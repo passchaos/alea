@@ -190,16 +190,16 @@ pub fn Exponential(comptime T: type) type {
     return struct {
         const Self = @This();
 
-        rate: T,
+        inverse_rate: T,
 
         pub fn init(rate: T) Error!Self {
             comptime requireFloat(T);
             if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
-            return .{ .rate = rate };
+            return .{ .inverse_rate = 1 / rate };
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return exponential(rng, T, self.rate);
+            return -@log(rng.floatOpen(T)) * self.inverse_rate;
         }
     };
 }
