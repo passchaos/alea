@@ -32,7 +32,7 @@ pub fn next(self: *Pcg64) u64 {
     const old = self.state;
     self.state = old *% multiplier +% self.inc;
 
-    const xorshifted: u64 = @truncate(((old >> 64) ^ old) >> 64);
+    const xorshifted: u64 = @truncate((old >> 64) ^ old);
     const rot: u6 = @intCast(old >> 122);
     return std.math.rotr(u64, xorshifted, rot);
 }

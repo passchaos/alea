@@ -56,6 +56,7 @@ pub fn main() !void {
 ```sh
 zig build test
 zig build run-basic
+zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
 RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/rand_bench/Cargo.toml
 ```

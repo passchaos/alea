@@ -62,4 +62,21 @@ pub fn build(b: *std.Build) void {
 
     const bench_step = b.step("bench", "Run the alea throughput benchmark");
     bench_step.dependOn(&run_bench.step);
+
+    const statcheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/statcheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    statcheck_mod.addImport("alea", module);
+
+    const statcheck = b.addExecutable(.{
+        .name = "alea-statcheck",
+        .root_module = statcheck_mod,
+    });
+    const run_statcheck = b.addRunArtifact(statcheck);
+    if (b.args) |args| run_statcheck.addArgs(args);
+
+    const statcheck_step = b.step("statcheck", "Run extended statistical smoke checks");
+    statcheck_step.dependOn(&run_statcheck.step);
 }
