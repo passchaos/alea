@@ -28,6 +28,12 @@ ecosystem-specific abstractions to reproduce.
   it helps users adopt the library.
 - Prefer Zig-native APIs over direct translations of Rust traits or ecosystem
   integration points.
+- Prioritize completing and surpassing core random-number functionality before
+  spending time on performance tuning, except where performance is part of the
+  feature's basic viability.
+- If a feature genuinely needs trait-like abstraction, evaluate the local
+  `~/project-z/zigraft` library before inventing a custom abstraction. Do not
+  introduce trait-like machinery just to mirror Rust's API shape.
 - When implementing engines, distributions, samplers, or sequence utilities,
   compare against Rust `rand` and document meaningful deviations.
 - Favor deterministic reproducibility: seed handling, named streams, and
