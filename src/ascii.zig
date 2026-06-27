@@ -44,6 +44,27 @@ pub fn string(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
     return Alphanumeric.alloc(allocator, rng, len);
 }
 
+pub fn unicodeScalar(rng: Rng) u21 {
+    const gap_size = 0xDFFF - 0xD800 + 1;
+    var value = rng.intRangeLessThan(u21, gap_size, 0x11_0000);
+    if (value <= 0xDFFF) value -= gap_size;
+    return value;
+}
+
+pub fn unicodeUtf8Alloc(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
+    var out = try std.ArrayList(u8).initCapacity(allocator, len);
+    errdefer out.deinit(allocator);
+
+    var i: usize = 0;
+    while (i < len) : (i += 1) {
+        var buf: [4]u8 = undefined;
+        const n = std.unicode.utf8Encode(unicodeScalar(rng), &buf) catch unreachable;
+        try out.appendSlice(allocator, buf[0..n]);
+    }
+
+    return out.toOwnedSlice(allocator);
+}
+
 test "ascii charset fills requested length" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(77);
@@ -54,4 +75,21 @@ test "ascii charset fills requested length" {
 
     try std.testing.expectEqual(@as(usize, 32), password.len);
     for (password) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
+}
+
+test "unicode scalar string generation produces valid utf8" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(78);
+    const rng = alea.Rng.init(&engine);
+
+    var i: usize = 0;
+    while (i < 256) : (i += 1) {
+        const scalar = unicodeScalar(rng);
+        try std.testing.expect(scalar < 0xD800 or scalar > 0xDFFF);
+        try std.testing.expect(scalar < 0x11_0000);
+    }
+
+    const text = try unicodeUtf8Alloc(std.testing.allocator, rng, 64);
+    defer std.testing.allocator.free(text);
+    try std.testing.expectEqual(@as(usize, 64), try std.unicode.utf8CountCodepoints(text));
 }

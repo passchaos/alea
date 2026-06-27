@@ -16,7 +16,8 @@ The first milestone is intentionally broad:
   repeated choice iterators, weighted choice samplers, weighted sampling without
   replacement, reservoir sampling, and adaptive index sampling
 - reusable uniform, Bernoulli, non-uniform distribution, and alias-table samplers
-- ASCII `Alphanumeric`, `Alphabetic`, and custom `Charset` string generation
+- ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, and Unicode scalar
+  string generation
 - distributions: uniform, bernoulli, binomial, normal, log-normal,
   exponential, poisson, gamma, chi-squared, beta, Fisher F, Student t,
   triangular, cauchy, pareto, weibull
