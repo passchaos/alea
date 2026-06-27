@@ -3,12 +3,22 @@
 ## Project Mission
 
 `alea` is a Zig 0.16 random-number library whose explicit goal is to surpass
-Rust's `rand` ecosystem in ergonomics, feature coverage, reproducibility,
+Rust's `rand` in core random-number functionality, ergonomics, reproducibility,
 statistical quality, and performance.
 
+The target is not a one-for-one port of Rust ecosystem shapes. Do not copy
+Rust-only mechanisms such as traits, serde integration, crate feature matrices,
+or API forms that do not fit Zig. Instead, use Zig-native designs that exceed
+`rand` where it matters for random-number work: deterministic and secure-style
+engines, seeding and stream derivation, uniform and ranged sampling,
+distributions, reusable samplers, sequence and collection sampling, string
+generation, interoperability with `std.Random`, statistical validation, and
+benchmarked throughput.
+
 Use the local Rust `rand` checkout at `~/Work/rand` as the primary reference for
-existing behavior, APIs, algorithms, tests, and benchmarks. Treat `rand` as the
-baseline to study and exceed, not as a ceiling or a compatibility constraint.
+existing behavior, algorithms, tests, and benchmarks. Treat `rand` as the
+baseline to study and exceed for core RNG functionality, not as a checklist of
+ecosystem-specific abstractions to reproduce.
 
 ## Working Guidelines
 
@@ -16,6 +26,8 @@ baseline to study and exceed, not as a ceiling or a compatibility constraint.
   random-number algorithm work.
 - Preserve idiomatic Zig APIs while keeping `std.Random` interoperability where
   it helps users adopt the library.
+- Prefer Zig-native APIs over direct translations of Rust traits or ecosystem
+  integration points.
 - When implementing engines, distributions, samplers, or sequence utilities,
   compare against Rust `rand` and document meaningful deviations.
 - Favor deterministic reproducibility: seed handling, named streams, and
