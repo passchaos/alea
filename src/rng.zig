@@ -288,6 +288,13 @@ pub fn floatRange(self: Rng, comptime T: type, min: T, max: T) T {
     return min + (max - min) * self.float(T);
 }
 
+pub fn unicodeScalar(self: Rng) u21 {
+    const gap_size = 0xDFFF - 0xD800 + 1;
+    var scalar = self.intRangeLessThan(u21, gap_size, 0x11_0000);
+    if (scalar <= 0xDFFF) scalar -= gap_size;
+    return scalar;
+}
+
 pub fn normal(self: Rng, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
@@ -477,6 +484,10 @@ test "rng facade covers scalar APIs" {
 
     const tuple = rng.value(struct { u8, bool, f32 });
     try std.testing.expect(tuple[2] < 1.0);
+
+    const scalar = rng.unicodeScalar();
+    try std.testing.expect(scalar < 0xD800 or scalar > 0xDFFF);
+    try std.testing.expect(scalar < 0x11_0000);
 
     var buf: [16]u16 = undefined;
     rng.fill(u16, &buf);

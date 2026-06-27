@@ -45,10 +45,7 @@ pub fn string(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
 }
 
 pub fn unicodeScalar(rng: Rng) u21 {
-    const gap_size = 0xDFFF - 0xD800 + 1;
-    var value = rng.intRangeLessThan(u21, gap_size, 0x11_0000);
-    if (value <= 0xDFFF) value -= gap_size;
-    return value;
+    return rng.unicodeScalar();
 }
 
 pub fn unicodeUtf8Alloc(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
