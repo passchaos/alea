@@ -87,6 +87,17 @@ pub fn binomial(rng: Rng, trials: u64, p: f64) u64 {
     return if (p <= 0.5) sampled else trials - sampled;
 }
 
+pub fn binomialPoissonApprox(rng: Rng, trials: u64, p: f64) u64 {
+    std.debug.assert(p >= 0 and p <= 1);
+    if (trials == 0 or p == 0) return 0;
+    if (p == 1) return trials;
+
+    const q = if (p <= 0.5) p else 1.0 - p;
+    const mean = @as(f64, @floatFromInt(trials)) * q;
+    const sampled = @min(poisson(rng, mean), trials);
+    return if (p <= 0.5) sampled else trials - sampled;
+}
+
 fn binomialFair(rng: Rng, trials: u64) u64 {
     var remaining = trials;
     var successes: u64 = 0;
@@ -898,6 +909,7 @@ test "binomial sampler has plausible moments" {
 
     var iter = rng.sampleIter(u64, try Binomial.init(8, 0.5));
     try std.testing.expect(iter.next().? <= 8);
+    try std.testing.expect(binomialPoissonApprox(rng, 10_000, 0.01) < 200);
     try std.testing.expectError(error.InvalidProbability, Binomial.init(1, 1.1));
 }
 
