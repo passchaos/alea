@@ -472,6 +472,85 @@ pub fn Triangular(comptime T: type) type {
     };
 }
 
+pub fn cauchy(rng: Rng, comptime T: type, median: T, scale: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0);
+    const u = rng.floatOpen(T);
+    return median + scale * @tan(@as(T, @floatCast(std.math.pi)) * (u - 0.5));
+}
+
+pub fn Cauchy(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        median: T,
+        scale: T,
+
+        pub fn init(median: T, scale: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!std.math.isFinite(median)) return error.InvalidParameter;
+            return .{ .median = median, .scale = scale };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return cauchy(rng, T, self.median, self.scale);
+        }
+    };
+}
+
+pub fn pareto(rng: Rng, comptime T: type, scale: T, shape: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and shape > 0);
+    return scale / std.math.pow(T, rng.floatOpen(T), 1 / shape);
+}
+
+pub fn Pareto(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        scale: T,
+        shape: T,
+
+        pub fn init(scale: T, shape: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(scale > 0) or !(shape > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            return .{ .scale = scale, .shape = shape };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return pareto(rng, T, self.scale, self.shape);
+        }
+    };
+}
+
+pub fn weibull(rng: Rng, comptime T: type, scale: T, shape: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and shape > 0);
+    return scale * std.math.pow(T, -@log(rng.floatOpen(T)), 1 / shape);
+}
+
+pub fn Weibull(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        scale: T,
+        shape: T,
+
+        pub fn init(scale: T, shape: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(scale > 0) or !(shape > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            return .{ .scale = scale, .shape = shape };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return weibull(rng, T, self.scale, self.shape);
+        }
+    };
+}
+
 pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
@@ -682,6 +761,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     const triangular_value = triangulars.next().?;
     try std.testing.expect(triangular_value >= -1 and triangular_value <= 2);
 
+    var cauchys = rng.sampleIter(f64, try Cauchy(f64).init(0, 1));
+    _ = cauchys.next().?;
+
+    var paretos = rng.sampleIter(f64, try Pareto(f64).init(2, 3));
+    try std.testing.expect(paretos.next().? >= 2);
+
+    var weibulls = rng.sampleIter(f64, try Weibull(f64).init(2, 1.5));
+    try std.testing.expect(weibulls.next().? >= 0);
+
     try std.testing.expectError(error.InvalidParameter, Normal(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Exponential(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).init(0, -1));
@@ -693,6 +781,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, FisherF(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, StudentT(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Triangular(f64).init(1, 0, 2));
+    try std.testing.expectError(error.InvalidParameter, Cauchy(f64).init(0, 0));
+    try std.testing.expectError(error.InvalidParameter, Pareto(f64).init(1, 0));
+    try std.testing.expectError(error.InvalidParameter, Weibull(f64).init(0, 1));
 }
 
 test "binomial sampler has plausible moments" {

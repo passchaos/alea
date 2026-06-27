@@ -19,7 +19,7 @@ The first milestone is intentionally broad:
 - ASCII `Alphanumeric`, `Alphabetic`, and custom `Charset` string generation
 - distributions: uniform, bernoulli, binomial, normal, log-normal,
   exponential, poisson, gamma, chi-squared, beta, Fisher F, Student t,
-  triangular
+  triangular, cauchy, pareto, weibull
 - O(1) repeated weighted sampling through alias tables
 
 ## Quick Start
