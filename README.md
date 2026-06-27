@@ -9,6 +9,7 @@ The first milestone is intentionally broad:
 - a `ChaCha12` secure-style stream for secret-seeded randomness
 - `Rng`, a small facade with `std.Random` compatibility
 - `Rng.value(T)` for scalar, enum, tuple, and array sampling
+- `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling
 - deterministic seed derivation with named streams
 - scalar helpers for integers, floats, ranges, booleans, and bytes
 - collection helpers for `choose`, `shuffle`, partial shuffle, weighted indexes,
@@ -32,6 +33,8 @@ pub fn main() !void {
     const die = rng.intRangeAtMost(u8, 1, 6);
     const x = rng.normal(f64, 0.0, 1.0);
     const tuple = rng.value(struct { u16, bool, f32 });
+    var rolls = rng.sampleIter(u8, try alea.distributions.Uniform(u8).initInclusive(1, 6));
+    const next_roll = rolls.next().?;
 
     var items = [_]u32{ 10, 20, 30, 40 };
     const hand = alea.seq.partialShuffle(rng, u32, &items, 2);
@@ -39,6 +42,7 @@ pub fn main() !void {
     _ = die;
     _ = x;
     _ = tuple;
+    _ = next_roll;
     _ = hand;
 }
 ```
@@ -60,9 +64,10 @@ The Rust command benchmarks against the local `rand` checkout in
 
 `alea` is designed to exceed Rust `rand`'s default crate surface in Zig form:
 the core library includes non-uniform distributions, reusable samplers, string
-generation, and sequence sampling instead of pushing most non-uniform sampling
-to a separate crate. Every engine still exposes `random()` for standard-library
-consumers, and `Rng.random()` returns a `std.Random` interface.
+generation, iterator-style repeated sampling, and sequence sampling instead of
+pushing most non-uniform sampling to a separate crate. Every engine still
+exposes `random()` for standard-library consumers, and `Rng.random()` returns a
+`std.Random` interface.
 
 `DefaultPrng` is `Xoshiro256`, `FastPrng` is `Wyhash64`, `ReproduciblePrng` is
 `Pcg64`, and `SecurePrng` is `ChaCha12`.

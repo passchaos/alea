@@ -93,6 +93,21 @@ pub fn value(self: Rng, comptime T: type) T {
     };
 }
 
+pub fn valueIter(self: Rng, comptime T: type) ValueIterator(T) {
+    return .{ .rng = self };
+}
+
+pub fn randomIter(self: Rng, comptime T: type) ValueIterator(T) {
+    return self.valueIter(T);
+}
+
+pub fn sampleIter(self: Rng, comptime T: type, sampler: anytype) SampleIterator(@TypeOf(sampler), T) {
+    return .{
+        .rng = self,
+        .sampler = sampler,
+    };
+}
+
 pub fn bytes(self: Rng, buf: []u8) void {
     self.fillFn(self.ptr, buf);
 }
@@ -335,6 +350,47 @@ pub fn sampleWithoutReplacement(self: Rng, comptime T: type, allocator: std.mem.
     return out.toOwnedSlice(allocator);
 }
 
+pub fn ValueIterator(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        rng: Rng,
+
+        pub fn next(self: *Self) ?T {
+            return self.nextValue();
+        }
+
+        pub fn nextValue(self: *Self) T {
+            return self.rng.value(T);
+        }
+
+        pub fn fill(self: *Self, dest: []T) void {
+            for (dest) |*item| item.* = self.nextValue();
+        }
+    };
+}
+
+pub fn SampleIterator(comptime Sampler: type, comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        rng: Rng,
+        sampler: Sampler,
+
+        pub fn next(self: *Self) ?T {
+            return self.nextValue();
+        }
+
+        pub fn nextValue(self: *Self) T {
+            return self.sampler.sample(self.rng);
+        }
+
+        pub fn fill(self: *Self, dest: []T) void {
+            for (dest) |*item| item.* = self.nextValue();
+        }
+    };
+}
+
 fn uintBits(self: Rng, comptime T: type, comptime bits: comptime_int) T {
     comptime requireUnsigned(T);
     if (bits == 0) return 0;
@@ -406,4 +462,31 @@ test "shuffle and sampling keep item set" {
     const sample = try rng.sampleWithoutReplacement(u8, std.testing.allocator, &values, 3);
     defer std.testing.allocator.free(sample);
     try std.testing.expectEqual(@as(usize, 3), sample.len);
+}
+
+test "value and sampler iterators produce unbounded samples" {
+    const alea = @import("root.zig");
+    var engine = alea.Xoshiro256.init(123);
+    const rng = Rng.init(&engine);
+
+    var values = rng.valueIter(u16);
+    const first = values.next().?;
+    const second = values.nextValue();
+    try std.testing.expect(first != second);
+
+    var bool_iter = rng.randomIter(bool);
+    var bools: [8]bool = undefined;
+    bool_iter.fill(&bools);
+
+    var tuple_iter = rng.valueIter(struct { u8, bool, f32 });
+    const tuple = tuple_iter.nextValue();
+    try std.testing.expect(tuple[2] >= 0 and tuple[2] < 1);
+
+    const die = try alea.distributions.Uniform(u8).initInclusive(1, 6);
+    var rolls = rng.sampleIter(u8, die);
+    var i: usize = 0;
+    while (i < 16) : (i += 1) {
+        const roll = rolls.next().?;
+        try std.testing.expect(roll >= 1 and roll <= 6);
+    }
 }
