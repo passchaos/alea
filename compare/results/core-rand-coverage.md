@@ -21,7 +21,7 @@ Rust `rand` in core random-number functionality using Zig-native designs.
 | Poisson | small-lambda exact product method and large-lambda PTRS method | Large-lambda moment test |
 | Sequence sampling | compact `IndexVec`, `sampleIndices`, `sampleArray`, iterator sampling | `src/seq.zig` tests |
 | Collection sampling | choose, choose iterators, shuffle, partial shuffle, reservoir sampling | `src/rng.zig` and `src/seq.zig` tests |
-| Weighted sampling | weighted index, alias table, weighted choice, weighted no-replacement sampling | `src/distributions.zig`, `src/seq.zig` tests |
+| Weighted sampling | weighted index, updateable alias table, weighted choice, weighted no-replacement sampling | `src/distributions.zig`, `src/seq.zig` tests |
 | Statistical smoke tests | engine bit balance, range buckets, normal/exponential means | `src/quality.zig` |
 | Native benchmark evidence | Zig and Rust native CPU commands; facade/direct split | `compare/results/2026-06-27-rand-comparison.md` |
 

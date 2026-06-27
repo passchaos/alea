@@ -700,6 +700,16 @@ pub fn AliasTable(comptime Weight: type) type {
             self.* = undefined;
         }
 
+        pub fn update(self: *Self, weights: []const Weight) !void {
+            if (weights.len != self.prob.len) return error.InvalidParameter;
+
+            const next = try Self.init(self.allocator, weights);
+            self.allocator.free(self.prob);
+            self.allocator.free(self.alias);
+            self.prob = next.prob;
+            self.alias = next.alias;
+        }
+
         pub fn sample(self: Self, rng: Rng) usize {
             const column = rng.uintLessThan(usize, self.prob.len);
             return if (rng.float(f64) < self.prob[column]) column else self.alias[column];
@@ -759,6 +769,14 @@ test "alias table samples valid indexes" {
         try std.testing.expect(index < 4);
         try std.testing.expect(index != 1);
     }
+
+    try table.update(&.{ 0, 10, 0, 0 });
+    i = 0;
+    while (i < 16) : (i += 1) {
+        try std.testing.expectEqual(@as(usize, 1), table.sample(rng));
+    }
+
+    try std.testing.expectError(error.InvalidParameter, table.update(&.{ 1, 2 }));
 }
 
 test "poisson large lambda has plausible moments" {
