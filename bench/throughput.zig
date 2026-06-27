@@ -117,7 +117,7 @@ fn benchSeq(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: usize,
     var best_checksum: usize = 0;
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
-        var engine = alea.DefaultPrng.init(0xabcd);
+        var engine = alea.FastPrng.init(0xabcd);
         const rng = alea.Rng.init(&engine);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         const indices = try alea.seq.sampleIndices(std.heap.smp_allocator, rng, length, amount);
@@ -142,7 +142,7 @@ fn benchSeqIndexVec(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length
     var best_checksum: usize = 0;
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
-        var engine = alea.DefaultPrng.init(0xabcd);
+        var engine = alea.FastPrng.init(0xabcd);
         const rng = alea.Rng.init(&engine);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         const indices = try alea.seq.sampleIndexVec(std.heap.smp_allocator, rng, length, amount);
@@ -168,7 +168,7 @@ fn benchSeqU32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: u32
     var best_checksum: u64 = 0;
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
-        var engine = alea.DefaultPrng.init(0xabcd);
+        var engine = alea.FastPrng.init(0xabcd);
         const rng = alea.Rng.init(&engine);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         const indices = try alea.seq.sampleIndicesU32(std.heap.smp_allocator, rng, length, amount);
