@@ -117,7 +117,7 @@ pub fn exponential(rng: Rng, comptime T: type, rate: T) T {
 }
 
 pub fn poisson(rng: Rng, lambda: f64) u64 {
-    std.debug.assert(lambda >= 0);
+    std.debug.assert(lambda >= 0 and std.math.isFinite(lambda));
     if (lambda == 0) return 0;
 
     if (lambda < 30) {
@@ -131,8 +131,35 @@ pub fn poisson(rng: Rng, lambda: f64) u64 {
         return k - 1;
     }
 
-    const sample = normal(rng, f64, lambda, @sqrt(lambda));
-    return if (sample < 0) 0 else @intFromFloat(sample + 0.5);
+    return poissonPtrs(rng, lambda);
+}
+
+fn poissonPtrs(rng: Rng, lambda: f64) u64 {
+    const sqrt_lambda = @sqrt(lambda);
+    const log_lambda = @log(lambda);
+    const b = 0.931 + 2.53 * sqrt_lambda;
+    const a = -0.059 + 0.02483 * b;
+    const inv_alpha = 1.1239 + 1.1328 / (b - 3.4);
+    const v_r = 0.9277 - 3.6224 / (b - 2.0);
+
+    while (true) {
+        const u = rng.float(f64) - 0.5;
+        const v = rng.floatOpen(f64);
+        const us = 0.5 - @abs(u);
+        const kf = @floor((2.0 * a / us + b) * u + lambda + 0.43);
+
+        if (us >= 0.07 and v <= v_r) return @intFromFloat(kf);
+        if (kf < 0 or (us < 0.013 and v > us)) continue;
+
+        const k: u64 = @intFromFloat(kf);
+        const lhs = @log(v) + @log(inv_alpha) - @log(a / (us * us) + b);
+        const rhs = -lambda + @as(f64, @floatFromInt(k)) * log_lambda - logFactorial(k);
+        if (lhs <= rhs) return k;
+    }
+}
+
+fn logFactorial(k: u64) f64 {
+    return std.math.lgamma(f64, @as(f64, @floatFromInt(k + 1)));
 }
 
 pub fn geometric(rng: Rng, p: f64) u64 {
@@ -330,4 +357,26 @@ test "alias table samples valid indexes" {
         try std.testing.expect(index < 4);
         try std.testing.expect(index != 1);
     }
+}
+
+test "poisson large lambda has plausible moments" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(55);
+    const rng = Rng.init(&engine);
+
+    const lambda = 60.0;
+    const samples = 20_000;
+    var sum: f64 = 0;
+    var sum_sq: f64 = 0;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) {
+        const value: f64 = @floatFromInt(poisson(rng, lambda));
+        sum += value;
+        sum_sq += value * value;
+    }
+
+    const mean = sum / @as(f64, @floatFromInt(samples));
+    const variance = sum_sq / @as(f64, @floatFromInt(samples)) - mean * mean;
+    try std.testing.expect(mean > 59.0 and mean < 61.0);
+    try std.testing.expect(variance > 56.0 and variance < 64.0);
 }
