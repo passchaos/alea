@@ -23,6 +23,9 @@ fn checkEngine(comptime Engine: type, comptime name: []const u8) !void {
     var byte_counts = [_]usize{0} ** 256;
     var low_nibble_counts = [_]usize{0} ** 16;
     var ones: usize = 0;
+    var transitions: usize = 0;
+    var same_low_byte: usize = 0;
+    var prev_low_byte: ?u8 = null;
 
     const samples = 65_536;
     var i: usize = 0;
@@ -34,7 +37,15 @@ fn checkEngine(comptime Engine: type, comptime name: []const u8) !void {
         var x = value;
         var b: usize = 0;
         while (b < 8) : (b += 1) {
-            byte_counts[@as(u8, @truncate(x))] += 1;
+            const byte: u8 = @truncate(x);
+            byte_counts[byte] += 1;
+            if (b == 0) {
+                if (prev_low_byte) |prev| {
+                    transitions += 1;
+                    same_low_byte += @intFromBool(prev == byte);
+                }
+                prev_low_byte = byte;
+            }
             x >>= 8;
         }
     }
@@ -51,6 +62,9 @@ fn checkEngine(comptime Engine: type, comptime name: []const u8) !void {
     for (byte_counts) |count| {
         try expectBetween(name, "byte buckets", count, expected_byte * 80 / 100, expected_byte * 120 / 100);
     }
+
+    const expected_same = transitions / 256;
+    try expectBetween(name, "lag-1 low-byte repeats", same_low_byte, expected_same / 2, expected_same * 3 / 2 + 1);
 }
 
 fn checkDistributions() !void {
