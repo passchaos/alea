@@ -124,6 +124,40 @@ pub fn chooseMultiple(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
     return out;
 }
 
+pub fn Choice(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        items: []const T,
+
+        pub fn init(items: []const T) ?Self {
+            if (items.len == 0) return null;
+            return .{ .items = items };
+        }
+
+        pub fn len(self: Self) usize {
+            return self.items.len;
+        }
+
+        pub fn sample(self: Self, rng: Rng) *const T {
+            return &self.items[rng.uintLessThan(usize, self.items.len)];
+        }
+
+        pub fn sampleValue(self: Self, rng: Rng) T {
+            return self.sample(rng).*;
+        }
+
+        pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
+            return rng.sampleIter(*const T, self);
+        }
+    };
+}
+
+pub fn chooseIter(rng: Rng, comptime T: type, items: []const T) ?Rng.SampleIterator(Choice(T), *const T) {
+    const choice = Choice(T).init(items) orelse return null;
+    return choice.iter(rng);
+}
+
 pub fn partialShuffle(rng: Rng, comptime T: type, items: []T, amount: usize) []T {
     const count = @min(amount, items.len);
     var i: usize = 0;
@@ -349,4 +383,27 @@ test "partial shuffle and reservoir sample respect counts" {
     const sampled = try reservoirSample(std.testing.allocator, rng, u8, &values, 4);
     defer std.testing.allocator.free(sampled);
     try std.testing.expectEqual(@as(usize, 4), sampled.len);
+}
+
+test "choice sampler repeatedly samples slice references" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(445);
+    const rng = alea.Rng.init(&engine);
+
+    const values = [_]u8{ 2, 4, 6, 8 };
+    const choice = Choice(u8).init(&values).?;
+    try std.testing.expectEqual(@as(usize, 4), choice.len());
+    try std.testing.expect(Choice(u8).init(&.{}) == null);
+
+    var iter = choice.iter(rng);
+    var i: usize = 0;
+    while (i < 32) : (i += 1) {
+        const item = iter.next().?;
+        try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
+    }
+
+    var convenience_iter = chooseIter(rng, u8, &values).?;
+    const picked = convenience_iter.next().?.*;
+    try std.testing.expect(picked == 2 or picked == 4 or picked == 6 or picked == 8);
+    try std.testing.expect(chooseIter(rng, u8, &.{}) == null);
 }

@@ -13,7 +13,7 @@ The first milestone is intentionally broad:
 - deterministic seed derivation with named streams
 - scalar helpers for integers, floats, ranges, booleans, and bytes
 - collection helpers for `choose`, `shuffle`, partial shuffle, weighted indexes,
-  reservoir sampling, and adaptive index sampling
+  repeated choice iterators, reservoir sampling, and adaptive index sampling
 - reusable `Uniform(T)`, `Bernoulli`, and alias-table samplers
 - ASCII `Alphanumeric`, `Alphabetic`, and custom `Charset` string generation
 - distributions: uniform, bernoulli, normal, exponential, poisson, gamma, beta,
