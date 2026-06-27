@@ -209,6 +209,42 @@ pub fn chooseIteratorWeighted(rng: Rng, comptime T: type, iterator: anytype) !?T
     return result;
 }
 
+pub fn sampleIteratorWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T: type, iterator: anytype, amount: usize) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
+
+    var heap = WeightedIteratorQueue(T).initContext({});
+    defer heap.deinit(allocator);
+    try heap.ensureTotalCapacityPrecise(allocator, amount);
+
+    while (iterator.next()) |entry| {
+        const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        if (weight == 0) continue;
+
+        const candidate = WeightedIteratorCandidate(T){
+            .item = entry.item,
+            .key = @log(rng.floatOpen(f64)) / weight,
+        };
+
+        if (heap.count() < amount) {
+            try heap.push(allocator, candidate);
+        } else if (heap.peek()) |min_candidate| {
+            if (candidate.key > min_candidate.key) {
+                _ = heap.pop();
+                try heap.push(allocator, candidate);
+            }
+        }
+    }
+
+    const out = try allocator.alloc(T, heap.count());
+    errdefer allocator.free(out);
+    var i: usize = 0;
+    while (heap.pop()) |candidate| : (i += 1) {
+        out[i] = candidate.item;
+    }
+    return out;
+}
+
 pub fn sampleWeightedIndices(allocator: std.mem.Allocator, rng: Rng, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
     if (amount == 0) return allocator.alloc(usize, 0);
     if (weights.len == 0) return error.EmptyInput;
@@ -535,6 +571,25 @@ fn compareWeightedCandidate(_: void, a: WeightedCandidate, b: WeightedCandidate)
     return std.math.order(a.index, b.index);
 }
 
+fn WeightedIteratorCandidate(comptime T: type) type {
+    return struct {
+        item: T,
+        key: f64,
+    };
+}
+
+fn WeightedIteratorQueue(comptime T: type) type {
+    return std.PriorityQueue(WeightedIteratorCandidate(T), void, compareWeightedIteratorCandidate(T));
+}
+
+fn compareWeightedIteratorCandidate(comptime T: type) fn (void, WeightedIteratorCandidate(T), WeightedIteratorCandidate(T)) std.math.Order {
+    return struct {
+        fn compare(_: void, a: WeightedIteratorCandidate(T), b: WeightedIteratorCandidate(T)) std.math.Order {
+            return std.math.order(a.key, b.key);
+        }
+    }.compare;
+}
+
 fn weightAsF64(comptime Weight: type, weight: Weight) f64 {
     return switch (@typeInfo(Weight)) {
         .int => @floatFromInt(weight),
@@ -789,4 +844,10 @@ test "weighted iterator choice works without collecting first" {
     const bad_entries = [_]Entry{.{ .item = 1, .weight = std.math.nan(f64) }};
     var bad_iter = WeightedIter{ .items = &bad_entries };
     try std.testing.expectError(error.InvalidWeight, chooseIteratorWeighted(rng, u8, &bad_iter));
+
+    var sample_iter = WeightedIter{ .items = &entries };
+    const sample = try sampleIteratorWeighted(std.testing.allocator, rng, u8, &sample_iter, 2);
+    defer std.testing.allocator.free(sample);
+    try std.testing.expectEqual(@as(usize, 2), sample.len);
+    for (sample) |item| try std.testing.expect(item == 2 or item == 3);
 }
