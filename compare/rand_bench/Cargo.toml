@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-rand = { path = "../../../rand", features = ["std", "std_rng", "thread_rng"] }
+rand = { path = "../../../../Work/rand", features = ["std", "std_rng", "thread_rng"] }
 
 [profile.release]
 opt-level = 3
