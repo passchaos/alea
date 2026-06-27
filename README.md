@@ -11,7 +11,7 @@ The first milestone is intentionally broad:
 - `Rng.value(T)` for scalar, enum, tuple, and array sampling
 - `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling
 - deterministic seed derivation with named streams and system-entropy helpers
-- scalar helpers for integers, floats, ranges, booleans, and bytes
+- scalar helpers for integers, floats, durations, ranges, booleans, and bytes
 - collection helpers for `choose`, `shuffle`, partial shuffle, weighted indexes,
   repeated choice iterators, weighted choice samplers, weighted sampling without
   replacement, iterator and weighted iterator sampling with and without

@@ -323,6 +323,26 @@ pub fn floatRangeChecked(self: Rng, comptime T: type, min: T, max: T) Error!T {
     return self.floatRange(T, min, max);
 }
 
+pub fn durationRangeLessThan(self: Rng, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
+    std.debug.assert(min.nanoseconds < max.nanoseconds);
+    return .{ .nanoseconds = self.intRangeLessThan(i96, min.nanoseconds, max.nanoseconds) };
+}
+
+pub fn durationRangeAtMost(self: Rng, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
+    std.debug.assert(min.nanoseconds <= max.nanoseconds);
+    return .{ .nanoseconds = self.intRangeAtMost(i96, min.nanoseconds, max.nanoseconds) };
+}
+
+pub fn durationRangeLessThanChecked(self: Rng, min: std.Io.Duration, max: std.Io.Duration) Error!std.Io.Duration {
+    if (min.nanoseconds >= max.nanoseconds) return error.EmptyRange;
+    return self.durationRangeLessThan(min, max);
+}
+
+pub fn durationRangeAtMostChecked(self: Rng, min: std.Io.Duration, max: std.Io.Duration) Error!std.Io.Duration {
+    if (min.nanoseconds > max.nanoseconds) return error.EmptyRange;
+    return self.durationRangeAtMost(min, max);
+}
+
 pub fn unicodeScalar(self: Rng) u21 {
     const gap_size = 0xDFFF - 0xD800 + 1;
     var scalar = self.intRangeLessThan(u21, gap_size, 0x11_0000);
@@ -523,6 +543,10 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.EmptyRange, rng.intRangeLessThanChecked(u32, 3, 3));
     try std.testing.expectError(error.EmptyRange, rng.intRangeAtMostChecked(u32, 4, 3));
     try std.testing.expectError(error.EmptyRange, rng.floatRangeChecked(f64, std.math.inf(f64), 1));
+    const duration = rng.durationRangeAtMost(.fromMilliseconds(10), .fromMilliseconds(20));
+    try std.testing.expect(duration.nanoseconds >= std.time.ns_per_ms * 10);
+    try std.testing.expect(duration.nanoseconds <= std.time.ns_per_ms * 20);
+    try std.testing.expectError(error.EmptyRange, rng.durationRangeLessThanChecked(.fromSeconds(2), .fromSeconds(1)));
 
     const tuple = rng.value(struct { u8, bool, f32 });
     try std.testing.expect(tuple[2] < 1.0);
