@@ -191,6 +191,24 @@ pub fn sampleIterator(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
     return reservoir.toOwnedSlice(allocator);
 }
 
+pub fn chooseIteratorWeighted(rng: Rng, comptime T: type, iterator: anytype) !?T {
+    var total: f64 = 0;
+    var result: ?T = null;
+
+    while (iterator.next()) |entry| {
+        const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        if (weight == 0) continue;
+
+        total += weight;
+        if (rng.float(f64) * total < weight) {
+            result = entry.item;
+        }
+    }
+
+    return result;
+}
+
 pub fn sampleWeightedIndices(allocator: std.mem.Allocator, rng: Rng, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
     if (amount == 0) return allocator.alloc(usize, 0);
     if (weights.len == 0) return error.EmptyInput;
@@ -733,4 +751,42 @@ test "iterator sampling works without collecting first" {
     const short = try sampleIterator(std.testing.allocator, rng, u32, &short_iter, 8);
     defer std.testing.allocator.free(short);
     try std.testing.expectEqual(@as(usize, 3), short.len);
+}
+
+test "weighted iterator choice works without collecting first" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(449);
+    const rng = alea.Rng.init(&engine);
+
+    const Entry = struct {
+        item: u8,
+        weight: f64,
+    };
+    const WeightedIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 1, .weight = 0 },
+        .{ .item = 2, .weight = 1 },
+        .{ .item = 3, .weight = 5 },
+    };
+    var iter = WeightedIter{ .items = &entries };
+    const picked = (try chooseIteratorWeighted(rng, u8, &iter)).?;
+    try std.testing.expect(picked == 2 or picked == 3);
+
+    var empty_iter = WeightedIter{ .items = &.{} };
+    try std.testing.expect((try chooseIteratorWeighted(rng, u8, &empty_iter)) == null);
+
+    const bad_entries = [_]Entry{.{ .item = 1, .weight = std.math.nan(f64) }};
+    var bad_iter = WeightedIter{ .items = &bad_entries };
+    try std.testing.expectError(error.InvalidWeight, chooseIteratorWeighted(rng, u8, &bad_iter));
 }
