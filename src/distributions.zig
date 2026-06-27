@@ -551,6 +551,38 @@ pub fn Weibull(comptime T: type) type {
     };
 }
 
+pub fn Dirichlet(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        alpha: []const T,
+
+        pub fn init(alpha: []const T) Error!Self {
+            comptime requireFloat(T);
+            if (alpha.len == 0) return error.EmptyRange;
+            for (alpha) |a| {
+                if (!(a > 0) or !std.math.isFinite(a)) return error.InvalidParameter;
+            }
+            return .{ .alpha = alpha };
+        }
+
+        pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            const out = try allocator.alloc(T, self.alpha.len);
+            errdefer allocator.free(out);
+
+            var total: T = 0;
+            for (self.alpha, out) |a, *slot| {
+                const value = gamma(rng, T, a, 1);
+                slot.* = value;
+                total += value;
+            }
+
+            for (out) |*value| value.* /= total;
+            return out;
+        }
+    };
+}
+
 pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
@@ -811,4 +843,25 @@ test "binomial sampler has plausible moments" {
     var iter = rng.sampleIter(u64, try Binomial.init(8, 0.5));
     try std.testing.expect(iter.next().? <= 8);
     try std.testing.expectError(error.InvalidProbability, Binomial.init(1, 1.1));
+}
+
+test "dirichlet sampler returns simplex vectors" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(68);
+    const rng = Rng.init(&engine);
+
+    const dist = try Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
+    const sample = try dist.sample(std.testing.allocator, rng);
+    defer std.testing.allocator.free(sample);
+
+    try std.testing.expectEqual(@as(usize, 3), sample.len);
+    var total: f64 = 0;
+    for (sample) |value| {
+        try std.testing.expect(value >= 0 and value <= 1);
+        total += value;
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), total, 1e-12);
+
+    try std.testing.expectError(error.EmptyRange, Dirichlet(f64).init(&.{}));
+    try std.testing.expectError(error.InvalidParameter, Dirichlet(f64).init(&.{ 1.0, 0.0 }));
 }
