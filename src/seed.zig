@@ -17,6 +17,12 @@ pub fn fromString(input: []const u8) Seed {
     return fromBytes(input);
 }
 
+pub fn secure(io: std.Io) !Seed {
+    var bytes_buf: [8]u8 = undefined;
+    try std.Io.randomSecure(io, &bytes_buf);
+    return .{ .state = std.mem.readInt(u64, &bytes_buf, .little) };
+}
+
 pub fn mix(self: Seed, input: []const u8) Seed {
     var buf: [8]u8 = undefined;
     std.mem.writeInt(u64, &buf, self.state, .little);

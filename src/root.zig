@@ -32,12 +32,24 @@ pub fn default(seed: u64) DefaultPrng {
     return DefaultPrng.init(seed);
 }
 
+pub fn defaultSecure(io: std.Io) !DefaultPrng {
+    return DefaultPrng.init((try Seed.secure(io)).state);
+}
+
 pub fn fast(seed: u64) FastPrng {
     return FastPrng.init(seed);
 }
 
+pub fn fastSecure(io: std.Io) !FastPrng {
+    return FastPrng.init((try Seed.secure(io)).state);
+}
+
 pub fn reproducible(seed: u64) ReproduciblePrng {
     return ReproduciblePrng.init(seed);
+}
+
+pub fn reproducibleSecure(io: std.Io) !ReproduciblePrng {
+    return ReproduciblePrng.init((try Seed.secure(io)).state);
 }
 
 pub fn secureFromSeed(seed: u64) SecurePrng {
@@ -48,6 +60,10 @@ pub fn secure(io: std.Io) !SecurePrng {
     var seed_bytes: [SecurePrng.seed_length]u8 = undefined;
     try std.Io.randomSecure(io, &seed_bytes);
     return SecurePrng.init(seed_bytes);
+}
+
+pub fn secureBytes(io: std.Io, out: []u8) !void {
+    try std.Io.randomSecure(io, out);
 }
 
 pub fn rng(engine: anytype) Rng {
