@@ -157,6 +157,40 @@ pub fn chooseMultiple(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
     return out;
 }
 
+pub fn chooseIterator(rng: Rng, comptime T: type, iterator: anytype) ?T {
+    var seen: usize = 0;
+    var result: ?T = null;
+
+    while (iterator.next()) |item| {
+        seen += 1;
+        if (rng.uintLessThan(usize, seen) == 0) {
+            result = item;
+        }
+    }
+
+    return result;
+}
+
+pub fn sampleIterator(allocator: std.mem.Allocator, rng: Rng, comptime T: type, iterator: anytype, amount: usize) ![]T {
+    var reservoir = try std.ArrayList(T).initCapacity(allocator, amount);
+    errdefer reservoir.deinit(allocator);
+    if (amount == 0) return reservoir.toOwnedSlice(allocator);
+
+    while (reservoir.items.len < amount) {
+        const item = iterator.next() orelse return reservoir.toOwnedSlice(allocator);
+        try reservoir.append(allocator, item);
+    }
+
+    var seen = reservoir.items.len;
+    while (iterator.next()) |item| {
+        seen += 1;
+        const index = rng.uintLessThan(usize, seen);
+        if (index < amount) reservoir.items[index] = item;
+    }
+
+    return reservoir.toOwnedSlice(allocator);
+}
+
 pub fn sampleWeightedIndices(allocator: std.mem.Allocator, rng: Rng, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
     if (amount == 0) return allocator.alloc(usize, 0);
     if (weights.len == 0) return error.EmptyInput;
@@ -666,4 +700,37 @@ test "weighted sampling without replacement returns distinct positive-weight ite
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndices(std.testing.allocator, rng, u32, &.{}, 1));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndices(std.testing.allocator, rng, f64, &.{ 1.0, std.math.nan(f64) }, 1));
     try std.testing.expectError(error.LengthMismatch, sampleWeighted(std.testing.allocator, rng, u8, u32, &.{ 1, 2 }, &.{1}, 1));
+}
+
+test "iterator sampling works without collecting first" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(448);
+    const rng = alea.Rng.init(&engine);
+
+    const RangeIter = struct {
+        next_value: u32,
+        end: u32,
+
+        fn next(self: *@This()) ?u32 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+
+    var choose_iter = RangeIter{ .next_value = 0, .end = 100 };
+    const chosen = chooseIterator(rng, u32, &choose_iter).?;
+    try std.testing.expect(chosen < 100);
+
+    var sample_iter = RangeIter{ .next_value = 0, .end = 100 };
+    const sample = try sampleIterator(std.testing.allocator, rng, u32, &sample_iter, 8);
+    defer std.testing.allocator.free(sample);
+    try std.testing.expectEqual(@as(usize, 8), sample.len);
+    for (sample) |item| try std.testing.expect(item < 100);
+
+    var short_iter = RangeIter{ .next_value = 0, .end = 3 };
+    const short = try sampleIterator(std.testing.allocator, rng, u32, &short_iter, 8);
+    defer std.testing.allocator.free(short);
+    try std.testing.expectEqual(@as(usize, 3), short.len);
 }

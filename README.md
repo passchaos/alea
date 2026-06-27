@@ -14,7 +14,8 @@ The first milestone is intentionally broad:
 - scalar helpers for integers, floats, ranges, booleans, and bytes
 - collection helpers for `choose`, `shuffle`, partial shuffle, weighted indexes,
   repeated choice iterators, weighted choice samplers, weighted sampling without
-  replacement, reservoir sampling, and adaptive index sampling
+  replacement, iterator sampling, reservoir sampling, and adaptive index
+  sampling
 - reusable uniform, Bernoulli, non-uniform distribution, and alias-table samplers
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, and Unicode scalar
   string generation
