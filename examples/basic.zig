@@ -25,8 +25,8 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(unicode);
 
     const dirichlet = try alea.distributions.Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
-    const proportions = try dirichlet.sample(init.gpa, rng);
-    defer init.gpa.free(proportions);
+    var proportions: [3]f64 = undefined;
+    dirichlet.sampleInto(rng, &proportions);
 
     var deck = [_]u8{ 1, 2, 3, 4, 5, 6, 7, 8 };
     const hand = alea.seq.partialShuffle(rng, u8, &deck, 3);

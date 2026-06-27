@@ -569,7 +569,12 @@ pub fn Dirichlet(comptime T: type) type {
         pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
             const out = try allocator.alloc(T, self.alpha.len);
             errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
+        }
 
+        pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len == self.alpha.len);
             var total: T = 0;
             for (self.alpha, out) |a, *slot| {
                 const value = gamma(rng, T, a, 1);
@@ -578,7 +583,6 @@ pub fn Dirichlet(comptime T: type) type {
             }
 
             for (out) |*value| value.* /= total;
-            return out;
         }
     };
 }
@@ -864,4 +868,10 @@ test "dirichlet sampler returns simplex vectors" {
 
     try std.testing.expectError(error.EmptyRange, Dirichlet(f64).init(&.{}));
     try std.testing.expectError(error.InvalidParameter, Dirichlet(f64).init(&.{ 1.0, 0.0 }));
+
+    var stack_sample: [3]f64 = undefined;
+    dist.sampleInto(rng, &stack_sample);
+    var stack_total: f64 = 0;
+    for (stack_sample) |value| stack_total += value;
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
 }
