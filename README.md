@@ -17,8 +17,8 @@ The first milestone is intentionally broad:
   replacement, reservoir sampling, and adaptive index sampling
 - reusable uniform, Bernoulli, non-uniform distribution, and alias-table samplers
 - ASCII `Alphanumeric`, `Alphabetic`, and custom `Charset` string generation
-- distributions: uniform, bernoulli, normal, exponential, poisson, gamma, beta,
-  triangular
+- distributions: uniform, bernoulli, binomial, normal, exponential, poisson,
+  gamma, beta, triangular
 - O(1) repeated weighted sampling through alias tables
 
 ## Quick Start

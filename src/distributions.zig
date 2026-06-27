@@ -62,6 +62,43 @@ pub const Bernoulli = struct {
     }
 };
 
+pub const Binomial = struct {
+    trials: u64,
+    p: f64,
+
+    pub fn init(trials: u64, p: f64) Error!Binomial {
+        if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+        return .{ .trials = trials, .p = p };
+    }
+
+    pub fn sample(self: Binomial, rng: Rng) u64 {
+        return binomial(rng, self.trials, self.p);
+    }
+};
+
+pub fn binomial(rng: Rng, trials: u64, p: f64) u64 {
+    std.debug.assert(p >= 0 and p <= 1);
+    if (trials == 0 or p == 0) return 0;
+    if (p == 1) return trials;
+
+    const q = if (p <= 0.5) p else 1.0 - p;
+    const sampled = binomialSmallP(rng, trials, q);
+    return if (p <= 0.5) sampled else trials - sampled;
+}
+
+fn binomialSmallP(rng: Rng, trials: u64, p: f64) u64 {
+    if (p == 0) return 0;
+
+    var successes: u64 = 0;
+    var remaining = trials;
+    while (true) {
+        const step = geometric(rng, p);
+        if (step > remaining) return successes;
+        successes += 1;
+        remaining -= step;
+    }
+}
+
 pub fn Uniform(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -460,6 +497,7 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sample(rng));
     try std.testing.expect(!(try Bernoulli.init(0)).sample(rng));
     try std.testing.expect((try Bernoulli.init(1.0 - std.math.floatEps(f64) / 2.0)).sample(rng));
+    try std.testing.expect((try Binomial.init(10, 1)).sample(rng) == 10);
     try std.testing.expect(exponential(rng, f64, 2) >= 0);
     try std.testing.expect(poisson(rng, 4) < 32);
     try std.testing.expect(beta(rng, f64, 2, 5) >= 0);
@@ -542,4 +580,31 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Gamma(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, Beta(f64).init(1, 0));
     try std.testing.expectError(error.InvalidParameter, Triangular(f64).init(1, 0, 2));
+}
+
+test "binomial sampler has plausible moments" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(67);
+    const rng = Rng.init(&engine);
+
+    const trials: u64 = 40;
+    const p = 0.25;
+    const samples = 20_000;
+    var sum: f64 = 0;
+    var sum_sq: f64 = 0;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) {
+        const value: f64 = @floatFromInt(binomial(rng, trials, p));
+        sum += value;
+        sum_sq += value * value;
+    }
+
+    const mean = sum / @as(f64, @floatFromInt(samples));
+    const variance = sum_sq / @as(f64, @floatFromInt(samples)) - mean * mean;
+    try std.testing.expect(mean > 9.8 and mean < 10.2);
+    try std.testing.expect(variance > 7.1 and variance < 7.9);
+
+    var iter = rng.sampleIter(u64, try Binomial.init(8, 0.5));
+    try std.testing.expect(iter.next().? <= 8);
+    try std.testing.expectError(error.InvalidProbability, Binomial.init(1, 1.1));
 }
