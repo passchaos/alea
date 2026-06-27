@@ -145,6 +145,55 @@ pub fn chooseMultiple(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
     return out;
 }
 
+pub fn sampleWeightedIndices(allocator: std.mem.Allocator, rng: Rng, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
+    if (amount == 0) return allocator.alloc(usize, 0);
+    if (weights.len == 0) return error.EmptyInput;
+
+    const limit = @min(amount, weights.len);
+    var heap = WeightedCandidateQueue.initContext({});
+    defer heap.deinit(allocator);
+    try heap.ensureTotalCapacityPrecise(allocator, limit);
+
+    for (weights, 0..) |weight, index| {
+        const value = weightAsF64(Weight, weight);
+        if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+        if (value == 0) continue;
+
+        const candidate = WeightedCandidate{
+            .index = index,
+            .key = @log(rng.floatOpen(f64)) / value,
+        };
+
+        if (heap.count() < limit) {
+            try heap.push(allocator, candidate);
+        } else if (heap.peek()) |min_candidate| {
+            if (candidate.key > min_candidate.key) {
+                _ = heap.pop();
+                try heap.push(allocator, candidate);
+            }
+        }
+    }
+
+    const out = try allocator.alloc(usize, heap.count());
+    errdefer allocator.free(out);
+    var i: usize = 0;
+    while (heap.pop()) |candidate| : (i += 1) {
+        out[i] = candidate.index;
+    }
+    return out;
+}
+
+pub fn sampleWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
+    if (items.len != weights.len) return error.LengthMismatch;
+    const count = @min(amount, items.len);
+    const indices = try sampleWeightedIndices(allocator, rng, Weight, weights, count);
+    defer allocator.free(indices);
+
+    const out = try allocator.alloc(T, indices.len);
+    for (indices, out) |index, *slot| slot.* = items[index];
+    return out;
+}
+
 pub fn Choice(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -409,6 +458,27 @@ fn sampleRejectionU32AsUsize(allocator: std.mem.Allocator, rng: Rng, length: u32
     return indices;
 }
 
+const WeightedCandidate = struct {
+    index: usize,
+    key: f64,
+};
+
+const WeightedCandidateQueue = std.PriorityQueue(WeightedCandidate, void, compareWeightedCandidate);
+
+fn compareWeightedCandidate(_: void, a: WeightedCandidate, b: WeightedCandidate) std.math.Order {
+    const key_order = std.math.order(a.key, b.key);
+    if (key_order != .eq) return key_order;
+    return std.math.order(a.index, b.index);
+}
+
+fn weightAsF64(comptime Weight: type, weight: Weight) f64 {
+    return switch (@typeInfo(Weight)) {
+        .int => @floatFromInt(weight),
+        .float => @floatCast(weight),
+        else => @compileError("weighted sampling weights must be numeric"),
+    };
+}
+
 const U32Set = struct {
     keys: []u32,
     used: []u8,
@@ -554,4 +624,34 @@ test "weighted choice sampler maps alias indexes to items" {
 
     try std.testing.expectError(error.EmptyInput, WeightedChoice(u8, u32).init(std.testing.allocator, &.{}, &.{}));
     try std.testing.expectError(error.LengthMismatch, WeightedChoice(u8, u32).init(std.testing.allocator, &.{1}, &.{ 1, 2 }));
+}
+
+test "weighted sampling without replacement returns distinct positive-weight items" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(447);
+    const rng = alea.Rng.init(&engine);
+
+    const weights = [_]f64{ 0, 1, 5, 0, 9 };
+    const indices = try sampleWeightedIndices(std.testing.allocator, rng, f64, &weights, 4);
+    defer std.testing.allocator.free(indices);
+
+    try std.testing.expectEqual(@as(usize, 3), indices.len);
+    var seen = [_]bool{false} ** weights.len;
+    for (indices) |index| {
+        try std.testing.expect(index < weights.len);
+        try std.testing.expect(weights[index] > 0);
+        try std.testing.expect(!seen[index]);
+        seen[index] = true;
+    }
+
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+    const sample = try sampleWeighted(std.testing.allocator, rng, u8, f64, &items, &weights, 2);
+    defer std.testing.allocator.free(sample);
+    try std.testing.expectEqual(@as(usize, 2), sample.len);
+    try std.testing.expect(sample[0] != sample[1]);
+    for (sample) |item| try std.testing.expect(item == 20 or item == 30 or item == 50);
+
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndices(std.testing.allocator, rng, u32, &.{}, 1));
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndices(std.testing.allocator, rng, f64, &.{ 1.0, std.math.nan(f64) }, 1));
+    try std.testing.expectError(error.LengthMismatch, sampleWeighted(std.testing.allocator, rng, u8, u32, &.{ 1, 2 }, &.{1}, 1));
 }
