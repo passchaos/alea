@@ -22,17 +22,24 @@ fn checkEngine(comptime Engine: type, comptime name: []const u8) !void {
     var engine = Engine.init(0x51a7_c0de);
     var byte_counts = [_]usize{0} ** 256;
     var low_nibble_counts = [_]usize{0} ** 16;
+    var low_nibble_pairs = [_]usize{0} ** 256;
     var ones: usize = 0;
     var transitions: usize = 0;
     var same_low_byte: usize = 0;
     var prev_low_byte: ?u8 = null;
+    var prev_low_nibble: ?usize = null;
 
     const samples = 65_536;
     var i: usize = 0;
     while (i < samples) : (i += 1) {
         const value = engine.next();
         ones += @popCount(value);
-        low_nibble_counts[value & 0xF] += 1;
+        const low_nibble: usize = @intCast(value & 0xF);
+        low_nibble_counts[low_nibble] += 1;
+        if (prev_low_nibble) |prev| {
+            low_nibble_pairs[prev * 16 + low_nibble] += 1;
+        }
+        prev_low_nibble = low_nibble;
 
         var x = value;
         var b: usize = 0;
@@ -56,6 +63,11 @@ fn checkEngine(comptime Engine: type, comptime name: []const u8) !void {
     const expected_nibble = samples / low_nibble_counts.len;
     for (low_nibble_counts) |count| {
         try expectBetween(name, "low nibble buckets", count, expected_nibble * 85 / 100, expected_nibble * 115 / 100);
+    }
+
+    const expected_pair = (samples - 1) / low_nibble_pairs.len;
+    for (low_nibble_pairs) |count| {
+        try expectBetween(name, "low nibble serial pairs", count, expected_pair / 2, expected_pair * 3 / 2 + 1);
     }
 
     const expected_byte = samples * 8 / byte_counts.len;
