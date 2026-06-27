@@ -1,0 +1,3 @@
+.zig-cache/
+zig-out/
+compare/rand_bench/target/
