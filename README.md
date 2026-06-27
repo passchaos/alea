@@ -36,17 +36,22 @@ pub fn main() !void {
 
     const die = rng.intRangeAtMost(u8, 1, 6);
     const x = rng.normal(f64, 0.0, 1.0);
+    const outages = alea.distributions.binomial(rng, 40, 0.25);
     const tuple = rng.value(struct { u16, bool, f32 });
     var rolls = rng.sampleIter(u8, try alea.distributions.Uniform(u8).initInclusive(1, 6));
     const next_roll = rolls.next().?;
+    const token = try alea.ascii.Alphanumeric.alloc(std.heap.smp_allocator, rng, 16);
+    defer std.heap.smp_allocator.free(token);
 
     var items = [_]u32{ 10, 20, 30, 40 };
     const hand = alea.seq.partialShuffle(rng, u32, &items, 2);
 
     _ = die;
     _ = x;
+    _ = outages;
     _ = tuple;
     _ = next_roll;
+    _ = token;
     _ = hand;
 }
 ```

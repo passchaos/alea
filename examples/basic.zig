@@ -17,12 +17,31 @@ pub fn main(init: std.process.Init) !void {
     }
 
     const normal = rng.normal(f64, 10.0, 2.5);
+    const outage_count = alea.distributions.binomial(rng, 40, 0.25);
     const weighted = rng.weightedIndex(&.{ 0.1, 0.2, 0.7 }).?;
     const token = try alea.ascii.Alphanumeric.alloc(init.gpa, rng, 16);
     defer init.gpa.free(token);
+    const unicode = try alea.ascii.unicodeUtf8Alloc(init.gpa, rng, 6);
+    defer init.gpa.free(unicode);
+
+    const dirichlet = try alea.distributions.Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
+    const proportions = try dirichlet.sample(init.gpa, rng);
+    defer init.gpa.free(proportions);
 
     var deck = [_]u8{ 1, 2, 3, 4, 5, 6, 7, 8 };
     const hand = alea.seq.partialShuffle(rng, u8, &deck, 3);
+
+    const Iter = struct {
+        next_value: u8 = 0,
+        pub fn next(self: *@This()) ?u8 {
+            if (self.next_value == 10) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+    var iter = Iter{};
+    const stream_choice = alea.seq.chooseIterator(rng, u8, &iter).?;
 
     seed = seed.mix("child-stream");
     var child_engine = alea.FastPrng.init(seed.stream(42).state);
@@ -30,9 +49,13 @@ pub fn main(init: std.process.Init) !void {
 
     try stdout.print("dice: {any}\n", .{dice});
     try stdout.print("normal(mean=10,stddev=2.5): {d:.4}\n", .{normal});
+    try stdout.print("binomial(n=40,p=.25): {}\n", .{outage_count});
     try stdout.print("weighted index: {}\n", .{weighted});
     try stdout.print("token: {s}\n", .{token});
+    try stdout.print("unicode scalars: {s}\n", .{unicode});
+    try stdout.print("dirichlet: {any}\n", .{proportions});
     try stdout.print("partial shuffle hand: {any}\n", .{hand});
+    try stdout.print("iterator choice: {}\n", .{stream_choice});
     try stdout.print("child stream u64: {}\n", .{child_rng.next()});
     try stdout.flush();
 }
