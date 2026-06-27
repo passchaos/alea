@@ -2,6 +2,11 @@ const std = @import("std");
 
 const Rng = @This();
 
+pub const Error = error{
+    EmptyRange,
+    InvalidProbability,
+};
+
 ptr: *anyopaque,
 nextFn: *const fn (ptr: *anyopaque) u64,
 fillFn: *const fn (ptr: *anyopaque, buf: []u8) void,
@@ -146,11 +151,21 @@ pub fn chance(self: Rng, p: f64) bool {
     return self.next() < probabilityThreshold(p);
 }
 
+pub fn chanceChecked(self: Rng, p: f64) Error!bool {
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+    return self.chance(p);
+}
+
 pub fn ratio(self: Rng, numerator: u32, denominator: u32) bool {
     std.debug.assert(denominator > 0 and numerator <= denominator);
     if (numerator == 0) return false;
     if (numerator == denominator) return true;
     return self.uintLessThan(u32, denominator) < numerator;
+}
+
+pub fn ratioChecked(self: Rng, numerator: u32, denominator: u32) Error!bool {
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
+    return self.ratio(numerator, denominator);
 }
 
 pub fn uint(self: Rng, comptime T: type) T {
@@ -159,6 +174,11 @@ pub fn uint(self: Rng, comptime T: type) T {
 
 pub fn uintLessThan(self: Rng, comptime T: type, less_than: T) T {
     return uintLessThanFrom(self, T, less_than);
+}
+
+pub fn uintLessThanChecked(self: Rng, comptime T: type, less_than: T) Error!T {
+    if (less_than == 0) return error.EmptyRange;
+    return self.uintLessThan(T, less_than);
 }
 
 pub fn uintAtMost(self: Rng, comptime T: type, at_most: T) T {
@@ -212,8 +232,18 @@ pub fn intRangeLessThan(self: Rng, comptime T: type, at_least: T, less_than: T) 
     return intRangeLessThanFrom(self, T, at_least, less_than);
 }
 
+pub fn intRangeLessThanChecked(self: Rng, comptime T: type, at_least: T, less_than: T) Error!T {
+    if (at_least >= less_than) return error.EmptyRange;
+    return self.intRangeLessThan(T, at_least, less_than);
+}
+
 pub fn intRangeAtMost(self: Rng, comptime T: type, at_least: T, at_most: T) T {
     return intRangeAtMostFrom(self, T, at_least, at_most);
+}
+
+pub fn intRangeAtMostChecked(self: Rng, comptime T: type, at_least: T, at_most: T) Error!T {
+    if (at_least > at_most) return error.EmptyRange;
+    return self.intRangeAtMost(T, at_least, at_most);
 }
 
 pub fn intRangeLessThanFrom(source: anytype, comptime T: type, at_least: T, less_than: T) T {
@@ -286,6 +316,11 @@ pub fn floatOpenClosed(self: Rng, comptime T: type) T {
 pub fn floatRange(self: Rng, comptime T: type, min: T, max: T) T {
     std.debug.assert(min <= max);
     return min + (max - min) * self.float(T);
+}
+
+pub fn floatRangeChecked(self: Rng, comptime T: type, min: T, max: T) Error!T {
+    if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+    return self.floatRange(T, min, max);
 }
 
 pub fn unicodeScalar(self: Rng) u21 {
@@ -481,6 +516,13 @@ test "rng facade covers scalar APIs" {
     try std.testing.expect(rng.chance(1));
     try std.testing.expect(!rng.ratio(0, 7));
     try std.testing.expect(rng.chance(1.0 - std.math.floatEps(f64) / 2.0));
+    try std.testing.expect(try rng.chanceChecked(0.5) or true);
+    try std.testing.expectError(error.InvalidProbability, rng.chanceChecked(1.1));
+    try std.testing.expectError(error.InvalidProbability, rng.ratioChecked(2, 1));
+    try std.testing.expectError(error.EmptyRange, rng.uintLessThanChecked(u32, 0));
+    try std.testing.expectError(error.EmptyRange, rng.intRangeLessThanChecked(u32, 3, 3));
+    try std.testing.expectError(error.EmptyRange, rng.intRangeAtMostChecked(u32, 4, 3));
+    try std.testing.expectError(error.EmptyRange, rng.floatRangeChecked(f64, std.math.inf(f64), 1));
 
     const tuple = rng.value(struct { u8, bool, f32 });
     try std.testing.expect(tuple[2] < 1.0);
