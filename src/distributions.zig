@@ -122,14 +122,100 @@ fn binomialSmallP(rng: Rng, trials: u64, p: f64) u64 {
         return successes;
     }
 
+    const mean = @as(f64, @floatFromInt(trials)) * p;
+    if (mean >= 8) return binomialRejectionSmallP(rng, trials, p);
+
+    return binomialWaiting(rng, trials, -@log(1.0 - p));
+}
+
+fn binomialWaiting(rng: Rng, trials: u64, q: f64) u64 {
     var successes: u64 = 0;
-    var remaining = trials;
-    const log_failure = @log(1.0 - p);
+    var sum: f64 = 0;
     while (true) {
-        const step: u64 = @intFromFloat(@floor(@log(rng.floatOpen(f64)) / log_failure) + 1);
-        if (step > remaining) return successes;
+        if (successes == trials) return successes;
+        const e = -@log(1.0 - rng.float(f64));
+        sum += e / @as(f64, @floatFromInt(trials - successes));
         successes += 1;
-        remaining -= step;
+        if (sum > q) return successes - 1;
+    }
+}
+
+fn binomialRejectionSmallP(rng: Rng, trials: u64, p: f64) u64 {
+    const t: f64 = @floatFromInt(trials);
+    const np = @floor(t * p);
+    const pa = np / t;
+    const one_minus_pa = 1.0 - pa;
+    const pi_4 = 0.7853981633974483096156608458198757;
+
+    const d1x = @sqrt(np * one_minus_pa * @log(32.0 * np / (81.0 * pi_4 * one_minus_pa)));
+    const d1 = @round(@max(1.0, d1x));
+    const d2x = @sqrt(np * one_minus_pa * @log(32.0 * t * one_minus_pa / (pi_4 * pa)));
+    const d2 = @round(@max(1.0, d2x));
+
+    const sqrt_pi_over_2 = 1.2533141373155002512078826424055226;
+    const s1 = @sqrt(np * one_minus_pa) * (1.0 + d1 / (4.0 * np));
+    const s2 = @sqrt(np * one_minus_pa) * (1.0 + d2 / (4.0 * t * one_minus_pa));
+    const c = 2.0 * d1 / np;
+    const a1 = @exp(c) * s1 * sqrt_pi_over_2;
+    const a12 = a1 + s2 * sqrt_pi_over_2;
+    const s1s = s1 * s1;
+    const a123 = a12 + (@exp(d1 / (t * one_minus_pa)) *
+        2.0 * s1s / d1 *
+        @exp(-d1 * d1 / (2.0 * s1s)));
+    const s2s = s2 * s2;
+    const s = a123 + 2.0 * s2s / d2 * @exp(-d2 * d2 / (2.0 * s2s));
+    const lf = std.math.lgamma(f64, np + 1.0) + std.math.lgamma(f64, t - np + 1.0);
+    const lp1p = @log(pa / one_minus_pa);
+    const q = -@log(1.0 - (p - pa) / one_minus_pa);
+
+    while (true) {
+        var x: f64 = undefined;
+        var v: f64 = undefined;
+        var reject = false;
+
+        const u = s * rng.float(f64);
+        if (u <= a1) {
+            const n = normal(rng, f64, 0, 1);
+            const y = s1 * @abs(n);
+            reject = y >= d1;
+            if (!reject) {
+                const e = -@log(1.0 - rng.float(f64));
+                x = @floor(y);
+                v = -e - n * n / 2.0 + c;
+            }
+        } else if (u <= a12) {
+            const n = normal(rng, f64, 0, 1);
+            const y = s2 * @abs(n);
+            reject = y >= d2;
+            if (!reject) {
+                const e = -@log(1.0 - rng.float(f64));
+                x = @floor(-y);
+                v = -e - n * n / 2.0;
+            }
+        } else if (u <= a123) {
+            const e1 = -@log(1.0 - rng.float(f64));
+            const e2 = -@log(1.0 - rng.float(f64));
+            const y = d1 + 2.0 * s1s * e1 / d1;
+            x = @floor(y);
+            v = -e2 + d1 * (1.0 / (t - np) - y / (2.0 * s1s));
+        } else {
+            const e1 = -@log(1.0 - rng.float(f64));
+            const e2 = -@log(1.0 - rng.float(f64));
+            const y = d2 + 2.0 * s2s * e1 / d2;
+            x = @floor(-y);
+            v = -e2 - d2 * y / (2.0 * s2s);
+        }
+
+        reject = reject or x < -np or x > t - np;
+        if (!reject) {
+            const kf = np + x;
+            const lfx = std.math.lgamma(f64, kf + 1.0) + std.math.lgamma(f64, t - kf + 1.0);
+            reject = v > lf - lfx + x * lp1p;
+        }
+        if (reject) continue;
+
+        const x_int: u64 = @intFromFloat(np + x + (1.0 - std.math.floatEps(f64)) / 2.0);
+        return x_int + binomialWaiting(rng, trials - x_int, q);
     }
 }
 
@@ -912,6 +998,29 @@ test "binomial sampler has plausible moments" {
     try std.testing.expect(iter.next().? <= 8);
     try std.testing.expect(binomialPoissonApprox(rng, 10_000, 0.01) < 200);
     try std.testing.expectError(error.InvalidProbability, Binomial.init(1, 1.1));
+}
+
+test "large binomial sampler has plausible moments" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(69);
+    const rng = Rng.init(&engine);
+
+    const trials: u64 = 10_000;
+    const p = 0.01;
+    const samples = 12_000;
+    var sum: f64 = 0;
+    var sum_sq: f64 = 0;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) {
+        const value: f64 = @floatFromInt(binomial(rng, trials, p));
+        sum += value;
+        sum_sq += value * value;
+    }
+
+    const mean = sum / @as(f64, @floatFromInt(samples));
+    const variance = sum_sq / @as(f64, @floatFromInt(samples)) - mean * mean;
+    try std.testing.expect(mean > 99.5 and mean < 100.5);
+    try std.testing.expect(variance > 94.0 and variance < 104.0);
 }
 
 test "dirichlet sampler returns simplex vectors" {
