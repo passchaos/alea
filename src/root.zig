@@ -12,6 +12,7 @@ pub const Seed = @import("seed.zig");
 pub const distributions = @import("distributions.zig");
 pub const seq = @import("seq.zig");
 pub const ascii = @import("ascii.zig");
+pub const quality = @import("quality.zig");
 
 pub const SplitMix64 = @import("engines/splitmix64.zig");
 pub const Wyhash64 = @import("engines/wyhash64.zig");
