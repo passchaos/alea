@@ -15,7 +15,7 @@ The first milestone is intentionally broad:
 - collection helpers for `choose`, `shuffle`, partial shuffle, weighted indexes,
   repeated choice iterators, weighted choice samplers, weighted sampling without
   replacement, reservoir sampling, and adaptive index sampling
-- reusable `Uniform(T)`, `Bernoulli`, and alias-table samplers
+- reusable uniform, Bernoulli, non-uniform distribution, and alias-table samplers
 - ASCII `Alphanumeric`, `Alphabetic`, and custom `Charset` string generation
 - distributions: uniform, bernoulli, normal, exponential, poisson, gamma, beta,
   triangular

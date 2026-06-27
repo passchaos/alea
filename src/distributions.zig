@@ -5,6 +5,7 @@ pub const Error = error{
     EmptyRange,
     InvalidProbability,
     InvalidWeight,
+    InvalidParameter,
 };
 
 pub fn uniform(rng: Rng, comptime T: type, min: T, max: T) T {
@@ -116,6 +117,44 @@ pub fn exponential(rng: Rng, comptime T: type, rate: T) T {
     return -@log(rng.floatOpen(T)) / rate;
 }
 
+pub fn Normal(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        mean: T,
+        stddev: T,
+
+        pub fn init(mean: T, stddev: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+            if (!std.math.isFinite(mean)) return error.InvalidParameter;
+            return .{ .mean = mean, .stddev = stddev };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return normal(rng, T, self.mean, self.stddev);
+        }
+    };
+}
+
+pub fn Exponential(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        rate: T,
+
+        pub fn init(rate: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+            return .{ .rate = rate };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return exponential(rng, T, self.rate);
+        }
+    };
+}
+
 pub fn poisson(rng: Rng, lambda: f64) u64 {
     std.debug.assert(lambda >= 0 and std.math.isFinite(lambda));
     if (lambda == 0) return 0;
@@ -133,6 +172,19 @@ pub fn poisson(rng: Rng, lambda: f64) u64 {
 
     return poissonPtrs(rng, lambda);
 }
+
+pub const Poisson = struct {
+    lambda: f64,
+
+    pub fn init(lambda: f64) Error!Poisson {
+        if (!(lambda >= 0) or !std.math.isFinite(lambda)) return error.InvalidParameter;
+        return .{ .lambda = lambda };
+    }
+
+    pub fn sample(self: Poisson, rng: Rng) u64 {
+        return poisson(rng, self.lambda);
+    }
+};
 
 fn poissonPtrs(rng: Rng, lambda: f64) u64 {
     const sqrt_lambda = @sqrt(lambda);
@@ -169,6 +221,19 @@ pub fn geometric(rng: Rng, p: f64) u64 {
     return failures + 1;
 }
 
+pub const Geometric = struct {
+    p: f64,
+
+    pub fn init(p: f64) Error!Geometric {
+        if (!(p > 0 and p <= 1)) return error.InvalidProbability;
+        return .{ .p = p };
+    }
+
+    pub fn sample(self: Geometric, rng: Rng) u64 {
+        return geometric(rng, self.p);
+    }
+};
+
 pub fn gamma(rng: Rng, comptime T: type, shape: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(shape > 0 and scale > 0);
@@ -193,11 +258,51 @@ pub fn gamma(rng: Rng, comptime T: type, shape: T, scale: T) T {
     }
 }
 
+pub fn Gamma(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        shape: T,
+        scale: T,
+
+        pub fn init(shape: T, scale: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(shape > 0) or !(scale > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(shape) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            return .{ .shape = shape, .scale = scale };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return gamma(rng, T, self.shape, self.scale);
+        }
+    };
+}
+
 pub fn beta(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
     const x = gamma(rng, T, alpha, 1);
     const y = gamma(rng, T, beta_param, 1);
     return x / (x + y);
+}
+
+pub fn Beta(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        alpha: T,
+        beta_param: T,
+
+        pub fn init(alpha: T, beta_param: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(alpha > 0) or !(beta_param > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return error.InvalidParameter;
+            return .{ .alpha = alpha, .beta_param = beta_param };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return beta(rng, T, self.alpha, self.beta_param);
+        }
+    };
 }
 
 pub fn triangular(rng: Rng, comptime T: type, min: T, mode: T, max: T) T {
@@ -210,6 +315,27 @@ pub fn triangular(rng: Rng, comptime T: type, min: T, mode: T, max: T) T {
         return min + @sqrt(u * (max - min) * (mode - min));
     }
     return max - @sqrt((1 - u) * (max - min) * (max - mode));
+}
+
+pub fn Triangular(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        min: T,
+        mode: T,
+        max: T,
+
+        pub fn init(min: T, mode: T, max: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(min <= mode and mode <= max and min < max)) return error.InvalidParameter;
+            if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) return error.InvalidParameter;
+            return .{ .min = min, .mode = mode, .max = max };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return triangular(rng, T, self.min, self.mode, self.max);
+        }
+    };
 }
 
 pub fn aliasTable(comptime T: type) type {
@@ -379,4 +505,41 @@ test "poisson large lambda has plausible moments" {
     const variance = sum_sq / @as(f64, @floatFromInt(samples)) - mean * mean;
     try std.testing.expect(mean > 59.0 and mean < 61.0);
     try std.testing.expect(variance > 56.0 and variance < 64.0);
+}
+
+test "non-uniform samplers can be reused with sample iterators" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(66);
+    const rng = Rng.init(&engine);
+
+    var normals = rng.sampleIter(f64, try Normal(f64).init(10, 2));
+    try std.testing.expect(normals.next().? > 0);
+
+    var exponentials = rng.sampleIter(f64, try Exponential(f64).init(2));
+    try std.testing.expect(exponentials.next().? >= 0);
+
+    var poissons = rng.sampleIter(u64, try Poisson.init(12));
+    try std.testing.expect(poissons.next().? < 64);
+
+    var geometrics = rng.sampleIter(u64, try Geometric.init(0.25));
+    try std.testing.expect(geometrics.next().? >= 1);
+
+    var gammas = rng.sampleIter(f64, try Gamma(f64).init(2, 3));
+    try std.testing.expect(gammas.next().? > 0);
+
+    var betas = rng.sampleIter(f64, try Beta(f64).init(2, 5));
+    const beta_value = betas.next().?;
+    try std.testing.expect(beta_value >= 0 and beta_value <= 1);
+
+    var triangulars = rng.sampleIter(f64, try Triangular(f64).init(-1, 0, 2));
+    const triangular_value = triangulars.next().?;
+    try std.testing.expect(triangular_value >= -1 and triangular_value <= 2);
+
+    try std.testing.expectError(error.InvalidParameter, Normal(f64).init(0, -1));
+    try std.testing.expectError(error.InvalidParameter, Exponential(f64).init(0));
+    try std.testing.expectError(error.InvalidParameter, Poisson.init(std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidProbability, Geometric.init(0));
+    try std.testing.expectError(error.InvalidParameter, Gamma(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, Beta(f64).init(1, 0));
+    try std.testing.expectError(error.InvalidParameter, Triangular(f64).init(1, 0, 2));
 }
