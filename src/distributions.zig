@@ -124,8 +124,9 @@ fn binomialSmallP(rng: Rng, trials: u64, p: f64) u64 {
 
     var successes: u64 = 0;
     var remaining = trials;
+    const log_failure = @log(1.0 - p);
     while (true) {
-        const step = geometric(rng, p);
+        const step: u64 = @intFromFloat(@floor(@log(rng.floatOpen(f64)) / log_failure) + 1);
         if (step > remaining) return successes;
         successes += 1;
         remaining -= step;
