@@ -57,7 +57,7 @@ cargo run --release --manifest-path compare/rand_bench/Cargo.toml
 ```
 
 The Rust command benchmarks against the local `rand` checkout in
-`/Users/bytedance/space/rand`. Latest comparison data is kept under
+`~/Work/rand`. Latest comparison data is kept under
 `compare/results/`.
 
 ## Design Notes
@@ -69,5 +69,5 @@ pushing most non-uniform sampling to a separate crate. Every engine still
 exposes `random()` for standard-library consumers, and `Rng.random()` returns a
 `std.Random` interface.
 
-`DefaultPrng` is `Xoshiro256`, `FastPrng` is `Wyhash64`, `ReproduciblePrng` is
-`Pcg64`, and `SecurePrng` is `ChaCha12`.
+`DefaultPrng` is `Xoshiro256`, `FastPrng` is `Alea4x64`, `HashPrng` is
+`Wyhash64`, `ReproduciblePrng` is `Pcg64`, and `SecurePrng` is `ChaCha12`.

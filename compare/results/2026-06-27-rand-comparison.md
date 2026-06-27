@@ -3,7 +3,7 @@
 Timestamp: 2026-06-27 21:45:41 CST
 
 This report compares `alea` against the local Rust `rand` checkout at
-`/Users/bytedance/space/rand` using same-machine benchmarks.
+`~/Work/rand` using same-machine benchmarks.
 
 ## Commands
 
@@ -81,4 +81,3 @@ Compared with Rust `rand`'s default crate surface, `alea` now includes:
 - ASCII string/charset generation.
 - Adaptive index sampling with compact `IndexVec` backing.
 - System secure seeding via Zig 0.16 `std.Io.randomSecure`.
-
