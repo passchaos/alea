@@ -192,6 +192,27 @@ pub fn Exponential(comptime T: type) type {
     };
 }
 
+pub fn logNormal(rng: Rng, comptime T: type, mean: T, stddev: T) T {
+    comptime requireFloat(T);
+    return @exp(normal(rng, T, mean, stddev));
+}
+
+pub fn LogNormal(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        normal_sampler: Normal(T),
+
+        pub fn init(mean: T, stddev: T) Error!Self {
+            return .{ .normal_sampler = try Normal(T).init(mean, stddev) };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return @exp(self.normal_sampler.sample(rng));
+        }
+    };
+}
+
 pub fn poisson(rng: Rng, lambda: f64) u64 {
     std.debug.assert(lambda >= 0 and std.math.isFinite(lambda));
     if (lambda == 0) return 0;
@@ -315,6 +336,30 @@ pub fn Gamma(comptime T: type) type {
     };
 }
 
+pub fn chiSquared(rng: Rng, comptime T: type, dof: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(dof > 0);
+    return gamma(rng, T, dof / 2, 2);
+}
+
+pub fn ChiSquared(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        dof: T,
+
+        pub fn init(dof: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(dof > 0) or !std.math.isFinite(dof)) return error.InvalidParameter;
+            return .{ .dof = dof };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return chiSquared(rng, T, self.dof);
+        }
+    };
+}
+
 pub fn beta(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
     const x = gamma(rng, T, alpha, 1);
@@ -338,6 +383,58 @@ pub fn Beta(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             return beta(rng, T, self.alpha, self.beta_param);
+        }
+    };
+}
+
+pub fn fisherF(rng: Rng, comptime T: type, d1: T, d2: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(d1 > 0 and d2 > 0);
+    const x = chiSquared(rng, T, d1) / d1;
+    const y = chiSquared(rng, T, d2) / d2;
+    return x / y;
+}
+
+pub fn FisherF(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        d1: T,
+        d2: T,
+
+        pub fn init(d1: T, d2: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(d1 > 0) or !(d2 > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(d1) or !std.math.isFinite(d2)) return error.InvalidParameter;
+            return .{ .d1 = d1, .d2 = d2 };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return fisherF(rng, T, self.d1, self.d2);
+        }
+    };
+}
+
+pub fn studentT(rng: Rng, comptime T: type, dof: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(dof > 0);
+    return normal(rng, T, 0, 1) * @sqrt(dof / chiSquared(rng, T, dof));
+}
+
+pub fn StudentT(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        dof: T,
+
+        pub fn init(dof: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(dof > 0) or !std.math.isFinite(dof)) return error.InvalidParameter;
+            return .{ .dof = dof };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return studentT(rng, T, self.dof);
         }
     };
 }
@@ -556,6 +653,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     var exponentials = rng.sampleIter(f64, try Exponential(f64).init(2));
     try std.testing.expect(exponentials.next().? >= 0);
 
+    var log_normals = rng.sampleIter(f64, try LogNormal(f64).init(0, 0.25));
+    try std.testing.expect(log_normals.next().? > 0);
+
     var poissons = rng.sampleIter(u64, try Poisson.init(12));
     try std.testing.expect(poissons.next().? < 64);
 
@@ -565,9 +665,18 @@ test "non-uniform samplers can be reused with sample iterators" {
     var gammas = rng.sampleIter(f64, try Gamma(f64).init(2, 3));
     try std.testing.expect(gammas.next().? > 0);
 
+    var chi_squared = rng.sampleIter(f64, try ChiSquared(f64).init(4));
+    try std.testing.expect(chi_squared.next().? > 0);
+
     var betas = rng.sampleIter(f64, try Beta(f64).init(2, 5));
     const beta_value = betas.next().?;
     try std.testing.expect(beta_value >= 0 and beta_value <= 1);
+
+    var fisher = rng.sampleIter(f64, try FisherF(f64).init(5, 20));
+    try std.testing.expect(fisher.next().? > 0);
+
+    var student = rng.sampleIter(f64, try StudentT(f64).init(10));
+    _ = student.next().?;
 
     var triangulars = rng.sampleIter(f64, try Triangular(f64).init(-1, 0, 2));
     const triangular_value = triangulars.next().?;
@@ -575,10 +684,14 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     try std.testing.expectError(error.InvalidParameter, Normal(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Exponential(f64).init(0));
+    try std.testing.expectError(error.InvalidParameter, LogNormal(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Poisson.init(std.math.inf(f64)));
     try std.testing.expectError(error.InvalidProbability, Geometric.init(0));
     try std.testing.expectError(error.InvalidParameter, Gamma(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, ChiSquared(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Beta(f64).init(1, 0));
+    try std.testing.expectError(error.InvalidParameter, FisherF(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, StudentT(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Triangular(f64).init(1, 0, 2));
 }
 
