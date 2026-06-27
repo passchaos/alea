@@ -1,5 +1,6 @@
 const std = @import("std");
 const Rng = @import("rng.zig");
+const distributions = @import("distributions.zig");
 
 pub const IndexVec = union(enum) {
     u32: []u32,
@@ -156,6 +157,46 @@ pub fn Choice(comptime T: type) type {
 pub fn chooseIter(rng: Rng, comptime T: type, items: []const T) ?Rng.SampleIterator(Choice(T), *const T) {
     const choice = Choice(T).init(items) orelse return null;
     return choice.iter(rng);
+}
+
+pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
+    return struct {
+        const Self = @This();
+        const Table = distributions.AliasTable(Weight);
+
+        items: []const T,
+        table: Table,
+
+        pub fn init(allocator: std.mem.Allocator, items: []const T, weights: []const Weight) !Self {
+            if (items.len == 0) return error.EmptyInput;
+            if (items.len != weights.len) return error.LengthMismatch;
+            return .{
+                .items = items,
+                .table = try Table.init(allocator, weights),
+            };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.table.deinit();
+            self.* = undefined;
+        }
+
+        pub fn len(self: Self) usize {
+            return self.items.len;
+        }
+
+        pub fn sample(self: Self, rng: Rng) *const T {
+            return &self.items[self.table.sample(rng)];
+        }
+
+        pub fn sampleValue(self: Self, rng: Rng) T {
+            return self.sample(rng).*;
+        }
+
+        pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
+            return rng.sampleIter(*const T, self);
+        }
+    };
 }
 
 pub fn partialShuffle(rng: Rng, comptime T: type, items: []T, amount: usize) []T {
@@ -406,4 +447,32 @@ test "choice sampler repeatedly samples slice references" {
     const picked = convenience_iter.next().?.*;
     try std.testing.expect(picked == 2 or picked == 4 or picked == 6 or picked == 8);
     try std.testing.expect(chooseIter(rng, u8, &.{}) == null);
+}
+
+test "weighted choice sampler maps alias indexes to items" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(446);
+    const rng = alea.Rng.init(&engine);
+
+    const labels = [_][]const u8{ "never", "rare", "often" };
+    var choice = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &labels, &.{ 0, 1, 7 });
+    defer choice.deinit();
+
+    try std.testing.expectEqual(@as(usize, 3), choice.len());
+
+    var i: usize = 0;
+    var saw_often = false;
+    while (i < 64) : (i += 1) {
+        const item = choice.sample(rng);
+        try std.testing.expect(!std.mem.eql(u8, item.*, "never"));
+        saw_often = saw_often or std.mem.eql(u8, item.*, "often");
+    }
+    try std.testing.expect(saw_often);
+
+    var iter = choice.iter(rng);
+    const picked = iter.next().?.*;
+    try std.testing.expect(std.mem.eql(u8, picked, "rare") or std.mem.eql(u8, picked, "often"));
+
+    try std.testing.expectError(error.EmptyInput, WeightedChoice(u8, u32).init(std.testing.allocator, &.{}, &.{}));
+    try std.testing.expectError(error.LengthMismatch, WeightedChoice(u8, u32).init(std.testing.allocator, &.{1}, &.{ 1, 2 }));
 }
