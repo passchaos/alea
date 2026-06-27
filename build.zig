@@ -79,4 +79,21 @@ pub fn build(b: *std.Build) void {
 
     const statcheck_step = b.step("statcheck", "Run extended statistical smoke checks");
     statcheck_step.dependOn(&run_statcheck.step);
+
+    const stream_mod = b.createModule(.{
+        .root_source_file = b.path("tools/stream.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    stream_mod.addImport("alea", module);
+
+    const stream = b.addExecutable(.{
+        .name = "alea-stream",
+        .root_module = stream_mod,
+    });
+    const run_stream = b.addRunArtifact(stream);
+    if (b.args) |args| run_stream.addArgs(args);
+
+    const stream_step = b.step("stream", "Write raw RNG bytes to stdout for external statistical tools");
+    stream_step.dependOn(&run_stream.step);
 }

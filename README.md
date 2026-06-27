@@ -57,6 +57,7 @@ pub fn main() !void {
 zig build test
 zig build run-basic
 zig build -Doptimize=ReleaseFast statcheck
+zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/alea.bin
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
 RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/rand_bench/Cargo.toml
 ```

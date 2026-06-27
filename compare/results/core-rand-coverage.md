@@ -29,7 +29,7 @@ Rust `rand` in core random-number functionality using Zig-native designs.
 
 | Area | Gap | Priority |
 | --- | --- | --- |
-| Full statistical validation | `zig build statcheck` adds a longer in-repo statistical smoke harness, but there is still no PractRand/TestU01 integration. | High |
+| Full statistical validation | `zig build statcheck` adds a longer in-repo statistical smoke harness, and `zig build stream` exports raw bytes for PractRand/TestU01-style external testing. A checked-in long-run external report is still pending. | Medium |
 | Distribution benchmarks | `zig build bench` includes initial normal, exponential, poisson, and binomial rows; broader distribution coverage is still pending. | Medium |
 | Distribution algorithms | Some samplers are correctness-first and not yet optimized, especially binomial and normal/exponential ziggurat-style paths. | Medium |
 | Error-returning scalar APIs | Several single-shot helpers use debug assertions for invalid parameters. Reusable sampler constructors return errors more consistently. | Medium |
@@ -40,6 +40,7 @@ Rust `rand` in core random-number functionality using Zig-native designs.
 
 Continue feature-first work until the high-priority core functionality gaps are
 closed. Use `zig build statcheck` after changes that affect engines,
-distributions, ranges, or sampling internals. Defer performance tuning except
-where a feature is unusable without it or where benchmark evidence is needed to
-compare against Rust `rand`.
+distributions, ranges, or sampling internals. Use `zig build stream -- ...` to
+feed raw engine output into external statistical tools when validating engine
+changes. Defer performance tuning except where a feature is unusable without it
+or where benchmark evidence is needed to compare against Rust `rand`.
