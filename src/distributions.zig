@@ -102,6 +102,14 @@ fn binomialFair(rng: Rng, trials: u64) u64 {
 
 fn binomialSmallP(rng: Rng, trials: u64, p: f64) u64 {
     if (p == 0) return 0;
+    if (trials <= 64) {
+        var successes: u64 = 0;
+        var i: u64 = 0;
+        while (i < trials) : (i += 1) {
+            successes += @intFromBool(rng.chance(p));
+        }
+        return successes;
+    }
 
     var successes: u64 = 0;
     var remaining = trials;
