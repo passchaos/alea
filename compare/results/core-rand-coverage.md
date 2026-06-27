@@ -30,7 +30,7 @@ Rust `rand` in core random-number functionality using Zig-native designs.
 | Area | Gap | Priority |
 | --- | --- | --- |
 | Full statistical validation | `zig build statcheck` adds a longer in-repo statistical smoke harness, and `zig build stream` exports raw bytes for PractRand/TestU01-style external testing. A checked-in long-run external report is still pending. | Medium |
-| Distribution benchmarks | `zig build bench` includes initial normal, exponential, poisson, and binomial rows; broader distribution coverage is still pending. | Medium |
+| Distribution benchmarks | `zig build bench` includes normal, exponential, poisson, binomial, gamma, beta, and dirichlet rows; broader tail/derived distribution coverage is still pending. | Low |
 | Distribution algorithms | Some samplers are correctness-first and not yet optimized, especially binomial and normal/exponential ziggurat-style paths. | Medium |
 | Error-returning scalar APIs | Checked variants exist for probabilities and scalar ranges; some older assertion-based helpers remain as fast-path APIs. | Low |
 | Iterator ergonomics | `chooseIterator`, `sampleIterator`, `chooseIteratorWeighted`, and `sampleIteratorWeighted` use Zig iterator shape directly. | Closed |
