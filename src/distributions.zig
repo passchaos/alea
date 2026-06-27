@@ -160,6 +160,7 @@ pub fn Normal(comptime T: type) type {
 
         mean: T,
         stddev: T,
+        cached: ?T = null,
 
         pub fn init(mean: T, stddev: T) Error!Self {
             comptime requireFloat(T);
@@ -168,8 +169,19 @@ pub fn Normal(comptime T: type) type {
             return .{ .mean = mean, .stddev = stddev };
         }
 
-        pub fn sample(self: Self, rng: Rng) T {
-            return normal(rng, T, self.mean, self.stddev);
+        pub fn sample(self: *Self, rng: Rng) T {
+            if (self.cached) |z| {
+                self.cached = null;
+                return self.mean + self.stddev * z;
+            }
+
+            const open_uniform = rng.floatOpen(T);
+            const angle_uniform = rng.float(T);
+            const radius = @sqrt(-2 * @log(open_uniform));
+            const theta = @as(T, @floatCast(std.math.tau)) * angle_uniform;
+            const z0 = radius * @cos(theta);
+            self.cached = radius * @sin(theta);
+            return self.mean + self.stddev * z0;
         }
     };
 }
@@ -207,7 +219,7 @@ pub fn LogNormal(comptime T: type) type {
             return .{ .normal_sampler = try Normal(T).init(mean, stddev) };
         }
 
-        pub fn sample(self: Self, rng: Rng) T {
+        pub fn sample(self: *Self, rng: Rng) T {
             return @exp(self.normal_sampler.sample(rng));
         }
     };
