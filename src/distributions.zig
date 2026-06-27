@@ -80,10 +80,24 @@ pub fn binomial(rng: Rng, trials: u64, p: f64) u64 {
     std.debug.assert(p >= 0 and p <= 1);
     if (trials == 0 or p == 0) return 0;
     if (p == 1) return trials;
+    if (p == 0.5) return binomialFair(rng, trials);
 
     const q = if (p <= 0.5) p else 1.0 - p;
     const sampled = binomialSmallP(rng, trials, q);
     return if (p <= 0.5) sampled else trials - sampled;
+}
+
+fn binomialFair(rng: Rng, trials: u64) u64 {
+    var remaining = trials;
+    var successes: u64 = 0;
+    while (remaining >= 64) : (remaining -= 64) {
+        successes += @popCount(rng.next());
+    }
+    if (remaining > 0) {
+        const mask = (@as(u64, 1) << @intCast(remaining)) - 1;
+        successes += @popCount(rng.next() & mask);
+    }
+    return successes;
 }
 
 fn binomialSmallP(rng: Rng, trials: u64, p: f64) u64 {
