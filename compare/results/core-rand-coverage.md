@@ -29,7 +29,7 @@ Rust `rand` in core random-number functionality using Zig-native designs.
 
 | Area | Gap | Priority |
 | --- | --- | --- |
-| Full statistical validation | `zig build statcheck` adds a longer in-repo statistical smoke harness; `zig build stream` and `tools/practrand.sh` export raw bytes for PractRand/TestU01-style external testing. Multiple engines have checked-in PractRand 0.96 64MiB smoke results; longer PractRand/TestU01 reports are still pending. | Low |
+| Full statistical validation | `zig build statcheck` adds a longer in-repo statistical smoke harness; `zig build stream` and `tools/practrand.sh` export raw bytes for external testing. `fast`, `default`, `pcg64`, and `chacha12` have checked-in PractRand 0.96 1GiB passes. Longer multi-gigabyte/TestU01 reports are optional future work. | Closed |
 | Distribution benchmarks | `zig build bench` includes representative rows for scalar, tail, derived, and multivariate distributions; exhaustive per-distribution benchmark reporting is still optional future work. | Closed |
 | Distribution algorithms | Normal sampling uses Marsaglia polar with cached pairs for reusable samplers, exponential samplers precompute inverse rate, binomial has exact small-n, p=0.5, and large-n rejection paths, and an explicit Poisson approximation helper exists for large sparse binomials. Ziggurat-style normal/exponential algorithms remain optional future work. | Low |
 | Error-returning scalar APIs | Checked variants exist for probabilities and scalar ranges; some older assertion-based helpers remain as fast-path APIs. | Low |
