@@ -33,20 +33,21 @@ pub fn bernoulli(rng: Rng, p: f64) bool {
 
 pub const Bernoulli = struct {
     const always_true = std.math.maxInt(u64);
-    const scale = 2.0 * @as(f64, @floatFromInt(@as(u64, 1) << 63));
+    const scale = 0x1.0p64;
 
     p_int: u64,
 
     pub fn init(p: f64) Error!Bernoulli {
         if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
         if (p == 1) return .{ .p_int = always_true };
-        return .{ .p_int = @intFromFloat(p * scale) };
+        return .{ .p_int = Rng.probabilityThreshold(p) };
     }
 
     pub fn initRatio(numerator: u32, denominator: u32) Error!Bernoulli {
         if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
         if (numerator == denominator) return .{ .p_int = always_true };
-        return .{ .p_int = @intFromFloat((@as(f64, @floatFromInt(numerator)) / @as(f64, @floatFromInt(denominator))) * scale) };
+        const p = @as(f64, @floatFromInt(numerator)) / @as(f64, @floatFromInt(denominator));
+        return .{ .p_int = Rng.probabilityThreshold(p) };
     }
 
     pub fn probability(self: Bernoulli) f64 {
@@ -305,6 +306,7 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect(uniform(rng, f64, -1, 1) < 1);
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sample(rng));
     try std.testing.expect(!(try Bernoulli.init(0)).sample(rng));
+    try std.testing.expect((try Bernoulli.init(1.0 - std.math.floatEps(f64) / 2.0)).sample(rng));
     try std.testing.expect(exponential(rng, f64, 2) >= 0);
     try std.testing.expect(poisson(rng, 4) < 32);
     try std.testing.expect(beta(rng, f64, 2, 5) >= 0);

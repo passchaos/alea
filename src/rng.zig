@@ -143,9 +143,7 @@ pub fn chance(self: Rng, p: f64) bool {
     std.debug.assert(p >= 0 and p <= 1);
     if (p == 0) return false;
     if (p == 1) return true;
-    const scale = 2.0 * @as(f64, @floatFromInt(@as(u64, 1) << 63));
-    const threshold: u64 = @intFromFloat(p * scale);
-    return self.next() < threshold;
+    return self.next() < probabilityThreshold(p);
 }
 
 pub fn ratio(self: Rng, numerator: u32, denominator: u32) bool {
@@ -426,6 +424,16 @@ fn requireFloat(comptime T: type) void {
     if (@typeInfo(T) != .float) @compileError("expected float type, found " ++ @typeName(T));
 }
 
+pub fn probabilityThreshold(p: f64) u64 {
+    std.debug.assert(p >= 0 and p <= 1);
+    if (p <= 0) return 0;
+    if (p >= 1) return std.math.maxInt(u64);
+    const scale = 0x1.0p64;
+    const threshold = @floor(p * scale);
+    if (threshold >= scale) return std.math.maxInt(u64);
+    return @intFromFloat(threshold);
+}
+
 test "rng facade covers scalar APIs" {
     const Xoshiro256 = @import("engines/xoshiro256.zig");
     var engine = Xoshiro256.init(7);
@@ -437,6 +445,7 @@ test "rng facade covers scalar APIs" {
     try std.testing.expect(rng.floatOpen(f64) > 0.0);
     try std.testing.expect(rng.chance(1));
     try std.testing.expect(!rng.ratio(0, 7));
+    try std.testing.expect(rng.chance(1.0 - std.math.floatEps(f64) / 2.0));
 
     const tuple = rng.value(struct { u8, bool, f32 });
     try std.testing.expect(tuple[2] < 1.0);
