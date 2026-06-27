@@ -29,29 +29,41 @@ pub const IndexVec = union(enum) {
 };
 
 pub fn sampleIndexVec(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) !IndexVec {
+    return sampleIndexVecFrom(allocator, rng, length, amount);
+}
+
+pub fn sampleIndexVecFrom(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) !IndexVec {
     std.debug.assert(amount <= length);
     if (length <= std.math.maxInt(u32)) {
-        return .{ .u32 = try sampleIndicesU32(allocator, rng, @intCast(length), @intCast(amount)) };
+        return .{ .u32 = try sampleIndicesU32From(allocator, source, @intCast(length), @intCast(amount)) };
     }
-    return .{ .usize = try sampleIndicesLarge(allocator, rng, length, amount) };
+    return .{ .usize = try sampleIndicesLarge(allocator, source, length, amount) };
 }
 
 pub fn sampleIndices(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) ![]usize {
+    return sampleIndicesFrom(allocator, rng, length, amount);
+}
+
+pub fn sampleIndicesFrom(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
     std.debug.assert(amount <= length);
     if (amount == 0) return allocator.alloc(usize, 0);
     if (length <= std.math.maxInt(u32)) {
-        return sampleIndicesU32AsUsize(allocator, rng, @intCast(length), @intCast(amount));
+        return sampleIndicesU32AsUsize(allocator, source, @intCast(length), @intCast(amount));
     }
     if (length < 4 * amount and length <= 1_000_000) {
-        return sampleInPlace(allocator, rng, length, amount);
+        return sampleInPlace(allocator, source, length, amount);
     }
     if (amount <= 128) {
-        return sampleFloyd(allocator, rng, length, amount);
+        return sampleFloyd(allocator, source, length, amount);
     }
-    return sampleRejection(allocator, rng, length, amount);
+    return sampleRejection(allocator, source, length, amount);
 }
 
 pub fn sampleIndicesU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]u32 {
+    return sampleIndicesU32From(allocator, rng, length, amount);
+}
+
+pub fn sampleIndicesU32From(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]u32 {
     std.debug.assert(amount <= length);
     if (amount == 0) return allocator.alloc(u32, 0);
 
@@ -62,20 +74,20 @@ pub fn sampleIndicesU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amo
         const amount_fp: f32 = @floatFromInt(amount);
         const m4 = c0[j] * amount_fp;
         if (amount > 11 and @as(f32, @floatFromInt(length)) < (c1[j] + m4) * amount_fp) {
-            return sampleInPlaceU32(allocator, rng, length, amount);
+            return sampleInPlaceU32(allocator, source, length, amount);
         }
-        return sampleFloydU32(allocator, rng, length, amount);
+        return sampleFloydU32(allocator, source, length, amount);
     }
 
     const c = [_]f32{ 270.0, 330.0 / 9.0 };
     const j: usize = @intFromBool(length >= 500_000);
     if (@as(f32, @floatFromInt(length)) < c[j] * @as(f32, @floatFromInt(amount))) {
-        return sampleInPlaceU32(allocator, rng, length, amount);
+        return sampleInPlaceU32(allocator, source, length, amount);
     }
-    return sampleRejectionU32(allocator, rng, length, amount);
+    return sampleRejectionU32(allocator, source, length, amount);
 }
 
-fn sampleIndicesU32AsUsize(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]usize {
+fn sampleIndicesU32AsUsize(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]usize {
     std.debug.assert(amount <= length);
     if (amount == 0) return allocator.alloc(usize, 0);
 
@@ -86,28 +98,28 @@ fn sampleIndicesU32AsUsize(allocator: std.mem.Allocator, rng: Rng, length: u32, 
         const amount_fp: f32 = @floatFromInt(amount);
         const m4 = c0[j] * amount_fp;
         if (amount > 11 and @as(f32, @floatFromInt(length)) < (c1[j] + m4) * amount_fp) {
-            return sampleInPlaceU32AsUsize(allocator, rng, length, amount);
+            return sampleInPlaceU32AsUsize(allocator, source, length, amount);
         }
-        return sampleFloydU32AsUsize(allocator, rng, length, amount);
+        return sampleFloydU32AsUsize(allocator, source, length, amount);
     }
 
     const c = [_]f32{ 270.0, 330.0 / 9.0 };
     const j: usize = @intFromBool(length >= 500_000);
     if (@as(f32, @floatFromInt(length)) < c[j] * @as(f32, @floatFromInt(amount))) {
-        return sampleInPlaceU32AsUsize(allocator, rng, length, amount);
+        return sampleInPlaceU32AsUsize(allocator, source, length, amount);
     }
-    return sampleRejectionU32AsUsize(allocator, rng, length, amount);
+    return sampleRejectionU32AsUsize(allocator, source, length, amount);
 }
 
-fn sampleIndicesLarge(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) ![]usize {
+fn sampleIndicesLarge(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
     if (amount == 0) return allocator.alloc(usize, 0);
     if (length < 4 * amount and length <= 1_000_000) {
-        return sampleInPlace(allocator, rng, length, amount);
+        return sampleInPlace(allocator, source, length, amount);
     }
     if (amount <= 128) {
-        return sampleFloyd(allocator, rng, length, amount);
+        return sampleFloyd(allocator, source, length, amount);
     }
-    return sampleRejection(allocator, rng, length, amount);
+    return sampleRejection(allocator, source, length, amount);
 }
 
 pub fn sampleArray(rng: Rng, comptime N: usize, length: usize) ?[N]usize {
@@ -292,13 +304,13 @@ pub fn reservoirSample(allocator: std.mem.Allocator, rng: Rng, comptime T: type,
     return out;
 }
 
-fn sampleFloyd(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) ![]usize {
+fn sampleFloyd(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
     var indices = try std.ArrayList(usize).initCapacity(allocator, amount);
     errdefer indices.deinit(allocator);
 
     var j = length - amount;
     while (j < length) : (j += 1) {
-        const t = rng.uintAtMost(usize, j);
+        const t = Rng.uintAtMostFrom(source, usize, j);
         var found: ?usize = null;
         for (indices.items, 0..) |existing, pos| {
             if (existing == t) {
@@ -313,7 +325,7 @@ fn sampleFloyd(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: us
     return indices.toOwnedSlice(allocator);
 }
 
-fn sampleInPlace(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) ![]usize {
+fn sampleInPlace(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
     var indices = try std.ArrayList(usize).initCapacity(allocator, length);
     errdefer indices.deinit(allocator);
     var i: usize = 0;
@@ -321,14 +333,14 @@ fn sampleInPlace(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: 
 
     i = 0;
     while (i < amount) : (i += 1) {
-        const j = rng.intRangeLessThan(usize, i, length);
+        const j = Rng.intRangeLessThanFrom(source, usize, i, length);
         std.mem.swap(usize, &indices.items[i], &indices.items[j]);
     }
     indices.items.len = amount;
     return indices.toOwnedSlice(allocator);
 }
 
-fn sampleRejection(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) ![]usize {
+fn sampleRejection(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
     var set = std.AutoHashMap(usize, void).init(allocator);
     defer set.deinit();
     try set.ensureTotalCapacity(@intCast(amount));
@@ -338,7 +350,7 @@ fn sampleRejection(allocator: std.mem.Allocator, rng: Rng, length: usize, amount
 
     var filled: usize = 0;
     while (filled < amount) {
-        const index = rng.uintLessThan(usize, length);
+        const index = Rng.uintLessThanFrom(source, usize, length);
         const entry = try set.getOrPut(index);
         if (!entry.found_existing) {
             indices[filled] = index;
@@ -349,13 +361,13 @@ fn sampleRejection(allocator: std.mem.Allocator, rng: Rng, length: usize, amount
     return indices;
 }
 
-fn sampleFloydU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]u32 {
+fn sampleFloydU32(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]u32 {
     var indices = try std.ArrayList(u32).initCapacity(allocator, amount);
     errdefer indices.deinit(allocator);
 
     var j = length - amount;
     while (j < length) : (j += 1) {
-        const t = rng.uintAtMost(u32, j);
+        const t = Rng.uintAtMostFrom(source, u32, j);
         var found: ?usize = null;
         for (indices.items, 0..) |existing, pos| {
             if (existing == t) {
@@ -370,13 +382,13 @@ fn sampleFloydU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u
     return indices.toOwnedSlice(allocator);
 }
 
-fn sampleFloydU32AsUsize(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]usize {
+fn sampleFloydU32AsUsize(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]usize {
     var indices = try std.ArrayList(usize).initCapacity(allocator, amount);
     errdefer indices.deinit(allocator);
 
     var j = length - amount;
     while (j < length) : (j += 1) {
-        const t = rng.uintAtMost(u32, j);
+        const t = Rng.uintAtMostFrom(source, u32, j);
         const t_usize: usize = t;
         var found: ?usize = null;
         for (indices.items, 0..) |existing, pos| {
@@ -392,7 +404,7 @@ fn sampleFloydU32AsUsize(allocator: std.mem.Allocator, rng: Rng, length: u32, am
     return indices.toOwnedSlice(allocator);
 }
 
-fn sampleInPlaceU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]u32 {
+fn sampleInPlaceU32(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]u32 {
     var indices = try std.ArrayList(u32).initCapacity(allocator, length);
     errdefer indices.deinit(allocator);
     var i: u32 = 0;
@@ -400,14 +412,14 @@ fn sampleInPlaceU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amount:
 
     i = 0;
     while (i < amount) : (i += 1) {
-        const j = rng.intRangeLessThan(u32, i, length);
+        const j = Rng.intRangeLessThanFrom(source, u32, i, length);
         std.mem.swap(u32, &indices.items[i], &indices.items[j]);
     }
     indices.items.len = amount;
     return indices.toOwnedSlice(allocator);
 }
 
-fn sampleInPlaceU32AsUsize(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]usize {
+fn sampleInPlaceU32AsUsize(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]usize {
     var indices = try std.ArrayList(usize).initCapacity(allocator, length);
     errdefer indices.deinit(allocator);
     var i: u32 = 0;
@@ -415,14 +427,14 @@ fn sampleInPlaceU32AsUsize(allocator: std.mem.Allocator, rng: Rng, length: u32, 
 
     i = 0;
     while (i < amount) : (i += 1) {
-        const j = rng.intRangeLessThan(u32, i, length);
+        const j = Rng.intRangeLessThanFrom(source, u32, i, length);
         std.mem.swap(usize, &indices.items[i], &indices.items[j]);
     }
     indices.items.len = amount;
     return indices.toOwnedSlice(allocator);
 }
 
-fn sampleRejectionU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]u32 {
+fn sampleRejectionU32(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]u32 {
     var set = try U32Set.init(allocator, amount);
     defer set.deinit(allocator);
     const indices = try allocator.alloc(u32, amount);
@@ -430,7 +442,7 @@ fn sampleRejectionU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amoun
 
     var filled: usize = 0;
     while (filled < amount) {
-        const index = rng.uintLessThan(u32, length);
+        const index = Rng.uintLessThanFrom(source, u32, length);
         if (set.insert(index)) {
             indices[filled] = index;
             filled += 1;
@@ -440,7 +452,7 @@ fn sampleRejectionU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amoun
     return indices;
 }
 
-fn sampleRejectionU32AsUsize(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]usize {
+fn sampleRejectionU32AsUsize(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]usize {
     var set = try U32Set.init(allocator, amount);
     defer set.deinit(allocator);
     const indices = try allocator.alloc(usize, amount);
@@ -448,7 +460,7 @@ fn sampleRejectionU32AsUsize(allocator: std.mem.Allocator, rng: Rng, length: u32
 
     var filled: usize = 0;
     while (filled < amount) {
-        const index = rng.uintLessThan(u32, length);
+        const index = Rng.uintLessThanFrom(source, u32, length);
         if (set.insert(index)) {
             indices[filled] = index;
             filled += 1;

@@ -154,21 +154,33 @@ pub fn ratio(self: Rng, numerator: u32, denominator: u32) bool {
 }
 
 pub fn uint(self: Rng, comptime T: type) T {
-    comptime requireInt(T);
-    const info = @typeInfo(T).int;
-    const Unsigned = std.meta.Int(.unsigned, info.bits);
-    const bits_value = self.uintBits(Unsigned, info.bits);
-    return @bitCast(bits_value);
+    return uintFrom(self, T);
 }
 
 pub fn uintLessThan(self: Rng, comptime T: type, less_than: T) T {
+    return uintLessThanFrom(self, T, less_than);
+}
+
+pub fn uintAtMost(self: Rng, comptime T: type, at_most: T) T {
+    return uintAtMostFrom(self, T, at_most);
+}
+
+pub fn uintFrom(source: anytype, comptime T: type) T {
+    comptime requireInt(T);
+    const info = @typeInfo(T).int;
+    const Unsigned = std.meta.Int(.unsigned, info.bits);
+    const bits_value = uintBitsFrom(source, Unsigned, info.bits);
+    return @bitCast(bits_value);
+}
+
+pub fn uintLessThanFrom(source: anytype, comptime T: type, less_than: T) T {
     comptime requireUnsigned(T);
     std.debug.assert(less_than > 0);
 
     const bits = @typeInfo(T).int.bits;
     if (bits == 0) unreachable;
 
-    var x = self.uint(T);
+    var x = uintFrom(source, T);
     var m = std.math.mulWide(T, x, less_than);
     var l: T = @truncate(m);
     if (l < less_than) {
@@ -181,7 +193,7 @@ pub fn uintLessThan(self: Rng, comptime T: type, less_than: T) T {
         }
 
         while (l < threshold) {
-            x = self.uint(T);
+            x = uintFrom(source, T);
             m = std.math.mulWide(T, x, less_than);
             l = @truncate(m);
         }
@@ -190,13 +202,21 @@ pub fn uintLessThan(self: Rng, comptime T: type, less_than: T) T {
     return @intCast(m >> bits);
 }
 
-pub fn uintAtMost(self: Rng, comptime T: type, at_most: T) T {
+pub fn uintAtMostFrom(source: anytype, comptime T: type, at_most: T) T {
     comptime requireUnsigned(T);
-    if (at_most == std.math.maxInt(T)) return self.uint(T);
-    return self.uintLessThan(T, at_most + 1);
+    if (at_most == std.math.maxInt(T)) return uintFrom(source, T);
+    return uintLessThanFrom(source, T, at_most + 1);
 }
 
 pub fn intRangeLessThan(self: Rng, comptime T: type, at_least: T, less_than: T) T {
+    return intRangeLessThanFrom(self, T, at_least, less_than);
+}
+
+pub fn intRangeAtMost(self: Rng, comptime T: type, at_least: T, at_most: T) T {
+    return intRangeAtMostFrom(self, T, at_least, at_most);
+}
+
+pub fn intRangeLessThanFrom(source: anytype, comptime T: type, at_least: T, less_than: T) T {
     comptime requireInt(T);
     std.debug.assert(at_least < less_than);
 
@@ -205,14 +225,14 @@ pub fn intRangeLessThan(self: Rng, comptime T: type, at_least: T, less_than: T) 
         const Unsigned = std.meta.Int(.unsigned, info.bits);
         const lo: Unsigned = @bitCast(at_least);
         const hi: Unsigned = @bitCast(less_than);
-        const result = lo +% self.uintLessThan(Unsigned, hi -% lo);
+        const result = lo +% uintLessThanFrom(source, Unsigned, hi -% lo);
         return @bitCast(result);
     }
 
-    return at_least + self.uintLessThan(T, less_than - at_least);
+    return at_least + uintLessThanFrom(source, T, less_than - at_least);
 }
 
-pub fn intRangeAtMost(self: Rng, comptime T: type, at_least: T, at_most: T) T {
+pub fn intRangeAtMostFrom(source: anytype, comptime T: type, at_least: T, at_most: T) T {
     comptime requireInt(T);
     std.debug.assert(at_least <= at_most);
 
@@ -221,11 +241,11 @@ pub fn intRangeAtMost(self: Rng, comptime T: type, at_least: T, at_most: T) T {
         const Unsigned = std.meta.Int(.unsigned, info.bits);
         const lo: Unsigned = @bitCast(at_least);
         const hi: Unsigned = @bitCast(at_most);
-        const result = lo +% self.uintAtMost(Unsigned, hi -% lo);
+        const result = lo +% uintAtMostFrom(source, Unsigned, hi -% lo);
         return @bitCast(result);
     }
 
-    return at_least + self.uintAtMost(T, at_most - at_least);
+    return at_least + uintAtMostFrom(source, T, at_most - at_least);
 }
 
 pub fn float(self: Rng, comptime T: type) T {
@@ -390,6 +410,10 @@ pub fn SampleIterator(comptime Sampler: type, comptime T: type) type {
 }
 
 fn uintBits(self: Rng, comptime T: type, comptime bits: comptime_int) T {
+    return uintBitsFrom(self, T, bits);
+}
+
+fn uintBitsFrom(source: anytype, comptime T: type, comptime bits: comptime_int) T {
     comptime requireUnsigned(T);
     if (bits == 0) return 0;
 
@@ -400,13 +424,17 @@ fn uintBits(self: Rng, comptime T: type, comptime bits: comptime_int) T {
     while (remaining > 0) {
         const take = @min(remaining, 64);
         const mask = if (take == 64) std.math.maxInt(u64) else (@as(u64, 1) << @intCast(take)) - 1;
-        const part = self.next() & mask;
+        const part = nextFrom(source) & mask;
         result |= @as(T, @intCast(part)) << @intCast(shift);
         remaining -= take;
         shift += take;
     }
 
     return result;
+}
+
+fn nextFrom(source: anytype) u64 {
+    return source.next();
 }
 
 fn requireInt(comptime T: type) void {
