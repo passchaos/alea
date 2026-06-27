@@ -261,11 +261,17 @@ pub const OpenClosed01 = struct {
 pub fn normal(rng: Rng, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
-    const open_uniform = rng.floatOpen(T);
-    const angle_uniform = rng.float(T);
-    const radius = @sqrt(-2 * @log(open_uniform));
-    const theta = @as(T, @floatCast(std.math.tau)) * angle_uniform;
-    return mean + stddev * radius * @cos(theta);
+    return mean + stddev * standardNormal(rng, T);
+}
+
+fn standardNormal(rng: Rng, comptime T: type) T {
+    while (true) {
+        const u = 2 * rng.float(T) - 1;
+        const v = 2 * rng.float(T) - 1;
+        const s = u * u + v * v;
+        if (s == 0 or s >= 1) continue;
+        return u * @sqrt(-2 * @log(s) / s);
+    }
 }
 
 pub fn exponential(rng: Rng, comptime T: type, rate: T) T {
@@ -295,13 +301,16 @@ pub fn Normal(comptime T: type) type {
                 return self.mean + self.stddev * z;
             }
 
-            const open_uniform = rng.floatOpen(T);
-            const angle_uniform = rng.float(T);
-            const radius = @sqrt(-2 * @log(open_uniform));
-            const theta = @as(T, @floatCast(std.math.tau)) * angle_uniform;
-            const z0 = radius * @cos(theta);
-            self.cached = radius * @sin(theta);
-            return self.mean + self.stddev * z0;
+            while (true) {
+                const u = 2 * rng.float(T) - 1;
+                const v = 2 * rng.float(T) - 1;
+                const s = u * u + v * v;
+                if (s == 0 or s >= 1) continue;
+                const mul = @sqrt(-2 * @log(s) / s);
+                self.cached = v * mul;
+                const z0 = u * mul;
+                return self.mean + self.stddev * z0;
+            }
         }
     };
 }
