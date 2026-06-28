@@ -647,7 +647,7 @@ pub fn normal(self: Rng, comptime T: type, mean: T, stddev: T) T {
     return normalFastFrom(self, T, mean, stddev);
 }
 
-pub fn normalFastFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
+pub inline fn normalFastFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
     return mean + stddev * switch (T) {
@@ -661,7 +661,7 @@ pub fn exponential(self: Rng, comptime T: type, rate: T) T {
     return exponentialFastFrom(self, T, rate);
 }
 
-pub fn exponentialFastFrom(source: anytype, comptime T: type, rate: T) T {
+pub inline fn exponentialFastFrom(source: anytype, comptime T: type, rate: T) T {
     comptime requireFloat(T);
     std.debug.assert(rate > 0);
     return switch (T) {
@@ -808,7 +808,7 @@ fn uintBitsFrom(source: anytype, comptime T: type, comptime bits: comptime_int) 
     return result;
 }
 
-fn nextFrom(source: anytype) u64 {
+inline fn nextFrom(source: anytype) u64 {
     return source.next();
 }
 
@@ -816,7 +816,7 @@ fn randomFrom(source: anytype) std.Random {
     return source.random();
 }
 
-fn normalZigguratF64(source: anytype) f64 {
+inline fn normalZigguratF64(source: anytype) f64 {
     const tables = std_ziggurat.NormDist;
     while (true) {
         const bits = nextFrom(source);
@@ -842,7 +842,7 @@ fn normalZigguratZeroCase(source: anytype, u: f64) f64 {
     return if (u < 0) x - std_ziggurat.norm_r else std_ziggurat.norm_r - x;
 }
 
-fn exponentialZigguratF64(source: anytype) f64 {
+inline fn exponentialZigguratF64(source: anytype) f64 {
     const tables = std_ziggurat.ExpDist;
     while (true) {
         const bits = nextFrom(source);
