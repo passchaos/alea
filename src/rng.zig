@@ -206,8 +206,8 @@ pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
-    if (info.child == f32) {
-        fillVectorNormalF32From(source, VectorType, dest, mean, stddev);
+    if (info.child == f32 or info.child == f64) {
+        fillVectorNormalFloatFrom(source, VectorType, dest, mean, stddev);
         return;
     }
     for (dest) |*item| item.* = vectorNormalFrom(source, VectorType, mean, stddev);
@@ -603,7 +603,7 @@ pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vector
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
-    if (info.child == f32) return vectorNormalF32From(source, VectorType, mean, stddev);
+    if (info.child == f32 or info.child == f64) return vectorNormalFloatFrom(source, VectorType, mean, stddev);
     var out: VectorType = undefined;
     var std_random = randomFrom(source);
     inline for (0..info.len) |i| out[i] = mean + stddev * std_random.floatNorm(info.child);
@@ -960,12 +960,12 @@ fn vectorF32From(source: anytype, comptime VectorType: type) VectorType {
     return out;
 }
 
-fn vectorNormalF32From(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+fn vectorNormalFloatFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
     const info = vectorInfo(VectorType);
-    if (info.child != f32) @compileError("vectorNormalF32 expects a f32 vector");
+    if (info.child != f32 and info.child != f64) @compileError("vectorNormalFloatFrom expects a float vector");
 
     const one: VectorType = @splat(1);
-    const tau: VectorType = @splat(@as(f32, @floatCast(std.math.tau)));
+    const tau: VectorType = @splat(@as(info.child, @floatCast(std.math.tau)));
     const uniform_radius = one - vectorFrom(source, VectorType);
     const uniform_angle = vectorFrom(source, VectorType);
     const radius = @sqrt(@as(VectorType, @splat(-2)) * @log(uniform_radius));
@@ -973,14 +973,14 @@ fn vectorNormalF32From(source: anytype, comptime VectorType: type, mean: f32, st
     return @as(VectorType, @splat(mean)) + @as(VectorType, @splat(stddev)) * radius * @cos(theta);
 }
 
-fn fillVectorNormalF32From(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
+fn fillVectorNormalFloatFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
     const info = vectorInfo(VectorType);
-    if (info.child != f32) @compileError("fillVectorNormalF32From expects a f32 vector");
+    if (info.child != f32 and info.child != f64) @compileError("fillVectorNormalFloatFrom expects a float vector");
 
     const mean_vec: VectorType = @splat(mean);
     const stddev_vec: VectorType = @splat(stddev);
     const one: VectorType = @splat(1);
-    const tau: VectorType = @splat(@as(f32, @floatCast(std.math.tau)));
+    const tau: VectorType = @splat(@as(info.child, @floatCast(std.math.tau)));
 
     var i: usize = 0;
     while (i + 1 < dest.len) : (i += 2) {
@@ -992,7 +992,7 @@ fn fillVectorNormalF32From(source: anytype, comptime VectorType: type, dest: []V
         dest[i + 1] = mean_vec + stddev_vec * radius * @sin(theta);
     }
 
-    if (i < dest.len) dest[i] = vectorNormalF32From(source, VectorType, mean, stddev);
+    if (i < dest.len) dest[i] = vectorNormalFloatFrom(source, VectorType, mean, stddev);
 }
 
 fn f32FromBits(bits: u24) f32 {
