@@ -63,6 +63,23 @@ pub fn build(b: *std.Build) void {
     const bench_step = b.step("bench", "Run the alea throughput benchmark");
     bench_step.dependOn(&run_bench.step);
 
+    const vectorbench_mod = b.createModule(.{
+        .root_source_file = b.path("bench/vector.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    vectorbench_mod.addImport("alea", module);
+
+    const vectorbench = b.addExecutable(.{
+        .name = "alea-vectorbench",
+        .root_module = vectorbench_mod,
+    });
+    const run_vectorbench = b.addRunArtifact(vectorbench);
+    if (b.args) |args| run_vectorbench.addArgs(args);
+
+    const vectorbench_step = b.step("vectorbench", "Run vector/SIMD microbenchmarks");
+    vectorbench_step.dependOn(&run_vectorbench.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

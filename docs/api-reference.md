@@ -178,6 +178,7 @@ Build steps:
 - `zig build stream -- --engine <engine> --bytes <n>`
 - `zig build repro`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native bench`
+- `zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench`
 
 Tools:
 
