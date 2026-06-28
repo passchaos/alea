@@ -32,7 +32,7 @@ must be completed before the long-term goal is considered fully achieved.
 
 | ID | Milestone | Completion gate | Status |
 | --- | --- | --- | --- |
-| M1 | External statistical validation | PractRand 0.96 `stdin64` at 16GiB or larger for `fast`, `default`, `wyhash64`, `pcg64`, `xoshiro256++`, and `chacha12`, with checked-in reports. Any anomaly must be investigated or explicitly accepted with rationale. | In progress: 1GiB passes exist for all listed engines |
+| M1 | External statistical validation | PractRand 0.96 `stdin64` at 16GiB or larger for `fast`, `default`, `wyhash64`, `pcg64`, `xoshiro256++`, and `chacha12`, with checked-in reports. Any anomaly must be investigated or explicitly accepted with rationale. | Closed: all listed engines have 16GiB passes |
 | M2 | Distribution algorithm maturity | Replace correctness-first slow paths where mature algorithms are known: ziggurat-style normal/exponential or documented faster alternatives, and benchmarked exact large-n binomial. Keep exact semantics separate from approximation helpers. | In progress: polar normal, cached normal pairs, inverse-rate exponential, and large-n binomial rejection exist |
 | M3 | Distribution benchmark matrix | Add benchmark rows for every public distribution family across at least one representative parameter set, including tail/derived/multivariate distributions. | In progress: representative rows exist for major families, but not every public distribution |
 | M4 | Fallible API surface | Provide checked/error-returning variants for public single-shot APIs where invalid input is realistically user-supplied, while preserving assert-based fast paths. | In progress |
