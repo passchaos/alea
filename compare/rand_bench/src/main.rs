@@ -29,12 +29,15 @@ fn main() {
     bench_alphanumeric("rand alphanumeric", bytes / 8);
     bench_weighted_index("rand weighted index", bytes / 256);
     bench_weighted_tree("rand_distr weighted tree update+sample", bytes / 256);
+    bench_distr_standard_normal("rand_distr standard-normal", bytes / 64);
     bench_distr_normal("rand_distr normal", bytes / 64);
+    bench_distr_exp1("rand_distr exp1", bytes / 64);
     bench_distr_exponential("rand_distr exponential", bytes / 64);
     bench_distr_poisson("rand_distr poisson", bytes / 64);
     bench_distr_binomial("rand_distr binomial", bytes / 64);
     bench_distr_gamma("rand_distr gamma", bytes / 128);
     bench_distr_beta("rand_distr beta", bytes / 128);
+    bench_distr_log_normal("rand_distr log-normal", bytes / 128);
     bench_distr_gumbel("rand_distr gumbel", bytes / 128);
     bench_distr_frechet("rand_distr frechet", bytes / 128);
     bench_distr_skew_normal("rand_distr skew-normal", bytes / 128);
@@ -191,7 +194,10 @@ fn bench_alphanumeric(name: &str, count: usize) {
         let start = Instant::now();
         let mut checksum: u64 = 0;
 
-        for byte in (&mut rng).sample_iter(rand::distr::Alphanumeric).take(count) {
+        for byte in (&mut rng)
+            .sample_iter(rand::distr::Alphanumeric)
+            .take(count)
+        {
             checksum = checksum.wrapping_add(byte as u64);
         }
 
@@ -261,9 +267,17 @@ fn bench_weighted_tree(name: &str, count: usize) {
     println!("{name}: {best_million_per_s:.1} M ops/s checksum={best_checksum}");
 }
 
+fn bench_distr_standard_normal(name: &str, count: usize) {
+    bench_distr_f64(name, count, 0xd15a, rand_distr::StandardNormal);
+}
+
 fn bench_distr_normal(name: &str, count: usize) {
     let dist = rand_distr::Normal::new(0.0, 1.0).unwrap();
     bench_distr_f64(name, count, 0xd15a, dist);
+}
+
+fn bench_distr_exp1(name: &str, count: usize) {
+    bench_distr_f64(name, count, 0xe151, rand_distr::Exp1);
 }
 
 fn bench_distr_exponential(name: &str, count: usize) {
@@ -279,6 +293,11 @@ fn bench_distr_gamma(name: &str, count: usize) {
 fn bench_distr_beta(name: &str, count: usize) {
     let dist = rand_distr::Beta::new(2.0, 5.0).unwrap();
     bench_distr_f64(name, count, 0xbe7a, dist);
+}
+
+fn bench_distr_log_normal(name: &str, count: usize) {
+    let dist = rand_distr::LogNormal::new(0.0, 0.25).unwrap();
+    bench_distr_f64(name, count, 0x1060, dist);
 }
 
 fn bench_distr_gumbel(name: &str, count: usize) {
