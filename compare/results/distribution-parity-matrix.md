@@ -1,0 +1,75 @@
+# Distribution Parity-Plus Matrix
+
+This document compares `alea`'s distribution surface with the locally available
+Rust references:
+
+- `~/Work/rand`, current default `rand` checkout
+- cached historical `rand` crates under `~/.cargo/registry/src`
+
+The goal is not to mirror Rust traits or feature gates. The goal is to ensure
+that core distribution functionality is covered or intentionally excluded in a
+Zig-native way.
+
+## Current Rust `rand` Default Crate
+
+| Rust `rand` area | Alea status |
+| --- | --- |
+| `StandardUniform` integers/floats/bools | Covered by `Rng.value`, scalar helpers, `float`, `boolean` |
+| `StandardUniform` arrays/tuples | Covered by `Rng.value` arrays and tuples |
+| `StandardUniform` char | Covered by explicit `Rng.unicodeScalar` and Unicode UTF-8 helpers |
+| `Uniform` integer/float ranges | Covered by `Uniform(T)` and range helpers |
+| `UniformChar` | Covered by `unicodeScalar`; explicit char-range sampler is not needed because Zig has no native `char` type |
+| `UniformDuration` | Covered by `durationRangeLessThan` and `durationRangeAtMost` for `std.Io.Duration` |
+| `Bernoulli` | Covered by `Bernoulli`, `chance`, `ratio`, checked variants |
+| `Alphanumeric`, `Alphabetic` | Covered by ASCII charsets and `Charset` |
+| `Slice::Choose` | Covered by `seq.Choice` and `chooseIter` |
+| `WeightedIndex` | Covered by `weightedIndex`, `AliasTable`, `WeightedChoice`; `AliasTable.update` supports weight replacement |
+
+## Historical Rust `rand` Non-Uniform Distributions
+
+| Rust distribution family | Alea status |
+| --- | --- |
+| Normal | Covered: `normal`, `Normal(T)` |
+| LogNormal | Covered: `logNormal`, `LogNormal(T)` |
+| Exponential | Covered: `exponential`, `Exponential(T)` |
+| Gamma | Covered: `gamma`, `Gamma(T)` |
+| ChiSquared | Covered: `chiSquared`, `ChiSquared(T)` |
+| FisherF | Covered: `fisherF`, `FisherF(T)` |
+| StudentT | Covered: `studentT`, `StudentT(T)` |
+| Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path |
+| Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper |
+| WeightedChoice | Covered: `WeightedChoice`, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
+
+## Additional Alea Core Distributions
+
+These are not in current Rust `rand` default crate, but are useful core random
+toolkit functionality and reduce reliance on companion crates:
+
+| Alea distribution | Status |
+| --- | --- |
+| Beta | Covered: `beta`, `Beta(T)` |
+| Triangular | Covered: `triangular`, `Triangular(T)` |
+| Cauchy | Covered: `cauchy`, `Cauchy(T)` |
+| Pareto | Covered: `pareto`, `Pareto(T)` |
+| Weibull | Covered: `weibull`, `Weibull(T)` |
+| Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs |
+| Multinomial | Covered: `Multinomial` |
+| NegativeBinomial | Covered: `NegativeBinomial` |
+| Hypergeometric | Covered: `Hypergeometric` |
+
+## Explicit Out Of Scope
+
+| Rust ecosystem feature | Rationale |
+| --- | --- |
+| `Distribution<T>` trait mirroring | Zig-native sampler structs and `Rng.sampleIter` provide the reusable-sampler workflow without copying Rust traits |
+| serde integration | Rust ecosystem-specific; not core RNG functionality for Zig |
+| crate feature matrices | Rust packaging-specific |
+| Rust SIMD `std::simd` distribution implementations | Zig vector/SIMD support should be designed as a separate Zig-native milestone if needed |
+
+## Remaining Follow-Up
+
+- Add parameter-grid validation for every public distribution family.
+- Add Rust-side benchmarks for comparable workloads where Rust has a local
+  matching implementation.
+- Consider Zig-native vector/SIMD sampling after scalar functionality and
+  validation remain stable.
