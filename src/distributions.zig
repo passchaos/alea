@@ -98,6 +98,52 @@ pub fn binomialPoissonApprox(rng: Rng, trials: u64, p: f64) u64 {
     return if (p <= 0.5) sampled else trials - sampled;
 }
 
+pub const Multinomial = struct {
+    trials: u64,
+    probabilities: []const f64,
+    total_probability: f64,
+
+    pub fn init(trials: u64, probabilities: []const f64) Error!Multinomial {
+        if (probabilities.len == 0) return error.EmptyRange;
+        var total: f64 = 0;
+        for (probabilities) |p| {
+            if (!(p >= 0) or !std.math.isFinite(p)) return error.InvalidProbability;
+            total += p;
+        }
+        if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidProbability;
+        return .{
+            .trials = trials,
+            .probabilities = probabilities,
+            .total_probability = total,
+        };
+    }
+
+    pub fn sample(self: Multinomial, allocator: std.mem.Allocator, rng: Rng) ![]u64 {
+        const out = try allocator.alloc(u64, self.probabilities.len);
+        errdefer allocator.free(out);
+        self.sampleInto(rng, out);
+        return out;
+    }
+
+    pub fn sampleInto(self: Multinomial, rng: Rng, out: []u64) void {
+        std.debug.assert(out.len == self.probabilities.len);
+        @memset(out, 0);
+
+        var remaining_trials = self.trials;
+        var remaining_probability = self.total_probability;
+        for (self.probabilities[0 .. self.probabilities.len - 1], out[0 .. out.len - 1]) |p, *slot| {
+            if (remaining_trials == 0) return;
+            if (p == 0) continue;
+            const normalized = p / remaining_probability;
+            const count = binomial(rng, remaining_trials, normalized);
+            slot.* = count;
+            remaining_trials -= count;
+            remaining_probability -= p;
+        }
+        out[out.len - 1] = remaining_trials;
+    }
+};
+
 fn binomialFair(rng: Rng, trials: u64) u64 {
     var remaining = trials;
     var successes: u64 = 0;
@@ -997,6 +1043,31 @@ test "binomial sampler has plausible moments" {
     try std.testing.expect(iter.next().? <= 8);
     try std.testing.expect(binomialPoissonApprox(rng, 10_000, 0.01) < 200);
     try std.testing.expectError(error.InvalidProbability, Binomial.init(1, 1.1));
+}
+
+test "multinomial sampler returns category counts" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(70);
+    const rng = Rng.init(&engine);
+
+    const dist = try Multinomial.init(100, &.{ 1.0, 2.0, 3.0 });
+    const counts = try dist.sample(std.testing.allocator, rng);
+    defer std.testing.allocator.free(counts);
+
+    try std.testing.expectEqual(@as(usize, 3), counts.len);
+    var total: u64 = 0;
+    for (counts) |count| total += count;
+    try std.testing.expectEqual(@as(u64, 100), total);
+
+    var stack_counts: [3]u64 = undefined;
+    dist.sampleInto(rng, &stack_counts);
+    total = 0;
+    for (stack_counts) |count| total += count;
+    try std.testing.expectEqual(@as(u64, 100), total);
+
+    try std.testing.expectError(error.EmptyRange, Multinomial.init(1, &.{}));
+    try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 1.0, std.math.nan(f64) }));
+    try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 0.0, 0.0 }));
 }
 
 test "large binomial sampler has plausible moments" {

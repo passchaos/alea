@@ -21,7 +21,7 @@ The first milestone is intentionally broad:
   string generation
 - distributions: uniform, bernoulli, binomial, normal, log-normal,
   exponential, poisson, gamma, chi-squared, beta, Fisher F, Student t,
-  triangular, cauchy, pareto, weibull, dirichlet
+  triangular, cauchy, pareto, weibull, dirichlet, multinomial
 - O(1) repeated weighted sampling through alias tables
 
 ## Quick Start
