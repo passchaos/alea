@@ -100,11 +100,21 @@ fn checkContinuous() !void {
             return alea.distributions.normal(r, f64, 5, 2);
         }
     }.sample, 4.95, 5.05);
+    try expectContinuousMean("standard-normal", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.standardNormal(r, f64);
+        }
+    }.sample, -0.05, 0.05);
     try expectContinuousMean("exponential", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.exponential(r, f64, 4);
         }
     }.sample, 0.24, 0.26);
+    try expectContinuousMean("standard-exponential", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.standardExponential(r, f64);
+        }
+    }.sample, 0.98, 1.02);
     try expectContinuousMean("gamma", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.gamma(r, f64, 2, 3);

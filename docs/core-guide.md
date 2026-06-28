@@ -57,7 +57,7 @@ sampling.
 Single-shot helpers and reusable samplers cover:
 
 - uniform, Bernoulli, binomial
-- normal, log-normal, exponential
+- standard normal, normal, log-normal, standard exponential, exponential
 - poisson, geometric
 - gamma, chi-squared, beta, Fisher F, Student t
 - triangular, cauchy, pareto, weibull

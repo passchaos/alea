@@ -63,6 +63,7 @@ pub fn main(init: std.process.Init) !void {
     try benchNormalWyhashStdRandom(io, stdout, "alea normal wyhash64 std.Random", bytes / 64);
     try benchNormalStdRandom(io, stdout, "alea normal std.Random direct", bytes / 64);
     try benchNormalFast(io, stdout, "alea normal fast direct", bytes / 64);
+    try benchStandardNormalScalar(io, stdout, "alea standard-normal scalar direct", bytes / 64);
     try benchVectorNormalF32(io, stdout, "alea vector normal f32x8", bytes / 64);
     try benchFillNormal(io, stdout, "alea fillNormal", bytes / 64);
     try benchFillNormalScalar(io, stdout, "alea fillNormal scalar direct", bytes / 64);
@@ -70,6 +71,7 @@ pub fn main(init: std.process.Init) !void {
     try benchExponential(io, stdout, "alea exponential", bytes / 64);
     try benchExponentialWyhash(io, stdout, "alea exponential wyhash64 direct", bytes / 64);
     try benchExponentialFast(io, stdout, "alea exponential fast direct", bytes / 64);
+    try benchStandardExponentialScalar(io, stdout, "alea standard-exponential scalar direct", bytes / 64);
     try benchVectorExponentialF32(io, stdout, "alea vector exponential f32x8", bytes / 64);
     try benchFillExponential(io, stdout, "alea fillExponential", bytes / 64);
     try benchFillExponentialScalar(io, stdout, "alea fillExponential scalar direct", bytes / 64);
@@ -881,6 +883,30 @@ fn benchNormalFast(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchStandardNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const dist = alea.distributions.StandardNormal(f64){};
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xd15a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchVectorNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
@@ -1143,6 +1169,30 @@ fn benchExponentialFast(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
         var i: usize = 0;
         var checksum: f64 = 0;
         while (i < count) : (i += 1) checksum += alea.Rng.exponentialFastFrom(&engine, f64, 2);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchStandardExponentialScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const dist = alea.distributions.StandardExponential(f64){};
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xe15a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

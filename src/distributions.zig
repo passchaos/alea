@@ -367,16 +367,44 @@ pub const OpenClosed01 = struct {
     }
 };
 
+pub fn standardNormal(rng: Rng, comptime T: type) T {
+    return Rng.normalFastFrom(rng, T, 0, 1);
+}
+
+pub fn standardNormalFrom(source: anytype, comptime T: type) T {
+    return Rng.normalFastFrom(source, T, 0, 1);
+}
+
 pub fn normal(rng: Rng, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
-    return mean + stddev * rng.random().floatNorm(T);
+    return Rng.normalFastFrom(rng, T, mean, stddev);
+}
+
+pub fn StandardNormal(comptime T: type) type {
+    return struct {
+        pub fn sample(_: @This(), rng: Rng) T {
+            return standardNormal(rng, T);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) T {
+            return standardNormalFrom(source, T);
+        }
+    };
+}
+
+pub fn standardExponential(rng: Rng, comptime T: type) T {
+    return Rng.exponentialFastFrom(rng, T, 1);
+}
+
+pub fn standardExponentialFrom(source: anytype, comptime T: type) T {
+    return Rng.exponentialFastFrom(source, T, 1);
 }
 
 pub fn exponential(rng: Rng, comptime T: type, rate: T) T {
     comptime requireFloat(T);
     std.debug.assert(rate > 0);
-    return rng.random().floatExp(T) / rate;
+    return Rng.exponentialFastFrom(rng, T, rate);
 }
 
 pub fn Normal(comptime T: type) type {
@@ -396,6 +424,22 @@ pub fn Normal(comptime T: type) type {
         pub fn sample(self: Self, rng: Rng) T {
             return rng.normal(T, self.mean, self.stddev);
         }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return Rng.normalFastFrom(source, T, self.mean, self.stddev);
+        }
+    };
+}
+
+pub fn StandardExponential(comptime T: type) type {
+    return struct {
+        pub fn sample(_: @This(), rng: Rng) T {
+            return standardExponential(rng, T);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) T {
+            return standardExponentialFrom(source, T);
+        }
     };
 }
 
@@ -412,7 +456,11 @@ pub fn Exponential(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return rng.random().floatExp(T) * self.inverse_rate;
+            return Rng.exponentialFastFrom(rng, T, 1) * self.inverse_rate;
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return Rng.exponentialFastFrom(source, T, 1) * self.inverse_rate;
         }
     };
 }
@@ -2060,6 +2108,12 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var exponentials = rng.sampleIter(f64, try Exponential(f64).init(2));
     try std.testing.expect(exponentials.next().? >= 0);
+
+    var standard_normals = rng.sampleIter(f64, StandardNormal(f64){});
+    try std.testing.expect(std.math.isFinite(standard_normals.next().?));
+
+    var standard_exponentials = rng.sampleIter(f64, StandardExponential(f64){});
+    try std.testing.expect(standard_exponentials.next().? >= 0);
 
     var log_normals = rng.sampleIter(f64, try LogNormal(f64).init(0, 0.25));
     try std.testing.expect(log_normals.next().? > 0);

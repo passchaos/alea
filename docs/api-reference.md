@@ -78,7 +78,8 @@ Single-shot helpers:
 - `uniform`, `uniformInclusive`
 - `bernoulli`, `binomial`, `binomialPoissonApprox`
 - `negativeBinomial`, `hypergeometric`
-- `normal`, `logNormal`, `exponential`
+- `standardNormal`, `standardNormalFrom`, `normal`, `logNormal`,
+  `standardExponential`, `standardExponentialFrom`, `exponential`
 - `poisson`, `geometric`
 - `gamma`, `gammaFrom`, `chiSquared`, `beta`, `fisherF`, `studentT`
 - `triangular`, `cauchy`, `pareto`, `weibull`
@@ -96,8 +97,14 @@ Reusable samplers:
 - `Uniform(T)`
 - `Open01`
 - `OpenClosed01`
+- `StandardNormal(T)`
+- `StandardNormal(T).sampleFrom`
 - `Normal(T)`
+- `Normal(T).sampleFrom`
+- `StandardExponential(T)`
+- `StandardExponential(T).sampleFrom`
 - `Exponential(T)`
+- `Exponential(T).sampleFrom`
 - `LogNormal(T)`
 - `Poisson`
 - `Poisson.sampleFrom`

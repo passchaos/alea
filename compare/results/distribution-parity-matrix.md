@@ -29,9 +29,9 @@ Zig-native way.
 
 | Rust distribution family | Alea status |
 | --- | --- |
-| Normal | Covered: `normal`, `Normal(T)` |
+| Normal / StandardNormal | Covered: `standardNormal`, `StandardNormal(T)`, `normal`, `Normal(T)` |
 | LogNormal | Covered: `logNormal`, `LogNormal(T)` |
-| Exponential | Covered: `exponential`, `Exponential(T)` |
+| Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)` |
 | Gamma | Covered: `gamma`, `Gamma(T)` |
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)` |
 | FisherF | Covered: `fisherF`, `FisherF(T)` |
