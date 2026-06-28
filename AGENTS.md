@@ -6,6 +6,11 @@
 Rust's `rand` in core random-number functionality, ergonomics, reproducibility,
 statistical quality, and performance.
 
+This is a long-term product goal, not a one-time milestone. A roadmap milestone
+being marked complete means the current bar was met; it does not mean the
+project should stop improving. When the user asks to continue toward the goal,
+raise the bar in the roadmap and keep iterating on the next concrete gap.
+
 The target is not a one-for-one port of Rust ecosystem shapes. Do not copy
 Rust-only mechanisms such as traits, serde integration, crate feature matrices,
 or API forms that do not fit Zig. Instead, use Zig-native designs that exceed
@@ -31,6 +36,9 @@ ecosystem-specific abstractions to reproduce.
 - Prioritize completing and surpassing core random-number functionality before
   spending time on performance tuning, except where performance is part of the
   feature's basic viability.
+- Treat `compare/results/core-rand-coverage.md` as a living product roadmap:
+  when all listed milestones are closed, add the next stricter milestone rather
+  than declaring the broader product goal permanently finished.
 - If a feature genuinely needs trait-like abstraction, evaluate the local
   `~/project-z/zigraft` library before inventing a custom abstraction. Do not
   introduce trait-like machinery just to mirror Rust's API shape.

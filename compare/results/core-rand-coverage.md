@@ -1,10 +1,12 @@
 # Core RNG Roadmap
 
-This document tracks `alea` against the repository goal in `AGENTS.md`: surpass
-Rust `rand` in core random-number functionality using Zig-native designs.
+This document tracks `alea` against the long-term product goal in `AGENTS.md`:
+surpass Rust `rand` / `rand_distr` in core random-number functionality using
+Zig-native designs.
 
-It is a roadmap, not a completion certificate. Items in **Required Milestones**
-must be completed before the long-term goal is considered fully achieved.
+It is a living roadmap, not a completion certificate. When all milestones in one
+stage are closed, define the next stricter stage instead of declaring the
+broader product goal permanently finished.
 
 ## Covered
 
@@ -28,7 +30,7 @@ must be completed before the long-term goal is considered fully achieved.
 | Statistical smoke tests | engine bit balance, range buckets, normal/exponential means | `src/quality.zig` |
 | Native benchmark evidence | Zig and Rust native CPU commands; facade/direct split | `compare/results/2026-06-27-rand-comparison.md` |
 
-## Required Milestones
+## Stage 1 Required Milestones
 
 | ID | Milestone | Completion gate | Status |
 | --- | --- | --- | --- |
@@ -39,9 +41,20 @@ must be completed before the long-term goal is considered fully achieved.
 | M5 | Reproducibility matrix | Document deterministic output stability expectations for each reproducible engine and seed/stream derivation API, including what may vary by architecture or version. | Closed: `compare/results/reproducibility-matrix.md` defines stable, versioned-stable, and non-stable outputs |
 | M6 | Core docs | Expand README or dedicated docs to cover engines, seeding, distributions, sequence sampling, statistical validation, and benchmark interpretation without relying only on tests and examples. | Closed: `docs/core-guide.md` covers core APIs, validation, and benchmarks |
 
+## Stage 2 Required Milestones
+
+| ID | Milestone | Completion gate | Status |
+| --- | --- | --- | --- |
+| S2-M1 | Extended statistical validation | PractRand 0.96 `stdin64` at 64GiB or larger for `fast`, `default`, `wyhash64`, `pcg64`, `xoshiro256++`, and `chacha12`, plus at least one TestU01-compatible report or a documented local blocker. | Not started |
+| S2-M2 | Distribution parity-plus matrix | Compare the public distribution list against locally available `rand_distr`/historical `rand` distribution families and add any still-missing core families or explicitly document why they are out of scope for Zig-native `alea`. | Not started |
+| S2-M3 | Parameter-grid distribution validation | For each public distribution family, add deterministic mean/variance or support checks across multiple parameter regimes, not just one representative case. | Not started |
+| S2-M4 | Benchmark parity matrix | Add Rust-side benchmark rows for comparable distribution and sequence workloads where `rand`/`rand_distr` exposes matching functionality, and keep Zig/Rust native CPU flags aligned. | Not started |
+| S2-M5 | Cross-platform reproducibility | Validate and document stable outputs on at least two architectures or OS targets, or document why the current environment cannot provide this evidence. | Not started |
+| S2-M6 | API reference completeness | Add public API reference docs or generated documentation covering all exported modules and examples. | Not started |
+
 ## Current Rule
 
-Continue feature-first work until all required milestones are closed. Use
+Continue feature-first work on the earliest open stage milestone. Use
 `zig build statcheck` after changes that affect engines, distributions, ranges,
 or sampling internals. Use `zig build stream -- ...` to feed raw engine output
 into external statistical tools when validating engine changes. Defer pure
