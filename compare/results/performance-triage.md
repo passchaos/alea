@@ -24,6 +24,7 @@ project does not repeat unproductive work.
 | Direct ziggurat normal using engine `next()` instead of `std.Random.int` | About 386-390M samples/s; repeated runs showed `std.Random.floatNorm` can also fall back near 210M | Adopted as default. Still trails `rand_distr`, so keep optimizing. |
 | Direct ziggurat exponential using engine `next()` instead of `std.Random.int` | About 383M samples/s, essentially same as previous stdlib-backed path | Adopted internally for consistency with normal; not enough to close the Rust performance gap. |
 | Default `fillNormal(f32)` via vector Box-Muller | About 125M samples/s, slower than scalar ziggurat bulk around 196M samples/s | Rejected as default. Keep explicit vector normal prototype for experimentation. |
+| Paired `fillVectorNormal(f32)` vector generation | `vectorbench` improved from about 74M to about 130M lanes/s | Adopted for vector-slice normal fills; still not a default scalar replacement. |
 | Default `fillExponential(f32)` via vector log kernel | About 183M samples/s, slower than scalar ziggurat bulk around 320M samples/s | Rejected as default. Keep explicit vector exponential prototype for experimentation. |
 | Full benchmark row for vector-slice range fill | Caused anomalously long full benchmark runs | Deferred. API remains tested; design a smaller isolated microbench before re-adding to the full benchmark. |
 
