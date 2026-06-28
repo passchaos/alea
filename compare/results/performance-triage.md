@@ -8,11 +8,11 @@ project does not repeat unproductive work.
 
 | Area | Local Rust evidence | Current Alea evidence | Status |
 | --- | --- | --- | --- |
-| Poisson `lambda = 20` | `rand_distr poisson`: about 69M samples/s | `alea poisson`: about 52M samples/s after Ahrens-Dieter adoption | Watch: materially improved from about 26M; still trails Rust |
+| Poisson `lambda = 20` | `rand_distr poisson`: about 69M samples/s | `alea poisson`: about 62M samples/s with `FastPrng`; about 76M samples/s with `ScalarPrng` direct `sampleFrom` | Closed for scalar-fast profile; default `FastPrng` path still trails Rust |
 | Normal `f64` facade | `rand_distr normal`: about 462M samples/s | `alea normal`: about 386-390M samples/s with direct ziggurat path | Watch: materially improved from the old 210-224M; still trails Rust |
 | Exponential `f64` facade | `rand_distr exponential`: about 446M samples/s | `alea exponential`: about 383M samples/s after direct ziggurat path | Watch: close but still trails |
 | Weighted dynamic update+sample | `rand_distr weighted tree`: about 52M ops/s | `alea weighted int tree`: about 52M ops/s; generic float tree about 46M ops/s | Closed for unsigned integer weights; generic float-weight tree remains watch |
-| Scalar engine choice | Rust `SmallRng` is the baseline scalar engine | `wyhash64 next`: about 2515-2530M next/s; `normal` on `wyhash64`: about 426-427M samples/s; `fillNormal` on `wyhash64`: about 393M samples/s; `exponential` on `wyhash64`: about 422M samples/s; `fillExponential` on `wyhash64`: about 400M samples/s; `poisson` on `wyhash64`: about 57M samples/s | Use `ScalarPrng` for scalar-heavy distribution workloads; `FastPrng` remains best for bulk byte fill |
+| Scalar engine choice | Rust `SmallRng` is the baseline scalar engine | `wyhash64 next`: about 2515-2530M next/s; `normal` on `wyhash64`: about 426-427M samples/s; `fillNormal` on `wyhash64`: about 393-397M samples/s; `exponential` on `wyhash64`: about 422-426M samples/s; `fillExponential` on `wyhash64`: about 400-405M samples/s; `poisson` on `wyhash64`: about 76M samples/s | Use `ScalarPrng` for scalar-heavy distribution workloads; `FastPrng` remains best for bulk byte fill |
 
 ## Rejected Or Deferred Attempts
 

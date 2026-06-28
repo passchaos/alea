@@ -820,7 +820,7 @@ fn uintBitsFrom(source: anytype, comptime T: type, comptime bits: comptime_int) 
     return result;
 }
 
-inline fn nextFrom(source: anytype) u64 {
+pub inline fn nextFrom(source: anytype) u64 {
     return source.next();
 }
 
@@ -999,7 +999,7 @@ fn f32FromBits(bits: u24) f32 {
     return @as(f32, @floatFromInt(bits)) * (1.0 / 16777216.0);
 }
 
-fn floatFrom(source: anytype, comptime T: type) T {
+pub fn floatFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
         f32 => f32FromBits(@truncate(nextFrom(source) >> 40)),

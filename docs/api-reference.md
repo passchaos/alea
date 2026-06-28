@@ -100,6 +100,7 @@ Reusable samplers:
 - `Exponential(T)`
 - `LogNormal(T)`
 - `Poisson`
+- `Poisson.sampleFrom`
 - `Geometric`
 - `Gamma(T)`
 - `ChiSquared(T)`

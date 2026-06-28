@@ -475,10 +475,14 @@ pub const Poisson = struct {
     }
 
     pub fn sample(self: Poisson, rng: Rng) u64 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Poisson, source: anytype) u64 {
         return switch (self.method) {
             .zero => 0,
-            .product => |threshold| poissonProduct(rng, threshold),
-            .ahrens_dieter => |method| method.sample(rng),
+            .product => |threshold| poissonProductFrom(source, threshold),
+            .ahrens_dieter => |method| method.sampleFrom(source),
         };
     }
 };
@@ -524,13 +528,17 @@ const PoissonAhrensDieter = struct {
     }
 
     fn sample(self: PoissonAhrensDieter, rng: Rng) u64 {
+        return self.sampleFrom(rng);
+    }
+
+    fn sampleFrom(self: PoissonAhrensDieter, source: anytype) u64 {
         while (true) {
-            const g = normal(rng, f64, self.lambda, self.s);
+            const g = Rng.normalFastFrom(source, f64, self.lambda, self.s);
             if (g >= 0) {
                 const k1 = @floor(g);
                 if (k1 >= self.l) return @intFromFloat(k1);
 
-                const u = rng.float(f64);
+                const u = Rng.floatFrom(source, f64);
                 const diff = self.lambda - k1;
                 if (self.d * u >= diff * diff * diff) return @intFromFloat(k1);
 
@@ -539,8 +547,8 @@ const PoissonAhrensDieter = struct {
             }
 
             while (true) {
-                const e = rng.random().floatExp(f64);
-                const u = 2.0 * rng.float(f64) - 1.0;
+                const e = Rng.exponentialFastFrom(source, f64, 1);
+                const u = 2.0 * Rng.floatFrom(source, f64) - 1.0;
                 const sign: f64 = if (u < 0) -1 else 1;
                 const t = 1.8 + e * sign;
                 if (t <= -0.6744) continue;
@@ -561,11 +569,15 @@ pub fn poissonAhrensDieter(rng: Rng, lambda: f64) u64 {
 }
 
 fn poissonProduct(rng: Rng, threshold: f64) u64 {
+    return poissonProductFrom(rng, threshold);
+}
+
+fn poissonProductFrom(source: anytype, threshold: f64) u64 {
     var k: u64 = 0;
     var p: f64 = 1;
     while (p > threshold) {
         k += 1;
-        p *= rng.floatOpen(f64);
+        p *= Rng.floatFrom(source, f64);
     }
     return k - 1;
 }
