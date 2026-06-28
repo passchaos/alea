@@ -457,7 +457,7 @@ pub fn poisson(rng: Rng, lambda: f64) u64 {
     std.debug.assert(lambda >= 0 and std.math.isFinite(lambda));
     if (lambda == 0) return 0;
 
-    if (lambda < 30) {
+    if (lambda < 12) {
         const threshold = @exp(-lambda);
         var k: u64 = 0;
         var p: f64 = 1;
@@ -468,7 +468,7 @@ pub fn poisson(rng: Rng, lambda: f64) u64 {
         return k - 1;
     }
 
-    return poissonPtrs(rng, lambda);
+    return poissonAhrensDieter(rng, lambda);
 }
 
 pub const Poisson = struct {
@@ -483,6 +483,113 @@ pub const Poisson = struct {
         return poisson(rng, self.lambda);
     }
 };
+
+pub fn poissonAhrensDieter(rng: Rng, lambda: f64) u64 {
+    std.debug.assert(lambda >= 12 and std.math.isFinite(lambda));
+
+    const s = @sqrt(lambda);
+    const d = 6.0 * lambda * lambda;
+    const l = @floor(lambda - 1.1484);
+    const c = 0.1069 / lambda;
+    const b1 = (1.0 / 24.0) / lambda;
+    const b2 = 0.3 * b1 * b1;
+    const c3 = (1.0 / 7.0) * b1 * b2;
+    const c2 = b2 - 15.0 * c3;
+    const c1 = b1 - 6.0 * b2 + 45.0 * c3;
+    const c0 = 1.0 - b1 + 3.0 * b2 - 15.0 * c3;
+    const omega = 1.0 / @sqrt(2.0 * std.math.pi) / s;
+
+    while (true) {
+        const g = normal(rng, f64, lambda, s);
+        if (g >= 0) {
+            const k1 = @floor(g);
+            if (k1 >= l) return @intFromFloat(k1);
+
+            const u = rng.float(f64);
+            const diff = lambda - k1;
+            if (d * u >= diff * diff * diff) return @intFromFloat(k1);
+
+            const parts = poissonAdParts(lambda, s, omega, c0, c1, c2, c3, k1);
+            if (parts.fy * (1.0 - u) <= parts.py * @exp(parts.px - parts.fx)) return @intFromFloat(k1);
+        }
+
+        while (true) {
+            const e = rng.random().floatExp(f64);
+            const u = 2.0 * rng.float(f64) - 1.0;
+            const sign: f64 = if (u < 0) -1 else 1;
+            const t = 1.8 + e * sign;
+            if (t <= -0.6744) continue;
+
+            const k2 = @floor(lambda + s * t);
+            const parts = poissonAdParts(lambda, s, omega, c0, c1, c2, c3, k2);
+            if (c * @abs(u) <= parts.py * @exp(parts.px + e) - parts.fy * @exp(parts.fx + e)) {
+                return @intFromFloat(k2);
+            }
+        }
+    }
+}
+
+const PoissonAdParts = struct {
+    px: f64,
+    py: f64,
+    fx: f64,
+    fy: f64,
+};
+
+const PoissonAdPxPy = struct {
+    px: f64,
+    py: f64,
+};
+
+fn poissonAdParts(lambda: f64, s: f64, omega: f64, c0: f64, c1: f64, c2: f64, c3: f64, k: f64) PoissonAdParts {
+    const px_py: PoissonAdPxPy = if (k < 10.0) blk: {
+        const fact = [_]f64{ 1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880 };
+        const ki: usize = @intFromFloat(k);
+        break :blk .{
+            .px = -lambda,
+            .py = std.math.pow(f64, lambda, k) / fact[ki],
+        };
+    } else blk: {
+        const delta_base = 1.0 / (12.0 * k);
+        const delta = delta_base - 4.8 * delta_base * delta_base * delta_base;
+        const v = (lambda - k) / k;
+        const a = [_]f64{
+            -0.5000000002,
+            0.3333333343,
+            -0.2499998565,
+            0.1999997049,
+            -0.1666848753,
+            0.1428833286,
+            -0.1241963125,
+            0.1101687109,
+            -0.1142650302,
+            0.1055093006,
+        };
+        var poly: f64 = 0;
+        var idx: usize = a.len;
+        while (idx > 0) {
+            idx -= 1;
+            poly = poly * v + a[idx];
+        }
+        const px = if (@abs(v) <= 0.25)
+            k * v * v * poly - delta
+        else
+            k * @log(1.0 + v) - (lambda - k) - delta;
+        break :blk .{
+            .px = px,
+            .py = 1.0 / @sqrt(2.0 * std.math.pi) / @sqrt(k),
+        };
+    };
+
+    const x = (k - lambda + 0.5) / s;
+    const x2 = x * x;
+    return .{
+        .px = px_py.px,
+        .py = px_py.py,
+        .fx = -0.5 * x2,
+        .fy = omega * (((c3 * x2 + c2) * x2 + c1) * x2 + c0),
+    };
+}
 
 fn poissonPtrs(rng: Rng, lambda: f64) u64 {
     const sqrt_lambda = @sqrt(lambda);
