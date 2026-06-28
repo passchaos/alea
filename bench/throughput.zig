@@ -34,6 +34,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorRange(io, stdout, "alea vector bounded i32x8 facade", bytes / 8);
     try benchVectorFloat(io, stdout, "alea vector f32x8 facade", bytes / 8);
     try benchFillRange(io, stdout, "alea fillRange i32", bytes / 8);
+    try benchFillRangeF32(io, stdout, "alea fillRange f32", bytes / 4);
     try stdout.print("\nsequence throughput\n", .{});
     try benchSeqFacade(io, stdout, "alea sample indices facade", 1_000_000, 10_000);
     try benchSeqDirect(io, stdout, "alea sample indices direct", 1_000_000, 10_000);
@@ -413,6 +414,36 @@ fn benchFillRange(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillRangeF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [4096]f32 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xf132);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f32 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            rng.fillRange(f32, out[0..n], -1, 1);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchSeqFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: usize, amount: usize) !void {

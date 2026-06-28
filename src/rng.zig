@@ -150,7 +150,7 @@ pub fn fillRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
         },
         .float => {
             std.debug.assert(min <= max);
-            for (dest) |*item| item.* = self.floatRange(T, min, max);
+            self.fillFloatRange(T, dest, min, max);
         },
         else => @compileError("alea.Rng.fillRange supports integer and floating-point slices"),
     }
@@ -258,6 +258,21 @@ fn fillFloats(self: Rng, comptime T: type, dest: []T) void {
         },
         f64 => {
             for (dest) |*item| item.* = self.float(f64);
+        },
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn fillFloatRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => {
+            self.fill(f32, dest);
+            const width = max - min;
+            for (dest) |*item| item.* = min + width * item.*;
+        },
+        f64 => {
+            for (dest) |*item| item.* = self.floatRange(f64, min, max);
         },
         else => @compileError("alea supports f32 and f64 floats"),
     }
