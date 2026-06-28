@@ -8,8 +8,9 @@ The first milestone is intentionally broad:
 - multiple deterministic engines: `Wyhash64`, `Xoshiro256`, `Pcg64`
 - a `ChaCha12` secure-style stream for secret-seeded randomness
 - `Rng`, a small facade with `std.Random` compatibility
-- `ScalarPrng = Wyhash64` for scalar-heavy distribution workloads, alongside
-  `FastPrng = Alea4x64` for bulk-fill throughput
+- `ScalarPrng = Wyhash64` for scalar-heavy distribution workloads such as
+  normal, exponential, and Poisson, alongside `FastPrng = Alea4x64` for
+  bulk-fill throughput
 - `Rng.value(T)` for scalar, enum, tuple, and array sampling
 - `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling
 - bulk `fillSample`, `fillRange`, `fillNormal`, and `fillExponential` APIs for

@@ -9,7 +9,8 @@ traits.
 - `DefaultPrng = Xoshiro256`: deterministic default for reproducible work.
 - `FastPrng = Alea4x64`: high-throughput non-cryptographic generator.
 - `ScalarPrng = Wyhash64`: scalar-heavy fast path for workloads dominated by
-  repeated `next()` calls or scalar distributions.
+  repeated `next()` calls or scalar distributions such as normal, exponential,
+  and Poisson.
 - `HashPrng = Wyhash64`: compact hash-style generator.
 - `ReproduciblePrng = Pcg64`: stream-selectable reproducible generator.
 - `SecurePrng = ChaCha12`: secure-style stream for secret-seeded randomness.
