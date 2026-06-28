@@ -1185,10 +1185,14 @@ pub fn Pert(comptime T: type) type {
 }
 
 pub fn unitCircle(rng: Rng, comptime T: type) [2]T {
+    return unitCircleFrom(rng, T);
+}
+
+pub fn unitCircleFrom(source: anytype, comptime T: type) [2]T {
     comptime requireFloat(T);
     while (true) {
-        const x1 = 2 * rng.float(T) - 1;
-        const x2 = 2 * rng.float(T) - 1;
+        const x1 = 2 * Rng.floatFrom(source, T) - 1;
+        const x2 = 2 * Rng.floatFrom(source, T) - 1;
         const sum = x1 * x1 + x2 * x2;
         if (!(sum > 0 and sum < 1)) continue;
 
@@ -1198,19 +1202,27 @@ pub fn unitCircle(rng: Rng, comptime T: type) [2]T {
 }
 
 pub fn unitDisc(rng: Rng, comptime T: type) [2]T {
+    return unitDiscFrom(rng, T);
+}
+
+pub fn unitDiscFrom(source: anytype, comptime T: type) [2]T {
     comptime requireFloat(T);
     while (true) {
-        const x1 = 2 * rng.float(T) - 1;
-        const x2 = 2 * rng.float(T) - 1;
+        const x1 = 2 * Rng.floatFrom(source, T) - 1;
+        const x2 = 2 * Rng.floatFrom(source, T) - 1;
         if (x1 * x1 + x2 * x2 <= 1) return .{ x1, x2 };
     }
 }
 
 pub fn unitSphere(rng: Rng, comptime T: type) [3]T {
+    return unitSphereFrom(rng, T);
+}
+
+pub fn unitSphereFrom(source: anytype, comptime T: type) [3]T {
     comptime requireFloat(T);
     while (true) {
-        const x1 = 2 * rng.float(T) - 1;
-        const x2 = 2 * rng.float(T) - 1;
+        const x1 = 2 * Rng.floatFrom(source, T) - 1;
+        const x2 = 2 * Rng.floatFrom(source, T) - 1;
         const sum = x1 * x1 + x2 * x2;
         if (sum >= 1) continue;
 
@@ -1220,11 +1232,15 @@ pub fn unitSphere(rng: Rng, comptime T: type) [3]T {
 }
 
 pub fn unitBall(rng: Rng, comptime T: type) [3]T {
+    return unitBallFrom(rng, T);
+}
+
+pub fn unitBallFrom(source: anytype, comptime T: type) [3]T {
     comptime requireFloat(T);
     while (true) {
-        const x1 = 2 * rng.float(T) - 1;
-        const x2 = 2 * rng.float(T) - 1;
-        const x3 = 2 * rng.float(T) - 1;
+        const x1 = 2 * Rng.floatFrom(source, T) - 1;
+        const x2 = 2 * Rng.floatFrom(source, T) - 1;
+        const x3 = 2 * Rng.floatFrom(source, T) - 1;
         if (x1 * x1 + x2 * x2 + x3 * x3 <= 1) return .{ x1, x2, x3 };
     }
 }
@@ -1234,6 +1250,10 @@ pub fn UnitCircle(comptime T: type) type {
         pub fn sample(_: @This(), rng: Rng) [2]T {
             return unitCircle(rng, T);
         }
+
+        pub fn sampleFrom(_: @This(), source: anytype) [2]T {
+            return unitCircleFrom(source, T);
+        }
     };
 }
 
@@ -1241,6 +1261,10 @@ pub fn UnitDisc(comptime T: type) type {
     return struct {
         pub fn sample(_: @This(), rng: Rng) [2]T {
             return unitDisc(rng, T);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) [2]T {
+            return unitDiscFrom(source, T);
         }
     };
 }
@@ -1250,6 +1274,10 @@ pub fn UnitSphere(comptime T: type) type {
         pub fn sample(_: @This(), rng: Rng) [3]T {
             return unitSphere(rng, T);
         }
+
+        pub fn sampleFrom(_: @This(), source: anytype) [3]T {
+            return unitSphereFrom(source, T);
+        }
     };
 }
 
@@ -1257,6 +1285,10 @@ pub fn UnitBall(comptime T: type) type {
     return struct {
         pub fn sample(_: @This(), rng: Rng) [3]T {
             return unitBall(rng, T);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) [3]T {
+            return unitBallFrom(source, T);
         }
     };
 }
