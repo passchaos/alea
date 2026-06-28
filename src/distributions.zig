@@ -385,7 +385,6 @@ pub fn Normal(comptime T: type) type {
 
         mean: T,
         stddev: T,
-        cached: ?T = null,
 
         pub fn init(mean: T, stddev: T) Error!Self {
             comptime requireFloat(T);
@@ -394,22 +393,8 @@ pub fn Normal(comptime T: type) type {
             return .{ .mean = mean, .stddev = stddev };
         }
 
-        pub fn sample(self: *Self, rng: Rng) T {
-            if (self.cached) |z| {
-                self.cached = null;
-                return self.mean + self.stddev * z;
-            }
-
-            while (true) {
-                const u = 2 * rng.float(T) - 1;
-                const v = 2 * rng.float(T) - 1;
-                const s = u * u + v * v;
-                if (s == 0 or s >= 1) continue;
-                const mul = @sqrt(-2 * @log(s) / s);
-                self.cached = v * mul;
-                const z0 = u * mul;
-                return self.mean + self.stddev * z0;
-            }
+        pub fn sample(self: Self, rng: Rng) T {
+            return rng.normal(T, self.mean, self.stddev);
         }
     };
 }
