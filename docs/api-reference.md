@@ -19,7 +19,9 @@ expectations.
 
 - Construction and interop: `init`, `fromRandom`, `random`
 - Values: `value`, `valueIter`, `randomIter`, `sampleIter`
-- Bytes/fill: `bytes`, `fill`
+- Bytes/fill: `bytes`, `fill`, `fillRange`, `fillRangeChecked`,
+  `fillNormal`, `fillNormalChecked`, `fillExponential`,
+  `fillExponentialChecked`
 - Raw/scalars: `next`, `boolean`, `chance`, `chanceChecked`, `ratio`,
   `ratioChecked`, `uint`, `uintLessThan`, `uintLessThanChecked`,
   `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`

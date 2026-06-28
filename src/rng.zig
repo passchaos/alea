@@ -139,6 +139,57 @@ pub fn fill(self: Rng, comptime T: type, dest: []T) void {
     }
 }
 
+pub fn fillRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
+    switch (@typeInfo(T)) {
+        .int => {
+            std.debug.assert(min < max);
+            for (dest) |*item| item.* = self.intRangeLessThan(T, min, max);
+        },
+        .float => {
+            std.debug.assert(min <= max);
+            for (dest) |*item| item.* = self.floatRange(T, min, max);
+        },
+        else => @compileError("alea.Rng.fillRange supports integer and floating-point slices"),
+    }
+}
+
+pub fn fillRangeChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    switch (@typeInfo(T)) {
+        .int => {
+            if (min >= max) return error.EmptyRange;
+        },
+        .float => {
+            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+        },
+        else => @compileError("alea.Rng.fillRangeChecked supports integer and floating-point slices"),
+    }
+    self.fillRange(T, dest, min, max);
+}
+
+pub fn fillNormal(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(stddev >= 0);
+    for (dest) |*item| item.* = self.normal(T, mean, stddev);
+}
+
+pub fn fillNormalChecked(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    self.fillNormal(T, dest, mean, stddev);
+}
+
+pub fn fillExponential(self: Rng, comptime T: type, dest: []T, rate: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(rate > 0);
+    for (dest) |*item| item.* = self.exponential(T, rate);
+}
+
+pub fn fillExponentialChecked(self: Rng, comptime T: type, dest: []T, rate: T) Error!void {
+    comptime requireFloat(T);
+    if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+    self.fillExponential(T, dest, rate);
+}
+
 pub fn next(self: Rng) u64 {
     return self.nextFn(self.ptr);
 }
@@ -636,6 +687,22 @@ test "rng facade covers scalar APIs" {
     for (buf) |item| any_non_zero = any_non_zero or item != 0;
     try std.testing.expect(any_non_zero);
 
+    var ranged_buf: [16]i16 = undefined;
+    rng.fillRange(i16, &ranged_buf, -20, 20);
+    for (ranged_buf) |item| try std.testing.expect(item >= -20 and item < 20);
+
+    var ranged_float_buf: [16]f32 = undefined;
+    try rng.fillRangeChecked(f32, &ranged_float_buf, -1, 1);
+    for (ranged_float_buf) |item| try std.testing.expect(item >= -1 and item < 1);
+
+    var normal_buf: [16]f64 = undefined;
+    try rng.fillNormalChecked(f64, &normal_buf, 0, 1);
+    for (normal_buf) |item| try std.testing.expect(std.math.isFinite(item));
+
+    var exp_buf: [16]f64 = undefined;
+    try rng.fillExponentialChecked(f64, &exp_buf, 2);
+    for (exp_buf) |item| try std.testing.expect(item >= 0);
+
     const uvec = rng.value(@Vector(4, u16));
     var any_vec_non_zero = false;
     inline for (0..4) |i| any_vec_non_zero = any_vec_non_zero or uvec[i] != 0;
@@ -658,6 +725,9 @@ test "rng facade covers scalar APIs" {
 
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, u32), 3, 3));
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectError(error.EmptyRange, rng.fillRangeChecked(u32, &.{}, 3, 3));
+    try std.testing.expectError(error.InvalidParameter, rng.fillNormalChecked(f64, &normal_buf, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.fillExponentialChecked(f64, &exp_buf, 0));
 }
 
 test "shuffle and sampling keep item set" {

@@ -84,7 +84,7 @@ Rust parity.
 | S4-M1 | Broader platform reproducibility | Validate reproducibility snapshots and core distribution checks on at least one additional OS or architecture, or add a stronger blocker with exact missing infrastructure. | Blocked locally: `compare/results/cross-platform-repro-blocker.md` now records the missing second-platform runners and revalidated x86_64 Linux baseline |
 | S4-M2 | Longer external statistical validation | Run and check in longer PractRand/TestU01-compatible evidence beyond the current local 64GiB engine reports for the primary Linux engines. | Closed for 128GiB Linux stage: all primary engines have 128GiB PractRand reports; `default` / `Xoshiro256` and `pcg64` each have one default-seed `unusual` plus a clean alternate-seed rerun, summarized in `compare/results/2026-06-28-practrand-128gib-summary.md` |
 | S4-M3 | SIMD/vector sampling design | Design and prototype Zig-native vector/SIMD sampling APIs for high-volume scalar distributions without copying Rust `std::simd` surface shapes. | In progress: `Rng` now has a Zig-native vector prototype for `value(@Vector)`, `vectorRange`, `vectorNormal`, and `vectorExponential`; deeper SIMD-optimized kernels are still open |
-| S4-M4 | Performance follow-up from parity benchmarks | Use the completed feature matrix to choose targeted performance work where Alea trails local Rust in comparable core workloads. | In progress: first follow-up moved `Rng.normal` and `Rng.exponential` to ziggurat-backed stdlib paths, raising native benchmark throughput to about 222M and 374M samples/s respectively; broader performance triage remains open |
+| S4-M4 | Performance follow-up from parity benchmarks | Use the completed feature matrix to choose targeted performance work where Alea trails local Rust in comparable core workloads. | In progress: first follow-up moved `Rng.normal` and `Rng.exponential` to ziggurat-backed stdlib paths, raising native benchmark throughput to about 222M and 374M samples/s respectively; bulk `fillRange`, `fillNormal`, and `fillExponential` APIs now have native benchmark rows; broader performance triage remains open |
 
 ## Current Rule
 
@@ -94,3 +94,17 @@ or sampling internals. Use `zig build stream -- ...` to feed raw engine output
 into external statistical tools when validating engine changes. Defer pure
 micro-optimization until feature, correctness, and validation milestones are in
 place, except where performance is part of a feature's viability.
+
+## Long-Term Product Tracks
+
+These tracks exist beyond any single roadmap stage. Closing a stage means the
+current evidence bar was met, not that Alea has finished surpassing Rust
+`rand` / `rand_distr` as a product.
+
+| Track | Product target | Current next pressure |
+| --- | --- | --- |
+| Feature breadth | Core random workflows should be available in one Zig-native library without forcing users into companion packages. | Bulk range, normal, and exponential fill APIs exist; continue adding allocation-free bulk paths for other high-volume distributions. |
+| Statistical confidence | Engine and distribution evidence should keep getting longer, broader, and easier to reproduce. | Repeat or extend the 128GiB observations for `default` and `pcg64`; add second-platform execution when infrastructure exists. |
+| Performance | Fast paths should be competitive with or faster than local Rust evidence for comparable workloads, with facade/direct overhead separated. | Continue targeted benchmark-driven optimization after feature coverage remains stable. |
+| Ergonomics | APIs should feel natural in Zig, including allocation-free and comptime-friendly workflows. | Continue extending direct fill/bulk APIs beyond the first range/normal/exponential batch. |
+| Portability | Stable-output expectations should be clear across targets, and blockers should be exact. | Close S4-M1 once another OS/architecture runner is available. |
