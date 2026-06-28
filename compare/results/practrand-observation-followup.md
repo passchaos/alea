@@ -9,7 +9,7 @@ confidence, not merely closing a single milestone.
 | Engine | Observation | Immediate follow-up |
 | --- | --- | --- |
 | `default` / `Xoshiro256` | One default-seed 128GiB PractRand `unusual` in `[Low4/64]DC6-9x1Bytes-1`; two alternate-seed 128GiB runs were clean. | No immediate engine change indicated; keep visible for later longer stages. |
-| `pcg64` | One default-seed 128GiB PractRand `unusual` in `[Low1/64]BDayS2(4,24)[60]`; alternate-seed 128GiB run was clean. | Repeat one more 128GiB run with a third seed, then run 256GiB if any low-bit `unusual` recurs. |
+| `pcg64` | One default-seed 128GiB PractRand `unusual` in `[Low1/64]BDayS2(4,24)[60]`; two alternate-seed 128GiB runs were clean. | No immediate engine change indicated; keep visible for later longer stages. |
 
 ## Escalation Rules
 
