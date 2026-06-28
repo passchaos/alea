@@ -169,6 +169,25 @@ pub fn fillRangeChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) 
     self.fillRange(T, dest, min, max);
 }
 
+pub fn fillVectorRange(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    _ = vectorInfo(VectorType);
+    for (dest) |*item| item.* = self.vectorRange(VectorType, min, max);
+}
+
+pub fn fillVectorRangeChecked(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    const info = vectorInfo(VectorType);
+    switch (@typeInfo(info.child)) {
+        .int => {
+            if (min >= max) return error.EmptyRange;
+        },
+        .float => {
+            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+        },
+        else => @compileError("Rng.fillVectorRangeChecked supports integer and floating-point vectors"),
+    }
+    self.fillVectorRange(VectorType, dest, min, max);
+}
+
 pub fn fillNormal(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
@@ -956,6 +975,10 @@ test "rng facade covers scalar APIs" {
     rng.fill(@Vector(8, f32), &vec_buf);
     for (vec_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0 and vec[i] < 1);
 
+    var vec_range_buf: [8]@Vector(8, f32) = undefined;
+    try rng.fillVectorRangeChecked(@Vector(8, f32), &vec_range_buf, -1, 1);
+    for (vec_range_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= -1 and vec[i] < 1);
+
     const ranged_i = rng.vectorRange(@Vector(4, i32), -10, 10);
     inline for (0..4) |i| try std.testing.expect(ranged_i[i] >= -10 and ranged_i[i] < 10);
 
@@ -976,6 +999,7 @@ test "rng facade covers scalar APIs" {
 
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, u32), 3, 3));
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectError(error.EmptyRange, rng.fillVectorRangeChecked(@Vector(8, f32), &vec_range_buf, 2, 1));
     try std.testing.expectError(error.EmptyRange, rng.fillRangeChecked(u32, &.{}, 3, 3));
     try std.testing.expectError(error.InvalidParameter, rng.fillNormalChecked(f64, &normal_buf, 0, -1));
     try std.testing.expectError(error.InvalidParameter, rng.fillExponentialChecked(f64, &exp_buf, 0));
