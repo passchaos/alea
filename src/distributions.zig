@@ -1091,13 +1091,17 @@ pub fn Frechet(comptime T: type) type {
 }
 
 pub fn skewNormal(rng: Rng, comptime T: type, location: T, scale: T, shape: T) T {
+    return skewNormalFrom(rng, T, location, scale, shape);
+}
+
+pub fn skewNormalFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(shape));
 
-    const z1 = normal(rng, T, 0, 1);
+    const z1 = Rng.normalFastFrom(source, T, 0, 1);
     if (shape == 0) return location + scale * z1;
 
-    const z2 = normal(rng, T, 0, 1);
+    const z2 = Rng.normalFastFrom(source, T, 0, 1);
     const high = @max(z1, z2);
     const low = @min(z1, z2);
     const normalized = if (shape == -1)
@@ -1130,7 +1134,11 @@ pub fn SkewNormal(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return skewNormal(rng, T, self.location, self.scale, self.shape);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return skewNormalFrom(source, T, self.location, self.scale, self.shape);
         }
     };
 }

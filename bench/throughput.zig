@@ -104,6 +104,7 @@ pub fn main(init: std.process.Init) !void {
     try benchGumbel(io, stdout, "alea gumbel", bytes / 128);
     try benchFrechet(io, stdout, "alea frechet", bytes / 128);
     try benchSkewNormal(io, stdout, "alea skew-normal", bytes / 128);
+    try benchSkewNormalScalar(io, stdout, "alea skew-normal scalar direct", bytes / 128);
     try benchPert(io, stdout, "alea pert", bytes / 128);
     try benchUnitCircle(io, stdout, "alea unit circle", bytes / 128);
     try benchUnitCircleScalar(io, stdout, "alea unit circle scalar direct", bytes / 128);
@@ -2007,6 +2008,30 @@ fn benchSkewNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
         var i: usize = 0;
         var checksum: f64 = 0;
         while (i < count) : (i += 1) checksum += alea.distributions.skewNormal(rng, f64, 0, 1, 1);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchSkewNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const dist = alea.distributions.SkewNormal(f64).init(0, 1, 1) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x5ce9);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

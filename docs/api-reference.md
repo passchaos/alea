@@ -82,7 +82,7 @@ Single-shot helpers:
 - `poisson`, `geometric`
 - `gamma`, `gammaFrom`, `chiSquared`, `beta`, `fisherF`, `studentT`
 - `triangular`, `cauchy`, `pareto`, `weibull`
-- `gumbel`, `frechet`, `skewNormal`, `pert`
+- `gumbel`, `frechet`, `skewNormal`, `skewNormalFrom`, `pert`
 - `inverseGaussian`, `normalInverseGaussian`, `zipf`, `zeta`
 - `unitCircle`, `unitDisc`, `unitSphere`, `unitBall`
 
@@ -119,6 +119,7 @@ Reusable samplers:
 - `Gumbel(T)`
 - `Frechet(T)`
 - `SkewNormal(T)`
+- `SkewNormal(T).sampleFrom`
 - `Pert(T)`
 - `InverseGaussian(T)`
 - `InverseGaussian(T).sampleFrom`
