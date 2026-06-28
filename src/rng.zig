@@ -414,17 +414,13 @@ pub fn unicodeScalar(self: Rng) u21 {
 pub fn normal(self: Rng, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
-    const open_uniform = self.floatOpen(T);
-    const angle_uniform = self.float(T);
-    const radius = @sqrt(-2 * @log(open_uniform));
-    const theta = @as(T, @floatCast(std.math.tau)) * angle_uniform;
-    return mean + stddev * radius * @cos(theta);
+    return mean + stddev * self.random().floatNorm(T);
 }
 
 pub fn exponential(self: Rng, comptime T: type, rate: T) T {
     comptime requireFloat(T);
     std.debug.assert(rate > 0);
-    return -@log(self.floatOpen(T)) / rate;
+    return self.random().floatExp(T) / rate;
 }
 
 pub fn enumValue(self: Rng, comptime EnumType: type) EnumType {
