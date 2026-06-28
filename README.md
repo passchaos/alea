@@ -19,9 +19,10 @@ The first milestone is intentionally broad:
 - reusable uniform, Bernoulli, non-uniform distribution, and alias-table samplers
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, and Unicode scalar
   string generation
-- distributions: uniform, bernoulli, binomial, normal, log-normal,
-  exponential, poisson, gamma, chi-squared, beta, Fisher F, Student t,
-  triangular, cauchy, pareto, weibull, dirichlet, multinomial
+- distributions: uniform, bernoulli, binomial, negative-binomial,
+  hypergeometric, normal, log-normal, exponential, poisson, gamma,
+  chi-squared, beta, Fisher F, Student t, triangular, cauchy, pareto,
+  weibull, dirichlet, multinomial
 - O(1) repeated weighted sampling through alias tables
 
 ## Quick Start

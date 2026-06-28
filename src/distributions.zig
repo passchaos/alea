@@ -144,6 +144,69 @@ pub const Multinomial = struct {
     }
 };
 
+pub const NegativeBinomial = struct {
+    successes: u64,
+    p: f64,
+
+    pub fn init(successes: u64, p: f64) Error!NegativeBinomial {
+        if (successes == 0) return error.InvalidParameter;
+        if (!(p > 0 and p <= 1)) return error.InvalidProbability;
+        return .{ .successes = successes, .p = p };
+    }
+
+    pub fn sample(self: NegativeBinomial, rng: Rng) u64 {
+        return negativeBinomial(rng, self.successes, self.p);
+    }
+};
+
+pub fn negativeBinomial(rng: Rng, successes: u64, p: f64) u64 {
+    std.debug.assert(successes > 0 and p > 0 and p <= 1);
+    if (p == 1) return 0;
+
+    var failures: u64 = 0;
+    var i: u64 = 0;
+    while (i < successes) : (i += 1) {
+        failures += geometric(rng, p) - 1;
+    }
+    return failures;
+}
+
+pub const Hypergeometric = struct {
+    population: u64,
+    successes: u64,
+    draws: u64,
+
+    pub fn init(population: u64, successes: u64, draws: u64) Error!Hypergeometric {
+        if (successes > population or draws > population) return error.InvalidParameter;
+        return .{ .population = population, .successes = successes, .draws = draws };
+    }
+
+    pub fn sample(self: Hypergeometric, rng: Rng) u64 {
+        return hypergeometric(rng, self.population, self.successes, self.draws);
+    }
+};
+
+pub fn hypergeometric(rng: Rng, population: u64, successes: u64, draws: u64) u64 {
+    std.debug.assert(successes <= population and draws <= population);
+    if (population == 0 or successes == 0 or draws == 0) return 0;
+    if (successes == population) return draws;
+
+    var remaining_population = population;
+    var remaining_successes = successes;
+    var hits: u64 = 0;
+    var i: u64 = 0;
+    while (i < draws) : (i += 1) {
+        const p = @as(f64, @floatFromInt(remaining_successes)) / @as(f64, @floatFromInt(remaining_population));
+        if (rng.chance(p)) {
+            hits += 1;
+            remaining_successes -= 1;
+            if (remaining_successes == 0) break;
+        }
+        remaining_population -= 1;
+    }
+    return hits;
+}
+
 fn binomialFair(rng: Rng, trials: u64) u64 {
     var remaining = trials;
     var successes: u64 = 0;
@@ -1068,6 +1131,32 @@ test "multinomial sampler returns category counts" {
     try std.testing.expectError(error.EmptyRange, Multinomial.init(1, &.{}));
     try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 0.0, 0.0 }));
+}
+
+test "negative-binomial and hypergeometric samplers have plausible moments" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(71);
+    const rng = Rng.init(&engine);
+
+    const nb = try NegativeBinomial.init(5, 0.4);
+    const hg = try Hypergeometric.init(100, 30, 10);
+    const samples = 20_000;
+    var nb_sum: f64 = 0;
+    var hg_sum: f64 = 0;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) {
+        nb_sum += @floatFromInt(nb.sample(rng));
+        hg_sum += @floatFromInt(hg.sample(rng));
+    }
+
+    const n: f64 = @floatFromInt(samples);
+    try std.testing.expect(nb_sum / n > 7.2 and nb_sum / n < 7.8);
+    try std.testing.expect(hg_sum / n > 2.8 and hg_sum / n < 3.2);
+
+    try std.testing.expectError(error.InvalidParameter, NegativeBinomial.init(0, 0.5));
+    try std.testing.expectError(error.InvalidProbability, NegativeBinomial.init(1, 0));
+    try std.testing.expectError(error.InvalidParameter, Hypergeometric.init(10, 11, 1));
+    try std.testing.expectError(error.InvalidParameter, Hypergeometric.init(10, 1, 11));
 }
 
 test "large binomial sampler has plausible moments" {
