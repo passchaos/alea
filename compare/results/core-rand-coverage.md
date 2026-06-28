@@ -70,8 +70,21 @@ gap on the current Linux platform against the locally available `rand`,
 | S3-M2 | Stage 3 validation grid | Extend `distcheck` and unit tests for all Stage 3 distributions with support checks, deterministic parameter grids, and mean/CDF-style smoke gates where moments exist. | Closed for Stage 3 distribution additions: unit tests and `distcheck` cover support and mean checks for the added families |
 | S3-M3 | Stage 3 benchmark parity | Add Zig benchmark rows and Rust `rand_distr` rows for comparable Stage 3 workloads, using native CPU flags on both sides. | Closed for Stage 3 distribution additions: Zig and Rust rows cover comparable scalar and unit-geometry workloads |
 | S3-M4 | Weighted dynamic sampling parity | Compare `AliasTable.update`, sequence weighted sampling, and local `rand_distr` weighted alias/tree APIs; add a Zig-native dynamic weighted sampler if alias rebuilds leave a real core gap. | Closed: `WeightedTree(Weight)` adds O(log n) sample/update/push/pop parity with local `rand_distr::weighted::WeightedTreeIndex`; Zig/Rust update+sample benchmark rows exist |
-| S3-M5 | Linux no-known-gaps audit report | Replace informal coverage claims with a checked-in audit listing local Rust evidence, Alea status, remaining gaps, exclusions, and next Linux-first actions. | Open |
-| S3-M6 | Documentation and API reference refresh | Keep README, core guide, API reference, and parity matrix synchronized with every newly exported Stage 3 API. | In progress |
+| S3-M5 | Linux no-known-gaps audit report | Replace informal coverage claims with a checked-in audit listing local Rust evidence, Alea status, remaining gaps, exclusions, and next Linux-first actions. | Closed: `compare/results/linux-no-known-gaps-audit.md` records the local Linux evidence, scope, exclusions, and current no-known-gaps finding |
+| S3-M6 | Documentation and API reference refresh | Keep README, core guide, API reference, and parity matrix synchronized with every newly exported Stage 3 API. | Closed for Stage 3: README, core guide, API reference, parity matrix, Zig benchmark rows, and Rust benchmark rows are synchronized |
+
+## Stage 4 Required Milestones
+
+Stage 4 raises the bar after the local Linux no-known-gaps audit. The next focus
+is broader evidence, longer validation, and Zig-native advantages beyond local
+Rust parity.
+
+| ID | Milestone | Completion gate | Status |
+| --- | --- | --- | --- |
+| S4-M1 | Broader platform reproducibility | Validate reproducibility snapshots and core distribution checks on at least one additional OS or architecture, or add a stronger blocker with exact missing infrastructure. | Open |
+| S4-M2 | Longer external statistical validation | Run and check in longer PractRand/TestU01-compatible evidence beyond the current local 64GiB engine reports for the primary Linux engines. | Open |
+| S4-M3 | SIMD/vector sampling design | Design and prototype Zig-native vector/SIMD sampling APIs for high-volume scalar distributions without copying Rust `std::simd` surface shapes. | Open |
+| S4-M4 | Performance follow-up from parity benchmarks | Use the completed feature matrix to choose targeted performance work where Alea trails local Rust in comparable core workloads. | Open |
 
 ## Current Rule
 
