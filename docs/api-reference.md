@@ -123,6 +123,7 @@ Reusable samplers:
 - `Dirichlet(T)`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
+- `WeightedIntTree(Weight)`
 
 Alias helpers:
 

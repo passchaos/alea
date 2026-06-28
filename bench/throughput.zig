@@ -47,6 +47,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("\ndistribution throughput\n", .{});
     try benchBernoulli(io, stdout, "alea bernoulli", bytes / 64);
     try benchWeightedTree(io, stdout, "alea weighted tree update+sample", bytes / 256);
+    try benchWeightedIntTree(io, stdout, "alea weighted int tree update+sample", bytes / 256);
     try benchNormal(io, stdout, "alea normal", bytes / 64);
     try benchNormalStdRandom(io, stdout, "alea normal std.Random direct", bytes / 64);
     try benchNormalFast(io, stdout, "alea normal fast direct", bytes / 64);
@@ -849,6 +850,38 @@ fn benchWeightedTree(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
         var engine = alea.FastPrng.init(0x77ee);
         const rng = alea.Rng.init(&engine);
         var tree = try alea.distributions.WeightedTree(u32).init(std.heap.smp_allocator, &initial);
+        defer tree.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: usize = 0;
+        while (i < count) : (i += 1) {
+            const index = i & 7;
+            try tree.update(index, @as(u32, @intCast((i % 17) + 1)));
+            checksum +%= tree.sample(rng);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M ops/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchWeightedIntTree(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    const initial = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x77ef);
+        const rng = alea.Rng.init(&engine);
+        var tree = try alea.distributions.WeightedIntTree(u32).init(std.heap.smp_allocator, &initial);
         defer tree.deinit();
 
         const start = std.Io.Clock.awake.now(io).nanoseconds;

@@ -11,7 +11,7 @@ project does not repeat unproductive work.
 | Poisson `lambda = 20` | `rand_distr poisson`: about 69M samples/s | `alea poisson`: about 52M samples/s after Ahrens-Dieter adoption | Watch: materially improved from about 26M; still trails Rust |
 | Normal `f64` facade | `rand_distr normal`: about 462M samples/s | `alea normal`: about 386-390M samples/s with direct ziggurat path | Watch: materially improved from the old 210-224M; still trails Rust |
 | Exponential `f64` facade | `rand_distr exponential`: about 446M samples/s | `alea exponential`: about 383M samples/s after direct ziggurat path | Watch: close but still trails |
-| Weighted dynamic update+sample | `rand_distr weighted tree`: about 52M ops/s | `alea weighted tree`: about 46M ops/s | Watch: close, possible data-structure tuning later |
+| Weighted dynamic update+sample | `rand_distr weighted tree`: about 52M ops/s | `alea weighted int tree`: about 52M ops/s; generic float tree about 46M ops/s | Closed for unsigned integer weights; generic float-weight tree remains watch |
 
 ## Rejected Or Deferred Attempts
 

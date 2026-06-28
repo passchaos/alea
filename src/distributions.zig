@@ -1618,6 +1618,117 @@ pub fn WeightedTree(comptime Weight: type) type {
     };
 }
 
+pub fn WeightedIntTree(comptime Weight: type) type {
+    return struct {
+        const Self = @This();
+
+        subtotals: std.ArrayList(u64),
+        allocator: std.mem.Allocator,
+
+        pub fn init(allocator: std.mem.Allocator, weights: []const Weight) !Self {
+            comptime requireUnsignedWeight(Weight);
+            var subtotals = try std.ArrayList(u64).initCapacity(allocator, weights.len);
+            errdefer subtotals.deinit(allocator);
+
+            for (weights) |weight| try subtotals.append(allocator, @intCast(weight));
+            buildSubtotals(subtotals.items);
+
+            return .{ .subtotals = subtotals, .allocator = allocator };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.subtotals.deinit(self.allocator);
+            self.* = undefined;
+        }
+
+        pub fn len(self: Self) usize {
+            return self.subtotals.items.len;
+        }
+
+        pub fn totalWeight(self: Self) u64 {
+            return if (self.subtotals.items.len == 0) 0 else self.subtotals.items[0];
+        }
+
+        pub fn get(self: Self, index: usize) Error!u64 {
+            if (index >= self.subtotals.items.len) return error.InvalidParameter;
+            return self.subtotals.items[index] - self.subtotal(2 * index + 1) - self.subtotal(2 * index + 2);
+        }
+
+        pub fn update(self: *Self, index: usize, weight: Weight) !void {
+            if (index >= self.subtotals.items.len) return error.InvalidParameter;
+            const value: u64 = @intCast(weight);
+            const old = try self.get(index);
+            if (value >= old) {
+                const delta = value - old;
+                var cursor = index;
+                while (true) {
+                    self.subtotals.items[cursor] += delta;
+                    if (cursor == 0) break;
+                    cursor = (cursor - 1) / 2;
+                }
+            } else {
+                const delta = old - value;
+                var cursor = index;
+                while (true) {
+                    self.subtotals.items[cursor] -= delta;
+                    if (cursor == 0) break;
+                    cursor = (cursor - 1) / 2;
+                }
+            }
+        }
+
+        pub fn sample(self: Self, rng: Rng) usize {
+            return self.sampleChecked(rng) catch unreachable;
+        }
+
+        pub fn sampleChecked(self: Self, rng: Rng) Error!usize {
+            const total = self.totalWeight();
+            if (total == 0) return error.InvalidWeight;
+
+            var target = rng.uintLessThan(u64, total);
+            var index: usize = 0;
+            while (true) {
+                const left_index = 2 * index + 1;
+                const left = self.subtotal(left_index);
+                if (target < left) {
+                    index = left_index;
+                    continue;
+                }
+                target -= left;
+
+                const right_index = 2 * index + 2;
+                const right = self.subtotal(right_index);
+                if (target < right) {
+                    index = right_index;
+                    continue;
+                }
+                target -= right;
+
+                const own = self.subtotals.items[index] - left - right;
+                if (target < own or own > 0) return index;
+            }
+        }
+
+        fn subtotal(self: Self, index: usize) u64 {
+            return if (index < self.subtotals.items.len) self.subtotals.items[index] else 0;
+        }
+
+        fn buildSubtotals(subtotals: []u64) void {
+            var i = subtotals.len;
+            while (i > 1) {
+                i -= 1;
+                subtotals[(i - 1) / 2] += subtotals[i];
+            }
+        }
+    };
+}
+
+fn requireUnsignedWeight(comptime Weight: type) void {
+    if (@typeInfo(Weight) != .int or @typeInfo(Weight).int.signedness != .unsigned) {
+        @compileError("WeightedIntTree weights must be unsigned integers");
+    }
+}
+
 fn rangeLess(comptime T: type, low: T, high: T) bool {
     return switch (@typeInfo(T)) {
         .int, .float => low < high,
@@ -1724,6 +1835,31 @@ test "weighted tree supports dynamic updates" {
     var float_tree = try WeightedTree(f64).init(std.testing.allocator, &.{1.0});
     defer float_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, float_tree.push(std.math.nan(f64)));
+}
+
+test "weighted int tree supports dynamic updates" {
+    const alea = @import("root.zig");
+    var engine = alea.Wyhash64.init(46);
+    const rng = Rng.init(&engine);
+
+    var tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 9, 1, 0 });
+    defer tree.deinit();
+
+    try std.testing.expectEqual(@as(usize, 3), tree.len());
+    try std.testing.expectEqual(@as(u64, 10), tree.totalWeight());
+    try std.testing.expectEqual(@as(u64, 9), try tree.get(0));
+    try std.testing.expectEqual(@as(u64, 1), try tree.get(1));
+    try std.testing.expectEqual(@as(u64, 0), try tree.get(2));
+
+    try tree.update(0, 0);
+    try tree.update(1, 0);
+    try std.testing.expectError(error.InvalidWeight, tree.sampleChecked(rng));
+
+    try tree.update(2, 5);
+    var i: usize = 0;
+    while (i < 16) : (i += 1) try std.testing.expectEqual(@as(usize, 2), tree.sample(rng));
+
+    try std.testing.expectError(error.InvalidParameter, tree.update(9, 1));
 }
 
 test "poisson large lambda has plausible moments" {

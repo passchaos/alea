@@ -46,7 +46,7 @@ Zig-native way.
 | Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper |
 | WeightedChoice | Covered: `WeightedChoice`, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
 | WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling |
-| WeightedTreeIndex | Covered: `WeightedTree(Weight)` for O(log n) sample/update/push/pop workloads |
+| WeightedTreeIndex | Covered: `WeightedTree(Weight)` for generic weights and `WeightedIntTree(Weight)` for faster unsigned integer sample/update workloads |
 | InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)` |
 | NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)` |
 | Zipf | Covered: `zipf`, `Zipf(T)` |
