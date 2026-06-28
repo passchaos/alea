@@ -167,9 +167,20 @@ Dynamic weighted helpers:
 - `WeightedTree.get`
 - `WeightedTree.sample`
 - `WeightedTree.sampleChecked`
+- `WeightedTree.sampleFrom`
+- `WeightedTree.sampleCheckedFrom`
 - `WeightedTree.totalWeight`
 - `WeightedTree.isValid`
 - `WeightedTree.deinit`
+- `WeightedIntTree.init`
+- `WeightedIntTree.update`
+- `WeightedIntTree.get`
+- `WeightedIntTree.sample`
+- `WeightedIntTree.sampleChecked`
+- `WeightedIntTree.sampleFrom`
+- `WeightedIntTree.sampleCheckedFrom`
+- `WeightedIntTree.totalWeight`
+- `WeightedIntTree.deinit`
 
 ## Sequence Sampling
 

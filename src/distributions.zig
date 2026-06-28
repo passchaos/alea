@@ -1793,10 +1793,18 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn sampleChecked(self: Self, rng: Rng) Error!usize {
+            return self.sampleCheckedFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) usize {
+            return self.sampleCheckedFrom(source) catch unreachable;
+        }
+
+        pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (!(total > 0)) return error.InvalidWeight;
 
-            var target = rng.float(f64) * total;
+            var target = Rng.floatFrom(source, f64) * total;
             var index: usize = 0;
             while (true) {
                 const left_index = 2 * index + 1;
@@ -1908,10 +1916,18 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn sampleChecked(self: Self, rng: Rng) Error!usize {
+            return self.sampleCheckedFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) usize {
+            return self.sampleCheckedFrom(source) catch unreachable;
+        }
+
+        pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
 
-            var target = rng.uintLessThan(u64, total);
+            var target = Rng.uintLessThanFrom(source, u64, total);
             var index: usize = 0;
             while (true) {
                 const left_index = 2 * index + 1;
@@ -2040,14 +2056,14 @@ test "weighted tree supports dynamic updates" {
     try tree.push(7);
     var i: usize = 0;
     while (i < 16) : (i += 1) {
-        try std.testing.expectEqual(@as(usize, 3), tree.sample(rng));
+        try std.testing.expectEqual(@as(usize, 3), tree.sampleFrom(&engine));
     }
 
     try tree.update(2, 5);
     var saw_two = false;
     i = 0;
     while (i < 64) : (i += 1) {
-        const index = tree.sample(rng);
+        const index = try tree.sampleCheckedFrom(&engine);
         try std.testing.expect(index == 2 or index == 3);
         saw_two = saw_two or index == 2;
     }
@@ -2083,7 +2099,8 @@ test "weighted int tree supports dynamic updates" {
 
     try tree.update(2, 5);
     var i: usize = 0;
-    while (i < 16) : (i += 1) try std.testing.expectEqual(@as(usize, 2), tree.sample(rng));
+    while (i < 16) : (i += 1) try std.testing.expectEqual(@as(usize, 2), tree.sampleFrom(&engine));
+    try std.testing.expectEqual(@as(usize, 2), try tree.sampleCheckedFrom(&engine));
 
     try std.testing.expectError(error.InvalidParameter, tree.update(9, 1));
 }
