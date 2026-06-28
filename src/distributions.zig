@@ -261,23 +261,13 @@ pub const OpenClosed01 = struct {
 pub fn normal(rng: Rng, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
-    return mean + stddev * standardNormal(rng, T);
-}
-
-fn standardNormal(rng: Rng, comptime T: type) T {
-    while (true) {
-        const u = 2 * rng.float(T) - 1;
-        const v = 2 * rng.float(T) - 1;
-        const s = u * u + v * v;
-        if (s == 0 or s >= 1) continue;
-        return u * @sqrt(-2 * @log(s) / s);
-    }
+    return mean + stddev * rng.random().floatNorm(T);
 }
 
 pub fn exponential(rng: Rng, comptime T: type, rate: T) T {
     comptime requireFloat(T);
     std.debug.assert(rate > 0);
-    return -@log(rng.floatOpen(T)) / rate;
+    return rng.random().floatExp(T) / rate;
 }
 
 pub fn Normal(comptime T: type) type {
@@ -328,7 +318,7 @@ pub fn Exponential(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return -@log(rng.floatOpen(T)) * self.inverse_rate;
+            return rng.random().floatExp(T) * self.inverse_rate;
         }
     };
 }
