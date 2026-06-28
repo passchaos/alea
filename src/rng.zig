@@ -1,4 +1,5 @@
 const std = @import("std");
+const std_ziggurat = std.Random.ziggurat;
 
 const Rng = @This();
 
@@ -236,7 +237,7 @@ pub fn fillVectorExponentialChecked(self: Rng, comptime VectorType: type, dest: 
 pub fn fillNormal(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
-    for (dest) |*item| item.* = self.normal(T, mean, stddev);
+    for (dest) |*item| item.* = normalFastFrom(self, T, mean, stddev);
 }
 
 pub fn fillNormalChecked(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
@@ -643,9 +644,17 @@ pub fn unicodeScalar(self: Rng) u21 {
 }
 
 pub fn normal(self: Rng, comptime T: type, mean: T, stddev: T) T {
+    return normalFastFrom(self, T, mean, stddev);
+}
+
+pub fn normalFastFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
-    return mean + stddev * self.random().floatNorm(T);
+    return mean + stddev * switch (T) {
+        f64 => normalZigguratF64(source),
+        f32 => @as(f32, @floatCast(normalZigguratF64(source))),
+        else => @compileError("alea supports f32 and f64 normal"),
+    };
 }
 
 pub fn exponential(self: Rng, comptime T: type, rate: T) T {
@@ -797,6 +806,32 @@ fn nextFrom(source: anytype) u64 {
 
 fn randomFrom(source: anytype) std.Random {
     return source.random();
+}
+
+fn normalZigguratF64(source: anytype) f64 {
+    const tables = std_ziggurat.NormDist;
+    while (true) {
+        const bits = nextFrom(source);
+        const i: usize = @as(u8, @truncate(bits));
+        const repr = (@as(u64, 0x400) << 52) | (bits >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+        const x = u * tables.x[i];
+        const test_x = @abs(x);
+
+        if (test_x < tables.x[i + 1]) return x;
+        if (i == 0) return normalZigguratZeroCase(source, u);
+        if (tables.f[i + 1] + (tables.f[i] - tables.f[i + 1]) * floatFrom(source, f64) < @exp(-x * x / 2.0)) return x;
+    }
+}
+
+fn normalZigguratZeroCase(source: anytype, u: f64) f64 {
+    var x: f64 = 1;
+    var y: f64 = 0;
+    while (-2.0 * y < x * x) {
+        x = @log(floatFrom(source, f64)) / std_ziggurat.norm_r;
+        y = @log(floatFrom(source, f64));
+    }
+    return if (u < 0) x - std_ziggurat.norm_r else std_ziggurat.norm_r - x;
 }
 
 fn requireInt(comptime T: type) void {
@@ -1083,6 +1118,9 @@ test "rng facade covers scalar APIs" {
 
     const normals = rng.vectorNormal(@Vector(4, f64), 0, 1);
     inline for (0..4) |i| try std.testing.expect(std.math.isFinite(normals[i]));
+
+    const fast_normal = Rng.normalFastFrom(&engine, f64, 0, 1);
+    try std.testing.expect(std.math.isFinite(fast_normal));
 
     const vector_normals_f32 = rng.vectorNormal(@Vector(8, f32), 0, 1);
     inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vector_normals_f32[i]));

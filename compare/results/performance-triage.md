@@ -9,7 +9,7 @@ project does not repeat unproductive work.
 | Area | Local Rust evidence | Current Alea evidence | Status |
 | --- | --- | --- | --- |
 | Poisson `lambda = 20` | `rand_distr poisson`: about 69M samples/s | `alea poisson`: about 52M samples/s after Ahrens-Dieter adoption | Watch: materially improved from about 26M; still trails Rust |
-| Normal `f64` facade | `rand_distr normal`: about 462M samples/s | `alea normal`: about 210-224M samples/s; direct `std.Random.floatNorm` path is about 214M | Open: gap is mostly stdlib ziggurat algorithm/implementation, not Alea facade overhead |
+| Normal `f64` facade | `rand_distr normal`: about 462M samples/s | `alea normal`: about 390M samples/s after direct ziggurat path | Watch: materially improved from about 210-224M; still trails Rust |
 | Exponential `f64` facade | `rand_distr exponential`: about 446M samples/s | `alea exponential`: about 372-380M samples/s | Watch: close but still trails |
 | Weighted dynamic update+sample | `rand_distr weighted tree`: about 52M ops/s | `alea weighted tree`: about 46M ops/s | Watch: close, possible data-structure tuning later |
 
@@ -20,6 +20,7 @@ project does not repeat unproductive work.
 | Lower Poisson PTRS threshold from `lambda >= 30` to `lambda >= 12` | `lambda = 20` benchmark dropped from about 26M samples/s to about 23M samples/s, while `distcheck` still passed | Rejected. Dedicated medium-lambda Ahrens-Dieter path was adopted instead. |
 | Cache Poisson Ahrens-Dieter constants in reusable `Poisson` sampler | `alea poisson cached`: about 52M samples/s, essentially same as single-shot after adoption | Kept for API quality and avoiding recomputation, but not enough to close the remaining Rust performance gap. |
 | Direct `normalFrom` helper wrapping `std.Random.floatNorm` | About 208M samples/s, essentially same as facade/direct `std.Random` and still far below `rand_distr` | Rejected as public API. Normal gap needs a faster normal kernel, not another wrapper. |
+| Direct ziggurat normal using engine `next()` instead of `std.Random.int` | About 390M samples/s for default `alea normal`; also improves normal-derived distributions | Adopted as default. Still trails `rand_distr`, so keep optimizing. |
 | Default `fillNormal(f32)` via vector Box-Muller | About 125M samples/s, slower than scalar ziggurat bulk around 196M samples/s | Rejected as default. Keep explicit vector normal prototype for experimentation. |
 | Default `fillExponential(f32)` via vector log kernel | About 183M samples/s, slower than scalar ziggurat bulk around 320M samples/s | Rejected as default. Keep explicit vector exponential prototype for experimentation. |
 | Full benchmark row for vector-slice range fill | Caused anomalously long full benchmark runs | Deferred. API remains tested; design a smaller isolated microbench before re-adding to the full benchmark. |

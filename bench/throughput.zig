@@ -49,6 +49,7 @@ pub fn main(init: std.process.Init) !void {
     try benchWeightedTree(io, stdout, "alea weighted tree update+sample", bytes / 256);
     try benchNormal(io, stdout, "alea normal", bytes / 64);
     try benchNormalStdRandom(io, stdout, "alea normal std.Random direct", bytes / 64);
+    try benchNormalFast(io, stdout, "alea normal fast direct", bytes / 64);
     try benchVectorNormalF32(io, stdout, "alea vector normal f32x8", bytes / 64);
     try benchFillNormal(io, stdout, "alea fillNormal", bytes / 64);
     try benchFillNormalF32(io, stdout, "alea fillNormal f32", bytes / 64);
@@ -690,6 +691,29 @@ fn benchNormalStdRandom(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
         var i: usize = 0;
         var checksum: f64 = 0;
         while (i < count) : (i += 1) checksum += random.floatNorm(f64);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchNormalFast(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xd15e);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += alea.Rng.normalFastFrom(&engine, f64, 0, 1);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
