@@ -21,6 +21,7 @@ pub fn main(init: std.process.Init) !void {
     try benchEngine(io, stdout, "pcg64", alea.Pcg64, bytes, &buffer);
     try benchEngine(io, stdout, "chacha12", alea.ChaCha, bytes, &buffer);
     try stdout.print("\nscalar next throughput\n", .{});
+    try benchNext(io, stdout, "splitmix64 next", alea.SplitMix64, bytes / 8);
     try benchNext(io, stdout, "alea4x64 next", alea.Alea4x64, bytes / 8);
     try benchNext(io, stdout, "wyhash64 next", alea.Wyhash64, bytes / 8);
     try benchNext(io, stdout, "xoshiro256** next", alea.Xoshiro256, bytes / 8);
@@ -57,6 +58,7 @@ pub fn main(init: std.process.Init) !void {
     try benchWeightedTree(io, stdout, "alea weighted tree update+sample", bytes / 256);
     try benchWeightedIntTree(io, stdout, "alea weighted int tree update+sample", bytes / 256);
     try benchNormal(io, stdout, "alea normal", bytes / 64);
+    try benchNormalSplitMix(io, stdout, "alea normal splitmix64 direct", bytes / 64);
     try benchNormalWyhash(io, stdout, "alea normal wyhash64 direct", bytes / 64);
     try benchNormalWyhashStdRandom(io, stdout, "alea normal wyhash64 std.Random", bytes / 64);
     try benchNormalStdRandom(io, stdout, "alea normal std.Random direct", bytes / 64);
@@ -748,6 +750,29 @@ fn benchNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usiz
         var i: usize = 0;
         var checksum: f64 = 0;
         while (i < count) : (i += 1) checksum += rng.normal(f64, 0, 1);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchNormalSplitMix(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.SplitMix64.init(0xd15a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += alea.Rng.normalFastFrom(&engine, f64, 0, 1);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
