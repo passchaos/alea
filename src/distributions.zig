@@ -466,8 +466,12 @@ pub fn Exponential(comptime T: type) type {
 }
 
 pub fn logNormal(rng: Rng, comptime T: type, mean: T, stddev: T) T {
+    return logNormalFrom(rng, T, mean, stddev);
+}
+
+pub fn logNormalFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
-    return @exp(normal(rng, T, mean, stddev));
+    return @exp(Rng.normalFastFrom(source, T, mean, stddev));
 }
 
 pub fn LogNormal(comptime T: type) type {
@@ -481,7 +485,11 @@ pub fn LogNormal(comptime T: type) type {
         }
 
         pub fn sample(self: *Self, rng: Rng) T {
-            return @exp(self.normal_sampler.sample(rng));
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: *Self, source: anytype) T {
+            return @exp(self.normal_sampler.sampleFrom(source));
         }
     };
 }
@@ -1404,13 +1412,17 @@ pub fn InverseGaussian(comptime T: type) type {
 }
 
 pub fn normalInverseGaussian(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
+    return normalInverseGaussianFrom(rng, T, alpha, beta_param);
+}
+
+pub fn normalInverseGaussianFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
     std.debug.assert(alpha > 0 and @abs(beta_param) < alpha);
 
     const ratio = beta_param / alpha;
     const gamma_param = alpha * @sqrt(1 - ratio * ratio);
-    const inv_gauss = inverseGaussian(rng, T, 1 / gamma_param, 1);
-    return beta_param * inv_gauss + @sqrt(inv_gauss) * normal(rng, T, 0, 1);
+    const inv_gauss = inverseGaussianFrom(source, T, 1 / gamma_param, 1);
+    return beta_param * inv_gauss + @sqrt(inv_gauss) * Rng.normalFastFrom(source, T, 0, 1);
 }
 
 pub fn NormalInverseGaussian(comptime T: type) type {

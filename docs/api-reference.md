@@ -79,12 +79,14 @@ Single-shot helpers:
 - `bernoulli`, `binomial`, `binomialPoissonApprox`
 - `negativeBinomial`, `hypergeometric`
 - `standardNormal`, `standardNormalFrom`, `normal`, `logNormal`,
+  `logNormalFrom`,
   `standardExponential`, `standardExponentialFrom`, `exponential`
 - `poisson`, `geometric`
 - `gamma`, `gammaFrom`, `chiSquared`, `beta`, `fisherF`, `studentT`
 - `triangular`, `cauchy`, `pareto`, `weibull`
 - `gumbel`, `frechet`, `skewNormal`, `skewNormalFrom`, `pert`
-- `inverseGaussian`, `normalInverseGaussian`, `zipf`, `zeta`
+- `inverseGaussian`, `normalInverseGaussian`, `normalInverseGaussianFrom`,
+  `zipf`, `zeta`
 - `unitCircle`, `unitDisc`, `unitSphere`, `unitBall`
 
 Reusable samplers:
@@ -106,6 +108,7 @@ Reusable samplers:
 - `Exponential(T)`
 - `Exponential(T).sampleFrom`
 - `LogNormal(T)`
+- `LogNormal(T).sampleFrom`
 - `Poisson`
 - `Poisson.sampleFrom`
 - `Geometric`
