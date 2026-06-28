@@ -96,4 +96,21 @@ pub fn build(b: *std.Build) void {
 
     const stream_step = b.step("stream", "Write raw RNG bytes to stdout for external statistical tools");
     stream_step.dependOn(&run_stream.step);
+
+    const distcheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/distcheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    distcheck_mod.addImport("alea", module);
+
+    const distcheck = b.addExecutable(.{
+        .name = "alea-distcheck",
+        .root_module = distcheck_mod,
+    });
+    const run_distcheck = b.addRunArtifact(distcheck);
+    if (b.args) |args| run_distcheck.addArgs(args);
+
+    const distcheck_step = b.step("distcheck", "Run parameter-grid distribution checks");
+    distcheck_step.dependOn(&run_distcheck.step);
 }
