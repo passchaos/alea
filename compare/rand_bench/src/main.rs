@@ -22,6 +22,11 @@ fn main() {
 
     println!("\nsequence throughput");
     bench_seq("rand sample indices", 1_000_000, 10_000);
+
+    println!("\ndistribution throughput");
+    bench_bool("rand random_bool", bytes / 8);
+    bench_alphanumeric("rand alphanumeric", bytes / 8);
+    bench_weighted_index("rand weighted index", bytes / 256);
 }
 
 fn bench_bytes<R>(name: &str, bytes: usize, buffer: &mut [u8])
@@ -132,4 +137,78 @@ fn bench_seq(name: &str, length: usize, amount: usize) {
 
     black_box(best_checksum);
     println!("{name}: {best_thousand_per_s:.1} K chosen/s checksum={best_checksum}");
+}
+
+fn bench_bool(name: &str, count: usize) {
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0u64;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0xb001);
+        let start = Instant::now();
+        let mut checksum: u64 = 0;
+
+        for _ in 0..count {
+            checksum = checksum.wrapping_add(rng.random_bool(0.25) as u64);
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
+}
+
+fn bench_alphanumeric(name: &str, count: usize) {
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0u64;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0xa11a);
+        let start = Instant::now();
+        let mut checksum: u64 = 0;
+
+        for byte in (&mut rng).sample_iter(rand::distr::Alphanumeric).take(count) {
+            checksum = checksum.wrapping_add(byte as u64);
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
+}
+
+fn bench_weighted_index(name: &str, count: usize) {
+    let weights = [1u32, 2, 3, 0, 5, 8, 13, 21];
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0usize;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0xface);
+        let dist = rand::distr::weighted::WeightedIndex::new(&weights).unwrap();
+        let start = Instant::now();
+        let mut checksum: usize = 0;
+
+        for _ in 0..count {
+            checksum = checksum.wrapping_add(rng.sample(&dist));
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
 }
