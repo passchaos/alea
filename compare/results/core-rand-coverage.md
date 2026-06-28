@@ -1,7 +1,10 @@
-# Core RNG Coverage Matrix
+# Core RNG Roadmap
 
-This matrix tracks `alea` against the repository goal in `AGENTS.md`: surpass
+This document tracks `alea` against the repository goal in `AGENTS.md`: surpass
 Rust `rand` in core random-number functionality using Zig-native designs.
+
+It is a roadmap, not a completion certificate. Items in **Required Milestones**
+must be completed before the long-term goal is considered fully achieved.
 
 ## Covered
 
@@ -25,22 +28,22 @@ Rust `rand` in core random-number functionality using Zig-native designs.
 | Statistical smoke tests | engine bit balance, range buckets, normal/exponential means | `src/quality.zig` |
 | Native benchmark evidence | Zig and Rust native CPU commands; facade/direct split | `compare/results/2026-06-27-rand-comparison.md` |
 
-## Known Gaps
+## Required Milestones
 
-| Area | Gap | Priority |
-| --- | --- | --- |
-| Full statistical validation | `zig build statcheck` adds a longer in-repo statistical smoke harness; `zig build stream` and `tools/practrand.sh` export raw bytes for external testing. `fast`, `default`, `wyhash64`, `pcg64`, `xoshiro256++`, and `chacha12` have checked-in PractRand 0.96 1GiB passes. Longer multi-gigabyte/TestU01 reports are optional future work. | Closed |
-| Distribution benchmarks | `zig build bench` includes representative rows for scalar, tail, derived, and multivariate distributions; exhaustive per-distribution benchmark reporting is still optional future work. | Closed |
-| Distribution algorithms | Normal sampling uses Marsaglia polar with cached pairs for reusable samplers, exponential samplers precompute inverse rate, binomial has exact small-n, p=0.5, and large-n rejection paths, and an explicit Poisson approximation helper exists for large sparse binomials. Ziggurat-style normal/exponential algorithms remain optional future work. | Low |
-| Error-returning scalar APIs | Checked variants exist for probabilities and scalar ranges; some older assertion-based helpers remain as fast-path APIs. | Low |
-| Iterator ergonomics | `chooseIterator`, `sampleIterator`, `chooseIteratorWeighted`, and `sampleIteratorWeighted` use Zig iterator shape directly. | Closed |
-| Documentation examples | README and `examples/basic.zig` demonstrate expanded distribution, Unicode, iterator, and sequence helpers. | Closed |
+| ID | Milestone | Completion gate | Status |
+| --- | --- | --- | --- |
+| M1 | External statistical validation | PractRand 0.96 `stdin64` at 16GiB or larger for `fast`, `default`, `wyhash64`, `pcg64`, `xoshiro256++`, and `chacha12`, with checked-in reports. Any anomaly must be investigated or explicitly accepted with rationale. | In progress: 1GiB passes exist for all listed engines |
+| M2 | Distribution algorithm maturity | Replace correctness-first slow paths where mature algorithms are known: ziggurat-style normal/exponential or documented faster alternatives, and benchmarked exact large-n binomial. Keep exact semantics separate from approximation helpers. | In progress: polar normal, cached normal pairs, inverse-rate exponential, and large-n binomial rejection exist |
+| M3 | Distribution benchmark matrix | Add benchmark rows for every public distribution family across at least one representative parameter set, including tail/derived/multivariate distributions. | In progress: representative rows exist for major families, but not every public distribution |
+| M4 | Fallible API surface | Provide checked/error-returning variants for public single-shot APIs where invalid input is realistically user-supplied, while preserving assert-based fast paths. | In progress |
+| M5 | Reproducibility matrix | Document deterministic output stability expectations for each reproducible engine and seed/stream derivation API, including what may vary by architecture or version. | Not started |
+| M6 | Core docs | Expand README or dedicated docs to cover engines, seeding, distributions, sequence sampling, statistical validation, and benchmark interpretation without relying only on tests and examples. | In progress |
 
 ## Current Rule
 
-Continue feature-first work until the high-priority core functionality gaps are
-closed. Use `zig build statcheck` after changes that affect engines,
-distributions, ranges, or sampling internals. Use `zig build stream -- ...` to
-feed raw engine output into external statistical tools when validating engine
-changes. Defer performance tuning except where a feature is unusable without it
-or where benchmark evidence is needed to compare against Rust `rand`.
+Continue feature-first work until all required milestones are closed. Use
+`zig build statcheck` after changes that affect engines, distributions, ranges,
+or sampling internals. Use `zig build stream -- ...` to feed raw engine output
+into external statistical tools when validating engine changes. Defer pure
+micro-optimization until feature, correctness, and validation milestones are in
+place, except where performance is part of a feature's viability.
