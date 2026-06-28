@@ -136,7 +136,7 @@ pub fn fill(self: Rng, comptime T: type, dest: []T) void {
             self.fillBools(dest);
         },
         .vector => {
-            for (dest) |*item| item.* = self.vector(T);
+            fillVectorFrom(self, T, dest);
         },
         else => @compileError("alea.Rng.fill supports integer, float, bool, and vector slices"),
     }
@@ -170,8 +170,17 @@ pub fn fillRangeChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) 
 }
 
 pub fn fillVectorRange(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    fillVectorRangeFrom(self, VectorType, dest, min, max);
+}
+
+pub fn fillVectorFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
     _ = vectorInfo(VectorType);
-    for (dest) |*item| item.* = self.vectorRange(VectorType, min, max);
+    for (dest) |*item| item.* = vectorFrom(source, VectorType);
+}
+
+pub fn fillVectorRangeFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    _ = vectorInfo(VectorType);
+    for (dest) |*item| item.* = vectorRangeFrom(source, VectorType, min, max);
 }
 
 pub fn fillVectorRangeChecked(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
@@ -189,10 +198,14 @@ pub fn fillVectorRangeChecked(self: Rng, comptime VectorType: type, dest: []Vect
 }
 
 pub fn fillVectorNormal(self: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    fillVectorNormalFrom(self, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
-    for (dest) |*item| item.* = self.vectorNormal(VectorType, mean, stddev);
+    for (dest) |*item| item.* = vectorNormalFrom(source, VectorType, mean, stddev);
 }
 
 pub fn fillVectorNormalChecked(self: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!void {
@@ -203,10 +216,14 @@ pub fn fillVectorNormalChecked(self: Rng, comptime VectorType: type, dest: []Vec
 }
 
 pub fn fillVectorExponential(self: Rng, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) void {
+    fillVectorExponentialFrom(self, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(rate > 0);
-    for (dest) |*item| item.* = self.vectorExponential(VectorType, rate);
+    for (dest) |*item| item.* = vectorExponentialFrom(source, VectorType, rate);
 }
 
 pub fn fillVectorExponentialChecked(self: Rng, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) Error!void {
@@ -566,25 +583,35 @@ pub fn vectorRangeChecked(self: Rng, comptime VectorType: type, min: vectorChild
 }
 
 pub fn vectorNormal(self: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
+    return vectorNormalFrom(self, VectorType, mean, stddev);
+}
+
+pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
-    if (info.child == f32) return self.vectorNormalF32(VectorType, mean, stddev);
+    if (info.child == f32) return vectorNormalF32From(source, VectorType, mean, stddev);
     var out: VectorType = undefined;
-    inline for (0..info.len) |i| out[i] = self.normal(info.child, mean, stddev);
+    var std_random = randomFrom(source);
+    inline for (0..info.len) |i| out[i] = mean + stddev * std_random.floatNorm(info.child);
     return out;
 }
 
 pub fn vectorExponential(self: Rng, comptime VectorType: type, rate: vectorChild(VectorType)) VectorType {
+    return vectorExponentialFrom(self, VectorType, rate);
+}
+
+pub fn vectorExponentialFrom(source: anytype, comptime VectorType: type, rate: vectorChild(VectorType)) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(rate > 0);
     if (info.child == f32) {
-        const uniform = self.vector(VectorType);
+        const uniform = vectorFrom(source, VectorType);
         return -@log(@as(VectorType, @splat(1)) - uniform) / @as(VectorType, @splat(rate));
     }
     var out: VectorType = undefined;
-    inline for (0..info.len) |i| out[i] = self.exponential(info.child, rate);
+    var std_random = randomFrom(source);
+    inline for (0..info.len) |i| out[i] = std_random.floatExp(info.child) / rate;
     return out;
 }
 
@@ -768,6 +795,10 @@ fn nextFrom(source: anytype) u64 {
     return source.next();
 }
 
+fn randomFrom(source: anytype) std.Random {
+    return source.random();
+}
+
 fn requireInt(comptime T: type) void {
     if (@typeInfo(T) != .int) @compileError("expected integer type, found " ++ @typeName(T));
 }
@@ -859,14 +890,14 @@ fn vectorF32From(source: anytype, comptime VectorType: type) VectorType {
     return out;
 }
 
-fn vectorNormalF32(self: Rng, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+fn vectorNormalF32From(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorNormalF32 expects a f32 vector");
 
     const one: VectorType = @splat(1);
     const tau: VectorType = @splat(@as(f32, @floatCast(std.math.tau)));
-    const uniform_radius = one - self.vector(VectorType);
-    const uniform_angle = self.vector(VectorType);
+    const uniform_radius = one - vectorFrom(source, VectorType);
+    const uniform_angle = vectorFrom(source, VectorType);
     const radius = @sqrt(@as(VectorType, @splat(-2)) * @log(uniform_radius));
     const theta = tau * uniform_angle;
     return @as(VectorType, @splat(mean)) + @as(VectorType, @splat(stddev)) * radius * @cos(theta);
@@ -1013,17 +1044,33 @@ test "rng facade covers scalar APIs" {
     rng.fill(@Vector(8, f32), &vec_buf);
     for (vec_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0 and vec[i] < 1);
 
+    var direct_vec_buf: [4]@Vector(8, f32) = undefined;
+    Rng.fillVectorFrom(&engine, @Vector(8, f32), &direct_vec_buf);
+    for (direct_vec_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0 and vec[i] < 1);
+
     var vec_range_buf: [8]@Vector(8, f32) = undefined;
     try rng.fillVectorRangeChecked(@Vector(8, f32), &vec_range_buf, -1, 1);
     for (vec_range_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= -1 and vec[i] < 1);
+
+    var direct_vec_range_buf: [4]@Vector(8, f32) = undefined;
+    Rng.fillVectorRangeFrom(&engine, @Vector(8, f32), &direct_vec_range_buf, -1, 1);
+    for (direct_vec_range_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= -1 and vec[i] < 1);
 
     var vec_normal_buf: [8]@Vector(8, f32) = undefined;
     try rng.fillVectorNormalChecked(@Vector(8, f32), &vec_normal_buf, 0, 1);
     for (vec_normal_buf) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
 
+    var direct_vec_normal_buf: [4]@Vector(8, f32) = undefined;
+    Rng.fillVectorNormalFrom(&engine, @Vector(8, f32), &direct_vec_normal_buf, 0, 1);
+    for (direct_vec_normal_buf) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
+
     var vec_exp_buf: [8]@Vector(8, f32) = undefined;
     try rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_exp_buf, 2);
     for (vec_exp_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0);
+
+    var direct_vec_exp_buf: [4]@Vector(8, f32) = undefined;
+    Rng.fillVectorExponentialFrom(&engine, @Vector(8, f32), &direct_vec_exp_buf, 2);
+    for (direct_vec_exp_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0);
 
     const ranged_i = rng.vectorRange(@Vector(4, i32), -10, 10);
     inline for (0..4) |i| try std.testing.expect(ranged_i[i] >= -10 and ranged_i[i] < 10);
