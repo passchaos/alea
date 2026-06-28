@@ -514,6 +514,7 @@ pub fn vectorNormal(self: Rng, comptime VectorType: type, mean: vectorChild(Vect
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
+    if (info.child == f32) return self.vectorNormalF32(VectorType, mean, stddev);
     var out: VectorType = undefined;
     inline for (0..info.len) |i| out[i] = self.normal(info.child, mean, stddev);
     return out;
@@ -798,6 +799,19 @@ fn vectorF32(self: Rng, comptime VectorType: type) VectorType {
     return out;
 }
 
+fn vectorNormalF32(self: Rng, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorNormalF32 expects a f32 vector");
+
+    const one: VectorType = @splat(1);
+    const tau: VectorType = @splat(@as(f32, @floatCast(std.math.tau)));
+    const uniform_radius = one - self.vector(VectorType);
+    const uniform_angle = self.vector(VectorType);
+    const radius = @sqrt(@as(VectorType, @splat(-2)) * @log(uniform_radius));
+    const theta = tau * uniform_angle;
+    return @as(VectorType, @splat(mean)) + @as(VectorType, @splat(stddev)) * radius * @cos(theta);
+}
+
 fn f32FromBits(bits: u24) f32 {
     return @as(f32, @floatFromInt(bits)) * (1.0 / 16777216.0);
 }
@@ -927,6 +941,9 @@ test "rng facade covers scalar APIs" {
 
     const normals = rng.vectorNormal(@Vector(4, f64), 0, 1);
     inline for (0..4) |i| try std.testing.expect(std.math.isFinite(normals[i]));
+
+    const vector_normals_f32 = rng.vectorNormal(@Vector(8, f32), 0, 1);
+    inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vector_normals_f32[i]));
 
     const exponentials = rng.vectorExponential(@Vector(4, f64), 2);
     inline for (0..4) |i| try std.testing.expect(exponentials[i] >= 0);
