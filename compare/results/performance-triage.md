@@ -10,7 +10,7 @@ project does not repeat unproductive work.
 | --- | --- | --- | --- |
 | Poisson `lambda = 20` | `rand_distr poisson`: about 69M samples/s | `alea poisson`: about 52M samples/s after Ahrens-Dieter adoption | Watch: materially improved from about 26M; still trails Rust |
 | Normal `f64` facade | `rand_distr normal`: about 462M samples/s | `alea normal`: about 390M samples/s after direct ziggurat path | Watch: materially improved from about 210-224M; still trails Rust |
-| Exponential `f64` facade | `rand_distr exponential`: about 446M samples/s | `alea exponential`: about 372-380M samples/s | Watch: close but still trails |
+| Exponential `f64` facade | `rand_distr exponential`: about 446M samples/s | `alea exponential`: about 383M samples/s after direct ziggurat path | Watch: close but still trails |
 | Weighted dynamic update+sample | `rand_distr weighted tree`: about 52M ops/s | `alea weighted tree`: about 46M ops/s | Watch: close, possible data-structure tuning later |
 
 ## Rejected Or Deferred Attempts
@@ -21,6 +21,7 @@ project does not repeat unproductive work.
 | Cache Poisson Ahrens-Dieter constants in reusable `Poisson` sampler | `alea poisson cached`: about 52M samples/s, essentially same as single-shot after adoption | Kept for API quality and avoiding recomputation, but not enough to close the remaining Rust performance gap. |
 | Direct `normalFrom` helper wrapping `std.Random.floatNorm` | About 208M samples/s, essentially same as facade/direct `std.Random` and still far below `rand_distr` | Rejected as public API. Normal gap needs a faster normal kernel, not another wrapper. |
 | Direct ziggurat normal using engine `next()` instead of `std.Random.int` | About 390M samples/s for default `alea normal`; also improves normal-derived distributions | Adopted as default. Still trails `rand_distr`, so keep optimizing. |
+| Direct ziggurat exponential using engine `next()` instead of `std.Random.int` | About 383M samples/s, essentially same as previous stdlib-backed path | Adopted internally for consistency with normal; not enough to close the Rust performance gap. |
 | Default `fillNormal(f32)` via vector Box-Muller | About 125M samples/s, slower than scalar ziggurat bulk around 196M samples/s | Rejected as default. Keep explicit vector normal prototype for experimentation. |
 | Default `fillExponential(f32)` via vector log kernel | About 183M samples/s, slower than scalar ziggurat bulk around 320M samples/s | Rejected as default. Keep explicit vector exponential prototype for experimentation. |
 | Full benchmark row for vector-slice range fill | Caused anomalously long full benchmark runs | Deferred. API remains tested; design a smaller isolated microbench before re-adding to the full benchmark. |
