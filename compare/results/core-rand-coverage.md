@@ -37,7 +37,7 @@ must be completed before the long-term goal is considered fully achieved.
 | M3 | Distribution benchmark matrix | Add benchmark rows for every public distribution family across at least one representative parameter set, including tail/derived/multivariate distributions. | Closed: `zig build bench` covers scalar, Bernoulli/binomial, Poisson, continuous, tail, derived, and multivariate distribution families |
 | M4 | Fallible API surface | Provide checked/error-returning variants for public single-shot APIs where invalid input is realistically user-supplied, while preserving assert-based fast paths. | In progress |
 | M5 | Reproducibility matrix | Document deterministic output stability expectations for each reproducible engine and seed/stream derivation API, including what may vary by architecture or version. | Closed: `compare/results/reproducibility-matrix.md` defines stable, versioned-stable, and non-stable outputs |
-| M6 | Core docs | Expand README or dedicated docs to cover engines, seeding, distributions, sequence sampling, statistical validation, and benchmark interpretation without relying only on tests and examples. | In progress |
+| M6 | Core docs | Expand README or dedicated docs to cover engines, seeding, distributions, sequence sampling, statistical validation, and benchmark interpretation without relying only on tests and examples. | Closed: `docs/core-guide.md` covers core APIs, validation, and benchmarks |
 
 ## Current Rule
 
