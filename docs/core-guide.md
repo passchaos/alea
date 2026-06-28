@@ -38,7 +38,8 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - durations: `durationRangeLessThan`, `durationRangeAtMost`
 - Unicode scalar values: `unicodeScalar`
 - structured values: `value(T)` for bools, ints, floats, enums, arrays, and tuples
-- bulk sampling: `fill`, `fillRange`, `fillNormal`, and `fillExponential`
+- bulk sampling: `fill`, `fillSample`, `fillRange`, `fillNormal`, and
+  `fillExponential`
 
 Checked variants exist for user-supplied probabilities and scalar ranges.
 

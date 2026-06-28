@@ -190,6 +190,11 @@ pub fn fillExponentialChecked(self: Rng, comptime T: type, dest: []T, rate: T) E
     self.fillExponential(T, dest, rate);
 }
 
+pub fn fillSample(self: Rng, comptime T: type, dest: []T, sampler: anytype) void {
+    var local_sampler = sampler;
+    for (dest) |*item| item.* = local_sampler.sample(self);
+}
+
 pub fn next(self: Rng) u64 {
     return self.nextFn(self.ptr);
 }
@@ -702,6 +707,16 @@ test "rng facade covers scalar APIs" {
     var exp_buf: [16]f64 = undefined;
     try rng.fillExponentialChecked(f64, &exp_buf, 2);
     for (exp_buf) |item| try std.testing.expect(item >= 0);
+
+    const alea = @import("root.zig");
+    var poisson_buf: [16]u64 = undefined;
+    rng.fillSample(u64, &poisson_buf, try alea.distributions.Poisson.init(8));
+    for (poisson_buf) |item| try std.testing.expect(item < 64);
+
+    var normal_sampler = try alea.distributions.Normal(f64).init(0, 1);
+    var sample_buf: [16]f64 = undefined;
+    rng.fillSample(f64, &sample_buf, &normal_sampler);
+    for (sample_buf) |item| try std.testing.expect(std.math.isFinite(item));
 
     const uvec = rng.value(@Vector(4, u16));
     var any_vec_non_zero = false;

@@ -51,6 +51,7 @@ pub fn main(init: std.process.Init) !void {
     try benchHypergeometric(io, stdout, "alea hypergeometric", bytes / 128);
     try benchMultinomial(io, stdout, "alea multinomial", bytes / 512);
     try benchGamma(io, stdout, "alea gamma", bytes / 128);
+    try benchFillSampleGamma(io, stdout, "alea fillSample gamma", bytes / 128);
     try benchChiSquared(io, stdout, "alea chi-squared", bytes / 128);
     try benchBeta(io, stdout, "alea beta", bytes / 128);
     try benchFisherF(io, stdout, "alea fisher-f", bytes / 128);
@@ -765,6 +766,37 @@ fn benchGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize
         var i: usize = 0;
         var checksum: f64 = 0;
         while (i < count) : (i += 1) checksum += alea.distributions.gamma(rng, f64, 2, 3);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillSampleGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [4096]f64 = undefined;
+    const dist = alea.distributions.Gamma(f64).init(2, 3) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x6a44b);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            rng.fillSample(f64, out[0..n], dist);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
