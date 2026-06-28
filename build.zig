@@ -113,4 +113,21 @@ pub fn build(b: *std.Build) void {
 
     const distcheck_step = b.step("distcheck", "Run parameter-grid distribution checks");
     distcheck_step.dependOn(&run_distcheck.step);
+
+    const repro_mod = b.createModule(.{
+        .root_source_file = b.path("tools/repro.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    repro_mod.addImport("alea", module);
+
+    const repro = b.addExecutable(.{
+        .name = "alea-repro",
+        .root_module = repro_mod,
+    });
+    const run_repro = b.addRunArtifact(repro);
+    if (b.args) |args| run_repro.addArgs(args);
+
+    const repro_step = b.step("repro", "Print deterministic reproducibility snapshots");
+    repro_step.dependOn(&run_repro.step);
 }
