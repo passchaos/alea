@@ -19,6 +19,7 @@ project does not repeat unproductive work.
 | ChiSquared/StudentT reusable samplers | Local Rust evidence covered by `rand_distr` derived distributions | `alea chi-squared`: about 150M single-shot, about 172M cached; `alea student-t`: about 113M single-shot, about 123M cached | Closed for cached reusable sampler path; keep single-shot path simple |
 | InverseGaussian/NormalInverseGaussian reusable samplers | `rand_distr inverse-gaussian`: about 77M; `rand_distr normal-inverse-gaussian`: about 67M | `alea inverse-gaussian`: about 68M single-shot, about 74M cached; `alea normal-inverse-gaussian`: about 58M cached | Watch: direct reusable path helps, but NIG still trails Rust |
 | Unit geometry scalar profile | `rand_distr unit circle/sphere`: about 159M samples/s; unit ball about 56M | `alea unit circle/disc/sphere`: about 91-95M with `FastPrng`, about 113-120M with `ScalarPrng` direct; unit ball about 45M direct | Watch: direct scalar path helps, but geometry algorithms still trail Rust |
+| Alphanumeric strings | `rand alphanumeric`: about 840M chars/s | `alea alphanumeric`: about 949M chars/s | Closed for current local Rust evidence |
 
 ## Rejected Or Deferred Attempts
 
