@@ -678,24 +678,28 @@ pub const Geometric = struct {
 };
 
 pub fn gamma(rng: Rng, comptime T: type, shape: T, scale: T) T {
+    return gammaFrom(rng, T, shape, scale);
+}
+
+pub fn gammaFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(shape > 0 and scale > 0);
 
     if (shape < 1) {
-        const boosted = gamma(rng, T, shape + 1, 1);
-        return scale * boosted * std.math.pow(T, rng.floatOpen(T), 1 / shape);
+        const boosted = gammaFrom(source, T, shape + 1, 1);
+        return scale * boosted * std.math.pow(T, Rng.floatFrom(source, T), 1 / shape);
     }
 
     const d = shape - @as(T, 1.0 / 3.0);
     const c = @as(T, 1.0) / @sqrt(9 * d);
 
     while (true) {
-        const x = normal(rng, T, 0, 1);
+        const x = Rng.normalFastFrom(source, T, 0, 1);
         const v_base = 1 + c * x;
         if (v_base <= 0) continue;
 
         const v = v_base * v_base * v_base;
-        const u = rng.float(T);
+        const u = Rng.floatFrom(source, T);
         if (u < 1 - 0.0331 * (x * x) * (x * x)) return scale * d * v;
         if (@log(u) < 0.5 * x * x + d * (1 - v + @log(v))) return scale * d * v;
     }
@@ -716,7 +720,11 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return gamma(rng, T, self.shape, self.scale);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return gammaFrom(source, T, self.shape, self.scale);
         }
     };
 }

@@ -80,7 +80,7 @@ Single-shot helpers:
 - `negativeBinomial`, `hypergeometric`
 - `normal`, `logNormal`, `exponential`
 - `poisson`, `geometric`
-- `gamma`, `chiSquared`, `beta`, `fisherF`, `studentT`
+- `gamma`, `gammaFrom`, `chiSquared`, `beta`, `fisherF`, `studentT`
 - `triangular`, `cauchy`, `pareto`, `weibull`
 - `gumbel`, `frechet`, `skewNormal`, `pert`
 - `inverseGaussian`, `normalInverseGaussian`, `zipf`, `zeta`
@@ -103,6 +103,7 @@ Reusable samplers:
 - `Poisson.sampleFrom`
 - `Geometric`
 - `Gamma(T)`
+- `Gamma(T).sampleFrom`
 - `ChiSquared(T)`
 - `Beta(T)`
 - `FisherF(T)`
