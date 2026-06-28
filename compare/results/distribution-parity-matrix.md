@@ -62,6 +62,9 @@ toolkit functionality and reduce reliance on companion crates:
 | Beta | Covered: `beta`, `Beta(T)` |
 | Triangular | Covered: `triangular`, `Triangular(T)` |
 | Cauchy | Covered: `cauchy`, `Cauchy(T)` |
+| Laplace | Covered: `laplace`, `Laplace(T)` |
+| Logistic | Covered: `logistic`, `Logistic(T)` |
+| Rayleigh | Covered: `rayleigh`, `Rayleigh(T)` |
 | Pareto | Covered: `pareto`, `Pareto(T)` |
 | Weibull | Covered: `weibull`, `Weibull(T)` |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs |

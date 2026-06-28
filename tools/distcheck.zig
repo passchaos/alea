@@ -145,6 +145,21 @@ fn checkContinuous() !void {
             return alea.distributions.fisherF(r, f64, 5, 20);
         }
     }.sample, 1.05, 1.18);
+    try expectContinuousMean("laplace", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.laplace(r, f64, 0, 1);
+        }
+    }.sample, -0.05, 0.05);
+    try expectContinuousMean("logistic", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.logistic(r, f64, 0, 1);
+        }
+    }.sample, -0.05, 0.05);
+    try expectContinuousMean("rayleigh", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.rayleigh(r, f64, 2);
+        }
+    }.sample, 2.45, 2.57);
     try expectContinuousMean("weibull", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.weibull(r, f64, 2, 1.5);

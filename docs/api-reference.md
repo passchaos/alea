@@ -83,7 +83,8 @@ Single-shot helpers:
   `standardExponential`, `standardExponentialFrom`, `exponential`
 - `poisson`, `geometric`
 - `gamma`, `gammaFrom`, `chiSquared`, `beta`, `fisherF`, `studentT`
-- `triangular`, `cauchy`, `pareto`, `weibull`
+- `triangular`, `cauchy`, `laplace`, `laplaceFrom`, `logistic`,
+  `logisticFrom`, `rayleigh`, `rayleighFrom`, `pareto`, `weibull`
 - `gumbel`, `frechet`, `skewNormal`, `skewNormalFrom`, `pert`
 - `inverseGaussian`, `normalInverseGaussian`, `normalInverseGaussianFrom`,
   `zipf`, `zeta`
@@ -124,6 +125,12 @@ Reusable samplers:
 - `StudentT(T).sampleFrom`
 - `Triangular(T)`
 - `Cauchy(T)`
+- `Laplace(T)`
+- `Laplace(T).sampleFrom`
+- `Logistic(T)`
+- `Logistic(T).sampleFrom`
+- `Rayleigh(T)`
+- `Rayleigh(T).sampleFrom`
 - `Pareto(T)`
 - `Weibull(T)`
 - `Gumbel(T)`

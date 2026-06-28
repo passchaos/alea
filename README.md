@@ -28,8 +28,9 @@ The first milestone is intentionally broad:
 - distributions: uniform, bernoulli, binomial, negative-binomial,
   hypergeometric, standard normal, normal, log-normal, standard exponential,
   exponential, poisson, gamma,
-  chi-squared, beta, Fisher F, Student t, triangular, cauchy, pareto,
-  weibull, gumbel, frechet, skew-normal, PERT, inverse Gaussian,
+  chi-squared, beta, Fisher F, Student t, triangular, cauchy, laplace,
+  logistic, rayleigh, pareto, weibull, gumbel, frechet, skew-normal, PERT,
+  inverse Gaussian,
   normal-inverse Gaussian, Zipf, Zeta, unit geometry samplers, dirichlet,
   multinomial
 - O(1) repeated weighted sampling through alias tables

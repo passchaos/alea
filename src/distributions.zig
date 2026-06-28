@@ -1038,6 +1038,129 @@ pub fn Cauchy(comptime T: type) type {
     };
 }
 
+pub fn laplace(rng: Rng, comptime T: type, location: T, scale: T) T {
+    return laplaceFrom(rng, T, location, scale);
+}
+
+pub fn laplaceFrom(source: anytype, comptime T: type, location: T, scale: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+
+    const u = openFloatFrom(source, T) - @as(T, 0.5);
+    const one: T = 1;
+    const sign: T = if (u < 0) -1 else 1;
+    return location - scale * sign * @log(one - 2 * @abs(u));
+}
+
+pub fn Laplace(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        location: T,
+        scale: T,
+
+        pub fn init(location: T, scale: T) Error!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(location)) return error.InvalidParameter;
+            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            return .{ .location = location, .scale = scale };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return laplaceFrom(source, T, self.location, self.scale);
+        }
+    };
+}
+
+pub fn logistic(rng: Rng, comptime T: type, location: T, scale: T) T {
+    return logisticFrom(rng, T, location, scale);
+}
+
+pub fn logisticFrom(source: anytype, comptime T: type, location: T, scale: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+
+    const u = openFloatFrom(source, T);
+    return location + scale * @log(u / (1 - u));
+}
+
+pub fn Logistic(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        location: T,
+        scale: T,
+
+        pub fn init(location: T, scale: T) Error!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(location)) return error.InvalidParameter;
+            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            return .{ .location = location, .scale = scale };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return logisticFrom(source, T, self.location, self.scale);
+        }
+    };
+}
+
+pub fn rayleigh(rng: Rng, comptime T: type, scale: T) T {
+    return rayleighFrom(rng, T, scale);
+}
+
+pub fn rayleighFrom(source: anytype, comptime T: type, scale: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+
+    return scale * @sqrt(-2 * @log(openFloatFrom(source, T)));
+}
+
+pub fn Rayleigh(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        scale: T,
+
+        pub fn init(scale: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            return .{ .scale = scale };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return rayleighFrom(source, T, self.scale);
+        }
+    };
+}
+
+fn openFloatFrom(source: anytype, comptime T: type) T {
+    return switch (T) {
+        f32 => blk: {
+            const fraction: u32 = @truncate(Rng.nextFrom(source) >> 41);
+            const bits = (@as(u32, 127) << 23) | fraction;
+            break :blk @as(f32, @bitCast(bits)) - (1.0 - std.math.floatEps(f32) / 2.0);
+        },
+        f64 => blk: {
+            const fraction = Rng.nextFrom(source) >> 12;
+            const bits = (@as(u64, 1023) << 52) | fraction;
+            break :blk @as(f64, @bitCast(bits)) - (1.0 - std.math.floatEps(f64) / 2.0);
+        },
+        else => @compileError("alea supports f32 and f64 floats"),
+    };
+}
+
 pub fn pareto(rng: Rng, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0);
@@ -2176,6 +2299,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var cauchys = rng.sampleIter(f64, try Cauchy(f64).init(0, 1));
     _ = cauchys.next().?;
 
+    var laplaces = rng.sampleIter(f64, try Laplace(f64).init(0, 1));
+    try std.testing.expect(std.math.isFinite(laplaces.next().?));
+
+    var logistics = rng.sampleIter(f64, try Logistic(f64).init(0, 1));
+    try std.testing.expect(std.math.isFinite(logistics.next().?));
+
+    var rayleighs = rng.sampleIter(f64, try Rayleigh(f64).init(2));
+    try std.testing.expect(rayleighs.next().? >= 0);
+
     var paretos = rng.sampleIter(f64, try Pareto(f64).init(2, 3));
     try std.testing.expect(paretos.next().? >= 2);
 
@@ -2228,6 +2360,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, StudentT(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Triangular(f64).init(1, 0, 2));
     try std.testing.expectError(error.InvalidParameter, Cauchy(f64).init(0, 0));
+    try std.testing.expectError(error.InvalidParameter, Laplace(f64).init(0, 0));
+    try std.testing.expectError(error.InvalidParameter, Logistic(f64).init(0, 0));
+    try std.testing.expectError(error.InvalidParameter, Rayleigh(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Pareto(f64).init(1, 0));
     try std.testing.expectError(error.InvalidParameter, Weibull(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, Gumbel(f64).init(0, 0));
