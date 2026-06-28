@@ -140,6 +140,16 @@ fn checkContinuous() !void {
             return alea.distributions.chiSquared(r, f64, 4);
         }
     }.sample, 3.9, 4.1);
+    try expectContinuousMean("chi", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.chi(r, f64, 4);
+        }
+    }.sample, 1.85, 1.9);
+    try expectContinuousMean("erlang", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.erlang(r, f64, 3, 2);
+        }
+    }.sample, 5.85, 6.15);
     try expectContinuousMean("student-t", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.studentT(r, f64, 10);
@@ -160,6 +170,16 @@ fn checkContinuous() !void {
             return alea.distributions.logistic(r, f64, 0, 1);
         }
     }.sample, -0.05, 0.05);
+    try expectContinuousMean("log-logistic", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.logLogistic(r, f64, 2, 3);
+        }
+    }.sample, 2.35, 2.45);
+    try expectContinuousMean("kumaraswamy", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.kumaraswamy(r, f64, 2, 5);
+        }
+    }.sample, 0.365, 0.375);
     try expectContinuousMean("rayleigh", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.rayleigh(r, f64, 2);

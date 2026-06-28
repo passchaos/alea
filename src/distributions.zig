@@ -869,9 +869,13 @@ pub fn Gamma(comptime T: type) type {
 }
 
 pub fn chiSquared(rng: Rng, comptime T: type, dof: T) T {
+    return chiSquaredFrom(rng, T, dof);
+}
+
+pub fn chiSquaredFrom(source: anytype, comptime T: type, dof: T) T {
     comptime requireFloat(T);
     std.debug.assert(dof > 0);
-    return gamma(rng, T, dof / 2, 2);
+    return gammaFrom(source, T, dof / 2, 2);
 }
 
 pub fn ChiSquared(comptime T: type) type {
@@ -887,6 +891,73 @@ pub fn ChiSquared(comptime T: type) type {
             return .{
                 .dof = dof,
                 .gamma_sampler = try Gamma(T).init(dof / 2, 2),
+            };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return self.gamma_sampler.sampleFrom(source);
+        }
+    };
+}
+
+pub fn chi(rng: Rng, comptime T: type, dof: T) T {
+    return chiFrom(rng, T, dof);
+}
+
+pub fn chiFrom(source: anytype, comptime T: type, dof: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(dof > 0);
+    return @sqrt(chiSquaredFrom(source, T, dof));
+}
+
+pub fn Chi(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        chi_squared_sampler: ChiSquared(T),
+
+        pub fn init(dof: T) Error!Self {
+            return .{ .chi_squared_sampler = try ChiSquared(T).init(dof) };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return @sqrt(self.chi_squared_sampler.sampleFrom(source));
+        }
+    };
+}
+
+pub fn erlang(rng: Rng, comptime T: type, shape: u64, scale: T) T {
+    return erlangFrom(rng, T, shape, scale);
+}
+
+pub fn erlangFrom(source: anytype, comptime T: type, shape: u64, scale: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(shape > 0 and scale > 0);
+    return gammaFrom(source, T, @as(T, @floatFromInt(shape)), scale);
+}
+
+pub fn Erlang(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        shape: u64,
+        gamma_sampler: Gamma(T),
+
+        pub fn init(shape: u64, scale: T) Error!Self {
+            comptime requireFloat(T);
+            if (shape == 0) return error.InvalidParameter;
+            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            return .{
+                .shape = shape,
+                .gamma_sampler = try Gamma(T).init(@as(T, @floatFromInt(shape)), scale),
             };
         }
 
@@ -1141,6 +1212,83 @@ pub fn Logistic(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return logisticFrom(source, T, self.location, self.scale);
+        }
+    };
+}
+
+pub fn logLogistic(rng: Rng, comptime T: type, scale: T, shape: T) T {
+    return logLogisticFrom(rng, T, scale, shape);
+}
+
+pub fn logLogisticFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+
+    const u = openFloatFrom(source, T);
+    return scale * std.math.pow(T, u / (1 - u), 1 / shape);
+}
+
+pub fn LogLogistic(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        scale: T,
+        inverse_shape: T,
+
+        pub fn init(scale: T, shape: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(scale > 0) or !(shape > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            return .{ .scale = scale, .inverse_shape = 1 / shape };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            const u = openFloatFrom(source, T);
+            return self.scale * std.math.pow(T, u / (1 - u), self.inverse_shape);
+        }
+    };
+}
+
+pub fn kumaraswamy(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
+    return kumaraswamyFrom(rng, T, alpha, beta_param);
+}
+
+pub fn kumaraswamyFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(alpha > 0 and beta_param > 0 and std.math.isFinite(alpha) and std.math.isFinite(beta_param));
+
+    const u = openFloatFrom(source, T);
+    return std.math.pow(T, 1 - std.math.pow(T, 1 - u, 1 / beta_param), 1 / alpha);
+}
+
+pub fn Kumaraswamy(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        inverse_alpha: T,
+        inverse_beta: T,
+
+        pub fn init(alpha: T, beta_param: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(alpha > 0) or !(beta_param > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return error.InvalidParameter;
+            return .{
+                .inverse_alpha = 1 / alpha,
+                .inverse_beta = 1 / beta_param,
+            };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            const u = openFloatFrom(source, T);
+            return std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
         }
     };
 }
@@ -2354,6 +2502,12 @@ test "non-uniform samplers can be reused with sample iterators" {
     var chi_squared = rng.sampleIter(f64, try ChiSquared(f64).init(4));
     try std.testing.expect(chi_squared.next().? > 0);
 
+    var chis = rng.sampleIter(f64, try Chi(f64).init(4));
+    try std.testing.expect(chis.next().? > 0);
+
+    var erlangs = rng.sampleIter(f64, try Erlang(f64).init(3, 2));
+    try std.testing.expect(erlangs.next().? > 0);
+
     var betas = rng.sampleIter(f64, try Beta(f64).init(2, 5));
     const beta_value = betas.next().?;
     try std.testing.expect(beta_value >= 0 and beta_value <= 1);
@@ -2376,6 +2530,13 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var logistics = rng.sampleIter(f64, try Logistic(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(logistics.next().?));
+
+    var log_logistics = rng.sampleIter(f64, try LogLogistic(f64).init(2, 3));
+    try std.testing.expect(log_logistics.next().? > 0);
+
+    var kumaraswamys = rng.sampleIter(f64, try Kumaraswamy(f64).init(2, 5));
+    const kumaraswamy_value = kumaraswamys.next().?;
+    try std.testing.expect(kumaraswamy_value >= 0 and kumaraswamy_value <= 1);
 
     var rayleighs = rng.sampleIter(f64, try Rayleigh(f64).init(2));
     try std.testing.expect(rayleighs.next().? >= 0);
@@ -2431,6 +2592,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidProbability, Geometric.init(0));
     try std.testing.expectError(error.InvalidParameter, Gamma(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, ChiSquared(f64).init(0));
+    try std.testing.expectError(error.InvalidParameter, Chi(f64).init(0));
+    try std.testing.expectError(error.InvalidParameter, Erlang(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, Beta(f64).init(1, 0));
     try std.testing.expectError(error.InvalidParameter, FisherF(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, StudentT(f64).init(0));
@@ -2438,6 +2601,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Cauchy(f64).init(0, 0));
     try std.testing.expectError(error.InvalidParameter, Laplace(f64).init(0, 0));
     try std.testing.expectError(error.InvalidParameter, Logistic(f64).init(0, 0));
+    try std.testing.expectError(error.InvalidParameter, LogLogistic(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, Kumaraswamy(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, Rayleigh(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Maxwell(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Pareto(f64).init(1, 0));

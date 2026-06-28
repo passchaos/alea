@@ -67,6 +67,10 @@ toolkit functionality and reduce reliance on companion crates:
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)` |
 | HalfNormal | Covered: `halfNormal`, `HalfNormal(T)` |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)` |
+| Chi | Covered: `chi`, `Chi(T)` |
+| Erlang | Covered: `erlang`, `Erlang(T)` |
+| LogLogistic | Covered: `logLogistic`, `LogLogistic(T)` |
+| Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)` |
 | Pareto | Covered: `pareto`, `Pareto(T)` |
 | Weibull | Covered: `weibull`, `Weibull(T)` |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs |

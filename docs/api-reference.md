@@ -79,12 +79,14 @@ Single-shot helpers:
 - `bernoulli`, `binomial`, `binomialPoissonApprox`
 - `negativeBinomial`, `hypergeometric`
 - `standardNormal`, `standardNormalFrom`, `normal`, `logNormal`,
-  `logNormalFrom`, `halfNormal`, `halfNormalFrom`,
+  `logNormalFrom`, `halfNormal`, `halfNormalFrom`, `chi`, `chiFrom`,
   `standardExponential`, `standardExponentialFrom`, `exponential`
 - `poisson`, `geometric`
-- `gamma`, `gammaFrom`, `chiSquared`, `beta`, `fisherF`, `studentT`
+- `gamma`, `gammaFrom`, `chiSquared`, `chiSquaredFrom`, `erlang`,
+  `erlangFrom`, `beta`, `fisherF`, `studentT`
 - `triangular`, `cauchy`, `laplace`, `laplaceFrom`, `logistic`,
-  `logisticFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
+  `logisticFrom`, `logLogistic`, `logLogisticFrom`, `kumaraswamy`,
+  `kumaraswamyFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
   `pareto`, `weibull`
 - `gumbel`, `frechet`, `skewNormal`, `skewNormalFrom`, `pert`
 - `inverseGaussian`, `normalInverseGaussian`, `normalInverseGaussianFrom`,
@@ -120,6 +122,10 @@ Reusable samplers:
 - `Gamma(T).sampleFrom`
 - `ChiSquared(T)`
 - `ChiSquared(T).sampleFrom`
+- `Chi(T)`
+- `Chi(T).sampleFrom`
+- `Erlang(T)`
+- `Erlang(T).sampleFrom`
 - `Beta(T)`
 - `Beta(T).sampleFrom`
 - `FisherF(T)`
@@ -132,6 +138,10 @@ Reusable samplers:
 - `Laplace(T).sampleFrom`
 - `Logistic(T)`
 - `Logistic(T).sampleFrom`
+- `LogLogistic(T)`
+- `LogLogistic(T).sampleFrom`
+- `Kumaraswamy(T)`
+- `Kumaraswamy(T).sampleFrom`
 - `Rayleigh(T)`
 - `Rayleigh(T).sampleFrom`
 - `Maxwell(T)`
