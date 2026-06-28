@@ -22,7 +22,8 @@ expectations.
 - Bytes/fill: `bytes`, `fill` for scalar and vector slices, `fillSample`,
   `fillRange`, `fillRangeChecked`, `fillNormal`, `fillNormalChecked`,
   `fillExponential`, `fillExponentialChecked`, `fillVectorRange`,
-  `fillVectorRangeChecked`
+  `fillVectorRangeChecked`, `fillVectorNormal`, `fillVectorNormalChecked`,
+  `fillVectorExponential`, `fillVectorExponentialChecked`
 - Raw/scalars: `next`, `boolean`, `chance`, `chanceChecked`, `ratio`,
   `ratioChecked`, `uint`, `uintLessThan`, `uintLessThanChecked`,
   `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`
