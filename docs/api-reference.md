@@ -115,6 +115,7 @@ Reusable samplers:
 - `UnitBall(T)`
 - `Dirichlet(T)`
 - `AliasTable(Weight)`
+- `WeightedTree(Weight)`
 
 Alias helpers:
 
@@ -123,6 +124,19 @@ Alias helpers:
 - `AliasTable.update`
 - `AliasTable.sample`
 - `AliasTable.deinit`
+
+Dynamic weighted helpers:
+
+- `WeightedTree.init`
+- `WeightedTree.push`
+- `WeightedTree.pop`
+- `WeightedTree.update`
+- `WeightedTree.get`
+- `WeightedTree.sample`
+- `WeightedTree.sampleChecked`
+- `WeightedTree.totalWeight`
+- `WeightedTree.isValid`
+- `WeightedTree.deinit`
 
 ## Sequence Sampling
 

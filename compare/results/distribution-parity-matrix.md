@@ -45,6 +45,8 @@ Zig-native way.
 | Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path |
 | Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper |
 | WeightedChoice | Covered: `WeightedChoice`, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
+| WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling |
+| WeightedTreeIndex | Covered: `WeightedTree(Weight)` for O(log n) sample/update/push/pop workloads |
 | InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)` |
 | NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)` |
 | Zipf | Covered: `zipf`, `Zipf(T)` |
@@ -80,7 +82,5 @@ toolkit functionality and reduce reliance on companion crates:
 
 - Add a Linux no-known-gaps audit report tying the local `rand_distr` source
   list to Alea exports, tests, docs, and benchmark rows.
-- Compare dynamic weighted sampling against local `rand_distr` weighted tree
-  APIs and add a Zig-native sampler if alias rebuilds leave a real core gap.
 - Consider Zig-native vector/SIMD sampling after scalar functionality and
   validation remain stable.

@@ -17,6 +17,7 @@ The first milestone is intentionally broad:
   replacement, iterator and weighted iterator sampling with and without
   replacement, reservoir sampling, and adaptive index sampling
 - reusable uniform, Bernoulli, non-uniform distribution, and alias-table samplers
+- dynamic weighted trees for frequent update/push/pop weighted sampling
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, and Unicode scalar
   string generation
 - distributions: uniform, bernoulli, binomial, negative-binomial,
