@@ -9,7 +9,7 @@ project does not repeat unproductive work.
 | Area | Local Rust evidence | Current Alea evidence | Status |
 | --- | --- | --- | --- |
 | Poisson `lambda = 20` | `rand_distr poisson`: about 69M samples/s | `alea poisson`: about 52M samples/s after Ahrens-Dieter adoption | Watch: materially improved from about 26M; still trails Rust |
-| Normal `f64` facade | `rand_distr normal`: about 462M samples/s | `alea normal`: about 216-224M samples/s | Open: stdlib ziggurat helped, but Alea still trails |
+| Normal `f64` facade | `rand_distr normal`: about 462M samples/s | `alea normal`: about 210-224M samples/s; direct `std.Random.floatNorm` path is about 214M | Open: gap is mostly stdlib ziggurat algorithm/implementation, not Alea facade overhead |
 | Exponential `f64` facade | `rand_distr exponential`: about 446M samples/s | `alea exponential`: about 372-380M samples/s | Watch: close but still trails |
 | Weighted dynamic update+sample | `rand_distr weighted tree`: about 52M ops/s | `alea weighted tree`: about 46M ops/s | Watch: close, possible data-structure tuning later |
 
