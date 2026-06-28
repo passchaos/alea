@@ -188,6 +188,10 @@ pub fn fillNormalChecked(self: Rng, comptime T: type, dest: []T, mean: T, stddev
 pub fn fillExponential(self: Rng, comptime T: type, dest: []T, rate: T) void {
     comptime requireFloat(T);
     std.debug.assert(rate > 0);
+    if (T == f32) {
+        self.fillExponentialF32(dest, rate);
+        return;
+    }
     for (dest) |*item| item.* = self.exponential(T, rate);
 }
 
@@ -845,6 +849,17 @@ fn fillNormalF32(self: Rng, dest: []f32, mean: f32, stddev: f32) void {
     while (i < dest.len) : (i += 1) dest[i] = self.normal(f32, mean, stddev);
 }
 
+fn fillExponentialF32(self: Rng, dest: []f32, rate: f32) void {
+    const Vec = @Vector(8, f32);
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const samples = self.vectorExponential(Vec, rate);
+        inline for (0..8) |lane| dest[i + lane] = samples[lane];
+    }
+
+    while (i < dest.len) : (i += 1) dest[i] = self.exponential(f32, rate);
+}
+
 fn f32FromBits(bits: u24) f32 {
     return @as(f32, @floatFromInt(bits)) * (1.0 / 16777216.0);
 }
@@ -935,6 +950,10 @@ test "rng facade covers scalar APIs" {
     var exp_buf: [16]f64 = undefined;
     try rng.fillExponentialChecked(f64, &exp_buf, 2);
     for (exp_buf) |item| try std.testing.expect(item >= 0);
+
+    var exp_f32_buf: [17]f32 = undefined;
+    try rng.fillExponentialChecked(f32, &exp_f32_buf, 2);
+    for (exp_f32_buf) |item| try std.testing.expect(item >= 0);
 
     const alea = @import("root.zig");
     var poisson_buf: [16]u64 = undefined;
