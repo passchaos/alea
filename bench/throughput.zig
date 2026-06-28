@@ -29,6 +29,8 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("\nrange throughput\n", .{});
     try benchRangeFacade(io, stdout, "alea bounded u32 facade", bytes / 8);
     try benchRangeDirect(io, stdout, "alea bounded u32 direct", bytes / 8);
+    try benchVectorBool(io, stdout, "alea vector boolx64 facade", bytes / 8);
+    try benchVectorInt(io, stdout, "alea vector u16x16 facade", bytes / 8);
     try benchVectorRange(io, stdout, "alea vector bounded i32x8 facade", bytes / 8);
     try benchVectorFloat(io, stdout, "alea vector f32x8 facade", bytes / 8);
     try benchFillRange(io, stdout, "alea fillRange i32", bytes / 8);
@@ -273,6 +275,60 @@ fn benchRangeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchVectorBool(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xb064);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 64) {
+            const value = rng.value(@Vector(64, bool));
+            inline for (0..64) |lane| checksum += @intFromBool(value[lane]);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchVectorInt(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x1616);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 16) {
+            const value = rng.value(@Vector(16, u16));
+            inline for (0..16) |lane| checksum +%= value[lane];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchVectorRange(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
