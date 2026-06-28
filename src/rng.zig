@@ -239,9 +239,13 @@ pub fn fillVectorExponentialChecked(self: Rng, comptime VectorType: type, dest: 
 }
 
 pub fn fillNormal(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
+    fillNormalFrom(self, T, dest, mean, stddev);
+}
+
+pub fn fillNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
-    for (dest) |*item| item.* = normalFastFrom(self, T, mean, stddev);
+    for (dest) |*item| item.* = normalFastFrom(source, T, mean, stddev);
 }
 
 pub fn fillNormalChecked(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
@@ -251,9 +255,13 @@ pub fn fillNormalChecked(self: Rng, comptime T: type, dest: []T, mean: T, stddev
 }
 
 pub fn fillExponential(self: Rng, comptime T: type, dest: []T, rate: T) void {
+    fillExponentialFrom(self, T, dest, rate);
+}
+
+pub fn fillExponentialFrom(source: anytype, comptime T: type, dest: []T, rate: T) void {
     comptime requireFloat(T);
     std.debug.assert(rate > 0);
-    for (dest) |*item| item.* = self.exponential(T, rate);
+    for (dest) |*item| item.* = exponentialFastFrom(source, T, rate);
 }
 
 pub fn fillExponentialChecked(self: Rng, comptime T: type, dest: []T, rate: T) Error!void {
@@ -1079,6 +1087,10 @@ test "rng facade covers scalar APIs" {
     try rng.fillNormalChecked(f64, &normal_buf, 0, 1);
     for (normal_buf) |item| try std.testing.expect(std.math.isFinite(item));
 
+    var direct_normal_buf: [16]f64 = undefined;
+    Rng.fillNormalFrom(&engine, f64, &direct_normal_buf, 0, 1);
+    for (direct_normal_buf) |item| try std.testing.expect(std.math.isFinite(item));
+
     var normal_f32_buf: [33]f32 = undefined;
     try rng.fillNormalChecked(f32, &normal_f32_buf, 0, 1);
     for (normal_f32_buf) |item| try std.testing.expect(std.math.isFinite(item));
@@ -1086,6 +1098,10 @@ test "rng facade covers scalar APIs" {
     var exp_buf: [16]f64 = undefined;
     try rng.fillExponentialChecked(f64, &exp_buf, 2);
     for (exp_buf) |item| try std.testing.expect(item >= 0);
+
+    var direct_exp_buf: [16]f64 = undefined;
+    Rng.fillExponentialFrom(&engine, f64, &direct_exp_buf, 2);
+    for (direct_exp_buf) |item| try std.testing.expect(item >= 0);
 
     var exp_f32_buf: [17]f32 = undefined;
     try rng.fillExponentialChecked(f32, &exp_f32_buf, 2);

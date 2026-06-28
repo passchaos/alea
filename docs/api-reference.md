@@ -23,8 +23,9 @@ expectations.
   `fillRange`, `fillRangeChecked`, `fillNormal`, `fillNormalChecked`,
   `fillExponential`, `fillExponentialChecked`, `fillVectorRange`,
   `fillVectorRangeChecked`, `fillVectorNormal`, `fillVectorNormalChecked`,
-  `fillVectorExponential`, `fillVectorExponentialChecked`, `fillVectorFrom`,
-  `fillVectorRangeFrom`, `fillVectorNormalFrom`, `fillVectorExponentialFrom`
+  `fillVectorExponential`, `fillVectorExponentialChecked`, `fillNormalFrom`,
+  `fillExponentialFrom`, `fillVectorFrom`, `fillVectorRangeFrom`,
+  `fillVectorNormalFrom`, `fillVectorExponentialFrom`
 - Raw/scalars: `next`, `boolean`, `chance`, `chanceChecked`, `ratio`,
   `ratioChecked`, `uint`, `uintLessThan`, `uintLessThanChecked`,
   `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`
