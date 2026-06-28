@@ -485,13 +485,17 @@ pub fn floatRangeChecked(self: Rng, comptime T: type, min: T, max: T) Error!T {
 }
 
 pub fn vector(self: Rng, comptime VectorType: type) VectorType {
+    return vectorFrom(self, VectorType);
+}
+
+pub fn vectorFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     return switch (@typeInfo(info.child)) {
-        .bool => self.vectorBools(VectorType),
-        .int => self.vectorInts(VectorType),
+        .bool => vectorBoolsFrom(source, VectorType),
+        .int => vectorIntsFrom(source, VectorType),
         .float => switch (info.child) {
-            f32 => self.vectorF32(VectorType),
-            f64 => self.vectorScalar(VectorType),
+            f32 => vectorF32From(source, VectorType),
+            f64 => vectorScalarFrom(source, VectorType),
             else => @compileError("alea supports f32 and f64 float vectors"),
         },
         else => @compileError("alea.Rng.vector supports bool, integer, and floating-point vectors"),
@@ -499,17 +503,21 @@ pub fn vector(self: Rng, comptime VectorType: type) VectorType {
 }
 
 pub fn vectorRange(self: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    return vectorRangeFrom(self, VectorType, min, max);
+}
+
+pub fn vectorRangeFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
     const info = vectorInfo(VectorType);
     switch (@typeInfo(info.child)) {
         .int => {
             std.debug.assert(min < max);
             var out: VectorType = undefined;
-            inline for (0..info.len) |i| out[i] = self.intRangeLessThan(info.child, min, max);
+            inline for (0..info.len) |i| out[i] = intRangeLessThanFrom(source, info.child, min, max);
             return out;
         },
         .float => {
             std.debug.assert(min <= max);
-            return @as(VectorType, @splat(min)) + (@as(VectorType, @splat(max)) - @as(VectorType, @splat(min))) * self.vector(VectorType);
+            return @as(VectorType, @splat(min)) + (@as(VectorType, @splat(max)) - @as(VectorType, @splat(min))) * vectorFrom(source, VectorType);
         },
         else => @compileError("Rng.vectorRange supports integer and floating-point vectors"),
     }
@@ -757,35 +765,40 @@ fn vectorChild(comptime VectorType: type) type {
     return vectorInfo(VectorType).child;
 }
 
-fn vectorScalar(self: Rng, comptime VectorType: type) VectorType {
+fn vectorScalarFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     var out: VectorType = undefined;
     inline for (0..info.len) |i| {
-        out[i] = self.value(info.child);
+        out[i] = switch (@typeInfo(info.child)) {
+            .bool => nextFrom(source) & 1 != 0,
+            .int => uintFrom(source, info.child),
+            .float => floatFrom(source, info.child),
+            else => @compileError("unsupported scalar vector child"),
+        };
     }
     return out;
 }
 
-fn vectorBools(self: Rng, comptime VectorType: type) VectorType {
+fn vectorBoolsFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != bool) @compileError("vectorBools expects a bool vector");
 
     var out: VectorType = undefined;
     var bits: u64 = 0;
     inline for (0..info.len) |i| {
-        if (i % 64 == 0) bits = self.next();
+        if (i % 64 == 0) bits = nextFrom(source);
         out[i] = @as(i64, @bitCast(bits)) < 0;
         bits <<= 1;
     }
     return out;
 }
 
-fn vectorInts(self: Rng, comptime VectorType: type) VectorType {
+fn vectorIntsFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireInt(info.child);
     const int_info = @typeInfo(info.child).int;
     if (int_info.bits == 0) return @splat(0);
-    if (int_info.bits > 64) return self.vectorScalar(VectorType);
+    if (int_info.bits > 64) return vectorScalarFrom(source, VectorType);
 
     const Unsigned = std.meta.Int(.unsigned, int_info.bits);
     const lanes_per_word = @max(1, 64 / int_info.bits);
@@ -794,7 +807,7 @@ fn vectorInts(self: Rng, comptime VectorType: type) VectorType {
     var out: VectorType = undefined;
     var bits: u64 = 0;
     inline for (0..info.len) |i| {
-        if (i % lanes_per_word == 0) bits = self.next();
+        if (i % lanes_per_word == 0) bits = nextFrom(source);
         const raw: Unsigned = @intCast(bits & mask);
         out[i] = @bitCast(raw);
         if (int_info.bits != 64) bits >>= @intCast(int_info.bits);
@@ -802,14 +815,14 @@ fn vectorInts(self: Rng, comptime VectorType: type) VectorType {
     return out;
 }
 
-fn vectorF32(self: Rng, comptime VectorType: type) VectorType {
+fn vectorF32From(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorF32 expects a f32 vector");
 
     var out: VectorType = undefined;
     var bits: u64 = 0;
     inline for (0..info.len) |i| {
-        if (i % 2 == 0) bits = self.next();
+        if (i % 2 == 0) bits = nextFrom(source);
         out[i] = if (i % 2 == 0)
             f32FromBits(@truncate(bits >> 40))
         else
@@ -833,6 +846,15 @@ fn vectorNormalF32(self: Rng, comptime VectorType: type, mean: f32, stddev: f32)
 
 fn f32FromBits(bits: u24) f32 {
     return @as(f32, @floatFromInt(bits)) * (1.0 / 16777216.0);
+}
+
+fn floatFrom(source: anytype, comptime T: type) T {
+    comptime requireFloat(T);
+    return switch (T) {
+        f32 => f32FromBits(@truncate(nextFrom(source) >> 40)),
+        f64 => @as(f64, @floatFromInt(nextFrom(source) >> 11)) * (1.0 / 9007199254740992.0),
+        else => @compileError("alea supports f32 and f64 floats"),
+    };
 }
 
 pub fn probabilityThreshold(p: f64) u64 {
@@ -941,6 +963,9 @@ test "rng facade covers scalar APIs" {
     inline for (0..4) |i| any_vec_non_zero = any_vec_non_zero or uvec[i] != 0;
     try std.testing.expect(any_vec_non_zero);
 
+    const direct_uvec = Rng.vectorFrom(&engine, @Vector(4, u16));
+    inline for (0..4) |i| _ = direct_uvec[i];
+
     const ivec = rng.value(@Vector(8, i16));
     inline for (0..8) |i| _ = ivec[i];
 
@@ -966,6 +991,9 @@ test "rng facade covers scalar APIs" {
 
     const ranged_i = rng.vectorRange(@Vector(4, i32), -10, 10);
     inline for (0..4) |i| try std.testing.expect(ranged_i[i] >= -10 and ranged_i[i] < 10);
+
+    const direct_ranged_i = Rng.vectorRangeFrom(&engine, @Vector(4, i32), -10, 10);
+    inline for (0..4) |i| try std.testing.expect(direct_ranged_i[i] >= -10 and direct_ranged_i[i] < 10);
 
     const ranged_f = rng.vectorRange(@Vector(4, f64), -1, 2);
     inline for (0..4) |i| try std.testing.expect(ranged_f[i] >= -1 and ranged_f[i] < 2);
