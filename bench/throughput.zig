@@ -100,11 +100,13 @@ pub fn main(init: std.process.Init) !void {
     try benchFisherF(io, stdout, "alea fisher-f", bytes / 128);
     try benchFisherFCached(io, stdout, "alea fisher-f cached", bytes / 128);
     try benchTriangular(io, stdout, "alea triangular", bytes / 128);
+    try benchArcsine(io, stdout, "alea arcsine", bytes / 128);
     try benchCauchy(io, stdout, "alea cauchy", bytes / 128);
     try benchLaplace(io, stdout, "alea laplace", bytes / 128);
     try benchLogistic(io, stdout, "alea logistic", bytes / 128);
     try benchLogLogistic(io, stdout, "alea log-logistic", bytes / 128);
     try benchKumaraswamy(io, stdout, "alea kumaraswamy", bytes / 128);
+    try benchPowerFunction(io, stdout, "alea power-function", bytes / 128);
     try benchRayleigh(io, stdout, "alea rayleigh", bytes / 128);
     try benchMaxwell(io, stdout, "alea maxwell", bytes / 128);
     try benchDirichlet(io, stdout, "alea dirichlet", bytes / 512);
@@ -1946,6 +1948,30 @@ fn benchTriangular(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchArcsine(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const dist = alea.distributions.Arcsine(f64).init(-1, 3) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xa2c5);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchCauchy(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
@@ -2049,6 +2075,30 @@ fn benchKumaraswamy(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.ScalarPrng.init(0x9a77);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchPowerFunction(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const dist = alea.distributions.PowerFunction(f64).init(-1, 2, 3) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x90af);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;
         var checksum: f64 = 0;

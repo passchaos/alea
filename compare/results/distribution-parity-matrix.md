@@ -61,6 +61,7 @@ toolkit functionality and reduce reliance on companion crates:
 | --- | --- |
 | Beta | Covered: `beta`, `Beta(T)` |
 | Triangular | Covered: `triangular`, `Triangular(T)` |
+| Arcsine | Covered: `arcsine`, `Arcsine(T)` |
 | Cauchy | Covered: `cauchy`, `Cauchy(T)` |
 | Laplace | Covered: `laplace`, `Laplace(T)` |
 | Logistic | Covered: `logistic`, `Logistic(T)` |
@@ -71,6 +72,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Erlang | Covered: `erlang`, `Erlang(T)` |
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)` |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)` |
+| PowerFunction | Covered: `powerFunction`, `PowerFunction(T)` |
 | Pareto | Covered: `pareto`, `Pareto(T)` |
 | Weibull | Covered: `weibull`, `Weibull(T)` |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs |

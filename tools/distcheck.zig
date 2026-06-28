@@ -160,6 +160,11 @@ fn checkContinuous() !void {
             return alea.distributions.fisherF(r, f64, 5, 20);
         }
     }.sample, 1.05, 1.18);
+    try expectContinuousMean("arcsine", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.arcsine(r, f64, -1, 3);
+        }
+    }.sample, 0.95, 1.05);
     try expectContinuousMean("laplace", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.laplace(r, f64, 0, 1);
@@ -180,6 +185,11 @@ fn checkContinuous() !void {
             return alea.distributions.kumaraswamy(r, f64, 2, 5);
         }
     }.sample, 0.365, 0.375);
+    try expectContinuousMean("power-function", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.powerFunction(r, f64, -1, 2, 3);
+        }
+    }.sample, 1.22, 1.28);
     try expectContinuousMean("rayleigh", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.rayleigh(r, f64, 2);

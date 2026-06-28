@@ -1115,6 +1115,42 @@ pub fn Triangular(comptime T: type) type {
     };
 }
 
+pub fn arcsine(rng: Rng, comptime T: type, min: T, max: T) T {
+    return arcsineFrom(rng, T, min, max);
+}
+
+pub fn arcsineFrom(source: anytype, comptime T: type, min: T, max: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(min < max and std.math.isFinite(min) and std.math.isFinite(max));
+
+    const u = openFloatFrom(source, T);
+    const s = @sin(@as(T, @floatCast(std.math.pi)) * u / 2);
+    return min + (max - min) * s * s;
+}
+
+pub fn Arcsine(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        min: T,
+        max: T,
+
+        pub fn init(min: T, max: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(min < max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.InvalidParameter;
+            return .{ .min = min, .max = max };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return arcsineFrom(source, T, self.min, self.max);
+        }
+    };
+}
+
 pub fn cauchy(rng: Rng, comptime T: type, median: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0);
@@ -1289,6 +1325,47 @@ pub fn Kumaraswamy(comptime T: type) type {
         pub fn sampleFrom(self: Self, source: anytype) T {
             const u = openFloatFrom(source, T);
             return std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
+        }
+    };
+}
+
+pub fn powerFunction(rng: Rng, comptime T: type, min: T, max: T, shape: T) T {
+    return powerFunctionFrom(rng, T, min, max, shape);
+}
+
+pub fn powerFunctionFrom(source: anytype, comptime T: type, min: T, max: T, shape: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(min < max and shape > 0);
+    std.debug.assert(std.math.isFinite(min) and std.math.isFinite(max) and std.math.isFinite(shape));
+
+    return min + (max - min) * std.math.pow(T, openFloatFrom(source, T), 1 / shape);
+}
+
+pub fn PowerFunction(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        min: T,
+        range: T,
+        inverse_shape: T,
+
+        pub fn init(min: T, max: T, shape: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(min < max) or !(shape > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(min) or !std.math.isFinite(max) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            return .{
+                .min = min,
+                .range = max - min,
+                .inverse_shape = 1 / shape,
+            };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return self.min + self.range * std.math.pow(T, openFloatFrom(source, T), self.inverse_shape);
         }
     };
 }
@@ -2522,6 +2599,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     const triangular_value = triangulars.next().?;
     try std.testing.expect(triangular_value >= -1 and triangular_value <= 2);
 
+    var arcsines = rng.sampleIter(f64, try Arcsine(f64).init(-1, 3));
+    const arcsine_value = arcsines.next().?;
+    try std.testing.expect(arcsine_value >= -1 and arcsine_value <= 3);
+
     var cauchys = rng.sampleIter(f64, try Cauchy(f64).init(0, 1));
     _ = cauchys.next().?;
 
@@ -2537,6 +2618,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     var kumaraswamys = rng.sampleIter(f64, try Kumaraswamy(f64).init(2, 5));
     const kumaraswamy_value = kumaraswamys.next().?;
     try std.testing.expect(kumaraswamy_value >= 0 and kumaraswamy_value <= 1);
+
+    var power_functions = rng.sampleIter(f64, try PowerFunction(f64).init(-1, 2, 3));
+    const power_value = power_functions.next().?;
+    try std.testing.expect(power_value >= -1 and power_value <= 2);
 
     var rayleighs = rng.sampleIter(f64, try Rayleigh(f64).init(2));
     try std.testing.expect(rayleighs.next().? >= 0);
@@ -2598,11 +2683,13 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, FisherF(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, StudentT(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Triangular(f64).init(1, 0, 2));
+    try std.testing.expectError(error.InvalidParameter, Arcsine(f64).init(1, 1));
     try std.testing.expectError(error.InvalidParameter, Cauchy(f64).init(0, 0));
     try std.testing.expectError(error.InvalidParameter, Laplace(f64).init(0, 0));
     try std.testing.expectError(error.InvalidParameter, Logistic(f64).init(0, 0));
     try std.testing.expectError(error.InvalidParameter, LogLogistic(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, Kumaraswamy(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, PowerFunction(f64).init(0, 1, 0));
     try std.testing.expectError(error.InvalidParameter, Rayleigh(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Maxwell(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Pareto(f64).init(1, 0));

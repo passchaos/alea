@@ -84,9 +84,9 @@ Single-shot helpers:
 - `poisson`, `geometric`
 - `gamma`, `gammaFrom`, `chiSquared`, `chiSquaredFrom`, `erlang`,
   `erlangFrom`, `beta`, `fisherF`, `studentT`
-- `triangular`, `cauchy`, `laplace`, `laplaceFrom`, `logistic`,
+- `triangular`, `arcsine`, `arcsineFrom`, `cauchy`, `laplace`, `laplaceFrom`, `logistic`,
   `logisticFrom`, `logLogistic`, `logLogisticFrom`, `kumaraswamy`,
-  `kumaraswamyFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
+  `kumaraswamyFrom`, `powerFunction`, `powerFunctionFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
   `pareto`, `weibull`
 - `gumbel`, `frechet`, `skewNormal`, `skewNormalFrom`, `pert`
 - `inverseGaussian`, `normalInverseGaussian`, `normalInverseGaussianFrom`,
@@ -133,6 +133,8 @@ Reusable samplers:
 - `StudentT(T)`
 - `StudentT(T).sampleFrom`
 - `Triangular(T)`
+- `Arcsine(T)`
+- `Arcsine(T).sampleFrom`
 - `Cauchy(T)`
 - `Laplace(T)`
 - `Laplace(T).sampleFrom`
@@ -142,6 +144,8 @@ Reusable samplers:
 - `LogLogistic(T).sampleFrom`
 - `Kumaraswamy(T)`
 - `Kumaraswamy(T).sampleFrom`
+- `PowerFunction(T)`
+- `PowerFunction(T).sampleFrom`
 - `Rayleigh(T)`
 - `Rayleigh(T).sampleFrom`
 - `Maxwell(T)`

@@ -60,8 +60,8 @@ Single-shot helpers and reusable samplers cover:
 - standard normal, normal, log-normal, half-normal, standard exponential, exponential
 - poisson, geometric
 - gamma, chi-squared, chi, erlang, beta, Fisher F, Student t
-- triangular, cauchy, laplace, logistic, log-logistic, kumaraswamy,
-  rayleigh, maxwell, pareto, weibull
+- triangular, arcsine, cauchy, laplace, logistic, log-logistic, kumaraswamy,
+  power-function, rayleigh, maxwell, pareto, weibull
 - gumbel, frechet, skew-normal, PERT
 - inverse Gaussian, normal-inverse Gaussian, Zipf, Zeta
 - unit circle/disc and unit sphere/ball geometry samplers
