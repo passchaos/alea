@@ -523,6 +523,10 @@ pub fn vectorExponential(self: Rng, comptime VectorType: type, rate: vectorChild
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(rate > 0);
+    if (info.child == f32) {
+        const uniform = self.vector(VectorType);
+        return -@log(@as(VectorType, @splat(1)) - uniform) / @as(VectorType, @splat(rate));
+    }
     var out: VectorType = undefined;
     inline for (0..info.len) |i| out[i] = self.exponential(info.child, rate);
     return out;
@@ -926,6 +930,9 @@ test "rng facade covers scalar APIs" {
 
     const exponentials = rng.vectorExponential(@Vector(4, f64), 2);
     inline for (0..4) |i| try std.testing.expect(exponentials[i] >= 0);
+
+    const vector_exp_f32 = rng.vectorExponential(@Vector(8, f32), 2);
+    inline for (0..8) |i| try std.testing.expect(vector_exp_f32[i] >= 0);
 
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, u32), 3, 3));
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));

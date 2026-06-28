@@ -48,6 +48,7 @@ pub fn main(init: std.process.Init) !void {
     try benchNormal(io, stdout, "alea normal", bytes / 64);
     try benchFillNormal(io, stdout, "alea fillNormal", bytes / 64);
     try benchExponential(io, stdout, "alea exponential", bytes / 64);
+    try benchVectorExponentialF32(io, stdout, "alea vector exponential f32x8", bytes / 64);
     try benchFillExponential(io, stdout, "alea fillExponential", bytes / 64);
     try benchPoisson(io, stdout, "alea poisson", bytes / 64);
     try benchBinomial(io, stdout, "alea binomial", bytes / 64);
@@ -728,6 +729,33 @@ fn benchExponential(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchVectorExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xe158);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f32 = 0;
+        while (i < count) : (i += 8) {
+            const value = rng.vectorExponential(@Vector(8, f32), 2);
+            inline for (0..8) |lane| checksum += value[lane];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchFillExponential(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
