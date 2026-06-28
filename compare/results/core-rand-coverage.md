@@ -45,7 +45,7 @@ broader product goal permanently finished.
 
 | ID | Milestone | Completion gate | Status |
 | --- | --- | --- | --- |
-| S2-M1 | Extended statistical validation | PractRand 0.96 `stdin64` at 64GiB or larger for `fast`, `default`, `wyhash64`, `pcg64`, `xoshiro256++`, and `chacha12`, plus at least one TestU01-compatible report or a documented local blocker. | In progress: `fast`, `default`, `wyhash64`, `pcg64`, and `xoshiro256++` have 64GiB PractRand passes; `chacha12` pending |
+| S2-M1 | Extended statistical validation | PractRand 0.96 `stdin64` at 64GiB or larger for `fast`, `default`, `wyhash64`, `pcg64`, `xoshiro256++`, and `chacha12`, plus at least one TestU01-compatible report or a documented local blocker. | Closed: all listed engines have 64GiB PractRand passes |
 | S2-M2 | Distribution parity-plus matrix | Compare the public distribution list against locally available `rand_distr`/historical `rand` distribution families and add any still-missing core families or explicitly document why they are out of scope for Zig-native `alea`. | Not started |
 | S2-M3 | Parameter-grid distribution validation | For each public distribution family, add deterministic mean/variance or support checks across multiple parameter regimes, not just one representative case. | Not started |
 | S2-M4 | Benchmark parity matrix | Add Rust-side benchmark rows for comparable distribution and sequence workloads where `rand`/`rand_distr` exposes matching functionality, and keep Zig/Rust native CPU flags aligned. | Not started |
