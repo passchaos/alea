@@ -19,6 +19,7 @@ project does not repeat unproductive work.
 | --- | --- | --- |
 | Lower Poisson PTRS threshold from `lambda >= 30` to `lambda >= 12` | `lambda = 20` benchmark dropped from about 26M samples/s to about 23M samples/s, while `distcheck` still passed | Rejected. Dedicated medium-lambda Ahrens-Dieter path was adopted instead. |
 | Cache Poisson Ahrens-Dieter constants in reusable `Poisson` sampler | `alea poisson cached`: about 52M samples/s, essentially same as single-shot after adoption | Kept for API quality and avoiding recomputation, but not enough to close the remaining Rust performance gap. |
+| Direct `normalFrom` helper wrapping `std.Random.floatNorm` | About 208M samples/s, essentially same as facade/direct `std.Random` and still far below `rand_distr` | Rejected as public API. Normal gap needs a faster normal kernel, not another wrapper. |
 | Default `fillNormal(f32)` via vector Box-Muller | About 125M samples/s, slower than scalar ziggurat bulk around 196M samples/s | Rejected as default. Keep explicit vector normal prototype for experimentation. |
 | Default `fillExponential(f32)` via vector log kernel | About 183M samples/s, slower than scalar ziggurat bulk around 320M samples/s | Rejected as default. Keep explicit vector exponential prototype for experimentation. |
 | Full benchmark row for vector-slice range fill | Caused anomalously long full benchmark runs | Deferred. API remains tested; design a smaller isolated microbench before re-adding to the full benchmark. |
