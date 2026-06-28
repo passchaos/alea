@@ -127,13 +127,13 @@ pub fn fill(self: Rng, comptime T: type, dest: []T) void {
                 self.bytes(dest);
                 return;
             }
-            for (dest) |*item| item.* = self.uint(T);
+            self.fillInts(T, dest);
         },
         .float => {
             for (dest) |*item| item.* = self.float(T);
         },
         .bool => {
-            for (dest) |*item| item.* = self.boolean();
+            self.fillBools(dest);
         },
         else => @compileError("alea.Rng.fill supports integer, float, and bool slices"),
     }
@@ -193,6 +193,49 @@ pub fn fillExponentialChecked(self: Rng, comptime T: type, dest: []T, rate: T) E
 pub fn fillSample(self: Rng, comptime T: type, dest: []T, sampler: anytype) void {
     var local_sampler = sampler;
     for (dest) |*item| item.* = local_sampler.sample(self);
+}
+
+fn fillBools(self: Rng, dest: []bool) void {
+    var i: usize = 0;
+    while (i < dest.len) {
+        var bits = self.next();
+        var lane: usize = 0;
+        const take = @min(@as(usize, 64), dest.len - i);
+        while (lane < take) : (lane += 1) {
+            dest[i + lane] = @as(i64, @bitCast(bits)) < 0;
+            bits <<= 1;
+        }
+        i += take;
+    }
+}
+
+fn fillInts(self: Rng, comptime T: type, dest: []T) void {
+    comptime requireInt(T);
+    const info = @typeInfo(T).int;
+    if (info.bits == 0) {
+        @memset(dest, 0);
+        return;
+    }
+    if (info.bits > 64) {
+        for (dest) |*item| item.* = self.uint(T);
+        return;
+    }
+
+    const Unsigned = std.meta.Int(.unsigned, info.bits);
+    const lanes_per_word = @max(1, 64 / info.bits);
+    const mask = if (info.bits == 64) std.math.maxInt(u64) else (@as(u64, 1) << @intCast(info.bits)) - 1;
+
+    var i: usize = 0;
+    while (i < dest.len) {
+        var bits = self.next();
+        var lane: usize = 0;
+        while (lane < lanes_per_word and i < dest.len) : (lane += 1) {
+            const raw: Unsigned = @intCast(bits & mask);
+            dest[i] = @bitCast(raw);
+            i += 1;
+            if (info.bits != 64) bits >>= @intCast(info.bits);
+        }
+    }
 }
 
 pub fn next(self: Rng) u64 {
@@ -691,6 +734,22 @@ test "rng facade covers scalar APIs" {
     var any_non_zero = false;
     for (buf) |item| any_non_zero = any_non_zero or item != 0;
     try std.testing.expect(any_non_zero);
+
+    var u32_buf: [16]u32 = undefined;
+    rng.fill(u32, &u32_buf);
+    var any_u32_non_zero = false;
+    for (u32_buf) |item| any_u32_non_zero = any_u32_non_zero or item != 0;
+    try std.testing.expect(any_u32_non_zero);
+
+    var bool_buf: [128]bool = undefined;
+    rng.fill(bool, &bool_buf);
+    var saw_true = false;
+    var saw_false = false;
+    for (bool_buf) |item| {
+        saw_true = saw_true or item;
+        saw_false = saw_false or !item;
+    }
+    try std.testing.expect(saw_true and saw_false);
 
     var ranged_buf: [16]i16 = undefined;
     rng.fillRange(i16, &ranged_buf, -20, 20);

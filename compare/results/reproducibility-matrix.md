@@ -22,6 +22,7 @@ is explicitly documented.
 | `Rng.uint`, `uintLessThan`, `uintAtMost`, integer ranges | Same output for fixed engine stream, integer type, and bounds on the same integer width. |
 | `Rng.float`, `floatOpen`, `floatOpenClosed` | Same output for fixed engine stream and float type. |
 | `Rng.value` for bools, ints, floats, enums, tuples, arrays | Same output when all nested sampled types are stable. |
+| `Rng.fill(u8, ...)` / `Rng.bytes` | Same byte stream for fixed engine stream. |
 | `ascii.Charset` sampling | Same bytes for fixed engine stream and charset bytes. |
 | `seq.sampleIndicesU32`, `sampleIndexVec` with `.u32` backing | Same sampled index sequence for fixed engine stream, length, and amount. |
 
@@ -33,6 +34,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Area | Reason |
 | --- | --- |
 | Non-uniform distributions | Algorithms may be improved for statistical quality or speed, as happened with Poisson and binomial. |
+| `Rng.fill` for non-`u8` integer and bool slices | Bulk packing policy may change to improve throughput; use scalar `valueIter` if per-element draw compatibility is required. |
 | `seq.sampleIndices` returning `[]usize` | `usize` width and compact conversion policy can vary by target. |
 | `seq.sampleWeightedIndices` and weighted no-replacement helpers | Heap ordering ties and floating-point keys are deterministic for a target, but algorithm changes may alter output. |
 | `AliasTable` construction | O(1) sampling contract is stable; exact table layout may change with algorithm improvements. |
