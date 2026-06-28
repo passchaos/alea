@@ -1018,6 +1018,169 @@ pub fn UnitBall(comptime T: type) type {
     };
 }
 
+pub fn inverseGaussian(rng: Rng, comptime T: type, mean: T, shape: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(mean > 0 and shape > 0);
+
+    const z = normal(rng, T, 0, 1);
+    const y = mean * z * z;
+    const mean_over_2shape = mean / (2 * shape);
+    const x = mean + mean_over_2shape * (y - @sqrt(4 * shape * y + y * y));
+    if (rng.float(T) <= mean / (mean + x)) return x;
+    return mean * mean / x;
+}
+
+pub fn InverseGaussian(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        mean: T,
+        shape: T,
+
+        pub fn init(mean: T, shape: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(mean > 0) or !(shape > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(mean) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            return .{ .mean = mean, .shape = shape };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return inverseGaussian(rng, T, self.mean, self.shape);
+        }
+    };
+}
+
+pub fn normalInverseGaussian(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(alpha > 0 and @abs(beta_param) < alpha);
+
+    const ratio = beta_param / alpha;
+    const gamma_param = alpha * @sqrt(1 - ratio * ratio);
+    const inv_gauss = inverseGaussian(rng, T, 1 / gamma_param, 1);
+    return beta_param * inv_gauss + @sqrt(inv_gauss) * normal(rng, T, 0, 1);
+}
+
+pub fn NormalInverseGaussian(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        beta_param: T,
+        inverse_mean: T,
+
+        pub fn init(alpha: T, beta_param: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(alpha > 0) or !std.math.isFinite(alpha)) return error.InvalidParameter;
+            if (!std.math.isFinite(beta_param) or !(@abs(beta_param) < alpha)) return error.InvalidParameter;
+
+            const ratio = beta_param / alpha;
+            const gamma_param = alpha * @sqrt(1 - ratio * ratio);
+            const inverse_mean = 1 / gamma_param;
+            if (!(inverse_mean > 0) or !std.math.isFinite(inverse_mean)) return error.InvalidParameter;
+            return .{ .beta_param = beta_param, .inverse_mean = inverse_mean };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            const inv_gauss = inverseGaussian(rng, T, self.inverse_mean, 1);
+            return self.beta_param * inv_gauss + @sqrt(inv_gauss) * normal(rng, T, 0, 1);
+        }
+    };
+}
+
+pub fn zipf(rng: Rng, comptime T: type, n: T, exponent: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(exponent >= 0 and n >= 1);
+
+    const sampler = Zipf(T).init(n, exponent) catch unreachable;
+    return sampler.sample(rng);
+}
+
+pub fn Zipf(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        exponent: T,
+        t: T,
+        q: T,
+
+        pub fn init(n: T, exponent: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(exponent >= 0) or std.math.isNan(exponent)) return error.InvalidParameter;
+            if (!(n >= 1) or std.math.isNan(n)) return error.InvalidParameter;
+            if (std.math.isInf(n) and exponent <= 1) return error.InvalidParameter;
+
+            const q = if (exponent != 1) 1 / (1 - exponent) else 0;
+            const t = if (std.math.isInf(exponent))
+                1
+            else if (exponent != 1)
+                (std.math.pow(T, n, 1 - exponent) - exponent) * q
+            else
+                1 + @log(n);
+
+            if (!(t > 0) or std.math.isNan(t)) return error.InvalidParameter;
+            return .{ .exponent = exponent, .t = t, .q = q };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            if (std.math.isInf(self.exponent)) return 1;
+
+            while (true) {
+                const inv_b = self.invCdf(rng.float(T));
+                const x = @floor(inv_b + 1);
+                var ratio = std.math.pow(T, x, -self.exponent);
+                if (x > 1) ratio *= std.math.pow(T, inv_b, self.exponent);
+
+                if (rng.float(T) < ratio) return x;
+            }
+        }
+
+        fn invCdf(self: Self, p: T) T {
+            const pt = p * self.t;
+            if (pt <= 1) return pt;
+            if (self.exponent != 1) return std.math.pow(T, pt * (1 - self.exponent) + self.exponent, self.q);
+            return @exp(pt - 1);
+        }
+    };
+}
+
+pub fn zeta(rng: Rng, comptime T: type, exponent: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(exponent > 1);
+
+    const sampler = Zeta(T).init(exponent) catch unreachable;
+    return sampler.sample(rng);
+}
+
+pub fn Zeta(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        exponent_minus_one: T,
+        b: T,
+
+        pub fn init(exponent: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(exponent > 1) or std.math.isNan(exponent)) return error.InvalidParameter;
+            const exponent_minus_one = exponent - 1;
+            return .{
+                .exponent_minus_one = exponent_minus_one,
+                .b = std.math.pow(T, 2, exponent_minus_one),
+            };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            while (true) {
+                const u = rng.floatOpenClosed(T);
+                const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
+                if (std.math.isInf(x)) return x;
+
+                const t = std.math.pow(T, 1 + 1 / x, self.exponent_minus_one);
+                const v = rng.float(T);
+                if (v * x * (t - 1) * self.b <= t * (self.b - 1)) return x;
+            }
+        }
+    };
+}
+
 pub fn Dirichlet(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1304,6 +1467,19 @@ test "non-uniform samplers can be reused with sample iterators" {
     const pert_value = perts.next().?;
     try std.testing.expect(pert_value >= -1 and pert_value <= 2);
 
+    var inverse_gaussians = rng.sampleIter(f64, try InverseGaussian(f64).init(1, 2));
+    try std.testing.expect(inverse_gaussians.next().? > 0);
+
+    var normal_inverse_gaussians = rng.sampleIter(f64, try NormalInverseGaussian(f64).init(2, 1));
+    try std.testing.expect(std.math.isFinite(normal_inverse_gaussians.next().?));
+
+    var zipfs = rng.sampleIter(f64, try Zipf(f64).init(10, 1.5));
+    const zipf_value = zipfs.next().?;
+    try std.testing.expect(zipf_value >= 1 and zipf_value <= 10);
+
+    var zetas = rng.sampleIter(f64, try Zeta(f64).init(3));
+    try std.testing.expect(zetas.next().? >= 1);
+
     var unit_circles = rng.sampleIter([2]f64, UnitCircle(f64){});
     const unit_circle = unit_circles.next().?;
     try std.testing.expectApproxEqAbs(@as(f64, 1), unit_circle[0] * unit_circle[0] + unit_circle[1] * unit_circle[1], 1e-12);
@@ -1330,6 +1506,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Frechet(f64).init(0, 1, 0));
     try std.testing.expectError(error.InvalidParameter, SkewNormal(f64).init(0, 0, 1));
     try std.testing.expectError(error.InvalidParameter, Pert(f64).init(0, 2, 1, 4));
+    try std.testing.expectError(error.InvalidParameter, InverseGaussian(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, NormalInverseGaussian(f64).init(1, 1));
+    try std.testing.expectError(error.InvalidParameter, Zipf(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, Zipf(f64).init(std.math.inf(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, Zeta(f64).init(1));
 }
 
 test "binomial sampler has plausible moments" {
@@ -1462,6 +1643,43 @@ test "extreme-value and shape samplers have plausible means" {
     const by_mode = try Pert(f64).init(-1, 0.5, 2, 4);
     try std.testing.expectApproxEqAbs(by_mode.alpha, by_mean.alpha, 1e-12);
     try std.testing.expectApproxEqAbs(by_mode.beta_param, by_mean.beta_param, 1e-12);
+}
+
+test "inverse-gaussian and rank samplers have plausible behavior" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(74);
+    const rng = Rng.init(&engine);
+
+    const samples = 30_000;
+    var inverse_sum: f64 = 0;
+    var nig_sum: f64 = 0;
+    var zipf_sum: f64 = 0;
+    var zeta_sum: f64 = 0;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) {
+        const inverse_value = inverseGaussian(rng, f64, 1, 2);
+        try std.testing.expect(inverse_value > 0);
+        inverse_sum += inverse_value;
+
+        nig_sum += normalInverseGaussian(rng, f64, 2, 1);
+
+        const zipf_value = zipf(rng, f64, 10, 1.5);
+        try std.testing.expect(zipf_value >= 1 and zipf_value <= 10);
+        zipf_sum += zipf_value;
+
+        const zeta_value = zeta(rng, f64, 3);
+        try std.testing.expect(zeta_value >= 1);
+        zeta_sum += zeta_value;
+    }
+
+    const n: f64 = @floatFromInt(samples);
+    try std.testing.expect(inverse_sum / n > 0.97 and inverse_sum / n < 1.03);
+    try std.testing.expect(nig_sum / n > 0.53 and nig_sum / n < 0.62);
+    try std.testing.expect(zipf_sum / n > 2.3 and zipf_sum / n < 2.7);
+    try std.testing.expect(zeta_sum / n > 1.30 and zeta_sum / n < 1.45);
+
+    const high_exponent = try Zipf(f64).init(10, std.math.inf(f64));
+    try std.testing.expectEqual(@as(f64, 1), high_exponent.sample(rng));
 }
 
 test "unit geometric distributions stay on expected support" {

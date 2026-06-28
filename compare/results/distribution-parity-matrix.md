@@ -45,10 +45,10 @@ Zig-native way.
 | Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path |
 | Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper |
 | WeightedChoice | Covered: `WeightedChoice`, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
-| InverseGaussian | Stage 3 open gap |
-| NormalInverseGaussian | Stage 3 open gap |
-| Zipf | Stage 3 open gap |
-| Zeta | Stage 3 open gap |
+| InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)` |
+| NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)` |
+| Zipf | Covered: `zipf`, `Zipf(T)` |
+| Zeta | Covered: `zeta`, `Zeta(T)` |
 
 ## Additional Alea Core Distributions
 
@@ -78,9 +78,9 @@ toolkit functionality and reduce reliance on companion crates:
 
 ## Remaining Follow-Up
 
-- Close the remaining Stage 3 local `rand_distr` gaps: inverse Gaussian,
-  normal inverse Gaussian, Zipf, and Zeta, or explicitly exclude any item with a
-  Zig-native rationale.
-- Add Rust-side benchmark rows for comparable Stage 3 workloads.
+- Add a Linux no-known-gaps audit report tying the local `rand_distr` source
+  list to Alea exports, tests, docs, and benchmark rows.
+- Compare dynamic weighted sampling against local `rand_distr` weighted tree
+  APIs and add a Zig-native sampler if alias rebuilds leave a real core gap.
 - Consider Zig-native vector/SIMD sampling after scalar functionality and
   validation remain stable.

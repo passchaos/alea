@@ -74,6 +74,7 @@ Single-shot helpers:
 - `gamma`, `chiSquared`, `beta`, `fisherF`, `studentT`
 - `triangular`, `cauchy`, `pareto`, `weibull`
 - `gumbel`, `frechet`, `skewNormal`, `pert`
+- `inverseGaussian`, `normalInverseGaussian`, `zipf`, `zeta`
 - `unitCircle`, `unitDisc`, `unitSphere`, `unitBall`
 
 Reusable samplers:
@@ -104,6 +105,10 @@ Reusable samplers:
 - `Frechet(T)`
 - `SkewNormal(T)`
 - `Pert(T)`
+- `InverseGaussian(T)`
+- `NormalInverseGaussian(T)`
+- `Zipf(T)`
+- `Zeta(T)`
 - `UnitCircle(T)`
 - `UnitDisc(T)`
 - `UnitSphere(T)`

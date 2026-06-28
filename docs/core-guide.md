@@ -49,6 +49,7 @@ Single-shot helpers and reusable samplers cover:
 - gamma, chi-squared, beta, Fisher F, Student t
 - triangular, cauchy, pareto, weibull
 - gumbel, frechet, skew-normal, PERT
+- inverse Gaussian, normal-inverse Gaussian, Zipf, Zeta
 - unit circle/disc and unit sphere/ball geometry samplers
 - dirichlet
 

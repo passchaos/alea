@@ -34,6 +34,18 @@ fn main() {
     bench_distr_binomial("rand_distr binomial", bytes / 64);
     bench_distr_gamma("rand_distr gamma", bytes / 128);
     bench_distr_beta("rand_distr beta", bytes / 128);
+    bench_distr_gumbel("rand_distr gumbel", bytes / 128);
+    bench_distr_frechet("rand_distr frechet", bytes / 128);
+    bench_distr_skew_normal("rand_distr skew-normal", bytes / 128);
+    bench_distr_pert("rand_distr pert", bytes / 128);
+    bench_distr_unit_circle("rand_distr unit circle", bytes / 128);
+    bench_distr_unit_disc("rand_distr unit disc", bytes / 128);
+    bench_distr_unit_sphere("rand_distr unit sphere", bytes / 128);
+    bench_distr_unit_ball("rand_distr unit ball", bytes / 128);
+    bench_distr_inverse_gaussian("rand_distr inverse-gaussian", bytes / 128);
+    bench_distr_normal_inverse_gaussian("rand_distr normal-inverse-gaussian", bytes / 128);
+    bench_distr_zipf("rand_distr zipf", bytes / 128);
+    bench_distr_zeta("rand_distr zeta", bytes / 128);
 }
 
 fn bench_bytes<R>(name: &str, bytes: usize, buffer: &mut [u8])
@@ -238,6 +250,116 @@ fn bench_distr_gamma(name: &str, count: usize) {
 fn bench_distr_beta(name: &str, count: usize) {
     let dist = rand_distr::Beta::new(2.0, 5.0).unwrap();
     bench_distr_f64(name, count, 0xbe7a, dist);
+}
+
+fn bench_distr_gumbel(name: &str, count: usize) {
+    let dist = rand_distr::Gumbel::new(0.0, 1.0).unwrap();
+    bench_distr_f64(name, count, 0x6cbe1, dist);
+}
+
+fn bench_distr_frechet(name: &str, count: usize) {
+    let dist = rand_distr::Frechet::new(0.0, 1.0, 3.0).unwrap();
+    bench_distr_f64(name, count, 0xf7ec, dist);
+}
+
+fn bench_distr_skew_normal(name: &str, count: usize) {
+    let dist = rand_distr::SkewNormal::new(0.0, 1.0, 1.0).unwrap();
+    bench_distr_f64(name, count, 0x5ce9, dist);
+}
+
+fn bench_distr_pert(name: &str, count: usize) {
+    let dist = rand_distr::Pert::new(-1.0, 2.0).with_mode(0.5).unwrap();
+    bench_distr_f64(name, count, 0x9e71, dist);
+}
+
+fn bench_distr_inverse_gaussian(name: &str, count: usize) {
+    let dist = rand_distr::InverseGaussian::new(1.0, 2.0).unwrap();
+    bench_distr_f64(name, count, 0x164a, dist);
+}
+
+fn bench_distr_normal_inverse_gaussian(name: &str, count: usize) {
+    let dist = rand_distr::NormalInverseGaussian::new(2.0, 1.0).unwrap();
+    bench_distr_f64(name, count, 0x916a, dist);
+}
+
+fn bench_distr_zipf(name: &str, count: usize) {
+    let dist = rand_distr::Zipf::new(10.0, 1.5).unwrap();
+    bench_distr_f64(name, count, 0x719f, dist);
+}
+
+fn bench_distr_zeta(name: &str, count: usize) {
+    let dist = rand_distr::Zeta::new(3.0).unwrap();
+    bench_distr_f64(name, count, 0x7e7a, dist);
+}
+
+fn bench_distr_unit_circle(name: &str, count: usize) {
+    bench_distr_array2(name, count, 0xc11c1e, rand_distr::UnitCircle);
+}
+
+fn bench_distr_unit_disc(name: &str, count: usize) {
+    bench_distr_array2(name, count, 0xd15c, rand_distr::UnitDisc);
+}
+
+fn bench_distr_unit_sphere(name: &str, count: usize) {
+    bench_distr_array3(name, count, 0x59e7e, rand_distr::UnitSphere);
+}
+
+fn bench_distr_unit_ball(name: &str, count: usize) {
+    bench_distr_array3(name, count, 0xba11, rand_distr::UnitBall);
+}
+
+fn bench_distr_array2<D>(name: &str, count: usize, seed: u64, dist: D)
+where
+    D: RandDistrDistribution<[f64; 2]> + Copy,
+{
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0.0;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(seed);
+        let start = Instant::now();
+        let mut checksum = 0.0;
+
+        for _ in 0..count {
+            checksum += dist.sample(&mut rng)[0];
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum:.3}");
+}
+
+fn bench_distr_array3<D>(name: &str, count: usize, seed: u64, dist: D)
+where
+    D: RandDistrDistribution<[f64; 3]> + Copy,
+{
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0.0;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(seed);
+        let start = Instant::now();
+        let mut checksum = 0.0;
+
+        for _ in 0..count {
+            checksum += dist.sample(&mut rng)[0];
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum:.3}");
 }
 
 fn bench_distr_f64<D>(name: &str, count: usize, seed: u64, dist: D)

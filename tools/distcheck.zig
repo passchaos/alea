@@ -13,6 +13,7 @@ pub fn main(init: std.process.Init) !void {
     try checkPoisson();
     try checkContinuous();
     try checkExtremeAndShape();
+    try checkInverseAndRank();
     try checkBoundedSupport();
     try checkVectorDistributions();
 
@@ -164,6 +165,31 @@ fn checkExtremeAndShape() !void {
             return alea.distributions.pert(r, f64, -1, 0.5, 2, 4);
         }
     }.sample, 0.45, 0.55);
+}
+
+fn checkInverseAndRank() !void {
+    var engine = alea.FastPrng.init(0x1645);
+    const rng = alea.Rng.init(&engine);
+    try expectContinuousMean("inverse-gaussian", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.inverseGaussian(r, f64, 1, 2);
+        }
+    }.sample, 0.97, 1.03);
+    try expectContinuousMean("normal-inverse-gaussian", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.normalInverseGaussian(r, f64, 2, 1);
+        }
+    }.sample, 0.52, 0.63);
+    try expectContinuousMean("zipf", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.zipf(r, f64, 10, 1.5);
+        }
+    }.sample, 2.3, 2.7);
+    try expectContinuousMean("zeta", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.zeta(r, f64, 3);
+        }
+    }.sample, 1.30, 1.45);
 }
 
 fn expectContinuousMean(comptime label: []const u8, rng: alea.Rng, samples: usize, sampleFn: *const fn (alea.Rng) f64, min: f64, max: f64) !void {
