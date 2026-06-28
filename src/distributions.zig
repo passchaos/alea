@@ -790,15 +790,23 @@ pub fn ChiSquared(comptime T: type) type {
         const Self = @This();
 
         dof: T,
+        gamma_sampler: Gamma(T),
 
         pub fn init(dof: T) Error!Self {
             comptime requireFloat(T);
             if (!(dof > 0) or !std.math.isFinite(dof)) return error.InvalidParameter;
-            return .{ .dof = dof };
+            return .{
+                .dof = dof,
+                .gamma_sampler = try Gamma(T).init(dof / 2, 2),
+            };
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return chiSquared(rng, T, self.dof);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return self.gamma_sampler.sampleFrom(source);
         }
     };
 }
@@ -893,15 +901,23 @@ pub fn StudentT(comptime T: type) type {
         const Self = @This();
 
         dof: T,
+        chi_squared_sampler: ChiSquared(T),
 
         pub fn init(dof: T) Error!Self {
             comptime requireFloat(T);
             if (!(dof > 0) or !std.math.isFinite(dof)) return error.InvalidParameter;
-            return .{ .dof = dof };
+            return .{
+                .dof = dof,
+                .chi_squared_sampler = try ChiSquared(T).init(dof),
+            };
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return studentT(rng, T, self.dof);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return Rng.normalFastFrom(source, T, 0, 1) * @sqrt(self.dof / self.chi_squared_sampler.sampleFrom(source));
         }
     };
 }
