@@ -104,7 +104,7 @@ current evidence bar was met, not that Alea has finished surpassing Rust
 | Track | Product target | Current next pressure |
 | --- | --- | --- |
 | Feature breadth | Core random workflows should be available in one Zig-native library without forcing users into companion packages. | Bulk range, normal, exponential, and reusable-sampler fill APIs exist; continue adding specialized bulk paths only where they materially improve throughput or ergonomics. |
-| Statistical confidence | Engine and distribution evidence should keep getting longer, broader, and easier to reproduce. | Repeat or extend the 128GiB observations for `default` and `pcg64`; add second-platform execution when infrastructure exists. |
+| Statistical confidence | Engine and distribution evidence should keep getting longer, broader, and easier to reproduce. | Follow `compare/results/practrand-observation-followup.md` for `default` and `pcg64`; add second-platform execution when infrastructure exists. |
 | Performance | Fast paths should be competitive with or faster than local Rust evidence for comparable workloads, with facade/direct overhead separated. | Continue targeted benchmark-driven optimization after feature coverage remains stable. |
 | Ergonomics | APIs should feel natural in Zig, including allocation-free and comptime-friendly workflows. | `fillSample` gives reusable samplers an allocation-free bulk path; continue reducing boilerplate for high-volume workflows. |
 | Portability | Stable-output expectations should be clear across targets, and blockers should be exact. | Close S4-M1 once another OS/architecture runner is available. |
