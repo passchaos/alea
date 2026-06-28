@@ -1,7 +1,8 @@
-# Rand Distr Benchmark Blocker
+# Rand Distr Benchmark Availability
 
 `S2-M4` asks for Rust-side benchmark rows where local Rust `rand` /
-`rand_distr` exposes matching functionality.
+`rand_distr` exposes matching functionality. This file records the dependency
+availability history.
 
 The local `~/Work/rand` checkout does not include `rand_distr`, and this
 environment's Cargo configuration replaces crates.io with a non-remote
@@ -18,10 +19,11 @@ error: crates-io is replaced with non-remote-registry source registry `rsproxy-s
 include `--registry crates-io` to use crates.io
 ```
 
-Therefore the current Rust-side comparison is limited to functionality exposed
-by the local `rand` checkout itself: bytes, fill-only, bounded range, sequence
-index sampling, random bool, alphanumeric, and weighted index sampling.
+This blocker was resolved by explicitly using crates.io:
 
-If `rand_distr` becomes locally available, extend `compare/rand_bench` with
-matching rows for normal, exponential, gamma, beta, poisson, binomial, and
-derived distributions.
+```sh
+cargo add rand_distr --registry crates-io --manifest-path compare/rand_bench/Cargo.toml
+```
+
+The Rust-side comparison now includes matching rows for normal, exponential,
+gamma, beta, poisson, and binomial in addition to default `rand` rows.

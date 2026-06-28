@@ -1,5 +1,6 @@
 use rand::prelude::*;
 use rand::seq;
+use rand_distr::Distribution as RandDistrDistribution;
 use std::hint::black_box;
 use std::time::Instant;
 
@@ -27,6 +28,12 @@ fn main() {
     bench_bool("rand random_bool", bytes / 8);
     bench_alphanumeric("rand alphanumeric", bytes / 8);
     bench_weighted_index("rand weighted index", bytes / 256);
+    bench_distr_normal("rand_distr normal", bytes / 64);
+    bench_distr_exponential("rand_distr exponential", bytes / 64);
+    bench_distr_poisson("rand_distr poisson", bytes / 64);
+    bench_distr_binomial("rand_distr binomial", bytes / 64);
+    bench_distr_gamma("rand_distr gamma", bytes / 128);
+    bench_distr_beta("rand_distr beta", bytes / 128);
 }
 
 fn bench_bytes<R>(name: &str, bytes: usize, buffer: &mut [u8])
@@ -199,6 +206,103 @@ fn bench_weighted_index(name: &str, count: usize) {
 
         for _ in 0..count {
             checksum = checksum.wrapping_add(rng.sample(&dist));
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
+}
+
+fn bench_distr_normal(name: &str, count: usize) {
+    let dist = rand_distr::Normal::new(0.0, 1.0).unwrap();
+    bench_distr_f64(name, count, 0xd15a, dist);
+}
+
+fn bench_distr_exponential(name: &str, count: usize) {
+    let dist = rand_distr::Exp::new(2.0).unwrap();
+    bench_distr_f64(name, count, 0xe15a, dist);
+}
+
+fn bench_distr_gamma(name: &str, count: usize) {
+    let dist = rand_distr::Gamma::new(2.0, 3.0).unwrap();
+    bench_distr_f64(name, count, 0x6a44a, dist);
+}
+
+fn bench_distr_beta(name: &str, count: usize) {
+    let dist = rand_distr::Beta::new(2.0, 5.0).unwrap();
+    bench_distr_f64(name, count, 0xbe7a, dist);
+}
+
+fn bench_distr_f64<D>(name: &str, count: usize, seed: u64, dist: D)
+where
+    D: RandDistrDistribution<f64> + Copy,
+{
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0.0;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(seed);
+        let start = Instant::now();
+        let mut checksum = 0.0;
+
+        for _ in 0..count {
+            checksum += dist.sample(&mut rng);
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum:.3}");
+}
+
+fn bench_distr_poisson(name: &str, count: usize) {
+    let dist = rand_distr::Poisson::new(20.0).unwrap();
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0u64;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0xa157);
+        let start = Instant::now();
+        let mut checksum = 0u64;
+
+        for _ in 0..count {
+            checksum = checksum.wrapping_add(dist.sample(&mut rng) as u64);
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
+}
+
+fn bench_distr_binomial(name: &str, count: usize) {
+    let dist = rand_distr::Binomial::new(40, 0.25).unwrap();
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0u64;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0xb157);
+        let start = Instant::now();
+        let mut checksum = 0u64;
+
+        for _ in 0..count {
+            checksum = checksum.wrapping_add(dist.sample(&mut rng));
         }
 
         let seconds = start.elapsed().as_secs_f64();

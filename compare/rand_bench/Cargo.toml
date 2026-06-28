@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 rand = { path = "../../../../Work/rand", features = ["std", "std_rng", "thread_rng"] }
+rand_distr = "0.6.0"
 
 [profile.release]
 opt-level = 3
