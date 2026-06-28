@@ -37,7 +37,8 @@ expectations.
 - Vectors: `vector`, `vectorRange`, `vectorRangeChecked`, `vectorNormal`,
   `vectorExponential`, `vectorFrom`, `vectorRangeFrom`
 - Unicode: `unicodeScalar`
-- Distributions: `normal`, `exponential`
+- Distributions: `normal`, `exponential`, `normalFastFrom`,
+  `exponentialFastFrom`
 - Enums and collections: `enumValue`, `shuffle`, `choose`, `choosePtr`,
   `weightedIndex`, `weightedIndexChecked`, `sampleWithoutReplacement`,
   `sampleWithoutReplacementChecked`

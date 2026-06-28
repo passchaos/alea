@@ -46,6 +46,9 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
   `fillExponential`, and `fillVectorExponential`
 
 Checked variants exist for user-supplied probabilities and scalar ranges.
+Use `normalFastFrom` and `exponentialFastFrom` when a comptime-known engine
+pointer is available and the workload is dominated by scalar distribution
+sampling.
 
 ## Distributions
 
