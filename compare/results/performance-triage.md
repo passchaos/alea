@@ -17,6 +17,7 @@ project does not repeat unproductive work.
 | Direct reusable bulk fill | Local Rust evidence uses repeated sampler calls | `fillSample gamma`: about 141M samples/s; `fillSampleFrom` with `ScalarPrng`: about 162M samples/s | Adopted for direct bulk reusable-sampler workflows |
 | Beta/Fisher reusable samplers | `rand_distr beta`: about 16M samples/s | `alea beta`: about 77M single-shot, about 87M cached; `alea fisher-f`: about 88M cached | Closed for current local Rust evidence; cached Gamma composition is substantially faster |
 | ChiSquared/StudentT reusable samplers | Local Rust evidence covered by `rand_distr` derived distributions | `alea chi-squared`: about 150M single-shot, about 172M cached; `alea student-t`: about 113M single-shot, about 123M cached | Closed for cached reusable sampler path; keep single-shot path simple |
+| InverseGaussian/NormalInverseGaussian reusable samplers | `rand_distr inverse-gaussian`: about 77M; `rand_distr normal-inverse-gaussian`: about 67M | `alea inverse-gaussian`: about 68M single-shot, about 74M cached; `alea normal-inverse-gaussian`: about 58M cached | Watch: direct reusable path helps, but NIG still trails Rust |
 
 ## Rejected Or Deferred Attempts
 

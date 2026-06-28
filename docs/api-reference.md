@@ -121,7 +121,9 @@ Reusable samplers:
 - `SkewNormal(T)`
 - `Pert(T)`
 - `InverseGaussian(T)`
+- `InverseGaussian(T).sampleFrom`
 - `NormalInverseGaussian(T)`
+- `NormalInverseGaussian(T).sampleFrom`
 - `Zipf(T)`
 - `Zeta(T)`
 - `UnitCircle(T)`

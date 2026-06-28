@@ -1262,14 +1262,18 @@ pub fn UnitBall(comptime T: type) type {
 }
 
 pub fn inverseGaussian(rng: Rng, comptime T: type, mean: T, shape: T) T {
+    return inverseGaussianFrom(rng, T, mean, shape);
+}
+
+pub fn inverseGaussianFrom(source: anytype, comptime T: type, mean: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(mean > 0 and shape > 0);
 
-    const z = normal(rng, T, 0, 1);
+    const z = Rng.normalFastFrom(source, T, 0, 1);
     const y = mean * z * z;
     const mean_over_2shape = mean / (2 * shape);
     const x = mean + mean_over_2shape * (y - @sqrt(4 * shape * y + y * y));
-    if (rng.float(T) <= mean / (mean + x)) return x;
+    if (Rng.floatFrom(source, T) <= mean / (mean + x)) return x;
     return mean * mean / x;
 }
 
@@ -1288,7 +1292,11 @@ pub fn InverseGaussian(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return inverseGaussian(rng, T, self.mean, self.shape);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return inverseGaussianFrom(source, T, self.mean, self.shape);
         }
     };
 }
@@ -1309,6 +1317,7 @@ pub fn NormalInverseGaussian(comptime T: type) type {
 
         beta_param: T,
         inverse_mean: T,
+        inverse_gaussian: InverseGaussian(T),
 
         pub fn init(alpha: T, beta_param: T) Error!Self {
             comptime requireFloat(T);
@@ -1319,12 +1328,20 @@ pub fn NormalInverseGaussian(comptime T: type) type {
             const gamma_param = alpha * @sqrt(1 - ratio * ratio);
             const inverse_mean = 1 / gamma_param;
             if (!(inverse_mean > 0) or !std.math.isFinite(inverse_mean)) return error.InvalidParameter;
-            return .{ .beta_param = beta_param, .inverse_mean = inverse_mean };
+            return .{
+                .beta_param = beta_param,
+                .inverse_mean = inverse_mean,
+                .inverse_gaussian = try InverseGaussian(T).init(inverse_mean, 1),
+            };
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            const inv_gauss = inverseGaussian(rng, T, self.inverse_mean, 1);
-            return self.beta_param * inv_gauss + @sqrt(inv_gauss) * normal(rng, T, 0, 1);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            const inv_gauss = self.inverse_gaussian.sampleFrom(source);
+            return self.beta_param * inv_gauss + @sqrt(inv_gauss) * Rng.normalFastFrom(source, T, 0, 1);
         }
     };
 }
