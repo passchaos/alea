@@ -80,6 +80,7 @@ pub fn value(self: Rng, comptime T: type) T {
         .bool => self.boolean(),
         .int => self.uint(T),
         .float => self.float(T),
+        .vector => self.vector(T),
         .@"enum" => self.enumValue(T),
         .array => |array_info| blk: {
             var out: T = undefined;
@@ -325,6 +326,64 @@ pub fn floatRangeChecked(self: Rng, comptime T: type, min: T, max: T) Error!T {
     return self.floatRange(T, min, max);
 }
 
+pub fn vector(self: Rng, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |i| {
+        out[i] = self.value(info.child);
+    }
+    return out;
+}
+
+pub fn vectorRange(self: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    const info = vectorInfo(VectorType);
+    switch (@typeInfo(info.child)) {
+        .int => {
+            std.debug.assert(min < max);
+            var out: VectorType = undefined;
+            inline for (0..info.len) |i| out[i] = self.intRangeLessThan(info.child, min, max);
+            return out;
+        },
+        .float => {
+            std.debug.assert(min <= max);
+            return @as(VectorType, @splat(min)) + (@as(VectorType, @splat(max)) - @as(VectorType, @splat(min))) * self.vector(VectorType);
+        },
+        else => @compileError("Rng.vectorRange supports integer and floating-point vectors"),
+    }
+}
+
+pub fn vectorRangeChecked(self: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    switch (@typeInfo(info.child)) {
+        .int => {
+            if (min >= max) return error.EmptyRange;
+        },
+        .float => {
+            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+        },
+        else => @compileError("Rng.vectorRangeChecked supports integer and floating-point vectors"),
+    }
+    return self.vectorRange(VectorType, min, max);
+}
+
+pub fn vectorNormal(self: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    std.debug.assert(stddev >= 0);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |i| out[i] = self.normal(info.child, mean, stddev);
+    return out;
+}
+
+pub fn vectorExponential(self: Rng, comptime VectorType: type, rate: vectorChild(VectorType)) VectorType {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    std.debug.assert(rate > 0);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |i| out[i] = self.exponential(info.child, rate);
+    return out;
+}
+
 pub fn durationRangeLessThan(self: Rng, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
     std.debug.assert(min.nanoseconds < max.nanoseconds);
     return .{ .nanoseconds = self.intRangeLessThan(i96, min.nanoseconds, max.nanoseconds) };
@@ -524,6 +583,16 @@ fn requireFloat(comptime T: type) void {
     if (@typeInfo(T) != .float) @compileError("expected float type, found " ++ @typeName(T));
 }
 
+fn vectorInfo(comptime VectorType: type) @TypeOf(@typeInfo(VectorType).vector) {
+    const info = @typeInfo(VectorType);
+    if (info != .vector) @compileError("expected vector type, found " ++ @typeName(VectorType));
+    return info.vector;
+}
+
+fn vectorChild(comptime VectorType: type) type {
+    return vectorInfo(VectorType).child;
+}
+
 pub fn probabilityThreshold(p: f64) u64 {
     std.debug.assert(p >= 0 and p <= 1);
     if (p <= 0) return 0;
@@ -570,6 +639,29 @@ test "rng facade covers scalar APIs" {
     var any_non_zero = false;
     for (buf) |item| any_non_zero = any_non_zero or item != 0;
     try std.testing.expect(any_non_zero);
+
+    const uvec = rng.value(@Vector(4, u16));
+    var any_vec_non_zero = false;
+    inline for (0..4) |i| any_vec_non_zero = any_vec_non_zero or uvec[i] != 0;
+    try std.testing.expect(any_vec_non_zero);
+
+    const fvec = rng.value(@Vector(4, f32));
+    inline for (0..4) |i| try std.testing.expect(fvec[i] >= 0 and fvec[i] < 1);
+
+    const ranged_i = rng.vectorRange(@Vector(4, i32), -10, 10);
+    inline for (0..4) |i| try std.testing.expect(ranged_i[i] >= -10 and ranged_i[i] < 10);
+
+    const ranged_f = rng.vectorRange(@Vector(4, f64), -1, 2);
+    inline for (0..4) |i| try std.testing.expect(ranged_f[i] >= -1 and ranged_f[i] < 2);
+
+    const normals = rng.vectorNormal(@Vector(4, f64), 0, 1);
+    inline for (0..4) |i| try std.testing.expect(std.math.isFinite(normals[i]));
+
+    const exponentials = rng.vectorExponential(@Vector(4, f64), 2);
+    inline for (0..4) |i| try std.testing.expect(exponentials[i] >= 0);
+
+    try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, u32), 3, 3));
+    try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
 }
 
 test "shuffle and sampling keep item set" {

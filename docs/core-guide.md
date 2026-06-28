@@ -32,6 +32,8 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - integers: `uint`, `uintLessThan`, `uintAtMost`
 - signed and unsigned ranges: `intRangeLessThan`, `intRangeAtMost`
 - floats: `float`, `floatOpen`, `floatOpenClosed`, `floatRange`
+- vectors: `value(@Vector(N, T))`, `vectorRange`, `vectorNormal`,
+  `vectorExponential`
 - booleans: `boolean`, `chance`, `ratio`
 - durations: `durationRangeLessThan`, `durationRangeAtMost`
 - Unicode scalar values: `unicodeScalar`

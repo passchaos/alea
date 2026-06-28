@@ -29,6 +29,8 @@ expectations.
   `durationRangeAtMost`, `durationRangeLessThanChecked`,
   `durationRangeAtMostChecked`
 - Floats: `float`, `floatOpen`, `floatOpenClosed`
+- Vectors: `vector`, `vectorRange`, `vectorRangeChecked`, `vectorNormal`,
+  `vectorExponential`
 - Unicode: `unicodeScalar`
 - Distributions: `normal`, `exponential`
 - Enums and collections: `enumValue`, `shuffle`, `choose`, `choosePtr`,
