@@ -207,7 +207,7 @@ pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
     if (info.child == f32 or info.child == f64) {
-        fillVectorNormalFloatFrom(source, VectorType, dest, mean, stddev);
+        fillVectorNormalScalarFrom(source, VectorType, dest, mean, stddev);
         return;
     }
     for (dest) |*item| item.* = vectorNormalFrom(source, VectorType, mean, stddev);
@@ -228,6 +228,10 @@ pub fn fillVectorExponentialFrom(source: anytype, comptime VectorType: type, des
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(rate > 0);
+    if (info.child == f32 or info.child == f64) {
+        fillVectorExponentialScalarFrom(source, VectorType, dest, rate);
+        return;
+    }
     for (dest) |*item| item.* = vectorExponentialFrom(source, VectorType, rate);
 }
 
@@ -998,6 +1002,28 @@ fn fillVectorNormalFloatFrom(source: anytype, comptime VectorType: type, dest: [
     }
 
     if (i < dest.len) dest[i] = vectorNormalFloatFrom(source, VectorType, mean, stddev);
+}
+
+fn fillVectorNormalScalarFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32 and info.child != f64) @compileError("fillVectorNormalScalarFrom expects a float vector");
+
+    for (dest) |*item| {
+        var out: VectorType = undefined;
+        inline for (0..info.len) |lane| out[lane] = normalFastFrom(source, info.child, mean, stddev);
+        item.* = out;
+    }
+}
+
+fn fillVectorExponentialScalarFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32 and info.child != f64) @compileError("fillVectorExponentialScalarFrom expects a float vector");
+
+    for (dest) |*item| {
+        var out: VectorType = undefined;
+        inline for (0..info.len) |lane| out[lane] = exponentialFastFrom(source, info.child, rate);
+        item.* = out;
+    }
 }
 
 fn f32FromBits(bits: u24) f32 {
