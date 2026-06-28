@@ -28,6 +28,7 @@ project does not repeat unproductive work.
 | Route all non-`Rng` `normalFastFrom` / `exponentialFastFrom` calls through `source.random()` | In one native run `normal wyhash64 direct` dropped to about 243M samples/s, while bulk fills improved; behavior was inconsistent by workload | Rejected as a generic rule. Keep direct ziggurat fast path; use explicit benchmarked bulk helpers for ScalarPrng recommendations. |
 | Default `fillNormal(f32)` via vector Box-Muller | About 125M samples/s, slower than scalar ziggurat bulk around 196M samples/s | Rejected as default. Keep explicit vector normal prototype for experimentation. |
 | Paired `fillVectorNormal(f32)` vector generation | `vectorbench` improved from about 74M to about 130M lanes/s | Adopted for vector-slice normal fills; still not a default scalar replacement. |
+| `fillVectorExponential(f64)` vector log kernel | `vectorbench` reports about 119M lanes/s, slower than scalar bulk exponential | Keep as experimental vector API coverage only; do not use as default scalar replacement. |
 | Default `fillExponential(f32)` via vector log kernel | About 183M samples/s, slower than scalar ziggurat bulk around 320M samples/s | Rejected as default. Keep explicit vector exponential prototype for experimentation. |
 | Full benchmark row for vector-slice range fill | Caused anomalously long full benchmark runs | Deferred. API remains tested; design a smaller isolated microbench before re-adding to the full benchmark. |
 

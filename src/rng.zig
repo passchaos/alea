@@ -618,7 +618,7 @@ pub fn vectorExponentialFrom(source: anytype, comptime VectorType: type, rate: v
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(rate > 0);
-    if (info.child == f32) {
+    if (info.child == f32 or info.child == f64) {
         const uniform = vectorFrom(source, VectorType);
         return -@log(@as(VectorType, @splat(1)) - uniform) / @as(VectorType, @splat(rate));
     }
