@@ -711,12 +711,18 @@ pub fn Gamma(comptime T: type) type {
 
         shape: T,
         scale: T,
+        d: T,
+        c: T,
+        boost_inverse_shape: T = 0,
+        boosted_d: T = 0,
+        boosted_c: T = 0,
+        is_boosted: bool = false,
 
         pub fn init(shape: T, scale: T) Error!Self {
             comptime requireFloat(T);
             if (!(shape > 0) or !(scale > 0)) return error.InvalidParameter;
             if (!std.math.isFinite(shape) or !std.math.isFinite(scale)) return error.InvalidParameter;
-            return .{ .shape = shape, .scale = scale };
+            return Self.initInternal(shape, scale);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -724,7 +730,51 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            return gammaFrom(source, T, self.shape, self.scale);
+            if (self.is_boosted) {
+                return self.scale * self.sampleMarsaglia(source, self.boosted_d, self.boosted_c) *
+                    std.math.pow(T, Rng.floatFrom(source, T), self.boost_inverse_shape);
+            }
+
+            return self.scale * self.sampleMarsaglia(source, self.d, self.c);
+        }
+
+        fn sampleMarsaglia(_: Self, source: anytype, d: T, c: T) T {
+            while (true) {
+                const x = Rng.normalFastFrom(source, T, 0, 1);
+                const v_base = 1 + c * x;
+                if (v_base <= 0) continue;
+
+                const v = v_base * v_base * v_base;
+                const u = Rng.floatFrom(source, T);
+                if (u < 1 - 0.0331 * (x * x) * (x * x)) return d * v;
+                if (@log(u) < 0.5 * x * x + d * (1 - v + @log(v))) return d * v;
+            }
+        }
+
+        fn initInternal(shape: T, scale: T) Self {
+            if (shape < 1) {
+                const boosted_shape = shape + 1;
+                const boosted_d = boosted_shape - @as(T, 1.0 / 3.0);
+                return .{
+                    .shape = shape,
+                    .scale = scale,
+                    .d = 0,
+                    .c = 0,
+                    .boost_inverse_shape = 1 / shape,
+                    .boosted_d = boosted_d,
+                    .boosted_c = @as(T, 1.0) / @sqrt(9 * boosted_d),
+                    .is_boosted = true,
+                };
+            }
+
+            const d = shape - @as(T, 1.0 / 3.0);
+            return .{
+                .shape = shape,
+                .scale = scale,
+                .d = d,
+                .c = @as(T, 1.0) / @sqrt(9 * d),
+                .is_boosted = false,
+            };
         }
     };
 }

@@ -13,7 +13,7 @@ project does not repeat unproductive work.
 | Exponential `f64` facade | `rand_distr exponential`: about 446M samples/s | `alea exponential`: about 383M samples/s after direct ziggurat path | Watch: close but still trails |
 | Weighted dynamic update+sample | `rand_distr weighted tree`: about 52M ops/s | `alea weighted int tree`: about 52M ops/s; generic float tree about 46M ops/s | Closed for unsigned integer weights; generic float-weight tree remains watch |
 | Scalar engine choice | Rust `SmallRng` is the baseline scalar engine | `wyhash64 next`: about 2515-2530M next/s; `normal` on `wyhash64`: about 426-427M samples/s; `fillNormal` on `wyhash64`: about 393-397M samples/s; `exponential` on `wyhash64`: about 422-426M samples/s; `fillExponential` on `wyhash64`: about 400-405M samples/s; `poisson` on `wyhash64`: about 76M samples/s | Use `ScalarPrng` for scalar-heavy distribution workloads; `FastPrng` remains best for bulk byte fill |
-| Gamma scalar profile | `rand_distr gamma`: about 172M samples/s | `alea gamma`: about 149M samples/s with `FastPrng`; about 143M with `ScalarPrng` direct | Watch: direct scalar profile is not universally faster; keep `FastPrng` default for gamma |
+| Gamma scalar profile | `rand_distr gamma`: about 172M samples/s | `alea gamma`: about 150M samples/s with `FastPrng`; about 172M with cached `Gamma.sampleFrom(ScalarPrng)` | Closed for scalar-fast reusable sampler; default `FastPrng` path remains watch |
 
 ## Rejected Or Deferred Attempts
 
