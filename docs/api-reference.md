@@ -127,9 +127,13 @@ Reusable samplers:
 - `Zipf(T)`
 - `Zeta(T)`
 - `UnitCircle(T)`
+- `UnitCircle(T).sampleFrom`
 - `UnitDisc(T)`
+- `UnitDisc(T).sampleFrom`
 - `UnitSphere(T)`
+- `UnitSphere(T).sampleFrom`
 - `UnitBall(T)`
+- `UnitBall(T).sampleFrom`
 - `Dirichlet(T)`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
