@@ -203,10 +203,6 @@ pub fn fillNormalChecked(self: Rng, comptime T: type, dest: []T, mean: T, stddev
 pub fn fillExponential(self: Rng, comptime T: type, dest: []T, rate: T) void {
     comptime requireFloat(T);
     std.debug.assert(rate > 0);
-    if (T == f32) {
-        self.fillExponentialF32(dest, rate);
-        return;
-    }
     for (dest) |*item| item.* = self.exponential(T, rate);
 }
 
@@ -833,17 +829,6 @@ fn vectorNormalF32(self: Rng, comptime VectorType: type, mean: f32, stddev: f32)
     const radius = @sqrt(@as(VectorType, @splat(-2)) * @log(uniform_radius));
     const theta = tau * uniform_angle;
     return @as(VectorType, @splat(mean)) + @as(VectorType, @splat(stddev)) * radius * @cos(theta);
-}
-
-fn fillExponentialF32(self: Rng, dest: []f32, rate: f32) void {
-    const Vec = @Vector(8, f32);
-    var i: usize = 0;
-    while (i + 8 <= dest.len) : (i += 8) {
-        const samples = self.vectorExponential(Vec, rate);
-        inline for (0..8) |lane| dest[i + lane] = samples[lane];
-    }
-
-    while (i < dest.len) : (i += 1) dest[i] = self.exponential(f32, rate);
 }
 
 fn f32FromBits(bits: u24) f32 {
