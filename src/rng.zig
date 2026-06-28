@@ -5,6 +5,8 @@ const Rng = @This();
 pub const Error = error{
     EmptyRange,
     InvalidProbability,
+    InvalidParameter,
+    InvalidWeight,
 };
 
 ptr: *anyopaque,
@@ -396,9 +398,13 @@ pub fn choosePtr(self: Rng, comptime T: type, items: []T) ?*T {
 }
 
 pub fn weightedIndex(self: Rng, weights: []const f64) ?usize {
+    return self.weightedIndexChecked(weights) catch unreachable;
+}
+
+pub fn weightedIndexChecked(self: Rng, weights: []const f64) Error!?usize {
     var total: f64 = 0;
     for (weights) |weight| {
-        std.debug.assert(weight >= 0);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         total += weight;
     }
     if (weights.len == 0 or total == 0) return null;
@@ -414,7 +420,11 @@ pub fn weightedIndex(self: Rng, weights: []const f64) ?usize {
 
 pub fn sampleWithoutReplacement(self: Rng, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
     std.debug.assert(count <= items.len);
+    return self.sampleWithoutReplacementChecked(T, allocator, items, count) catch unreachable;
+}
 
+pub fn sampleWithoutReplacementChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
+    if (count > items.len) return error.InvalidParameter;
     var pool = try std.ArrayList(T).initCapacity(allocator, items.len);
     defer pool.deinit(allocator);
     try pool.appendSlice(allocator, items);
@@ -576,6 +586,8 @@ test "shuffle and sampling keep item set" {
     const sample = try rng.sampleWithoutReplacement(u8, std.testing.allocator, &values, 3);
     defer std.testing.allocator.free(sample);
     try std.testing.expectEqual(@as(usize, 3), sample.len);
+    try std.testing.expectError(error.InvalidParameter, rng.sampleWithoutReplacementChecked(u8, std.testing.allocator, &values, 99));
+    try std.testing.expectError(error.InvalidWeight, rng.weightedIndexChecked(&.{ 1.0, std.math.nan(f64) }));
 }
 
 test "value and sampler iterators produce unbounded samples" {

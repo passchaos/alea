@@ -15,6 +15,11 @@ pub const Charset = struct {
         return .{ .bytes = bytes };
     }
 
+    pub fn initChecked(bytes: []const u8) error{EmptyCharset}!Charset {
+        if (bytes.len == 0) return error.EmptyCharset;
+        return .{ .bytes = bytes };
+    }
+
     pub fn sample(self: Charset, rng: Rng) u8 {
         return self.bytes[rng.uintLessThan(usize, self.bytes.len)];
     }
@@ -72,6 +77,7 @@ test "ascii charset fills requested length" {
 
     try std.testing.expectEqual(@as(usize, 32), password.len);
     for (password) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
+    try std.testing.expectError(error.EmptyCharset, Charset.initChecked(""));
 }
 
 test "unicode scalar string generation produces valid utf8" {

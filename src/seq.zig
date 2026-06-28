@@ -28,7 +28,12 @@ pub const IndexVec = union(enum) {
     }
 };
 
+pub const Error = error{
+    InvalidParameter,
+};
+
 pub fn sampleIndexVec(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) !IndexVec {
+    if (amount > length) return error.InvalidParameter;
     return sampleIndexVecFrom(allocator, rng, length, amount);
 }
 
@@ -41,6 +46,7 @@ pub fn sampleIndexVecFrom(allocator: std.mem.Allocator, source: anytype, length:
 }
 
 pub fn sampleIndices(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) ![]usize {
+    if (amount > length) return error.InvalidParameter;
     return sampleIndicesFrom(allocator, rng, length, amount);
 }
 
@@ -60,6 +66,7 @@ pub fn sampleIndicesFrom(allocator: std.mem.Allocator, source: anytype, length: 
 }
 
 pub fn sampleIndicesU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]u32 {
+    if (amount > length) return error.InvalidParameter;
     return sampleIndicesU32From(allocator, rng, length, amount);
 }
 
@@ -661,6 +668,8 @@ test "sample indices are distinct and bounded" {
         const entry = try seen.getOrPut(index);
         try std.testing.expect(!entry.found_existing);
     }
+
+    try std.testing.expectError(error.InvalidParameter, sampleIndices(std.testing.allocator, rng, 3, 4));
 }
 
 test "index vec keeps compact backing for u32 lengths" {
