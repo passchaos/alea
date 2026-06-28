@@ -10,6 +10,10 @@ This is a long-term product goal, not a one-time milestone. A roadmap milestone
 being marked complete means the current bar was met; it does not mean the
 project should stop improving. When the user asks to continue toward the goal,
 raise the bar in the roadmap and keep iterating on the next concrete gap.
+The current product focus is the local Linux platform first: drive the roadmap
+to "no known core RNG gaps versus locally available `rand`/`rand_distr`
+evidence on this platform", then raise the bar to broader platforms and longer
+validation runs.
 
 The target is not a one-for-one port of Rust ecosystem shapes. Do not copy
 Rust-only mechanisms such as traits, serde integration, crate feature matrices,

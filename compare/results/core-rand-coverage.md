@@ -8,6 +8,11 @@ It is a living roadmap, not a completion certificate. When all milestones in one
 stage are closed, define the next stricter stage instead of declaring the
 broader product goal permanently finished.
 
+The active product focus is the current Linux environment. The goal for each
+stage is to drive this platform to no known core RNG gaps against locally
+available Rust `rand` / `rand_distr` evidence before expanding to broader
+platform and longer-run requirements.
+
 ## Covered
 
 | Area | Alea artifact | Evidence |
