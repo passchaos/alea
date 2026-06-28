@@ -791,6 +791,233 @@ pub fn Weibull(comptime T: type) type {
     };
 }
 
+pub fn gumbel(rng: Rng, comptime T: type, location: T, scale: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+    const u = rng.floatOpenClosed(T);
+    return location - scale * @log(-@log(u));
+}
+
+pub fn Gumbel(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        location: T,
+        scale: T,
+
+        pub fn init(location: T, scale: T) Error!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(location)) return error.InvalidParameter;
+            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            return .{ .location = location, .scale = scale };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return gumbel(rng, T, self.location, self.scale);
+        }
+    };
+}
+
+pub fn frechet(rng: Rng, comptime T: type, location: T, scale: T, shape: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(location) and scale > 0 and shape > 0);
+    const u = rng.floatOpenClosed(T);
+    return location + scale * std.math.pow(T, -@log(u), -1 / shape);
+}
+
+pub fn Frechet(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        location: T,
+        scale: T,
+        shape: T,
+
+        pub fn init(location: T, scale: T, shape: T) Error!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(location)) return error.InvalidParameter;
+            if (!(scale > 0) or !(shape > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            return .{ .location = location, .scale = scale, .shape = shape };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return frechet(rng, T, self.location, self.scale, self.shape);
+        }
+    };
+}
+
+pub fn skewNormal(rng: Rng, comptime T: type, location: T, scale: T, shape: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(shape));
+
+    const z1 = normal(rng, T, 0, 1);
+    if (shape == 0) return location + scale * z1;
+
+    const z2 = normal(rng, T, 0, 1);
+    const high = @max(z1, z2);
+    const low = @min(z1, z2);
+    const normalized = if (shape == -1)
+        low
+    else if (shape == 1)
+        high
+    else blk: {
+        const one: T = 1;
+        const sqrt_two: T = @sqrt(@as(T, 2));
+        break :blk ((one + shape) * high + (one - shape) * low) /
+            (@sqrt(one + shape * shape) * sqrt_two);
+    };
+    return location + scale * normalized;
+}
+
+pub fn SkewNormal(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        location: T,
+        scale: T,
+        shape: T,
+
+        pub fn init(location: T, scale: T, shape: T) Error!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(location)) return error.InvalidParameter;
+            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!std.math.isFinite(shape)) return error.InvalidParameter;
+            return .{ .location = location, .scale = scale, .shape = shape };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return skewNormal(rng, T, self.location, self.scale, self.shape);
+        }
+    };
+}
+
+pub fn pert(rng: Rng, comptime T: type, min: T, mode: T, max: T, shape: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(min < max and min <= mode and mode <= max and shape >= 0);
+    const range = max - min;
+    const alpha = 1 + shape * (mode - min) / range;
+    const beta_param = 1 + shape * (max - mode) / range;
+    return min + range * beta(rng, T, alpha, beta_param);
+}
+
+pub fn Pert(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        min: T,
+        range: T,
+        alpha: T,
+        beta_param: T,
+
+        pub fn init(min: T, mode: T, max: T, shape: T) Error!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) return error.InvalidParameter;
+            if (!(min < max) or !(min <= mode and mode <= max)) return error.InvalidParameter;
+            if (!(shape >= 0) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            const range = max - min;
+            return .{
+                .min = min,
+                .range = range,
+                .alpha = 1 + shape * (mode - min) / range,
+                .beta_param = 1 + shape * (max - mode) / range,
+            };
+        }
+
+        pub fn initDefault(min: T, mode: T, max: T) Error!Self {
+            return Self.init(min, mode, max, 4);
+        }
+
+        pub fn initMean(min: T, mean: T, max: T, shape: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(shape > 0) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            const mode = ((shape + 2) * mean - min - max) / shape;
+            return Self.init(min, mode, max, shape);
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.min + self.range * beta(rng, T, self.alpha, self.beta_param);
+        }
+    };
+}
+
+pub fn unitCircle(rng: Rng, comptime T: type) [2]T {
+    comptime requireFloat(T);
+    while (true) {
+        const x1 = 2 * rng.float(T) - 1;
+        const x2 = 2 * rng.float(T) - 1;
+        const sum = x1 * x1 + x2 * x2;
+        if (!(sum > 0 and sum < 1)) continue;
+
+        const diff = x1 * x1 - x2 * x2;
+        return .{ diff / sum, 2 * x1 * x2 / sum };
+    }
+}
+
+pub fn unitDisc(rng: Rng, comptime T: type) [2]T {
+    comptime requireFloat(T);
+    while (true) {
+        const x1 = 2 * rng.float(T) - 1;
+        const x2 = 2 * rng.float(T) - 1;
+        if (x1 * x1 + x2 * x2 <= 1) return .{ x1, x2 };
+    }
+}
+
+pub fn unitSphere(rng: Rng, comptime T: type) [3]T {
+    comptime requireFloat(T);
+    while (true) {
+        const x1 = 2 * rng.float(T) - 1;
+        const x2 = 2 * rng.float(T) - 1;
+        const sum = x1 * x1 + x2 * x2;
+        if (sum >= 1) continue;
+
+        const factor = 2 * @sqrt(1 - sum);
+        return .{ x1 * factor, x2 * factor, 1 - 2 * sum };
+    }
+}
+
+pub fn unitBall(rng: Rng, comptime T: type) [3]T {
+    comptime requireFloat(T);
+    while (true) {
+        const x1 = 2 * rng.float(T) - 1;
+        const x2 = 2 * rng.float(T) - 1;
+        const x3 = 2 * rng.float(T) - 1;
+        if (x1 * x1 + x2 * x2 + x3 * x3 <= 1) return .{ x1, x2, x3 };
+    }
+}
+
+pub fn UnitCircle(comptime T: type) type {
+    return struct {
+        pub fn sample(_: @This(), rng: Rng) [2]T {
+            return unitCircle(rng, T);
+        }
+    };
+}
+
+pub fn UnitDisc(comptime T: type) type {
+    return struct {
+        pub fn sample(_: @This(), rng: Rng) [2]T {
+            return unitDisc(rng, T);
+        }
+    };
+}
+
+pub fn UnitSphere(comptime T: type) type {
+    return struct {
+        pub fn sample(_: @This(), rng: Rng) [3]T {
+            return unitSphere(rng, T);
+        }
+    };
+}
+
+pub fn UnitBall(comptime T: type) type {
+    return struct {
+        pub fn sample(_: @This(), rng: Rng) [3]T {
+            return unitBall(rng, T);
+        }
+    };
+}
+
 pub fn Dirichlet(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1064,6 +1291,27 @@ test "non-uniform samplers can be reused with sample iterators" {
     var weibulls = rng.sampleIter(f64, try Weibull(f64).init(2, 1.5));
     try std.testing.expect(weibulls.next().? >= 0);
 
+    var gumbels = rng.sampleIter(f64, try Gumbel(f64).init(0, 1));
+    try std.testing.expect(std.math.isFinite(gumbels.next().?));
+
+    var frechets = rng.sampleIter(f64, try Frechet(f64).init(0, 1, 2));
+    try std.testing.expect(frechets.next().? >= 0);
+
+    var skew_normals = rng.sampleIter(f64, try SkewNormal(f64).init(0, 1, 1));
+    try std.testing.expect(std.math.isFinite(skew_normals.next().?));
+
+    var perts = rng.sampleIter(f64, try Pert(f64).initDefault(-1, 0, 2));
+    const pert_value = perts.next().?;
+    try std.testing.expect(pert_value >= -1 and pert_value <= 2);
+
+    var unit_circles = rng.sampleIter([2]f64, UnitCircle(f64){});
+    const unit_circle = unit_circles.next().?;
+    try std.testing.expectApproxEqAbs(@as(f64, 1), unit_circle[0] * unit_circle[0] + unit_circle[1] * unit_circle[1], 1e-12);
+
+    var unit_spheres = rng.sampleIter([3]f64, UnitSphere(f64){});
+    const unit_sphere = unit_spheres.next().?;
+    try std.testing.expectApproxEqAbs(@as(f64, 1), unit_sphere[0] * unit_sphere[0] + unit_sphere[1] * unit_sphere[1] + unit_sphere[2] * unit_sphere[2], 1e-12);
+
     try std.testing.expectError(error.InvalidParameter, Normal(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Exponential(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).init(0, -1));
@@ -1078,6 +1326,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Cauchy(f64).init(0, 0));
     try std.testing.expectError(error.InvalidParameter, Pareto(f64).init(1, 0));
     try std.testing.expectError(error.InvalidParameter, Weibull(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, Gumbel(f64).init(0, 0));
+    try std.testing.expectError(error.InvalidParameter, Frechet(f64).init(0, 1, 0));
+    try std.testing.expectError(error.InvalidParameter, SkewNormal(f64).init(0, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, Pert(f64).init(0, 2, 1, 4));
 }
 
 test "binomial sampler has plausible moments" {
@@ -1180,6 +1432,57 @@ test "large binomial sampler has plausible moments" {
     const variance = sum_sq / @as(f64, @floatFromInt(samples)) - mean * mean;
     try std.testing.expect(mean > 99.5 and mean < 100.5);
     try std.testing.expect(variance > 94.0 and variance < 104.0);
+}
+
+test "extreme-value and shape samplers have plausible means" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(72);
+    const rng = Rng.init(&engine);
+
+    const samples = 30_000;
+    var gumbel_sum: f64 = 0;
+    var frechet_sum: f64 = 0;
+    var skew_sum: f64 = 0;
+    var pert_sum: f64 = 0;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) {
+        gumbel_sum += gumbel(rng, f64, 0, 1);
+        frechet_sum += frechet(rng, f64, 0, 1, 3);
+        skew_sum += skewNormal(rng, f64, 0, 1, 1);
+        pert_sum += pert(rng, f64, -1, 0.5, 2, 4);
+    }
+
+    const n: f64 = @floatFromInt(samples);
+    try std.testing.expect(gumbel_sum / n > 0.55 and gumbel_sum / n < 0.61);
+    try std.testing.expect(frechet_sum / n > 1.30 and frechet_sum / n < 1.40);
+    try std.testing.expect(skew_sum / n > 0.52 and skew_sum / n < 0.60);
+    try std.testing.expect(pert_sum / n > 0.45 and pert_sum / n < 0.55);
+
+    const by_mean = try Pert(f64).initMean(-1, 0.5, 2, 4);
+    const by_mode = try Pert(f64).init(-1, 0.5, 2, 4);
+    try std.testing.expectApproxEqAbs(by_mode.alpha, by_mean.alpha, 1e-12);
+    try std.testing.expectApproxEqAbs(by_mode.beta_param, by_mean.beta_param, 1e-12);
+}
+
+test "unit geometric distributions stay on expected support" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(73);
+    const rng = Rng.init(&engine);
+
+    var i: usize = 0;
+    while (i < 1000) : (i += 1) {
+        const circle = unitCircle(rng, f64);
+        try std.testing.expectApproxEqAbs(@as(f64, 1), circle[0] * circle[0] + circle[1] * circle[1], 1e-12);
+
+        const disc = unitDisc(rng, f64);
+        try std.testing.expect(disc[0] * disc[0] + disc[1] * disc[1] <= 1);
+
+        const sphere = unitSphere(rng, f64);
+        try std.testing.expectApproxEqAbs(@as(f64, 1), sphere[0] * sphere[0] + sphere[1] * sphere[1] + sphere[2] * sphere[2], 1e-12);
+
+        const ball = unitBall(rng, f64);
+        try std.testing.expect(ball[0] * ball[0] + ball[1] * ball[1] + ball[2] * ball[2] <= 1);
+    }
 }
 
 test "dirichlet sampler returns simplex vectors" {

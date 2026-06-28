@@ -36,9 +36,19 @@ Zig-native way.
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)` |
 | FisherF | Covered: `fisherF`, `FisherF(T)` |
 | StudentT | Covered: `studentT`, `StudentT(T)` |
+| Gumbel | Covered: `gumbel`, `Gumbel(T)` |
+| Frechet | Covered: `frechet`, `Frechet(T)` |
+| SkewNormal | Covered: `skewNormal`, `SkewNormal(T)` |
+| Pert | Covered: `pert`, `Pert(T)`, including default-shape and mean constructors |
+| UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)` |
+| UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)` |
 | Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path |
 | Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper |
 | WeightedChoice | Covered: `WeightedChoice`, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
+| InverseGaussian | Stage 3 open gap |
+| NormalInverseGaussian | Stage 3 open gap |
+| Zipf | Stage 3 open gap |
+| Zeta | Stage 3 open gap |
 
 ## Additional Alea Core Distributions
 
@@ -68,8 +78,9 @@ toolkit functionality and reduce reliance on companion crates:
 
 ## Remaining Follow-Up
 
-- Add parameter-grid validation for every public distribution family.
-- Add Rust-side benchmarks for comparable workloads where Rust has a local
-  matching implementation.
+- Close the remaining Stage 3 local `rand_distr` gaps: inverse Gaussian,
+  normal inverse Gaussian, Zipf, and Zeta, or explicitly exclude any item with a
+  Zig-native rationale.
+- Add Rust-side benchmark rows for comparable Stage 3 workloads.
 - Consider Zig-native vector/SIMD sampling after scalar functionality and
   validation remain stable.

@@ -73,6 +73,8 @@ Single-shot helpers:
 - `poisson`, `geometric`
 - `gamma`, `chiSquared`, `beta`, `fisherF`, `studentT`
 - `triangular`, `cauchy`, `pareto`, `weibull`
+- `gumbel`, `frechet`, `skewNormal`, `pert`
+- `unitCircle`, `unitDisc`, `unitSphere`, `unitBall`
 
 Reusable samplers:
 
@@ -98,6 +100,14 @@ Reusable samplers:
 - `Cauchy(T)`
 - `Pareto(T)`
 - `Weibull(T)`
+- `Gumbel(T)`
+- `Frechet(T)`
+- `SkewNormal(T)`
+- `Pert(T)`
+- `UnitCircle(T)`
+- `UnitDisc(T)`
+- `UnitSphere(T)`
+- `UnitBall(T)`
 - `Dirichlet(T)`
 - `AliasTable(Weight)`
 

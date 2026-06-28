@@ -57,6 +57,22 @@ platform and longer-run requirements.
 | S2-M5 | Cross-platform reproducibility | Validate and document stable outputs on at least two architectures or OS targets, or document why the current environment cannot provide this evidence. | Closed for local environment: x86_64 Linux snapshot exists and second architecture/OS blocker is documented in `compare/results/cross-platform-repro-blocker.md` |
 | S2-M6 | API reference completeness | Add public API reference docs or generated documentation covering all exported modules and examples. | Closed: `docs/api-reference.md` lists the public API surface and tooling |
 
+## Stage 3 Required Milestones
+
+Stage 3 raises the Linux-first bar from broad parity-plus coverage to a stricter
+local `rand_distr` 0.6.0 audit. The target is no known core RNG functionality
+gap on the current Linux platform against the locally available `rand`,
+`rand_distr`, and checked-in comparison evidence.
+
+| ID | Milestone | Completion gate | Status |
+| --- | --- | --- | --- |
+| S3-M1 | Local `rand_distr` gap closure | Audit local `rand_distr` 0.6.0 source and implement or explicitly exclude each remaining core distribution/geometric sampler in Zig-native form. | In progress: first batch adds Gumbel, Frechet, SkewNormal, PERT, UnitCircle, UnitDisc, UnitSphere, and UnitBall; remaining known gaps include inverse Gaussian, normal inverse Gaussian, Zipf, and Zeta |
+| S3-M2 | Stage 3 validation grid | Extend `distcheck` and unit tests for all Stage 3 distributions with support checks, deterministic parameter grids, and mean/CDF-style smoke gates where moments exist. | In progress: first-batch support and mean checks exist for extreme-value, shape, and unit-geometry samplers |
+| S3-M3 | Stage 3 benchmark parity | Add Zig benchmark rows and Rust `rand_distr` rows for comparable Stage 3 workloads, using native CPU flags on both sides. | Open |
+| S3-M4 | Weighted dynamic sampling parity | Compare `AliasTable.update`, sequence weighted sampling, and local `rand_distr` weighted alias/tree APIs; add a Zig-native dynamic weighted sampler if alias rebuilds leave a real core gap. | Open |
+| S3-M5 | Linux no-known-gaps audit report | Replace informal coverage claims with a checked-in audit listing local Rust evidence, Alea status, remaining gaps, exclusions, and next Linux-first actions. | Open |
+| S3-M6 | Documentation and API reference refresh | Keep README, core guide, API reference, and parity matrix synchronized with every newly exported Stage 3 API. | In progress |
+
 ## Current Rule
 
 Continue feature-first work on the earliest open stage milestone. Use

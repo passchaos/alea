@@ -12,6 +12,7 @@ pub fn main(init: std.process.Init) !void {
     try checkDiscrete();
     try checkPoisson();
     try checkContinuous();
+    try checkExtremeAndShape();
     try checkBoundedSupport();
     try checkVectorDistributions();
 
@@ -140,6 +141,31 @@ fn checkContinuous() !void {
     }.sample, 1.75, 1.85);
 }
 
+fn checkExtremeAndShape() !void {
+    var engine = alea.FastPrng.init(0xe751);
+    const rng = alea.Rng.init(&engine);
+    try expectContinuousMean("gumbel", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.gumbel(r, f64, 0, 1);
+        }
+    }.sample, 0.55, 0.61);
+    try expectContinuousMean("frechet", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.frechet(r, f64, 0, 1, 3);
+        }
+    }.sample, 1.30, 1.40);
+    try expectContinuousMean("skew-normal", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.skewNormal(r, f64, 0, 1, 1);
+        }
+    }.sample, 0.52, 0.60);
+    try expectContinuousMean("pert", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.pert(r, f64, -1, 0.5, 2, 4);
+        }
+    }.sample, 0.45, 0.55);
+}
+
 fn expectContinuousMean(comptime label: []const u8, rng: alea.Rng, samples: usize, sampleFn: *const fn (alea.Rng) f64, min: f64, max: f64) !void {
     var sum: f64 = 0;
     var i: usize = 0;
@@ -161,6 +187,8 @@ fn checkBoundedSupport() !void {
         if (!(pareto >= 2)) return error.DistributionCheckFailed;
         const cauchy = alea.distributions.cauchy(rng, f64, 0, 1);
         if (!std.math.isFinite(cauchy)) return error.DistributionCheckFailed;
+        const pert = alea.distributions.pert(rng, f64, -1, 0.5, 2, 4);
+        if (!(pert >= -1 and pert <= 2)) return error.DistributionCheckFailed;
     }
 }
 
@@ -187,6 +215,15 @@ fn checkVectorDistributions() !void {
         var total: u64 = 0;
         for (counts) |count| total += count;
         if (total != 100) return error.DistributionCheckFailed;
+
+        const circle = alea.distributions.unitCircle(rng, f64);
+        try expectFloatBetween("unit circle norm", circle[0] * circle[0] + circle[1] * circle[1], 0.999999999999, 1.000000000001);
+        const disc = alea.distributions.unitDisc(rng, f64);
+        if (disc[0] * disc[0] + disc[1] * disc[1] > 1) return error.DistributionCheckFailed;
+        const sphere = alea.distributions.unitSphere(rng, f64);
+        try expectFloatBetween("unit sphere norm", sphere[0] * sphere[0] + sphere[1] * sphere[1] + sphere[2] * sphere[2], 0.999999999999, 1.000000000001);
+        const ball = alea.distributions.unitBall(rng, f64);
+        if (ball[0] * ball[0] + ball[1] * ball[1] + ball[2] * ball[2] > 1) return error.DistributionCheckFailed;
     }
 }
 

@@ -48,6 +48,8 @@ Single-shot helpers and reusable samplers cover:
 - poisson, geometric
 - gamma, chi-squared, beta, Fisher F, Student t
 - triangular, cauchy, pareto, weibull
+- gumbel, frechet, skew-normal, PERT
+- unit circle/disc and unit sphere/ball geometry samplers
 - dirichlet
 
 Reusable samplers expose `sample(rng)` and can be used with
