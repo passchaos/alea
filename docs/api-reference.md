@@ -106,7 +106,9 @@ Reusable samplers:
 - `Gamma(T).sampleFrom`
 - `ChiSquared(T)`
 - `Beta(T)`
+- `Beta(T).sampleFrom`
 - `FisherF(T)`
+- `FisherF(T).sampleFrom`
 - `StudentT(T)`
 - `Triangular(T)`
 - `Cauchy(T)`

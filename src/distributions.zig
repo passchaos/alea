@@ -816,16 +816,29 @@ pub fn Beta(comptime T: type) type {
 
         alpha: T,
         beta_param: T,
+        gamma_a: Gamma(T),
+        gamma_b: Gamma(T),
 
         pub fn init(alpha: T, beta_param: T) Error!Self {
             comptime requireFloat(T);
             if (!(alpha > 0) or !(beta_param > 0)) return error.InvalidParameter;
             if (!std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return error.InvalidParameter;
-            return .{ .alpha = alpha, .beta_param = beta_param };
+            return .{
+                .alpha = alpha,
+                .beta_param = beta_param,
+                .gamma_a = try Gamma(T).init(alpha, 1),
+                .gamma_b = try Gamma(T).init(beta_param, 1),
+            };
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return beta(rng, T, self.alpha, self.beta_param);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            const x = self.gamma_a.sampleFrom(source);
+            const y = self.gamma_b.sampleFrom(source);
+            return x / (x + y);
         }
     };
 }
@@ -844,16 +857,27 @@ pub fn FisherF(comptime T: type) type {
 
         d1: T,
         d2: T,
+        numerator: Gamma(T),
+        denominator: Gamma(T),
 
         pub fn init(d1: T, d2: T) Error!Self {
             comptime requireFloat(T);
             if (!(d1 > 0) or !(d2 > 0)) return error.InvalidParameter;
             if (!std.math.isFinite(d1) or !std.math.isFinite(d2)) return error.InvalidParameter;
-            return .{ .d1 = d1, .d2 = d2 };
+            return .{
+                .d1 = d1,
+                .d2 = d2,
+                .numerator = try Gamma(T).init(d1 / 2, 2 / d1),
+                .denominator = try Gamma(T).init(d2 / 2, 2 / d2),
+            };
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return fisherF(rng, T, self.d1, self.d2);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return self.numerator.sampleFrom(source) / self.denominator.sampleFrom(source);
         }
     };
 }
