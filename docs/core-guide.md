@@ -44,7 +44,7 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - Unicode scalar values: `unicodeScalar`
 - structured values: `value(T)` for bools, ints, floats, enums, arrays, and tuples
 - bulk sampling: `fill` for scalar and vector slices, `fillSample`,
-  `fillRange`, `fillVectorRange`, `fillNormal`, `fillVectorNormal`,
+  `fillSampleFrom`, `fillRange`, `fillVectorRange`, `fillNormal`, `fillVectorNormal`,
   `fillExponential`, and `fillVectorExponential`
 
 Checked variants exist for user-supplied probabilities and scalar ranges.

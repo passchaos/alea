@@ -81,6 +81,7 @@ pub fn main(init: std.process.Init) !void {
     try benchGamma(io, stdout, "alea gamma", bytes / 128);
     try benchGammaScalar(io, stdout, "alea gamma scalar direct", bytes / 128);
     try benchFillSampleGamma(io, stdout, "alea fillSample gamma", bytes / 128);
+    try benchFillSampleGammaScalar(io, stdout, "alea fillSampleFrom gamma scalar", bytes / 128);
     try benchChiSquared(io, stdout, "alea chi-squared", bytes / 128);
     try benchChiSquaredCached(io, stdout, "alea chi-squared cached", bytes / 128);
     try benchBeta(io, stdout, "alea beta", bytes / 128);
@@ -1470,6 +1471,36 @@ fn benchFillSampleGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             rng.fillSample(f64, out[0..n], dist);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillSampleGammaScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [4096]f64 = undefined;
+    const dist = alea.distributions.Gamma(f64).init(2, 3) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x6a44c);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.Rng.fillSampleFrom(&engine, f64, out[0..n], dist);
             for (out[0..n]) |value| checksum += value;
             remaining -= n;
         }

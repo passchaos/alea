@@ -20,7 +20,7 @@ expectations.
 - Construction and interop: `init`, `fromRandom`, `random`
 - Values: `value`, `valueIter`, `randomIter`, `sampleIter`
 - Bytes/fill: `bytes`, `fill` for scalar and vector slices, `fillSample`,
-  `fillRange`, `fillRangeChecked`, `fillNormal`, `fillNormalChecked`,
+  `fillSampleFrom`, `fillRange`, `fillRangeChecked`, `fillNormal`, `fillNormalChecked`,
   `fillExponential`, `fillExponentialChecked`, `fillVectorRange`,
   `fillVectorRangeChecked`, `fillVectorNormal`, `fillVectorNormalChecked`,
   `fillVectorExponential`, `fillVectorExponentialChecked`, `fillNormalFrom`,

@@ -275,6 +275,11 @@ pub fn fillSample(self: Rng, comptime T: type, dest: []T, sampler: anytype) void
     for (dest) |*item| item.* = local_sampler.sample(self);
 }
 
+pub fn fillSampleFrom(source: anytype, comptime T: type, dest: []T, sampler: anytype) void {
+    var local_sampler = sampler;
+    for (dest) |*item| item.* = local_sampler.sampleFrom(source);
+}
+
 fn fillBools(self: Rng, dest: []bool) void {
     var i: usize = 0;
     while (i < dest.len) {
@@ -1111,6 +1116,10 @@ test "rng facade covers scalar APIs" {
     var poisson_buf: [16]u64 = undefined;
     rng.fillSample(u64, &poisson_buf, try alea.distributions.Poisson.init(8));
     for (poisson_buf) |item| try std.testing.expect(item < 64);
+
+    var direct_poisson_buf: [16]u64 = undefined;
+    Rng.fillSampleFrom(&engine, u64, &direct_poisson_buf, try alea.distributions.Poisson.init(8));
+    for (direct_poisson_buf) |item| try std.testing.expect(item < 64);
 
     var normal_sampler = try alea.distributions.Normal(f64).init(0, 1);
     var sample_buf: [16]f64 = undefined;
