@@ -8,7 +8,7 @@ project does not repeat unproductive work.
 
 | Area | Local Rust evidence | Current Alea evidence | Status |
 | --- | --- | --- | --- |
-| Poisson `lambda = 20` | `rand_distr poisson`: about 69M samples/s | `alea poisson`: about 50M samples/s after Ahrens-Dieter adoption | Watch: materially improved from about 26M; cache/reusable sampler tuning remains possible |
+| Poisson `lambda = 20` | `rand_distr poisson`: about 69M samples/s | `alea poisson`: about 52M samples/s after Ahrens-Dieter adoption | Watch: materially improved from about 26M; still trails Rust |
 | Normal `f64` facade | `rand_distr normal`: about 462M samples/s | `alea normal`: about 216-224M samples/s | Open: stdlib ziggurat helped, but Alea still trails |
 | Exponential `f64` facade | `rand_distr exponential`: about 446M samples/s | `alea exponential`: about 372-380M samples/s | Watch: close but still trails |
 | Weighted dynamic update+sample | `rand_distr weighted tree`: about 52M ops/s | `alea weighted tree`: about 46M ops/s | Watch: close, possible data-structure tuning later |
@@ -18,6 +18,7 @@ project does not repeat unproductive work.
 | Attempt | Result | Decision |
 | --- | --- | --- |
 | Lower Poisson PTRS threshold from `lambda >= 30` to `lambda >= 12` | `lambda = 20` benchmark dropped from about 26M samples/s to about 23M samples/s, while `distcheck` still passed | Rejected. Dedicated medium-lambda Ahrens-Dieter path was adopted instead. |
+| Cache Poisson Ahrens-Dieter constants in reusable `Poisson` sampler | `alea poisson cached`: about 52M samples/s, essentially same as single-shot after adoption | Kept for API quality and avoiding recomputation, but not enough to close the remaining Rust performance gap. |
 | Default `fillNormal(f32)` via vector Box-Muller | About 125M samples/s, slower than scalar ziggurat bulk around 196M samples/s | Rejected as default. Keep explicit vector normal prototype for experimentation. |
 | Default `fillExponential(f32)` via vector log kernel | About 183M samples/s, slower than scalar ziggurat bulk around 320M samples/s | Rejected as default. Keep explicit vector exponential prototype for experimentation. |
 | Full benchmark row for vector-slice range fill | Caused anomalously long full benchmark runs | Deferred. API remains tested; design a smaller isolated microbench before re-adding to the full benchmark. |

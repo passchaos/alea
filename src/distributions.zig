@@ -458,75 +458,116 @@ pub fn poisson(rng: Rng, lambda: f64) u64 {
     if (lambda == 0) return 0;
 
     if (lambda < 12) {
-        const threshold = @exp(-lambda);
-        var k: u64 = 0;
-        var p: f64 = 1;
-        while (p > threshold) {
-            k += 1;
-            p *= rng.floatOpen(f64);
-        }
-        return k - 1;
+        return poissonProduct(rng, @exp(-lambda));
     }
 
     return poissonAhrensDieter(rng, lambda);
 }
 
 pub const Poisson = struct {
-    lambda: f64,
+    method: PoissonMethod,
 
     pub fn init(lambda: f64) Error!Poisson {
         if (!(lambda >= 0) or !std.math.isFinite(lambda)) return error.InvalidParameter;
-        return .{ .lambda = lambda };
+        if (lambda == 0) return .{ .method = .zero };
+        if (lambda < 12) return .{ .method = .{ .product = @exp(-lambda) } };
+        return .{ .method = .{ .ahrens_dieter = PoissonAhrensDieter.init(lambda) } };
     }
 
     pub fn sample(self: Poisson, rng: Rng) u64 {
-        return poisson(rng, self.lambda);
+        return switch (self.method) {
+            .zero => 0,
+            .product => |threshold| poissonProduct(rng, threshold),
+            .ahrens_dieter => |method| method.sample(rng),
+        };
+    }
+};
+
+const PoissonMethod = union(enum) {
+    zero,
+    product: f64,
+    ahrens_dieter: PoissonAhrensDieter,
+};
+
+const PoissonAhrensDieter = struct {
+    lambda: f64,
+    s: f64,
+    d: f64,
+    l: f64,
+    c: f64,
+    c0: f64,
+    c1: f64,
+    c2: f64,
+    c3: f64,
+    omega: f64,
+
+    fn init(lambda: f64) PoissonAhrensDieter {
+        const s = @sqrt(lambda);
+        const b1 = (1.0 / 24.0) / lambda;
+        const b2 = 0.3 * b1 * b1;
+        const c3 = (1.0 / 7.0) * b1 * b2;
+        const c2 = b2 - 15.0 * c3;
+        const c1 = b1 - 6.0 * b2 + 45.0 * c3;
+        const c0 = 1.0 - b1 + 3.0 * b2 - 15.0 * c3;
+        return .{
+            .lambda = lambda,
+            .s = s,
+            .d = 6.0 * lambda * lambda,
+            .l = @floor(lambda - 1.1484),
+            .c = 0.1069 / lambda,
+            .c0 = c0,
+            .c1 = c1,
+            .c2 = c2,
+            .c3 = c3,
+            .omega = 1.0 / @sqrt(2.0 * std.math.pi) / s,
+        };
+    }
+
+    fn sample(self: PoissonAhrensDieter, rng: Rng) u64 {
+        while (true) {
+            const g = normal(rng, f64, self.lambda, self.s);
+            if (g >= 0) {
+                const k1 = @floor(g);
+                if (k1 >= self.l) return @intFromFloat(k1);
+
+                const u = rng.float(f64);
+                const diff = self.lambda - k1;
+                if (self.d * u >= diff * diff * diff) return @intFromFloat(k1);
+
+                const parts = poissonAdParts(self, k1);
+                if (parts.fy * (1.0 - u) <= parts.py * @exp(parts.px - parts.fx)) return @intFromFloat(k1);
+            }
+
+            while (true) {
+                const e = rng.random().floatExp(f64);
+                const u = 2.0 * rng.float(f64) - 1.0;
+                const sign: f64 = if (u < 0) -1 else 1;
+                const t = 1.8 + e * sign;
+                if (t <= -0.6744) continue;
+
+                const k2 = @floor(self.lambda + self.s * t);
+                const parts = poissonAdParts(self, k2);
+                if (self.c * @abs(u) <= parts.py * @exp(parts.px + e) - parts.fy * @exp(parts.fx + e)) {
+                    return @intFromFloat(k2);
+                }
+            }
+        }
     }
 };
 
 pub fn poissonAhrensDieter(rng: Rng, lambda: f64) u64 {
     std.debug.assert(lambda >= 12 and std.math.isFinite(lambda));
+    return PoissonAhrensDieter.init(lambda).sample(rng);
+}
 
-    const s = @sqrt(lambda);
-    const d = 6.0 * lambda * lambda;
-    const l = @floor(lambda - 1.1484);
-    const c = 0.1069 / lambda;
-    const b1 = (1.0 / 24.0) / lambda;
-    const b2 = 0.3 * b1 * b1;
-    const c3 = (1.0 / 7.0) * b1 * b2;
-    const c2 = b2 - 15.0 * c3;
-    const c1 = b1 - 6.0 * b2 + 45.0 * c3;
-    const c0 = 1.0 - b1 + 3.0 * b2 - 15.0 * c3;
-    const omega = 1.0 / @sqrt(2.0 * std.math.pi) / s;
-
-    while (true) {
-        const g = normal(rng, f64, lambda, s);
-        if (g >= 0) {
-            const k1 = @floor(g);
-            if (k1 >= l) return @intFromFloat(k1);
-
-            const u = rng.float(f64);
-            const diff = lambda - k1;
-            if (d * u >= diff * diff * diff) return @intFromFloat(k1);
-
-            const parts = poissonAdParts(lambda, s, omega, c0, c1, c2, c3, k1);
-            if (parts.fy * (1.0 - u) <= parts.py * @exp(parts.px - parts.fx)) return @intFromFloat(k1);
-        }
-
-        while (true) {
-            const e = rng.random().floatExp(f64);
-            const u = 2.0 * rng.float(f64) - 1.0;
-            const sign: f64 = if (u < 0) -1 else 1;
-            const t = 1.8 + e * sign;
-            if (t <= -0.6744) continue;
-
-            const k2 = @floor(lambda + s * t);
-            const parts = poissonAdParts(lambda, s, omega, c0, c1, c2, c3, k2);
-            if (c * @abs(u) <= parts.py * @exp(parts.px + e) - parts.fy * @exp(parts.fx + e)) {
-                return @intFromFloat(k2);
-            }
-        }
+fn poissonProduct(rng: Rng, threshold: f64) u64 {
+    var k: u64 = 0;
+    var p: f64 = 1;
+    while (p > threshold) {
+        k += 1;
+        p *= rng.floatOpen(f64);
     }
+    return k - 1;
 }
 
 const PoissonAdParts = struct {
@@ -541,18 +582,18 @@ const PoissonAdPxPy = struct {
     py: f64,
 };
 
-fn poissonAdParts(lambda: f64, s: f64, omega: f64, c0: f64, c1: f64, c2: f64, c3: f64, k: f64) PoissonAdParts {
+fn poissonAdParts(method: PoissonAhrensDieter, k: f64) PoissonAdParts {
     const px_py: PoissonAdPxPy = if (k < 10.0) blk: {
         const fact = [_]f64{ 1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880 };
         const ki: usize = @intFromFloat(k);
         break :blk .{
-            .px = -lambda,
-            .py = std.math.pow(f64, lambda, k) / fact[ki],
+            .px = -method.lambda,
+            .py = std.math.pow(f64, method.lambda, k) / fact[ki],
         };
     } else blk: {
         const delta_base = 1.0 / (12.0 * k);
         const delta = delta_base - 4.8 * delta_base * delta_base * delta_base;
-        const v = (lambda - k) / k;
+        const v = (method.lambda - k) / k;
         const a = [_]f64{
             -0.5000000002,
             0.3333333343,
@@ -574,20 +615,20 @@ fn poissonAdParts(lambda: f64, s: f64, omega: f64, c0: f64, c1: f64, c2: f64, c3
         const px = if (@abs(v) <= 0.25)
             k * v * v * poly - delta
         else
-            k * @log(1.0 + v) - (lambda - k) - delta;
+            k * @log(1.0 + v) - (method.lambda - k) - delta;
         break :blk .{
             .px = px,
             .py = 1.0 / @sqrt(2.0 * std.math.pi) / @sqrt(k),
         };
     };
 
-    const x = (k - lambda + 0.5) / s;
+    const x = (k - method.lambda + 0.5) / method.s;
     const x2 = x * x;
     return .{
         .px = px_py.px,
         .py = px_py.py,
         .fx = -0.5 * x2,
-        .fy = omega * (((c3 * x2 + c2) * x2 + c1) * x2 + c0),
+        .fy = method.omega * (((method.c3 * x2 + method.c2) * x2 + method.c1) * x2 + method.c0),
     };
 }
 
