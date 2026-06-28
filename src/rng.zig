@@ -135,7 +135,10 @@ pub fn fill(self: Rng, comptime T: type, dest: []T) void {
         .bool => {
             self.fillBools(dest);
         },
-        else => @compileError("alea.Rng.fill supports integer, float, and bool slices"),
+        .vector => {
+            for (dest) |*item| item.* = self.vector(T);
+        },
+        else => @compileError("alea.Rng.fill supports integer, float, bool, and vector slices"),
     }
 }
 
@@ -892,6 +895,10 @@ test "rng facade covers scalar APIs" {
 
     const fvec = rng.value(@Vector(4, f32));
     inline for (0..4) |i| try std.testing.expect(fvec[i] >= 0 and fvec[i] < 1);
+
+    var vec_buf: [8]@Vector(8, f32) = undefined;
+    rng.fill(@Vector(8, f32), &vec_buf);
+    for (vec_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0 and vec[i] < 1);
 
     const ranged_i = rng.vectorRange(@Vector(4, i32), -10, 10);
     inline for (0..4) |i| try std.testing.expect(ranged_i[i] >= -10 and ranged_i[i] < 10);
