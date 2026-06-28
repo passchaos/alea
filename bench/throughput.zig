@@ -1116,11 +1116,10 @@ fn benchExponentialWyhash(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.ScalarPrng.init(0xe15a);
-        const rng = alea.Rng.init(&engine);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;
         var checksum: f64 = 0;
-        while (i < count) : (i += 1) checksum += rng.exponential(f64, 2);
+        while (i < count) : (i += 1) checksum += alea.Rng.exponentialFastFrom(&engine, f64, 2);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
