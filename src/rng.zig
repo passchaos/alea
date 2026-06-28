@@ -130,7 +130,7 @@ pub fn fill(self: Rng, comptime T: type, dest: []T) void {
             self.fillInts(T, dest);
         },
         .float => {
-            for (dest) |*item| item.* = self.float(T);
+            self.fillFloats(T, dest);
         },
         .bool => {
             self.fillBools(dest);
@@ -235,6 +235,28 @@ fn fillInts(self: Rng, comptime T: type, dest: []T) void {
             i += 1;
             if (info.bits != 64) bits >>= @intCast(info.bits);
         }
+    }
+}
+
+fn fillFloats(self: Rng, comptime T: type, dest: []T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => {
+            var i: usize = 0;
+            while (i < dest.len) {
+                const bits = self.next();
+                dest[i] = f32FromBits(@truncate(bits >> 40));
+                i += 1;
+                if (i < dest.len) {
+                    dest[i] = f32FromBits(@truncate(bits >> 16));
+                    i += 1;
+                }
+            }
+        },
+        f64 => {
+            for (dest) |*item| item.* = self.float(f64);
+        },
+        else => @compileError("alea supports f32 and f64 floats"),
     }
 }
 
@@ -383,7 +405,7 @@ pub fn intRangeAtMostFrom(source: anytype, comptime T: type, at_least: T, at_mos
 pub fn float(self: Rng, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
-        f32 => @as(f32, @floatFromInt(self.next() >> 40)) * (1.0 / 16777216.0),
+        f32 => f32FromBits(@truncate(self.next() >> 40)),
         f64 => @as(f64, @floatFromInt(self.next() >> 11)) * (1.0 / 9007199254740992.0),
         else => @compileError("alea supports f32 and f64 floats"),
     };
@@ -688,6 +710,10 @@ fn vectorChild(comptime VectorType: type) type {
     return vectorInfo(VectorType).child;
 }
 
+fn f32FromBits(bits: u24) f32 {
+    return @as(f32, @floatFromInt(bits)) * (1.0 / 16777216.0);
+}
+
 pub fn probabilityThreshold(p: f64) u64 {
     std.debug.assert(p >= 0 and p <= 1);
     if (p <= 0) return 0;
@@ -758,6 +784,10 @@ test "rng facade covers scalar APIs" {
     var ranged_float_buf: [16]f32 = undefined;
     try rng.fillRangeChecked(f32, &ranged_float_buf, -1, 1);
     for (ranged_float_buf) |item| try std.testing.expect(item >= -1 and item < 1);
+
+    var f32_buf: [17]f32 = undefined;
+    rng.fill(f32, &f32_buf);
+    for (f32_buf) |item| try std.testing.expect(item >= 0 and item < 1);
 
     var normal_buf: [16]f64 = undefined;
     try rng.fillNormalChecked(f64, &normal_buf, 0, 1);
