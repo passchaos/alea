@@ -172,10 +172,6 @@ pub fn fillRangeChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) 
 pub fn fillNormal(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
-    if (T == f32) {
-        self.fillNormalF32(dest, mean, stddev);
-        return;
-    }
     for (dest) |*item| item.* = self.normal(T, mean, stddev);
 }
 
@@ -818,35 +814,6 @@ fn vectorNormalF32(self: Rng, comptime VectorType: type, mean: f32, stddev: f32)
     const radius = @sqrt(@as(VectorType, @splat(-2)) * @log(uniform_radius));
     const theta = tau * uniform_angle;
     return @as(VectorType, @splat(mean)) + @as(VectorType, @splat(stddev)) * radius * @cos(theta);
-}
-
-fn fillNormalF32(self: Rng, dest: []f32, mean: f32, stddev: f32) void {
-    const Vec = @Vector(8, f32);
-    const mean_vec: Vec = @splat(mean);
-    const stddev_vec: Vec = @splat(stddev);
-    const one: Vec = @splat(1);
-    const tau: Vec = @splat(@as(f32, @floatCast(std.math.tau)));
-
-    var i: usize = 0;
-    while (i + 16 <= dest.len) : (i += 16) {
-        const uniform_radius = one - self.vector(Vec);
-        const uniform_angle = self.vector(Vec);
-        const radius = @sqrt(@as(Vec, @splat(-2)) * @log(uniform_radius));
-        const theta = tau * uniform_angle;
-        const z0 = mean_vec + stddev_vec * radius * @cos(theta);
-        const z1 = mean_vec + stddev_vec * radius * @sin(theta);
-        inline for (0..8) |lane| {
-            dest[i + lane] = z0[lane];
-            dest[i + 8 + lane] = z1[lane];
-        }
-    }
-
-    while (i + 8 <= dest.len) : (i += 8) {
-        const normal_vec = self.vectorNormal(Vec, mean, stddev);
-        inline for (0..8) |lane| dest[i + lane] = normal_vec[lane];
-    }
-
-    while (i < dest.len) : (i += 1) dest[i] = self.normal(f32, mean, stddev);
 }
 
 fn fillExponentialF32(self: Rng, dest: []f32, rate: f32) void {
