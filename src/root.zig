@@ -24,6 +24,7 @@ pub const ChaCha = @import("engines/chacha.zig");
 
 pub const DefaultPrng = Xoshiro256;
 pub const FastPrng = Alea4x64;
+pub const ScalarPrng = Wyhash64;
 pub const HashPrng = Wyhash64;
 pub const ReproduciblePrng = Pcg64;
 pub const SecurePrng = ChaCha;
@@ -42,6 +43,14 @@ pub fn fast(seed: u64) FastPrng {
 
 pub fn fastSecure(io: std.Io) !FastPrng {
     return FastPrng.init((try Seed.secure(io)).state);
+}
+
+pub fn scalar(seed: u64) ScalarPrng {
+    return ScalarPrng.init(seed);
+}
+
+pub fn scalarSecure(io: std.Io) !ScalarPrng {
+    return ScalarPrng.init((try Seed.secure(io)).state);
 }
 
 pub fn reproducible(seed: u64) ReproduciblePrng {

@@ -10,10 +10,10 @@ expectations.
 - Engines: `SplitMix64`, `Wyhash64`, `Alea4x64`, `Xoshiro256PlusPlus`,
   `Xoshiro256`, `Pcg64`, `ChaCha`
 - Aliases: `DefaultPrng`, `FastPrng`, `HashPrng`, `ReproduciblePrng`,
-  `SecurePrng`
+  `ScalarPrng`, `SecurePrng`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
-  `reproducible`, `reproducibleSecure`, `secureFromSeed`, `secure`,
-  `secureBytes`, `rng`
+  `scalar`, `scalarSecure`, `reproducible`, `reproducibleSecure`,
+  `secureFromSeed`, `secure`, `secureBytes`, `rng`
 
 ## Rng
 

@@ -20,6 +20,12 @@ pub fn main(init: std.process.Init) !void {
     try benchEngine(io, stdout, "xoshiro256**", alea.Xoshiro256, bytes, &buffer);
     try benchEngine(io, stdout, "pcg64", alea.Pcg64, bytes, &buffer);
     try benchEngine(io, stdout, "chacha12", alea.ChaCha, bytes, &buffer);
+    try stdout.print("\nscalar next throughput\n", .{});
+    try benchNext(io, stdout, "alea4x64 next", alea.Alea4x64, bytes / 8);
+    try benchNext(io, stdout, "wyhash64 next", alea.Wyhash64, bytes / 8);
+    try benchNext(io, stdout, "xoshiro256** next", alea.Xoshiro256, bytes / 8);
+    try benchNext(io, stdout, "xoshiro256++ next", alea.Xoshiro256PlusPlus, bytes / 8);
+    try benchNext(io, stdout, "pcg64 next", alea.Pcg64, bytes / 8);
     try stdout.print("\nfill-only throughput\n", .{});
     try benchFillOnly(io, stdout, "alea4x64 fill-only", alea.Alea4x64, bytes, &buffer);
     try benchFillOnly(io, stdout, "xoshiro256++ fill-only", alea.Xoshiro256PlusPlus, bytes, &buffer);
@@ -49,6 +55,7 @@ pub fn main(init: std.process.Init) !void {
     try benchWeightedTree(io, stdout, "alea weighted tree update+sample", bytes / 256);
     try benchWeightedIntTree(io, stdout, "alea weighted int tree update+sample", bytes / 256);
     try benchNormal(io, stdout, "alea normal", bytes / 64);
+    try benchNormalWyhash(io, stdout, "alea normal wyhash64 direct", bytes / 64);
     try benchNormalStdRandom(io, stdout, "alea normal std.Random direct", bytes / 64);
     try benchNormalFast(io, stdout, "alea normal fast direct", bytes / 64);
     try benchVectorNormalF32(io, stdout, "alea vector normal f32x8", bytes / 64);
@@ -120,6 +127,29 @@ fn benchEngine(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime En
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} MiB/s checksum={}\n", .{ name, best_mib_per_s, best_checksum });
+}
+
+fn benchNext(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime Engine: type, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = if (Engine == alea.ChaCha) Engine.initFromU64(0x1234_5678) else Engine.init(0x1234_5678);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) checksum ^= engine.next();
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M next/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchFillOnly(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime Engine: type, bytes: usize, buffer: []u8) !void {
@@ -669,6 +699,29 @@ fn benchNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usiz
         var i: usize = 0;
         var checksum: f64 = 0;
         while (i < count) : (i += 1) checksum += rng.normal(f64, 0, 1);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchNormalWyhash(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.Wyhash64.init(0xd15a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += alea.Rng.normalFastFrom(&engine, f64, 0, 1);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

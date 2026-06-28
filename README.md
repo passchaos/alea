@@ -8,6 +8,8 @@ The first milestone is intentionally broad:
 - multiple deterministic engines: `Wyhash64`, `Xoshiro256`, `Pcg64`
 - a `ChaCha12` secure-style stream for secret-seeded randomness
 - `Rng`, a small facade with `std.Random` compatibility
+- `ScalarPrng = Wyhash64` for scalar-heavy distribution workloads, alongside
+  `FastPrng = Alea4x64` for bulk-fill throughput
 - `Rng.value(T)` for scalar, enum, tuple, and array sampling
 - `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling
 - bulk `fillSample`, `fillRange`, `fillNormal`, and `fillExponential` APIs for
@@ -88,8 +90,9 @@ pushing most non-uniform sampling to a separate crate. Every engine still
 exposes `random()` for standard-library consumers, and `Rng.random()` returns a
 `std.Random` interface.
 
-`DefaultPrng` is `Xoshiro256`, `FastPrng` is `Alea4x64`, `HashPrng` is
-`Wyhash64`, `ReproduciblePrng` is `Pcg64`, and `SecurePrng` is `ChaCha12`.
+`DefaultPrng` is `Xoshiro256`, `FastPrng` is `Alea4x64`, `ScalarPrng` and
+`HashPrng` are `Wyhash64`, `ReproduciblePrng` is `Pcg64`, and `SecurePrng` is
+`ChaCha12`.
 
 See `docs/core-guide.md` for the core API guide, `docs/api-reference.md` for
 the public API reference, and

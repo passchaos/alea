@@ -12,6 +12,7 @@ project does not repeat unproductive work.
 | Normal `f64` facade | `rand_distr normal`: about 462M samples/s | `alea normal`: about 386-390M samples/s with direct ziggurat path | Watch: materially improved from the old 210-224M; still trails Rust |
 | Exponential `f64` facade | `rand_distr exponential`: about 446M samples/s | `alea exponential`: about 383M samples/s after direct ziggurat path | Watch: close but still trails |
 | Weighted dynamic update+sample | `rand_distr weighted tree`: about 52M ops/s | `alea weighted int tree`: about 52M ops/s; generic float tree about 46M ops/s | Closed for unsigned integer weights; generic float-weight tree remains watch |
+| Scalar engine choice | Rust `SmallRng` is the baseline scalar engine | `wyhash64 next`: about 2520M next/s; `alea4x64 next`: about 1990M next/s; `normal` on `wyhash64`: about 425M samples/s | Open: expose or document a scalar-fast profile instead of treating `FastPrng` as best for every workload |
 
 ## Rejected Or Deferred Attempts
 
@@ -31,6 +32,7 @@ project does not repeat unproductive work.
 Continue performance triage on the remaining large gaps:
 
 - normal `f64` facade still trails local `rand_distr`,
+- scalar-heavy workloads should be benchmarked with `wyhash64` / scalar-fast profile,
 - weighted dynamic update+sample is close but still trails local `rand_distr`,
 - SIMD/vector distribution kernels need stronger default-path wins before they
   can replace scalar ziggurat paths.
