@@ -130,6 +130,11 @@ fn checkContinuous() !void {
             return alea.distributions.logNormal(r, f64, 0, 0.25);
         }
     }.sample, 1.02, 1.04);
+    try expectContinuousMean("half-normal", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.halfNormal(r, f64, 2);
+        }
+    }.sample, 1.55, 1.65);
     try expectContinuousMean("chi-squared", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.chiSquared(r, f64, 4);
@@ -160,6 +165,11 @@ fn checkContinuous() !void {
             return alea.distributions.rayleigh(r, f64, 2);
         }
     }.sample, 2.45, 2.57);
+    try expectContinuousMean("maxwell", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.maxwell(r, f64, 2);
+        }
+    }.sample, 3.1, 3.25);
     try expectContinuousMean("weibull", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.weibull(r, f64, 2, 1.5);

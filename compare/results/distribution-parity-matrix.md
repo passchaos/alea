@@ -65,6 +65,8 @@ toolkit functionality and reduce reliance on companion crates:
 | Laplace | Covered: `laplace`, `Laplace(T)` |
 | Logistic | Covered: `logistic`, `Logistic(T)` |
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)` |
+| HalfNormal | Covered: `halfNormal`, `HalfNormal(T)` |
+| Maxwell | Covered: `maxwell`, `Maxwell(T)` |
 | Pareto | Covered: `pareto`, `Pareto(T)` |
 | Weibull | Covered: `weibull`, `Weibull(T)` |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs |

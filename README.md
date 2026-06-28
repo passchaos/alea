@@ -26,10 +26,10 @@ The first milestone is intentionally broad:
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, and Unicode scalar
   string generation
 - distributions: uniform, bernoulli, binomial, negative-binomial,
-  hypergeometric, standard normal, normal, log-normal, standard exponential,
+  hypergeometric, standard normal, normal, log-normal, half-normal, standard exponential,
   exponential, poisson, gamma,
   chi-squared, beta, Fisher F, Student t, triangular, cauchy, laplace,
-  logistic, rayleigh, pareto, weibull, gumbel, frechet, skew-normal, PERT,
+  logistic, rayleigh, maxwell, pareto, weibull, gumbel, frechet, skew-normal, PERT,
   inverse Gaussian,
   normal-inverse Gaussian, Zipf, Zeta, unit geometry samplers, dirichlet,
   multinomial

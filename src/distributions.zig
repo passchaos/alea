@@ -494,6 +494,39 @@ pub fn LogNormal(comptime T: type) type {
     };
 }
 
+pub fn halfNormal(rng: Rng, comptime T: type, scale: T) T {
+    return halfNormalFrom(rng, T, scale);
+}
+
+pub fn halfNormalFrom(source: anytype, comptime T: type, scale: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+
+    return @abs(Rng.normalFastFrom(source, T, 0, scale));
+}
+
+pub fn HalfNormal(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        scale: T,
+
+        pub fn init(scale: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            return .{ .scale = scale };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return halfNormalFrom(source, T, self.scale);
+        }
+    };
+}
+
 pub fn poisson(rng: Rng, lambda: f64) u64 {
     std.debug.assert(lambda >= 0 and std.math.isFinite(lambda));
     if (lambda == 0) return 0;
@@ -1141,6 +1174,42 @@ pub fn Rayleigh(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return rayleighFrom(source, T, self.scale);
+        }
+    };
+}
+
+pub fn maxwell(rng: Rng, comptime T: type, scale: T) T {
+    return maxwellFrom(rng, T, scale);
+}
+
+pub fn maxwellFrom(source: anytype, comptime T: type, scale: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+
+    const x = Rng.normalFastFrom(source, T, 0, scale);
+    const y = Rng.normalFastFrom(source, T, 0, scale);
+    const z = Rng.normalFastFrom(source, T, 0, scale);
+    return @sqrt(x * x + y * y + z * z);
+}
+
+pub fn Maxwell(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        scale: T,
+
+        pub fn init(scale: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            return .{ .scale = scale };
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return maxwellFrom(source, T, self.scale);
         }
     };
 }
@@ -2270,6 +2339,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     var log_normals = rng.sampleIter(f64, try LogNormal(f64).init(0, 0.25));
     try std.testing.expect(log_normals.next().? > 0);
 
+    var half_normals = rng.sampleIter(f64, try HalfNormal(f64).init(2));
+    try std.testing.expect(half_normals.next().? >= 0);
+
     var poissons = rng.sampleIter(u64, try Poisson.init(12));
     try std.testing.expect(poissons.next().? < 64);
 
@@ -2307,6 +2379,9 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var rayleighs = rng.sampleIter(f64, try Rayleigh(f64).init(2));
     try std.testing.expect(rayleighs.next().? >= 0);
+
+    var maxwells = rng.sampleIter(f64, try Maxwell(f64).init(2));
+    try std.testing.expect(maxwells.next().? >= 0);
 
     var paretos = rng.sampleIter(f64, try Pareto(f64).init(2, 3));
     try std.testing.expect(paretos.next().? >= 2);
@@ -2351,6 +2426,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Normal(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Exponential(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).init(0, -1));
+    try std.testing.expectError(error.InvalidParameter, HalfNormal(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Poisson.init(std.math.inf(f64)));
     try std.testing.expectError(error.InvalidProbability, Geometric.init(0));
     try std.testing.expectError(error.InvalidParameter, Gamma(f64).init(0, 1));
@@ -2363,6 +2439,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Laplace(f64).init(0, 0));
     try std.testing.expectError(error.InvalidParameter, Logistic(f64).init(0, 0));
     try std.testing.expectError(error.InvalidParameter, Rayleigh(f64).init(0));
+    try std.testing.expectError(error.InvalidParameter, Maxwell(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Pareto(f64).init(1, 0));
     try std.testing.expectError(error.InvalidParameter, Weibull(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, Gumbel(f64).init(0, 0));

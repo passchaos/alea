@@ -79,12 +79,13 @@ Single-shot helpers:
 - `bernoulli`, `binomial`, `binomialPoissonApprox`
 - `negativeBinomial`, `hypergeometric`
 - `standardNormal`, `standardNormalFrom`, `normal`, `logNormal`,
-  `logNormalFrom`,
+  `logNormalFrom`, `halfNormal`, `halfNormalFrom`,
   `standardExponential`, `standardExponentialFrom`, `exponential`
 - `poisson`, `geometric`
 - `gamma`, `gammaFrom`, `chiSquared`, `beta`, `fisherF`, `studentT`
 - `triangular`, `cauchy`, `laplace`, `laplaceFrom`, `logistic`,
-  `logisticFrom`, `rayleigh`, `rayleighFrom`, `pareto`, `weibull`
+  `logisticFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
+  `pareto`, `weibull`
 - `gumbel`, `frechet`, `skewNormal`, `skewNormalFrom`, `pert`
 - `inverseGaussian`, `normalInverseGaussian`, `normalInverseGaussianFrom`,
   `zipf`, `zeta`
@@ -110,6 +111,8 @@ Reusable samplers:
 - `Exponential(T).sampleFrom`
 - `LogNormal(T)`
 - `LogNormal(T).sampleFrom`
+- `HalfNormal(T)`
+- `HalfNormal(T).sampleFrom`
 - `Poisson`
 - `Poisson.sampleFrom`
 - `Geometric`
@@ -131,6 +134,8 @@ Reusable samplers:
 - `Logistic(T).sampleFrom`
 - `Rayleigh(T)`
 - `Rayleigh(T).sampleFrom`
+- `Maxwell(T)`
+- `Maxwell(T).sampleFrom`
 - `Pareto(T)`
 - `Weibull(T)`
 - `Gumbel(T)`

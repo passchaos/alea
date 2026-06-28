@@ -27,7 +27,7 @@ platform and longer-run requirements.
 | Unicode and strings | ASCII charsets, custom `Charset`, Unicode scalar UTF-8 strings | `src/ascii.zig` tests |
 | Uniform samplers | `Uniform(T)`, `Open01`, `OpenClosed01` | `src/distributions.zig` tests |
 | Bernoulli/binomial | `Bernoulli`, `Binomial` | Moment and parameter tests |
-| Continuous distributions | normal, log-normal, exponential, gamma, chi-squared, beta, Fisher F, Student t, triangular, cauchy, laplace, logistic, rayleigh, pareto, weibull, dirichlet | Sampler tests and moment smoke tests |
+| Continuous distributions | normal, log-normal, half-normal, exponential, gamma, chi-squared, beta, Fisher F, Student t, triangular, cauchy, laplace, logistic, rayleigh, maxwell, pareto, weibull, dirichlet | Sampler tests and moment smoke tests |
 | Poisson | small-lambda exact product method and large-lambda PTRS method | Large-lambda moment test |
 | Sequence sampling | compact `IndexVec`, `sampleIndices`, `sampleArray`, iterator sampling | `src/seq.zig` tests |
 | Collection sampling | choose, choose iterators, shuffle, partial shuffle, reservoir sampling | `src/rng.zig` and `src/seq.zig` tests |
@@ -103,7 +103,7 @@ current evidence bar was met, not that Alea has finished surpassing Rust
 
 | Track | Product target | Current next pressure |
 | --- | --- | --- |
-| Feature breadth | Core random workflows should be available in one Zig-native library without forcing users into companion packages. | Bulk range, normal, exponential, and reusable-sampler fill APIs exist; Laplace, Logistic, and Rayleigh extend continuous distribution breadth beyond the local Rust list; continue adding specialized bulk paths only where they materially improve throughput or ergonomics. |
+| Feature breadth | Core random workflows should be available in one Zig-native library without forcing users into companion packages. | Bulk range, normal, exponential, and reusable-sampler fill APIs exist; Laplace, Logistic, Rayleigh, HalfNormal, and Maxwell extend continuous distribution breadth beyond the local Rust list; continue adding specialized bulk paths only where they materially improve throughput or ergonomics. |
 | Statistical confidence | Engine and distribution evidence should keep getting longer, broader, and easier to reproduce. | Follow `compare/results/practrand-observation-followup.md` for `default` and `pcg64`; add second-platform execution when infrastructure exists. |
 | Performance | Fast paths should be competitive with or faster than local Rust evidence for comparable workloads, with facade/direct overhead separated. | Follow `compare/results/performance-triage.md`; distinguish bulk-fast and scalar-fast engine profiles when choosing defaults or recommendations. |
 | Ergonomics | APIs should feel natural in Zig, including allocation-free and comptime-friendly workflows. | `fillSample` gives reusable samplers an allocation-free bulk path; continue reducing boilerplate for high-volume workflows. |
