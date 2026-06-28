@@ -1199,8 +1199,8 @@ pub fn unitCircle(rng: Rng, comptime T: type) [2]T {
 pub fn unitCircleFrom(source: anytype, comptime T: type) [2]T {
     comptime requireFloat(T);
     while (true) {
-        const x1 = 2 * Rng.floatFrom(source, T) - 1;
-        const x2 = 2 * Rng.floatFrom(source, T) - 1;
+        const x1 = signedUnitFloatFrom(source, T);
+        const x2 = signedUnitFloatFrom(source, T);
         const sum = x1 * x1 + x2 * x2;
         if (!(sum > 0 and sum < 1)) continue;
 
@@ -1216,8 +1216,8 @@ pub fn unitDisc(rng: Rng, comptime T: type) [2]T {
 pub fn unitDiscFrom(source: anytype, comptime T: type) [2]T {
     comptime requireFloat(T);
     while (true) {
-        const x1 = 2 * Rng.floatFrom(source, T) - 1;
-        const x2 = 2 * Rng.floatFrom(source, T) - 1;
+        const x1 = signedUnitFloatFrom(source, T);
+        const x2 = signedUnitFloatFrom(source, T);
         if (x1 * x1 + x2 * x2 <= 1) return .{ x1, x2 };
     }
 }
@@ -1229,8 +1229,8 @@ pub fn unitSphere(rng: Rng, comptime T: type) [3]T {
 pub fn unitSphereFrom(source: anytype, comptime T: type) [3]T {
     comptime requireFloat(T);
     while (true) {
-        const x1 = 2 * Rng.floatFrom(source, T) - 1;
-        const x2 = 2 * Rng.floatFrom(source, T) - 1;
+        const x1 = signedUnitFloatFrom(source, T);
+        const x2 = signedUnitFloatFrom(source, T);
         const sum = x1 * x1 + x2 * x2;
         if (sum >= 1) continue;
 
@@ -1246,11 +1246,25 @@ pub fn unitBall(rng: Rng, comptime T: type) [3]T {
 pub fn unitBallFrom(source: anytype, comptime T: type) [3]T {
     comptime requireFloat(T);
     while (true) {
-        const x1 = 2 * Rng.floatFrom(source, T) - 1;
-        const x2 = 2 * Rng.floatFrom(source, T) - 1;
-        const x3 = 2 * Rng.floatFrom(source, T) - 1;
+        const x1 = signedUnitFloatFrom(source, T);
+        const x2 = signedUnitFloatFrom(source, T);
+        const x3 = signedUnitFloatFrom(source, T);
         if (x1 * x1 + x2 * x2 + x3 * x3 <= 1) return .{ x1, x2, x3 };
     }
+}
+
+inline fn signedUnitFloatFrom(source: anytype, comptime T: type) T {
+    return switch (T) {
+        f32 => blk: {
+            const repr = (@as(u32, 0x80) << 23) | @as(u32, @truncate(Rng.nextFrom(source) >> 41));
+            break :blk @as(f32, @bitCast(repr)) - 3.0;
+        },
+        f64 => blk: {
+            const repr = (@as(u64, 0x400) << 52) | (Rng.nextFrom(source) >> 12);
+            break :blk @as(f64, @bitCast(repr)) - 3.0;
+        },
+        else => @compileError("alea supports f32 and f64 unit geometry"),
+    };
 }
 
 pub fn UnitCircle(comptime T: type) type {

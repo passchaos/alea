@@ -19,7 +19,7 @@ project does not repeat unproductive work.
 | ChiSquared/StudentT reusable samplers | Local Rust evidence covered by `rand_distr` derived distributions | `alea chi-squared`: about 150M single-shot, about 172M cached; `alea student-t`: about 113M single-shot, about 123M cached | Closed for cached reusable sampler path; keep single-shot path simple |
 | InverseGaussian/NormalInverseGaussian reusable samplers | `rand_distr inverse-gaussian`: about 77M; `rand_distr normal-inverse-gaussian`: about 67M | `alea inverse-gaussian`: about 68M single-shot, about 74M cached; `alea normal-inverse-gaussian`: about 58M cached | Watch: direct reusable path helps, but NIG still trails Rust |
 | SkewNormal scalar profile | `rand_distr skew-normal`: about 263M samples/s | `alea skew-normal`: about 186M with `FastPrng`; about 229M with reusable `SkewNormal.sampleFrom(ScalarPrng)` | Watch: direct source path helps, but still trails Rust |
-| Unit geometry scalar profile | `rand_distr unit circle/sphere`: about 159M samples/s; unit ball about 56M | `alea unit circle/disc/sphere`: about 91-95M with `FastPrng`, about 113-120M with `ScalarPrng` direct; unit ball about 45M direct | Watch: direct scalar path helps, but geometry algorithms still trail Rust |
+| Unit geometry scalar profile | `rand_distr unit circle/sphere`: about 159M samples/s; unit ball about 56M | `alea unit circle/disc/sphere`: about 119-128M with `FastPrng`, about 150-162M with `ScalarPrng` direct; unit ball about 59M direct | Mostly closed for scalar-fast profile; `FastPrng` facade still trails Rust surface/sphere rows |
 | Alphanumeric strings | `rand alphanumeric`: about 840M chars/s | `alea alphanumeric`: about 949M chars/s | Closed for current local Rust evidence |
 
 ## Rejected Or Deferred Attempts
@@ -35,6 +35,8 @@ project does not repeat unproductive work.
 | Direct ziggurat exponential using engine `next()` instead of `std.Random.int` | About 383M samples/s, essentially same as previous stdlib-backed path | Adopted internally for consistency with normal; not enough to close the Rust performance gap. |
 | Route all non-`Rng` `normalFastFrom` / `exponentialFastFrom` calls through `source.random()` | `normal wyhash64 std.Random` is about 245M samples/s, while `normal wyhash64 direct` is about 427M samples/s | Rejected as a generic rule. Keep direct ziggurat fast path; use explicit benchmarked bulk helpers for ScalarPrng recommendations. |
 | Reusable/direct `SkewNormal(T).sampleFrom` | `alea skew-normal scalar direct`: about 229M samples/s, up from the `FastPrng` facade around 186M, but still below local Rust around 263M | Adopted as scalar-fast reusable sampler path; keep skew-normal on the watch list for algorithm-level work. |
+| Unit geometry signed-unit float generation | Replacing `2 * float - 1` with exponent-bit construction for internal `[-1, 1)` candidates raised `unit circle`/`unit disc`/`unit sphere` scalar direct from about 113-120M to about 150-162M samples/s and `unit ball` direct from about 44M to about 59M | Adopted. This matches Rust's efficient uniform-float range strategy without changing the public API. |
+| Public `inline` markers on unit-geometry helpers | Adding `inline` to the exported unit-geometry functions did not produce an independent benchmark win once signed-unit float generation was isolated | Rejected. Keep public function declarations normal and let the optimizer handle call boundaries. |
 | Default `fillNormal(f32)` via vector Box-Muller | About 125M samples/s, slower than scalar ziggurat bulk around 196M samples/s | Rejected as default. Keep explicit vector normal prototype for experimentation. |
 | Paired `fillVectorNormal(f32)` vector generation | `vectorbench` improved from about 74M to about 130M lanes/s | Adopted for vector-slice normal fills; still not a default scalar replacement. |
 | `fillVectorNormal(f64)` vector Box-Muller kernel | `vectorbench` reports about 93M lanes/s, slower than scalar bulk normal | Keep as experimental vector API coverage only; do not use as default scalar replacement. |
@@ -48,6 +50,6 @@ Continue performance triage on the remaining large gaps:
 
 - normal `f64` facade still trails local `rand_distr`,
 - scalar-heavy workloads should be benchmarked with `wyhash64` / scalar-fast profile,
-- skew-normal and unit-geometry scalar algorithms still trail local `rand_distr`,
+- skew-normal still trails local `rand_distr`,
 - SIMD/vector distribution kernels need stronger default-path wins before they
   can replace scalar ziggurat paths.
