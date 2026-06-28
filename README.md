@@ -86,5 +86,6 @@ exposes `random()` for standard-library consumers, and `Rng.random()` returns a
 `DefaultPrng` is `Xoshiro256`, `FastPrng` is `Alea4x64`, `HashPrng` is
 `Wyhash64`, `ReproduciblePrng` is `Pcg64`, and `SecurePrng` is `ChaCha12`.
 
-See `docs/core-guide.md` for the core API guide and
+See `docs/core-guide.md` for the core API guide, `docs/api-reference.md` for
+the public API reference, and
 `compare/results/core-rand-coverage.md` for the roadmap and validation matrix.

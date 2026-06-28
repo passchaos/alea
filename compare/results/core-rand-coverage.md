@@ -50,7 +50,7 @@ broader product goal permanently finished.
 | S2-M3 | Parameter-grid distribution validation | For each public distribution family, add deterministic mean/variance or support checks across multiple parameter regimes, not just one representative case. | Closed: `zig build distcheck` covers scalar, discrete, continuous, bounded-support, and vector distribution families across multiple parameter regimes |
 | S2-M4 | Benchmark parity matrix | Add Rust-side benchmark rows for comparable distribution and sequence workloads where `rand`/`rand_distr` exposes matching functionality, and keep Zig/Rust native CPU flags aligned. | Closed for local evidence: Rust default-`rand` rows cover random bool, alphanumeric, weighted index, range, bytes, and sequence indexes; `rand_distr` blocker is documented in `compare/results/rand-distr-benchmark-blocker.md` |
 | S2-M5 | Cross-platform reproducibility | Validate and document stable outputs on at least two architectures or OS targets, or document why the current environment cannot provide this evidence. | Closed for local environment: x86_64 Linux snapshot exists and second architecture/OS blocker is documented in `compare/results/cross-platform-repro-blocker.md` |
-| S2-M6 | API reference completeness | Add public API reference docs or generated documentation covering all exported modules and examples. | Not started |
+| S2-M6 | API reference completeness | Add public API reference docs or generated documentation covering all exported modules and examples. | Closed: `docs/api-reference.md` lists the public API surface and tooling |
 
 ## Current Rule
 
