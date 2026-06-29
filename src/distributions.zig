@@ -1859,6 +1859,16 @@ pub fn gumbelFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     return location - scale * @log(-@log(u));
 }
 
+pub fn fillGumbel(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) void {
+    fillGumbelFrom(rng, T, dest, location, scale);
+}
+
+pub fn fillGumbelFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+    for (dest) |*item| item.* = gumbelFrom(source, T, location, scale);
+}
+
 pub fn Gumbel(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1879,6 +1889,14 @@ pub fn Gumbel(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return gumbelFrom(source, T, self.location, self.scale);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3284,6 +3302,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var gumbels = rng.sampleIter(f64, try Gumbel(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(gumbels.next().?));
     try std.testing.expect(std.math.isFinite((try Gumbel(f64).init(0, 1)).sampleFrom(&direct_engine)));
+    var gumbel_buf: [8]f64 = undefined;
+    fillGumbel(rng, f64, &gumbel_buf, 0, 1);
+    for (gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    var direct_gumbel_buf: [8]f64 = undefined;
+    fillGumbelFrom(&direct_engine, f64, &direct_gumbel_buf, 0, 1);
+    for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    const gumbel_sampler = try Gumbel(f64).init(0, 1);
+    gumbel_sampler.fillFrom(&direct_engine, &direct_gumbel_buf);
+    for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
     var frechets = rng.sampleIter(f64, try Frechet(f64).init(0, 1, 2));
     try std.testing.expect(frechets.next().? >= 0);
