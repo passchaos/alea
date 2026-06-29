@@ -976,7 +976,7 @@ pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vector
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
-    if (info.child == f32 or info.child == f64) return vectorNormalFloatFrom(source, VectorType, mean, stddev);
+    if (info.child == f32 or info.child == f64) return vectorNormalScalarFrom(source, VectorType, mean, stddev);
     var out: VectorType = undefined;
     var std_random = randomFrom(source);
     inline for (0..info.len) |i| out[i] = mean + stddev * std_random.floatNorm(info.child);
@@ -991,10 +991,7 @@ pub fn vectorExponentialFrom(source: anytype, comptime VectorType: type, rate: v
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(rate > 0);
-    if (info.child == f32 or info.child == f64) {
-        const uniform = vectorFrom(source, VectorType);
-        return -@log(@as(VectorType, @splat(1)) - uniform) / @as(VectorType, @splat(rate));
-    }
+    if (info.child == f32 or info.child == f64) return vectorExponentialScalarFrom(source, VectorType, rate);
     var out: VectorType = undefined;
     var std_random = randomFrom(source);
     inline for (0..info.len) |i| out[i] = std_random.floatExp(info.child) / rate;
@@ -1442,61 +1439,36 @@ fn vectorOpenClosedF64From(source: anytype, comptime VectorType: type) VectorTyp
         @as(VectorType, @splat(1.0 / 9007199254740992.0));
 }
 
-fn vectorNormalFloatFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
-    const info = vectorInfo(VectorType);
-    if (info.child != f32 and info.child != f64) @compileError("vectorNormalFloatFrom expects a float vector");
-
-    const one: VectorType = @splat(1);
-    const tau: VectorType = @splat(@as(info.child, @floatCast(std.math.tau)));
-    const uniform_radius = one - vectorFrom(source, VectorType);
-    const uniform_angle = vectorFrom(source, VectorType);
-    const radius = @sqrt(@as(VectorType, @splat(-2)) * @log(uniform_radius));
-    const theta = tau * uniform_angle;
-    return @as(VectorType, @splat(mean)) + @as(VectorType, @splat(stddev)) * radius * @cos(theta);
-}
-
-fn fillVectorNormalFloatFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
-    const info = vectorInfo(VectorType);
-    if (info.child != f32 and info.child != f64) @compileError("fillVectorNormalFloatFrom expects a float vector");
-
-    const mean_vec: VectorType = @splat(mean);
-    const stddev_vec: VectorType = @splat(stddev);
-    const one: VectorType = @splat(1);
-    const tau: VectorType = @splat(@as(info.child, @floatCast(std.math.tau)));
-
-    var i: usize = 0;
-    while (i + 1 < dest.len) : (i += 2) {
-        const uniform_radius = one - vectorFrom(source, VectorType);
-        const uniform_angle = vectorFrom(source, VectorType);
-        const radius = @sqrt(@as(VectorType, @splat(-2)) * @log(uniform_radius));
-        const theta = tau * uniform_angle;
-        dest[i] = mean_vec + stddev_vec * radius * @cos(theta);
-        dest[i + 1] = mean_vec + stddev_vec * radius * @sin(theta);
-    }
-
-    if (i < dest.len) dest[i] = vectorNormalFloatFrom(source, VectorType, mean, stddev);
-}
-
 fn fillVectorNormalScalarFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
     const info = vectorInfo(VectorType);
     if (info.child != f32 and info.child != f64) @compileError("fillVectorNormalScalarFrom expects a float vector");
 
-    for (dest) |*item| {
-        var out: VectorType = undefined;
-        inline for (0..info.len) |lane| out[lane] = normalFastFrom(source, info.child, mean, stddev);
-        item.* = out;
-    }
+    for (dest) |*item| item.* = vectorNormalScalarFrom(source, VectorType, mean, stddev);
 }
 
 fn fillVectorExponentialScalarFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) void {
     const info = vectorInfo(VectorType);
     if (info.child != f32 and info.child != f64) @compileError("fillVectorExponentialScalarFrom expects a float vector");
 
-    for (dest) |*item| {
-        var out: VectorType = undefined;
-        inline for (0..info.len) |lane| out[lane] = exponentialFastFrom(source, info.child, rate);
-        item.* = out;
-    }
+    for (dest) |*item| item.* = vectorExponentialScalarFrom(source, VectorType, rate);
+}
+
+fn vectorNormalScalarFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32 and info.child != f64) @compileError("vectorNormalScalarFrom expects a float vector");
+
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = normalFastFrom(source, info.child, mean, stddev);
+    return out;
+}
+
+fn vectorExponentialScalarFrom(source: anytype, comptime VectorType: type, rate: vectorChild(VectorType)) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32 and info.child != f64) @compileError("vectorExponentialScalarFrom expects a float vector");
+
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = exponentialFastFrom(source, info.child, rate);
+    return out;
 }
 
 fn f32FromBits(bits: u24) f32 {
