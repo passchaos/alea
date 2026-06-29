@@ -556,6 +556,23 @@ pub fn build(b: *std.Build) void {
     const exponential_rate_probe_step = b.step("exponential-rate-probe", "Run exponential rate bulk microbenchmarks");
     exponential_rate_probe_step.dependOn(&run_exponential_rate_probe.step);
 
+    const normal_affine_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/normal_affine_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    normal_affine_probe_mod.addImport("alea", module);
+
+    const normal_affine_probe = b.addExecutable(.{
+        .name = "alea-normal-affine-probe",
+        .root_module = normal_affine_probe_mod,
+    });
+    const run_normal_affine_probe = b.addRunArtifact(normal_affine_probe);
+    if (b.args) |args| run_normal_affine_probe.addArgs(args);
+
+    const normal_affine_probe_step = b.step("normal-affine-probe", "Run normal affine bulk microbenchmarks");
+    normal_affine_probe_step.dependOn(&run_normal_affine_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

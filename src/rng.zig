@@ -412,7 +412,13 @@ pub fn fillNormal(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) vo
 pub fn fillNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
-    for (dest) |*item| item.* = normalFastFrom(source, T, mean, stddev);
+    if (mean == 0 and stddev == 1) {
+        for (dest) |*item| item.* = standardNormalFastFrom(source, T);
+        return;
+    }
+
+    for (dest) |*item| item.* = standardNormalFastFrom(source, T);
+    normalAffineInPlace(T, dest, mean, stddev);
 }
 
 pub fn fillNormalChecked(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
@@ -1508,6 +1514,31 @@ fn fillVectorExponentialScalarFrom(source: anytype, comptime VectorType: type, d
     if (info.child != f32 and info.child != f64) @compileError("fillVectorExponentialScalarFrom expects a float vector");
 
     for (dest) |*item| item.* = vectorExponentialScalarFrom(source, VectorType, rate);
+}
+
+fn normalAffineInPlace(comptime T: type, dest: []T, mean: T, stddev: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => normalAffineInPlaceVector(T, @Vector(8, f32), dest, mean, stddev),
+        f64 => normalAffineInPlaceVector(T, @Vector(4, f64), dest, mean, stddev),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn normalAffineInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T, mean: T, stddev: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const mean_vec: VectorType = @splat(mean);
+    const stddev_vec: VectorType = @splat(stddev);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var vec: VectorType = undefined;
+        inline for (0..len) |lane| vec[lane] = dest[i + lane];
+        vec = mean_vec + stddev_vec * vec;
+        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+    }
+
+    while (i < dest.len) : (i += 1) dest[i] = mean + stddev * dest[i];
 }
 
 fn vectorNormalScalarFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
