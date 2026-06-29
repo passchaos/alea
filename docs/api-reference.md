@@ -86,16 +86,20 @@ appropriate.
 Single-shot helpers:
 
 - `uniform`, `uniformFrom`, `uniformInclusive`, `uniformInclusiveFrom`
-- `bernoulli`, `binomial`, `binomialFrom`, `binomialPoissonApprox`
-- `negativeBinomial`, `negativeBinomialFrom`, `hypergeometric`,
-  `hypergeometricFrom`
+- `bernoulli`, `fillBernoulli`, `fillBernoulliFrom`, `binomial`,
+  `binomialFrom`, `fillBinomial`, `fillBinomialFrom`,
+  `binomialPoissonApprox`
+- `negativeBinomial`, `negativeBinomialFrom`, `fillNegativeBinomial`,
+  `fillNegativeBinomialFrom`, `hypergeometric`, `hypergeometricFrom`,
+  `fillHypergeometric`, `fillHypergeometricFrom`
 - `standardNormal`, `standardNormalFrom`, `fillStandardNormal`,
   `fillStandardNormalFrom`, `normal`, `logNormal`,
   `logNormalFrom`, `fillLogNormal`, `fillLogNormalFrom`, `halfNormal`,
   `halfNormalFrom`, `fillHalfNormal`, `fillHalfNormalFrom`, `chi`, `chiFrom`,
   `standardExponential`, `standardExponentialFrom`,
   `fillStandardExponential`, `fillStandardExponentialFrom`, `exponential`
-- `poisson`, `geometric`, `geometricFrom`
+- `poisson`, `fillPoisson`, `fillPoissonFrom`, `geometric`,
+  `geometricFrom`, `fillGeometric`, `fillGeometricFrom`
 - `gamma`, `gammaFrom`, `fillGamma`, `fillGammaFrom`, `chiSquared`,
   `chiSquaredFrom`, `fillChiSquared`, `fillChiSquaredFrom`, `chi`,
   `chiFrom`, `fillChi`, `fillChiFrom`, `erlang`, `erlangFrom`,
@@ -133,14 +137,22 @@ Reusable samplers:
 
 - `Bernoulli`
 - `Bernoulli.sampleFrom`
+- `Bernoulli.fill`
+- `Bernoulli.fillFrom`
 - `Binomial`
 - `Binomial.sampleFrom`
+- `Binomial.fill`
+- `Binomial.fillFrom`
 - `Multinomial`
 - `Multinomial.sampleIntoFrom`
 - `NegativeBinomial`
 - `NegativeBinomial.sampleFrom`
+- `NegativeBinomial.fill`
+- `NegativeBinomial.fillFrom`
 - `Hypergeometric`
 - `Hypergeometric.sampleFrom`
+- `Hypergeometric.fill`
+- `Hypergeometric.fillFrom`
 - `Uniform(T)`
 - `Uniform(T).sampleFrom`
 - `Open01`
@@ -169,8 +181,12 @@ Reusable samplers:
 - `HalfNormal(T).fillFrom`
 - `Poisson`
 - `Poisson.sampleFrom`
+- `Poisson.fill`
+- `Poisson.fillFrom`
 - `Geometric`
 - `Geometric.sampleFrom`
+- `Geometric.fill`
+- `Geometric.fillFrom`
 - `Gamma(T)`
 - `Gamma(T).sampleFrom`
 - `Gamma(T).fill`

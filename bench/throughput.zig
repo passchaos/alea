@@ -89,6 +89,7 @@ pub fn main(init: std.process.Init) !void {
     try benchSeqU32Direct(io, stdout, "alea sample indices u32 direct", 1_000_000, 10_000);
     try stdout.print("\ndistribution throughput\n", .{});
     try benchBernoulli(io, stdout, "alea bernoulli", bytes / 64);
+    try benchFillBernoulli(io, stdout, "alea fillBernoulli p=0.25", bytes / 8);
     try benchAliasTable(io, stdout, "alea alias table", bytes / 256);
     try benchAliasTableDirect(io, stdout, "alea alias table direct", bytes / 256);
     try benchWeightedChoice(io, stdout, "alea weighted choice", bytes / 256);
@@ -129,11 +130,19 @@ pub fn main(init: std.process.Init) !void {
     try benchPoisson(io, stdout, "alea poisson", bytes / 64);
     try benchPoissonWyhash(io, stdout, "alea poisson wyhash64 direct", bytes / 64);
     try benchPoissonCached(io, stdout, "alea poisson cached", bytes / 64);
+    try benchFillPoisson(io, stdout, "alea fillPoisson", bytes / 64);
+    try benchFillPoissonScalar(io, stdout, "alea fillPoisson scalar direct", bytes / 64);
     try benchBinomial(io, stdout, "alea binomial", bytes / 64);
+    try benchFillBinomial(io, stdout, "alea fillBinomial", bytes / 64);
+    try benchFillBinomialScalar(io, stdout, "alea fillBinomial scalar direct", bytes / 64);
     try benchBinomialLarge(io, stdout, "alea binomial large", bytes / 256);
     try benchBinomialApprox(io, stdout, "alea binomial poisson approx", bytes / 256);
     try benchNegativeBinomial(io, stdout, "alea negative-binomial", bytes / 128);
+    try benchFillNegativeBinomial(io, stdout, "alea fillNegativeBinomial", bytes / 128);
+    try benchFillNegativeBinomialScalar(io, stdout, "alea fillNegativeBinomial scalar direct", bytes / 128);
     try benchHypergeometric(io, stdout, "alea hypergeometric", bytes / 128);
+    try benchFillHypergeometric(io, stdout, "alea fillHypergeometric", bytes / 128);
+    try benchFillHypergeometricScalar(io, stdout, "alea fillHypergeometric scalar direct", bytes / 128);
     try benchMultinomial(io, stdout, "alea multinomial", bytes / 512);
     try benchMultinomialDirect(io, stdout, "alea multinomial direct", bytes / 512);
     try benchGamma(io, stdout, "alea gamma", bytes / 128);
@@ -2217,6 +2226,36 @@ fn benchBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]bool = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xbe44);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillBernoulli(rng, out[0..n], 0.25);
+            for (out[0..n]) |value| checksum += @intFromBool(value);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchAliasTable(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: usize = 0;
@@ -2888,6 +2927,65 @@ fn benchPoissonCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillPoisson(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xa159);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillPoisson(rng, out[0..n], 20);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillPoissonScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xa157);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillPoissonFrom(&engine, out[0..n], 20);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
@@ -2899,6 +2997,65 @@ fn benchBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
         var i: usize = 0;
         var checksum: u64 = 0;
         while (i < count) : (i += 1) checksum +%= alea.distributions.binomial(rng, 40, 0.25);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xb157);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillBinomial(rng, out[0..n], 40, 0.25);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillBinomialScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xb157);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillBinomialFrom(&engine, out[0..n], 40, 0.25);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
@@ -2985,6 +3142,65 @@ fn benchNegativeBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillNegativeBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5e6b);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillNegativeBinomial(rng, out[0..n], 5, 0.4);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillNegativeBinomialScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x5e6b);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillNegativeBinomialFrom(&engine, out[0..n], 5, 0.4);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchHypergeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
@@ -2997,6 +3213,65 @@ fn benchHypergeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
         var i: usize = 0;
         var checksum: u64 = 0;
         while (i < count) : (i += 1) checksum +%= dist.sample(rng);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillHypergeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x4965);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillHypergeometric(rng, out[0..n], 100, 30, 10);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillHypergeometricScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x4965);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillHypergeometricFrom(&engine, out[0..n], 100, 30, 10);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

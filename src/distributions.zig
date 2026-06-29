@@ -43,6 +43,15 @@ pub fn bernoulli(rng: Rng, p: f64) bool {
     return dist.sample(rng);
 }
 
+pub fn fillBernoulli(rng: Rng, dest: []bool, p: f64) void {
+    fillBernoulliFrom(rng, dest, p);
+}
+
+pub fn fillBernoulliFrom(source: anytype, dest: []bool, p: f64) void {
+    const dist = Bernoulli.init(p) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
 pub const Bernoulli = struct {
     const always_true = std.math.maxInt(u64);
     const scale = 0x1.0p64;
@@ -75,6 +84,30 @@ pub const Bernoulli = struct {
         if (self.p_int == always_true) return true;
         return Rng.nextFrom(source) < self.p_int;
     }
+
+    pub fn fill(self: Bernoulli, rng: Rng, dest: []bool) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Bernoulli, source: anytype, dest: []bool) void {
+        if (self.p_int == 0) {
+            @memset(dest, false);
+            return;
+        }
+        if (self.p_int == always_true) {
+            @memset(dest, true);
+            return;
+        }
+        if (self.p_int == Rng.probabilityThreshold(0.5)) {
+            Rng.fillChanceFrom(source, dest, 0.5);
+            return;
+        }
+        if (self.p_int == Rng.probabilityThreshold(0.25)) {
+            Rng.fillChanceFrom(source, dest, 0.25);
+            return;
+        }
+        for (dest) |*item| item.* = Rng.nextFrom(source) < self.p_int;
+    }
 };
 
 pub const Binomial = struct {
@@ -93,10 +126,27 @@ pub const Binomial = struct {
     pub fn sampleFrom(self: Binomial, source: anytype) u64 {
         return binomialFrom(source, self.trials, self.p);
     }
+
+    pub fn fill(self: Binomial, rng: Rng, dest: []u64) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Binomial, source: anytype, dest: []u64) void {
+        for (dest) |*item| item.* = self.sampleFrom(source);
+    }
 };
 
 pub fn binomial(rng: Rng, trials: u64, p: f64) u64 {
     return binomialFrom(rng, trials, p);
+}
+
+pub fn fillBinomial(rng: Rng, dest: []u64, trials: u64, p: f64) void {
+    fillBinomialFrom(rng, dest, trials, p);
+}
+
+pub fn fillBinomialFrom(source: anytype, dest: []u64, trials: u64, p: f64) void {
+    const dist = Binomial.init(trials, p) catch unreachable;
+    dist.fillFrom(source, dest);
 }
 
 pub fn binomialFrom(source: anytype, trials: u64, p: f64) u64 {
@@ -188,10 +238,27 @@ pub const NegativeBinomial = struct {
     pub fn sampleFrom(self: NegativeBinomial, source: anytype) u64 {
         return negativeBinomialFrom(source, self.successes, self.p);
     }
+
+    pub fn fill(self: NegativeBinomial, rng: Rng, dest: []u64) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: NegativeBinomial, source: anytype, dest: []u64) void {
+        for (dest) |*item| item.* = self.sampleFrom(source);
+    }
 };
 
 pub fn negativeBinomial(rng: Rng, successes: u64, p: f64) u64 {
     return negativeBinomialFrom(rng, successes, p);
+}
+
+pub fn fillNegativeBinomial(rng: Rng, dest: []u64, successes: u64, p: f64) void {
+    fillNegativeBinomialFrom(rng, dest, successes, p);
+}
+
+pub fn fillNegativeBinomialFrom(source: anytype, dest: []u64, successes: u64, p: f64) void {
+    const dist = NegativeBinomial.init(successes, p) catch unreachable;
+    dist.fillFrom(source, dest);
 }
 
 pub fn negativeBinomialFrom(source: anytype, successes: u64, p: f64) u64 {
@@ -223,10 +290,27 @@ pub const Hypergeometric = struct {
     pub fn sampleFrom(self: Hypergeometric, source: anytype) u64 {
         return hypergeometricFrom(source, self.population, self.successes, self.draws);
     }
+
+    pub fn fill(self: Hypergeometric, rng: Rng, dest: []u64) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Hypergeometric, source: anytype, dest: []u64) void {
+        for (dest) |*item| item.* = self.sampleFrom(source);
+    }
 };
 
 pub fn hypergeometric(rng: Rng, population: u64, successes: u64, draws: u64) u64 {
     return hypergeometricFrom(rng, population, successes, draws);
+}
+
+pub fn fillHypergeometric(rng: Rng, dest: []u64, population: u64, successes: u64, draws: u64) void {
+    fillHypergeometricFrom(rng, dest, population, successes, draws);
+}
+
+pub fn fillHypergeometricFrom(source: anytype, dest: []u64, population: u64, successes: u64, draws: u64) void {
+    const dist = Hypergeometric.init(population, successes, draws) catch unreachable;
+    dist.fillFrom(source, dest);
 }
 
 pub fn hypergeometricFrom(source: anytype, population: u64, successes: u64, draws: u64) u64 {
@@ -680,6 +764,15 @@ pub fn poisson(rng: Rng, lambda: f64) u64 {
     return poissonAhrensDieter(rng, lambda);
 }
 
+pub fn fillPoisson(rng: Rng, dest: []u64, lambda: f64) void {
+    fillPoissonFrom(rng, dest, lambda);
+}
+
+pub fn fillPoissonFrom(source: anytype, dest: []u64, lambda: f64) void {
+    const dist = Poisson.init(lambda) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
 pub const Poisson = struct {
     method: PoissonMethod,
 
@@ -700,6 +793,14 @@ pub const Poisson = struct {
             .product => |threshold| poissonProductFrom(source, threshold),
             .ahrens_dieter => |method| method.sampleFrom(source),
         };
+    }
+
+    pub fn fill(self: Poisson, rng: Rng, dest: []u64) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Poisson, source: anytype, dest: []u64) void {
+        for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
 
@@ -899,6 +1000,15 @@ pub fn geometricFrom(source: anytype, p: f64) u64 {
     return failures + 1;
 }
 
+pub fn fillGeometric(rng: Rng, dest: []u64, p: f64) void {
+    fillGeometricFrom(rng, dest, p);
+}
+
+pub fn fillGeometricFrom(source: anytype, dest: []u64, p: f64) void {
+    const dist = Geometric.init(p) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
 pub const Geometric = struct {
     p: f64,
 
@@ -913,6 +1023,14 @@ pub const Geometric = struct {
 
     pub fn sampleFrom(self: Geometric, source: anytype) u64 {
         return geometricFrom(source, self.p);
+    }
+
+    pub fn fill(self: Geometric, rng: Rng, dest: []u64) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Geometric, source: anytype, dest: []u64) void {
+        for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
 
@@ -3151,7 +3269,20 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect((try Bernoulli.init(1.0 - std.math.floatEps(f64) / 2.0)).sample(rng));
     var direct_bernoulli_engine = alea.ScalarPrng.init(64);
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sampleFrom(&direct_bernoulli_engine));
+    var bernoulli_buf: [8]bool = undefined;
+    fillBernoulli(rng, &bernoulli_buf, 1);
+    for (bernoulli_buf) |value| try std.testing.expect(value);
+    fillBernoulliFrom(&direct_bernoulli_engine, &bernoulli_buf, 0);
+    for (bernoulli_buf) |value| try std.testing.expect(!value);
+    const bernoulli_sampler = try Bernoulli.init(0.5);
+    bernoulli_sampler.fillFrom(&direct_bernoulli_engine, &bernoulli_buf);
     try std.testing.expect((try Binomial.init(10, 1)).sample(rng) == 10);
+    var binomial_buf: [8]u64 = undefined;
+    fillBinomial(rng, &binomial_buf, 10, 1);
+    for (binomial_buf) |value| try std.testing.expectEqual(@as(u64, 10), value);
+    const binomial_sampler = try Binomial.init(10, 0.5);
+    binomial_sampler.fillFrom(&direct_bernoulli_engine, &binomial_buf);
+    for (binomial_buf) |value| try std.testing.expect(value <= 10);
     try std.testing.expect(exponential(rng, f64, 2) >= 0);
     try std.testing.expect(poisson(rng, 4) < 32);
     try std.testing.expect(beta(rng, f64, 2, 5) >= 0);
@@ -3354,10 +3485,28 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var poissons = rng.sampleIter(u64, try Poisson.init(12));
     try std.testing.expect(poissons.next().? < 64);
+    var poisson_buf: [8]u64 = undefined;
+    fillPoisson(rng, &poisson_buf, 12);
+    for (poisson_buf) |value| try std.testing.expect(value < 64);
+    var direct_poisson_buf: [8]u64 = undefined;
+    fillPoissonFrom(&direct_engine, &direct_poisson_buf, 12);
+    for (direct_poisson_buf) |value| try std.testing.expect(value < 64);
+    const poisson_sampler = try Poisson.init(12);
+    poisson_sampler.fillFrom(&direct_engine, &direct_poisson_buf);
+    for (direct_poisson_buf) |value| try std.testing.expect(value < 64);
 
     var geometrics = rng.sampleIter(u64, try Geometric.init(0.25));
     try std.testing.expect(geometrics.next().? >= 1);
     try std.testing.expect((try Geometric.init(0.25)).sampleFrom(&direct_engine) >= 1);
+    var geometric_buf: [8]u64 = undefined;
+    fillGeometric(rng, &geometric_buf, 0.25);
+    for (geometric_buf) |value| try std.testing.expect(value >= 1);
+    var direct_geometric_buf: [8]u64 = undefined;
+    fillGeometricFrom(&direct_engine, &direct_geometric_buf, 0.25);
+    for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
+    const geometric_sampler = try Geometric.init(0.25);
+    geometric_sampler.fillFrom(&direct_engine, &direct_geometric_buf);
+    for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
 
     var gammas = rng.sampleIter(f64, try Gamma(f64).init(2, 3));
     try std.testing.expect(gammas.next().? > 0);
@@ -3758,6 +3907,11 @@ test "binomial sampler has plausible moments" {
     try std.testing.expect(iter.next().? <= 8);
     var direct_engine = alea.ScalarPrng.init(68);
     try std.testing.expect((try Binomial.init(8, 0.5)).sampleFrom(&direct_engine) <= 8);
+    var binomial_buf: [8]u64 = undefined;
+    fillBinomial(rng, &binomial_buf, 8, 0.5);
+    for (binomial_buf) |value| try std.testing.expect(value <= 8);
+    fillBinomialFrom(&direct_engine, &binomial_buf, 8, 0.5);
+    for (binomial_buf) |value| try std.testing.expect(value <= 8);
     try std.testing.expect(binomialPoissonApprox(rng, 10_000, 0.01) < 200);
     try std.testing.expectError(error.InvalidProbability, Binomial.init(1, 1.1));
 }
@@ -3816,6 +3970,20 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     var direct_engine = alea.ScalarPrng.init(72);
     try std.testing.expect(nb.sampleFrom(&direct_engine) >= 0);
     try std.testing.expect(hg.sampleFrom(&direct_engine) <= 10);
+    var nb_buf: [8]u64 = undefined;
+    fillNegativeBinomial(rng, &nb_buf, 5, 0.4);
+    for (nb_buf) |value| try std.testing.expect(value < 64);
+    fillNegativeBinomialFrom(&direct_engine, &nb_buf, 5, 0.4);
+    for (nb_buf) |value| try std.testing.expect(value < 64);
+    nb.fillFrom(&direct_engine, &nb_buf);
+    for (nb_buf) |value| try std.testing.expect(value < 64);
+    var hg_buf: [8]u64 = undefined;
+    fillHypergeometric(rng, &hg_buf, 100, 30, 10);
+    for (hg_buf) |value| try std.testing.expect(value <= 10);
+    fillHypergeometricFrom(&direct_engine, &hg_buf, 100, 30, 10);
+    for (hg_buf) |value| try std.testing.expect(value <= 10);
+    hg.fillFrom(&direct_engine, &hg_buf);
+    for (hg_buf) |value| try std.testing.expect(value <= 10);
 
     try std.testing.expectError(error.InvalidParameter, NegativeBinomial.init(0, 0.5));
     try std.testing.expectError(error.InvalidProbability, NegativeBinomial.init(1, 0));
