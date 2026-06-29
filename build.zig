@@ -624,6 +624,23 @@ pub fn build(b: *std.Build) void {
     const student_t_probe_step = b.step("student-t-probe", "Run StudentT special-case microbenchmarks");
     student_t_probe_step.dependOn(&run_student_t_probe.step);
 
+    const fisher_f_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/fisher_f_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    fisher_f_probe_mod.addImport("alea", module);
+
+    const fisher_f_probe = b.addExecutable(.{
+        .name = "alea-fisher-f-probe",
+        .root_module = fisher_f_probe_mod,
+    });
+    const run_fisher_f_probe = b.addRunArtifact(fisher_f_probe);
+    if (b.args) |args| run_fisher_f_probe.addArgs(args);
+
+    const fisher_f_probe_step = b.step("fisher-f-probe", "Run Fisher-F special-case microbenchmarks");
+    fisher_f_probe_step.dependOn(&run_fisher_f_probe.step);
+
     const beta_special_probe_mod = b.createModule(.{
         .root_source_file = b.path("tools/beta_special_probe.zig"),
         .target = target,
