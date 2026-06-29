@@ -944,6 +944,15 @@ pub fn gammaFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
     }
 }
 
+pub fn fillGamma(rng: Rng, comptime T: type, dest: []T, shape: T, scale: T) void {
+    fillGammaFrom(rng, T, dest, shape, scale);
+}
+
+pub fn fillGammaFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) void {
+    const sampler = Gamma(T).init(shape, scale) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Gamma(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -975,6 +984,14 @@ pub fn Gamma(comptime T: type) type {
             }
 
             return self.scale * self.sampleMarsaglia(source, self.d, self.c);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
 
         fn sampleMarsaglia(_: Self, source: anytype, d: T, c: T) T {
@@ -3242,6 +3259,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var gammas = rng.sampleIter(f64, try Gamma(f64).init(2, 3));
     try std.testing.expect(gammas.next().? > 0);
+    var gamma_buf: [8]f64 = undefined;
+    fillGamma(rng, f64, &gamma_buf, 2, 3);
+    for (gamma_buf) |value| try std.testing.expect(value > 0);
+    var direct_gamma_buf: [8]f64 = undefined;
+    fillGammaFrom(&direct_engine, f64, &direct_gamma_buf, 2, 3);
+    for (direct_gamma_buf) |value| try std.testing.expect(value > 0);
+    const gamma_sampler = try Gamma(f64).init(2, 3);
+    gamma_sampler.fillFrom(&direct_engine, &direct_gamma_buf);
+    for (direct_gamma_buf) |value| try std.testing.expect(value > 0);
 
     var chi_squared = rng.sampleIter(f64, try ChiSquared(f64).init(4));
     try std.testing.expect(chi_squared.next().? > 0);
