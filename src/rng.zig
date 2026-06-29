@@ -122,38 +122,46 @@ pub fn bytes(self: Rng, buf: []u8) void {
 }
 
 pub fn fill(self: Rng, comptime T: type, dest: []T) void {
+    fillFrom(self, T, dest);
+}
+
+pub fn fillFrom(source: anytype, comptime T: type, dest: []T) void {
     switch (@typeInfo(T)) {
         .int => {
             if (T == u8) {
-                self.bytes(dest);
+                fillBytesFrom(source, dest);
                 return;
             }
-            self.fillInts(T, dest);
+            fillIntsFrom(source, T, dest);
         },
         .float => {
-            self.fillFloats(T, dest);
+            fillFloatsFrom(source, T, dest);
         },
         .bool => {
-            self.fillBools(dest);
+            fillBoolsFrom(source, dest);
         },
         .vector => {
-            fillVectorFrom(self, T, dest);
+            fillVectorFrom(source, T, dest);
         },
-        else => @compileError("alea.Rng.fill supports integer, float, bool, and vector slices"),
+        else => @compileError("alea.Rng.fillFrom supports integer, float, bool, and vector slices"),
     }
 }
 
 pub fn fillRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
+    fillRangeFrom(self, T, dest, min, max);
+}
+
+pub fn fillRangeFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
     switch (@typeInfo(T)) {
         .int => {
             std.debug.assert(min < max);
-            for (dest) |*item| item.* = self.intRangeLessThan(T, min, max);
+            for (dest) |*item| item.* = intRangeLessThanFrom(source, T, min, max);
         },
         .float => {
             std.debug.assert(min <= max);
-            self.fillFloatRange(T, dest, min, max);
+            fillFloatRangeFrom(source, T, dest, min, max);
         },
-        else => @compileError("alea.Rng.fillRange supports integer and floating-point slices"),
+        else => @compileError("alea.Rng.fillRangeFrom supports integer and floating-point slices"),
     }
 }
 
@@ -422,6 +430,14 @@ fn fillBools(self: Rng, dest: []bool) void {
     fillBoolsFrom(self, dest);
 }
 
+fn fillBytesFrom(source: anytype, buf: []u8) void {
+    if (@TypeOf(source) == Rng) {
+        source.bytes(buf);
+    } else {
+        source.fill(buf);
+    }
+}
+
 fn fillBoolsFrom(source: anytype, dest: []bool) void {
     var i: usize = 0;
     while (i < dest.len) {
@@ -469,6 +485,10 @@ fn fillRatioPowerOfTwoFrom(source: anytype, dest: []bool, numerator: u32, denomi
 }
 
 fn fillInts(self: Rng, comptime T: type, dest: []T) void {
+    fillIntsFrom(self, T, dest);
+}
+
+fn fillIntsFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireInt(T);
     const info = @typeInfo(T).int;
     if (info.bits == 0) {
@@ -476,7 +496,7 @@ fn fillInts(self: Rng, comptime T: type, dest: []T) void {
         return;
     }
     if (info.bits > 64) {
-        for (dest) |*item| item.* = self.uint(T);
+        for (dest) |*item| item.* = uintFrom(source, T);
         return;
     }
 
@@ -486,7 +506,7 @@ fn fillInts(self: Rng, comptime T: type, dest: []T) void {
 
     var i: usize = 0;
     while (i < dest.len) {
-        var bits = self.next();
+        var bits = nextFrom(source);
         var lane: usize = 0;
         while (lane < lanes_per_word and i < dest.len) : (lane += 1) {
             const raw: Unsigned = @intCast(bits & mask);
@@ -498,11 +518,15 @@ fn fillInts(self: Rng, comptime T: type, dest: []T) void {
 }
 
 fn fillFloats(self: Rng, comptime T: type, dest: []T) void {
+    fillFloatsFrom(self, T, dest);
+}
+
+fn fillFloatsFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireFloat(T);
     switch (T) {
-        f32 => fillF32From(self, dest),
+        f32 => fillF32From(source, dest),
         f64 => {
-            fillF64From(self, dest);
+            fillF64From(source, dest);
         },
         else => @compileError("alea supports f32 and f64 floats"),
     }
@@ -605,10 +629,14 @@ fn fillOpenClosedF64From(source: anytype, dest: []f64) void {
 }
 
 fn fillFloatRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
+    fillFloatRangeFrom(self, T, dest, min, max);
+}
+
+fn fillFloatRangeFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
     comptime requireFloat(T);
     switch (T) {
-        f32 => fillRangeF32From(self, dest, min, max),
-        f64 => fillRangeF64From(self, dest, min, max),
+        f32 => fillRangeF32From(source, dest, min, max),
+        f64 => fillRangeF64From(source, dest, min, max),
         else => @compileError("alea supports f32 and f64 floats"),
     }
 }
@@ -1579,6 +1607,12 @@ test "rng facade covers scalar APIs" {
     for (u32_buf) |item| any_u32_non_zero = any_u32_non_zero or item != 0;
     try std.testing.expect(any_u32_non_zero);
 
+    var direct_u32_buf: [16]u32 = undefined;
+    Rng.fillFrom(&engine, u32, &direct_u32_buf);
+    var any_direct_u32_non_zero = false;
+    for (direct_u32_buf) |item| any_direct_u32_non_zero = any_direct_u32_non_zero or item != 0;
+    try std.testing.expect(any_direct_u32_non_zero);
+
     var bool_buf: [128]bool = undefined;
     rng.fill(bool, &bool_buf);
     var saw_true = false;
@@ -1631,6 +1665,10 @@ test "rng facade covers scalar APIs" {
     rng.fill(f64, &f64_buf);
     for (f64_buf) |item| try std.testing.expect(item >= 0 and item < 1);
 
+    var direct_f64_buf: [17]f64 = undefined;
+    Rng.fillFrom(&engine, f64, &direct_f64_buf);
+    for (direct_f64_buf) |item| try std.testing.expect(item >= 0 and item < 1);
+
     var open_f64_buf: [17]f64 = undefined;
     rng.fillOpen(f64, &open_f64_buf);
     for (open_f64_buf) |item| try std.testing.expect(item > 0 and item < 1);
@@ -1642,6 +1680,10 @@ test "rng facade covers scalar APIs" {
     var ranged_f64_buf: [17]f64 = undefined;
     rng.fillRange(f64, &ranged_f64_buf, -1, 1);
     for (ranged_f64_buf) |item| try std.testing.expect(item >= -1 and item < 1);
+
+    var direct_ranged_f64_buf: [17]f64 = undefined;
+    Rng.fillRangeFrom(&engine, f64, &direct_ranged_f64_buf, -1, 1);
+    for (direct_ranged_f64_buf) |item| try std.testing.expect(item >= -1 and item < 1);
 
     var normal_buf: [16]f64 = undefined;
     try rng.fillNormalChecked(f64, &normal_buf, 0, 1);

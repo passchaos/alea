@@ -19,8 +19,9 @@ expectations.
 
 - Construction and interop: `init`, `fromRandom`, `random`
 - Values: `value`, `valueIter`, `randomIter`, `sampleIter`
-- Bytes/fill: `bytes`, `fill` for scalar and vector slices, `fillSample`,
-  `fillSampleFrom`, `fillRange`, `fillRangeChecked`, `fillOpen`,
+- Bytes/fill: `bytes`, `fill` and `fillFrom` for scalar and vector slices,
+  `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`,
+  `fillRangeChecked`, `fillOpen`,
   `fillOpenFrom`, `fillOpenClosed`, `fillOpenClosedFrom`, `fillChance`,
   `fillChanceChecked`, `fillRatio`, `fillRatioChecked`, `fillNormal`, `fillNormalChecked`,
   `fillExponential`, `fillExponentialChecked`, `fillVectorRange`,
