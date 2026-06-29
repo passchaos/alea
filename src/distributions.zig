@@ -995,9 +995,26 @@ pub fn geometric(rng: Rng, p: f64) u64 {
 
 pub fn geometricFrom(source: anytype, p: f64) u64 {
     std.debug.assert(p > 0 and p <= 1);
-    if (p == 1) return 1;
-    const failures: u64 = @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(source, f64)) / @log(1 - p)));
-    return failures + 1;
+    return geometricFailuresFrom(source, p) + 1;
+}
+
+pub fn geometricFailures(rng: Rng, p: f64) u64 {
+    return geometricFailuresFrom(rng, p);
+}
+
+pub fn geometricFailuresFrom(source: anytype, p: f64) u64 {
+    std.debug.assert(p > 0 and p <= 1);
+    if (p == 1) return 0;
+    return @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(source, f64)) / @log(1 - p)));
+}
+
+pub fn fillGeometricFailures(rng: Rng, dest: []u64, p: f64) void {
+    fillGeometricFailuresFrom(rng, dest, p);
+}
+
+pub fn fillGeometricFailuresFrom(source: anytype, dest: []u64, p: f64) void {
+    const dist = GeometricFailures.init(p) catch unreachable;
+    dist.fillFrom(source, dest);
 }
 
 pub fn fillGeometric(rng: Rng, dest: []u64, p: f64) void {
@@ -1030,6 +1047,31 @@ pub const Geometric = struct {
     }
 
     pub fn fillFrom(self: Geometric, source: anytype, dest: []u64) void {
+        for (dest) |*item| item.* = self.sampleFrom(source);
+    }
+};
+
+pub const GeometricFailures = struct {
+    p: f64,
+
+    pub fn init(p: f64) Error!GeometricFailures {
+        if (!(p > 0 and p <= 1)) return error.InvalidProbability;
+        return .{ .p = p };
+    }
+
+    pub fn sample(self: GeometricFailures, rng: Rng) u64 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: GeometricFailures, source: anytype) u64 {
+        return geometricFailuresFrom(source, self.p);
+    }
+
+    pub fn fill(self: GeometricFailures, rng: Rng, dest: []u64) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: GeometricFailures, source: anytype, dest: []u64) void {
         for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
@@ -3507,6 +3549,16 @@ test "non-uniform samplers can be reused with sample iterators" {
     const geometric_sampler = try Geometric.init(0.25);
     geometric_sampler.fillFrom(&direct_engine, &direct_geometric_buf);
     for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
+    var geometric_failures = rng.sampleIter(u64, try GeometricFailures.init(0.25));
+    _ = geometric_failures.next().?;
+    var geometric_failures_buf: [8]u64 = undefined;
+    fillGeometricFailures(rng, &geometric_failures_buf, 0.25);
+    fillGeometricFailuresFrom(&direct_engine, &geometric_failures_buf, 0.25);
+    const geometric_failures_sampler = try GeometricFailures.init(0.25);
+    geometric_failures_sampler.fillFrom(&direct_engine, &geometric_failures_buf);
+    try std.testing.expectEqual(@as(u64, 0), geometricFailures(rng, 1));
+    const always_success_failures = GeometricFailures.init(1) catch unreachable;
+    try std.testing.expectEqual(@as(u64, 0), always_success_failures.sample(rng));
 
     var gammas = rng.sampleIter(f64, try Gamma(f64).init(2, 3));
     try std.testing.expect(gammas.next().? > 0);
