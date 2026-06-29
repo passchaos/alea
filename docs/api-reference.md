@@ -76,12 +76,13 @@ appropriate.
 Single-shot helpers:
 
 - `uniform`, `uniformInclusive`
-- `bernoulli`, `binomial`, `binomialPoissonApprox`
-- `negativeBinomial`, `hypergeometric`
+- `bernoulli`, `binomial`, `binomialFrom`, `binomialPoissonApprox`
+- `negativeBinomial`, `negativeBinomialFrom`, `hypergeometric`,
+  `hypergeometricFrom`
 - `standardNormal`, `standardNormalFrom`, `normal`, `logNormal`,
   `logNormalFrom`, `halfNormal`, `halfNormalFrom`, `chi`, `chiFrom`,
   `standardExponential`, `standardExponentialFrom`, `exponential`
-- `poisson`, `geometric`
+- `poisson`, `geometric`, `geometricFrom`
 - `gamma`, `gammaFrom`, `chiSquared`, `chiSquaredFrom`, `erlang`,
   `erlangFrom`, `beta`, `fisherF`, `studentT`
 - `triangular`, `arcsine`, `arcsineFrom`, `cauchy`, `laplace`, `laplaceFrom`, `logistic`,
@@ -96,10 +97,14 @@ Single-shot helpers:
 Reusable samplers:
 
 - `Bernoulli`
+- `Bernoulli.sampleFrom`
 - `Binomial`
+- `Binomial.sampleFrom`
 - `Multinomial`
 - `NegativeBinomial`
+- `NegativeBinomial.sampleFrom`
 - `Hypergeometric`
+- `Hypergeometric.sampleFrom`
 - `Uniform(T)`
 - `Open01`
 - `OpenClosed01`
@@ -118,6 +123,7 @@ Reusable samplers:
 - `Poisson`
 - `Poisson.sampleFrom`
 - `Geometric`
+- `Geometric.sampleFrom`
 - `Gamma(T)`
 - `Gamma(T).sampleFrom`
 - `ChiSquared(T)`

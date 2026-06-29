@@ -57,8 +57,12 @@ pub const Bernoulli = struct {
     }
 
     pub fn sample(self: Bernoulli, rng: Rng) bool {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Bernoulli, source: anytype) bool {
         if (self.p_int == always_true) return true;
-        return rng.next() < self.p_int;
+        return Rng.nextFrom(source) < self.p_int;
     }
 };
 
@@ -72,18 +76,26 @@ pub const Binomial = struct {
     }
 
     pub fn sample(self: Binomial, rng: Rng) u64 {
-        return binomial(rng, self.trials, self.p);
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Binomial, source: anytype) u64 {
+        return binomialFrom(source, self.trials, self.p);
     }
 };
 
 pub fn binomial(rng: Rng, trials: u64, p: f64) u64 {
+    return binomialFrom(rng, trials, p);
+}
+
+pub fn binomialFrom(source: anytype, trials: u64, p: f64) u64 {
     std.debug.assert(p >= 0 and p <= 1);
     if (trials == 0 or p == 0) return 0;
     if (p == 1) return trials;
-    if (p == 0.5) return binomialFair(rng, trials);
+    if (p == 0.5) return binomialFairFrom(source, trials);
 
     const q = if (p <= 0.5) p else 1.0 - p;
-    const sampled = binomialSmallP(rng, trials, q);
+    const sampled = binomialSmallPFrom(source, trials, q);
     return if (p <= 0.5) sampled else trials - sampled;
 }
 
@@ -155,18 +167,26 @@ pub const NegativeBinomial = struct {
     }
 
     pub fn sample(self: NegativeBinomial, rng: Rng) u64 {
-        return negativeBinomial(rng, self.successes, self.p);
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: NegativeBinomial, source: anytype) u64 {
+        return negativeBinomialFrom(source, self.successes, self.p);
     }
 };
 
 pub fn negativeBinomial(rng: Rng, successes: u64, p: f64) u64 {
+    return negativeBinomialFrom(rng, successes, p);
+}
+
+pub fn negativeBinomialFrom(source: anytype, successes: u64, p: f64) u64 {
     std.debug.assert(successes > 0 and p > 0 and p <= 1);
     if (p == 1) return 0;
 
     var failures: u64 = 0;
     var i: u64 = 0;
     while (i < successes) : (i += 1) {
-        failures += geometric(rng, p) - 1;
+        failures += geometricFrom(source, p) - 1;
     }
     return failures;
 }
@@ -182,11 +202,19 @@ pub const Hypergeometric = struct {
     }
 
     pub fn sample(self: Hypergeometric, rng: Rng) u64 {
-        return hypergeometric(rng, self.population, self.successes, self.draws);
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Hypergeometric, source: anytype) u64 {
+        return hypergeometricFrom(source, self.population, self.successes, self.draws);
     }
 };
 
 pub fn hypergeometric(rng: Rng, population: u64, successes: u64, draws: u64) u64 {
+    return hypergeometricFrom(rng, population, successes, draws);
+}
+
+pub fn hypergeometricFrom(source: anytype, population: u64, successes: u64, draws: u64) u64 {
     std.debug.assert(successes <= population and draws <= population);
     if (population == 0 or successes == 0 or draws == 0) return 0;
     if (successes == population) return draws;
@@ -197,7 +225,7 @@ pub fn hypergeometric(rng: Rng, population: u64, successes: u64, draws: u64) u64
     var i: u64 = 0;
     while (i < draws) : (i += 1) {
         const p = @as(f64, @floatFromInt(remaining_successes)) / @as(f64, @floatFromInt(remaining_population));
-        if (rng.chance(p)) {
+        if (Rng.floatFrom(source, f64) < p) {
             hits += 1;
             remaining_successes -= 1;
             if (remaining_successes == 0) break;
@@ -208,41 +236,54 @@ pub fn hypergeometric(rng: Rng, population: u64, successes: u64, draws: u64) u64
 }
 
 fn binomialFair(rng: Rng, trials: u64) u64 {
+    return binomialFairFrom(rng, trials);
+}
+
+fn binomialFairFrom(source: anytype, trials: u64) u64 {
     var remaining = trials;
     var successes: u64 = 0;
     while (remaining >= 64) : (remaining -= 64) {
-        successes += @popCount(rng.next());
+        successes += @popCount(Rng.nextFrom(source));
     }
     if (remaining > 0) {
         const mask = (@as(u64, 1) << @intCast(remaining)) - 1;
-        successes += @popCount(rng.next() & mask);
+        successes += @popCount(Rng.nextFrom(source) & mask);
     }
     return successes;
 }
 
 fn binomialSmallP(rng: Rng, trials: u64, p: f64) u64 {
+    return binomialSmallPFrom(rng, trials, p);
+}
+
+fn binomialSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     if (p == 0) return 0;
     if (trials <= 64) {
+        const threshold = Rng.probabilityThreshold(p);
         var successes: u64 = 0;
         var i: u64 = 0;
         while (i < trials) : (i += 1) {
-            successes += @intFromBool(rng.chance(p));
+            successes += @intFromBool(Rng.nextFrom(source) < threshold);
         }
         return successes;
     }
 
     const mean = @as(f64, @floatFromInt(trials)) * p;
-    if (mean >= 8) return binomialRejectionSmallP(rng, trials, p);
+    if (mean >= 8) return binomialRejectionSmallPFrom(source, trials, p);
 
-    return binomialWaiting(rng, trials, -@log(1.0 - p));
+    return binomialWaitingFrom(source, trials, -@log(1.0 - p));
 }
 
 fn binomialWaiting(rng: Rng, trials: u64, q: f64) u64 {
+    return binomialWaitingFrom(rng, trials, q);
+}
+
+fn binomialWaitingFrom(source: anytype, trials: u64, q: f64) u64 {
     var successes: u64 = 0;
     var sum: f64 = 0;
     while (true) {
         if (successes == trials) return successes;
-        const e = -@log(1.0 - rng.float(f64));
+        const e = -@log(1.0 - Rng.floatFrom(source, f64));
         sum += e / @as(f64, @floatFromInt(trials - successes));
         successes += 1;
         if (sum > q) return successes - 1;
@@ -250,6 +291,10 @@ fn binomialWaiting(rng: Rng, trials: u64, q: f64) u64 {
 }
 
 fn binomialRejectionSmallP(rng: Rng, trials: u64, p: f64) u64 {
+    return binomialRejectionSmallPFrom(rng, trials, p);
+}
+
+fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     const t: f64 = @floatFromInt(trials);
     const np = @floor(t * p);
     const pa = np / t;
@@ -282,34 +327,34 @@ fn binomialRejectionSmallP(rng: Rng, trials: u64, p: f64) u64 {
         var v: f64 = undefined;
         var reject = false;
 
-        const u = s * rng.float(f64);
+        const u = s * Rng.floatFrom(source, f64);
         if (u <= a1) {
-            const n = normal(rng, f64, 0, 1);
+            const n = Rng.normalFastFrom(source, f64, 0, 1);
             const y = s1 * @abs(n);
             reject = y >= d1;
             if (!reject) {
-                const e = -@log(1.0 - rng.float(f64));
+                const e = -@log(1.0 - Rng.floatFrom(source, f64));
                 x = @floor(y);
                 v = -e - n * n / 2.0 + c;
             }
         } else if (u <= a12) {
-            const n = normal(rng, f64, 0, 1);
+            const n = Rng.normalFastFrom(source, f64, 0, 1);
             const y = s2 * @abs(n);
             reject = y >= d2;
             if (!reject) {
-                const e = -@log(1.0 - rng.float(f64));
+                const e = -@log(1.0 - Rng.floatFrom(source, f64));
                 x = @floor(-y);
                 v = -e - n * n / 2.0;
             }
         } else if (u <= a123) {
-            const e1 = -@log(1.0 - rng.float(f64));
-            const e2 = -@log(1.0 - rng.float(f64));
+            const e1 = -@log(1.0 - Rng.floatFrom(source, f64));
+            const e2 = -@log(1.0 - Rng.floatFrom(source, f64));
             const y = d1 + 2.0 * s1s * e1 / d1;
             x = @floor(y);
             v = -e2 + d1 * (1.0 / (t - np) - y / (2.0 * s1s));
         } else {
-            const e1 = -@log(1.0 - rng.float(f64));
-            const e2 = -@log(1.0 - rng.float(f64));
+            const e1 = -@log(1.0 - Rng.floatFrom(source, f64));
+            const e2 = -@log(1.0 - Rng.floatFrom(source, f64));
             const y = d2 + 2.0 * s2s * e1 / d2;
             x = @floor(-y);
             v = -e2 - d2 * y / (2.0 * s2s);
@@ -324,7 +369,7 @@ fn binomialRejectionSmallP(rng: Rng, trials: u64, p: f64) u64 {
         if (reject) continue;
 
         const x_int: u64 = @intFromFloat(np + x + (1.0 - std.math.floatEps(f64)) / 2.0);
-        return x_int + binomialWaiting(rng, trials - x_int, q);
+        return x_int + binomialWaitingFrom(source, trials - x_int, q);
     }
 }
 
@@ -747,9 +792,13 @@ fn logFactorial(k: u64) f64 {
 }
 
 pub fn geometric(rng: Rng, p: f64) u64 {
+    return geometricFrom(rng, p);
+}
+
+pub fn geometricFrom(source: anytype, p: f64) u64 {
     std.debug.assert(p > 0 and p <= 1);
     if (p == 1) return 1;
-    const failures: u64 = @intFromFloat(@floor(@log(1 - rng.floatOpen(f64)) / @log(1 - p)));
+    const failures: u64 = @intFromFloat(@floor(@log(1 - openFloatFrom(source, f64)) / @log(1 - p)));
     return failures + 1;
 }
 
@@ -762,7 +811,11 @@ pub const Geometric = struct {
     }
 
     pub fn sample(self: Geometric, rng: Rng) u64 {
-        return geometric(rng, self.p);
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Geometric, source: anytype) u64 {
+        return geometricFrom(source, self.p);
     }
 };
 
@@ -2416,6 +2469,8 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sample(rng));
     try std.testing.expect(!(try Bernoulli.init(0)).sample(rng));
     try std.testing.expect((try Bernoulli.init(1.0 - std.math.floatEps(f64) / 2.0)).sample(rng));
+    var direct_bernoulli_engine = alea.ScalarPrng.init(64);
+    try std.testing.expect((try Bernoulli.initRatio(1, 1)).sampleFrom(&direct_bernoulli_engine));
     try std.testing.expect((try Binomial.init(10, 1)).sample(rng) == 10);
     try std.testing.expect(exponential(rng, f64, 2) >= 0);
     try std.testing.expect(poisson(rng, 4) < 32);
@@ -2572,6 +2627,8 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var geometrics = rng.sampleIter(u64, try Geometric.init(0.25));
     try std.testing.expect(geometrics.next().? >= 1);
+    var direct_geometric_engine = alea.ScalarPrng.init(66);
+    try std.testing.expect((try Geometric.init(0.25)).sampleFrom(&direct_geometric_engine) >= 1);
 
     var gammas = rng.sampleIter(f64, try Gamma(f64).init(2, 3));
     try std.testing.expect(gammas.next().? > 0);
@@ -2729,6 +2786,8 @@ test "binomial sampler has plausible moments" {
 
     var iter = rng.sampleIter(u64, try Binomial.init(8, 0.5));
     try std.testing.expect(iter.next().? <= 8);
+    var direct_engine = alea.ScalarPrng.init(68);
+    try std.testing.expect((try Binomial.init(8, 0.5)).sampleFrom(&direct_engine) <= 8);
     try std.testing.expect(binomialPoissonApprox(rng, 10_000, 0.01) < 200);
     try std.testing.expectError(error.InvalidProbability, Binomial.init(1, 1.1));
 }
@@ -2777,6 +2836,10 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     const n: f64 = @floatFromInt(samples);
     try std.testing.expect(nb_sum / n > 7.2 and nb_sum / n < 7.8);
     try std.testing.expect(hg_sum / n > 2.8 and hg_sum / n < 3.2);
+
+    var direct_engine = alea.ScalarPrng.init(72);
+    try std.testing.expect(nb.sampleFrom(&direct_engine) >= 0);
+    try std.testing.expect(hg.sampleFrom(&direct_engine) <= 10);
 
     try std.testing.expectError(error.InvalidParameter, NegativeBinomial.init(0, 0.5));
     try std.testing.expectError(error.InvalidProbability, NegativeBinomial.init(1, 0));
