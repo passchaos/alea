@@ -2314,15 +2314,17 @@ pub fn fillLogLogisticFrom(source: anytype, comptime T: type, dest: []T, scale: 
 pub fn LogLogistic(comptime T: type) type {
     return struct {
         const Self = @This();
+        const Method = enum { generic, ratio };
 
         scale: T,
         inverse_shape: T,
+        method: Method,
 
         pub fn init(scale: T, shape: T) Error!Self {
             comptime requireFloat(T);
             if (!(scale > 0) or !(shape > 0)) return error.InvalidParameter;
             if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
-            return .{ .scale = scale, .inverse_shape = 1 / shape };
+            return .{ .scale = scale, .inverse_shape = 1 / shape, .method = if (shape == 1) .ratio else .generic };
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -2331,6 +2333,7 @@ pub fn LogLogistic(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             const u = Rng.floatOpenFrom(source, T);
+            if (self.method == .ratio) return self.scale * u / (1 - u);
             return self.scale * std.math.pow(T, u / (1 - u), self.inverse_shape);
         }
 
@@ -2340,6 +2343,11 @@ pub fn LogLogistic(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             Rng.fillOpenFrom(source, T, dest);
+            if (self.method == .ratio) {
+                logLogisticShapeOneFromOpenUniforms(T, dest, self.scale);
+                return;
+            }
+
             logLogisticFromOpenUniforms(T, dest, self.scale, self.inverse_shape);
         }
     };

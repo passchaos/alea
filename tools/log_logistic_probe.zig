@@ -21,12 +21,16 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("log-logistic probe count={}\n", .{sample_count});
     try benchSample(alea.FastPrng, io, stdout, "fast sample current shape=1", 0x106111, sample_count, sampleShapeOneCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast sample ratio equivalent", 0x106111, sample_count, sampleRatioEquivalent);
+    try benchSample(alea.FastPrng, io, stdout, "fast sampler current shape=1", 0x106111, sample_count, samplerShapeOneCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample current shape=1", 0x106111, sample_count, sampleShapeOneCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample ratio equivalent", 0x106111, sample_count, sampleRatioEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sampler current shape=1", 0x106111, sample_count, samplerShapeOneCurrent);
     try benchFill(alea.FastPrng, io, stdout, "fast fill current shape=1", 0x106111, sample_count, fillShapeOneCurrent);
     try benchFill(alea.FastPrng, io, stdout, "fast fill ratio equivalent", 0x106111, sample_count, fillRatioEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast sampler fill current shape=1", 0x106111, sample_count, samplerShapeOneFillCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar fill current shape=1", 0x106111, sample_count, fillShapeOneCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar fill ratio equivalent", 0x106111, sample_count, fillRatioEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar sampler fill current shape=1", 0x106111, sample_count, samplerShapeOneFillCurrent);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x1061aa, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar pow", 0x1061aa, sample_count, stagedScalarPow);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar exp-logit", 0x1061aa, sample_count, stagedScalarExpLogit);
@@ -132,6 +136,16 @@ fn fillShapeOneCurrent(source: anytype, dest: []f64) void {
 fn fillRatioEquivalent(source: anytype, dest: []f64) void {
     alea.Rng.fillOpenFrom(source, f64, dest);
     for (dest) |*item| item.* = 2 * item.* / (1 - item.*);
+}
+
+fn samplerShapeOneCurrent(source: anytype) f64 {
+    const sampler = alea.distributions.LogLogistic(f64).init(2, 1) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+fn samplerShapeOneFillCurrent(source: anytype, dest: []f64) void {
+    const sampler = alea.distributions.LogLogistic(f64).init(2, 1) catch unreachable;
+    sampler.fillFrom(source, dest);
 }
 
 fn stagedScalarPow(source: anytype, dest: []f64) void {
