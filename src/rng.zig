@@ -717,6 +717,7 @@ pub fn vectorOpenClosed(self: Rng, comptime VectorType: type) VectorType {
 pub fn vectorOpenFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
+    if (info.child == f32) return vectorOpenF32From(source, VectorType);
     var out: VectorType = undefined;
     inline for (0..info.len) |i| out[i] = floatOpenFrom(source, info.child);
     return out;
@@ -725,6 +726,7 @@ pub fn vectorOpenFrom(source: anytype, comptime VectorType: type) VectorType {
 pub fn vectorOpenClosedFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
+    if (info.child == f32) return vectorOpenClosedF32From(source, VectorType);
     var out: VectorType = undefined;
     inline for (0..info.len) |i| out[i] = floatOpenClosedFrom(source, info.child);
     return out;
@@ -1206,6 +1208,40 @@ fn vectorF32From(source: anytype, comptime VectorType: type) VectorType {
     return out;
 }
 
+fn vectorOpenF32From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorOpenF32From expects an f32 vector");
+
+    var out: VectorType = undefined;
+    var bits: u64 = 0;
+    inline for (0..info.len) |i| {
+        if (i % 2 == 0) bits = nextFrom(source);
+        const raw: u24 = if (i % 2 == 0)
+            @truncate(bits >> 40)
+        else
+            @truncate(bits >> 16);
+        out[i] = f32OpenFromBits(raw);
+    }
+    return out;
+}
+
+fn vectorOpenClosedF32From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorOpenClosedF32From expects an f32 vector");
+
+    var out: VectorType = undefined;
+    var bits: u64 = 0;
+    inline for (0..info.len) |i| {
+        if (i % 2 == 0) bits = nextFrom(source);
+        const raw: u24 = if (i % 2 == 0)
+            @truncate(bits >> 40)
+        else
+            @truncate(bits >> 16);
+        out[i] = (@as(f32, @floatFromInt(raw)) + 1.0) * (1.0 / 16777216.0);
+    }
+    return out;
+}
+
 fn vectorNormalFloatFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32 and info.child != f64) @compileError("vectorNormalFloatFrom expects a float vector");
@@ -1267,6 +1303,11 @@ fn f32FromBits(bits: u24) f32 {
     return @as(f32, @floatFromInt(bits)) * (1.0 / 16777216.0);
 }
 
+fn f32OpenFromBits(bits: u24) f32 {
+    const non_zero = if (bits == 0) @as(u24, 1) else bits;
+    return @as(f32, @floatFromInt(non_zero)) * (1.0 / 16777216.0);
+}
+
 pub fn floatFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
@@ -1279,15 +1320,11 @@ pub fn floatFrom(source: anytype, comptime T: type) T {
 pub fn floatOpenFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
-        f32 => blk: {
-            const fraction: u32 = @truncate(nextFrom(source) >> 41);
-            const bits = (@as(u32, 127) << 23) | fraction;
-            break :blk @as(f32, @bitCast(bits)) - (1.0 - std.math.floatEps(f32) / 2.0);
-        },
+        f32 => f32OpenFromBits(@truncate(nextFrom(source) >> 40)),
         f64 => blk: {
-            const fraction = nextFrom(source) >> 12;
-            const bits = (@as(u64, 1023) << 52) | fraction;
-            break :blk @as(f64, @bitCast(bits)) - (1.0 - std.math.floatEps(f64) / 2.0);
+            const raw = nextFrom(source) >> 11;
+            const non_zero = if (raw == 0) @as(u64, 1) else raw;
+            break :blk @as(f64, @floatFromInt(non_zero)) * (1.0 / 9007199254740992.0);
         },
         else => @compileError("alea supports f32 and f64 floats"),
     };
