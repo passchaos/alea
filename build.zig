@@ -386,6 +386,23 @@ pub fn build(b: *std.Build) void {
     const arcsine_probe_step = b.step("arcsine-probe", "Run Arcsine bulk expression-shape microbenchmarks");
     arcsine_probe_step.dependOn(&run_arcsine_probe.step);
 
+    const maxwell_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/maxwell_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    maxwell_probe_mod.addImport("alea", module);
+
+    const maxwell_probe = b.addExecutable(.{
+        .name = "alea-maxwell-probe",
+        .root_module = maxwell_probe_mod,
+    });
+    const run_maxwell_probe = b.addRunArtifact(maxwell_probe);
+    if (b.args) |args| run_maxwell_probe.addArgs(args);
+
+    const maxwell_probe_step = b.step("maxwell-probe", "Run Maxwell bulk expression-shape microbenchmarks");
+    maxwell_probe_step.dependOn(&run_maxwell_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
