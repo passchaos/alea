@@ -56,7 +56,14 @@ fn main() {
     bench_distr_hypergeometric("rand_distr hypergeometric", bytes / 128);
     bench_distr_hypergeometric_large("rand_distr hypergeometric large", bytes / 256);
     bench_distr_gamma("rand_distr gamma", bytes / 128);
+    bench_distr_chi_squared("rand_distr chi-squared", bytes / 128);
     bench_distr_beta("rand_distr beta", bytes / 128);
+    bench_distr_fisher_f("rand_distr fisher-f", bytes / 128);
+    bench_distr_student_t("rand_distr student-t", bytes / 128);
+    bench_distr_triangular("rand_distr triangular", bytes / 128);
+    bench_distr_cauchy("rand_distr cauchy", bytes / 128);
+    bench_distr_pareto("rand_distr pareto", bytes / 128);
+    bench_distr_weibull("rand_distr weibull", bytes / 128);
     bench_distr_log_normal("rand_distr log-normal", bytes / 128);
     bench_distr_gumbel("rand_distr gumbel", bytes / 128);
     bench_distr_frechet("rand_distr frechet", bytes / 128);
@@ -467,9 +474,44 @@ fn bench_distr_gamma(name: &str, count: usize) {
     bench_distr_f64(name, count, 0x6a44a, dist);
 }
 
+fn bench_distr_chi_squared(name: &str, count: usize) {
+    let dist = rand_distr::ChiSquared::new(4.0).unwrap();
+    bench_distr_f64(name, count, 0xc415, dist);
+}
+
 fn bench_distr_beta(name: &str, count: usize) {
     let dist = rand_distr::Beta::new(2.0, 5.0).unwrap();
     bench_distr_f64(name, count, 0xbe7a, dist);
+}
+
+fn bench_distr_fisher_f(name: &str, count: usize) {
+    let dist = rand_distr::FisherF::new(5.0, 20.0).unwrap();
+    bench_distr_f64(name, count, 0xf15c, dist);
+}
+
+fn bench_distr_student_t(name: &str, count: usize) {
+    let dist = rand_distr::StudentT::new(10.0).unwrap();
+    bench_distr_f64(name, count, 0x57dd, dist);
+}
+
+fn bench_distr_triangular(name: &str, count: usize) {
+    let dist = rand_distr::Triangular::new(-1.0, 2.0, 0.0).unwrap();
+    bench_distr_f64(name, count, 0x751a, dist);
+}
+
+fn bench_distr_cauchy(name: &str, count: usize) {
+    let dist = rand_distr::Cauchy::new(0.0, 1.0).unwrap();
+    bench_distr_f64(name, count, 0xca11, dist);
+}
+
+fn bench_distr_pareto(name: &str, count: usize) {
+    let dist = rand_distr::Pareto::new(2.0, 3.0).unwrap();
+    bench_distr_f64(name, count, 0x9a7e70, dist);
+}
+
+fn bench_distr_weibull(name: &str, count: usize) {
+    let dist = rand_distr::Weibull::new(2.0, 1.5).unwrap();
+    bench_distr_f64(name, count, 0xe1b011, dist);
 }
 
 fn bench_distr_log_normal(name: &str, count: usize) {
