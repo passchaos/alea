@@ -170,6 +170,30 @@ pub fn fillRangeChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) 
     self.fillRange(T, dest, min, max);
 }
 
+pub fn fillChance(self: Rng, dest: []bool, p: f64) void {
+    fillChanceFrom(self, dest, p);
+}
+
+pub fn fillChanceFrom(source: anytype, dest: []bool, p: f64) void {
+    std.debug.assert(p >= 0 and p <= 1);
+    if (p == 0) {
+        @memset(dest, false);
+        return;
+    }
+    if (p == 1) {
+        @memset(dest, true);
+        return;
+    }
+
+    const threshold = probabilityThreshold(p);
+    for (dest) |*item| item.* = nextFrom(source) < threshold;
+}
+
+pub fn fillChanceChecked(self: Rng, dest: []bool, p: f64) Error!void {
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+    self.fillChance(dest, p);
+}
+
 pub fn fillVectorRange(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
     fillVectorRangeFrom(self, VectorType, dest, min, max);
 }
@@ -373,10 +397,14 @@ pub fn boolean(self: Rng) bool {
 }
 
 pub fn chance(self: Rng, p: f64) bool {
+    return chanceFrom(self, p);
+}
+
+pub fn chanceFrom(source: anytype, p: f64) bool {
     std.debug.assert(p >= 0 and p <= 1);
     if (p == 0) return false;
     if (p == 1) return true;
-    return self.next() < probabilityThreshold(p);
+    return nextFrom(source) < probabilityThreshold(p);
 }
 
 pub fn chanceChecked(self: Rng, p: f64) Error!bool {
@@ -602,6 +630,28 @@ pub fn vectorRangeChecked(self: Rng, comptime VectorType: type, min: vectorChild
         else => @compileError("Rng.vectorRangeChecked supports integer and floating-point vectors"),
     }
     return self.vectorRange(VectorType, min, max);
+}
+
+pub fn vectorChance(self: Rng, comptime VectorType: type, p: f64) VectorType {
+    return vectorChanceFrom(self, VectorType, p);
+}
+
+pub fn vectorChanceFrom(source: anytype, comptime VectorType: type, p: f64) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("Rng.vectorChance expects a bool vector");
+    std.debug.assert(p >= 0 and p <= 1);
+    if (p == 0) return @splat(false);
+    if (p == 1) return @splat(true);
+
+    const threshold = probabilityThreshold(p);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |i| out[i] = nextFrom(source) < threshold;
+    return out;
+}
+
+pub fn vectorChanceChecked(self: Rng, comptime VectorType: type, p: f64) Error!VectorType {
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+    return self.vectorChance(VectorType, p);
 }
 
 pub fn vectorNormal(self: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
@@ -1059,10 +1109,14 @@ test "rng facade covers scalar APIs" {
     try std.testing.expect(rng.float(f64) < 1.0);
     try std.testing.expect(rng.floatOpen(f64) > 0.0);
     try std.testing.expect(rng.chance(1));
+    try std.testing.expect(Rng.chanceFrom(&engine, 1));
     try std.testing.expect(!rng.ratio(0, 7));
     try std.testing.expect(rng.chance(1.0 - std.math.floatEps(f64) / 2.0));
     try std.testing.expect(try rng.chanceChecked(0.5) or true);
     try std.testing.expectError(error.InvalidProbability, rng.chanceChecked(1.1));
+    var empty_bool_buf: [0]bool = .{};
+    try std.testing.expectError(error.InvalidProbability, rng.fillChanceChecked(&empty_bool_buf, 1.1));
+    try std.testing.expectError(error.InvalidProbability, rng.vectorChanceChecked(@Vector(4, bool), -0.1));
     try std.testing.expectError(error.InvalidProbability, rng.ratioChecked(2, 1));
     try std.testing.expectError(error.EmptyRange, rng.uintLessThanChecked(u32, 0));
     try std.testing.expectError(error.EmptyRange, rng.intRangeLessThanChecked(u32, 3, 3));
@@ -1101,6 +1155,12 @@ test "rng facade covers scalar APIs" {
         saw_false = saw_false or !item;
     }
     try std.testing.expect(saw_true and saw_false);
+
+    var chance_buf: [64]bool = undefined;
+    rng.fillChance(&chance_buf, 0);
+    for (chance_buf) |item| try std.testing.expect(!item);
+    Rng.fillChanceFrom(&engine, &chance_buf, 1);
+    for (chance_buf) |item| try std.testing.expect(item);
 
     var ranged_buf: [16]i16 = undefined;
     rng.fillRange(i16, &ranged_buf, -20, 20);
@@ -1171,6 +1231,11 @@ test "rng facade covers scalar APIs" {
         vector_saw_false = vector_saw_false or !bvec[i];
     }
     try std.testing.expect(vector_saw_true and vector_saw_false);
+
+    const false_vec = rng.vectorChance(@Vector(8, bool), 0);
+    inline for (0..8) |i| try std.testing.expect(!false_vec[i]);
+    const true_vec = Rng.vectorChanceFrom(&engine, @Vector(8, bool), 1);
+    inline for (0..8) |i| try std.testing.expect(true_vec[i]);
 
     const fvec = rng.value(@Vector(4, f32));
     inline for (0..4) |i| try std.testing.expect(fvec[i] >= 0 and fvec[i] < 1);
