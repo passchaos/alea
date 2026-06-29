@@ -305,8 +305,12 @@ Reusable samplers:
 - `NormalInverseGaussian(T).fillFrom`
 - `Zipf(T)`
 - `Zipf(T).sampleFrom`
+- `Zipf(T).fill`
+- `Zipf(T).fillFrom`
 - `Zeta(T)`
 - `Zeta(T).sampleFrom`
+- `Zeta(T).fill`
+- `Zeta(T).fillFrom`
 - `UnitCircle(T)`
 - `UnitCircle(T).sampleFrom`
 - `UnitCircle(T).fill`

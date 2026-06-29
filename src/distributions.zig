@@ -3168,6 +3168,14 @@ pub fn Zipf(comptime T: type) type {
             }
         }
 
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
         fn invCdf(self: Self, p: T) T {
             const pt = p * self.t;
             if (pt <= 1) return pt;
@@ -3220,6 +3228,14 @@ pub fn Zeta(comptime T: type) type {
                 const v = Rng.floatFrom(source, T);
                 if (v * x * (t - 1) * self.b <= t * (self.b - 1)) return x;
             }
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -4272,10 +4288,24 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(zipf_value >= 1 and zipf_value <= 10);
     const direct_zipf = (try Zipf(f64).init(10, 1.5)).sampleFrom(&direct_engine);
     try std.testing.expect(direct_zipf >= 1 and direct_zipf <= 10);
+    const zipf_sampler = try Zipf(f64).init(10, 1.5);
+    var zipf_buf: [8]f64 = undefined;
+    zipf_sampler.fill(rng, &zipf_buf);
+    for (zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
+    var direct_zipf_buf: [8]f64 = undefined;
+    zipf_sampler.fillFrom(&direct_engine, &direct_zipf_buf);
+    for (direct_zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
 
     var zetas = rng.sampleIter(f64, try Zeta(f64).init(3));
     try std.testing.expect(zetas.next().? >= 1);
     try std.testing.expect((try Zeta(f64).init(3)).sampleFrom(&direct_engine) >= 1);
+    const zeta_sampler = try Zeta(f64).init(3);
+    var zeta_buf: [8]f64 = undefined;
+    zeta_sampler.fill(rng, &zeta_buf);
+    for (zeta_buf) |value| try std.testing.expect(value >= 1);
+    var direct_zeta_buf: [8]f64 = undefined;
+    zeta_sampler.fillFrom(&direct_engine, &direct_zeta_buf);
+    for (direct_zeta_buf) |value| try std.testing.expect(value >= 1);
 
     var unit_circles = rng.sampleIter([2]f64, UnitCircle(f64){});
     const unit_circle = unit_circles.next().?;
