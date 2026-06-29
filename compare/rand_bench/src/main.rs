@@ -1,5 +1,7 @@
 use rand::prelude::*;
 use rand::seq;
+use rand::distr::{Open01, OpenClosed01};
+use rand::distr::uniform::{SampleUniform, UniformSampler};
 use rand_distr::Distribution as RandDistrDistribution;
 use std::hint::black_box;
 use std::time::Instant;
@@ -20,6 +22,14 @@ fn main() {
 
     println!("\nrange throughput");
     bench_range("rand bounded u32", bytes / 8);
+    bench_float::<f32>("rand float f32", bytes / 4);
+    bench_float_open::<f32>("rand Open01 f32", bytes / 4);
+    bench_float_open_closed::<f32>("rand OpenClosed01 f32", bytes / 4);
+    bench_float_range::<f32>("rand float range f32", bytes / 4, -1.0, 1.0);
+    bench_float::<f64>("rand float f64", bytes / 8);
+    bench_float_open::<f64>("rand Open01 f64", bytes / 8);
+    bench_float_open_closed::<f64>("rand OpenClosed01 f64", bytes / 8);
+    bench_float_range::<f64>("rand float range f64", bytes / 8, -1.0, 1.0);
 
     println!("\nsequence throughput");
     bench_seq("rand sample indices", 1_000_000, 10_000);
@@ -136,6 +146,118 @@ fn bench_range(name: &str, count: usize) {
 
     black_box(best_checksum);
     println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
+}
+
+fn bench_float<T>(name: &str, count: usize)
+where
+    rand::distr::StandardUniform: rand::distr::Distribution<T>,
+    T: Copy + Into<f64>,
+{
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0.0;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0xf10a);
+        let start = Instant::now();
+        let mut checksum = 0.0;
+
+        for _ in 0..count {
+            checksum += rng.random::<T>().into();
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum:.3}");
+}
+
+fn bench_float_open<T>(name: &str, count: usize)
+where
+    Open01: rand::distr::Distribution<T>,
+    T: Copy + Into<f64>,
+{
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0.0;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0x0f01);
+        let start = Instant::now();
+        let mut checksum = 0.0;
+
+        for _ in 0..count {
+            checksum += rng.sample::<T, _>(Open01).into();
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum:.3}");
+}
+
+fn bench_float_open_closed<T>(name: &str, count: usize)
+where
+    OpenClosed01: rand::distr::Distribution<T>,
+    T: Copy + Into<f64>,
+{
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0.0;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0x0c01);
+        let start = Instant::now();
+        let mut checksum = 0.0;
+
+        for _ in 0..count {
+            checksum += rng.sample::<T, _>(OpenClosed01).into();
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum:.3}");
+}
+
+fn bench_float_range<T>(name: &str, count: usize, min: T, max: T)
+where
+    T: SampleUniform + Copy + Into<f64>,
+    <T as SampleUniform>::Sampler: UniformSampler<X = T>,
+{
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0.0;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0xf16e);
+        let start = Instant::now();
+        let mut checksum = 0.0;
+
+        for _ in 0..count {
+            checksum += T::Sampler::sample_single(min, max, &mut rng).unwrap().into();
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum:.3}");
 }
 
 fn bench_seq(name: &str, length: usize, amount: usize) {
