@@ -94,5 +94,7 @@ toolkit functionality and reduce reliance on companion crates:
 
 - Add a Linux no-known-gaps audit report tying the local `rand_distr` source
   list to Alea exports, tests, docs, and benchmark rows.
-- Consider Zig-native vector/SIMD sampling after scalar functionality and
+- Continue expanding benchmark parity where new local Rust rows reveal concrete
+  performance gaps; current follow-up is tracked in `performance-triage.md`.
+- Continue Zig-native vector/SIMD sampling after scalar functionality and
   validation remain stable.
