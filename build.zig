@@ -590,6 +590,23 @@ pub fn build(b: *std.Build) void {
     const gamma_shape_probe_step = b.step("gamma-shape-probe", "Run gamma shape-specialization microbenchmarks");
     gamma_shape_probe_step.dependOn(&run_gamma_shape_probe.step);
 
+    const beta_special_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/beta_special_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    beta_special_probe_mod.addImport("alea", module);
+
+    const beta_special_probe = b.addExecutable(.{
+        .name = "alea-beta-special-probe",
+        .root_module = beta_special_probe_mod,
+    });
+    const run_beta_special_probe = b.addRunArtifact(beta_special_probe);
+    if (b.args) |args| run_beta_special_probe.addArgs(args);
+
+    const beta_special_probe_step = b.step("beta-special-probe", "Run Beta special-case microbenchmarks");
+    beta_special_probe_step.dependOn(&run_beta_special_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

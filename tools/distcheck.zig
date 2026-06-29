@@ -230,6 +230,11 @@ fn checkContinuous() !void {
             return alea.distributions.chi(r, f64, 1);
         }
     }.sample, 0.77, 0.83);
+    try expectContinuousMean("beta-unit", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.beta(r, f64, 1, 1);
+        }
+    }.sample, 0.49, 0.51);
 }
 
 fn checkExtremeAndShape() !void {
