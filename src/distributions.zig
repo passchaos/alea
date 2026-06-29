@@ -595,6 +595,16 @@ pub fn halfNormalFrom(source: anytype, comptime T: type, scale: T) T {
     return @abs(Rng.normalFastFrom(source, T, 0, scale));
 }
 
+pub fn fillHalfNormal(rng: Rng, comptime T: type, dest: []T, scale: T) void {
+    fillHalfNormalFrom(rng, T, dest, scale);
+}
+
+pub fn fillHalfNormalFrom(source: anytype, comptime T: type, dest: []T, scale: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+    for (dest) |*item| item.* = halfNormalFrom(source, T, scale);
+}
+
 pub fn HalfNormal(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -613,6 +623,14 @@ pub fn HalfNormal(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return halfNormalFrom(source, T, self.scale);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -2883,6 +2901,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var half_normals = rng.sampleIter(f64, try HalfNormal(f64).init(2));
     try std.testing.expect(half_normals.next().? >= 0);
+    var half_normal_buf: [8]f64 = undefined;
+    fillHalfNormal(rng, f64, &half_normal_buf, 2);
+    for (half_normal_buf) |value| try std.testing.expect(value >= 0);
+    var direct_half_normal_buf: [8]f64 = undefined;
+    fillHalfNormalFrom(&direct_engine, f64, &direct_half_normal_buf, 2);
+    for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
+    const half_normal_sampler = try HalfNormal(f64).init(2);
+    half_normal_sampler.fillFrom(&direct_engine, &direct_half_normal_buf);
+    for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
 
     var poissons = rng.sampleIter(u64, try Poisson.init(12));
     try std.testing.expect(poissons.next().? < 64);
