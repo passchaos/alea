@@ -1704,6 +1704,16 @@ pub fn maxwellFrom(source: anytype, comptime T: type, scale: T) T {
     return @sqrt(x * x + y * y + z * z);
 }
 
+pub fn fillMaxwell(rng: Rng, comptime T: type, dest: []T, scale: T) void {
+    fillMaxwellFrom(rng, T, dest, scale);
+}
+
+pub fn fillMaxwellFrom(source: anytype, comptime T: type, dest: []T, scale: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+    for (dest) |*item| item.* = maxwellFrom(source, T, scale);
+}
+
 pub fn Maxwell(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1722,6 +1732,14 @@ pub fn Maxwell(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return maxwellFrom(source, T, self.scale);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3191,6 +3209,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var maxwells = rng.sampleIter(f64, try Maxwell(f64).init(2));
     try std.testing.expect(maxwells.next().? >= 0);
+    var maxwell_buf: [8]f64 = undefined;
+    fillMaxwell(rng, f64, &maxwell_buf, 2);
+    for (maxwell_buf) |value| try std.testing.expect(value >= 0);
+    var direct_maxwell_buf: [8]f64 = undefined;
+    fillMaxwellFrom(&direct_engine, f64, &direct_maxwell_buf, 2);
+    for (direct_maxwell_buf) |value| try std.testing.expect(value >= 0);
+    const maxwell_sampler = try Maxwell(f64).init(2);
+    maxwell_sampler.fillFrom(&direct_engine, &direct_maxwell_buf);
+    for (direct_maxwell_buf) |value| try std.testing.expect(value >= 0);
 
     var paretos = rng.sampleIter(f64, try Pareto(f64).init(2, 3));
     try std.testing.expect(paretos.next().? >= 2);
