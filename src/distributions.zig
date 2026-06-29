@@ -2756,6 +2756,11 @@ pub fn fillFrechetFrom(source: anytype, comptime T: type, dest: []T, location: T
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and shape > 0);
     Rng.fillOpenClosedFrom(source, T, dest);
+    if (shape == 1) {
+        frechetShapeOneFromOpenClosedUniforms(T, dest, location, scale);
+        return;
+    }
+
     frechetFromOpenClosedUniforms(T, dest, location, scale, -1 / shape);
 }
 
@@ -4347,6 +4352,31 @@ fn frechetFromOpenClosedUniformsVector(comptime T: type, comptime VectorType: ty
     }
 }
 
+fn frechetShapeOneFromOpenClosedUniforms(comptime T: type, dest: []T, location: T, scale: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => frechetShapeOneFromOpenClosedUniformsVector(T, @Vector(8, f32), dest, location, scale),
+        f64 => frechetShapeOneFromOpenClosedUniformsVector(T, @Vector(4, f64), dest, location, scale),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn frechetShapeOneFromOpenClosedUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, location: T, scale: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const location_vec: VectorType = @splat(location);
+    const negative_scale_vec: VectorType = @splat(-scale);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const out = location_vec + negative_scale_vec / @log(uniform_vec);
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) dest[i] = location - scale / @log(dest[i]);
+}
+
 fn arcsineFromOpenUniforms(comptime T: type, dest: []T, min: T, width: T) void {
     comptime requireFloat(T);
     switch (T) {
@@ -5067,6 +5097,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const frechet_sampler = try Frechet(f64).init(0, 1, 2);
     frechet_sampler.fillFrom(&direct_engine, &direct_frechet_buf);
     for (direct_frechet_buf) |value| try std.testing.expect(value >= 0);
+    var frechet_shape_one_buf: [8]f64 = undefined;
+    fillFrechetFrom(&direct_engine, f64, &frechet_shape_one_buf, 0, 1, 1);
+    for (frechet_shape_one_buf) |value| try std.testing.expect(value >= 0);
 
     var skew_normals = rng.sampleIter(f64, try SkewNormal(f64).init(0, 1, 1));
     try std.testing.expect(std.math.isFinite(skew_normals.next().?));
