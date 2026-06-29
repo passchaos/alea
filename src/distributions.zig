@@ -138,6 +138,10 @@ pub const Multinomial = struct {
     }
 
     pub fn sampleInto(self: Multinomial, rng: Rng, out: []u64) void {
+        self.sampleIntoFrom(rng, out);
+    }
+
+    pub fn sampleIntoFrom(self: Multinomial, source: anytype, out: []u64) void {
         std.debug.assert(out.len == self.probabilities.len);
         @memset(out, 0);
 
@@ -147,7 +151,7 @@ pub const Multinomial = struct {
             if (remaining_trials == 0) return;
             if (p == 0) continue;
             const normalized = p / remaining_probability;
-            const count = binomial(rng, remaining_trials, normalized);
+            const count = binomialFrom(source, remaining_trials, normalized);
             slot.* = count;
             remaining_trials -= count;
             remaining_probability -= p;
@@ -2048,10 +2052,14 @@ pub fn Dirichlet(comptime T: type) type {
         }
 
         pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            self.sampleIntoFrom(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
             std.debug.assert(out.len == self.alpha.len);
             var total: T = 0;
             for (self.alpha, out) |a, *slot| {
-                const value = gamma(rng, T, a, 1);
+                const value = gammaFrom(source, T, a, 1);
                 slot.* = value;
                 total += value;
             }
@@ -2812,6 +2820,12 @@ test "multinomial sampler returns category counts" {
     for (stack_counts) |count| total += count;
     try std.testing.expectEqual(@as(u64, 100), total);
 
+    var direct_engine = alea.ScalarPrng.init(70);
+    dist.sampleIntoFrom(&direct_engine, &stack_counts);
+    total = 0;
+    for (stack_counts) |count| total += count;
+    try std.testing.expectEqual(@as(u64, 100), total);
+
     try std.testing.expectError(error.EmptyRange, Multinomial.init(1, &.{}));
     try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 0.0, 0.0 }));
@@ -2981,6 +2995,12 @@ test "dirichlet sampler returns simplex vectors" {
     var stack_sample: [3]f64 = undefined;
     dist.sampleInto(rng, &stack_sample);
     var stack_total: f64 = 0;
+    for (stack_sample) |value| stack_total += value;
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
+
+    var direct_engine = alea.ScalarPrng.init(68);
+    dist.sampleIntoFrom(&direct_engine, &stack_sample);
+    stack_total = 0;
     for (stack_sample) |value| stack_total += value;
     try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
 }

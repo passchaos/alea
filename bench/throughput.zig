@@ -89,6 +89,7 @@ pub fn main(init: std.process.Init) !void {
     try benchNegativeBinomial(io, stdout, "alea negative-binomial", bytes / 128);
     try benchHypergeometric(io, stdout, "alea hypergeometric", bytes / 128);
     try benchMultinomial(io, stdout, "alea multinomial", bytes / 512);
+    try benchMultinomialDirect(io, stdout, "alea multinomial direct", bytes / 512);
     try benchGamma(io, stdout, "alea gamma", bytes / 128);
     try benchGammaScalar(io, stdout, "alea gamma scalar direct", bytes / 128);
     try benchFillSampleGamma(io, stdout, "alea fillSample gamma", bytes / 128);
@@ -112,6 +113,7 @@ pub fn main(init: std.process.Init) !void {
     try benchRayleigh(io, stdout, "alea rayleigh", bytes / 128);
     try benchMaxwell(io, stdout, "alea maxwell", bytes / 128);
     try benchDirichlet(io, stdout, "alea dirichlet", bytes / 512);
+    try benchDirichletDirect(io, stdout, "alea dirichlet direct", bytes / 512);
     try benchLogNormal(io, stdout, "alea log-normal", bytes / 128);
     try benchLogNormalScalar(io, stdout, "alea log-normal scalar direct", bytes / 128);
     try benchHalfNormal(io, stdout, "alea half-normal", bytes / 128);
@@ -1682,6 +1684,34 @@ fn benchMultinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchMultinomialDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    const dist = alea.distributions.Multinomial.init(100, &.{ 1.0, 2.0, 3.0 }) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x4112);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            var out: [3]u64 = undefined;
+            dist.sampleIntoFrom(&engine, &out);
+            checksum +%= out[0];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
@@ -2238,6 +2268,35 @@ fn benchDirichlet(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
         while (i < count) : (i += 1) {
             const sample = try dist.sample(std.heap.smp_allocator, rng);
             defer std.heap.smp_allocator.free(sample);
+            checksum += sample[0];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchDirichletDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const alpha = [_]f64{ 1, 2, 3 };
+    const dist = alea.distributions.Dirichlet(f64).init(&alpha) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xd152);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) {
+            var sample: [3]f64 = undefined;
+            dist.sampleIntoFrom(&engine, &sample);
             checksum += sample[0];
         }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;

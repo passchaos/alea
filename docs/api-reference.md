@@ -103,6 +103,7 @@ Reusable samplers:
 - `Binomial`
 - `Binomial.sampleFrom`
 - `Multinomial`
+- `Multinomial.sampleIntoFrom`
 - `NegativeBinomial`
 - `NegativeBinomial.sampleFrom`
 - `Hypergeometric`
@@ -180,6 +181,7 @@ Reusable samplers:
 - `UnitBall(T)`
 - `UnitBall(T).sampleFrom`
 - `Dirichlet(T)`
+- `Dirichlet(T).sampleIntoFrom`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
 - `WeightedIntTree(Weight)`
