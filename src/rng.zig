@@ -1280,8 +1280,8 @@ fn normalZigguratZeroCase(source: anytype, u: f64) f64 {
     var x: f64 = 1;
     var y: f64 = 0;
     while (-2.0 * y < x * x) {
-        x = @log(floatFrom(source, f64)) / std_ziggurat.norm_r;
-        y = @log(floatFrom(source, f64));
+        x = @log(floatOpenFrom(source, f64)) / std_ziggurat.norm_r;
+        y = @log(floatOpenFrom(source, f64));
     }
     return if (u < 0) x - std_ziggurat.norm_r else std_ziggurat.norm_r - x;
 }
@@ -1892,6 +1892,24 @@ test "rng facade covers scalar APIs" {
 
     const fast_normal = Rng.normalFastFrom(&engine, f64, 0, 1);
     try std.testing.expect(std.math.isFinite(fast_normal));
+
+    const TailSource = struct {
+        index: usize = 0,
+
+        fn next(self: *@This()) u64 {
+            const values = [_]u64{
+                0,
+                0,
+                @as(u64, 1) << 63,
+            };
+            const next_value = if (self.index < values.len) values[self.index] else @as(u64, 1) << 63;
+            self.index += 1;
+            return next_value;
+        }
+    };
+    var tail_source = TailSource{};
+    const tail_normal = Rng.standardNormalFastFrom(&tail_source, f64);
+    try std.testing.expect(std.math.isFinite(tail_normal));
 
     const vector_normals_f32 = rng.vectorNormal(@Vector(8, f32), 0, 1);
     inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vector_normals_f32[i]));
