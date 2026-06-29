@@ -1591,6 +1591,17 @@ pub fn powerFunctionFrom(source: anytype, comptime T: type, min: T, max: T, shap
     return min + (max - min) * std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / shape);
 }
 
+pub fn fillPowerFunction(rng: Rng, comptime T: type, dest: []T, min: T, max: T, shape: T) void {
+    fillPowerFunctionFrom(rng, T, dest, min, max, shape);
+}
+
+pub fn fillPowerFunctionFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T, shape: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(min < max and shape > 0);
+    std.debug.assert(std.math.isFinite(min) and std.math.isFinite(max) and std.math.isFinite(shape));
+    for (dest) |*item| item.* = powerFunctionFrom(source, T, min, max, shape);
+}
+
 pub fn PowerFunction(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1616,6 +1627,14 @@ pub fn PowerFunction(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return self.min + self.range * std.math.pow(T, Rng.floatOpenFrom(source, T), self.inverse_shape);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3130,6 +3149,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var power_functions = rng.sampleIter(f64, try PowerFunction(f64).init(-1, 2, 3));
     const power_value = power_functions.next().?;
     try std.testing.expect(power_value >= -1 and power_value <= 2);
+    var power_function_buf: [8]f64 = undefined;
+    fillPowerFunction(rng, f64, &power_function_buf, -1, 2, 3);
+    for (power_function_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    var direct_power_function_buf: [8]f64 = undefined;
+    fillPowerFunctionFrom(&direct_engine, f64, &direct_power_function_buf, -1, 2, 3);
+    for (direct_power_function_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    const power_function_sampler = try PowerFunction(f64).init(-1, 2, 3);
+    power_function_sampler.fillFrom(&direct_engine, &direct_power_function_buf);
+    for (direct_power_function_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
 
     var rayleighs = rng.sampleIter(f64, try Rayleigh(f64).init(2));
     try std.testing.expect(rayleighs.next().? >= 0);
