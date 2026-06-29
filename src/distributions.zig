@@ -277,34 +277,45 @@ pub const Hypergeometric = struct {
     population: u64,
     successes: u64,
     draws: u64,
-    method: HypergeometricMethod,
+    method: HypergeometricMethodTag,
+    inverse_transform: HypergeometricInverseTransform = undefined,
+    rejection_acceptance: HypergeometricRejectionAcceptance = undefined,
 
     pub fn init(population: u64, successes: u64, draws: u64) Error!Hypergeometric {
         if (successes > population or draws > population) return error.InvalidParameter;
-        return .{
+        var self: Hypergeometric = .{
             .population = population,
             .successes = successes,
             .draws = draws,
-            .method = HypergeometricMethod.init(population, successes, draws),
+            .method = .draw_loop,
         };
+        if (HypergeometricInverseTransform.init(population, successes, draws)) |method| {
+            self.method = .inverse_transform;
+            self.inverse_transform = method;
+        } else if (HypergeometricRejectionAcceptance.init(population, successes, draws)) |method| {
+            self.method = .rejection_acceptance;
+            self.rejection_acceptance = method;
+        }
+        return self;
     }
 
-    pub fn sample(self: Hypergeometric, rng: Rng) u64 {
+    pub fn sample(self: *const Hypergeometric, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
 
-    pub fn sampleFrom(self: Hypergeometric, source: anytype) u64 {
+    pub fn sampleFrom(self: *const Hypergeometric, source: anytype) u64 {
         return switch (self.method) {
             .draw_loop => hypergeometricDrawLoopFrom(source, self.population, self.successes, self.draws),
-            .inverse_transform => |method| method.sampleFrom(source),
+            .inverse_transform => self.inverse_transform.sampleFrom(source),
+            .rejection_acceptance => self.rejection_acceptance.sampleFrom(source),
         };
     }
 
-    pub fn fill(self: Hypergeometric, rng: Rng, dest: []u64) void {
+    pub fn fill(self: *const Hypergeometric, rng: Rng, dest: []u64) void {
         self.fillFrom(rng, dest);
     }
 
-    pub fn fillFrom(self: Hypergeometric, source: anytype, dest: []u64) void {
+    pub fn fillFrom(self: *const Hypergeometric, source: anytype, dest: []u64) void {
         for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
@@ -327,24 +338,14 @@ pub fn hypergeometricFrom(source: anytype, population: u64, successes: u64, draw
     if (population == 0 or successes == 0 or draws == 0) return 0;
     if (successes == population) return draws;
 
-    const method = HypergeometricMethod.init(population, successes, draws);
-    return switch (method) {
-        .draw_loop => hypergeometricDrawLoopFrom(source, population, successes, draws),
-        .inverse_transform => |inverse| inverse.sampleFrom(source),
-    };
+    const dist = Hypergeometric.init(population, successes, draws) catch unreachable;
+    return dist.sampleFrom(source);
 }
 
-const HypergeometricMethod = union(enum) {
+const HypergeometricMethodTag = enum {
     draw_loop,
-    inverse_transform: HypergeometricInverseTransform,
-
-    fn init(population: u64, successes: u64, draws: u64) HypergeometricMethod {
-        if (population == 0 or successes == 0 or draws == 0 or successes == population) return .draw_loop;
-        if (HypergeometricInverseTransform.init(population, successes, draws)) |method| {
-            return .{ .inverse_transform = method };
-        }
-        return .draw_loop;
-    }
+    inverse_transform,
+    rejection_acceptance,
 };
 
 const HypergeometricInverseTransform = struct {
@@ -357,47 +358,32 @@ const HypergeometricInverseTransform = struct {
     initial_x: i64,
 
     fn init(population: u64, successes: u64, draws: u64) ?HypergeometricInverseTransform {
-        const population_without_feature = population - successes;
-        var sign_x: i64 = 1;
-        var offset_x: i64 = 0;
-        const n1, const n2 = if (successes > population_without_feature) blk: {
-            sign_x = -1;
-            offset_x = @intCast(draws);
-            break :blk .{ population_without_feature, successes };
-        } else .{ successes, population_without_feature };
-
-        const k = if (draws <= population / 2) draws else blk: {
-            offset_x += @as(i64, @intCast(n1)) * sign_x;
-            sign_x *= -1;
-            break :blk population - draws;
-        };
-
-        const mode = @floor(@as(f64, @floatFromInt(k + 1)) *
-            @as(f64, @floatFromInt(n1 + 1)) / @as(f64, @floatFromInt(population + 2)));
-        const lower_bound = @max(@as(f64, 0), @as(f64, @floatFromInt(k)) - @as(f64, @floatFromInt(n2)));
+        const params = HypergeometricReducedParams.init(population, successes, draws);
+        const mode = hypergeometricMode(population, params.n1, params.k);
+        const lower_bound = @max(@as(f64, 0), @as(f64, @floatFromInt(params.k)) - @as(f64, @floatFromInt(params.n2)));
         if (mode - lower_bound >= 10) return null;
 
-        const initial_p, const initial_x = if (k < n2) .{
-            fractionOfProductsOfFactorials(.{ n2, population - k }, .{ population, n2 - k }),
+        const initial_p, const initial_x = if (params.k < params.n2) .{
+            fractionOfProductsOfFactorials(.{ params.n2, population - params.k }, .{ population, params.n2 - params.k }),
             @as(i64, 0),
         } else .{
-            fractionOfProductsOfFactorials(.{ n1, k }, .{ population, k - n2 }),
-            @as(i64, @intCast(k - n2)),
+            fractionOfProductsOfFactorials(.{ params.n1, params.k }, .{ population, params.k - params.n2 }),
+            @as(i64, @intCast(params.k - params.n2)),
         };
         if (!(initial_p > 0) or !std.math.isFinite(initial_p)) return null;
 
         return .{
-            .n1 = n1,
-            .n2 = n2,
-            .k = k,
-            .offset_x = offset_x,
-            .sign_x = sign_x,
+            .n1 = params.n1,
+            .n2 = params.n2,
+            .k = params.k,
+            .offset_x = params.offset_x,
+            .sign_x = params.sign_x,
             .initial_p = initial_p,
             .initial_x = initial_x,
         };
     }
 
-    fn sampleFrom(self: HypergeometricInverseTransform, source: anytype) u64 {
+    fn sampleFrom(self: *const HypergeometricInverseTransform, source: anytype) u64 {
         var p = self.initial_p;
         var x = self.initial_x;
         var u = Rng.floatFrom(source, f64);
@@ -416,6 +402,205 @@ const HypergeometricInverseTransform = struct {
         return @intCast(result);
     }
 };
+
+const HypergeometricRejectionAcceptance = struct {
+    n1: u64,
+    n2: u64,
+    k: u64,
+    offset_x: i64,
+    sign_x: i64,
+    m: f64,
+    a: f64,
+    lambda_l: f64,
+    lambda_r: f64,
+    x_l: f64,
+    x_r: f64,
+    p1: f64,
+    p2: f64,
+    p3: f64,
+
+    fn init(population: u64, successes: u64, draws: u64) ?HypergeometricRejectionAcceptance {
+        const params = HypergeometricReducedParams.init(population, successes, draws);
+        const m = hypergeometricMode(population, params.n1, params.k);
+        const lower_bound = @max(@as(f64, 0), @as(f64, @floatFromInt(params.k)) - @as(f64, @floatFromInt(params.n2)));
+        if (m - lower_bound < 10) return null;
+
+        const n_f: f64 = @floatFromInt(population);
+        const n1_f: f64 = @floatFromInt(params.n1);
+        const n2_f: f64 = @floatFromInt(params.n2);
+        const k_f: f64 = @floatFromInt(params.k);
+        const a = lnOfFactorial(m) + lnOfFactorial(n1_f - m) +
+            lnOfFactorial(k_f - m) + lnOfFactorial(n2_f - k_f + m);
+
+        const d = 1.5 * @sqrt((n_f - k_f) * k_f * n1_f * n2_f / ((n_f - 1.0) * n_f * n_f)) + 0.5;
+        const x_l = m - d + 0.5;
+        const x_r = m + d + 0.5;
+        const k_l = @exp(a - lnOfFactorial(x_l) - lnOfFactorial(n1_f - x_l) -
+            lnOfFactorial(k_f - x_l) - lnOfFactorial(n2_f - k_f + x_l));
+        const k_r = @exp(a - lnOfFactorial(x_r - 1.0) - lnOfFactorial(n1_f - x_r + 1.0) -
+            lnOfFactorial(k_f - x_r + 1.0) - lnOfFactorial(n2_f - k_f + x_r - 1.0));
+        const lambda_l = -@log(x_l * (n2_f - k_f + x_l) / ((n1_f - x_l + 1.0) * (k_f - x_l + 1.0)));
+        const lambda_r = -@log((n1_f - x_r + 1.0) * (k_f - x_r + 1.0) / (x_r * (n2_f - k_f + x_r)));
+        const p1 = 2.0 * d;
+        const p2 = p1 + k_l / lambda_l;
+        const p3 = p2 + k_r / lambda_r;
+        if (!std.math.isFinite(p3) or !(p3 > 0)) return null;
+
+        return .{
+            .n1 = params.n1,
+            .n2 = params.n2,
+            .k = params.k,
+            .offset_x = params.offset_x,
+            .sign_x = params.sign_x,
+            .m = m,
+            .a = a,
+            .lambda_l = lambda_l,
+            .lambda_r = lambda_r,
+            .x_l = x_l,
+            .x_r = x_r,
+            .p1 = p1,
+            .p2 = p2,
+            .p3 = p3,
+        };
+    }
+
+    fn sampleFrom(self: *const HypergeometricRejectionAcceptance, source: anytype) u64 {
+        while (true) {
+            const y, const v = self.selectCandidate(source);
+            if (self.accept(y, v)) return self.finish(y);
+        }
+    }
+
+    fn selectCandidate(self: *const HypergeometricRejectionAcceptance, source: anytype) struct { f64, f64 } {
+        while (true) {
+            const u = Rng.floatFrom(source, f64) * self.p3;
+            var v = Rng.floatFrom(source, f64);
+            if (u <= self.p1) return .{ @floor(self.x_l + u), v };
+            if (u <= self.p2) {
+                const y = @floor(self.x_l + @log(v) / self.lambda_l);
+                if (y >= @max(@as(f64, 0), @as(f64, @floatFromInt(self.k)) - @as(f64, @floatFromInt(self.n2)))) {
+                    v *= (u - self.p1) * self.lambda_l;
+                    return .{ y, v };
+                }
+            } else {
+                const y = @floor(self.x_r - @log(v) / self.lambda_r);
+                if (y <= @min(@as(f64, @floatFromInt(self.n1)), @as(f64, @floatFromInt(self.k)))) {
+                    v *= (u - self.p2) * self.lambda_r;
+                    return .{ y, v };
+                }
+            }
+        }
+    }
+
+    fn accept(self: *const HypergeometricRejectionAcceptance, y: f64, v: f64) bool {
+        if (self.m < 100.0 or y <= 50.0) {
+            var f: f64 = 1.0;
+            if (self.m < y) {
+                var i: u64 = @intFromFloat(self.m);
+                const y_i: u64 = @intFromFloat(y);
+                while (i < y_i) {
+                    i += 1;
+                    f *= @as(f64, @floatFromInt(self.n1 - i + 1)) * @as(f64, @floatFromInt(self.k - i + 1));
+                    f /= @as(f64, @floatFromInt(i)) * @as(f64, @floatFromInt(self.n2 - self.k + i));
+                }
+            } else {
+                var i: u64 = @intFromFloat(y);
+                const m_i: u64 = @intFromFloat(self.m);
+                while (i < m_i) {
+                    i += 1;
+                    f *= @as(f64, @floatFromInt(i)) * @as(f64, @floatFromInt(self.n2 - self.k + i));
+                    f /= @as(f64, @floatFromInt(self.n1 - i + 1)) * @as(f64, @floatFromInt(self.k - i + 1));
+                }
+            }
+            return v <= f;
+        }
+
+        const y1 = y + 1.0;
+        const ym = y - self.m;
+        const yn = @as(f64, @floatFromInt(self.n1)) - y + 1.0;
+        const yk = @as(f64, @floatFromInt(self.k)) - y + 1.0;
+        const nk = @as(f64, @floatFromInt(self.n2 - self.k)) + y1;
+        const r = -ym / y1;
+        const s = ym / yn;
+        const t = ym / yk;
+        const e = -ym / nk;
+        const g = yn * yk / (y1 * nk) - 1.0;
+        const dg = if (g < 0.0) 1.0 + g else 1.0;
+        const gu = g * (1.0 + g * (-0.5 + g / 3.0));
+        const gl = gu - pow4(g) / (4.0 * dg);
+        const xm = self.m + 0.5;
+        const xn = @as(f64, @floatFromInt(self.n1)) - self.m + 0.5;
+        const xk = @as(f64, @floatFromInt(self.k)) - self.m + 0.5;
+        const nm = @as(f64, @floatFromInt(self.n2 - self.k)) + xm;
+        const ub = xm * r * (1.0 + r * (-0.5 + r / 3.0)) +
+            xn * s * (1.0 + s * (-0.5 + s / 3.0)) +
+            xk * t * (1.0 + t * (-0.5 + t / 3.0)) +
+            nm * e * (1.0 + e * (-0.5 + e / 3.0)) +
+            y * gu - self.m * gl + 0.0034;
+        const av = @log(v);
+        if (av > ub) return false;
+
+        const dr = if (r < 0.0) xm * pow4(r) / (1.0 + r) else xm * pow4(r);
+        const ds = if (s < 0.0) xn * pow4(s) / (1.0 + s) else xn * pow4(s);
+        const dt = if (t < 0.0) xk * pow4(t) / (1.0 + t) else xk * pow4(t);
+        const de = if (e < 0.0) nm * pow4(e) / (1.0 + e) else nm * pow4(e);
+        if (av < ub - 0.25 * (dr + ds + dt + de) + (y + self.m) * (gl - gu) - 0.0078) {
+            return true;
+        }
+
+        const av_critical = self.a - lnOfFactorial(y) -
+            lnOfFactorial(@as(f64, @floatFromInt(self.n1)) - y) -
+            lnOfFactorial(@as(f64, @floatFromInt(self.k)) - y) -
+            lnOfFactorial(@as(f64, @floatFromInt(self.n2 - self.k)) + y);
+        return av <= av_critical;
+    }
+
+    fn finish(self: *const HypergeometricRejectionAcceptance, y: f64) u64 {
+        const x: i64 = @intFromFloat(y);
+        return @intCast(self.offset_x + self.sign_x * x);
+    }
+};
+
+const HypergeometricReducedParams = struct {
+    n1: u64,
+    n2: u64,
+    k: u64,
+    offset_x: i64,
+    sign_x: i64,
+
+    fn init(population: u64, successes: u64, draws: u64) HypergeometricReducedParams {
+        const failures = population - successes;
+        var sign_x: i64 = 1;
+        var offset_x: i64 = 0;
+        const n1, const n2 = if (successes > failures) blk: {
+            sign_x = -1;
+            offset_x = @intCast(draws);
+            break :blk .{ failures, successes };
+        } else .{ successes, failures };
+        const k = if (draws <= population / 2) draws else blk: {
+            offset_x += @as(i64, @intCast(n1)) * sign_x;
+            sign_x *= -1;
+            break :blk population - draws;
+        };
+        return .{ .n1 = n1, .n2 = n2, .k = k, .offset_x = offset_x, .sign_x = sign_x };
+    }
+};
+
+fn hypergeometricMode(population: u64, n1: u64, k: u64) f64 {
+    return @floor(@as(f64, @floatFromInt(k + 1)) *
+        @as(f64, @floatFromInt(n1 + 1)) / @as(f64, @floatFromInt(population + 2)));
+}
+
+fn lnOfFactorial(v: f64) f64 {
+    const v3 = v + 3.0;
+    const ln_fac = (v3 + 0.5) * @log(v3) - v3 + @as(f64, 0.91893853320467274178) + 1.0 / (12.0 * v3);
+    return ln_fac - @log((v + 3.0) * (v + 2.0) * (v + 1.0));
+}
+
+fn pow4(x: f64) f64 {
+    const squared = x * x;
+    return squared * squared;
+}
 
 fn fractionOfProductsOfFactorials(numerator: struct { u64, u64 }, denominator: struct { u64, u64 }) f64 {
     const min_top = @min(numerator[0], numerator[1]);
