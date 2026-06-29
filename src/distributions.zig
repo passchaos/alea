@@ -809,6 +809,18 @@ pub fn Uniform(comptime T: type) type {
             }
             return uniformFrom(source, T, self.low, self.high);
         }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.inclusive) {
+                for (dest) |*item| item.* = uniformInclusiveFrom(source, T, self.low, self.high);
+            } else {
+                Rng.fillRangeFrom(source, T, dest, self.low, self.high);
+            }
+        }
     };
 }
 
@@ -3845,10 +3857,19 @@ test "non-uniform samplers can be reused with sample iterators" {
     const uniform_sampler = try Uniform(u32).init(3, 9);
     const uniform_value = uniform_sampler.sampleFrom(&direct_engine);
     try std.testing.expect(uniform_value >= 3 and uniform_value < 9);
+    var uniform_buf: [8]u32 = undefined;
+    uniform_sampler.fill(rng, &uniform_buf);
+    for (uniform_buf) |value| try std.testing.expect(value >= 3 and value < 9);
+    var direct_uniform_buf: [8]u32 = undefined;
+    uniform_sampler.fillFrom(&direct_engine, &direct_uniform_buf);
+    for (direct_uniform_buf) |value| try std.testing.expect(value >= 3 and value < 9);
 
     const inclusive_uniform = try Uniform(u32).initInclusive(3, 9);
     const inclusive_value = inclusive_uniform.sampleFrom(&direct_engine);
     try std.testing.expect(inclusive_value >= 3 and inclusive_value <= 9);
+    var inclusive_uniform_buf: [8]u32 = undefined;
+    inclusive_uniform.fillFrom(&direct_engine, &inclusive_uniform_buf);
+    for (inclusive_uniform_buf) |value| try std.testing.expect(value >= 3 and value <= 9);
 
     const direct_open = (Open01{}).sampleFrom(&direct_engine, f64);
     try std.testing.expect(direct_open > 0 and direct_open < 1);

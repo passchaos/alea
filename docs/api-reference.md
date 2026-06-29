@@ -159,6 +159,8 @@ Reusable samplers:
 - `Hypergeometric.fillFrom`
 - `Uniform(T)`
 - `Uniform(T).sampleFrom`
+- `Uniform(T).fill`
+- `Uniform(T).fillFrom`
 - `Open01`
 - `Open01.sampleFrom`
 - `OpenClosed01`
