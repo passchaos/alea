@@ -1424,6 +1424,16 @@ pub fn logisticFrom(source: anytype, comptime T: type, location: T, scale: T) T 
     return location + scale * @log(u / (1 - u));
 }
 
+pub fn fillLogistic(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) void {
+    fillLogisticFrom(rng, T, dest, location, scale);
+}
+
+pub fn fillLogisticFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+    for (dest) |*item| item.* = logisticFrom(source, T, location, scale);
+}
+
 pub fn Logistic(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1444,6 +1454,14 @@ pub fn Logistic(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return logisticFrom(source, T, self.location, self.scale);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3038,6 +3056,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var logistics = rng.sampleIter(f64, try Logistic(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(logistics.next().?));
+    var logistic_buf: [8]f64 = undefined;
+    fillLogistic(rng, f64, &logistic_buf, 0, 1);
+    for (logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    var direct_logistic_buf: [8]f64 = undefined;
+    fillLogisticFrom(&direct_engine, f64, &direct_logistic_buf, 0, 1);
+    for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    const logistic_sampler = try Logistic(f64).init(0, 1);
+    logistic_sampler.fillFrom(&direct_engine, &direct_logistic_buf);
+    for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
     var log_logistics = rng.sampleIter(f64, try LogLogistic(f64).init(2, 3));
     try std.testing.expect(log_logistics.next().? > 0);

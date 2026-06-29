@@ -100,8 +100,8 @@ Single-shot helpers:
   `studentTFrom`
 - `triangular`, `triangularFrom`, `arcsine`, `arcsineFrom`,
   `cauchy`, `cauchyFrom`, `laplace`, `laplaceFrom`, `fillLaplace`,
-  `fillLaplaceFrom`, `logistic`,
-  `logisticFrom`, `logLogistic`, `logLogisticFrom`, `kumaraswamy`,
+  `fillLaplaceFrom`, `logistic`, `logisticFrom`, `fillLogistic`,
+  `fillLogisticFrom`, `logLogistic`, `logLogisticFrom`, `kumaraswamy`,
   `kumaraswamyFrom`, `powerFunction`, `powerFunctionFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
   `pareto`, `paretoFrom`, `weibull`, `weibullFrom`
 - `gumbel`, `gumbelFrom`, `frechet`, `frechetFrom`, `skewNormal`,
@@ -184,6 +184,8 @@ Reusable samplers:
 - `Laplace(T).fillFrom`
 - `Logistic(T)`
 - `Logistic(T).sampleFrom`
+- `Logistic(T).fill`
+- `Logistic(T).fillFrom`
 - `LogLogistic(T)`
 - `LogLogistic(T).sampleFrom`
 - `Kumaraswamy(T)`
