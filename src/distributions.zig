@@ -2018,6 +2018,16 @@ pub fn inverseGaussianFrom(source: anytype, comptime T: type, mean: T, shape: T)
     return mean * mean / x;
 }
 
+pub fn fillInverseGaussian(rng: Rng, comptime T: type, dest: []T, mean: T, shape: T) void {
+    fillInverseGaussianFrom(rng, T, dest, mean, shape);
+}
+
+pub fn fillInverseGaussianFrom(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(mean > 0 and shape > 0);
+    for (dest) |*item| item.* = inverseGaussianFrom(source, T, mean, shape);
+}
+
 pub fn InverseGaussian(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -2038,6 +2048,14 @@ pub fn InverseGaussian(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return inverseGaussianFrom(source, T, self.mean, self.shape);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -2926,6 +2944,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var inverse_gaussians = rng.sampleIter(f64, try InverseGaussian(f64).init(1, 2));
     try std.testing.expect(inverse_gaussians.next().? > 0);
+    var inverse_gaussian_buf: [8]f64 = undefined;
+    fillInverseGaussian(rng, f64, &inverse_gaussian_buf, 1, 2);
+    for (inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
+    var direct_inverse_gaussian_buf: [8]f64 = undefined;
+    fillInverseGaussianFrom(&direct_engine, f64, &direct_inverse_gaussian_buf, 1, 2);
+    for (direct_inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
+    const inverse_gaussian_sampler = try InverseGaussian(f64).init(1, 2);
+    inverse_gaussian_sampler.fillFrom(&direct_engine, &direct_inverse_gaussian_buf);
+    for (direct_inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
 
     var normal_inverse_gaussians = rng.sampleIter(f64, try NormalInverseGaussian(f64).init(2, 1));
     try std.testing.expect(std.math.isFinite(normal_inverse_gaussians.next().?));

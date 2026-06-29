@@ -103,7 +103,8 @@ Single-shot helpers:
   `pareto`, `paretoFrom`, `weibull`, `weibullFrom`
 - `gumbel`, `gumbelFrom`, `frechet`, `frechetFrom`, `skewNormal`,
   `skewNormalFrom`, `pert`, `pertFrom`
-- `inverseGaussian`, `normalInverseGaussian`, `normalInverseGaussianFrom`,
+- `inverseGaussian`, `fillInverseGaussian`, `fillInverseGaussianFrom`,
+  `normalInverseGaussian`, `normalInverseGaussianFrom`,
   `zipf`, `zipfFrom`, `zeta`, `zetaFrom`
 - `unitCircle`, `unitCircleFrom`, `fillUnitCircle`, `fillUnitCircleFrom`,
   `unitDisc`, `unitDiscFrom`, `fillUnitDisc`, `fillUnitDiscFrom`,
@@ -194,6 +195,8 @@ Reusable samplers:
 - `Pert(T).sampleFrom`
 - `InverseGaussian(T)`
 - `InverseGaussian(T).sampleFrom`
+- `InverseGaussian(T).fill`
+- `InverseGaussian(T).fillFrom`
 - `NormalInverseGaussian(T)`
 - `NormalInverseGaussian(T).sampleFrom`
 - `Zipf(T)`
