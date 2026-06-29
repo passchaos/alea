@@ -2465,10 +2465,12 @@ pub fn fillPowerFunctionFrom(source: anytype, comptime T: type, dest: []T, min: 
 pub fn PowerFunction(comptime T: type) type {
     return struct {
         const Self = @This();
+        const Method = enum { generic, uniform, sqrt };
 
         min: T,
         range: T,
         inverse_shape: T,
+        method: Method,
 
         pub fn init(min: T, max: T, shape: T) Error!Self {
             comptime requireFloat(T);
@@ -2478,6 +2480,7 @@ pub fn PowerFunction(comptime T: type) type {
                 .min = min,
                 .range = max - min,
                 .inverse_shape = 1 / shape,
+                .method = if (shape == 1) .uniform else if (shape == 2) .sqrt else .generic,
             };
         }
 
@@ -2486,7 +2489,11 @@ pub fn PowerFunction(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            return self.min + self.range * std.math.pow(T, Rng.floatOpenFrom(source, T), self.inverse_shape);
+            return switch (self.method) {
+                .uniform => Rng.floatRangeFrom(source, T, self.min, self.min + self.range),
+                .sqrt => self.min + self.range * @sqrt(Rng.floatOpenFrom(source, T)),
+                .generic => self.min + self.range * std.math.pow(T, Rng.floatOpenFrom(source, T), self.inverse_shape),
+            };
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
@@ -2494,6 +2501,19 @@ pub fn PowerFunction(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            switch (self.method) {
+                .uniform => {
+                    Rng.fillRangeFrom(source, T, dest, self.min, self.min + self.range);
+                    return;
+                },
+                .sqrt => {
+                    Rng.fillOpenFrom(source, T, dest);
+                    for (dest) |*item| item.* = self.min + self.range * @sqrt(item.*);
+                    return;
+                },
+                .generic => {},
+            }
+
             Rng.fillOpenFrom(source, T, dest);
             powerFunctionFromOpenUniforms(T, dest, self.min, self.range, self.inverse_shape);
         }
