@@ -1966,7 +1966,8 @@ pub fn fillTriangular(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, ma
 pub fn fillTriangularFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: T, max: T) void {
     comptime requireFloat(T);
     std.debug.assert(min <= mode and mode <= max and min < max);
-    for (dest) |*item| item.* = triangularFrom(source, T, min, mode, max);
+    Rng.fillFrom(source, T, dest);
+    triangularFromUniforms(T, dest, min, mode, max);
 }
 
 pub fn Triangular(comptime T: type) type {
@@ -1997,7 +1998,7 @@ pub fn Triangular(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillTriangularFrom(source, T, dest, self.min, self.mode, self.max);
         }
     };
 }
@@ -3889,6 +3890,46 @@ fn cauchyFromOpenUniformsVector(comptime T: type, comptime VectorType: type, des
 
     while (i < dest.len) : (i += 1) {
         dest[i] = median + scale * @tan(@as(T, @floatCast(std.math.pi)) * (dest[i] - 0.5));
+    }
+}
+
+fn triangularFromUniforms(comptime T: type, dest: []T, min: T, mode: T, max: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => triangularFromUniformsVector(T, @Vector(8, f32), dest, min, mode, max),
+        f64 => triangularFromUniformsVector(T, @Vector(4, f64), dest, min, mode, max),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn triangularFromUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, min: T, mode: T, max: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const width = max - min;
+    const left_width = mode - min;
+    const right_width = max - mode;
+    const c_vec: VectorType = @splat(left_width / width);
+    const one_vec: VectorType = @splat(1.0);
+    const min_vec: VectorType = @splat(min);
+    const max_vec: VectorType = @splat(max);
+    const left_scale_vec: VectorType = @splat(width * left_width);
+    const right_scale_vec: VectorType = @splat(width * right_width);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const left = min_vec + @sqrt(uniform_vec * left_scale_vec);
+        const right = max_vec - @sqrt((one_vec - uniform_vec) * right_scale_vec);
+        const out = @select(T, uniform_vec < c_vec, left, right);
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        const u = dest[i];
+        dest[i] = if (u < left_width / width)
+            min + @sqrt(u * width * left_width)
+        else
+            max - @sqrt((1 - u) * width * right_width);
     }
 }
 

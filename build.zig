@@ -216,6 +216,23 @@ pub fn build(b: *std.Build) void {
     const skew_normal_probe_step = b.step("skew-normal-probe", "Run SkewNormal bulk expression-shape microbenchmarks");
     skew_normal_probe_step.dependOn(&run_skew_normal_probe.step);
 
+    const triangular_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/triangular_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    triangular_probe_mod.addImport("alea", module);
+
+    const triangular_probe = b.addExecutable(.{
+        .name = "alea-triangular-probe",
+        .root_module = triangular_probe_mod,
+    });
+    const run_triangular_probe = b.addRunArtifact(triangular_probe);
+    if (b.args) |args| run_triangular_probe.addArgs(args);
+
+    const triangular_probe_step = b.step("triangular-probe", "Run Triangular bulk expression-shape microbenchmarks");
+    triangular_probe_step.dependOn(&run_triangular_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
