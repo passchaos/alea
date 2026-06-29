@@ -43,6 +43,18 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast abs-normal fill equivalent", 0xc101, sample_count, absNormalFillEquivalent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar chi dof=1 fill current", 0xc101, sample_count, chiOneFillCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar abs-normal fill equivalent", 0xc101, sample_count, absNormalFillEquivalent);
+    try benchSample(alea.FastPrng, io, stdout, "fast chi dof=2 current", 0xc202, sample_count, chiTwoCurrent);
+    try benchSample(alea.FastPrng, io, stdout, "fast rayleigh equivalent", 0xc202, sample_count, rayleighEquivalent);
+    try benchSample(alea.FastPrng, io, stdout, "fast exp-rayleigh equivalent", 0xc202, sample_count, expRayleighEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar chi dof=2 current", 0xc202, sample_count, chiTwoCurrent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar rayleigh equivalent", 0xc202, sample_count, rayleighEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar exp-rayleigh equivalent", 0xc202, sample_count, expRayleighEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast chi dof=2 fill current", 0xc202, sample_count, chiTwoFillCurrent);
+    try benchFill(alea.FastPrng, io, stdout, "fast rayleigh fill equivalent", 0xc202, sample_count, rayleighFillEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast exp-rayleigh fill equivalent", 0xc202, sample_count, expRayleighFillEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar chi dof=2 fill current", 0xc202, sample_count, chiTwoFillCurrent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar rayleigh fill equivalent", 0xc202, sample_count, rayleighFillEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar exp-rayleigh fill equivalent", 0xc202, sample_count, expRayleighFillEquivalent);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0xc411, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar sqrt", 0xc411, sample_count, stagedScalar);
     try benchFill(alea.FastPrng, io, stdout, "fast staged vector4 sqrt", 0xc411, sample_count, stagedVector4);
@@ -180,6 +192,30 @@ fn chiOneFillCurrent(source: anytype, dest: []f64) void {
 
 fn absNormalFillEquivalent(source: anytype, dest: []f64) void {
     for (dest) |*item| item.* = @abs(alea.Rng.standardNormalFastFrom(source, f64));
+}
+
+fn chiTwoCurrent(source: anytype) f64 {
+    return alea.distributions.chiFrom(source, f64, 2);
+}
+
+fn rayleighEquivalent(source: anytype) f64 {
+    return alea.distributions.rayleighFrom(source, f64, 1);
+}
+
+fn expRayleighEquivalent(source: anytype) f64 {
+    return @sqrt(2 * alea.Rng.standardExponentialFastFrom(source, f64));
+}
+
+fn chiTwoFillCurrent(source: anytype, dest: []f64) void {
+    alea.distributions.fillChiFrom(source, f64, dest, 2);
+}
+
+fn rayleighFillEquivalent(source: anytype, dest: []f64) void {
+    alea.distributions.fillRayleighFrom(source, f64, dest, 1);
+}
+
+fn expRayleighFillEquivalent(source: anytype, dest: []f64) void {
+    for (dest) |*item| item.* = expRayleighEquivalent(source);
 }
 
 fn stagedScalar(source: anytype, dest: []f64) void {
