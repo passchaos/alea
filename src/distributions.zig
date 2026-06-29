@@ -277,10 +277,16 @@ pub const Hypergeometric = struct {
     population: u64,
     successes: u64,
     draws: u64,
+    method: HypergeometricMethod,
 
     pub fn init(population: u64, successes: u64, draws: u64) Error!Hypergeometric {
         if (successes > population or draws > population) return error.InvalidParameter;
-        return .{ .population = population, .successes = successes, .draws = draws };
+        return .{
+            .population = population,
+            .successes = successes,
+            .draws = draws,
+            .method = HypergeometricMethod.init(population, successes, draws),
+        };
     }
 
     pub fn sample(self: Hypergeometric, rng: Rng) u64 {
@@ -288,7 +294,10 @@ pub const Hypergeometric = struct {
     }
 
     pub fn sampleFrom(self: Hypergeometric, source: anytype) u64 {
-        return hypergeometricFrom(source, self.population, self.successes, self.draws);
+        return switch (self.method) {
+            .draw_loop => hypergeometricDrawLoopFrom(source, self.population, self.successes, self.draws),
+            .inverse_transform => |method| method.sampleFrom(source),
+        };
     }
 
     pub fn fill(self: Hypergeometric, rng: Rng, dest: []u64) void {
@@ -315,6 +324,121 @@ pub fn fillHypergeometricFrom(source: anytype, dest: []u64, population: u64, suc
 
 pub fn hypergeometricFrom(source: anytype, population: u64, successes: u64, draws: u64) u64 {
     std.debug.assert(successes <= population and draws <= population);
+    if (population == 0 or successes == 0 or draws == 0) return 0;
+    if (successes == population) return draws;
+
+    const method = HypergeometricMethod.init(population, successes, draws);
+    return switch (method) {
+        .draw_loop => hypergeometricDrawLoopFrom(source, population, successes, draws),
+        .inverse_transform => |inverse| inverse.sampleFrom(source),
+    };
+}
+
+const HypergeometricMethod = union(enum) {
+    draw_loop,
+    inverse_transform: HypergeometricInverseTransform,
+
+    fn init(population: u64, successes: u64, draws: u64) HypergeometricMethod {
+        if (population == 0 or successes == 0 or draws == 0 or successes == population) return .draw_loop;
+        if (HypergeometricInverseTransform.init(population, successes, draws)) |method| {
+            return .{ .inverse_transform = method };
+        }
+        return .draw_loop;
+    }
+};
+
+const HypergeometricInverseTransform = struct {
+    n1: u64,
+    n2: u64,
+    k: u64,
+    offset_x: i64,
+    sign_x: i64,
+    initial_p: f64,
+    initial_x: i64,
+
+    fn init(population: u64, successes: u64, draws: u64) ?HypergeometricInverseTransform {
+        const population_without_feature = population - successes;
+        var sign_x: i64 = 1;
+        var offset_x: i64 = 0;
+        const n1, const n2 = if (successes > population_without_feature) blk: {
+            sign_x = -1;
+            offset_x = @intCast(draws);
+            break :blk .{ population_without_feature, successes };
+        } else .{ successes, population_without_feature };
+
+        const k = if (draws <= population / 2) draws else blk: {
+            offset_x += @as(i64, @intCast(n1)) * sign_x;
+            sign_x *= -1;
+            break :blk population - draws;
+        };
+
+        const mode = @floor(@as(f64, @floatFromInt(k + 1)) *
+            @as(f64, @floatFromInt(n1 + 1)) / @as(f64, @floatFromInt(population + 2)));
+        const lower_bound = @max(@as(f64, 0), @as(f64, @floatFromInt(k)) - @as(f64, @floatFromInt(n2)));
+        if (mode - lower_bound >= 10) return null;
+
+        const initial_p, const initial_x = if (k < n2) .{
+            fractionOfProductsOfFactorials(.{ n2, population - k }, .{ population, n2 - k }),
+            @as(i64, 0),
+        } else .{
+            fractionOfProductsOfFactorials(.{ n1, k }, .{ population, k - n2 }),
+            @as(i64, @intCast(k - n2)),
+        };
+        if (!(initial_p > 0) or !std.math.isFinite(initial_p)) return null;
+
+        return .{
+            .n1 = n1,
+            .n2 = n2,
+            .k = k,
+            .offset_x = offset_x,
+            .sign_x = sign_x,
+            .initial_p = initial_p,
+            .initial_x = initial_x,
+        };
+    }
+
+    fn sampleFrom(self: HypergeometricInverseTransform, source: anytype) u64 {
+        var p = self.initial_p;
+        var x = self.initial_x;
+        var u = Rng.floatFrom(source, f64);
+        const k_i: i64 = @intCast(self.k);
+        const n1_i: i64 = @intCast(self.n1);
+        const n2_i: i64 = @intCast(self.n2);
+
+        while (u > p and x < k_i) {
+            u -= p;
+            p *= @as(f64, @floatFromInt(n1_i - x)) * @as(f64, @floatFromInt(k_i - x));
+            p /= @as(f64, @floatFromInt(x + 1)) * @as(f64, @floatFromInt(n2_i - k_i + 1 + x));
+            x += 1;
+        }
+
+        const result = self.offset_x + self.sign_x * x;
+        return @intCast(result);
+    }
+};
+
+fn fractionOfProductsOfFactorials(numerator: struct { u64, u64 }, denominator: struct { u64, u64 }) f64 {
+    const min_top = @min(numerator[0], numerator[1]);
+    const min_bottom = @min(denominator[0], denominator[1]);
+    const min_all = @min(min_top, min_bottom);
+
+    const max_top = @max(numerator[0], numerator[1]);
+    const max_bottom = @max(denominator[0], denominator[1]);
+    const max_all = @max(max_top, max_bottom);
+
+    var result: f64 = 1;
+    var i = min_all;
+    while (i < max_all) {
+        i += 1;
+        if (i <= min_top) result *= @floatFromInt(i);
+        if (i <= min_bottom) result /= @floatFromInt(i);
+        if (i <= max_top) result *= @floatFromInt(i);
+        if (i <= max_bottom) result /= @floatFromInt(i);
+    }
+    return result;
+}
+
+fn hypergeometricDrawLoopFrom(source: anytype, population: u64, successes: u64, draws: u64) u64 {
     if (population == 0 or successes == 0 or draws == 0) return 0;
     if (successes == population) return draws;
 
