@@ -420,6 +420,23 @@ pub fn build(b: *std.Build) void {
     const chi_probe_step = b.step("chi-probe", "Run Chi bulk expression-shape microbenchmarks");
     chi_probe_step.dependOn(&run_chi_probe.step);
 
+    const erlang_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/erlang_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    erlang_probe_mod.addImport("alea", module);
+
+    const erlang_probe = b.addExecutable(.{
+        .name = "alea-erlang-probe",
+        .root_module = erlang_probe_mod,
+    });
+    const run_erlang_probe = b.addRunArtifact(erlang_probe);
+    if (b.args) |args| run_erlang_probe.addArgs(args);
+
+    const erlang_probe_step = b.step("erlang-probe", "Run Erlang bulk expression-shape microbenchmarks");
+    erlang_probe_step.dependOn(&run_erlang_probe.step);
+
     const pareto_probe_mod = b.createModule(.{
         .root_source_file = b.path("tools/pareto_probe.zig"),
         .target = target,
