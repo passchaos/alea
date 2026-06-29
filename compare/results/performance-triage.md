@@ -152,7 +152,7 @@ project does not repeat unproductive work.
 
 Continue performance triage on the remaining large gaps:
 
-- normal `f64` facade still trails local `rand_distr`,
+- normal/exponential scalar ziggurat paths still trail local `rand_distr`,
 - `fillOpenClosed(f64)` bulk is now at the local Rust evidence noise boundary,
   but remains a watch item because exact `(0, 1]` conversion is sensitive to
   expression shape,
@@ -161,5 +161,7 @@ Continue performance triage on the remaining large gaps:
 - log-normal scalar direct still trails local `rand_distr`, while log-normal,
   inverse-Gaussian, and NIG bulk fills now exceed the local Rust rows,
 - skew-normal still trails local `rand_distr`,
+- unit geometry bulk fills remain ergonomics wins but not broad speed wins over
+  scalar direct sampling,
 - SIMD/vector distribution kernels need stronger default-path wins before they
   can replace scalar ziggurat paths.
