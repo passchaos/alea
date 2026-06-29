@@ -21,14 +21,14 @@ expectations.
 - Values: `value`, `valueIter`, `randomIter`, `sampleIter`
 - Bytes/fill: `bytes`, `fill` for scalar and vector slices, `fillSample`,
   `fillSampleFrom`, `fillRange`, `fillRangeChecked`, `fillChance`,
-  `fillChanceChecked`, `fillNormal`, `fillNormalChecked`,
+  `fillChanceChecked`, `fillRatio`, `fillRatioChecked`, `fillNormal`, `fillNormalChecked`,
   `fillExponential`, `fillExponentialChecked`, `fillVectorRange`,
   `fillVectorRangeChecked`, `fillVectorNormal`, `fillVectorNormalChecked`,
   `fillVectorExponential`, `fillVectorExponentialChecked`, `fillNormalFrom`,
-  `fillExponentialFrom`, `fillChanceFrom`, `fillVectorFrom`, `fillVectorRangeFrom`,
+  `fillExponentialFrom`, `fillChanceFrom`, `fillRatioFrom`, `fillVectorFrom`, `fillVectorRangeFrom`,
   `fillVectorNormalFrom`, `fillVectorExponentialFrom`
 - Raw/scalars: `next`, `boolean`, `chance`, `chanceChecked`, `ratio`,
-  `chanceFrom`, `ratioChecked`, `uint`, `uintLessThan`, `uintLessThanChecked`,
+  `chanceFrom`, `ratioFrom`, `ratioChecked`, `uint`, `uintLessThan`, `uintLessThanChecked`,
   `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`
 - Ranges: `intRangeLessThan`, `intRangeLessThanChecked`, `intRangeAtMost`,
   `intRangeAtMostChecked`, `intRangeLessThanFrom`, `intRangeAtMostFrom`,
@@ -37,8 +37,9 @@ expectations.
   `durationRangeAtMostChecked`
 - Floats: `float`, `floatOpen`, `floatOpenClosed`
 - Vectors: `vector`, `vectorRange`, `vectorRangeChecked`, `vectorChance`,
-  `vectorChanceChecked`, `vectorNormal`, `vectorExponential`, `vectorFrom`,
-  `vectorRangeFrom`, `vectorChanceFrom`
+  `vectorChanceChecked`, `vectorRatio`, `vectorRatioChecked`, `vectorNormal`,
+  `vectorExponential`, `vectorFrom`, `vectorRangeFrom`, `vectorChanceFrom`,
+  `vectorRatioFrom`
 - Unicode: `unicodeScalar`
 - Distributions: `normal`, `exponential`, `normalFastFrom`,
   `exponentialFastFrom`
