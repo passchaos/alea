@@ -149,6 +149,8 @@ Reusable samplers:
 - `Binomial.fillFrom`
 - `Multinomial`
 - `Multinomial.sampleIntoFrom`
+- `Multinomial.sampleManyInto`
+- `Multinomial.sampleManyIntoFrom`
 - `NegativeBinomial`
 - `NegativeBinomial.sampleFrom`
 - `NegativeBinomial.fill`
@@ -331,6 +333,8 @@ Reusable samplers:
 - `UnitBall(T).fillFrom`
 - `Dirichlet(T)`
 - `Dirichlet(T).sampleIntoFrom`
+- `Dirichlet(T).sampleManyInto`
+- `Dirichlet(T).sampleManyIntoFrom`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
 - `WeightedIntTree(Weight)`

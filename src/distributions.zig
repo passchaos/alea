@@ -213,6 +213,18 @@ pub const Multinomial = struct {
         self.sampleIntoFrom(rng, out);
     }
 
+    pub fn sampleManyInto(self: Multinomial, rng: Rng, out: []u64) void {
+        self.sampleManyIntoFrom(rng, out);
+    }
+
+    pub fn sampleManyIntoFrom(self: Multinomial, source: anytype, out: []u64) void {
+        std.debug.assert(out.len % self.probabilities.len == 0);
+        var offset: usize = 0;
+        while (offset < out.len) : (offset += self.probabilities.len) {
+            self.sampleIntoFrom(source, out[offset..][0..self.probabilities.len]);
+        }
+    }
+
     pub fn sampleIntoFrom(self: Multinomial, source: anytype, out: []u64) void {
         std.debug.assert(out.len == self.probabilities.len);
         @memset(out, 0);
@@ -3289,6 +3301,18 @@ pub fn Dirichlet(comptime T: type) type {
             self.sampleIntoFrom(rng, out);
         }
 
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
+            self.sampleManyIntoFrom(rng, out);
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len % self.alpha.len == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += self.alpha.len) {
+                self.sampleIntoFrom(source, out[offset..][0..self.alpha.len]);
+            }
+        }
+
         pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
             std.debug.assert(out.len == self.alpha.len);
             var total: T = 0;
@@ -4524,6 +4548,21 @@ test "multinomial sampler returns category counts" {
     total = 0;
     for (stack_counts) |count| total += count;
     try std.testing.expectEqual(@as(u64, 100), total);
+    var many_counts: [9]u64 = undefined;
+    dist.sampleManyInto(rng, &many_counts);
+    var offset: usize = 0;
+    while (offset < many_counts.len) : (offset += 3) {
+        total = 0;
+        for (many_counts[offset..][0..3]) |count| total += count;
+        try std.testing.expectEqual(@as(u64, 100), total);
+    }
+    dist.sampleManyIntoFrom(&direct_engine, &many_counts);
+    offset = 0;
+    while (offset < many_counts.len) : (offset += 3) {
+        total = 0;
+        for (many_counts[offset..][0..3]) |count| total += count;
+        try std.testing.expectEqual(@as(u64, 100), total);
+    }
 
     try std.testing.expectError(error.EmptyRange, Multinomial.init(1, &.{}));
     try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 1.0, std.math.nan(f64) }));
@@ -4746,4 +4785,19 @@ test "dirichlet sampler returns simplex vectors" {
     stack_total = 0;
     for (stack_sample) |value| stack_total += value;
     try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
+    var many_samples: [9]f64 = undefined;
+    dist.sampleManyInto(rng, &many_samples);
+    var offset: usize = 0;
+    while (offset < many_samples.len) : (offset += 3) {
+        stack_total = 0;
+        for (many_samples[offset..][0..3]) |value| stack_total += value;
+        try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
+    }
+    dist.sampleManyIntoFrom(&direct_engine, &many_samples);
+    offset = 0;
+    while (offset < many_samples.len) : (offset += 3) {
+        stack_total = 0;
+        for (many_samples[offset..][0..3]) |value| stack_total += value;
+        try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
+    }
 }
