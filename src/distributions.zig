@@ -447,6 +447,15 @@ pub fn standardNormalFrom(source: anytype, comptime T: type) T {
     return Rng.normalFastFrom(source, T, 0, 1);
 }
 
+pub fn fillStandardNormal(rng: Rng, comptime T: type, dest: []T) void {
+    fillStandardNormalFrom(rng, T, dest);
+}
+
+pub fn fillStandardNormalFrom(source: anytype, comptime T: type, dest: []T) void {
+    comptime requireFloat(T);
+    for (dest) |*item| item.* = standardNormalFrom(source, T);
+}
+
 pub fn normal(rng: Rng, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
@@ -462,6 +471,14 @@ pub fn StandardNormal(comptime T: type) type {
         pub fn sampleFrom(_: @This(), source: anytype) T {
             return standardNormalFrom(source, T);
         }
+
+        pub fn fill(_: @This(), rng: Rng, dest: []T) void {
+            fillStandardNormal(rng, T, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: []T) void {
+            fillStandardNormalFrom(source, T, dest);
+        }
     };
 }
 
@@ -471,6 +488,15 @@ pub fn standardExponential(rng: Rng, comptime T: type) T {
 
 pub fn standardExponentialFrom(source: anytype, comptime T: type) T {
     return Rng.exponentialFastFrom(source, T, 1);
+}
+
+pub fn fillStandardExponential(rng: Rng, comptime T: type, dest: []T) void {
+    fillStandardExponentialFrom(rng, T, dest);
+}
+
+pub fn fillStandardExponentialFrom(source: anytype, comptime T: type, dest: []T) void {
+    comptime requireFloat(T);
+    for (dest) |*item| item.* = standardExponentialFrom(source, T);
 }
 
 pub fn exponential(rng: Rng, comptime T: type, rate: T) T {
@@ -511,6 +537,14 @@ pub fn StandardExponential(comptime T: type) type {
 
         pub fn sampleFrom(_: @This(), source: anytype) T {
             return standardExponentialFrom(source, T);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: []T) void {
+            fillStandardExponential(rng, T, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: []T) void {
+            fillStandardExponentialFrom(source, T, dest);
         }
     };
 }
@@ -2883,9 +2917,25 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var standard_normals = rng.sampleIter(f64, StandardNormal(f64){});
     try std.testing.expect(std.math.isFinite(standard_normals.next().?));
+    var standard_normal_buf: [8]f64 = undefined;
+    fillStandardNormal(rng, f64, &standard_normal_buf);
+    for (standard_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    var direct_standard_normal_buf: [8]f64 = undefined;
+    fillStandardNormalFrom(&direct_engine, f64, &direct_standard_normal_buf);
+    for (direct_standard_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    (StandardNormal(f64){}).fillFrom(&direct_engine, &direct_standard_normal_buf);
+    for (direct_standard_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
     var standard_exponentials = rng.sampleIter(f64, StandardExponential(f64){});
     try std.testing.expect(standard_exponentials.next().? >= 0);
+    var standard_exponential_buf: [8]f64 = undefined;
+    fillStandardExponential(rng, f64, &standard_exponential_buf);
+    for (standard_exponential_buf) |value| try std.testing.expect(value >= 0);
+    var direct_standard_exponential_buf: [8]f64 = undefined;
+    fillStandardExponentialFrom(&direct_engine, f64, &direct_standard_exponential_buf);
+    for (direct_standard_exponential_buf) |value| try std.testing.expect(value >= 0);
+    (StandardExponential(f64){}).fillFrom(&direct_engine, &direct_standard_exponential_buf);
+    for (direct_standard_exponential_buf) |value| try std.testing.expect(value >= 0);
 
     var log_normals = rng.sampleIter(f64, try LogNormal(f64).init(0, 0.25));
     try std.testing.expect(log_normals.next().? > 0);

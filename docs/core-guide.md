@@ -48,9 +48,9 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - bulk sampling: `fill` for scalar and vector slices, `fillSample`,
   `fillSampleFrom`, `fillRange`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,
   `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`,
-  `fillVectorOpenFrom`, `fillVectorOpenClosedFrom`, `fillNormal`,
-  `fillLogNormal`, `fillVectorNormal`, `fillExponential`, and
-  `fillVectorExponential`
+  `fillVectorOpenFrom`, `fillVectorOpenClosedFrom`, `fillStandardNormal`,
+  `fillNormal`, `fillLogNormal`, `fillVectorNormal`, `fillStandardExponential`,
+  `fillExponential`, and `fillVectorExponential`
 
 Checked variants exist for user-supplied probabilities and scalar ranges.
 Use `normalFastFrom` and `exponentialFastFrom` when a comptime-known engine

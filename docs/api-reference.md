@@ -88,10 +88,12 @@ Single-shot helpers:
 - `bernoulli`, `binomial`, `binomialFrom`, `binomialPoissonApprox`
 - `negativeBinomial`, `negativeBinomialFrom`, `hypergeometric`,
   `hypergeometricFrom`
-- `standardNormal`, `standardNormalFrom`, `normal`, `logNormal`,
+- `standardNormal`, `standardNormalFrom`, `fillStandardNormal`,
+  `fillStandardNormalFrom`, `normal`, `logNormal`,
   `logNormalFrom`, `fillLogNormal`, `fillLogNormalFrom`, `halfNormal`,
   `halfNormalFrom`, `fillHalfNormal`, `fillHalfNormalFrom`, `chi`, `chiFrom`,
-  `standardExponential`, `standardExponentialFrom`, `exponential`
+  `standardExponential`, `standardExponentialFrom`,
+  `fillStandardExponential`, `fillStandardExponentialFrom`, `exponential`
 - `poisson`, `geometric`, `geometricFrom`
 - `gamma`, `gammaFrom`, `chiSquared`, `chiSquaredFrom`, `erlang`,
   `erlangFrom`, `beta`, `betaFrom`, `fisherF`, `fisherFFrom`, `studentT`,
@@ -133,10 +135,14 @@ Reusable samplers:
 - `OpenClosed01.sampleFrom`
 - `StandardNormal(T)`
 - `StandardNormal(T).sampleFrom`
+- `StandardNormal(T).fill`
+- `StandardNormal(T).fillFrom`
 - `Normal(T)`
 - `Normal(T).sampleFrom`
 - `StandardExponential(T)`
 - `StandardExponential(T).sampleFrom`
+- `StandardExponential(T).fill`
+- `StandardExponential(T).fillFrom`
 - `Exponential(T)`
 - `Exponential(T).sampleFrom`
 - `LogNormal(T)`
