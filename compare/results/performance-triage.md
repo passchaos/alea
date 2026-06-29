@@ -157,7 +157,9 @@ project does not repeat unproductive work.
 
 Continue performance triage on the remaining large gaps:
 
-- normal/exponential scalar ziggurat paths still trail local `rand_distr`,
+- normal scalar ziggurat paths still trail local `rand_distr`,
+- exponential scalar paths are closer after the mantissa-threshold fast path,
+  but still sit below local `rand_distr` rows in some full-benchmark shapes,
 - `fillOpenClosed(f64)` bulk is now at the local Rust evidence noise boundary,
   but remains a watch item because exact `(0, 1]` conversion is sensitive to
   expression shape,
@@ -165,8 +167,9 @@ Continue performance triage on the remaining large gaps:
   single-sample Cauchy remains a small watch item,
 - log-normal scalar direct still trails local `rand_distr`, while log-normal,
   inverse-Gaussian, and NIG bulk fills now exceed the local Rust rows,
-- skew-normal still trails local `rand_distr`,
-- unit geometry bulk fills remain ergonomics wins but not broad speed wins over
-  scalar direct sampling,
+- skew-normal shape=1 remains a local Rust boundary item; generic shape=2 is
+  closed in isolated sample-loop and fill-loop evidence,
+- unit geometry bulk fills now have modest speed wins across all four families,
+  but scalar-direct profiles remain a useful reference,
 - SIMD/vector distribution kernels need stronger default-path wins before they
   can replace scalar ziggurat paths.
