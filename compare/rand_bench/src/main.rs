@@ -19,6 +19,8 @@ fn main() {
     println!("\nfill-only throughput");
     bench_fill_only::<SmallRng>("rand SmallRng fill-only", bytes, &mut buffer);
     bench_fill_only::<StdRng>("rand StdRng fill-only", bytes, &mut buffer);
+    println!("\nscalar next throughput");
+    bench_next_u64::<SmallRng>("rand SmallRng next_u64", bytes / 8);
 
     println!("\nrange throughput");
     bench_range("rand bounded u32", bytes / 8);
@@ -122,6 +124,33 @@ where
     }
 
     println!("{name}: {best_mib_per_s:.1} MiB/s tail={best_tail}");
+}
+
+fn bench_next_u64<R>(name: &str, count: usize)
+where
+    R: SeedableRng + Rng,
+{
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0u64;
+    for _ in 0..TRIALS {
+        let mut rng = R::seed_from_u64(0x5151);
+        let start = Instant::now();
+        let mut checksum = 0u64;
+
+        for _ in 0..count {
+            checksum ^= rng.next_u64();
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M next/s checksum={best_checksum}");
 }
 
 fn bench_range(name: &str, count: usize) {
