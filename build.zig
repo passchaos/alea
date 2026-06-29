@@ -403,6 +403,23 @@ pub fn build(b: *std.Build) void {
     const maxwell_probe_step = b.step("maxwell-probe", "Run Maxwell bulk expression-shape microbenchmarks");
     maxwell_probe_step.dependOn(&run_maxwell_probe.step);
 
+    const pareto_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/pareto_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    pareto_probe_mod.addImport("alea", module);
+
+    const pareto_probe = b.addExecutable(.{
+        .name = "alea-pareto-probe",
+        .root_module = pareto_probe_mod,
+    });
+    const run_pareto_probe = b.addRunArtifact(pareto_probe);
+    if (b.args) |args| run_pareto_probe.addArgs(args);
+
+    const pareto_probe_step = b.step("pareto-probe", "Run Pareto bulk expression-shape microbenchmarks");
+    pareto_probe_step.dependOn(&run_pareto_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

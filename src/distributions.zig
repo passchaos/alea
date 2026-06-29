@@ -2524,7 +2524,8 @@ pub fn fillPareto(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) voi
 pub fn fillParetoFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0);
-    for (dest) |*item| item.* = paretoFrom(source, T, scale, shape);
+    Rng.fillOpenFrom(source, T, dest);
+    paretoFromOpenUniforms(T, dest, scale, 1 / shape);
 }
 
 pub fn Pareto(comptime T: type) type {
@@ -2554,7 +2555,8 @@ pub fn Pareto(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            Rng.fillOpenFrom(source, T, dest);
+            paretoFromOpenUniforms(T, dest, self.scale, 1 / self.shape);
         }
     };
 }
@@ -4174,6 +4176,33 @@ fn arcsineFromOpenUniformsVector(comptime T: type, comptime VectorType: type, de
     while (i < dest.len) : (i += 1) {
         const s = @sin(@as(T, @floatCast(std.math.pi)) * dest[i] / 2);
         dest[i] = min + width * s * s;
+    }
+}
+
+fn paretoFromOpenUniforms(comptime T: type, dest: []T, scale: T, inverse_shape: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => paretoFromOpenUniformsVector(T, @Vector(8, f32), dest, scale, inverse_shape),
+        f64 => paretoFromOpenUniformsVector(T, @Vector(4, f64), dest, scale, inverse_shape),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn paretoFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T, inverse_shape: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const scale_vec: VectorType = @splat(scale);
+    const neg_inverse_shape_vec: VectorType = @splat(-inverse_shape);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const out = scale_vec * @exp(@log(uniform_vec) * neg_inverse_shape_vec);
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        dest[i] = scale * @exp(-@log(dest[i]) * inverse_shape);
     }
 }
 
