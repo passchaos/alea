@@ -1145,6 +1145,15 @@ pub fn erlangFrom(source: anytype, comptime T: type, shape: u64, scale: T) T {
     return gammaFrom(source, T, @as(T, @floatFromInt(shape)), scale);
 }
 
+pub fn fillErlang(rng: Rng, comptime T: type, dest: []T, shape: u64, scale: T) void {
+    fillErlangFrom(rng, T, dest, shape, scale);
+}
+
+pub fn fillErlangFrom(source: anytype, comptime T: type, dest: []T, shape: u64, scale: T) void {
+    const sampler = Erlang(T).init(shape, scale) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Erlang(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1168,6 +1177,14 @@ pub fn Erlang(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return self.gamma_sampler.sampleFrom(source);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3329,6 +3346,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var erlangs = rng.sampleIter(f64, try Erlang(f64).init(3, 2));
     try std.testing.expect(erlangs.next().? > 0);
+    var erlang_buf: [8]f64 = undefined;
+    fillErlang(rng, f64, &erlang_buf, 3, 2);
+    for (erlang_buf) |value| try std.testing.expect(value > 0);
+    var direct_erlang_buf: [8]f64 = undefined;
+    fillErlangFrom(&direct_engine, f64, &direct_erlang_buf, 3, 2);
+    for (direct_erlang_buf) |value| try std.testing.expect(value > 0);
+    const erlang_sampler = try Erlang(f64).init(3, 2);
+    erlang_sampler.fillFrom(&direct_engine, &direct_erlang_buf);
+    for (direct_erlang_buf) |value| try std.testing.expect(value > 0);
 
     var betas = rng.sampleIter(f64, try Beta(f64).init(2, 5));
     const beta_value = betas.next().?;

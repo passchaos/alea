@@ -98,8 +98,9 @@ Single-shot helpers:
 - `poisson`, `geometric`, `geometricFrom`
 - `gamma`, `gammaFrom`, `fillGamma`, `fillGammaFrom`, `chiSquared`,
   `chiSquaredFrom`, `fillChiSquared`, `fillChiSquaredFrom`, `chi`,
-  `chiFrom`, `fillChi`, `fillChiFrom`, `erlang`, `erlangFrom`, `beta`, `betaFrom`, `fisherF`, `fisherFFrom`,
-  `studentT`, `studentTFrom`
+  `chiFrom`, `fillChi`, `fillChiFrom`, `erlang`, `erlangFrom`,
+  `fillErlang`, `fillErlangFrom`, `beta`, `betaFrom`, `fisherF`,
+  `fisherFFrom`, `studentT`, `studentTFrom`
 - `triangular`, `triangularFrom`, `fillTriangular`, `fillTriangularFrom`,
   `arcsine`, `arcsineFrom`, `fillArcsine`, `fillArcsineFrom`,
   `cauchy`, `cauchyFrom`, `fillCauchy`, `fillCauchyFrom`, `laplace`, `laplaceFrom`, `fillLaplace`,
@@ -182,6 +183,8 @@ Reusable samplers:
 - `Chi(T).fillFrom`
 - `Erlang(T)`
 - `Erlang(T).sampleFrom`
+- `Erlang(T).fill`
+- `Erlang(T).fillFrom`
 - `Beta(T)`
 - `Beta(T).sampleFrom`
 - `FisherF(T)`
