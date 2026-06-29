@@ -3717,13 +3717,19 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
-            for (dest) |*item| item.* = try self.sampleCheckedFrom(source);
+            const total = self.totalWeight();
+            if (!(total > 0)) return error.InvalidWeight;
+            for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
         }
 
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (!(total > 0)) return error.InvalidWeight;
 
+            return self.sampleWithTotalFrom(source, total);
+        }
+
+        fn sampleWithTotalFrom(self: Self, source: anytype, total: f64) usize {
             var target = Rng.floatFrom(source, f64) * total;
             var index: usize = 0;
             while (true) {
@@ -3856,13 +3862,19 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
-            for (dest) |*item| item.* = try self.sampleCheckedFrom(source);
+            const total = self.totalWeight();
+            if (total == 0) return error.InvalidWeight;
+            for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
         }
 
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
 
+            return self.sampleWithTotalFrom(source, total);
+        }
+
+        fn sampleWithTotalFrom(self: Self, source: anytype, total: u64) usize {
             var target = Rng.uintLessThanFrom(source, u64, total);
             var index: usize = 0;
             while (true) {
