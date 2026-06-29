@@ -35,11 +35,46 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast shape=2 box-muller pair", 0x5ce2, sample_count, boxMullerShape2);
     try benchFill(alea.FastPrng, io, stdout, "fast shape=2 delta form", 0x5ce2, sample_count, deltaShape2);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=2 current", 0x5ce2, sample_count, currentShape2);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar shape=2 sample loop", 0x5ce2, sample_count, sampleShape2);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=2 staged scalar", 0x5ce2, sample_count, stagedShape2Scalar);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=2 staged vector4", 0x5ce2, sample_count, stagedShape2Vector4);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=2 box-muller pair", 0x5ce2, sample_count, boxMullerShape2);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=2 delta form", 0x5ce2, sample_count, deltaShape2);
     try stdout.flush();
+}
+
+fn benchSample(
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime sampleFn: anytype,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += sampleFn(&engine);
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchFill(
@@ -96,6 +131,11 @@ fn stagedShape1Vector4(source: anytype, dest: []f64) void {
 
 fn currentShape2(source: anytype, dest: []f64) void {
     alea.distributions.fillSkewNormalFrom(source, f64, dest, 0, 1, 2);
+}
+
+fn sampleShape2(source: anytype) f64 {
+    const dist = alea.distributions.SkewNormal(f64).init(0, 1, 2) catch unreachable;
+    return dist.sampleFrom(source);
 }
 
 fn boxMullerShape1(source: anytype, dest: []f64) void {
