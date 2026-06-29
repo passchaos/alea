@@ -75,6 +75,11 @@ fn checkDiscrete() !void {
             return alea.distributions.hypergeometric(r, 100, 30, 10);
         }
     }.sample, 2.8, 3.2);
+    try expectDiscreteMean("hypergeometric-large", rng, 4_000, struct {
+        fn sample(r: alea.Rng) u64 {
+            return alea.distributions.hypergeometric(r, 5000, 2500, 500);
+        }
+    }.sample, 248.5, 251.5);
 }
 
 fn expectDiscreteMean(comptime label: []const u8, rng: alea.Rng, samples: usize, sampleFn: *const fn (alea.Rng) u64, min: f64, max: f64) !void {
