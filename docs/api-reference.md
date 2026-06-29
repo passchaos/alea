@@ -89,7 +89,8 @@ Single-shot helpers:
 - `negativeBinomial`, `negativeBinomialFrom`, `hypergeometric`,
   `hypergeometricFrom`
 - `standardNormal`, `standardNormalFrom`, `normal`, `logNormal`,
-  `logNormalFrom`, `halfNormal`, `halfNormalFrom`, `chi`, `chiFrom`,
+  `logNormalFrom`, `fillLogNormal`, `fillLogNormalFrom`, `halfNormal`,
+  `halfNormalFrom`, `chi`, `chiFrom`,
   `standardExponential`, `standardExponentialFrom`, `exponential`
 - `poisson`, `geometric`, `geometricFrom`
 - `gamma`, `gammaFrom`, `chiSquared`, `chiSquaredFrom`, `erlang`,
@@ -137,6 +138,8 @@ Reusable samplers:
 - `Exponential(T).sampleFrom`
 - `LogNormal(T)`
 - `LogNormal(T).sampleFrom`
+- `LogNormal(T).fill`
+- `LogNormal(T).fillFrom`
 - `HalfNormal(T)`
 - `HalfNormal(T).sampleFrom`
 - `Poisson`

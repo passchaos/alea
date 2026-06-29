@@ -49,7 +49,8 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
   `fillSampleFrom`, `fillRange`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,
   `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`,
   `fillVectorOpenFrom`, `fillVectorOpenClosedFrom`, `fillNormal`,
-  `fillVectorNormal`, `fillExponential`, and `fillVectorExponential`
+  `fillLogNormal`, `fillVectorNormal`, `fillExponential`, and
+  `fillVectorExponential`
 
 Checked variants exist for user-supplied probabilities and scalar ranges.
 Use `normalFastFrom` and `exponentialFastFrom` when a comptime-known engine

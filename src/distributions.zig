@@ -546,6 +546,16 @@ pub fn logNormalFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     return @exp(Rng.normalFastFrom(source, T, mean, stddev));
 }
 
+pub fn fillLogNormal(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
+    fillLogNormalFrom(rng, T, dest, mean, stddev);
+}
+
+pub fn fillLogNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(stddev >= 0);
+    for (dest) |*item| item.* = logNormalFrom(source, T, mean, stddev);
+}
+
 pub fn LogNormal(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -562,6 +572,14 @@ pub fn LogNormal(comptime T: type) type {
 
         pub fn sampleFrom(self: *Self, source: anytype) T {
             return @exp(self.normal_sampler.sampleFrom(source));
+        }
+
+        pub fn fill(self: *Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -2800,6 +2818,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var log_normals = rng.sampleIter(f64, try LogNormal(f64).init(0, 0.25));
     try std.testing.expect(log_normals.next().? > 0);
+    var log_normal_buf: [8]f64 = undefined;
+    fillLogNormal(rng, f64, &log_normal_buf, 0, 0.25);
+    for (log_normal_buf) |value| try std.testing.expect(value > 0);
+    var direct_log_normal_buf: [8]f64 = undefined;
+    fillLogNormalFrom(&direct_engine, f64, &direct_log_normal_buf, 0, 0.25);
+    for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
+    var log_normal_sampler = try LogNormal(f64).init(0, 0.25);
+    log_normal_sampler.fillFrom(&direct_engine, &direct_log_normal_buf);
+    for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
 
     var half_normals = rng.sampleIter(f64, try HalfNormal(f64).init(2));
     try std.testing.expect(half_normals.next().? >= 0);
