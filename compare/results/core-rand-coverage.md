@@ -26,7 +26,7 @@ platform and longer-run requirements.
 | Repeated sampling | `valueIter`, `randomIter`, `sampleIter` | `src/rng.zig` tests |
 | Unicode and strings | ASCII charsets, custom `Charset`, Unicode scalar UTF-8 strings | `src/ascii.zig` tests |
 | Uniform samplers | `Uniform(T)`, `Open01`, `OpenClosed01` | `src/distributions.zig` tests |
-| Bernoulli/binomial | `Bernoulli`, `Binomial` | Moment and parameter tests |
+| Bernoulli/binomial | `Bernoulli`, `Binomial`, direct-source reusable sampling | Moment and parameter tests |
 | Continuous distributions | normal, log-normal, half-normal, exponential, gamma, chi-squared, chi, erlang, beta, Fisher F, Student t, triangular, arcsine, cauchy, laplace, logistic, log-logistic, kumaraswamy, power-function, rayleigh, maxwell, pareto, weibull, dirichlet | Sampler tests and moment smoke tests |
 | Poisson | small-lambda exact product method and large-lambda PTRS method | Large-lambda moment test |
 | Sequence sampling | compact `IndexVec`, `sampleIndices`, `sampleArray`, iterator sampling | `src/seq.zig` tests |
