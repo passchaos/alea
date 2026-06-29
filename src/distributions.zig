@@ -919,6 +919,14 @@ pub fn Normal(comptime T: type) type {
         pub fn sampleFrom(self: Self, source: anytype) T {
             return Rng.normalFastFrom(source, T, self.mean, self.stddev);
         }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
     };
 }
 
@@ -960,6 +968,14 @@ pub fn Exponential(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return Rng.exponentialFastFrom(source, T, 1) * self.inverse_rate;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3826,9 +3842,23 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var normals = rng.sampleIter(f64, try Normal(f64).init(10, 2));
     try std.testing.expect(normals.next().? > 0);
+    const normal_sampler = try Normal(f64).init(10, 2);
+    var normal_buf: [8]f64 = undefined;
+    normal_sampler.fill(rng, &normal_buf);
+    for (normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    var direct_normal_buf: [8]f64 = undefined;
+    normal_sampler.fillFrom(&direct_engine, &direct_normal_buf);
+    for (direct_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
     var exponentials = rng.sampleIter(f64, try Exponential(f64).init(2));
     try std.testing.expect(exponentials.next().? >= 0);
+    const exponential_sampler = try Exponential(f64).init(2);
+    var exponential_buf: [8]f64 = undefined;
+    exponential_sampler.fill(rng, &exponential_buf);
+    for (exponential_buf) |value| try std.testing.expect(value >= 0);
+    var direct_exponential_buf: [8]f64 = undefined;
+    exponential_sampler.fillFrom(&direct_engine, &direct_exponential_buf);
+    for (direct_exponential_buf) |value| try std.testing.expect(value >= 0);
 
     var standard_normals = rng.sampleIter(f64, StandardNormal(f64){});
     try std.testing.expect(std.math.isFinite(standard_normals.next().?));

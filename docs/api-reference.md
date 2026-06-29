@@ -169,12 +169,16 @@ Reusable samplers:
 - `StandardNormal(T).fillFrom`
 - `Normal(T)`
 - `Normal(T).sampleFrom`
+- `Normal(T).fill`
+- `Normal(T).fillFrom`
 - `StandardExponential(T)`
 - `StandardExponential(T).sampleFrom`
 - `StandardExponential(T).fill`
 - `StandardExponential(T).fillFrom`
 - `Exponential(T)`
 - `Exponential(T).sampleFrom`
+- `Exponential(T).fill`
+- `Exponential(T).fillFrom`
 - `LogNormal(T)`
 - `LogNormal(T).sampleFrom`
 - `LogNormal(T).fill`
