@@ -19,6 +19,14 @@ pub fn main(init: std.process.Init) !void {
         default_count;
 
     try stdout.print("chi probe count={}\n", .{sample_count});
+    try benchSample(alea.FastPrng, io, stdout, "fast chi-squared dof=1 current", 0xc105, sample_count, chiSquaredOneCurrent);
+    try benchSample(alea.FastPrng, io, stdout, "fast normal-square equivalent", 0xc105, sample_count, normalSquareEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar chi-squared dof=1 current", 0xc105, sample_count, chiSquaredOneCurrent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar normal-square equivalent", 0xc105, sample_count, normalSquareEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast chi-squared dof=1 fill current", 0xc105, sample_count, chiSquaredOneFillCurrent);
+    try benchFill(alea.FastPrng, io, stdout, "fast normal-square fill equivalent", 0xc105, sample_count, normalSquareFillEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar chi-squared dof=1 fill current", 0xc105, sample_count, chiSquaredOneFillCurrent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar normal-square fill equivalent", 0xc105, sample_count, normalSquareFillEquivalent);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0xc411, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar sqrt", 0xc411, sample_count, stagedScalar);
     try benchFill(alea.FastPrng, io, stdout, "fast staged vector4 sqrt", 0xc411, sample_count, stagedVector4);
@@ -26,6 +34,40 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged scalar sqrt", 0xc411, sample_count, stagedScalar);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged vector4 sqrt", 0xc411, sample_count, stagedVector4);
     try stdout.flush();
+}
+
+fn benchSample(
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime sampleFn: anytype,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += sampleFn(&engine);
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchFill(
@@ -70,6 +112,26 @@ fn benchFill(
 
 fn currentFill(source: anytype, dest: []f64) void {
     alea.distributions.fillChiFrom(source, f64, dest, 4);
+}
+
+fn chiSquaredOneCurrent(source: anytype) f64 {
+    return alea.distributions.chiSquaredFrom(source, f64, 1);
+}
+
+fn normalSquareEquivalent(source: anytype) f64 {
+    const z = alea.Rng.standardNormalFastFrom(source, f64);
+    return z * z;
+}
+
+fn chiSquaredOneFillCurrent(source: anytype, dest: []f64) void {
+    alea.distributions.fillChiSquaredFrom(source, f64, dest, 1);
+}
+
+fn normalSquareFillEquivalent(source: anytype, dest: []f64) void {
+    for (dest) |*item| {
+        const z = alea.Rng.standardNormalFastFrom(source, f64);
+        item.* = z * z;
+    }
 }
 
 fn stagedScalar(source: anytype, dest: []f64) void {

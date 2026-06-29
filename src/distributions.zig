@@ -1648,6 +1648,14 @@ pub fn fillChiSquared(rng: Rng, comptime T: type, dest: []T, dof: T) void {
 }
 
 pub fn fillChiSquaredFrom(source: anytype, comptime T: type, dest: []T, dof: T) void {
+    if (dof == 1) {
+        for (dest) |*item| {
+            const z = Rng.standardNormalFastFrom(source, T);
+            item.* = z * z;
+        }
+        return;
+    }
+
     const sampler = ChiSquared(T).init(dof) catch unreachable;
     sampler.fillFrom(source, dest);
 }
@@ -4750,6 +4758,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const chi_squared_sampler = try ChiSquared(f64).init(4);
     chi_squared_sampler.fillFrom(&direct_engine, &direct_chi_squared_buf);
     for (direct_chi_squared_buf) |value| try std.testing.expect(value > 0);
+    var chi_squared_one_buf: [8]f64 = undefined;
+    fillChiSquaredFrom(&direct_engine, f64, &chi_squared_one_buf, 1);
+    for (chi_squared_one_buf) |value| try std.testing.expect(value >= 0);
 
     var chis = rng.sampleIter(f64, try Chi(f64).init(4));
     try std.testing.expect(chis.next().? > 0);

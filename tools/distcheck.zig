@@ -220,6 +220,11 @@ fn checkContinuous() !void {
             return alea.distributions.weibull(r, f64, 2, 1.5);
         }
     }.sample, 1.75, 1.85);
+    try expectContinuousMean("chi-squared-dof-one", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.chiSquared(r, f64, 1);
+        }
+    }.sample, 0.96, 1.04);
 }
 
 fn checkExtremeAndShape() !void {
