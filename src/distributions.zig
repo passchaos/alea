@@ -2040,6 +2040,17 @@ pub fn pertFrom(source: anytype, comptime T: type, min: T, mode: T, max: T, shap
     return min + range * betaFrom(source, T, alpha, beta_param);
 }
 
+pub fn fillPert(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, max: T, shape: T) void {
+    fillPertFrom(rng, T, dest, min, mode, max, shape);
+}
+
+pub fn fillPertFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: T, max: T, shape: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(min < max and min <= mode and mode <= max and shape >= 0);
+    const sampler = Pert(T).init(min, mode, max, shape) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Pert(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -2080,6 +2091,14 @@ pub fn Pert(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return self.min + self.range * betaFrom(source, T, self.alpha, self.beta_param);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3360,6 +3379,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(pert_value >= -1 and pert_value <= 2);
     const direct_pert = (try Pert(f64).initDefault(-1, 0, 2)).sampleFrom(&direct_engine);
     try std.testing.expect(direct_pert >= -1 and direct_pert <= 2);
+    var pert_buf: [8]f64 = undefined;
+    fillPert(rng, f64, &pert_buf, -1, 0.5, 2, 4);
+    for (pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    var direct_pert_buf: [8]f64 = undefined;
+    fillPertFrom(&direct_engine, f64, &direct_pert_buf, -1, 0.5, 2, 4);
+    for (direct_pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    const pert_sampler = try Pert(f64).init(-1, 0.5, 2, 4);
+    pert_sampler.fillFrom(&direct_engine, &direct_pert_buf);
+    for (direct_pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
 
     var inverse_gaussians = rng.sampleIter(f64, try InverseGaussian(f64).init(1, 2));
     try std.testing.expect(inverse_gaussians.next().? > 0);
