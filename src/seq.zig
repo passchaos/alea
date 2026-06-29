@@ -317,11 +317,35 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) *const T {
-            return &self.items[rng.uintLessThan(usize, self.items.len)];
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) *const T {
+            return &self.items[Rng.uintLessThanFrom(source, usize, self.items.len)];
         }
 
         pub fn sampleValue(self: Self, rng: Rng) T {
             return self.sample(rng).*;
+        }
+
+        pub fn sampleValueFrom(self: Self, source: anytype) T {
+            return self.sampleFrom(source).*;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []*const T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        pub fn fillValues(self: Self, rng: Rng, dest: []T) void {
+            self.fillValuesFrom(rng, dest);
+        }
+
+        pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleValueFrom(source);
         }
 
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
@@ -375,6 +399,22 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn sampleValueFrom(self: Self, source: anytype) T {
             return self.sampleFrom(source).*;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []*const T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        pub fn fillValues(self: Self, rng: Rng, dest: []T) void {
+            self.fillValuesFrom(rng, dest);
+        }
+
+        pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleValueFrom(source);
         }
 
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
@@ -731,6 +771,16 @@ test "choice sampler repeatedly samples slice references" {
     var convenience_iter = chooseIter(rng, u8, &values).?;
     const picked = convenience_iter.next().?.*;
     try std.testing.expect(picked == 2 or picked == 4 or picked == 6 or picked == 8);
+    var pointer_buf: [8]*const u8 = undefined;
+    choice.fill(rng, &pointer_buf);
+    for (pointer_buf) |item| try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
+    choice.fillFrom(&engine, &pointer_buf);
+    for (pointer_buf) |item| try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
+    var value_buf: [8]u8 = undefined;
+    choice.fillValues(rng, &value_buf);
+    for (value_buf) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
+    choice.fillValuesFrom(&engine, &value_buf);
+    for (value_buf) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
     try std.testing.expect(chooseIter(rng, u8, &.{}) == null);
 }
 
@@ -757,6 +807,12 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expect(!std.mem.eql(u8, direct_item.*, "never"));
     const direct_value = choice.sampleValueFrom(&engine);
     try std.testing.expect(!std.mem.eql(u8, direct_value, "never"));
+    var pointer_buf: [8]*const []const u8 = undefined;
+    choice.fillFrom(&engine, &pointer_buf);
+    for (pointer_buf) |item| try std.testing.expect(!std.mem.eql(u8, item.*, "never"));
+    var value_buf: [8][]const u8 = undefined;
+    choice.fillValuesFrom(&engine, &value_buf);
+    for (value_buf) |value| try std.testing.expect(!std.mem.eql(u8, value, "never"));
 
     var iter = choice.iter(rng);
     const picked = iter.next().?.*;
