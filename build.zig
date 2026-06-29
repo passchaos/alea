@@ -454,6 +454,23 @@ pub fn build(b: *std.Build) void {
     const half_normal_probe_step = b.step("half-normal-probe", "Run HalfNormal bulk expression-shape microbenchmarks");
     half_normal_probe_step.dependOn(&run_half_normal_probe.step);
 
+    const unit_geometry_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/unit_geometry_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    unit_geometry_probe_mod.addImport("alea", module);
+
+    const unit_geometry_probe = b.addExecutable(.{
+        .name = "alea-unit-geometry-probe",
+        .root_module = unit_geometry_probe_mod,
+    });
+    const run_unit_geometry_probe = b.addRunArtifact(unit_geometry_probe);
+    if (b.args) |args| run_unit_geometry_probe.addArgs(args);
+
+    const unit_geometry_probe_step = b.step("unit-geometry-probe", "Run unit geometry bulk expression-shape microbenchmarks");
+    unit_geometry_probe_step.dependOn(&run_unit_geometry_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
