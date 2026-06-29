@@ -1709,7 +1709,7 @@ pub fn skewNormal(rng: Rng, comptime T: type, location: T, scale: T, shape: T) T
     return skewNormalFrom(rng, T, location, scale, shape);
 }
 
-pub fn skewNormalFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
+pub inline fn skewNormalFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(shape));
 
@@ -1730,6 +1730,16 @@ pub fn skewNormalFrom(source: anytype, comptime T: type, location: T, scale: T, 
             (@sqrt(one + shape * shape) * sqrt_two);
     };
     return location + scale * normalized;
+}
+
+pub fn fillSkewNormal(rng: Rng, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
+    fillSkewNormalFrom(rng, T, dest, location, scale, shape);
+}
+
+pub fn fillSkewNormalFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(shape));
+    for (dest) |*item| item.* = skewNormalFrom(source, T, location, scale, shape);
 }
 
 pub fn SkewNormal(comptime T: type) type {
@@ -1754,6 +1764,14 @@ pub fn SkewNormal(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return skewNormalFrom(source, T, self.location, self.scale, self.shape);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -2935,6 +2953,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var skew_normals = rng.sampleIter(f64, try SkewNormal(f64).init(0, 1, 1));
     try std.testing.expect(std.math.isFinite(skew_normals.next().?));
+    var skew_normal_buf: [8]f64 = undefined;
+    fillSkewNormal(rng, f64, &skew_normal_buf, 0, 1, 1);
+    for (skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    var direct_skew_normal_buf: [8]f64 = undefined;
+    fillSkewNormalFrom(&direct_engine, f64, &direct_skew_normal_buf, 0, 1, 1);
+    for (direct_skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    const skew_normal_sampler = try SkewNormal(f64).init(0, 1, 1);
+    skew_normal_sampler.fillFrom(&direct_engine, &direct_skew_normal_buf);
+    for (direct_skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
     var perts = rng.sampleIter(f64, try Pert(f64).initDefault(-1, 0, 2));
     const pert_value = perts.next().?;

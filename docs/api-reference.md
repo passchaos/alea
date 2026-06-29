@@ -102,7 +102,8 @@ Single-shot helpers:
   `kumaraswamyFrom`, `powerFunction`, `powerFunctionFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
   `pareto`, `paretoFrom`, `weibull`, `weibullFrom`
 - `gumbel`, `gumbelFrom`, `frechet`, `frechetFrom`, `skewNormal`,
-  `skewNormalFrom`, `pert`, `pertFrom`
+  `skewNormalFrom`, `fillSkewNormal`, `fillSkewNormalFrom`, `pert`,
+  `pertFrom`
 - `inverseGaussian`, `fillInverseGaussian`, `fillInverseGaussianFrom`,
   `normalInverseGaussian`, `normalInverseGaussianFrom`,
   `zipf`, `zipfFrom`, `zeta`, `zetaFrom`
@@ -191,6 +192,8 @@ Reusable samplers:
 - `Frechet(T).sampleFrom`
 - `SkewNormal(T)`
 - `SkewNormal(T).sampleFrom`
+- `SkewNormal(T).fill`
+- `SkewNormal(T).fillFrom`
 - `Pert(T)`
 - `Pert(T).sampleFrom`
 - `InverseGaussian(T)`
