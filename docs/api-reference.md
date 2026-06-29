@@ -342,6 +342,8 @@ Alias helpers:
 - `AliasTable.update`
 - `AliasTable.sample`
 - `AliasTable.sampleFrom`
+- `AliasTable.fill`
+- `AliasTable.fillFrom`
 - `AliasTable.deinit`
 
 Dynamic weighted helpers:
@@ -355,6 +357,10 @@ Dynamic weighted helpers:
 - `WeightedTree.sampleChecked`
 - `WeightedTree.sampleFrom`
 - `WeightedTree.sampleCheckedFrom`
+- `WeightedTree.fill`
+- `WeightedTree.fillChecked`
+- `WeightedTree.fillFrom`
+- `WeightedTree.fillCheckedFrom`
 - `WeightedTree.totalWeight`
 - `WeightedTree.isValid`
 - `WeightedTree.deinit`
@@ -365,6 +371,10 @@ Dynamic weighted helpers:
 - `WeightedIntTree.sampleChecked`
 - `WeightedIntTree.sampleFrom`
 - `WeightedIntTree.sampleCheckedFrom`
+- `WeightedIntTree.fill`
+- `WeightedIntTree.fillChecked`
+- `WeightedIntTree.fillFrom`
+- `WeightedIntTree.fillCheckedFrom`
 - `WeightedIntTree.totalWeight`
 - `WeightedIntTree.deinit`
 

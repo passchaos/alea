@@ -3397,6 +3397,14 @@ pub fn AliasTable(comptime Weight: type) type {
             const column = Rng.uintLessThanFrom(source, usize, self.prob.len);
             return if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column];
         }
+
+        pub fn fill(self: Self, rng: Rng, dest: []usize) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
     };
 }
 
@@ -3503,6 +3511,22 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) usize {
             return self.sampleCheckedFrom(source) catch unreachable;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []usize) void {
+            self.fillChecked(rng, dest) catch unreachable;
+        }
+
+        pub fn fillChecked(self: Self, rng: Rng, dest: []usize) Error!void {
+            try self.fillCheckedFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
+            self.fillCheckedFrom(source, dest) catch unreachable;
+        }
+
+        pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
+            for (dest) |*item| item.* = try self.sampleCheckedFrom(source);
         }
 
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
@@ -3628,6 +3652,22 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return self.sampleCheckedFrom(source) catch unreachable;
         }
 
+        pub fn fill(self: Self, rng: Rng, dest: []usize) void {
+            self.fillChecked(rng, dest) catch unreachable;
+        }
+
+        pub fn fillChecked(self: Self, rng: Rng, dest: []usize) Error!void {
+            try self.fillCheckedFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
+            self.fillCheckedFrom(source, dest) catch unreachable;
+        }
+
+        pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
+            for (dest) |*item| item.* = try self.sampleCheckedFrom(source);
+        }
+
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
@@ -3744,6 +3784,17 @@ test "alias table samples valid indexes" {
         try std.testing.expect(index != 1);
     }
     try std.testing.expect(table.sampleFrom(&engine) < 4);
+    var alias_buf: [8]usize = undefined;
+    table.fill(rng, &alias_buf);
+    for (alias_buf) |index| {
+        try std.testing.expect(index < 4);
+        try std.testing.expect(index != 1);
+    }
+    table.fillFrom(&engine, &alias_buf);
+    for (alias_buf) |index| {
+        try std.testing.expect(index < 4);
+        try std.testing.expect(index != 1);
+    }
 
     try table.update(&.{ 0, 10, 0, 0 });
     i = 0;
@@ -3779,6 +3830,9 @@ test "weighted tree supports dynamic updates" {
     while (i < 16) : (i += 1) {
         try std.testing.expectEqual(@as(usize, 3), tree.sampleFrom(&engine));
     }
+    var tree_buf: [8]usize = undefined;
+    try tree.fillCheckedFrom(&engine, &tree_buf);
+    for (tree_buf) |index| try std.testing.expectEqual(@as(usize, 3), index);
 
     try tree.update(2, 5);
     var saw_two = false;
@@ -3822,6 +3876,9 @@ test "weighted int tree supports dynamic updates" {
     var i: usize = 0;
     while (i < 16) : (i += 1) try std.testing.expectEqual(@as(usize, 2), tree.sampleFrom(&engine));
     try std.testing.expectEqual(@as(usize, 2), try tree.sampleCheckedFrom(&engine));
+    var tree_buf: [8]usize = undefined;
+    try tree.fillCheckedFrom(&engine, &tree_buf);
+    for (tree_buf) |index| try std.testing.expectEqual(@as(usize, 2), index);
 
     try std.testing.expectError(error.InvalidParameter, tree.update(9, 1));
 }
