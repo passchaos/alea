@@ -1739,6 +1739,14 @@ pub fn unitCircleFrom(source: anytype, comptime T: type) [2]T {
     }
 }
 
+pub fn fillUnitCircle(rng: Rng, comptime T: type, dest: [][2]T) void {
+    fillUnitCircleFrom(rng, T, dest);
+}
+
+pub fn fillUnitCircleFrom(source: anytype, comptime T: type, dest: [][2]T) void {
+    for (dest) |*item| item.* = unitCircleFrom(source, T);
+}
+
 pub fn unitDisc(rng: Rng, comptime T: type) [2]T {
     return unitDiscFrom(rng, T);
 }
@@ -1750,6 +1758,14 @@ pub fn unitDiscFrom(source: anytype, comptime T: type) [2]T {
         const x2 = signedUnitFloatFrom(source, T);
         if (x1 * x1 + x2 * x2 <= 1) return .{ x1, x2 };
     }
+}
+
+pub fn fillUnitDisc(rng: Rng, comptime T: type, dest: [][2]T) void {
+    fillUnitDiscFrom(rng, T, dest);
+}
+
+pub fn fillUnitDiscFrom(source: anytype, comptime T: type, dest: [][2]T) void {
+    for (dest) |*item| item.* = unitDiscFrom(source, T);
 }
 
 pub fn unitSphere(rng: Rng, comptime T: type) [3]T {
@@ -1769,6 +1785,14 @@ pub fn unitSphereFrom(source: anytype, comptime T: type) [3]T {
     }
 }
 
+pub fn fillUnitSphere(rng: Rng, comptime T: type, dest: [][3]T) void {
+    fillUnitSphereFrom(rng, T, dest);
+}
+
+pub fn fillUnitSphereFrom(source: anytype, comptime T: type, dest: [][3]T) void {
+    for (dest) |*item| item.* = unitSphereFrom(source, T);
+}
+
 pub fn unitBall(rng: Rng, comptime T: type) [3]T {
     return unitBallFrom(rng, T);
 }
@@ -1781,6 +1805,14 @@ pub fn unitBallFrom(source: anytype, comptime T: type) [3]T {
         const x3 = signedUnitFloatFrom(source, T);
         if (x1 * x1 + x2 * x2 + x3 * x3 <= 1) return .{ x1, x2, x3 };
     }
+}
+
+pub fn fillUnitBall(rng: Rng, comptime T: type, dest: [][3]T) void {
+    fillUnitBallFrom(rng, T, dest);
+}
+
+pub fn fillUnitBallFrom(source: anytype, comptime T: type, dest: [][3]T) void {
+    for (dest) |*item| item.* = unitBallFrom(source, T);
 }
 
 inline fn signedUnitFloatFrom(source: anytype, comptime T: type) T {
@@ -1806,6 +1838,14 @@ pub fn UnitCircle(comptime T: type) type {
         pub fn sampleFrom(_: @This(), source: anytype) [2]T {
             return unitCircleFrom(source, T);
         }
+
+        pub fn fill(_: @This(), rng: Rng, dest: [][2]T) void {
+            fillUnitCircle(rng, T, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: [][2]T) void {
+            fillUnitCircleFrom(source, T, dest);
+        }
     };
 }
 
@@ -1817,6 +1857,14 @@ pub fn UnitDisc(comptime T: type) type {
 
         pub fn sampleFrom(_: @This(), source: anytype) [2]T {
             return unitDiscFrom(source, T);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: [][2]T) void {
+            fillUnitDisc(rng, T, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: [][2]T) void {
+            fillUnitDiscFrom(source, T, dest);
         }
     };
 }
@@ -1830,6 +1878,14 @@ pub fn UnitSphere(comptime T: type) type {
         pub fn sampleFrom(_: @This(), source: anytype) [3]T {
             return unitSphereFrom(source, T);
         }
+
+        pub fn fill(_: @This(), rng: Rng, dest: [][3]T) void {
+            fillUnitSphere(rng, T, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: [][3]T) void {
+            fillUnitSphereFrom(source, T, dest);
+        }
     };
 }
 
@@ -1841,6 +1897,14 @@ pub fn UnitBall(comptime T: type) type {
 
         pub fn sampleFrom(_: @This(), source: anytype) [3]T {
             return unitBallFrom(source, T);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: [][3]T) void {
+            fillUnitBall(rng, T, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: [][3]T) void {
+            fillUnitBallFrom(source, T, dest);
         }
     };
 }
@@ -2975,6 +3039,36 @@ test "unit geometric distributions stay on expected support" {
         const ball = unitBall(rng, f64);
         try std.testing.expect(ball[0] * ball[0] + ball[1] * ball[1] + ball[2] * ball[2] <= 1);
     }
+
+    var circles: [16][2]f64 = undefined;
+    fillUnitCircle(rng, f64, &circles);
+    for (circles) |circle| {
+        try std.testing.expectApproxEqAbs(@as(f64, 1), circle[0] * circle[0] + circle[1] * circle[1], 1e-12);
+    }
+
+    var discs: [16][2]f64 = undefined;
+    fillUnitDisc(rng, f64, &discs);
+    for (discs) |disc| {
+        try std.testing.expect(disc[0] * disc[0] + disc[1] * disc[1] <= 1);
+    }
+
+    var direct_engine = alea.ScalarPrng.init(73);
+    var spheres: [16][3]f64 = undefined;
+    fillUnitSphereFrom(&direct_engine, f64, &spheres);
+    for (spheres) |sphere| {
+        try std.testing.expectApproxEqAbs(@as(f64, 1), sphere[0] * sphere[0] + sphere[1] * sphere[1] + sphere[2] * sphere[2], 1e-12);
+    }
+
+    var balls: [16][3]f64 = undefined;
+    fillUnitBallFrom(&direct_engine, f64, &balls);
+    for (balls) |ball| {
+        try std.testing.expect(ball[0] * ball[0] + ball[1] * ball[1] + ball[2] * ball[2] <= 1);
+    }
+
+    (UnitCircle(f64){}).fill(rng, &circles);
+    (UnitDisc(f64){}).fill(rng, &discs);
+    (UnitSphere(f64){}).fillFrom(&direct_engine, &spheres);
+    (UnitBall(f64){}).fillFrom(&direct_engine, &balls);
 }
 
 test "dirichlet sampler returns simplex vectors" {

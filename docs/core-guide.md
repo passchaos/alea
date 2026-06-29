@@ -73,7 +73,10 @@ Reusable samplers expose `sample(rng)`, and scalar-fast samplers expose
 `sampleFrom(source)` where direct engine dispatch is useful. They can be used with
 `rng.sampleIter(T, sampler)` when the sample type is scalar. `Dirichlet`
 supports allocation-returning `sample(allocator, rng)` and allocation-free
-`sampleInto(rng, out)` / `sampleIntoFrom(source, out)`.
+`sampleInto(rng, out)` / `sampleIntoFrom(source, out)`. Unit geometry samplers
+also expose `fill` / `fillFrom`, and the module-level `fillUnitCircle`,
+`fillUnitDisc`, `fillUnitSphere`, and `fillUnitBall` helpers fill slices of
+fixed-size point arrays.
 
 ## Sequence And Collection Sampling
 

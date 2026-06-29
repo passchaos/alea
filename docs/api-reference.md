@@ -97,7 +97,10 @@ Single-shot helpers:
 - `gumbel`, `frechet`, `skewNormal`, `skewNormalFrom`, `pert`
 - `inverseGaussian`, `normalInverseGaussian`, `normalInverseGaussianFrom`,
   `zipf`, `zeta`
-- `unitCircle`, `unitDisc`, `unitSphere`, `unitBall`
+- `unitCircle`, `unitCircleFrom`, `fillUnitCircle`, `fillUnitCircleFrom`,
+  `unitDisc`, `unitDiscFrom`, `fillUnitDisc`, `fillUnitDiscFrom`,
+  `unitSphere`, `unitSphereFrom`, `fillUnitSphere`, `fillUnitSphereFrom`,
+  `unitBall`, `unitBallFrom`, `fillUnitBall`, `fillUnitBallFrom`
 
 Reusable samplers:
 
@@ -177,12 +180,20 @@ Reusable samplers:
 - `Zeta(T)`
 - `UnitCircle(T)`
 - `UnitCircle(T).sampleFrom`
+- `UnitCircle(T).fill`
+- `UnitCircle(T).fillFrom`
 - `UnitDisc(T)`
 - `UnitDisc(T).sampleFrom`
+- `UnitDisc(T).fill`
+- `UnitDisc(T).fillFrom`
 - `UnitSphere(T)`
 - `UnitSphere(T).sampleFrom`
+- `UnitSphere(T).fill`
+- `UnitSphere(T).fillFrom`
 - `UnitBall(T)`
 - `UnitBall(T).sampleFrom`
+- `UnitBall(T).fill`
+- `UnitBall(T).fillFrom`
 - `Dirichlet(T)`
 - `Dirichlet(T).sampleIntoFrom`
 - `AliasTable(Weight)`

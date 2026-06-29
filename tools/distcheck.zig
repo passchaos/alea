@@ -316,6 +316,28 @@ fn checkVectorDistributions() !void {
         const ball = alea.distributions.unitBall(rng, f64);
         if (ball[0] * ball[0] + ball[1] * ball[1] + ball[2] * ball[2] > 1) return error.DistributionCheckFailed;
     }
+
+    var direct_engine = alea.ScalarPrng.init(0x7ec8);
+    var circles: [128][2]f64 = undefined;
+    var discs: [128][2]f64 = undefined;
+    var spheres: [128][3]f64 = undefined;
+    var balls: [128][3]f64 = undefined;
+    alea.distributions.fillUnitCircleFrom(&direct_engine, f64, &circles);
+    alea.distributions.fillUnitDiscFrom(&direct_engine, f64, &discs);
+    alea.distributions.fillUnitSphereFrom(&direct_engine, f64, &spheres);
+    alea.distributions.fillUnitBallFrom(&direct_engine, f64, &balls);
+    for (circles) |circle| {
+        try expectFloatBetween("fill unit circle norm", circle[0] * circle[0] + circle[1] * circle[1], 0.999999999999, 1.000000000001);
+    }
+    for (discs) |disc| {
+        if (disc[0] * disc[0] + disc[1] * disc[1] > 1) return error.DistributionCheckFailed;
+    }
+    for (spheres) |sphere| {
+        try expectFloatBetween("fill unit sphere norm", sphere[0] * sphere[0] + sphere[1] * sphere[1] + sphere[2] * sphere[2], 0.999999999999, 1.000000000001);
+    }
+    for (balls) |ball| {
+        if (ball[0] * ball[0] + ball[1] * ball[1] + ball[2] * ball[2] > 1) return error.DistributionCheckFailed;
+    }
 }
 
 fn expectFloatBetween(comptime label: []const u8, value: f64, min: f64, max: f64) !void {
