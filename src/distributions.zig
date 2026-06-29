@@ -3729,14 +3729,16 @@ fn requireUnsignedWeight(comptime Weight: type) void {
 
 fn rangeLess(comptime T: type, low: T, high: T) bool {
     return switch (@typeInfo(T)) {
-        .int, .float => low < high,
+        .int => low < high,
+        .float => std.math.isFinite(low) and std.math.isFinite(high) and low < high,
         else => @compileError("Uniform supports integer and floating-point types"),
     };
 }
 
 fn rangeLessEqual(comptime T: type, low: T, high: T) bool {
     return switch (@typeInfo(T)) {
-        .int, .float => low <= high,
+        .int => low <= high,
+        .float => std.math.isFinite(low) and std.math.isFinite(high) and low <= high,
         else => @compileError("Uniform supports integer and floating-point types"),
     };
 }
@@ -4428,6 +4430,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Exponential(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, HalfNormal(f64).init(0));
+    try std.testing.expectError(error.EmptyRange, Uniform(f64).init(std.math.inf(f64), 1));
+    try std.testing.expectError(error.EmptyRange, Uniform(f64).initInclusive(0, std.math.inf(f64)));
     try std.testing.expectError(error.InvalidParameter, Poisson.init(std.math.inf(f64)));
     try std.testing.expectError(error.InvalidProbability, Geometric.init(0));
     try std.testing.expectError(error.InvalidParameter, Gamma(f64).init(0, 1));
