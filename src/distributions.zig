@@ -2625,6 +2625,7 @@ pub fn weibull(rng: Rng, comptime T: type, scale: T, shape: T) T {
 pub fn weibullFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0);
+    if (shape == 1) return scale * Rng.standardExponentialFastFrom(source, T);
     return scale * std.math.pow(T, -@log(Rng.floatOpenFrom(source, T)), 1 / shape);
 }
 
@@ -2635,6 +2636,11 @@ pub fn fillWeibull(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) vo
 pub fn fillWeibullFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0);
+    if (shape == 1) {
+        for (dest) |*item| item.* = scale * Rng.standardExponentialFastFrom(source, T);
+        return;
+    }
+
     Rng.fillOpenFrom(source, T, dest);
     weibullFromOpenUniforms(T, dest, scale, 1 / shape);
 }
@@ -5023,6 +5029,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const weibull_sampler = try Weibull(f64).init(2, 1.5);
     weibull_sampler.fillFrom(&direct_engine, &direct_weibull_buf);
     for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
+    var weibull_shape_one_buf: [8]f64 = undefined;
+    fillWeibullFrom(&direct_engine, f64, &weibull_shape_one_buf, 2, 1);
+    for (weibull_shape_one_buf) |value| try std.testing.expect(value >= 0);
 
     var gumbels = rng.sampleIter(f64, try Gumbel(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(gumbels.next().?));
