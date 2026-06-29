@@ -130,6 +130,11 @@ fn checkContinuous() !void {
             return alea.distributions.gamma(r, f64, 1, 3);
         }
     }.sample, 2.94, 3.06);
+    try expectContinuousMean("gamma-shape-half", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.gamma(r, f64, 0.5, 3);
+        }
+    }.sample, 1.45, 1.55);
     try expectContinuousMean("beta", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.beta(r, f64, 2, 5);

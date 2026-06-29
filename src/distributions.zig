@@ -1504,12 +1504,17 @@ pub fn gammaFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(shape > 0 and scale > 0);
 
-    if (shape == 1) return scale * Rng.standardExponentialFastFrom(source, T);
-
     if (shape < 1) {
+        if (shape == 0.5) {
+            const z = Rng.standardNormalFastFrom(source, T);
+            return (scale * 0.5) * z * z;
+        }
+
         const boosted = gammaFrom(source, T, shape + 1, 1);
         return scale * boosted * std.math.pow(T, Rng.floatFrom(source, T), 1 / shape);
     }
+
+    if (shape == 1) return scale * Rng.standardExponentialFastFrom(source, T);
 
     const d = shape - @as(T, 1.0 / 3.0);
     const c = @as(T, 1.0) / @sqrt(9 * d);
@@ -1531,6 +1536,15 @@ pub fn fillGamma(rng: Rng, comptime T: type, dest: []T, shape: T, scale: T) void
 }
 
 pub fn fillGammaFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) void {
+    if (shape == 0.5) {
+        const half_scale = scale * 0.5;
+        for (dest) |*item| {
+            const z = Rng.standardNormalFastFrom(source, T);
+            item.* = half_scale * z * z;
+        }
+        return;
+    }
+
     const sampler = Gamma(T).init(shape, scale) catch unreachable;
     sampler.fillFrom(source, dest);
 }
@@ -4719,6 +4733,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (gamma_shape_one_buf) |value| try std.testing.expect(value > 0);
     const gamma_shape_one = try Gamma(f64).init(1, 3);
     try std.testing.expect(gamma_shape_one.sampleFrom(&direct_engine) > 0);
+    var gamma_shape_half_buf: [8]f64 = undefined;
+    fillGammaFrom(&direct_engine, f64, &gamma_shape_half_buf, 0.5, 3);
+    for (gamma_shape_half_buf) |value| try std.testing.expect(value >= 0);
+    const gamma_shape_half = try Gamma(f64).init(0.5, 3);
+    try std.testing.expect(gamma_shape_half.sampleFrom(&direct_engine) >= 0);
 
     var chi_squared = rng.sampleIter(f64, try ChiSquared(f64).init(4));
     try std.testing.expect(chi_squared.next().? > 0);
