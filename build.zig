@@ -131,6 +131,23 @@ pub fn build(b: *std.Build) void {
     const cauchy_probe_step = b.step("cauchy-probe", "Run Cauchy expression-shape microbenchmarks");
     cauchy_probe_step.dependOn(&run_cauchy_probe.step);
 
+    const open_closed_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/open_closed_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    open_closed_probe_mod.addImport("alea", module);
+
+    const open_closed_probe = b.addExecutable(.{
+        .name = "alea-open-closed-probe",
+        .root_module = open_closed_probe_mod,
+    });
+    const run_open_closed_probe = b.addRunArtifact(open_closed_probe);
+    if (b.args) |args| run_open_closed_probe.addArgs(args);
+
+    const open_closed_probe_step = b.step("open-closed-probe", "Run OpenClosed01 f64 bulk conversion microbenchmarks");
+    open_closed_probe_step.dependOn(&run_open_closed_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

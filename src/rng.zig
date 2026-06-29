@@ -639,7 +639,7 @@ fn fillOpenF64From(source: anytype, dest: []f64) void {
 
 fn fillOpenClosedF64From(source: anytype, dest: []f64) void {
     if (comptime sourceCanFillBytes(@TypeOf(source))) {
-        var raw_words: [512]u64 = undefined;
+        var raw_words: [128]u64 = undefined;
 
         var i: usize = 0;
         while (i < dest.len) {
