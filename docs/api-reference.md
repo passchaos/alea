@@ -372,6 +372,8 @@ Dynamic weighted helpers:
 - `WeightedTree.totalWeight`
 - `WeightedTree.isValid`
 - `WeightedTree.deinit`
+- Prefer `WeightedIntTree` when weights are unsigned integers and frequent
+  update/sample throughput is the priority.
 - `WeightedIntTree.init`
 - `WeightedIntTree.update`
 - `WeightedIntTree.get`

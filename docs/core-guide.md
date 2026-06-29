@@ -103,6 +103,8 @@ Use:
 - `distributions.AliasTable` for O(1) repeated weighted index sampling
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
   and sampling workloads
+- `distributions.WeightedIntTree` for unsigned integer weights when dynamic
+  update/sample throughput matters
 
 Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput index
 sampling. Use `sampleIndices` when a `[]usize` result is more convenient.
