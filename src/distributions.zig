@@ -2358,7 +2358,8 @@ pub fn fillPowerFunctionFrom(source: anytype, comptime T: type, dest: []T, min: 
     comptime requireFloat(T);
     std.debug.assert(min < max and shape > 0);
     std.debug.assert(std.math.isFinite(min) and std.math.isFinite(max) and std.math.isFinite(shape));
-    for (dest) |*item| item.* = powerFunctionFrom(source, T, min, max, shape);
+    Rng.fillOpenFrom(source, T, dest);
+    powerFunctionFromOpenUniforms(T, dest, min, max - min, 1 / shape);
 }
 
 pub fn PowerFunction(comptime T: type) type {
@@ -2393,7 +2394,8 @@ pub fn PowerFunction(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            Rng.fillOpenFrom(source, T, dest);
+            powerFunctionFromOpenUniforms(T, dest, self.min, self.range, self.inverse_shape);
         }
     };
 }
@@ -4056,6 +4058,34 @@ fn logLogisticFromOpenUniformsVector(comptime T: type, comptime VectorType: type
     while (i < dest.len) : (i += 1) {
         const u = dest[i];
         dest[i] = scale * @exp(@log(u / (1 - u)) * inverse_shape);
+    }
+}
+
+fn powerFunctionFromOpenUniforms(comptime T: type, dest: []T, min: T, width: T, inverse_shape: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => powerFunctionFromOpenUniformsVector(T, @Vector(8, f32), dest, min, width, inverse_shape),
+        f64 => powerFunctionFromOpenUniformsVector(T, @Vector(4, f64), dest, min, width, inverse_shape),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn powerFunctionFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, min: T, width: T, inverse_shape: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const min_vec: VectorType = @splat(min);
+    const width_vec: VectorType = @splat(width);
+    const inverse_shape_vec: VectorType = @splat(inverse_shape);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const out = min_vec + width_vec * @exp(@log(uniform_vec) * inverse_shape_vec);
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        dest[i] = min + width * @exp(@log(dest[i]) * inverse_shape);
     }
 }
 

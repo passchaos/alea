@@ -301,6 +301,23 @@ pub fn build(b: *std.Build) void {
     const log_logistic_probe_step = b.step("log-logistic-probe", "Run LogLogistic bulk expression-shape microbenchmarks");
     log_logistic_probe_step.dependOn(&run_log_logistic_probe.step);
 
+    const power_function_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/power_function_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    power_function_probe_mod.addImport("alea", module);
+
+    const power_function_probe = b.addExecutable(.{
+        .name = "alea-power-function-probe",
+        .root_module = power_function_probe_mod,
+    });
+    const run_power_function_probe = b.addRunArtifact(power_function_probe);
+    if (b.args) |args| run_power_function_probe.addArgs(args);
+
+    const power_function_probe_step = b.step("power-function-probe", "Run PowerFunction bulk expression-shape microbenchmarks");
+    power_function_probe_step.dependOn(&run_power_function_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
