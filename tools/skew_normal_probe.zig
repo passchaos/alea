@@ -22,15 +22,19 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast shape=1 current", 0x5ce8, sample_count, currentShape1);
     try benchFill(alea.FastPrng, io, stdout, "fast shape=1 staged scalar", 0x5ce8, sample_count, stagedShape1Scalar);
     try benchFill(alea.FastPrng, io, stdout, "fast shape=1 staged vector4", 0x5ce8, sample_count, stagedShape1Vector4);
+    try benchFill(alea.FastPrng, io, stdout, "fast shape=1 box-muller pair", 0x5ce8, sample_count, boxMullerShape1);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=1 current", 0x5ce8, sample_count, currentShape1);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=1 staged scalar", 0x5ce8, sample_count, stagedShape1Scalar);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=1 staged vector4", 0x5ce8, sample_count, stagedShape1Vector4);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=1 box-muller pair", 0x5ce8, sample_count, boxMullerShape1);
     try benchFill(alea.FastPrng, io, stdout, "fast shape=2 current", 0x5ce2, sample_count, currentShape2);
     try benchFill(alea.FastPrng, io, stdout, "fast shape=2 staged scalar", 0x5ce2, sample_count, stagedShape2Scalar);
     try benchFill(alea.FastPrng, io, stdout, "fast shape=2 staged vector4", 0x5ce2, sample_count, stagedShape2Vector4);
+    try benchFill(alea.FastPrng, io, stdout, "fast shape=2 box-muller pair", 0x5ce2, sample_count, boxMullerShape2);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=2 current", 0x5ce2, sample_count, currentShape2);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=2 staged scalar", 0x5ce2, sample_count, stagedShape2Scalar);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=2 staged vector4", 0x5ce2, sample_count, stagedShape2Vector4);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar shape=2 box-muller pair", 0x5ce2, sample_count, boxMullerShape2);
     try stdout.flush();
 }
 
@@ -90,12 +94,20 @@ fn currentShape2(source: anytype, dest: []f64) void {
     alea.distributions.fillSkewNormalFrom(source, f64, dest, 0, 1, 2);
 }
 
+fn boxMullerShape1(source: anytype, dest: []f64) void {
+    boxMullerPair(source, dest, 0, 1, 1);
+}
+
 fn stagedShape2Scalar(source: anytype, dest: []f64) void {
     stagedScalar(source, dest, 0, 1, 2);
 }
 
 fn stagedShape2Vector4(source: anytype, dest: []f64) void {
     stagedVector4(source, dest, 0, 1, 2);
+}
+
+fn boxMullerShape2(source: anytype, dest: []f64) void {
+    boxMullerPair(source, dest, 0, 1, 2);
 }
 
 fn stagedScalar(source: anytype, dest: []f64, location: f64, scale: f64, shape: f64) void {
@@ -162,4 +174,25 @@ fn combineVector4(dest: []f64, second_normals: []const f64, location: f64, scale
         inline for (0..4) |lane| dest[i + lane] = out[lane];
     }
     combineScalar(dest[i..], second_normals[i..], location, scale, shape);
+}
+
+fn boxMullerPair(source: anytype, dest: []f64, location: f64, scale: f64, shape: f64) void {
+    for (dest) |*item| {
+        const radius_uniform = alea.Rng.floatOpenFrom(source, f64);
+        const angle_uniform = alea.Rng.floatFrom(source, f64);
+        const radius = @sqrt(-2.0 * @log(radius_uniform));
+        const angle = 2.0 * std.math.pi * angle_uniform;
+        const first = radius * @cos(angle);
+        const second = radius * @sin(angle);
+        const high = @max(first, second);
+        const low = @min(first, second);
+        const normalized = if (shape == -1)
+            low
+        else if (shape == 1)
+            high
+        else
+            ((1.0 + shape) * high + (1.0 - shape) * low) /
+                (@sqrt(1.0 + shape * shape) * @sqrt(2.0));
+        item.* = location + scale * normalized;
+    }
 }
