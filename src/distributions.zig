@@ -1141,6 +1141,27 @@ pub fn fillGeometricFailuresFrom(source: anytype, dest: []u64, p: f64) void {
     dist.fillFrom(source, dest);
 }
 
+pub fn standardGeometric(rng: Rng) u64 {
+    return standardGeometricFrom(rng);
+}
+
+pub fn standardGeometricFrom(source: anytype) u64 {
+    var failures: u64 = 0;
+    while (true) {
+        const zeros = @clz(Rng.nextFrom(source));
+        failures += zeros;
+        if (zeros < 64) return failures;
+    }
+}
+
+pub fn fillStandardGeometric(rng: Rng, dest: []u64) void {
+    fillStandardGeometricFrom(rng, dest);
+}
+
+pub fn fillStandardGeometricFrom(source: anytype, dest: []u64) void {
+    for (dest) |*item| item.* = standardGeometricFrom(source);
+}
+
 pub fn fillGeometric(rng: Rng, dest: []u64, p: f64) void {
     fillGeometricFrom(rng, dest, p);
 }
@@ -1197,6 +1218,27 @@ pub const GeometricFailures = struct {
 
     pub fn fillFrom(self: GeometricFailures, source: anytype, dest: []u64) void {
         for (dest) |*item| item.* = self.sampleFrom(source);
+    }
+};
+
+pub const StandardGeometric = struct {
+    pub fn sample(self: StandardGeometric, rng: Rng) u64 {
+        _ = self;
+        return standardGeometricFrom(rng);
+    }
+
+    pub fn sampleFrom(self: StandardGeometric, source: anytype) u64 {
+        _ = self;
+        return standardGeometricFrom(source);
+    }
+
+    pub fn fill(self: StandardGeometric, rng: Rng, dest: []u64) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: StandardGeometric, source: anytype, dest: []u64) void {
+        _ = self;
+        for (dest) |*item| item.* = standardGeometricFrom(source);
     }
 };
 
@@ -3683,6 +3725,13 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectEqual(@as(u64, 0), geometricFailures(rng, 1));
     const always_success_failures = GeometricFailures.init(1) catch unreachable;
     try std.testing.expectEqual(@as(u64, 0), always_success_failures.sample(rng));
+    var standard_geometric_buf: [8]u64 = undefined;
+    fillStandardGeometric(rng, &standard_geometric_buf);
+    fillStandardGeometricFrom(&direct_engine, &standard_geometric_buf);
+    const standard_geometric_sampler = StandardGeometric{};
+    standard_geometric_sampler.fillFrom(&direct_engine, &standard_geometric_buf);
+    _ = standardGeometric(rng);
+    _ = standard_geometric_sampler.sampleFrom(&direct_engine);
 
     var gammas = rng.sampleIter(f64, try Gamma(f64).init(2, 3));
     try std.testing.expect(gammas.next().? > 0);

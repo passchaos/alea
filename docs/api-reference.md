@@ -101,7 +101,9 @@ Single-shot helpers:
 - `poisson`, `fillPoisson`, `fillPoissonFrom`, `geometric`,
   `geometricFrom`, `fillGeometric`, `fillGeometricFrom`,
   `geometricFailures`, `geometricFailuresFrom`, `fillGeometricFailures`,
-  `fillGeometricFailuresFrom`
+  `fillGeometricFailuresFrom`, `standardGeometric`,
+  `standardGeometricFrom`, `fillStandardGeometric`,
+  `fillStandardGeometricFrom`
 - `gamma`, `gammaFrom`, `fillGamma`, `fillGammaFrom`, `chiSquared`,
   `chiSquaredFrom`, `fillChiSquared`, `fillChiSquaredFrom`, `chi`,
   `chiFrom`, `fillChi`, `fillChiFrom`, `erlang`, `erlangFrom`,
@@ -193,6 +195,10 @@ Reusable samplers:
 - `GeometricFailures.sampleFrom`
 - `GeometricFailures.fill`
 - `GeometricFailures.fillFrom`
+- `StandardGeometric`
+- `StandardGeometric.sampleFrom`
+- `StandardGeometric.fill`
+- `StandardGeometric.fillFrom`
 - `Gamma(T)`
 - `Gamma(T).sampleFrom`
 - `Gamma(T).fill`

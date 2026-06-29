@@ -51,6 +51,7 @@ fn main() {
     bench_distr_exponential_f32("rand_distr exponential f32", bytes / 64);
     bench_distr_poisson("rand_distr poisson", bytes / 64);
     bench_distr_geometric("rand_distr geometric", bytes / 64);
+    bench_distr_standard_geometric("rand_distr standard-geometric", bytes / 64);
     bench_distr_binomial("rand_distr binomial", bytes / 64);
     bench_distr_hypergeometric("rand_distr hypergeometric", bytes / 128);
     bench_distr_hypergeometric_large("rand_distr hypergeometric large", bytes / 256);
@@ -671,6 +672,31 @@ fn bench_distr_geometric(name: &str, count: usize) {
     let mut best_checksum = 0u64;
     for _ in 0..TRIALS {
         let mut rng = SmallRng::seed_from_u64(0x6e0);
+        let start = Instant::now();
+        let mut checksum = 0u64;
+
+        for _ in 0..count {
+            checksum = checksum.wrapping_add(dist.sample(&mut rng));
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
+}
+
+fn bench_distr_standard_geometric(name: &str, count: usize) {
+    let dist = rand_distr::StandardGeometric;
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0u64;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0x6e05);
         let start = Instant::now();
         let mut checksum = 0u64;
 
