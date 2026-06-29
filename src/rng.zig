@@ -438,6 +438,15 @@ fn fillBytesFrom(source: anytype, buf: []u8) void {
     }
 }
 
+fn sourceCanFillBytes(comptime Source: type) bool {
+    if (Source == Rng) return true;
+    const info = @typeInfo(Source);
+    if (info == .pointer and info.pointer.size == .one) {
+        return @hasDecl(info.pointer.child, "fill");
+    }
+    return @hasDecl(Source, "fill");
+}
+
 fn fillBoolsFrom(source: anytype, dest: []bool) void {
     var i: usize = 0;
     while (i < dest.len) {
@@ -617,7 +626,24 @@ fn fillOpenF64From(source: anytype, dest: []f64) void {
 }
 
 fn fillOpenClosedF64From(source: anytype, dest: []f64) void {
-    for (dest) |*item| item.* = floatOpenClosedFrom(source, f64);
+    if (comptime sourceCanFillBytes(@TypeOf(source))) {
+        var raw_words: [512]u64 = undefined;
+
+        var i: usize = 0;
+        while (i < dest.len) {
+            const take = @min(dest.len - i, raw_words.len);
+            fillBytesFrom(source, std.mem.sliceAsBytes(raw_words[0..take]));
+
+            var lane: usize = 0;
+            while (lane < take) : (lane += 1) {
+                const raw = std.mem.littleToNative(u64, raw_words[lane]);
+                dest[i + lane] = f64OpenClosedFromRaw(raw);
+            }
+            i += take;
+        }
+    } else {
+        for (dest) |*item| item.* = floatOpenClosedFrom(source, f64);
+    }
 }
 
 fn fillFloatRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
@@ -1496,6 +1522,10 @@ fn f64OpenFromRaw(raw: u64) f64 {
     return @as(f64, @bitCast(f64UnitOpenBitsFromRaw(raw))) - (1.0 - std.math.floatEps(f64) / 2.0);
 }
 
+fn f64OpenClosedFromRaw(raw: u64) f64 {
+    return (@as(f64, @floatFromInt(raw >> 11)) + 1.0) * (1.0 / 9007199254740992.0);
+}
+
 pub fn floatFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
@@ -1518,7 +1548,7 @@ pub fn floatOpenClosedFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
         f32 => (@as(f32, @floatFromInt(nextFrom(source) >> 40)) + 1.0) * (1.0 / 16777216.0),
-        f64 => (@as(f64, @floatFromInt(nextFrom(source) >> 11)) + 1.0) * (1.0 / 9007199254740992.0),
+        f64 => f64OpenClosedFromRaw(nextFrom(source)),
         else => @compileError("alea supports f32 and f64 floats"),
     };
 }
