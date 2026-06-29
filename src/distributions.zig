@@ -3066,7 +3066,8 @@ pub fn fillInverseGaussian(rng: Rng, comptime T: type, dest: []T, mean: T, shape
 pub fn fillInverseGaussianFrom(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) void {
     comptime requireFloat(T);
     std.debug.assert(mean > 0 and shape > 0);
-    for (dest) |*item| item.* = inverseGaussianFrom(source, T, mean, shape);
+    Rng.fillNormalFrom(source, T, dest, 0, 1);
+    inverseGaussianFromNormals(source, T, dest, mean, shape);
 }
 
 pub fn InverseGaussian(comptime T: type) type {
@@ -3096,7 +3097,7 @@ pub fn InverseGaussian(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillInverseGaussianFrom(source, T, dest, self.mean, self.shape);
         }
     };
 }
@@ -3162,7 +3163,11 @@ pub fn NormalInverseGaussian(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            self.inverse_gaussian.fillFrom(source, dest);
+            for (dest) |*item| {
+                const inv_gauss = item.*;
+                item.* = self.beta_param * inv_gauss + @sqrt(inv_gauss) * Rng.normalFastFrom(source, T, 0, 1);
+            }
         }
     };
 }
@@ -3808,6 +3813,53 @@ fn expInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T) void
         inline for (0..len) |lane| dest[i + lane] = vec[lane];
     }
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
+}
+
+fn inverseGaussianFromNormals(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => inverseGaussianFromNormalsVector(source, T, @Vector(8, f32), dest, mean, shape),
+        f64 => inverseGaussianFromNormalsVector(source, T, @Vector(4, f64), dest, mean, shape),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn inverseGaussianFromNormalsVector(source: anytype, comptime T: type, comptime VectorType: type, dest: []T, mean: T, shape: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const mean_vec: VectorType = @splat(mean);
+    const shape_vec: VectorType = @splat(shape);
+    const mean_over_2shape: VectorType = @splat(mean / (2 * shape));
+    const mean_squared: VectorType = @splat(mean * mean);
+    const four_vec: VectorType = @splat(4.0);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var normal_vec: VectorType = undefined;
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| {
+            normal_vec[lane] = dest[i + lane];
+            uniform_vec[lane] = Rng.floatFrom(source, T);
+        }
+
+        const y = mean_vec * normal_vec * normal_vec;
+        const x = mean_vec + mean_over_2shape * (y - @sqrt(four_vec * shape_vec * y + y * y));
+        const threshold = mean_vec / (mean_vec + x);
+        const out = @select(T, uniform_vec <= threshold, x, mean_squared / x);
+
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        dest[i] = inverseGaussianFromNormal(source, T, dest[i], mean, shape);
+    }
+}
+
+fn inverseGaussianFromNormal(source: anytype, comptime T: type, normal_sample: T, mean: T, shape: T) T {
+    const y = mean * normal_sample * normal_sample;
+    const mean_over_2shape = mean / (2 * shape);
+    const x = mean + mean_over_2shape * (y - @sqrt(4 * shape * y + y * y));
+    if (Rng.floatFrom(source, T) <= mean / (mean + x)) return x;
+    return mean * mean / x;
 }
 
 test "basic distributions stay in expected ranges" {

@@ -165,6 +165,40 @@ pub fn build(b: *std.Build) void {
     const log_normal_probe_step = b.step("log-normal-probe", "Run LogNormal bulk expression-shape microbenchmarks");
     log_normal_probe_step.dependOn(&run_log_normal_probe.step);
 
+    const nig_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/nig_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    nig_probe_mod.addImport("alea", module);
+
+    const nig_probe = b.addExecutable(.{
+        .name = "alea-nig-probe",
+        .root_module = nig_probe_mod,
+    });
+    const run_nig_probe = b.addRunArtifact(nig_probe);
+    if (b.args) |args| run_nig_probe.addArgs(args);
+
+    const nig_probe_step = b.step("nig-probe", "Run NormalInverseGaussian bulk expression-shape microbenchmarks");
+    nig_probe_step.dependOn(&run_nig_probe.step);
+
+    const inverse_gaussian_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/inverse_gaussian_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    inverse_gaussian_probe_mod.addImport("alea", module);
+
+    const inverse_gaussian_probe = b.addExecutable(.{
+        .name = "alea-inverse-gaussian-probe",
+        .root_module = inverse_gaussian_probe_mod,
+    });
+    const run_inverse_gaussian_probe = b.addRunArtifact(inverse_gaussian_probe);
+    if (b.args) |args| run_inverse_gaussian_probe.addArgs(args);
+
+    const inverse_gaussian_probe_step = b.step("inverse-gaussian-probe", "Run InverseGaussian bulk expression-shape microbenchmarks");
+    inverse_gaussian_probe_step.dependOn(&run_inverse_gaussian_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
