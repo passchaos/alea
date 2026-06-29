@@ -420,6 +420,23 @@ pub fn build(b: *std.Build) void {
     const pareto_probe_step = b.step("pareto-probe", "Run Pareto bulk expression-shape microbenchmarks");
     pareto_probe_step.dependOn(&run_pareto_probe.step);
 
+    const weibull_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/weibull_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    weibull_probe_mod.addImport("alea", module);
+
+    const weibull_probe = b.addExecutable(.{
+        .name = "alea-weibull-probe",
+        .root_module = weibull_probe_mod,
+    });
+    const run_weibull_probe = b.addRunArtifact(weibull_probe);
+    if (b.args) |args| run_weibull_probe.addArgs(args);
+
+    const weibull_probe_step = b.step("weibull-probe", "Run Weibull bulk expression-shape microbenchmarks");
+    weibull_probe_step.dependOn(&run_weibull_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
