@@ -27,6 +27,14 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast normal-square fill equivalent", 0xc105, sample_count, normalSquareFillEquivalent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar chi-squared dof=1 fill current", 0xc105, sample_count, chiSquaredOneFillCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar normal-square fill equivalent", 0xc105, sample_count, normalSquareFillEquivalent);
+    try benchSample(alea.FastPrng, io, stdout, "fast chi dof=1 current", 0xc101, sample_count, chiOneCurrent);
+    try benchSample(alea.FastPrng, io, stdout, "fast abs-normal equivalent", 0xc101, sample_count, absNormalEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar chi dof=1 current", 0xc101, sample_count, chiOneCurrent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar abs-normal equivalent", 0xc101, sample_count, absNormalEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast chi dof=1 fill current", 0xc101, sample_count, chiOneFillCurrent);
+    try benchFill(alea.FastPrng, io, stdout, "fast abs-normal fill equivalent", 0xc101, sample_count, absNormalFillEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar chi dof=1 fill current", 0xc101, sample_count, chiOneFillCurrent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar abs-normal fill equivalent", 0xc101, sample_count, absNormalFillEquivalent);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0xc411, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar sqrt", 0xc411, sample_count, stagedScalar);
     try benchFill(alea.FastPrng, io, stdout, "fast staged vector4 sqrt", 0xc411, sample_count, stagedVector4);
@@ -132,6 +140,22 @@ fn normalSquareFillEquivalent(source: anytype, dest: []f64) void {
         const z = alea.Rng.standardNormalFastFrom(source, f64);
         item.* = z * z;
     }
+}
+
+fn chiOneCurrent(source: anytype) f64 {
+    return alea.distributions.chiFrom(source, f64, 1);
+}
+
+fn absNormalEquivalent(source: anytype) f64 {
+    return @abs(alea.Rng.standardNormalFastFrom(source, f64));
+}
+
+fn chiOneFillCurrent(source: anytype, dest: []f64) void {
+    alea.distributions.fillChiFrom(source, f64, dest, 1);
+}
+
+fn absNormalFillEquivalent(source: anytype, dest: []f64) void {
+    for (dest) |*item| item.* = @abs(alea.Rng.standardNormalFastFrom(source, f64));
 }
 
 fn stagedScalar(source: anytype, dest: []f64) void {
