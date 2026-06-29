@@ -188,6 +188,10 @@ pub fn fillChanceFrom(source: anytype, dest: []bool, p: f64) void {
         fillBoolsFrom(source, dest);
         return;
     }
+    if (p == 0.25) {
+        fillChanceQuarterFrom(source, dest);
+        return;
+    }
 
     const threshold = probabilityThreshold(p);
     for (dest) |*item| item.* = nextFrom(source) < threshold;
@@ -325,6 +329,20 @@ fn fillBoolsFrom(source: anytype, dest: []bool) void {
         while (lane < take) : (lane += 1) {
             dest[i + lane] = @as(i64, @bitCast(bits)) < 0;
             bits <<= 1;
+        }
+        i += take;
+    }
+}
+
+fn fillChanceQuarterFrom(source: anytype, dest: []bool) void {
+    var i: usize = 0;
+    while (i < dest.len) {
+        var bits = nextFrom(source);
+        var lane: usize = 0;
+        const take = @min(@as(usize, 32), dest.len - i);
+        while (lane < take) : (lane += 1) {
+            dest[i + lane] = (bits & 0b11) == 0;
+            bits >>= 2;
         }
         i += take;
     }
@@ -651,6 +669,7 @@ pub fn vectorChanceFrom(source: anytype, comptime VectorType: type, p: f64) Vect
     if (p == 0) return @splat(false);
     if (p == 1) return @splat(true);
     if (p == 0.5) return vectorBoolsFrom(source, VectorType);
+    if (p == 0.25) return vectorChanceQuarterFrom(source, VectorType);
 
     const threshold = probabilityThreshold(p);
     var out: VectorType = undefined;
@@ -986,6 +1005,20 @@ fn vectorBoolsFrom(source: anytype, comptime VectorType: type) VectorType {
         if (i % 64 == 0) bits = nextFrom(source);
         out[i] = @as(i64, @bitCast(bits)) < 0;
         bits <<= 1;
+    }
+    return out;
+}
+
+fn vectorChanceQuarterFrom(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("vectorChanceQuarterFrom expects a bool vector");
+
+    var out: VectorType = undefined;
+    var bits: u64 = 0;
+    inline for (0..info.len) |i| {
+        if (i % 32 == 0) bits = nextFrom(source);
+        out[i] = (bits & 0b11) == 0;
+        bits >>= 2;
     }
     return out;
 }
