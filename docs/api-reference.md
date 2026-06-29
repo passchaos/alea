@@ -105,7 +105,8 @@ Single-shot helpers:
   `fillLogLogistic`, `fillLogLogisticFrom`, `kumaraswamy`,
   `kumaraswamyFrom`, `fillKumaraswamy`, `fillKumaraswamyFrom`,
   `powerFunction`, `powerFunctionFrom`, `fillPowerFunction`,
-  `fillPowerFunctionFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
+  `fillPowerFunctionFrom`, `rayleigh`, `rayleighFrom`, `fillRayleigh`,
+  `fillRayleighFrom`, `maxwell`, `maxwellFrom`,
   `pareto`, `paretoFrom`, `weibull`, `weibullFrom`
 - `gumbel`, `gumbelFrom`, `frechet`, `frechetFrom`, `skewNormal`,
   `skewNormalFrom`, `fillSkewNormal`, `fillSkewNormalFrom`, `pert`,
@@ -203,6 +204,8 @@ Reusable samplers:
 - `PowerFunction(T).fillFrom`
 - `Rayleigh(T)`
 - `Rayleigh(T).sampleFrom`
+- `Rayleigh(T).fill`
+- `Rayleigh(T).fillFrom`
 - `Maxwell(T)`
 - `Maxwell(T).sampleFrom`
 - `Pareto(T)`

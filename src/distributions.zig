@@ -1650,6 +1650,16 @@ pub fn rayleighFrom(source: anytype, comptime T: type, scale: T) T {
     return scale * @sqrt(-2 * @log(Rng.floatOpenFrom(source, T)));
 }
 
+pub fn fillRayleigh(rng: Rng, comptime T: type, dest: []T, scale: T) void {
+    fillRayleighFrom(rng, T, dest, scale);
+}
+
+pub fn fillRayleighFrom(source: anytype, comptime T: type, dest: []T, scale: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+    for (dest) |*item| item.* = rayleighFrom(source, T, scale);
+}
+
 pub fn Rayleigh(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1668,6 +1678,14 @@ pub fn Rayleigh(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return rayleighFrom(source, T, self.scale);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3161,6 +3179,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var rayleighs = rng.sampleIter(f64, try Rayleigh(f64).init(2));
     try std.testing.expect(rayleighs.next().? >= 0);
+    var rayleigh_buf: [8]f64 = undefined;
+    fillRayleigh(rng, f64, &rayleigh_buf, 2);
+    for (rayleigh_buf) |value| try std.testing.expect(value >= 0);
+    var direct_rayleigh_buf: [8]f64 = undefined;
+    fillRayleighFrom(&direct_engine, f64, &direct_rayleigh_buf, 2);
+    for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
+    const rayleigh_sampler = try Rayleigh(f64).init(2);
+    rayleigh_sampler.fillFrom(&direct_engine, &direct_rayleigh_buf);
+    for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
 
     var maxwells = rng.sampleIter(f64, try Maxwell(f64).init(2));
     try std.testing.expect(maxwells.next().? >= 0);
