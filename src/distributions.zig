@@ -2743,10 +2743,8 @@ pub inline fn skewNormalFrom(source: anytype, comptime T: type, location: T, sca
     else if (shape == 1)
         high
     else blk: {
-        const one: T = 1;
-        const sqrt_two: T = @sqrt(@as(T, 2));
-        break :blk ((one + shape) * high + (one - shape) * low) /
-            (@sqrt(one + shape * shape) * sqrt_two);
+        const delta = shape / @sqrt(1 + shape * shape);
+        break :blk delta * @abs(z1) + @sqrt(1 - delta * delta) * z2;
     };
     return location + scale * normalized;
 }
