@@ -2074,7 +2074,8 @@ pub fn fillCauchy(rng: Rng, comptime T: type, dest: []T, median: T, scale: T) vo
 pub fn fillCauchyFrom(source: anytype, comptime T: type, dest: []T, median: T, scale: T) void {
     comptime requireFloat(T);
     std.debug.assert(scale > 0);
-    for (dest) |*item| item.* = cauchyFrom(source, T, median, scale);
+    Rng.fillOpenFrom(source, T, dest);
+    cauchyFromOpenUniforms(T, dest, median, scale);
 }
 
 pub fn Cauchy(comptime T: type) type {
@@ -2104,7 +2105,7 @@ pub fn Cauchy(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillCauchyFrom(source, T, dest, self.median, self.scale);
         }
     };
 }
@@ -3860,6 +3861,35 @@ fn inverseGaussianFromNormal(source: anytype, comptime T: type, normal_sample: T
     const x = mean + mean_over_2shape * (y - @sqrt(4 * shape * y + y * y));
     if (Rng.floatFrom(source, T) <= mean / (mean + x)) return x;
     return mean * mean / x;
+}
+
+fn cauchyFromOpenUniforms(comptime T: type, dest: []T, median: T, scale: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => cauchyFromOpenUniformsVector(T, @Vector(8, f32), dest, median, scale),
+        f64 => cauchyFromOpenUniformsVector(T, @Vector(4, f64), dest, median, scale),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn cauchyFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, median: T, scale: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const pi_vec: VectorType = @splat(@as(T, @floatCast(std.math.pi)));
+    const half_vec: VectorType = @splat(0.5);
+    const median_vec: VectorType = @splat(median);
+    const scale_vec: VectorType = @splat(scale);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const out = median_vec + scale_vec * @tan(pi_vec * (uniform_vec - half_vec));
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        dest[i] = median + scale * @tan(@as(T, @floatCast(std.math.pi)) * (dest[i] - 0.5));
+    }
 }
 
 test "basic distributions stay in expected ranges" {
