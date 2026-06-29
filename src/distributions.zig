@@ -2023,7 +2023,8 @@ pub fn fillArcsine(rng: Rng, comptime T: type, dest: []T, min: T, max: T) void {
 pub fn fillArcsineFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
     comptime requireFloat(T);
     std.debug.assert(min < max and std.math.isFinite(min) and std.math.isFinite(max));
-    for (dest) |*item| item.* = arcsineFrom(source, T, min, max);
+    Rng.fillOpenFrom(source, T, dest);
+    arcsineFromOpenUniforms(T, dest, min, max - min);
 }
 
 pub fn Arcsine(comptime T: type) type {
@@ -2052,7 +2053,7 @@ pub fn Arcsine(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillArcsineFrom(source, T, dest, self.min, self.max);
         }
     };
 }
@@ -4143,6 +4144,36 @@ fn frechetFromOpenClosedUniformsVector(comptime T: type, comptime VectorType: ty
 
     while (i < dest.len) : (i += 1) {
         dest[i] = location + scale * @exp(@log(-@log(dest[i])) * negative_inverse_shape);
+    }
+}
+
+fn arcsineFromOpenUniforms(comptime T: type, dest: []T, min: T, width: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => arcsineFromOpenUniformsVector(T, @Vector(8, f32), dest, min, width),
+        f64 => arcsineFromOpenUniformsVector(T, @Vector(4, f64), dest, min, width),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn arcsineFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, min: T, width: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const min_vec: VectorType = @splat(min);
+    const width_vec: VectorType = @splat(width);
+    const angle_scale_vec: VectorType = @splat(@as(T, @floatCast(std.math.pi)) / 2);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const s = @sin(angle_scale_vec * uniform_vec);
+        const out = min_vec + width_vec * s * s;
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        const s = @sin(@as(T, @floatCast(std.math.pi)) * dest[i] / 2);
+        dest[i] = min + width * s * s;
     }
 }
 

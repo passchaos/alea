@@ -369,6 +369,23 @@ pub fn build(b: *std.Build) void {
     const frechet_probe_step = b.step("frechet-probe", "Run Frechet bulk expression-shape microbenchmarks");
     frechet_probe_step.dependOn(&run_frechet_probe.step);
 
+    const arcsine_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/arcsine_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    arcsine_probe_mod.addImport("alea", module);
+
+    const arcsine_probe = b.addExecutable(.{
+        .name = "alea-arcsine-probe",
+        .root_module = arcsine_probe_mod,
+    });
+    const run_arcsine_probe = b.addRunArtifact(arcsine_probe);
+    if (b.args) |args| run_arcsine_probe.addArgs(args);
+
+    const arcsine_probe_step = b.step("arcsine-probe", "Run Arcsine bulk expression-shape microbenchmarks");
+    arcsine_probe_step.dependOn(&run_arcsine_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
