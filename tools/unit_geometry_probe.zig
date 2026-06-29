@@ -19,6 +19,8 @@ pub fn main(init: std.process.Init) !void {
         default_count;
 
     try stdout.print("unit geometry probe count={}\n", .{sample_count});
+    try benchFill(io, stdout, "unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
+    try benchFill(io, stdout, "unit circle batched candidates", 0xc11c1e, sample_count, batchedUnitCircle);
     try benchFill(io, stdout, "unit disc current fill", 0xd15c, sample_count, currentUnitDisc);
     try benchFill(io, stdout, "unit disc batched candidates", 0xd15c, sample_count, batchedUnitDisc);
     try stdout.flush();
@@ -65,6 +67,34 @@ fn benchFill(
 
 fn currentUnitDisc(source: *alea.ScalarPrng, dest: [][2]f64) void {
     alea.distributions.fillUnitDiscFrom(source, f64, dest);
+}
+
+fn currentUnitCircle(source: *alea.ScalarPrng, dest: [][2]f64) void {
+    alea.distributions.fillUnitCircleFrom(source, f64, dest);
+}
+
+fn batchedUnitCircle(source: *alea.ScalarPrng, dest: [][2]f64) void {
+    var x_candidates: [2048]f64 = undefined;
+    var y_candidates: [2048]f64 = undefined;
+
+    var filled: usize = 0;
+    while (filled < dest.len) {
+        const remaining = dest.len - filled;
+        const candidate_count = @min(x_candidates.len, @max(remaining, remaining * 2));
+        fillSignedUnit(source, x_candidates[0..candidate_count]);
+        fillSignedUnit(source, y_candidates[0..candidate_count]);
+
+        var i: usize = 0;
+        while (i < candidate_count and filled < dest.len) : (i += 1) {
+            const x = x_candidates[i];
+            const y = y_candidates[i];
+            const sum = x * x + y * y;
+            if (sum > 0 and sum < 1) {
+                dest[filled] = .{ (x * x - y * y) / sum, 2 * x * y / sum };
+                filled += 1;
+            }
+        }
+    }
 }
 
 fn batchedUnitDisc(source: *alea.ScalarPrng, dest: [][2]f64) void {

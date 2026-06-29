@@ -2893,6 +2893,10 @@ pub fn fillUnitCircle(rng: Rng, comptime T: type, dest: [][2]T) void {
 }
 
 pub fn fillUnitCircleFrom(source: anytype, comptime T: type, dest: [][2]T) void {
+    if (T == f64) {
+        fillUnitCircleF64From(source, dest);
+        return;
+    }
     for (dest) |*item| item.* = unitCircleFrom(source, T);
 }
 
@@ -2999,6 +3003,30 @@ fn fillUnitDiscF64From(source: anytype, dest: [][2]f64) void {
             const y = y_candidates[i];
             if (x * x + y * y <= 1) {
                 dest[filled] = .{ x, y };
+                filled += 1;
+            }
+        }
+    }
+}
+
+fn fillUnitCircleF64From(source: anytype, dest: [][2]f64) void {
+    var x_candidates: [2048]f64 = undefined;
+    var y_candidates: [2048]f64 = undefined;
+
+    var filled: usize = 0;
+    while (filled < dest.len) {
+        const remaining = dest.len - filled;
+        const candidate_count = @min(x_candidates.len, @max(remaining, remaining * 2));
+        fillSignedUnitF64(source, x_candidates[0..candidate_count]);
+        fillSignedUnitF64(source, y_candidates[0..candidate_count]);
+
+        var i: usize = 0;
+        while (i < candidate_count and filled < dest.len) : (i += 1) {
+            const x = x_candidates[i];
+            const y = y_candidates[i];
+            const sum = x * x + y * y;
+            if (sum > 0 and sum < 1) {
+                dest[filled] = .{ (x * x - y * y) / sum, 2 * x * y / sum };
                 filled += 1;
             }
         }
