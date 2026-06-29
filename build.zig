@@ -267,6 +267,23 @@ pub fn build(b: *std.Build) void {
     const logistic_probe_step = b.step("logistic-probe", "Run Logistic bulk expression-shape microbenchmarks");
     logistic_probe_step.dependOn(&run_logistic_probe.step);
 
+    const laplace_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/laplace_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    laplace_probe_mod.addImport("alea", module);
+
+    const laplace_probe = b.addExecutable(.{
+        .name = "alea-laplace-probe",
+        .root_module = laplace_probe_mod,
+    });
+    const run_laplace_probe = b.addRunArtifact(laplace_probe);
+    if (b.args) |args| run_laplace_probe.addArgs(args);
+
+    const laplace_probe_step = b.step("laplace-probe", "Run Laplace bulk expression-shape microbenchmarks");
+    laplace_probe_step.dependOn(&run_laplace_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
