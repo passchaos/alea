@@ -2092,6 +2092,15 @@ pub fn normalInverseGaussianFrom(source: anytype, comptime T: type, alpha: T, be
     return beta_param * inv_gauss + @sqrt(inv_gauss) * Rng.normalFastFrom(source, T, 0, 1);
 }
 
+pub fn fillNormalInverseGaussian(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
+    fillNormalInverseGaussianFrom(rng, T, dest, alpha, beta_param);
+}
+
+pub fn fillNormalInverseGaussianFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
+    const sampler = NormalInverseGaussian(T).init(alpha, beta_param) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
 pub fn NormalInverseGaussian(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -2123,6 +2132,14 @@ pub fn NormalInverseGaussian(comptime T: type) type {
         pub fn sampleFrom(self: Self, source: anytype) T {
             const inv_gauss = self.inverse_gaussian.sampleFrom(source);
             return self.beta_param * inv_gauss + @sqrt(inv_gauss) * Rng.normalFastFrom(source, T, 0, 1);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -2983,6 +3000,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var normal_inverse_gaussians = rng.sampleIter(f64, try NormalInverseGaussian(f64).init(2, 1));
     try std.testing.expect(std.math.isFinite(normal_inverse_gaussians.next().?));
+    var nig_buf: [8]f64 = undefined;
+    fillNormalInverseGaussian(rng, f64, &nig_buf, 2, 1);
+    for (nig_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    var direct_nig_buf: [8]f64 = undefined;
+    fillNormalInverseGaussianFrom(&direct_engine, f64, &direct_nig_buf, 2, 1);
+    for (direct_nig_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    const nig_sampler = try NormalInverseGaussian(f64).init(2, 1);
+    nig_sampler.fillFrom(&direct_engine, &direct_nig_buf);
+    for (direct_nig_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
     var zipfs = rng.sampleIter(f64, try Zipf(f64).init(10, 1.5));
     const zipf_value = zipfs.next().?;

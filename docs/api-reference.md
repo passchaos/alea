@@ -106,6 +106,7 @@ Single-shot helpers:
   `pertFrom`
 - `inverseGaussian`, `fillInverseGaussian`, `fillInverseGaussianFrom`,
   `normalInverseGaussian`, `normalInverseGaussianFrom`,
+  `fillNormalInverseGaussian`, `fillNormalInverseGaussianFrom`,
   `zipf`, `zipfFrom`, `zeta`, `zetaFrom`
 - `unitCircle`, `unitCircleFrom`, `fillUnitCircle`, `fillUnitCircleFrom`,
   `unitDisc`, `unitDiscFrom`, `fillUnitDisc`, `fillUnitDiscFrom`,
@@ -202,6 +203,8 @@ Reusable samplers:
 - `InverseGaussian(T).fillFrom`
 - `NormalInverseGaussian(T)`
 - `NormalInverseGaussian(T).sampleFrom`
+- `NormalInverseGaussian(T).fill`
+- `NormalInverseGaussian(T).fillFrom`
 - `Zipf(T)`
 - `Zipf(T).sampleFrom`
 - `Zeta(T)`
