@@ -1200,6 +1200,15 @@ pub fn betaFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
     return x / (x + y);
 }
 
+pub fn fillBeta(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
+    fillBetaFrom(rng, T, dest, alpha, beta_param);
+}
+
+pub fn fillBetaFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
+    const sampler = Beta(T).init(alpha, beta_param) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Beta(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1229,6 +1238,14 @@ pub fn Beta(comptime T: type) type {
             const x = self.gamma_a.sampleFrom(source);
             const y = self.gamma_b.sampleFrom(source);
             return x / (x + y);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3359,6 +3376,17 @@ test "non-uniform samplers can be reused with sample iterators" {
     var betas = rng.sampleIter(f64, try Beta(f64).init(2, 5));
     const beta_value = betas.next().?;
     try std.testing.expect(beta_value >= 0 and beta_value <= 1);
+    const direct_beta = betaFrom(&direct_engine, f64, 2, 5);
+    try std.testing.expect(direct_beta >= 0 and direct_beta <= 1);
+    var beta_buf: [8]f64 = undefined;
+    fillBeta(rng, f64, &beta_buf, 2, 5);
+    for (beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    var direct_beta_buf: [8]f64 = undefined;
+    fillBetaFrom(&direct_engine, f64, &direct_beta_buf, 2, 5);
+    for (direct_beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    const beta_sampler = try Beta(f64).init(2, 5);
+    beta_sampler.fillFrom(&direct_engine, &direct_beta_buf);
+    for (direct_beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
 
     var fisher = rng.sampleIter(f64, try FisherF(f64).init(5, 20));
     try std.testing.expect(fisher.next().? > 0);
