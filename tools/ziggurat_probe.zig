@@ -12,9 +12,27 @@ const norm_ratio = blk: {
     break :blk out;
 };
 
+const norm_threshold = blk: {
+    var out: [256]u64 = undefined;
+    for (&out, 0..) |*item, i| {
+        const ratio = ziggurat.NormDist.x[i + 1] / ziggurat.NormDist.x[i];
+        item.* = @intFromFloat(@ceil(ratio * @as(f64, @floatFromInt(@as(u64, 1) << 51))));
+    }
+    break :blk out;
+};
+
 const exp_ratio = blk: {
     var out: [256]f64 = undefined;
     for (&out, 0..) |*item, i| item.* = ziggurat.ExpDist.x[i + 1] / ziggurat.ExpDist.x[i];
+    break :blk out;
+};
+
+const exp_threshold = blk: {
+    var out: [256]u64 = undefined;
+    for (&out, 0..) |*item, i| {
+        const ratio = ziggurat.ExpDist.x[i + 1] / ziggurat.ExpDist.x[i];
+        item.* = @intFromFloat(@ceil(ratio * @as(f64, @floatFromInt(@as(u64, 1) << 52)) - 0.5));
+    }
     break :blk out;
 };
 
@@ -36,10 +54,12 @@ pub fn main(init: std.process.Init) !void {
     try benchF64(io, stdout, "generic normalFastFrom", sample_count, 0xd15a, genericNormal);
     try benchF64(io, stdout, "standard normal raw", sample_count, 0xd15a, standardNormal);
     try benchF64(io, stdout, "ratio normal inline candidate", sample_count, 0xd15a, ratioNormal);
+    try benchF64(io, stdout, "mantissa-threshold normal candidate", sample_count, 0xd15a, thresholdNormal);
     try benchF64(io, stdout, "table-bound normal candidate", sample_count, 0xd15a, tableBoundNormal);
     try benchF64(io, stdout, "generic exponentialFastFrom", sample_count, 0xe15a, genericExponential);
     try benchF64(io, stdout, "standard exponential raw", sample_count, 0xe15a, standardExponential);
     try benchF64(io, stdout, "ratio exponential inline candidate", sample_count, 0xe15a, ratioExponential);
+    try benchF64(io, stdout, "mantissa-threshold exponential candidate", sample_count, 0xe15a, thresholdExponential);
     try benchF64(io, stdout, "table-bound exponential candidate", sample_count, 0xe15a, tableBoundExponential);
     try benchVectorF64(io, stdout, "vector-repair normal f64x4 candidate", sample_count, 0xd15a, vectorRepairNormal);
     try benchVectorF64(io, stdout, "vector-repair exponential f64x4 candidate", sample_count, 0xe15a, vectorRepairExponential);
@@ -167,6 +187,31 @@ fn tableBoundNormal(engine: *alea.ScalarPrng) f64 {
     }
 }
 
+fn thresholdNormal(engine: *alea.ScalarPrng) f64 {
+    while (true) {
+        const bits = engine.next();
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 12;
+        const repr = (@as(u64, 0x400) << 52) | mantissa;
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+        const abs_mantissa = if (mantissa >= (@as(u64, 1) << 51))
+            mantissa - (@as(u64, 1) << 51)
+        else
+            (@as(u64, 1) << 51) - mantissa;
+
+        if (abs_mantissa < norm_threshold[i]) {
+            @branchHint(.likely);
+            return u * ziggurat.NormDist.x[i];
+        }
+        const x = u * ziggurat.NormDist.x[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return normalTail(engine, u);
+        }
+        if (ziggurat.NormDist.f[i + 1] + (ziggurat.NormDist.f[i] - ziggurat.NormDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x * x / 2.0)) return x;
+    }
+}
+
 fn normalTail(engine: *alea.ScalarPrng, u: f64) f64 {
     var x: f64 = 1;
     var y: f64 = 0;
@@ -209,6 +254,27 @@ fn tableBoundExponential(engine: *alea.ScalarPrng) f64 {
             @branchHint(.likely);
             return x;
         }
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return ziggurat.exp_r - @log(alea.Rng.floatFrom(engine, f64));
+        }
+        if (ziggurat.ExpDist.f[i + 1] + (ziggurat.ExpDist.f[i] - ziggurat.ExpDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x)) return x;
+    }
+}
+
+fn thresholdExponential(engine: *alea.ScalarPrng) f64 {
+    while (true) {
+        const bits = engine.next();
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 12;
+        const repr = (@as(u64, 0x3ff) << 52) | mantissa;
+        const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
+
+        if (mantissa < exp_threshold[i]) {
+            @branchHint(.likely);
+            return u * ziggurat.ExpDist.x[i];
+        }
+        const x = u * ziggurat.ExpDist.x[i];
         if (i == 0) {
             @branchHint(.unlikely);
             return ziggurat.exp_r - @log(alea.Rng.floatFrom(engine, f64));

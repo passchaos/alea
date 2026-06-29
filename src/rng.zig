@@ -15,6 +15,15 @@ const exp_ziggurat_ratio = blk: {
     break :blk out;
 };
 
+const exp_ziggurat_mantissa_threshold = blk: {
+    var out: [256]u64 = undefined;
+    for (&out, 0..) |*item, i| {
+        const threshold_ratio = std_ziggurat.ExpDist.x[i + 1] / std_ziggurat.ExpDist.x[i];
+        item.* = @intFromFloat(@ceil(threshold_ratio * @as(f64, @floatFromInt(@as(u64, 1) << 52)) - 0.5));
+    }
+    break :blk out;
+};
+
 pub const Error = error{
     EmptyRange,
     InvalidProbability,
@@ -1282,10 +1291,11 @@ inline fn exponentialZigguratF64(source: anytype) f64 {
     while (true) {
         const bits = nextFrom(source);
         const i: usize = @as(u8, @truncate(bits));
-        const repr = (@as(u64, 0x3ff) << 52) | (bits >> 12);
+        const mantissa = bits >> 12;
+        const repr = (@as(u64, 0x3ff) << 52) | mantissa;
         const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
 
-        if (u < exp_ziggurat_ratio[i]) {
+        if (mantissa < exp_ziggurat_mantissa_threshold[i]) {
             @branchHint(.likely);
             return u * tables.x[i];
         }
