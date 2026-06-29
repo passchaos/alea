@@ -335,6 +335,8 @@ fn checkBoundedSupport() !void {
         if (!(pareto_shape_one >= 2)) return error.DistributionCheckFailed;
         const cauchy = alea.distributions.cauchy(rng, f64, 0, 1);
         if (!std.math.isFinite(cauchy)) return error.DistributionCheckFailed;
+        const log_logistic_shape_one = alea.distributions.logLogistic(rng, f64, 2, 1);
+        if (!(log_logistic_shape_one > 0) or !std.math.isFinite(log_logistic_shape_one)) return error.DistributionCheckFailed;
         const pert = alea.distributions.pert(rng, f64, -1, 0.5, 2, 4);
         if (!(pert >= -1 and pert <= 2)) return error.DistributionCheckFailed;
     }

@@ -2291,6 +2291,7 @@ pub fn logLogisticFrom(source: anytype, comptime T: type, scale: T, shape: T) T 
     std.debug.assert(scale > 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
 
     const u = Rng.floatOpenFrom(source, T);
+    if (shape == 1) return scale * u / (1 - u);
     return scale * std.math.pow(T, u / (1 - u), 1 / shape);
 }
 
@@ -2302,6 +2303,11 @@ pub fn fillLogLogisticFrom(source: anytype, comptime T: type, dest: []T, scale: 
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
     Rng.fillOpenFrom(source, T, dest);
+    if (shape == 1) {
+        logLogisticShapeOneFromOpenUniforms(T, dest, scale);
+        return;
+    }
+
     logLogisticFromOpenUniforms(T, dest, scale, 1 / shape);
 }
 
@@ -4290,6 +4296,34 @@ fn logLogisticFromOpenUniformsVector(comptime T: type, comptime VectorType: type
     }
 }
 
+fn logLogisticShapeOneFromOpenUniforms(comptime T: type, dest: []T, scale: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => logLogisticShapeOneFromOpenUniformsVector(T, @Vector(8, f32), dest, scale),
+        f64 => logLogisticShapeOneFromOpenUniformsVector(T, @Vector(4, f64), dest, scale),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn logLogisticShapeOneFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const scale_vec: VectorType = @splat(scale);
+    const one_vec: VectorType = @splat(1.0);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const out = scale_vec * uniform_vec / (one_vec - uniform_vec);
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        const u = dest[i];
+        dest[i] = scale * u / (1 - u);
+    }
+}
+
 fn powerFunctionFromOpenUniforms(comptime T: type, dest: []T, min: T, width: T, inverse_shape: T) void {
     comptime requireFloat(T);
     switch (T) {
@@ -5010,6 +5044,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const log_logistic_sampler = try LogLogistic(f64).init(2, 3);
     log_logistic_sampler.fillFrom(&direct_engine, &direct_log_logistic_buf);
     for (direct_log_logistic_buf) |value| try std.testing.expect(value > 0);
+    var log_logistic_shape_one_buf: [8]f64 = undefined;
+    fillLogLogisticFrom(&direct_engine, f64, &log_logistic_shape_one_buf, 2, 1);
+    for (log_logistic_shape_one_buf) |value| try std.testing.expect(value > 0 and std.math.isFinite(value));
 
     var kumaraswamys = rng.sampleIter(f64, try Kumaraswamy(f64).init(2, 5));
     const kumaraswamy_value = kumaraswamys.next().?;
