@@ -41,6 +41,8 @@ pub fn main(init: std.process.Init) !void {
     try benchF64(io, stdout, "standard exponential raw", sample_count, 0xe15a, standardExponential);
     try benchF64(io, stdout, "ratio exponential inline candidate", sample_count, 0xe15a, ratioExponential);
     try benchF64(io, stdout, "table-bound exponential candidate", sample_count, 0xe15a, tableBoundExponential);
+    try benchVectorF64(io, stdout, "vector-repair normal f64x4 candidate", sample_count, 0xd15a, vectorRepairNormal);
+    try benchVectorF64(io, stdout, "vector-repair exponential f64x4 candidate", sample_count, 0xe15a, vectorRepairExponential);
     try stdout.flush();
 }
 
@@ -72,6 +74,41 @@ fn benchF64(
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchVectorF64(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    sample_count: usize,
+    seed: u64,
+    comptime sampleFn: fn (*alea.ScalarPrng) @Vector(4, f64),
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const vector_count = sample_count / 4;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < vector_count) : (i += 1) {
+            const vec = sampleFn(&engine);
+            inline for (0..4) |lane| checksum += vec[lane];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(vector_count * 4)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn genericNormal(engine: *alea.ScalarPrng) f64 {
@@ -178,4 +215,58 @@ fn tableBoundExponential(engine: *alea.ScalarPrng) f64 {
         }
         if (ziggurat.ExpDist.f[i + 1] + (ziggurat.ExpDist.f[i] - ziggurat.ExpDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x)) return x;
     }
+}
+
+fn vectorRepairNormal(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const VecF64 = @Vector(4, f64);
+    const VecU64 = @Vector(4, u64);
+
+    var bits: VecU64 = undefined;
+    inline for (0..4) |lane| bits[lane] = engine.next();
+
+    var ratios: VecF64 = undefined;
+    var x_values: VecF64 = undefined;
+    var out: VecF64 = undefined;
+    inline for (0..4) |lane| {
+        const i: usize = @as(u8, @truncate(bits[lane]));
+        const repr = (@as(u64, 0x400) << 52) | (bits[lane] >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+        ratios[lane] = norm_ratio[i];
+        x_values[lane] = u * ziggurat.NormDist.x[i];
+        out[lane] = x_values[lane];
+    }
+
+    const reprs = (@as(VecU64, @splat(@as(u64, 0x400) << 52)) | (bits >> @as(VecU64, @splat(12))));
+    const u_values: VecF64 = @as(VecF64, @bitCast(reprs)) - @as(VecF64, @splat(3.0));
+    const mask = @abs(u_values) < ratios;
+    inline for (0..4) |lane| {
+        if (!mask[lane]) out[lane] = ratioNormal(engine);
+    }
+    return out;
+}
+
+fn vectorRepairExponential(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const VecF64 = @Vector(4, f64);
+    const VecU64 = @Vector(4, u64);
+
+    var bits: VecU64 = undefined;
+    inline for (0..4) |lane| bits[lane] = engine.next();
+
+    var ratios: VecF64 = undefined;
+    var out: VecF64 = undefined;
+    inline for (0..4) |lane| {
+        const i: usize = @as(u8, @truncate(bits[lane]));
+        const repr = (@as(u64, 0x3ff) << 52) | (bits[lane] >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
+        ratios[lane] = exp_ratio[i];
+        out[lane] = u * ziggurat.ExpDist.x[i];
+    }
+
+    const reprs = (@as(VecU64, @splat(@as(u64, 0x3ff) << 52)) | (bits >> @as(VecU64, @splat(12))));
+    const u_values: VecF64 = @as(VecF64, @bitCast(reprs)) - @as(VecF64, @splat(1.0 - std.math.floatEps(f64) / 2.0));
+    const mask = u_values < ratios;
+    inline for (0..4) |lane| {
+        if (!mask[lane]) out[lane] = ratioExponential(engine);
+    }
+    return out;
 }
