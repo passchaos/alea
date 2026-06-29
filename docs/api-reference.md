@@ -101,7 +101,8 @@ Single-shot helpers:
 - `triangular`, `triangularFrom`, `arcsine`, `arcsineFrom`,
   `cauchy`, `cauchyFrom`, `laplace`, `laplaceFrom`, `fillLaplace`,
   `fillLaplaceFrom`, `logistic`, `logisticFrom`, `fillLogistic`,
-  `fillLogisticFrom`, `logLogistic`, `logLogisticFrom`, `kumaraswamy`,
+  `fillLogisticFrom`, `logLogistic`, `logLogisticFrom`,
+  `fillLogLogistic`, `fillLogLogisticFrom`, `kumaraswamy`,
   `kumaraswamyFrom`, `powerFunction`, `powerFunctionFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
   `pareto`, `paretoFrom`, `weibull`, `weibullFrom`
 - `gumbel`, `gumbelFrom`, `frechet`, `frechetFrom`, `skewNormal`,
@@ -188,6 +189,8 @@ Reusable samplers:
 - `Logistic(T).fillFrom`
 - `LogLogistic(T)`
 - `LogLogistic(T).sampleFrom`
+- `LogLogistic(T).fill`
+- `LogLogistic(T).fillFrom`
 - `Kumaraswamy(T)`
 - `Kumaraswamy(T).sampleFrom`
 - `PowerFunction(T)`

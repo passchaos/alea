@@ -1478,6 +1478,16 @@ pub fn logLogisticFrom(source: anytype, comptime T: type, scale: T, shape: T) T 
     return scale * std.math.pow(T, u / (1 - u), 1 / shape);
 }
 
+pub fn fillLogLogistic(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) void {
+    fillLogLogisticFrom(rng, T, dest, scale, shape);
+}
+
+pub fn fillLogLogisticFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    for (dest) |*item| item.* = logLogisticFrom(source, T, scale, shape);
+}
+
 pub fn LogLogistic(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1499,6 +1509,14 @@ pub fn LogLogistic(comptime T: type) type {
         pub fn sampleFrom(self: Self, source: anytype) T {
             const u = Rng.floatOpenFrom(source, T);
             return self.scale * std.math.pow(T, u / (1 - u), self.inverse_shape);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3068,6 +3086,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var log_logistics = rng.sampleIter(f64, try LogLogistic(f64).init(2, 3));
     try std.testing.expect(log_logistics.next().? > 0);
+    var log_logistic_buf: [8]f64 = undefined;
+    fillLogLogistic(rng, f64, &log_logistic_buf, 2, 3);
+    for (log_logistic_buf) |value| try std.testing.expect(value > 0);
+    var direct_log_logistic_buf: [8]f64 = undefined;
+    fillLogLogisticFrom(&direct_engine, f64, &direct_log_logistic_buf, 2, 3);
+    for (direct_log_logistic_buf) |value| try std.testing.expect(value > 0);
+    const log_logistic_sampler = try LogLogistic(f64).init(2, 3);
+    log_logistic_sampler.fillFrom(&direct_engine, &direct_log_logistic_buf);
+    for (direct_log_logistic_buf) |value| try std.testing.expect(value > 0);
 
     var kumaraswamys = rng.sampleIter(f64, try Kumaraswamy(f64).init(2, 5));
     const kumaraswamy_value = kumaraswamys.next().?;
