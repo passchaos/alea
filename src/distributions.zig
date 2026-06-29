@@ -1316,6 +1316,16 @@ pub fn arcsineFrom(source: anytype, comptime T: type, min: T, max: T) T {
     return min + (max - min) * s * s;
 }
 
+pub fn fillArcsine(rng: Rng, comptime T: type, dest: []T, min: T, max: T) void {
+    fillArcsineFrom(rng, T, dest, min, max);
+}
+
+pub fn fillArcsineFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(min < max and std.math.isFinite(min) and std.math.isFinite(max));
+    for (dest) |*item| item.* = arcsineFrom(source, T, min, max);
+}
+
 pub fn Arcsine(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1335,6 +1345,14 @@ pub fn Arcsine(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return arcsineFrom(source, T, self.min, self.max);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3246,6 +3264,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var arcsines = rng.sampleIter(f64, try Arcsine(f64).init(-1, 3));
     const arcsine_value = arcsines.next().?;
     try std.testing.expect(arcsine_value >= -1 and arcsine_value <= 3);
+    var arcsine_buf: [8]f64 = undefined;
+    fillArcsine(rng, f64, &arcsine_buf, -1, 3);
+    for (arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
+    var direct_arcsine_buf: [8]f64 = undefined;
+    fillArcsineFrom(&direct_engine, f64, &direct_arcsine_buf, -1, 3);
+    for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
+    const arcsine_sampler = try Arcsine(f64).init(-1, 3);
+    arcsine_sampler.fillFrom(&direct_engine, &direct_arcsine_buf);
+    for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
 
     var cauchys = rng.sampleIter(f64, try Cauchy(f64).init(0, 1));
     _ = cauchys.next().?;
