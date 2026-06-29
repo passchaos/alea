@@ -10,9 +10,10 @@ traits.
 - `FastPrng = Alea4x64`: high-throughput non-cryptographic generator.
 - `ScalarPrng = Wyhash64`: scalar-heavy fast path for workloads dominated by
   repeated `next()` calls or scalar distributions such as normal, exponential,
-  and Poisson. Use it with direct helpers such as `normalFastFrom`,
-  `fillNormalFrom`, `exponentialFastFrom`, and `fillExponentialFrom` when the
-  engine type is known.
+  and Poisson. Use it with direct helpers such as `standardNormalFastFrom`,
+  `normalFastFrom`, `fillNormalFrom`, `standardExponentialFastFrom`,
+  `exponentialFastFrom`, and `fillExponentialFrom` when the engine type is
+  known.
 - `HashPrng = Wyhash64`: compact hash-style generator.
 - `ReproduciblePrng = Pcg64`: stream-selectable reproducible generator.
 - `SecurePrng = ChaCha12`: secure-style stream for secret-seeded randomness.
@@ -53,9 +54,10 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
   `fillExponential`, and `fillVectorExponential`
 
 Checked variants exist for user-supplied probabilities and scalar ranges.
-Use `normalFastFrom` and `exponentialFastFrom` when a comptime-known engine
-pointer is available and the workload is dominated by scalar distribution
-sampling.
+Use `standardNormalFastFrom`, `normalFastFrom`,
+`standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
+engine pointer is available and the workload is dominated by scalar
+distribution sampling.
 
 ## Distributions
 

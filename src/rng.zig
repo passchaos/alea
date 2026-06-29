@@ -3,6 +3,18 @@ const std_ziggurat = std.Random.ziggurat;
 
 const Rng = @This();
 
+const norm_ziggurat_ratio = blk: {
+    var out: [256]f64 = undefined;
+    for (&out, 0..) |*item, i| item.* = std_ziggurat.NormDist.x[i + 1] / std_ziggurat.NormDist.x[i];
+    break :blk out;
+};
+
+const exp_ziggurat_ratio = blk: {
+    var out: [256]f64 = undefined;
+    for (&out, 0..) |*item, i| item.* = std_ziggurat.ExpDist.x[i + 1] / std_ziggurat.ExpDist.x[i];
+    break :blk out;
+};
+
 pub const Error = error{
     EmptyRange,
     InvalidProbability,
@@ -1055,28 +1067,38 @@ pub fn normal(self: Rng, comptime T: type, mean: T, stddev: T) T {
     return normalFastFrom(self, T, mean, stddev);
 }
 
-pub inline fn normalFastFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
+pub inline fn standardNormalFastFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
-    std.debug.assert(stddev >= 0);
-    return mean + stddev * switch (T) {
+    return switch (T) {
         f64 => normalZigguratF64(source),
         f32 => @as(f32, @floatCast(normalZigguratF64(source))),
         else => @compileError("alea supports f32 and f64 normal"),
     };
 }
 
+pub inline fn normalFastFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(stddev >= 0);
+    return mean + stddev * standardNormalFastFrom(source, T);
+}
+
 pub fn exponential(self: Rng, comptime T: type, rate: T) T {
     return exponentialFastFrom(self, T, rate);
+}
+
+pub inline fn standardExponentialFastFrom(source: anytype, comptime T: type) T {
+    comptime requireFloat(T);
+    return switch (T) {
+        f64 => exponentialZigguratF64(source),
+        f32 => @as(f32, @floatCast(exponentialZigguratF64(source))),
+        else => @compileError("alea supports f32 and f64 exponential"),
+    };
 }
 
 pub inline fn exponentialFastFrom(source: anytype, comptime T: type, rate: T) T {
     comptime requireFloat(T);
     std.debug.assert(rate > 0);
-    return switch (T) {
-        f64 => exponentialZigguratF64(source),
-        f32 => @as(f32, @floatCast(exponentialZigguratF64(source))),
-        else => @compileError("alea supports f32 and f64 exponential"),
-    } / rate;
+    return standardExponentialFastFrom(source, T) / rate;
 }
 
 pub fn enumValue(self: Rng, comptime EnumType: type) EnumType {
@@ -1231,13 +1253,12 @@ inline fn normalZigguratF64(source: anytype) f64 {
         const i: usize = @as(u8, @truncate(bits));
         const repr = (@as(u64, 0x400) << 52) | (bits >> 12);
         const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
-        const x = u * tables.x[i];
-        const test_x = @abs(x);
 
-        if (test_x < tables.x[i + 1]) {
+        if (@abs(u) < norm_ziggurat_ratio[i]) {
             @branchHint(.likely);
-            return x;
+            return u * tables.x[i];
         }
+        const x = u * tables.x[i];
         if (i == 0) {
             @branchHint(.unlikely);
             return normalZigguratZeroCase(source, u);
@@ -1263,12 +1284,12 @@ inline fn exponentialZigguratF64(source: anytype) f64 {
         const i: usize = @as(u8, @truncate(bits));
         const repr = (@as(u64, 0x3ff) << 52) | (bits >> 12);
         const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
-        const x = u * tables.x[i];
 
-        if (x < tables.x[i + 1]) {
+        if (u < exp_ziggurat_ratio[i]) {
             @branchHint(.likely);
-            return x;
+            return u * tables.x[i];
         }
+        const x = u * tables.x[i];
         if (i == 0) {
             @branchHint(.unlikely);
             return std_ziggurat.exp_r - @log(floatFrom(source, f64));

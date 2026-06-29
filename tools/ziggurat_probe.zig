@@ -1,0 +1,139 @@
+const std = @import("std");
+const alea = @import("alea");
+
+const ziggurat = std.Random.ziggurat;
+
+const trials = 3;
+const default_count = 16 * 1024 * 1024;
+
+const norm_ratio = blk: {
+    var out: [256]f64 = undefined;
+    for (&out, 0..) |*item, i| item.* = ziggurat.NormDist.x[i + 1] / ziggurat.NormDist.x[i];
+    break :blk out;
+};
+
+const exp_ratio = blk: {
+    var out: [256]f64 = undefined;
+    for (&out, 0..) |*item, i| item.* = ziggurat.ExpDist.x[i + 1] / ziggurat.ExpDist.x[i];
+    break :blk out;
+};
+
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_file = std.Io.File.stdout().writer(io, &stdout_buffer);
+    const stdout = &stdout_file.interface;
+
+    var args = std.process.Args.Iterator.init(init.minimal.args);
+    defer args.deinit();
+    _ = args.next();
+    const sample_count = if (args.next()) |arg|
+        std.fmt.parseInt(usize, arg, 10) catch default_count
+    else
+        default_count;
+
+    try stdout.print("ziggurat probe count={}\n", .{sample_count});
+    try benchF64(io, stdout, "generic normalFastFrom", sample_count, 0xd15a, genericNormal);
+    try benchF64(io, stdout, "standard normal raw", sample_count, 0xd15a, standardNormal);
+    try benchF64(io, stdout, "ratio normal inline candidate", sample_count, 0xd15a, ratioNormal);
+    try benchF64(io, stdout, "generic exponentialFastFrom", sample_count, 0xe15a, genericExponential);
+    try benchF64(io, stdout, "standard exponential raw", sample_count, 0xe15a, standardExponential);
+    try benchF64(io, stdout, "ratio exponential inline candidate", sample_count, 0xe15a, ratioExponential);
+    try stdout.flush();
+}
+
+fn benchF64(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    sample_count: usize,
+    seed: u64,
+    comptime sampleFn: fn (*alea.ScalarPrng) f64,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += sampleFn(&engine);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn genericNormal(engine: *alea.ScalarPrng) f64 {
+    return alea.Rng.normalFastFrom(engine, f64, 0, 1);
+}
+
+fn standardNormal(engine: *alea.ScalarPrng) f64 {
+    return alea.Rng.standardNormalFastFrom(engine, f64);
+}
+
+fn genericExponential(engine: *alea.ScalarPrng) f64 {
+    return alea.Rng.exponentialFastFrom(engine, f64, 1);
+}
+
+fn standardExponential(engine: *alea.ScalarPrng) f64 {
+    return alea.Rng.standardExponentialFastFrom(engine, f64);
+}
+
+fn ratioNormal(engine: *alea.ScalarPrng) f64 {
+    while (true) {
+        const bits = engine.next();
+        const i: usize = @as(u8, @truncate(bits));
+        const repr = (@as(u64, 0x400) << 52) | (bits >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+
+        if (@abs(u) < norm_ratio[i]) {
+            @branchHint(.likely);
+            return u * ziggurat.NormDist.x[i];
+        }
+        const x = u * ziggurat.NormDist.x[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return normalTail(engine, u);
+        }
+        if (ziggurat.NormDist.f[i + 1] + (ziggurat.NormDist.f[i] - ziggurat.NormDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x * x / 2.0)) return x;
+    }
+}
+
+fn normalTail(engine: *alea.ScalarPrng, u: f64) f64 {
+    var x: f64 = 1;
+    var y: f64 = 0;
+    while (-2.0 * y < x * x) {
+        x = @log(alea.Rng.floatFrom(engine, f64)) / ziggurat.norm_r;
+        y = @log(alea.Rng.floatFrom(engine, f64));
+    }
+    return if (u < 0) x - ziggurat.norm_r else ziggurat.norm_r - x;
+}
+
+fn ratioExponential(engine: *alea.ScalarPrng) f64 {
+    while (true) {
+        const bits = engine.next();
+        const i: usize = @as(u8, @truncate(bits));
+        const repr = (@as(u64, 0x3ff) << 52) | (bits >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
+
+        if (u < exp_ratio[i]) {
+            @branchHint(.likely);
+            return u * ziggurat.ExpDist.x[i];
+        }
+        const x = u * ziggurat.ExpDist.x[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return ziggurat.exp_r - @log(alea.Rng.floatFrom(engine, f64));
+        }
+        if (ziggurat.ExpDist.f[i + 1] + (ziggurat.ExpDist.f[i] - ziggurat.ExpDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x)) return x;
+    }
+}

@@ -97,6 +97,23 @@ pub fn build(b: *std.Build) void {
     const ziggurat_stats_step = b.step("ziggurat-stats", "Report ziggurat branch frequencies");
     ziggurat_stats_step.dependOn(&run_ziggurat_stats.step);
 
+    const ziggurat_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/ziggurat_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    ziggurat_probe_mod.addImport("alea", module);
+
+    const ziggurat_probe = b.addExecutable(.{
+        .name = "alea-ziggurat-probe",
+        .root_module = ziggurat_probe_mod,
+    });
+    const run_ziggurat_probe = b.addRunArtifact(ziggurat_probe);
+    if (b.args) |args| run_ziggurat_probe.addArgs(args);
+
+    const ziggurat_probe_step = b.step("ziggurat-probe", "Run ziggurat expression-shape microbenchmarks");
+    ziggurat_probe_step.dependOn(&run_ziggurat_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

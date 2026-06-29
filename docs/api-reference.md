@@ -48,8 +48,8 @@ expectations.
   `vectorExponential`, `vectorFrom`, `vectorOpenFrom`, `vectorOpenClosedFrom`,
   `vectorRangeFrom`, `vectorChanceFrom`, `vectorRatioFrom`
 - Unicode: `unicodeScalar`
-- Distributions: `normal`, `exponential`, `normalFastFrom`,
-  `exponentialFastFrom`
+- Distributions: `normal`, `exponential`, `standardNormalFastFrom`,
+  `standardExponentialFastFrom`, `normalFastFrom`, `exponentialFastFrom`
 - Enums and collections: `enumValue`, `shuffle`, `choose`, `choosePtr`,
   `weightedIndex`, `weightedIndexChecked`, `sampleWithoutReplacement`,
   `sampleWithoutReplacementChecked`
@@ -392,11 +392,13 @@ Build steps:
 - `zig build repro`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native bench`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench`
+- `zig build -Doptimize=ReleaseFast -Dcpu=native ziggurat-probe`
 
 Tools:
 
 - `tools/statcheck.zig`
 - `tools/distcheck.zig`
 - `tools/stream.zig`
+- `tools/ziggurat_probe.zig`
 - `tools/repro.zig`
 - `tools/practrand.sh`

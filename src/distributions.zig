@@ -833,11 +833,11 @@ pub const OpenClosed01 = struct {
 };
 
 pub fn standardNormal(rng: Rng, comptime T: type) T {
-    return Rng.normalFastFrom(rng, T, 0, 1);
+    return Rng.standardNormalFastFrom(rng, T);
 }
 
 pub fn standardNormalFrom(source: anytype, comptime T: type) T {
-    return Rng.normalFastFrom(source, T, 0, 1);
+    return Rng.standardNormalFastFrom(source, T);
 }
 
 pub fn fillStandardNormal(rng: Rng, comptime T: type, dest: []T) void {
@@ -876,11 +876,11 @@ pub fn StandardNormal(comptime T: type) type {
 }
 
 pub fn standardExponential(rng: Rng, comptime T: type) T {
-    return Rng.exponentialFastFrom(rng, T, 1);
+    return Rng.standardExponentialFastFrom(rng, T);
 }
 
 pub fn standardExponentialFrom(source: anytype, comptime T: type) T {
-    return Rng.exponentialFastFrom(source, T, 1);
+    return Rng.standardExponentialFastFrom(source, T);
 }
 
 pub fn fillStandardExponential(rng: Rng, comptime T: type, dest: []T) void {
