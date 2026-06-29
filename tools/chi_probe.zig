@@ -27,6 +27,14 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast normal-square fill equivalent", 0xc105, sample_count, normalSquareFillEquivalent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar chi-squared dof=1 fill current", 0xc105, sample_count, chiSquaredOneFillCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar normal-square fill equivalent", 0xc105, sample_count, normalSquareFillEquivalent);
+    try benchSample(alea.FastPrng, io, stdout, "fast chi-squared dof=2 current", 0xc205, sample_count, chiSquaredTwoCurrent);
+    try benchSample(alea.FastPrng, io, stdout, "fast exp-scale equivalent", 0xc205, sample_count, expScaleEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar chi-squared dof=2 current", 0xc205, sample_count, chiSquaredTwoCurrent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar exp-scale equivalent", 0xc205, sample_count, expScaleEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast chi-squared dof=2 fill current", 0xc205, sample_count, chiSquaredTwoFillCurrent);
+    try benchFill(alea.FastPrng, io, stdout, "fast exp-scale fill equivalent", 0xc205, sample_count, expScaleFillEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar chi-squared dof=2 fill current", 0xc205, sample_count, chiSquaredTwoFillCurrent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar exp-scale fill equivalent", 0xc205, sample_count, expScaleFillEquivalent);
     try benchSample(alea.FastPrng, io, stdout, "fast chi dof=1 current", 0xc101, sample_count, chiOneCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast abs-normal equivalent", 0xc101, sample_count, absNormalEquivalent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar chi dof=1 current", 0xc101, sample_count, chiOneCurrent);
@@ -140,6 +148,22 @@ fn normalSquareFillEquivalent(source: anytype, dest: []f64) void {
         const z = alea.Rng.standardNormalFastFrom(source, f64);
         item.* = z * z;
     }
+}
+
+fn chiSquaredTwoCurrent(source: anytype) f64 {
+    return alea.distributions.chiSquaredFrom(source, f64, 2);
+}
+
+fn expScaleEquivalent(source: anytype) f64 {
+    return 2 * alea.Rng.standardExponentialFastFrom(source, f64);
+}
+
+fn chiSquaredTwoFillCurrent(source: anytype, dest: []f64) void {
+    alea.distributions.fillChiSquaredFrom(source, f64, dest, 2);
+}
+
+fn expScaleFillEquivalent(source: anytype, dest: []f64) void {
+    for (dest) |*item| item.* = 2 * alea.Rng.standardExponentialFastFrom(source, f64);
 }
 
 fn chiOneCurrent(source: anytype) f64 {
