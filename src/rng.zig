@@ -1406,9 +1406,8 @@ fn vectorOpenF64From(source: anytype, comptime VectorType: type) VectorType {
 
     const RawVector = @Vector(info.len, u64);
     var raw: RawVector = undefined;
-    inline for (0..info.len) |i| raw[i] = nextFrom(source) >> 11;
-    const non_zero = @select(u64, raw == @as(RawVector, @splat(0)), @as(RawVector, @splat(1)), raw);
-    return @as(VectorType, @floatFromInt(non_zero)) * @as(VectorType, @splat(1.0 / 9007199254740992.0));
+    inline for (0..info.len) |i| raw[i] = f64UnitOpenBitsFromRaw(nextFrom(source));
+    return @as(VectorType, @bitCast(raw)) - @as(VectorType, @splat(1.0 - std.math.floatEps(f64) / 2.0));
 }
 
 fn vectorOpenClosedF32From(source: anytype, comptime VectorType: type) VectorType {
@@ -1513,6 +1512,14 @@ fn f64FromRaw(raw: u64) f64 {
     return @as(f64, @bitCast(f64UnitBitsFromRaw(raw))) - 1.0;
 }
 
+fn f64UnitOpenBitsFromRaw(raw: u64) u64 {
+    return (@as(u64, 0x3ff) << 52) | (raw >> 12);
+}
+
+fn f64OpenFromRaw(raw: u64) f64 {
+    return @as(f64, @bitCast(f64UnitOpenBitsFromRaw(raw))) - (1.0 - std.math.floatEps(f64) / 2.0);
+}
+
 pub fn floatFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
@@ -1526,11 +1533,7 @@ pub fn floatOpenFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
         f32 => f32OpenFromBits(@truncate(nextFrom(source) >> 40)),
-        f64 => blk: {
-            const raw = nextFrom(source) >> 11;
-            const non_zero = if (raw == 0) @as(u64, 1) else raw;
-            break :blk @as(f64, @floatFromInt(non_zero)) * (1.0 / 9007199254740992.0);
-        },
+        f64 => f64OpenFromRaw(nextFrom(source)),
         else => @compileError("alea supports f32 and f64 floats"),
     };
 }
