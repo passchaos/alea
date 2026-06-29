@@ -125,8 +125,10 @@ project does not repeat unproductive work.
 
 Continue performance triage on the remaining large gaps:
 
+- large-parameter Hypergeometric still needs an H2PE-equivalent fast path,
 - normal `f64` facade still trails local `rand_distr`,
-- scalar-heavy workloads should be benchmarked with `wyhash64` / scalar-fast profile,
+- `fillOpenClosed(f64)` bulk still trails local Rust evidence,
+- Cauchy remains a small performance watch item after adding Rust rows,
 - log-normal and NIG still trail local `rand_distr`,
 - skew-normal still trails local `rand_distr`,
 - SIMD/vector distribution kernels need stronger default-path wins before they
