@@ -215,6 +215,11 @@ fn checkContinuous() !void {
             return alea.distributions.powerFunction(r, f64, -1, 2, 1);
         }
     }.sample, 0.48, 0.52);
+    try expectContinuousMean("power-function-shape-two", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.powerFunction(r, f64, -1, 2, 2);
+        }
+    }.sample, 0.98, 1.02);
     try expectContinuousMean("rayleigh", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.rayleigh(r, f64, 2);

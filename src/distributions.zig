@@ -2428,6 +2428,7 @@ pub fn powerFunctionFrom(source: anytype, comptime T: type, min: T, max: T, shap
     std.debug.assert(std.math.isFinite(min) and std.math.isFinite(max) and std.math.isFinite(shape));
 
     if (shape == 1) return Rng.floatRangeFrom(source, T, min, max);
+    if (shape == 2) return min + (max - min) * @sqrt(Rng.floatOpenFrom(source, T));
     return min + (max - min) * std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / shape);
 }
 
@@ -2441,6 +2442,12 @@ pub fn fillPowerFunctionFrom(source: anytype, comptime T: type, dest: []T, min: 
     std.debug.assert(std.math.isFinite(min) and std.math.isFinite(max) and std.math.isFinite(shape));
     if (shape == 1) {
         Rng.fillRangeFrom(source, T, dest, min, max);
+        return;
+    }
+    if (shape == 2) {
+        const width = max - min;
+        Rng.fillOpenFrom(source, T, dest);
+        for (dest) |*item| item.* = min + width * @sqrt(item.*);
         return;
     }
 
@@ -5079,6 +5086,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     var power_function_shape_one_buf: [8]f64 = undefined;
     fillPowerFunctionFrom(&direct_engine, f64, &power_function_shape_one_buf, -1, 2, 1);
     for (power_function_shape_one_buf) |value| try std.testing.expect(value >= -1 and value < 2);
+    var power_function_shape_two_buf: [8]f64 = undefined;
+    fillPowerFunctionFrom(&direct_engine, f64, &power_function_shape_two_buf, -1, 2, 2);
+    for (power_function_shape_two_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
 
     var rayleighs = rng.sampleIter(f64, try Rayleigh(f64).init(2));
     try std.testing.expect(rayleighs.next().? >= 0);

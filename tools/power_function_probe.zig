@@ -27,6 +27,14 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast uniform fill equivalent", 0x90b1, sample_count, fillUniformEquivalent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar fill current shape=1", 0x90b1, sample_count, fillShapeOneCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar uniform fill equivalent", 0x90b1, sample_count, fillUniformEquivalent);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample current shape=2", 0x90b2, sample_count, sampleShapeTwoCurrent);
+    try benchSample(alea.FastPrng, io, stdout, "fast sqrt equivalent", 0x90b2, sample_count, sampleSqrtEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sample current shape=2", 0x90b2, sample_count, sampleShapeTwoCurrent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sqrt equivalent", 0x90b2, sample_count, sampleSqrtEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast fill current shape=2", 0x90b2, sample_count, fillShapeTwoCurrent);
+    try benchFill(alea.FastPrng, io, stdout, "fast sqrt fill equivalent", 0x90b2, sample_count, fillSqrtEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar fill current shape=2", 0x90b2, sample_count, fillShapeTwoCurrent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar sqrt fill equivalent", 0x90b2, sample_count, fillSqrtEquivalent);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x90b0, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar pow", 0x90b0, sample_count, stagedScalarPow);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar exp-log", 0x90b0, sample_count, stagedScalarExpLog);
@@ -130,6 +138,23 @@ fn fillShapeOneCurrent(source: anytype, dest: []f64) void {
 
 fn fillUniformEquivalent(source: anytype, dest: []f64) void {
     alea.Rng.fillRangeFrom(source, f64, dest, -1, 2);
+}
+
+fn sampleShapeTwoCurrent(source: anytype) f64 {
+    return alea.distributions.powerFunctionFrom(source, f64, -1, 2, 2);
+}
+
+fn sampleSqrtEquivalent(source: anytype) f64 {
+    return -1 + 3 * @sqrt(alea.Rng.floatOpenFrom(source, f64));
+}
+
+fn fillShapeTwoCurrent(source: anytype, dest: []f64) void {
+    alea.distributions.fillPowerFunctionFrom(source, f64, dest, -1, 2, 2);
+}
+
+fn fillSqrtEquivalent(source: anytype, dest: []f64) void {
+    alea.Rng.fillOpenFrom(source, f64, dest);
+    for (dest) |*item| item.* = -1 + 3 * @sqrt(item.*);
 }
 
 fn stagedScalarPow(source: anytype, dest: []f64) void {
