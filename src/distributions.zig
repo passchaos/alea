@@ -1533,6 +1533,16 @@ pub fn kumaraswamyFrom(source: anytype, comptime T: type, alpha: T, beta_param: 
     return std.math.pow(T, 1 - std.math.pow(T, 1 - u, 1 / beta_param), 1 / alpha);
 }
 
+pub fn fillKumaraswamy(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
+    fillKumaraswamyFrom(rng, T, dest, alpha, beta_param);
+}
+
+pub fn fillKumaraswamyFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(alpha > 0 and beta_param > 0 and std.math.isFinite(alpha) and std.math.isFinite(beta_param));
+    for (dest) |*item| item.* = kumaraswamyFrom(source, T, alpha, beta_param);
+}
+
 pub fn Kumaraswamy(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1557,6 +1567,14 @@ pub fn Kumaraswamy(comptime T: type) type {
         pub fn sampleFrom(self: Self, source: anytype) T {
             const u = Rng.floatOpenFrom(source, T);
             return std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3099,6 +3117,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var kumaraswamys = rng.sampleIter(f64, try Kumaraswamy(f64).init(2, 5));
     const kumaraswamy_value = kumaraswamys.next().?;
     try std.testing.expect(kumaraswamy_value >= 0 and kumaraswamy_value <= 1);
+    var kumaraswamy_buf: [8]f64 = undefined;
+    fillKumaraswamy(rng, f64, &kumaraswamy_buf, 2, 5);
+    for (kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    var direct_kumaraswamy_buf: [8]f64 = undefined;
+    fillKumaraswamyFrom(&direct_engine, f64, &direct_kumaraswamy_buf, 2, 5);
+    for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    const kumaraswamy_sampler = try Kumaraswamy(f64).init(2, 5);
+    kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf);
+    for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
 
     var power_functions = rng.sampleIter(f64, try PowerFunction(f64).init(-1, 2, 3));
     const power_value = power_functions.next().?;
