@@ -2628,7 +2628,8 @@ pub fn fillGumbel(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) 
 pub fn fillGumbelFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) void {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
-    for (dest) |*item| item.* = gumbelFrom(source, T, location, scale);
+    Rng.fillOpenClosedFrom(source, T, dest);
+    gumbelFromOpenClosedUniforms(T, dest, location, scale);
 }
 
 pub fn Gumbel(comptime T: type) type {
@@ -2658,7 +2659,7 @@ pub fn Gumbel(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillGumbelFrom(source, T, dest, self.location, self.scale);
         }
     };
 }
@@ -4086,6 +4087,33 @@ fn powerFunctionFromOpenUniformsVector(comptime T: type, comptime VectorType: ty
 
     while (i < dest.len) : (i += 1) {
         dest[i] = min + width * @exp(@log(dest[i]) * inverse_shape);
+    }
+}
+
+fn gumbelFromOpenClosedUniforms(comptime T: type, dest: []T, location: T, scale: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => gumbelFromOpenClosedUniformsVector(T, @Vector(8, f32), dest, location, scale),
+        f64 => gumbelFromOpenClosedUniformsVector(T, @Vector(4, f64), dest, location, scale),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn gumbelFromOpenClosedUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, location: T, scale: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const location_vec: VectorType = @splat(location);
+    const scale_vec: VectorType = @splat(scale);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const out = location_vec - scale_vec * @log(-@log(uniform_vec));
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        dest[i] = location - scale * @log(-@log(dest[i]));
     }
 }
 

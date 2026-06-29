@@ -335,6 +335,23 @@ pub fn build(b: *std.Build) void {
     const kumaraswamy_probe_step = b.step("kumaraswamy-probe", "Run Kumaraswamy bulk expression-shape microbenchmarks");
     kumaraswamy_probe_step.dependOn(&run_kumaraswamy_probe.step);
 
+    const gumbel_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/gumbel_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    gumbel_probe_mod.addImport("alea", module);
+
+    const gumbel_probe = b.addExecutable(.{
+        .name = "alea-gumbel-probe",
+        .root_module = gumbel_probe_mod,
+    });
+    const run_gumbel_probe = b.addRunArtifact(gumbel_probe);
+    if (b.args) |args| run_gumbel_probe.addArgs(args);
+
+    const gumbel_probe_step = b.step("gumbel-probe", "Run Gumbel bulk expression-shape microbenchmarks");
+    gumbel_probe_step.dependOn(&run_gumbel_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
