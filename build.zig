@@ -352,6 +352,23 @@ pub fn build(b: *std.Build) void {
     const gumbel_probe_step = b.step("gumbel-probe", "Run Gumbel bulk expression-shape microbenchmarks");
     gumbel_probe_step.dependOn(&run_gumbel_probe.step);
 
+    const frechet_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/frechet_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    frechet_probe_mod.addImport("alea", module);
+
+    const frechet_probe = b.addExecutable(.{
+        .name = "alea-frechet-probe",
+        .root_module = frechet_probe_mod,
+    });
+    const run_frechet_probe = b.addRunArtifact(frechet_probe);
+    if (b.args) |args| run_frechet_probe.addArgs(args);
+
+    const frechet_probe_step = b.step("frechet-probe", "Run Frechet bulk expression-shape microbenchmarks");
+    frechet_probe_step.dependOn(&run_frechet_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

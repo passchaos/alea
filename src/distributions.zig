@@ -2682,7 +2682,8 @@ pub fn fillFrechet(rng: Rng, comptime T: type, dest: []T, location: T, scale: T,
 pub fn fillFrechetFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and shape > 0);
-    for (dest) |*item| item.* = frechetFrom(source, T, location, scale, shape);
+    Rng.fillOpenClosedFrom(source, T, dest);
+    frechetFromOpenClosedUniforms(T, dest, location, scale, -1 / shape);
 }
 
 pub fn Frechet(comptime T: type) type {
@@ -2714,7 +2715,7 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillFrechetFrom(source, T, dest, self.location, self.scale, self.shape);
         }
     };
 }
@@ -4114,6 +4115,34 @@ fn gumbelFromOpenClosedUniformsVector(comptime T: type, comptime VectorType: typ
 
     while (i < dest.len) : (i += 1) {
         dest[i] = location - scale * @log(-@log(dest[i]));
+    }
+}
+
+fn frechetFromOpenClosedUniforms(comptime T: type, dest: []T, location: T, scale: T, negative_inverse_shape: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => frechetFromOpenClosedUniformsVector(T, @Vector(8, f32), dest, location, scale, negative_inverse_shape),
+        f64 => frechetFromOpenClosedUniformsVector(T, @Vector(4, f64), dest, location, scale, negative_inverse_shape),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn frechetFromOpenClosedUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, location: T, scale: T, negative_inverse_shape: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const location_vec: VectorType = @splat(location);
+    const scale_vec: VectorType = @splat(scale);
+    const negative_inverse_shape_vec: VectorType = @splat(negative_inverse_shape);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const out = location_vec + scale_vec * @exp(@log(-@log(uniform_vec)) * negative_inverse_shape_vec);
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        dest[i] = location + scale * @exp(@log(-@log(dest[i])) * negative_inverse_shape);
     }
 }
 
