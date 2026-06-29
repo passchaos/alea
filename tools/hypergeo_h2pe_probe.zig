@@ -168,25 +168,66 @@ const HypergeometricH2pe = struct {
     }
 
     fn accept(self: *const HypergeometricH2pe, y: f64, v: f64) bool {
-        var f: f64 = 1.0;
-        if (self.m < y) {
-            var i: u64 = @intFromFloat(self.m);
-            const y_i: u64 = @intFromFloat(y);
-            while (i < y_i) {
-                i += 1;
-                f *= @as(f64, @floatFromInt(self.n1 - i + 1)) * @as(f64, @floatFromInt(self.k - i + 1));
-                f /= @as(f64, @floatFromInt(i)) * @as(f64, @floatFromInt(self.n2 - self.k + i));
+        if (self.m < 100.0 or y <= 50.0) {
+            var f: f64 = 1.0;
+            if (self.m < y) {
+                var i: u64 = @intFromFloat(self.m);
+                const y_i: u64 = @intFromFloat(y);
+                while (i < y_i) {
+                    i += 1;
+                    f *= @as(f64, @floatFromInt(self.n1 - i + 1)) * @as(f64, @floatFromInt(self.k - i + 1));
+                    f /= @as(f64, @floatFromInt(i)) * @as(f64, @floatFromInt(self.n2 - self.k + i));
+                }
+            } else {
+                var i: u64 = @intFromFloat(y);
+                const m_i: u64 = @intFromFloat(self.m);
+                while (i < m_i) {
+                    i += 1;
+                    f *= @as(f64, @floatFromInt(i)) * @as(f64, @floatFromInt(self.n2 - self.k + i));
+                    f /= @as(f64, @floatFromInt(self.n1 - i + 1)) * @as(f64, @floatFromInt(self.k - i + 1));
+                }
             }
-        } else {
-            var i: u64 = @intFromFloat(y);
-            const m_i: u64 = @intFromFloat(self.m);
-            while (i < m_i) {
-                i += 1;
-                f *= @as(f64, @floatFromInt(i)) * @as(f64, @floatFromInt(self.n2 - self.k + i));
-                f /= @as(f64, @floatFromInt(self.n1 - i + 1)) * @as(f64, @floatFromInt(self.k - i + 1));
-            }
+            return v <= f;
         }
-        return v <= f;
+
+        const y1 = y + 1.0;
+        const ym = y - self.m;
+        const yn = @as(f64, @floatFromInt(self.n1)) - y + 1.0;
+        const yk = @as(f64, @floatFromInt(self.k)) - y + 1.0;
+        const nk = @as(f64, @floatFromInt(self.n2 - self.k)) + y1;
+        const r = -ym / y1;
+        const s = ym / yn;
+        const t = ym / yk;
+        const e = -ym / nk;
+        const g = yn * yk / (y1 * nk) - 1.0;
+        const dg = if (g < 0.0) 1.0 + g else 1.0;
+        const gu = g * (1.0 + g * (-0.5 + g / 3.0));
+        const gl = gu - pow4(g) / (4.0 * dg);
+        const xm = self.m + 0.5;
+        const xn = @as(f64, @floatFromInt(self.n1)) - self.m + 0.5;
+        const xk = @as(f64, @floatFromInt(self.k)) - self.m + 0.5;
+        const nm = @as(f64, @floatFromInt(self.n2 - self.k)) + xm;
+        const ub = xm * r * (1.0 + r * (-0.5 + r / 3.0)) +
+            xn * s * (1.0 + s * (-0.5 + s / 3.0)) +
+            xk * t * (1.0 + t * (-0.5 + t / 3.0)) +
+            nm * e * (1.0 + e * (-0.5 + e / 3.0)) +
+            y * gu - self.m * gl + 0.0034;
+        const av = @log(v);
+        if (av > ub) return false;
+
+        const dr = if (r < 0.0) xm * pow4(r) / (1.0 + r) else xm * pow4(r);
+        const ds = if (s < 0.0) xn * pow4(s) / (1.0 + s) else xn * pow4(s);
+        const dt = if (t < 0.0) xk * pow4(t) / (1.0 + t) else xk * pow4(t);
+        const de = if (e < 0.0) nm * pow4(e) / (1.0 + e) else nm * pow4(e);
+        if (av < ub - 0.25 * (dr + ds + dt + de) + (y + self.m) * (gl - gu) - 0.0078) {
+            return true;
+        }
+
+        const av_critical = self.a - lnOfFactorial(y) -
+            lnOfFactorial(@as(f64, @floatFromInt(self.n1)) - y) -
+            lnOfFactorial(@as(f64, @floatFromInt(self.k)) - y) -
+            lnOfFactorial(@as(f64, @floatFromInt(self.n2 - self.k)) + y);
+        return av <= av_critical;
     }
 
     fn finish(self: *const HypergeometricH2pe, y: f64) u64 {
@@ -224,4 +265,9 @@ fn lnOfFactorial(v: f64) f64 {
     const v3 = v + 3.0;
     const ln_fac = (v3 + 0.5) * @log(v3) - v3 + @as(f64, 0.91893853320467274178) + 1.0 / (12.0 * v3);
     return ln_fac - @log((v + 3.0) * (v + 2.0) * (v + 1.0));
+}
+
+fn pow4(x: f64) f64 {
+    const squared = x * x;
+    return squared * squared;
 }
