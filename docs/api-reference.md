@@ -93,7 +93,7 @@ Single-shot helpers:
   `standardExponential`, `standardExponentialFrom`, `exponential`
 - `poisson`, `geometric`, `geometricFrom`
 - `gamma`, `gammaFrom`, `chiSquared`, `chiSquaredFrom`, `erlang`,
-  `erlangFrom`, `beta`, `betaFrom`, `fisherF`, `studentT`,
+  `erlangFrom`, `beta`, `betaFrom`, `fisherF`, `fisherFFrom`, `studentT`,
   `studentTFrom`
 - `triangular`, `triangularFrom`, `arcsine`, `arcsineFrom`,
   `cauchy`, `cauchyFrom`, `laplace`, `laplaceFrom`, `logistic`,

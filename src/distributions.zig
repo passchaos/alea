@@ -1088,10 +1088,14 @@ pub fn Beta(comptime T: type) type {
 }
 
 pub fn fisherF(rng: Rng, comptime T: type, d1: T, d2: T) T {
+    return fisherFFrom(rng, T, d1, d2);
+}
+
+pub fn fisherFFrom(source: anytype, comptime T: type, d1: T, d2: T) T {
     comptime requireFloat(T);
     std.debug.assert(d1 > 0 and d2 > 0);
-    const x = chiSquared(rng, T, d1) / d1;
-    const y = chiSquared(rng, T, d2) / d2;
+    const x = chiSquaredFrom(source, T, d1) / d1;
+    const y = chiSquaredFrom(source, T, d2) / d2;
     return x / y;
 }
 
@@ -2811,6 +2815,7 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var fisher = rng.sampleIter(f64, try FisherF(f64).init(5, 20));
     try std.testing.expect(fisher.next().? > 0);
+    try std.testing.expect(fisherFFrom(&direct_engine, f64, 5, 20) > 0);
 
     var student = rng.sampleIter(f64, try StudentT(f64).init(10));
     _ = student.next().?;
