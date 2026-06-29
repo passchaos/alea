@@ -2555,8 +2555,7 @@ pub fn Pareto(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            Rng.fillOpenFrom(source, T, dest);
-            paretoFromOpenUniforms(T, dest, self.scale, 1 / self.shape);
+            fillParetoFrom(source, T, dest, self.scale, self.shape);
         }
     };
 }
