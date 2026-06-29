@@ -321,6 +321,8 @@ fn checkBoundedSupport() !void {
         if (!(beta >= 0 and beta <= 1)) return error.DistributionCheckFailed;
         const pareto = alea.distributions.pareto(rng, f64, 2, 3);
         if (!(pareto >= 2)) return error.DistributionCheckFailed;
+        const pareto_shape_one = alea.distributions.pareto(rng, f64, 2, 1);
+        if (!(pareto_shape_one >= 2)) return error.DistributionCheckFailed;
         const cauchy = alea.distributions.cauchy(rng, f64, 0, 1);
         if (!std.math.isFinite(cauchy)) return error.DistributionCheckFailed;
         const pert = alea.distributions.pert(rng, f64, -1, 0.5, 2, 4);

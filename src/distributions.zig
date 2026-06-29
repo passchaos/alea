@@ -2582,6 +2582,12 @@ pub fn fillPareto(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) voi
 pub fn fillParetoFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0);
+    if (shape == 1) {
+        Rng.fillOpenFrom(source, T, dest);
+        for (dest) |*item| item.* = scale / item.*;
+        return;
+    }
+
     Rng.fillOpenFrom(source, T, dest);
     paretoFromOpenUniforms(T, dest, scale, 1 / shape);
 }
@@ -5016,6 +5022,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const pareto_sampler = try Pareto(f64).init(2, 3);
     pareto_sampler.fillFrom(&direct_engine, &direct_pareto_buf);
     for (direct_pareto_buf) |value| try std.testing.expect(value >= 2);
+    var pareto_shape_one_buf: [8]f64 = undefined;
+    fillParetoFrom(&direct_engine, f64, &pareto_shape_one_buf, 2, 1);
+    for (pareto_shape_one_buf) |value| try std.testing.expect(value >= 2);
 
     var weibulls = rng.sampleIter(f64, try Weibull(f64).init(2, 1.5));
     try std.testing.expect(weibulls.next().? >= 0);
