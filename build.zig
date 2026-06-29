@@ -148,6 +148,23 @@ pub fn build(b: *std.Build) void {
     const distcheck_step = b.step("distcheck", "Run parameter-grid distribution checks");
     distcheck_step.dependOn(&run_distcheck.step);
 
+    const hypergeo_h2pe_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/hypergeo_h2pe_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    hypergeo_h2pe_probe_mod.addImport("alea", module);
+
+    const hypergeo_h2pe_probe = b.addExecutable(.{
+        .name = "alea-hypergeo-h2pe-probe",
+        .root_module = hypergeo_h2pe_probe_mod,
+    });
+    const run_hypergeo_h2pe_probe = b.addRunArtifact(hypergeo_h2pe_probe);
+    if (b.args) |args| run_hypergeo_h2pe_probe.addArgs(args);
+
+    const hypergeo_h2pe_probe_step = b.step("hypergeo-h2pe-probe", "Run isolated Hypergeometric H2PE experiments");
+    hypergeo_h2pe_probe_step.dependOn(&run_hypergeo_h2pe_probe.step);
+
     const repro_mod = b.createModule(.{
         .root_source_file = b.path("tools/repro.zig"),
         .target = target,
