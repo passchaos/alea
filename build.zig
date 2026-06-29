@@ -80,6 +80,23 @@ pub fn build(b: *std.Build) void {
     const vectorbench_step = b.step("vectorbench", "Run vector/SIMD microbenchmarks");
     vectorbench_step.dependOn(&run_vectorbench.step);
 
+    const ziggurat_stats_mod = b.createModule(.{
+        .root_source_file = b.path("tools/ziggurat_stats.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    ziggurat_stats_mod.addImport("alea", module);
+
+    const ziggurat_stats = b.addExecutable(.{
+        .name = "alea-ziggurat-stats",
+        .root_module = ziggurat_stats_mod,
+    });
+    const run_ziggurat_stats = b.addRunArtifact(ziggurat_stats);
+    if (b.args) |args| run_ziggurat_stats.addArgs(args);
+
+    const ziggurat_stats_step = b.step("ziggurat-stats", "Report ziggurat branch frequencies");
+    ziggurat_stats_step.dependOn(&run_ziggurat_stats.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
