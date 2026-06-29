@@ -39,7 +39,7 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - floats: `float`, `floatOpen`, `floatOpenClosed`, `floatRange`
 - vectors: `value(@Vector(N, T))`, `vectorOpen`, `vectorOpenClosed`,
   `vectorRange`, `vectorChance`, `vectorRatio`, `vectorNormal`,
-  `vectorExponential`
+  `vectorExponential` for `f32`/`f64`, integer, and boolean lanes
 - booleans: `boolean`, `chance`, `chanceFrom`, `ratio`, `ratioFrom`,
   `fillChance`, `fillRatio`
 - durations: `durationRangeLessThan`, `durationRangeAtMost`

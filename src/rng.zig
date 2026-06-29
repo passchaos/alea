@@ -178,9 +178,7 @@ pub fn fillOpenFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireFloat(T);
     switch (T) {
         f32 => fillOpenF32From(source, dest),
-        f64 => {
-            for (dest) |*item| item.* = floatOpenFrom(source, f64);
-        },
+        f64 => fillOpenF64From(source, dest),
         else => @compileError("alea supports f32 and f64 floats"),
     }
 }
@@ -193,9 +191,7 @@ pub fn fillOpenClosedFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireFloat(T);
     switch (T) {
         f32 => fillOpenClosedF32From(source, dest),
-        f64 => {
-            for (dest) |*item| item.* = floatOpenClosedFrom(source, f64);
-        },
+        f64 => fillOpenClosedF64From(source, dest),
         else => @compileError("alea supports f32 and f64 floats"),
     }
 }
@@ -517,7 +513,7 @@ fn fillFloats(self: Rng, comptime T: type, dest: []T) void {
             }
         },
         f64 => {
-            for (dest) |*item| item.* = self.float(f64);
+            fillF64From(self, dest);
         },
         else => @compileError("alea supports f32 and f64 floats"),
     }
@@ -549,6 +545,42 @@ fn fillOpenClosedF32From(source: anytype, dest: []f32) void {
     }
 }
 
+fn fillF64From(source: anytype, dest: []f64) void {
+    const VectorType = @Vector(4, f64);
+
+    var i: usize = 0;
+    while (i + 4 <= dest.len) : (i += 4) {
+        const vec = vectorF64From(source, VectorType);
+        inline for (0..4) |lane| dest[i + lane] = vec[lane];
+    }
+
+    while (i < dest.len) : (i += 1) dest[i] = floatFrom(source, f64);
+}
+
+fn fillOpenF64From(source: anytype, dest: []f64) void {
+    const VectorType = @Vector(4, f64);
+
+    var i: usize = 0;
+    while (i + 4 <= dest.len) : (i += 4) {
+        const vec = vectorOpenF64From(source, VectorType);
+        inline for (0..4) |lane| dest[i + lane] = vec[lane];
+    }
+
+    while (i < dest.len) : (i += 1) dest[i] = floatOpenFrom(source, f64);
+}
+
+fn fillOpenClosedF64From(source: anytype, dest: []f64) void {
+    const VectorType = @Vector(4, f64);
+
+    var i: usize = 0;
+    while (i + 4 <= dest.len) : (i += 4) {
+        const vec = vectorOpenClosedF64From(source, VectorType);
+        inline for (0..4) |lane| dest[i + lane] = vec[lane];
+    }
+
+    while (i < dest.len) : (i += 1) dest[i] = floatOpenClosedFrom(source, f64);
+}
+
 fn fillFloatRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
     comptime requireFloat(T);
     switch (T) {
@@ -558,7 +590,9 @@ fn fillFloatRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
             for (dest) |*item| item.* = min + width * item.*;
         },
         f64 => {
-            for (dest) |*item| item.* = self.floatRange(f64, min, max);
+            fillF64From(self, dest);
+            const width = max - min;
+            for (dest) |*item| item.* = min + width * item.*;
         },
         else => @compileError("alea supports f32 and f64 floats"),
     }
@@ -751,7 +785,7 @@ pub fn vectorFrom(source: anytype, comptime VectorType: type) VectorType {
         .int => vectorIntsFrom(source, VectorType),
         .float => switch (info.child) {
             f32 => vectorF32From(source, VectorType),
-            f64 => vectorScalarFrom(source, VectorType),
+            f64 => vectorF64From(source, VectorType),
             else => @compileError("alea supports f32 and f64 float vectors"),
         },
         else => @compileError("alea.Rng.vector supports bool, integer, and floating-point vectors"),
@@ -774,6 +808,7 @@ pub fn vectorOpenFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     if (info.child == f32) return vectorOpenF32From(source, VectorType);
+    if (info.child == f64) return vectorOpenF64From(source, VectorType);
     var out: VectorType = undefined;
     inline for (0..info.len) |i| out[i] = floatOpenFrom(source, info.child);
     return out;
@@ -783,6 +818,7 @@ pub fn vectorOpenClosedFrom(source: anytype, comptime VectorType: type) VectorTy
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     if (info.child == f32) return vectorOpenClosedF32From(source, VectorType);
+    if (info.child == f64) return vectorOpenClosedF64From(source, VectorType);
     var out: VectorType = undefined;
     inline for (0..info.len) |i| out[i] = floatOpenClosedFrom(source, info.child);
     return out;
@@ -1264,6 +1300,16 @@ fn vectorF32From(source: anytype, comptime VectorType: type) VectorType {
     return out;
 }
 
+fn vectorF64From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("vectorF64From expects an f64 vector");
+
+    const RawVector = @Vector(info.len, u64);
+    var raw: RawVector = undefined;
+    inline for (0..info.len) |i| raw[i] = nextFrom(source) >> 11;
+    return @as(VectorType, @floatFromInt(raw)) * @as(VectorType, @splat(1.0 / 9007199254740992.0));
+}
+
 fn vectorOpenF32From(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorOpenF32From expects an f32 vector");
@@ -1281,6 +1327,17 @@ fn vectorOpenF32From(source: anytype, comptime VectorType: type) VectorType {
     return out;
 }
 
+fn vectorOpenF64From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("vectorOpenF64From expects an f64 vector");
+
+    const RawVector = @Vector(info.len, u64);
+    var raw: RawVector = undefined;
+    inline for (0..info.len) |i| raw[i] = nextFrom(source) >> 11;
+    const non_zero = @select(u64, raw == @as(RawVector, @splat(0)), @as(RawVector, @splat(1)), raw);
+    return @as(VectorType, @floatFromInt(non_zero)) * @as(VectorType, @splat(1.0 / 9007199254740992.0));
+}
+
 fn vectorOpenClosedF32From(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorOpenClosedF32From expects an f32 vector");
@@ -1296,6 +1353,17 @@ fn vectorOpenClosedF32From(source: anytype, comptime VectorType: type) VectorTyp
         out[i] = (@as(f32, @floatFromInt(raw)) + 1.0) * (1.0 / 16777216.0);
     }
     return out;
+}
+
+fn vectorOpenClosedF64From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("vectorOpenClosedF64From expects an f64 vector");
+
+    const RawVector = @Vector(info.len, u64);
+    var raw: RawVector = undefined;
+    inline for (0..info.len) |i| raw[i] = nextFrom(source) >> 11;
+    return (@as(VectorType, @floatFromInt(raw)) + @as(VectorType, @splat(1))) *
+        @as(VectorType, @splat(1.0 / 9007199254740992.0));
 }
 
 fn vectorNormalFloatFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
@@ -1514,6 +1582,22 @@ test "rng facade covers scalar APIs" {
     rng.fill(f32, &f32_buf);
     for (f32_buf) |item| try std.testing.expect(item >= 0 and item < 1);
 
+    var f64_buf: [17]f64 = undefined;
+    rng.fill(f64, &f64_buf);
+    for (f64_buf) |item| try std.testing.expect(item >= 0 and item < 1);
+
+    var open_f64_buf: [17]f64 = undefined;
+    rng.fillOpen(f64, &open_f64_buf);
+    for (open_f64_buf) |item| try std.testing.expect(item > 0 and item < 1);
+
+    var open_closed_f64_buf: [17]f64 = undefined;
+    Rng.fillOpenClosedFrom(&engine, f64, &open_closed_f64_buf);
+    for (open_closed_f64_buf) |item| try std.testing.expect(item > 0 and item <= 1);
+
+    var ranged_f64_buf: [17]f64 = undefined;
+    rng.fillRange(f64, &ranged_f64_buf, -1, 1);
+    for (ranged_f64_buf) |item| try std.testing.expect(item >= -1 and item < 1);
+
     var normal_buf: [16]f64 = undefined;
     try rng.fillNormalChecked(f64, &normal_buf, 0, 1);
     for (normal_buf) |item| try std.testing.expect(std.math.isFinite(item));
@@ -1613,6 +1697,22 @@ test "rng facade covers scalar APIs" {
     var direct_vec_range_buf: [4]@Vector(8, f32) = undefined;
     Rng.fillVectorRangeFrom(&engine, @Vector(8, f32), &direct_vec_range_buf, -1, 1);
     for (direct_vec_range_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= -1 and vec[i] < 1);
+
+    var vec_f64_buf: [4]@Vector(4, f64) = undefined;
+    rng.fill(@Vector(4, f64), &vec_f64_buf);
+    for (vec_f64_buf) |vec| inline for (0..4) |i| try std.testing.expect(vec[i] >= 0 and vec[i] < 1);
+
+    var direct_vec_open_f64_buf: [4]@Vector(4, f64) = undefined;
+    Rng.fillVectorOpenFrom(&engine, @Vector(4, f64), &direct_vec_open_f64_buf);
+    for (direct_vec_open_f64_buf) |vec| inline for (0..4) |i| try std.testing.expect(vec[i] > 0 and vec[i] < 1);
+
+    var direct_vec_open_closed_f64_buf: [4]@Vector(4, f64) = undefined;
+    Rng.fillVectorOpenClosedFrom(&engine, @Vector(4, f64), &direct_vec_open_closed_f64_buf);
+    for (direct_vec_open_closed_f64_buf) |vec| inline for (0..4) |i| try std.testing.expect(vec[i] > 0 and vec[i] <= 1);
+
+    var vec_range_f64_buf: [4]@Vector(4, f64) = undefined;
+    Rng.fillVectorRangeFrom(&engine, @Vector(4, f64), &vec_range_f64_buf, -1, 1);
+    for (vec_range_f64_buf) |vec| inline for (0..4) |i| try std.testing.expect(vec[i] >= -1 and vec[i] < 1);
 
     var vec_chance_buf: [4]@Vector(8, bool) = undefined;
     try rng.fillVectorChanceChecked(@Vector(8, bool), &vec_chance_buf, 0);
