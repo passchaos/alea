@@ -617,15 +617,7 @@ fn fillOpenF64From(source: anytype, dest: []f64) void {
 }
 
 fn fillOpenClosedF64From(source: anytype, dest: []f64) void {
-    const VectorType = @Vector(4, f64);
-
-    var i: usize = 0;
-    while (i + 4 <= dest.len) : (i += 4) {
-        const vec = vectorOpenClosedF64From(source, VectorType);
-        inline for (0..4) |lane| dest[i + lane] = vec[lane];
-    }
-
-    while (i < dest.len) : (i += 1) dest[i] = floatOpenClosedFrom(source, f64);
+    for (dest) |*item| item.* = floatOpenClosedFrom(source, f64);
 }
 
 fn fillFloatRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
