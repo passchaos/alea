@@ -23,6 +23,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(io, stdout, "unit circle batched candidates", 0xc11c1e, sample_count, batchedUnitCircle);
     try benchFill(io, stdout, "unit disc current fill", 0xd15c, sample_count, currentUnitDisc);
     try benchFill(io, stdout, "unit disc batched candidates", 0xd15c, sample_count, batchedUnitDisc);
+    try benchFill3(io, stdout, "unit sphere current fill", 0x59e7e, sample_count, currentUnitSphere);
+    try benchFill3(io, stdout, "unit sphere batched candidates", 0x59e7e, sample_count, batchedUnitSphere);
     try stdout.flush();
 }
 
@@ -65,12 +67,55 @@ fn benchFill(
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFill3(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime fillFn: fn (*alea.ScalarPrng, [][3]f64) void,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024][3]f64 = undefined;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var remaining = sample_count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value[0];
+            remaining -= n;
+        }
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn currentUnitDisc(source: *alea.ScalarPrng, dest: [][2]f64) void {
     alea.distributions.fillUnitDiscFrom(source, f64, dest);
 }
 
 fn currentUnitCircle(source: *alea.ScalarPrng, dest: [][2]f64) void {
     alea.distributions.fillUnitCircleFrom(source, f64, dest);
+}
+
+fn currentUnitSphere(source: *alea.ScalarPrng, dest: [][3]f64) void {
+    alea.distributions.fillUnitSphereFrom(source, f64, dest);
 }
 
 fn batchedUnitCircle(source: *alea.ScalarPrng, dest: [][2]f64) void {
@@ -114,6 +159,31 @@ fn batchedUnitDisc(source: *alea.ScalarPrng, dest: [][2]f64) void {
             const y = y_candidates[i];
             if (x * x + y * y <= 1) {
                 dest[filled] = .{ x, y };
+                filled += 1;
+            }
+        }
+    }
+}
+
+fn batchedUnitSphere(source: *alea.ScalarPrng, dest: [][3]f64) void {
+    var x_candidates: [2048]f64 = undefined;
+    var y_candidates: [2048]f64 = undefined;
+
+    var filled: usize = 0;
+    while (filled < dest.len) {
+        const remaining = dest.len - filled;
+        const candidate_count = @min(x_candidates.len, @max(remaining, remaining * 2));
+        fillSignedUnit(source, x_candidates[0..candidate_count]);
+        fillSignedUnit(source, y_candidates[0..candidate_count]);
+
+        var i: usize = 0;
+        while (i < candidate_count and filled < dest.len) : (i += 1) {
+            const x = x_candidates[i];
+            const y = y_candidates[i];
+            const sum = x * x + y * y;
+            if (sum < 1) {
+                const factor = 2 * @sqrt(1 - sum);
+                dest[filled] = .{ x * factor, y * factor, 1 - 2 * sum };
                 filled += 1;
             }
         }
