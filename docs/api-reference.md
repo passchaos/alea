@@ -26,7 +26,8 @@ expectations.
   `fillVectorRangeChecked`, `fillVectorChance`, `fillVectorChanceChecked`,
   `fillVectorRatio`, `fillVectorRatioChecked`, `fillVectorNormal`,
   `fillVectorNormalChecked`, `fillVectorExponential`, `fillVectorExponentialChecked`, `fillNormalFrom`,
-  `fillExponentialFrom`, `fillChanceFrom`, `fillRatioFrom`, `fillVectorFrom`, `fillVectorRangeFrom`,
+  `fillExponentialFrom`, `fillChanceFrom`, `fillRatioFrom`, `fillVectorFrom`,
+  `fillVectorOpenFrom`, `fillVectorOpenClosedFrom`, `fillVectorRangeFrom`,
   `fillVectorChanceFrom`, `fillVectorRatioFrom`, `fillVectorNormalFrom`,
   `fillVectorExponentialFrom`
 - Raw/scalars: `next`, `boolean`, `chance`, `chanceChecked`, `ratio`,
@@ -39,10 +40,11 @@ expectations.
   `durationRangeAtMostChecked`
 - Floats: `float`, `floatFrom`, `floatOpen`, `floatOpenFrom`,
   `floatOpenClosed`, `floatOpenClosedFrom`
-- Vectors: `vector`, `vectorRange`, `vectorRangeChecked`, `vectorChance`,
+- Vectors: `vector`, `vectorOpen`, `vectorOpenClosed`, `vectorRange`,
+  `vectorRangeChecked`, `vectorChance`,
   `vectorChanceChecked`, `vectorRatio`, `vectorRatioChecked`, `vectorNormal`,
-  `vectorExponential`, `vectorFrom`, `vectorRangeFrom`, `vectorChanceFrom`,
-  `vectorRatioFrom`
+  `vectorExponential`, `vectorFrom`, `vectorOpenFrom`, `vectorOpenClosedFrom`,
+  `vectorRangeFrom`, `vectorChanceFrom`, `vectorRatioFrom`
 - Unicode: `unicodeScalar`
 - Distributions: `normal`, `exponential`, `normalFastFrom`,
   `exponentialFastFrom`

@@ -37,8 +37,9 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - integers: `uint`, `uintLessThan`, `uintAtMost`
 - signed and unsigned ranges: `intRangeLessThan`, `intRangeAtMost`
 - floats: `float`, `floatOpen`, `floatOpenClosed`, `floatRange`
-- vectors: `value(@Vector(N, T))`, `vectorRange`, `vectorChance`,
-  `vectorRatio`, `vectorNormal`, `vectorExponential`
+- vectors: `value(@Vector(N, T))`, `vectorOpen`, `vectorOpenClosed`,
+  `vectorRange`, `vectorChance`, `vectorRatio`, `vectorNormal`,
+  `vectorExponential`
 - booleans: `boolean`, `chance`, `chanceFrom`, `ratio`, `ratioFrom`,
   `fillChance`, `fillRatio`
 - durations: `durationRangeLessThan`, `durationRangeAtMost`
@@ -46,8 +47,9 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - structured values: `value(T)` for bools, ints, floats, enums, arrays, and tuples
 - bulk sampling: `fill` for scalar and vector slices, `fillSample`,
   `fillSampleFrom`, `fillRange`, `fillChance`, `fillRatio`,
-  `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`, `fillNormal`, `fillVectorNormal`,
-  `fillExponential`, and `fillVectorExponential`
+  `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`,
+  `fillVectorOpenFrom`, `fillVectorOpenClosedFrom`, `fillNormal`,
+  `fillVectorNormal`, `fillExponential`, and `fillVectorExponential`
 
 Checked variants exist for user-supplied probabilities and scalar ranges.
 Use `normalFastFrom` and `exponentialFastFrom` when a comptime-known engine

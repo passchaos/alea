@@ -245,6 +245,16 @@ pub fn fillVectorFrom(source: anytype, comptime VectorType: type, dest: []Vector
     for (dest) |*item| item.* = vectorFrom(source, VectorType);
 }
 
+pub fn fillVectorOpenFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    _ = vectorInfo(VectorType);
+    for (dest) |*item| item.* = vectorOpenFrom(source, VectorType);
+}
+
+pub fn fillVectorOpenClosedFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    _ = vectorInfo(VectorType);
+    for (dest) |*item| item.* = vectorOpenClosedFrom(source, VectorType);
+}
+
 pub fn fillVectorRangeFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
     _ = vectorInfo(VectorType);
     for (dest) |*item| item.* = vectorRangeFrom(source, VectorType, min, max);
@@ -694,6 +704,30 @@ pub fn vectorFrom(source: anytype, comptime VectorType: type) VectorType {
 
 pub fn vectorRange(self: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
     return vectorRangeFrom(self, VectorType, min, max);
+}
+
+pub fn vectorOpen(self: Rng, comptime VectorType: type) VectorType {
+    return vectorOpenFrom(self, VectorType);
+}
+
+pub fn vectorOpenClosed(self: Rng, comptime VectorType: type) VectorType {
+    return vectorOpenClosedFrom(self, VectorType);
+}
+
+pub fn vectorOpenFrom(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |i| out[i] = floatOpenFrom(source, info.child);
+    return out;
+}
+
+pub fn vectorOpenClosedFrom(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |i| out[i] = floatOpenClosedFrom(source, info.child);
+    return out;
 }
 
 pub fn vectorRangeFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
@@ -1441,6 +1475,12 @@ test "rng facade covers scalar APIs" {
     const fvec = rng.value(@Vector(4, f32));
     inline for (0..4) |i| try std.testing.expect(fvec[i] >= 0 and fvec[i] < 1);
 
+    const open_fvec = rng.vectorOpen(@Vector(4, f32));
+    inline for (0..4) |i| try std.testing.expect(open_fvec[i] > 0 and open_fvec[i] < 1);
+
+    const direct_open_closed_fvec = Rng.vectorOpenClosedFrom(&engine, @Vector(4, f32));
+    inline for (0..4) |i| try std.testing.expect(direct_open_closed_fvec[i] > 0 and direct_open_closed_fvec[i] <= 1);
+
     var vec_buf: [8]@Vector(8, f32) = undefined;
     rng.fill(@Vector(8, f32), &vec_buf);
     for (vec_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0 and vec[i] < 1);
@@ -1448,6 +1488,14 @@ test "rng facade covers scalar APIs" {
     var direct_vec_buf: [4]@Vector(8, f32) = undefined;
     Rng.fillVectorFrom(&engine, @Vector(8, f32), &direct_vec_buf);
     for (direct_vec_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0 and vec[i] < 1);
+
+    var direct_vec_open_buf: [4]@Vector(8, f32) = undefined;
+    Rng.fillVectorOpenFrom(&engine, @Vector(8, f32), &direct_vec_open_buf);
+    for (direct_vec_open_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] > 0 and vec[i] < 1);
+
+    var direct_vec_open_closed_buf: [4]@Vector(8, f32) = undefined;
+    Rng.fillVectorOpenClosedFrom(&engine, @Vector(8, f32), &direct_vec_open_closed_buf);
+    for (direct_vec_open_closed_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] > 0 and vec[i] <= 1);
 
     var vec_range_buf: [8]@Vector(8, f32) = undefined;
     try rng.fillVectorRangeChecked(@Vector(8, f32), &vec_range_buf, -1, 1);
