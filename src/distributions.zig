@@ -1098,6 +1098,15 @@ pub fn chiFrom(source: anytype, comptime T: type, dof: T) T {
     return @sqrt(chiSquaredFrom(source, T, dof));
 }
 
+pub fn fillChi(rng: Rng, comptime T: type, dest: []T, dof: T) void {
+    fillChiFrom(rng, T, dest, dof);
+}
+
+pub fn fillChiFrom(source: anytype, comptime T: type, dest: []T, dof: T) void {
+    const sampler = Chi(T).init(dof) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Chi(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1114,6 +1123,14 @@ pub fn Chi(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return @sqrt(self.chi_squared_sampler.sampleFrom(source));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3300,6 +3317,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var chis = rng.sampleIter(f64, try Chi(f64).init(4));
     try std.testing.expect(chis.next().? > 0);
+    var chi_buf: [8]f64 = undefined;
+    fillChi(rng, f64, &chi_buf, 4);
+    for (chi_buf) |value| try std.testing.expect(value > 0);
+    var direct_chi_buf: [8]f64 = undefined;
+    fillChiFrom(&direct_engine, f64, &direct_chi_buf, 4);
+    for (direct_chi_buf) |value| try std.testing.expect(value > 0);
+    const chi_sampler = try Chi(f64).init(4);
+    chi_sampler.fillFrom(&direct_engine, &direct_chi_buf);
+    for (direct_chi_buf) |value| try std.testing.expect(value > 0);
 
     var erlangs = rng.sampleIter(f64, try Erlang(f64).init(3, 2));
     try std.testing.expect(erlangs.next().? > 0);
