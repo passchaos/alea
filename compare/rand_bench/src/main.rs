@@ -68,6 +68,7 @@ fn main() {
     bench_distr_gumbel("rand_distr gumbel", bytes / 128);
     bench_distr_frechet("rand_distr frechet", bytes / 128);
     bench_distr_skew_normal("rand_distr skew-normal", bytes / 128);
+    bench_distr_skew_normal_shape2("rand_distr skew-normal shape=2", bytes / 128);
     bench_distr_pert("rand_distr pert", bytes / 128);
     bench_distr_unit_circle("rand_distr unit circle", bytes / 128);
     bench_distr_unit_disc("rand_distr unit disc", bytes / 128);
@@ -532,6 +533,11 @@ fn bench_distr_frechet(name: &str, count: usize) {
 fn bench_distr_skew_normal(name: &str, count: usize) {
     let dist = rand_distr::SkewNormal::new(0.0, 1.0, 1.0).unwrap();
     bench_distr_f64(name, count, 0x5ce9, dist);
+}
+
+fn bench_distr_skew_normal_shape2(name: &str, count: usize) {
+    let dist = rand_distr::SkewNormal::new(0.0, 1.0, 2.0).unwrap();
+    bench_distr_f64(name, count, 0x5ce2, dist);
 }
 
 fn bench_distr_pert(name: &str, count: usize) {
