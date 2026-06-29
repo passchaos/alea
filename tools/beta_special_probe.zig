@@ -21,12 +21,16 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("beta special probe count={}\n", .{sample_count});
     try benchSample(alea.FastPrng, io, stdout, "fast beta current 1,1", 0xbe11, sample_count, betaUnitCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast uniform equivalent", 0xbe11, sample_count, uniformEquivalent);
+    try benchSample(alea.FastPrng, io, stdout, "fast sampler current 1,1", 0xbe11, sample_count, betaUnitSamplerCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar beta current 1,1", 0xbe11, sample_count, betaUnitCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar uniform equivalent", 0xbe11, sample_count, uniformEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sampler current 1,1", 0xbe11, sample_count, betaUnitSamplerCurrent);
     try benchFill(alea.FastPrng, io, stdout, "fast beta fill current 1,1", 0xbe11, sample_count, betaUnitFillCurrent);
     try benchFill(alea.FastPrng, io, stdout, "fast uniform fill equivalent", 0xbe11, sample_count, uniformFillEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast sampler fill current 1,1", 0xbe11, sample_count, betaUnitSamplerFillCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar beta fill current 1,1", 0xbe11, sample_count, betaUnitFillCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar uniform fill equivalent", 0xbe11, sample_count, uniformFillEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar sampler fill current 1,1", 0xbe11, sample_count, betaUnitSamplerFillCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast beta current 2,1", 0xbe21, sample_count, betaAlphaCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast sqrt-uniform equivalent", 0xbe21, sample_count, sqrtUniformEquivalent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar beta current 2,1", 0xbe21, sample_count, betaAlphaCurrent);
@@ -142,6 +146,16 @@ fn betaUnitFillCurrent(source: anytype, dest: []f64) void {
 
 fn uniformFillEquivalent(source: anytype, dest: []f64) void {
     alea.Rng.fillFrom(source, f64, dest);
+}
+
+fn betaUnitSamplerCurrent(source: anytype) f64 {
+    const sampler = alea.distributions.Beta(f64).init(1, 1) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+fn betaUnitSamplerFillCurrent(source: anytype, dest: []f64) void {
+    const sampler = alea.distributions.Beta(f64).init(1, 1) catch unreachable;
+    sampler.fillFrom(source, dest);
 }
 
 fn betaAlphaCurrent(source: anytype) f64 {

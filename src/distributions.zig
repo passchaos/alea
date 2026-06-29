@@ -1850,11 +1850,13 @@ pub fn fillBetaFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta
 pub fn Beta(comptime T: type) type {
     return struct {
         const Self = @This();
+        const Method = enum { generic, uniform, sqrt_alpha, sqrt_beta };
 
         alpha: T,
         beta_param: T,
         gamma_a: Gamma(T),
         gamma_b: Gamma(T),
+        method: Method,
 
         pub fn init(alpha: T, beta_param: T) Error!Self {
             comptime requireFloat(T);
@@ -1865,6 +1867,14 @@ pub fn Beta(comptime T: type) type {
                 .beta_param = beta_param,
                 .gamma_a = try Gamma(T).init(alpha, 1),
                 .gamma_b = try Gamma(T).init(beta_param, 1),
+                .method = if (alpha == 1 and beta_param == 1)
+                    .uniform
+                else if (alpha == 2 and beta_param == 1)
+                    .sqrt_alpha
+                else if (alpha == 1 and beta_param == 2)
+                    .sqrt_beta
+                else
+                    .generic,
             };
         }
 
@@ -1873,6 +1883,13 @@ pub fn Beta(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            switch (self.method) {
+                .uniform => return Rng.floatFrom(source, T),
+                .sqrt_alpha => return @sqrt(Rng.floatOpenFrom(source, T)),
+                .sqrt_beta => return 1 - @sqrt(Rng.floatOpenFrom(source, T)),
+                .generic => {},
+            }
+
             const x = self.gamma_a.sampleFrom(source);
             const y = self.gamma_b.sampleFrom(source);
             return x / (x + y);
@@ -1883,6 +1900,24 @@ pub fn Beta(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            switch (self.method) {
+                .uniform => {
+                    Rng.fillFrom(source, T, dest);
+                    return;
+                },
+                .sqrt_alpha => {
+                    Rng.fillOpenFrom(source, T, dest);
+                    for (dest) |*item| item.* = @sqrt(item.*);
+                    return;
+                },
+                .sqrt_beta => {
+                    Rng.fillOpenFrom(source, T, dest);
+                    for (dest) |*item| item.* = 1 - @sqrt(item.*);
+                    return;
+                },
+                .generic => {},
+            }
+
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
