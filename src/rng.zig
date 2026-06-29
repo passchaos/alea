@@ -184,6 +184,10 @@ pub fn fillChanceFrom(source: anytype, dest: []bool, p: f64) void {
         @memset(dest, true);
         return;
     }
+    if (p == 0.5) {
+        fillBoolsFrom(source, dest);
+        return;
+    }
 
     const threshold = probabilityThreshold(p);
     for (dest) |*item| item.* = nextFrom(source) < threshold;
@@ -309,9 +313,13 @@ pub fn fillSampleFrom(source: anytype, comptime T: type, dest: []T, sampler: any
 }
 
 fn fillBools(self: Rng, dest: []bool) void {
+    fillBoolsFrom(self, dest);
+}
+
+fn fillBoolsFrom(source: anytype, dest: []bool) void {
     var i: usize = 0;
     while (i < dest.len) {
-        var bits = self.next();
+        var bits = nextFrom(source);
         var lane: usize = 0;
         const take = @min(@as(usize, 64), dest.len - i);
         while (lane < take) : (lane += 1) {
@@ -642,6 +650,7 @@ pub fn vectorChanceFrom(source: anytype, comptime VectorType: type, p: f64) Vect
     std.debug.assert(p >= 0 and p <= 1);
     if (p == 0) return @splat(false);
     if (p == 1) return @splat(true);
+    if (p == 0.5) return vectorBoolsFrom(source, VectorType);
 
     const threshold = probabilityThreshold(p);
     var out: VectorType = undefined;
