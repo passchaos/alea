@@ -1302,7 +1302,7 @@ inline fn exponentialZigguratF64(source: anytype) f64 {
         const x = u * tables.x[i];
         if (i == 0) {
             @branchHint(.unlikely);
-            return std_ziggurat.exp_r - @log(floatFrom(source, f64));
+            return std_ziggurat.exp_r - @log(floatOpenFrom(source, f64));
         }
         if (tables.f[i + 1] + (tables.f[i] - tables.f[i + 1]) * floatFrom(source, f64) < @exp(-x)) return x;
     }
@@ -1910,6 +1910,23 @@ test "rng facade covers scalar APIs" {
     var tail_source = TailSource{};
     const tail_normal = Rng.standardNormalFastFrom(&tail_source, f64);
     try std.testing.expect(std.math.isFinite(tail_normal));
+
+    const ExpTailSource = struct {
+        index: usize = 0,
+
+        fn next(self: *@This()) u64 {
+            const values = [_]u64{
+                ((@as(u64, 1) << 52) - 1) << 12,
+                0,
+            };
+            const next_value = if (self.index < values.len) values[self.index] else @as(u64, 1) << 63;
+            self.index += 1;
+            return next_value;
+        }
+    };
+    var exp_tail_source = ExpTailSource{};
+    const tail_exponential = Rng.standardExponentialFastFrom(&exp_tail_source, f64);
+    try std.testing.expect(std.math.isFinite(tail_exponential));
 
     const vector_normals_f32 = rng.vectorNormal(@Vector(8, f32), 0, 1);
     inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vector_normals_f32[i]));
