@@ -114,6 +114,23 @@ pub fn build(b: *std.Build) void {
     const ziggurat_probe_step = b.step("ziggurat-probe", "Run ziggurat expression-shape microbenchmarks");
     ziggurat_probe_step.dependOn(&run_ziggurat_probe.step);
 
+    const cauchy_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/cauchy_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    cauchy_probe_mod.addImport("alea", module);
+
+    const cauchy_probe = b.addExecutable(.{
+        .name = "alea-cauchy-probe",
+        .root_module = cauchy_probe_mod,
+    });
+    const run_cauchy_probe = b.addRunArtifact(cauchy_probe);
+    if (b.args) |args| run_cauchy_probe.addArgs(args);
+
+    const cauchy_probe_step = b.step("cauchy-probe", "Run Cauchy expression-shape microbenchmarks");
+    cauchy_probe_step.dependOn(&run_cauchy_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

@@ -426,6 +426,7 @@ Build steps:
 - `zig build -Doptimize=ReleaseFast -Dcpu=native bench`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native ziggurat-probe`
+- `zig build -Doptimize=ReleaseFast -Dcpu=native cauchy-probe`
 
 Tools:
 
@@ -433,5 +434,6 @@ Tools:
 - `tools/distcheck.zig`
 - `tools/stream.zig`
 - `tools/ziggurat_probe.zig`
+- `tools/cauchy_probe.zig`
 - `tools/repro.zig`
 - `tools/practrand.sh`
