@@ -9,19 +9,30 @@ pub const Error = error{
 };
 
 pub fn uniform(rng: Rng, comptime T: type, min: T, max: T) T {
+    return uniformFrom(rng, T, min, max);
+}
+
+pub fn uniformFrom(source: anytype, comptime T: type, min: T, max: T) T {
     switch (@typeInfo(T)) {
-        .int => return rng.intRangeLessThan(T, min, max),
-        .float => return rng.floatRange(T, min, max),
+        .int => return Rng.intRangeLessThanFrom(source, T, min, max),
+        .float => {
+            std.debug.assert(min <= max);
+            return min + (max - min) * Rng.floatFrom(source, T);
+        },
         else => @compileError("uniform supports integer and floating-point types"),
     }
 }
 
 pub fn uniformInclusive(rng: Rng, comptime T: type, min: T, max: T) T {
+    return uniformInclusiveFrom(rng, T, min, max);
+}
+
+pub fn uniformInclusiveFrom(source: anytype, comptime T: type, min: T, max: T) T {
     switch (@typeInfo(T)) {
-        .int => return rng.intRangeAtMost(T, min, max),
+        .int => return Rng.intRangeAtMostFrom(source, T, min, max),
         .float => {
             std.debug.assert(min <= max);
-            return min + (max - min) * rng.float(T);
+            return min + (max - min) * Rng.floatFrom(source, T);
         },
         else => @compileError("uniformInclusive supports integer and floating-point types"),
     }
@@ -396,10 +407,14 @@ pub fn Uniform(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
             if (self.inclusive) {
-                return uniformInclusive(rng, T, self.low, self.high);
+                return uniformInclusiveFrom(source, T, self.low, self.high);
             }
-            return uniform(rng, T, self.low, self.high);
+            return uniformFrom(source, T, self.low, self.high);
         }
     };
 }
@@ -1029,9 +1044,13 @@ pub fn Erlang(comptime T: type) type {
 }
 
 pub fn beta(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
+    return betaFrom(rng, T, alpha, beta_param);
+}
+
+pub fn betaFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
-    const x = gamma(rng, T, alpha, 1);
-    const y = gamma(rng, T, beta_param, 1);
+    const x = gammaFrom(source, T, alpha, 1);
+    const y = gammaFrom(source, T, beta_param, 1);
     return x / (x + y);
 }
 
@@ -1140,10 +1159,14 @@ pub fn StudentT(comptime T: type) type {
 }
 
 pub fn triangular(rng: Rng, comptime T: type, min: T, mode: T, max: T) T {
+    return triangularFrom(rng, T, min, mode, max);
+}
+
+pub fn triangularFrom(source: anytype, comptime T: type, min: T, mode: T, max: T) T {
     comptime requireFloat(T);
     std.debug.assert(min <= mode and mode <= max and min < max);
 
-    const u = rng.float(T);
+    const u = Rng.floatFrom(source, T);
     const c = (mode - min) / (max - min);
     if (u < c) {
         return min + @sqrt(u * (max - min) * (mode - min));
@@ -1167,7 +1190,11 @@ pub fn Triangular(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return triangular(rng, T, self.min, self.mode, self.max);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return triangularFrom(source, T, self.min, self.mode, self.max);
         }
     };
 }
@@ -1209,9 +1236,13 @@ pub fn Arcsine(comptime T: type) type {
 }
 
 pub fn cauchy(rng: Rng, comptime T: type, median: T, scale: T) T {
+    return cauchyFrom(rng, T, median, scale);
+}
+
+pub fn cauchyFrom(source: anytype, comptime T: type, median: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0);
-    const u = rng.floatOpen(T);
+    const u = openFloatFrom(source, T);
     return median + scale * @tan(@as(T, @floatCast(std.math.pi)) * (u - 0.5));
 }
 
@@ -1230,7 +1261,11 @@ pub fn Cauchy(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return cauchy(rng, T, self.median, self.scale);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return cauchyFrom(source, T, self.median, self.scale);
         }
     };
 }
@@ -1512,10 +1547,22 @@ fn openFloatFrom(source: anytype, comptime T: type) T {
     };
 }
 
+fn openClosedFloatFrom(source: anytype, comptime T: type) T {
+    return switch (T) {
+        f32 => (@as(f32, @floatFromInt(Rng.nextFrom(source) >> 40)) + 1.0) * (1.0 / 16777216.0),
+        f64 => (@as(f64, @floatFromInt(Rng.nextFrom(source) >> 11)) + 1.0) * (1.0 / 9007199254740992.0),
+        else => @compileError("alea supports f32 and f64 floats"),
+    };
+}
+
 pub fn pareto(rng: Rng, comptime T: type, scale: T, shape: T) T {
+    return paretoFrom(rng, T, scale, shape);
+}
+
+pub fn paretoFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0);
-    return scale / std.math.pow(T, rng.floatOpen(T), 1 / shape);
+    return scale / std.math.pow(T, openFloatFrom(source, T), 1 / shape);
 }
 
 pub fn Pareto(comptime T: type) type {
@@ -1533,15 +1580,23 @@ pub fn Pareto(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return pareto(rng, T, self.scale, self.shape);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return paretoFrom(source, T, self.scale, self.shape);
         }
     };
 }
 
 pub fn weibull(rng: Rng, comptime T: type, scale: T, shape: T) T {
+    return weibullFrom(rng, T, scale, shape);
+}
+
+pub fn weibullFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0);
-    return scale * std.math.pow(T, -@log(rng.floatOpen(T)), 1 / shape);
+    return scale * std.math.pow(T, -@log(openFloatFrom(source, T)), 1 / shape);
 }
 
 pub fn Weibull(comptime T: type) type {
@@ -1559,15 +1614,23 @@ pub fn Weibull(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return weibull(rng, T, self.scale, self.shape);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return weibullFrom(source, T, self.scale, self.shape);
         }
     };
 }
 
 pub fn gumbel(rng: Rng, comptime T: type, location: T, scale: T) T {
+    return gumbelFrom(rng, T, location, scale);
+}
+
+pub fn gumbelFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
-    const u = rng.floatOpenClosed(T);
+    const u = openClosedFloatFrom(source, T);
     return location - scale * @log(-@log(u));
 }
 
@@ -1586,15 +1649,23 @@ pub fn Gumbel(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return gumbel(rng, T, self.location, self.scale);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return gumbelFrom(source, T, self.location, self.scale);
         }
     };
 }
 
 pub fn frechet(rng: Rng, comptime T: type, location: T, scale: T, shape: T) T {
+    return frechetFrom(rng, T, location, scale, shape);
+}
+
+pub fn frechetFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and shape > 0);
-    const u = rng.floatOpenClosed(T);
+    const u = openClosedFloatFrom(source, T);
     return location + scale * std.math.pow(T, -@log(u), -1 / shape);
 }
 
@@ -1615,7 +1686,11 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return frechet(rng, T, self.location, self.scale, self.shape);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return frechetFrom(source, T, self.location, self.scale, self.shape);
         }
     };
 }
@@ -1674,12 +1749,16 @@ pub fn SkewNormal(comptime T: type) type {
 }
 
 pub fn pert(rng: Rng, comptime T: type, min: T, mode: T, max: T, shape: T) T {
+    return pertFrom(rng, T, min, mode, max, shape);
+}
+
+pub fn pertFrom(source: anytype, comptime T: type, min: T, mode: T, max: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(min < max and min <= mode and mode <= max and shape >= 0);
     const range = max - min;
     const alpha = 1 + shape * (mode - min) / range;
     const beta_param = 1 + shape * (max - mode) / range;
-    return min + range * beta(rng, T, alpha, beta_param);
+    return min + range * betaFrom(source, T, alpha, beta_param);
 }
 
 pub fn Pert(comptime T: type) type {
@@ -1717,7 +1796,11 @@ pub fn Pert(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.min + self.range * beta(rng, T, self.alpha, self.beta_param);
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return self.min + self.range * betaFrom(source, T, self.alpha, self.beta_param);
         }
     };
 }
@@ -1999,11 +2082,14 @@ pub fn NormalInverseGaussian(comptime T: type) type {
 }
 
 pub fn zipf(rng: Rng, comptime T: type, n: T, exponent: T) T {
+    return zipfFrom(rng, T, n, exponent);
+}
+
+pub fn zipfFrom(source: anytype, comptime T: type, n: T, exponent: T) T {
     comptime requireFloat(T);
     std.debug.assert(exponent >= 0 and n >= 1);
-
     const sampler = Zipf(T).init(n, exponent) catch unreachable;
-    return sampler.sample(rng);
+    return sampler.sampleFrom(source);
 }
 
 pub fn Zipf(comptime T: type) type {
@@ -2033,15 +2119,19 @@ pub fn Zipf(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
             if (std.math.isInf(self.exponent)) return 1;
 
             while (true) {
-                const inv_b = self.invCdf(rng.float(T));
+                const inv_b = self.invCdf(Rng.floatFrom(source, T));
                 const x = @floor(inv_b + 1);
                 var ratio = std.math.pow(T, x, -self.exponent);
                 if (x > 1) ratio *= std.math.pow(T, inv_b, self.exponent);
 
-                if (rng.float(T) < ratio) return x;
+                if (Rng.floatFrom(source, T) < ratio) return x;
             }
         }
 
@@ -2055,11 +2145,15 @@ pub fn Zipf(comptime T: type) type {
 }
 
 pub fn zeta(rng: Rng, comptime T: type, exponent: T) T {
+    return zetaFrom(rng, T, exponent);
+}
+
+pub fn zetaFrom(source: anytype, comptime T: type, exponent: T) T {
     comptime requireFloat(T);
     std.debug.assert(exponent > 1);
 
     const sampler = Zeta(T).init(exponent) catch unreachable;
-    return sampler.sample(rng);
+    return sampler.sampleFrom(source);
 }
 
 pub fn Zeta(comptime T: type) type {
@@ -2080,13 +2174,17 @@ pub fn Zeta(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
             while (true) {
-                const u = rng.floatOpenClosed(T);
+                const u = openClosedFloatFrom(source, T);
                 const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
                 if (std.math.isInf(x)) return x;
 
                 const t = std.math.pow(T, 1 + 1 / x, self.exponent_minus_one);
-                const v = rng.float(T);
+                const v = Rng.floatFrom(source, T);
                 if (v * x * (t - 1) * self.b <= t * (self.b - 1)) return x;
             }
         }
@@ -2680,6 +2778,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     const alea = @import("root.zig");
     var engine = alea.DefaultPrng.init(66);
     const rng = Rng.init(&engine);
+    var direct_engine = alea.ScalarPrng.init(166);
+
+    const uniform_sampler = try Uniform(u32).init(3, 9);
+    const uniform_value = uniform_sampler.sampleFrom(&direct_engine);
+    try std.testing.expect(uniform_value >= 3 and uniform_value < 9);
+
+    const inclusive_uniform = try Uniform(u32).initInclusive(3, 9);
+    const inclusive_value = inclusive_uniform.sampleFrom(&direct_engine);
+    try std.testing.expect(inclusive_value >= 3 and inclusive_value <= 9);
 
     var normals = rng.sampleIter(f64, try Normal(f64).init(10, 2));
     try std.testing.expect(normals.next().? > 0);
@@ -2704,8 +2811,7 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var geometrics = rng.sampleIter(u64, try Geometric.init(0.25));
     try std.testing.expect(geometrics.next().? >= 1);
-    var direct_geometric_engine = alea.ScalarPrng.init(66);
-    try std.testing.expect((try Geometric.init(0.25)).sampleFrom(&direct_geometric_engine) >= 1);
+    try std.testing.expect((try Geometric.init(0.25)).sampleFrom(&direct_engine) >= 1);
 
     var gammas = rng.sampleIter(f64, try Gamma(f64).init(2, 3));
     try std.testing.expect(gammas.next().? > 0);
@@ -2732,6 +2838,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     var triangulars = rng.sampleIter(f64, try Triangular(f64).init(-1, 0, 2));
     const triangular_value = triangulars.next().?;
     try std.testing.expect(triangular_value >= -1 and triangular_value <= 2);
+    const direct_triangular = (try Triangular(f64).init(-1, 0, 2)).sampleFrom(&direct_engine);
+    try std.testing.expect(direct_triangular >= -1 and direct_triangular <= 2);
 
     var arcsines = rng.sampleIter(f64, try Arcsine(f64).init(-1, 3));
     const arcsine_value = arcsines.next().?;
@@ -2739,6 +2847,7 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var cauchys = rng.sampleIter(f64, try Cauchy(f64).init(0, 1));
     _ = cauchys.next().?;
+    try std.testing.expect(std.math.isFinite((try Cauchy(f64).init(0, 1)).sampleFrom(&direct_engine)));
 
     var laplaces = rng.sampleIter(f64, try Laplace(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(laplaces.next().?));
@@ -2765,15 +2874,19 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var paretos = rng.sampleIter(f64, try Pareto(f64).init(2, 3));
     try std.testing.expect(paretos.next().? >= 2);
+    try std.testing.expect((try Pareto(f64).init(2, 3)).sampleFrom(&direct_engine) >= 2);
 
     var weibulls = rng.sampleIter(f64, try Weibull(f64).init(2, 1.5));
     try std.testing.expect(weibulls.next().? >= 0);
+    try std.testing.expect((try Weibull(f64).init(2, 1.5)).sampleFrom(&direct_engine) >= 0);
 
     var gumbels = rng.sampleIter(f64, try Gumbel(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(gumbels.next().?));
+    try std.testing.expect(std.math.isFinite((try Gumbel(f64).init(0, 1)).sampleFrom(&direct_engine)));
 
     var frechets = rng.sampleIter(f64, try Frechet(f64).init(0, 1, 2));
     try std.testing.expect(frechets.next().? >= 0);
+    try std.testing.expect((try Frechet(f64).init(0, 1, 2)).sampleFrom(&direct_engine) >= 0);
 
     var skew_normals = rng.sampleIter(f64, try SkewNormal(f64).init(0, 1, 1));
     try std.testing.expect(std.math.isFinite(skew_normals.next().?));
@@ -2781,6 +2894,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     var perts = rng.sampleIter(f64, try Pert(f64).initDefault(-1, 0, 2));
     const pert_value = perts.next().?;
     try std.testing.expect(pert_value >= -1 and pert_value <= 2);
+    const direct_pert = (try Pert(f64).initDefault(-1, 0, 2)).sampleFrom(&direct_engine);
+    try std.testing.expect(direct_pert >= -1 and direct_pert <= 2);
 
     var inverse_gaussians = rng.sampleIter(f64, try InverseGaussian(f64).init(1, 2));
     try std.testing.expect(inverse_gaussians.next().? > 0);
@@ -2791,9 +2906,12 @@ test "non-uniform samplers can be reused with sample iterators" {
     var zipfs = rng.sampleIter(f64, try Zipf(f64).init(10, 1.5));
     const zipf_value = zipfs.next().?;
     try std.testing.expect(zipf_value >= 1 and zipf_value <= 10);
+    const direct_zipf = (try Zipf(f64).init(10, 1.5)).sampleFrom(&direct_engine);
+    try std.testing.expect(direct_zipf >= 1 and direct_zipf <= 10);
 
     var zetas = rng.sampleIter(f64, try Zeta(f64).init(3));
     try std.testing.expect(zetas.next().? >= 1);
+    try std.testing.expect((try Zeta(f64).init(3)).sampleFrom(&direct_engine) >= 1);
 
     var unit_circles = rng.sampleIter([2]f64, UnitCircle(f64){});
     const unit_circle = unit_circles.next().?;

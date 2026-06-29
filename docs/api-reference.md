@@ -80,7 +80,7 @@ appropriate.
 
 Single-shot helpers:
 
-- `uniform`, `uniformInclusive`
+- `uniform`, `uniformFrom`, `uniformInclusive`, `uniformInclusiveFrom`
 - `bernoulli`, `binomial`, `binomialFrom`, `binomialPoissonApprox`
 - `negativeBinomial`, `negativeBinomialFrom`, `hypergeometric`,
   `hypergeometricFrom`
@@ -89,14 +89,16 @@ Single-shot helpers:
   `standardExponential`, `standardExponentialFrom`, `exponential`
 - `poisson`, `geometric`, `geometricFrom`
 - `gamma`, `gammaFrom`, `chiSquared`, `chiSquaredFrom`, `erlang`,
-  `erlangFrom`, `beta`, `fisherF`, `studentT`
-- `triangular`, `arcsine`, `arcsineFrom`, `cauchy`, `laplace`, `laplaceFrom`, `logistic`,
+  `erlangFrom`, `beta`, `betaFrom`, `fisherF`, `studentT`
+- `triangular`, `triangularFrom`, `arcsine`, `arcsineFrom`,
+  `cauchy`, `cauchyFrom`, `laplace`, `laplaceFrom`, `logistic`,
   `logisticFrom`, `logLogistic`, `logLogisticFrom`, `kumaraswamy`,
   `kumaraswamyFrom`, `powerFunction`, `powerFunctionFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
-  `pareto`, `weibull`
-- `gumbel`, `frechet`, `skewNormal`, `skewNormalFrom`, `pert`
+  `pareto`, `paretoFrom`, `weibull`, `weibullFrom`
+- `gumbel`, `gumbelFrom`, `frechet`, `frechetFrom`, `skewNormal`,
+  `skewNormalFrom`, `pert`, `pertFrom`
 - `inverseGaussian`, `normalInverseGaussian`, `normalInverseGaussianFrom`,
-  `zipf`, `zeta`
+  `zipf`, `zipfFrom`, `zeta`, `zetaFrom`
 - `unitCircle`, `unitCircleFrom`, `fillUnitCircle`, `fillUnitCircleFrom`,
   `unitDisc`, `unitDiscFrom`, `fillUnitDisc`, `fillUnitDiscFrom`,
   `unitSphere`, `unitSphereFrom`, `fillUnitSphere`, `fillUnitSphereFrom`,
@@ -115,6 +117,7 @@ Reusable samplers:
 - `Hypergeometric`
 - `Hypergeometric.sampleFrom`
 - `Uniform(T)`
+- `Uniform(T).sampleFrom`
 - `Open01`
 - `OpenClosed01`
 - `StandardNormal(T)`
@@ -148,9 +151,11 @@ Reusable samplers:
 - `StudentT(T)`
 - `StudentT(T).sampleFrom`
 - `Triangular(T)`
+- `Triangular(T).sampleFrom`
 - `Arcsine(T)`
 - `Arcsine(T).sampleFrom`
 - `Cauchy(T)`
+- `Cauchy(T).sampleFrom`
 - `Laplace(T)`
 - `Laplace(T).sampleFrom`
 - `Logistic(T)`
@@ -166,18 +171,25 @@ Reusable samplers:
 - `Maxwell(T)`
 - `Maxwell(T).sampleFrom`
 - `Pareto(T)`
+- `Pareto(T).sampleFrom`
 - `Weibull(T)`
+- `Weibull(T).sampleFrom`
 - `Gumbel(T)`
+- `Gumbel(T).sampleFrom`
 - `Frechet(T)`
+- `Frechet(T).sampleFrom`
 - `SkewNormal(T)`
 - `SkewNormal(T).sampleFrom`
 - `Pert(T)`
+- `Pert(T).sampleFrom`
 - `InverseGaussian(T)`
 - `InverseGaussian(T).sampleFrom`
 - `NormalInverseGaussian(T)`
 - `NormalInverseGaussian(T).sampleFrom`
 - `Zipf(T)`
+- `Zipf(T).sampleFrom`
 - `Zeta(T)`
+- `Zeta(T).sampleFrom`
 - `UnitCircle(T)`
 - `UnitCircle(T).sampleFrom`
 - `UnitCircle(T).fill`
