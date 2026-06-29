@@ -95,6 +95,8 @@ Use:
 
 Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput index
 sampling. Use `sampleIndices` when a `[]usize` result is more convenient.
+Use `AliasTable.sampleFrom` and `WeightedChoice.sampleValueFrom` for repeated
+weighted sampling with a comptime-known engine source.
 
 ## Strings
 

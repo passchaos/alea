@@ -362,11 +362,19 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) *const T {
-            return &self.items[self.table.sample(rng)];
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) *const T {
+            return &self.items[self.table.sampleFrom(source)];
         }
 
         pub fn sampleValue(self: Self, rng: Rng) T {
-            return self.sample(rng).*;
+            return self.sampleFrom(rng).*;
+        }
+
+        pub fn sampleValueFrom(self: Self, source: anytype) T {
+            return self.sampleFrom(source).*;
         }
 
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
@@ -745,6 +753,10 @@ test "weighted choice sampler maps alias indexes to items" {
         saw_often = saw_often or std.mem.eql(u8, item.*, "often");
     }
     try std.testing.expect(saw_often);
+    const direct_item = choice.sampleFrom(&engine);
+    try std.testing.expect(!std.mem.eql(u8, direct_item.*, "never"));
+    const direct_value = choice.sampleValueFrom(&engine);
+    try std.testing.expect(!std.mem.eql(u8, direct_value, "never"));
 
     var iter = choice.iter(rng);
     const picked = iter.next().?.*;

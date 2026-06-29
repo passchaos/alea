@@ -195,6 +195,7 @@ Alias helpers:
 - `AliasTable.init`
 - `AliasTable.update`
 - `AliasTable.sample`
+- `AliasTable.sampleFrom`
 - `AliasTable.deinit`
 
 Dynamic weighted helpers:
@@ -230,7 +231,9 @@ Dynamic weighted helpers:
 - Collections: `chooseMultiple`, `partialShuffle`, `reservoirSample`
 - Iterators: `chooseIterator`, `sampleIterator`, `chooseIteratorWeighted`,
   `sampleIteratorWeighted`
-- Reusable samplers: `Choice(T)`, `chooseIter`, `WeightedChoice(T, Weight)`
+- Reusable samplers: `Choice(T)`, `chooseIter`, `WeightedChoice(T, Weight)`,
+  `WeightedChoice.sample`, `WeightedChoice.sampleFrom`,
+  `WeightedChoice.sampleValue`, `WeightedChoice.sampleValueFrom`
 - Weighted no-replacement: `sampleWeightedIndices`, `sampleWeighted`
 
 ## ASCII And Unicode

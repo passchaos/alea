@@ -65,6 +65,10 @@ pub fn main(init: std.process.Init) !void {
     try benchSeqU32Direct(io, stdout, "alea sample indices u32 direct", 1_000_000, 10_000);
     try stdout.print("\ndistribution throughput\n", .{});
     try benchBernoulli(io, stdout, "alea bernoulli", bytes / 64);
+    try benchAliasTable(io, stdout, "alea alias table", bytes / 256);
+    try benchAliasTableDirect(io, stdout, "alea alias table direct", bytes / 256);
+    try benchWeightedChoice(io, stdout, "alea weighted choice", bytes / 256);
+    try benchWeightedChoiceDirect(io, stdout, "alea weighted choice direct", bytes / 256);
     try benchWeightedTree(io, stdout, "alea weighted tree update+sample", bytes / 256);
     try benchWeightedTreeDirect(io, stdout, "alea weighted tree direct update+sample", bytes / 256);
     try benchWeightedIntTree(io, stdout, "alea weighted int tree update+sample", bytes / 256);
@@ -1347,6 +1351,126 @@ fn benchBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
         var i: usize = 0;
         var checksum: u64 = 0;
         while (i < count) : (i += 1) checksum += @intFromBool(dist.sample(rng));
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchAliasTable(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    const weights = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xa11a);
+        const rng = alea.Rng.init(&engine);
+        var table = try alea.distributions.AliasTable(u32).init(std.heap.smp_allocator, &weights);
+        defer table.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: usize = 0;
+        while (i < count) : (i += 1) {
+            checksum +%= table.sample(rng);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchAliasTableDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    const weights = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xa11a);
+        var table = try alea.distributions.AliasTable(u32).init(std.heap.smp_allocator, &weights);
+        defer table.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: usize = 0;
+        while (i < count) : (i += 1) {
+            checksum +%= table.sampleFrom(&engine);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchWeightedChoice(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    const values = [_]u64{ 1, 2, 3, 4, 5, 8, 13, 21 };
+    const weights = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xc401ce);
+        const rng = alea.Rng.init(&engine);
+        var choice = try alea.seq.WeightedChoice(u64, u32).init(std.heap.smp_allocator, &values, &weights);
+        defer choice.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            checksum +%= choice.sampleValue(rng);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchWeightedChoiceDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    const values = [_]u64{ 1, 2, 3, 4, 5, 8, 13, 21 };
+    const weights = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xc401ce);
+        var choice = try alea.seq.WeightedChoice(u64, u32).init(std.heap.smp_allocator, &values, &weights);
+        defer choice.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            checksum +%= choice.sampleValueFrom(&engine);
+        }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

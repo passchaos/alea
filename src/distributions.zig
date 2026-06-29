@@ -2167,8 +2167,12 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) usize {
-            const column = rng.uintLessThan(usize, self.prob.len);
-            return if (rng.float(f64) < self.prob[column]) column else self.alias[column];
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) usize {
+            const column = Rng.uintLessThanFrom(source, usize, self.prob.len);
+            return if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column];
         }
     };
 }
@@ -2503,11 +2507,12 @@ test "alias table samples valid indexes" {
         try std.testing.expect(index < 4);
         try std.testing.expect(index != 1);
     }
+    try std.testing.expect(table.sampleFrom(&engine) < 4);
 
     try table.update(&.{ 0, 10, 0, 0 });
     i = 0;
     while (i < 16) : (i += 1) {
-        try std.testing.expectEqual(@as(usize, 1), table.sample(rng));
+        try std.testing.expectEqual(@as(usize, 1), table.sampleFrom(&engine));
     }
 
     try std.testing.expectError(error.InvalidParameter, table.update(&.{ 1, 2 }));
