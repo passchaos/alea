@@ -2355,6 +2355,7 @@ pub fn kumaraswamyFrom(source: anytype, comptime T: type, alpha: T, beta_param: 
 
     if (alpha == 2 and beta_param == 1) return @sqrt(Rng.floatOpenFrom(source, T));
     if (beta_param == 1) return std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / alpha);
+    if (alpha == 1) return 1 - std.math.pow(T, 1 - Rng.floatOpenFrom(source, T), 1 / beta_param);
 
     const u = Rng.floatOpenFrom(source, T);
     return std.math.pow(T, 1 - std.math.pow(T, 1 - u, 1 / beta_param), 1 / alpha);
@@ -2376,6 +2377,12 @@ pub fn fillKumaraswamyFrom(source: anytype, comptime T: type, dest: []T, alpha: 
         Rng.fillOpenFrom(source, T, dest);
         const inverse_alpha = 1 / alpha;
         for (dest) |*item| item.* = std.math.pow(T, item.*, inverse_alpha);
+        return;
+    }
+    if (alpha == 1) {
+        Rng.fillOpenFrom(source, T, dest);
+        const inverse_beta = 1 / beta_param;
+        for (dest) |*item| item.* = 1 - std.math.pow(T, 1 - item.*, inverse_beta);
         return;
     }
 
@@ -5070,6 +5077,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     var kumaraswamy_beta_one_buf: [8]f64 = undefined;
     fillKumaraswamyFrom(&direct_engine, f64, &kumaraswamy_beta_one_buf, 2, 1);
     for (kumaraswamy_beta_one_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    var kumaraswamy_alpha_one_buf: [8]f64 = undefined;
+    fillKumaraswamyFrom(&direct_engine, f64, &kumaraswamy_alpha_one_buf, 1, 5);
+    for (kumaraswamy_alpha_one_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
 
     var power_functions = rng.sampleIter(f64, try PowerFunction(f64).init(-1, 2, 3));
     const power_value = power_functions.next().?;

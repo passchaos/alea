@@ -205,6 +205,11 @@ fn checkContinuous() !void {
             return alea.distributions.kumaraswamy(r, f64, 2, 1);
         }
     }.sample, 0.66, 0.68);
+    try expectContinuousMean("kumaraswamy-alpha-one", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.kumaraswamy(r, f64, 1, 5);
+        }
+    }.sample, 0.16, 0.18);
     try expectContinuousMean("power-function", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.powerFunction(r, f64, -1, 2, 3);
