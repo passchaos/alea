@@ -1754,6 +1754,16 @@ pub fn paretoFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     return scale / std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / shape);
 }
 
+pub fn fillPareto(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) void {
+    fillParetoFrom(rng, T, dest, scale, shape);
+}
+
+pub fn fillParetoFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and shape > 0);
+    for (dest) |*item| item.* = paretoFrom(source, T, scale, shape);
+}
+
 pub fn Pareto(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1774,6 +1784,14 @@ pub fn Pareto(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return paretoFrom(source, T, self.scale, self.shape);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3222,6 +3240,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var paretos = rng.sampleIter(f64, try Pareto(f64).init(2, 3));
     try std.testing.expect(paretos.next().? >= 2);
     try std.testing.expect((try Pareto(f64).init(2, 3)).sampleFrom(&direct_engine) >= 2);
+    var pareto_buf: [8]f64 = undefined;
+    fillPareto(rng, f64, &pareto_buf, 2, 3);
+    for (pareto_buf) |value| try std.testing.expect(value >= 2);
+    var direct_pareto_buf: [8]f64 = undefined;
+    fillParetoFrom(&direct_engine, f64, &direct_pareto_buf, 2, 3);
+    for (direct_pareto_buf) |value| try std.testing.expect(value >= 2);
+    const pareto_sampler = try Pareto(f64).init(2, 3);
+    pareto_sampler.fillFrom(&direct_engine, &direct_pareto_buf);
+    for (direct_pareto_buf) |value| try std.testing.expect(value >= 2);
 
     var weibulls = rng.sampleIter(f64, try Weibull(f64).init(2, 1.5));
     try std.testing.expect(weibulls.next().? >= 0);
