@@ -235,6 +235,11 @@ fn checkContinuous() !void {
             return alea.distributions.beta(r, f64, 1, 1);
         }
     }.sample, 0.49, 0.51);
+    try expectContinuousMean("beta-alpha-two", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.beta(r, f64, 2, 1);
+        }
+    }.sample, 0.66, 0.68);
 }
 
 fn checkExtremeAndShape() !void {
