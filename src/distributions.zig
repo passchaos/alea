@@ -1912,6 +1912,16 @@ pub fn frechetFrom(source: anytype, comptime T: type, location: T, scale: T, sha
     return location + scale * std.math.pow(T, -@log(u), -1 / shape);
 }
 
+pub fn fillFrechet(rng: Rng, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
+    fillFrechetFrom(rng, T, dest, location, scale, shape);
+}
+
+pub fn fillFrechetFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(location) and scale > 0 and shape > 0);
+    for (dest) |*item| item.* = frechetFrom(source, T, location, scale, shape);
+}
+
 pub fn Frechet(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1934,6 +1944,14 @@ pub fn Frechet(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return frechetFrom(source, T, self.location, self.scale, self.shape);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3315,6 +3333,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var frechets = rng.sampleIter(f64, try Frechet(f64).init(0, 1, 2));
     try std.testing.expect(frechets.next().? >= 0);
     try std.testing.expect((try Frechet(f64).init(0, 1, 2)).sampleFrom(&direct_engine) >= 0);
+    var frechet_buf: [8]f64 = undefined;
+    fillFrechet(rng, f64, &frechet_buf, 0, 1, 2);
+    for (frechet_buf) |value| try std.testing.expect(value >= 0);
+    var direct_frechet_buf: [8]f64 = undefined;
+    fillFrechetFrom(&direct_engine, f64, &direct_frechet_buf, 0, 1, 2);
+    for (direct_frechet_buf) |value| try std.testing.expect(value >= 0);
+    const frechet_sampler = try Frechet(f64).init(0, 1, 2);
+    frechet_sampler.fillFrom(&direct_engine, &direct_frechet_buf);
+    for (direct_frechet_buf) |value| try std.testing.expect(value >= 0);
 
     var skew_normals = rng.sampleIter(f64, try SkewNormal(f64).init(0, 1, 1));
     try std.testing.expect(std.math.isFinite(skew_normals.next().?));

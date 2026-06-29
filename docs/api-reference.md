@@ -111,9 +111,10 @@ Single-shot helpers:
   `fillMaxwellFrom`,
   `pareto`, `paretoFrom`, `fillPareto`, `fillParetoFrom`, `weibull`,
   `weibullFrom`, `fillWeibull`, `fillWeibullFrom`
-- `gumbel`, `gumbelFrom`, `frechet`, `frechetFrom`, `skewNormal`,
-  `fillGumbel`, `fillGumbelFrom`, `skewNormal`, `skewNormalFrom`,
-  `fillSkewNormal`, `fillSkewNormalFrom`, `pert`, `pertFrom`
+- `gumbel`, `gumbelFrom`, `fillGumbel`, `fillGumbelFrom`,
+  `frechet`, `frechetFrom`, `fillFrechet`, `fillFrechetFrom`,
+  `skewNormal`, `skewNormalFrom`, `fillSkewNormal`, `fillSkewNormalFrom`,
+  `pert`, `pertFrom`
 - `inverseGaussian`, `fillInverseGaussian`, `fillInverseGaussianFrom`,
   `normalInverseGaussian`, `normalInverseGaussianFrom`,
   `fillNormalInverseGaussian`, `fillNormalInverseGaussianFrom`,
@@ -227,6 +228,8 @@ Reusable samplers:
 - `Gumbel(T).fillFrom`
 - `Frechet(T)`
 - `Frechet(T).sampleFrom`
+- `Frechet(T).fill`
+- `Frechet(T).fillFrom`
 - `SkewNormal(T)`
 - `SkewNormal(T).sampleFrom`
 - `SkewNormal(T).fill`
