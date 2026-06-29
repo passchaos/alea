@@ -2242,7 +2242,8 @@ pub fn fillLogLogistic(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T
 pub fn fillLogLogisticFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
-    for (dest) |*item| item.* = logLogisticFrom(source, T, scale, shape);
+    Rng.fillOpenFrom(source, T, dest);
+    logLogisticFromOpenUniforms(T, dest, scale, 1 / shape);
 }
 
 pub fn LogLogistic(comptime T: type) type {
@@ -2273,7 +2274,8 @@ pub fn LogLogistic(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            Rng.fillOpenFrom(source, T, dest);
+            logLogisticFromOpenUniforms(T, dest, self.scale, self.inverse_shape);
         }
     };
 }
@@ -4025,6 +4027,35 @@ fn laplaceFromOpenUniformsVector(comptime T: type, comptime VectorType: type, de
         const centered = dest[i] - 0.5;
         const sign: T = if (centered < 0) -1 else 1;
         dest[i] = location - scale * sign * @log(1 - 2 * @abs(centered));
+    }
+}
+
+fn logLogisticFromOpenUniforms(comptime T: type, dest: []T, scale: T, inverse_shape: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => logLogisticFromOpenUniformsVector(T, @Vector(8, f32), dest, scale, inverse_shape),
+        f64 => logLogisticFromOpenUniformsVector(T, @Vector(4, f64), dest, scale, inverse_shape),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn logLogisticFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T, inverse_shape: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const scale_vec: VectorType = @splat(scale);
+    const inverse_shape_vec: VectorType = @splat(inverse_shape);
+    const one_vec: VectorType = @splat(1.0);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const out = scale_vec * @exp(@log(uniform_vec / (one_vec - uniform_vec)) * inverse_shape_vec);
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        const u = dest[i];
+        dest[i] = scale * @exp(@log(u / (1 - u)) * inverse_shape);
     }
 }
 
