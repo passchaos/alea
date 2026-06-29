@@ -1211,8 +1211,14 @@ inline fn normalZigguratF64(source: anytype) f64 {
         const x = u * tables.x[i];
         const test_x = @abs(x);
 
-        if (test_x < tables.x[i + 1]) return x;
-        if (i == 0) return normalZigguratZeroCase(source, u);
+        if (test_x < tables.x[i + 1]) {
+            @branchHint(.likely);
+            return x;
+        }
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return normalZigguratZeroCase(source, u);
+        }
         if (tables.f[i + 1] + (tables.f[i] - tables.f[i + 1]) * floatFrom(source, f64) < @exp(-x * x / 2.0)) return x;
     }
 }
@@ -1236,8 +1242,14 @@ inline fn exponentialZigguratF64(source: anytype) f64 {
         const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
         const x = u * tables.x[i];
 
-        if (x < tables.x[i + 1]) return x;
-        if (i == 0) return std_ziggurat.exp_r - @log(floatFrom(source, f64));
+        if (x < tables.x[i + 1]) {
+            @branchHint(.likely);
+            return x;
+        }
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return std_ziggurat.exp_r - @log(floatFrom(source, f64));
+        }
         if (tables.f[i + 1] + (tables.f[i] - tables.f[i + 1]) * floatFrom(source, f64) < @exp(-x)) return x;
     }
 }
