@@ -1370,6 +1370,16 @@ pub fn laplaceFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     return location - scale * sign * @log(one - 2 * @abs(u));
 }
 
+pub fn fillLaplace(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) void {
+    fillLaplaceFrom(rng, T, dest, location, scale);
+}
+
+pub fn fillLaplaceFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+    for (dest) |*item| item.* = laplaceFrom(source, T, location, scale);
+}
+
 pub fn Laplace(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1390,6 +1400,14 @@ pub fn Laplace(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return laplaceFrom(source, T, self.location, self.scale);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3008,6 +3026,15 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var laplaces = rng.sampleIter(f64, try Laplace(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(laplaces.next().?));
+    var laplace_buf: [8]f64 = undefined;
+    fillLaplace(rng, f64, &laplace_buf, 0, 1);
+    for (laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    var direct_laplace_buf: [8]f64 = undefined;
+    fillLaplaceFrom(&direct_engine, f64, &direct_laplace_buf, 0, 1);
+    for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    const laplace_sampler = try Laplace(f64).init(0, 1);
+    laplace_sampler.fillFrom(&direct_engine, &direct_laplace_buf);
+    for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
     var logistics = rng.sampleIter(f64, try Logistic(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(logistics.next().?));

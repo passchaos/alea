@@ -99,7 +99,8 @@ Single-shot helpers:
   `erlangFrom`, `beta`, `betaFrom`, `fisherF`, `fisherFFrom`, `studentT`,
   `studentTFrom`
 - `triangular`, `triangularFrom`, `arcsine`, `arcsineFrom`,
-  `cauchy`, `cauchyFrom`, `laplace`, `laplaceFrom`, `logistic`,
+  `cauchy`, `cauchyFrom`, `laplace`, `laplaceFrom`, `fillLaplace`,
+  `fillLaplaceFrom`, `logistic`,
   `logisticFrom`, `logLogistic`, `logLogisticFrom`, `kumaraswamy`,
   `kumaraswamyFrom`, `powerFunction`, `powerFunctionFrom`, `rayleigh`, `rayleighFrom`, `maxwell`, `maxwellFrom`,
   `pareto`, `paretoFrom`, `weibull`, `weibullFrom`
@@ -179,6 +180,8 @@ Reusable samplers:
 - `Cauchy(T).sampleFrom`
 - `Laplace(T)`
 - `Laplace(T).sampleFrom`
+- `Laplace(T).fill`
+- `Laplace(T).fillFrom`
 - `Logistic(T)`
 - `Logistic(T).sampleFrom`
 - `LogLogistic(T)`
