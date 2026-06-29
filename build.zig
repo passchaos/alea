@@ -471,6 +471,23 @@ pub fn build(b: *std.Build) void {
     const unit_geometry_probe_step = b.step("unit-geometry-probe", "Run unit geometry bulk expression-shape microbenchmarks");
     unit_geometry_probe_step.dependOn(&run_unit_geometry_probe.step);
 
+    const weighted_tree_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/weighted_tree_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    weighted_tree_probe_mod.addImport("alea", module);
+
+    const weighted_tree_probe = b.addExecutable(.{
+        .name = "alea-weighted-tree-probe",
+        .root_module = weighted_tree_probe_mod,
+    });
+    const run_weighted_tree_probe = b.addRunArtifact(weighted_tree_probe);
+    if (b.args) |args| run_weighted_tree_probe.addArgs(args);
+
+    const weighted_tree_probe_step = b.step("weighted-tree-probe", "Run WeightedTree expression-shape microbenchmarks");
+    weighted_tree_probe_step.dependOn(&run_weighted_tree_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
