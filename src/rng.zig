@@ -1379,8 +1379,8 @@ fn vectorF64From(source: anytype, comptime VectorType: type) VectorType {
 
     const RawVector = @Vector(info.len, u64);
     var raw: RawVector = undefined;
-    inline for (0..info.len) |i| raw[i] = nextFrom(source) >> 11;
-    return @as(VectorType, @floatFromInt(raw)) * @as(VectorType, @splat(1.0 / 9007199254740992.0));
+    inline for (0..info.len) |i| raw[i] = f64UnitBitsFromRaw(nextFrom(source));
+    return @as(VectorType, @bitCast(raw)) - @as(VectorType, @splat(1.0));
 }
 
 fn vectorOpenF32From(source: anytype, comptime VectorType: type) VectorType {
@@ -1505,11 +1505,19 @@ fn f32OpenFromBits(bits: u24) f32 {
     return @as(f32, @floatFromInt(non_zero)) * (1.0 / 16777216.0);
 }
 
+fn f64UnitBitsFromRaw(raw: u64) u64 {
+    return (@as(u64, 0x3ff) << 52) | (raw >> 12);
+}
+
+fn f64FromRaw(raw: u64) f64 {
+    return @as(f64, @bitCast(f64UnitBitsFromRaw(raw))) - 1.0;
+}
+
 pub fn floatFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
         f32 => f32FromBits(@truncate(nextFrom(source) >> 40)),
-        f64 => @as(f64, @floatFromInt(nextFrom(source) >> 11)) * (1.0 / 9007199254740992.0),
+        f64 => f64FromRaw(nextFrom(source)),
         else => @compileError("alea supports f32 and f64 floats"),
     };
 }
