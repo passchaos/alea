@@ -1127,9 +1127,13 @@ pub fn FisherF(comptime T: type) type {
 }
 
 pub fn studentT(rng: Rng, comptime T: type, dof: T) T {
+    return studentTFrom(rng, T, dof);
+}
+
+pub fn studentTFrom(source: anytype, comptime T: type, dof: T) T {
     comptime requireFloat(T);
     std.debug.assert(dof > 0);
-    return normal(rng, T, 0, 1) * @sqrt(dof / chiSquared(rng, T, dof));
+    return Rng.normalFastFrom(source, T, 0, 1) * @sqrt(dof / chiSquaredFrom(source, T, dof));
 }
 
 pub fn StudentT(comptime T: type) type {
@@ -2810,6 +2814,7 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var student = rng.sampleIter(f64, try StudentT(f64).init(10));
     _ = student.next().?;
+    try std.testing.expect(std.math.isFinite(studentTFrom(&direct_engine, f64, 10)));
 
     var triangulars = rng.sampleIter(f64, try Triangular(f64).init(-1, 0, 2));
     const triangular_value = triangulars.next().?;
