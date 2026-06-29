@@ -318,6 +318,23 @@ pub fn build(b: *std.Build) void {
     const power_function_probe_step = b.step("power-function-probe", "Run PowerFunction bulk expression-shape microbenchmarks");
     power_function_probe_step.dependOn(&run_power_function_probe.step);
 
+    const kumaraswamy_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/kumaraswamy_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    kumaraswamy_probe_mod.addImport("alea", module);
+
+    const kumaraswamy_probe = b.addExecutable(.{
+        .name = "alea-kumaraswamy-probe",
+        .root_module = kumaraswamy_probe_mod,
+    });
+    const run_kumaraswamy_probe = b.addRunArtifact(kumaraswamy_probe);
+    if (b.args) |args| run_kumaraswamy_probe.addArgs(args);
+
+    const kumaraswamy_probe_step = b.step("kumaraswamy-probe", "Run Kumaraswamy bulk expression-shape microbenchmarks");
+    kumaraswamy_probe_step.dependOn(&run_kumaraswamy_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
