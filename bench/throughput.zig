@@ -135,6 +135,9 @@ pub fn main(init: std.process.Init) !void {
     try benchGeometric(io, stdout, "alea geometric", bytes / 64);
     try benchFillGeometric(io, stdout, "alea fillGeometric", bytes / 64);
     try benchFillGeometricScalar(io, stdout, "alea fillGeometric scalar direct", bytes / 64);
+    try benchGeometricFailures(io, stdout, "alea geometric failures", bytes / 64);
+    try benchFillGeometricFailures(io, stdout, "alea fillGeometricFailures", bytes / 64);
+    try benchFillGeometricFailuresScalar(io, stdout, "alea fillGeometricFailures scalar direct", bytes / 64);
     try benchBinomial(io, stdout, "alea binomial", bytes / 64);
     try benchFillBinomial(io, stdout, "alea fillBinomial", bytes / 64);
     try benchFillBinomialScalar(io, stdout, "alea fillBinomial scalar direct", bytes / 64);
@@ -3057,6 +3060,90 @@ fn benchFillGeometricScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             alea.distributions.fillGeometricFrom(&engine, out[0..n], 0.25);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchGeometricFailures(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    const dist = alea.distributions.GeometricFailures.init(0.25) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x6e0);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) checksum +%= dist.sample(rng);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillGeometricFailures(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x6e0);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillGeometricFailures(rng, out[0..n], 0.25);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillGeometricFailuresScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x6e0);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillGeometricFailuresFrom(&engine, out[0..n], 0.25);
             for (out[0..n]) |value| checksum +%= value;
             remaining -= n;
         }
