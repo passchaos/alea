@@ -233,6 +233,23 @@ pub fn build(b: *std.Build) void {
     const triangular_probe_step = b.step("triangular-probe", "Run Triangular bulk expression-shape microbenchmarks");
     triangular_probe_step.dependOn(&run_triangular_probe.step);
 
+    const rayleigh_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/rayleigh_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    rayleigh_probe_mod.addImport("alea", module);
+
+    const rayleigh_probe = b.addExecutable(.{
+        .name = "alea-rayleigh-probe",
+        .root_module = rayleigh_probe_mod,
+    });
+    const run_rayleigh_probe = b.addRunArtifact(rayleigh_probe);
+    if (b.args) |args| run_rayleigh_probe.addArgs(args);
+
+    const rayleigh_probe_step = b.step("rayleigh-probe", "Run Rayleigh bulk expression-shape microbenchmarks");
+    rayleigh_probe_step.dependOn(&run_rayleigh_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

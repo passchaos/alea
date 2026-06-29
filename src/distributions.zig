@@ -2412,7 +2412,8 @@ pub fn fillRayleigh(rng: Rng, comptime T: type, dest: []T, scale: T) void {
 pub fn fillRayleighFrom(source: anytype, comptime T: type, dest: []T, scale: T) void {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and std.math.isFinite(scale));
-    for (dest) |*item| item.* = rayleighFrom(source, T, scale);
+    Rng.fillOpenFrom(source, T, dest);
+    rayleighFromOpenUniforms(T, dest, scale);
 }
 
 pub fn Rayleigh(comptime T: type) type {
@@ -2440,7 +2441,7 @@ pub fn Rayleigh(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillRayleighFrom(source, T, dest, self.scale);
         }
     };
 }
@@ -3930,6 +3931,33 @@ fn triangularFromUniformsVector(comptime T: type, comptime VectorType: type, des
             min + @sqrt(u * width * left_width)
         else
             max - @sqrt((1 - u) * width * right_width);
+    }
+}
+
+fn rayleighFromOpenUniforms(comptime T: type, dest: []T, scale: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => rayleighFromOpenUniformsVector(T, @Vector(8, f32), dest, scale),
+        f64 => rayleighFromOpenUniformsVector(T, @Vector(4, f64), dest, scale),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn rayleighFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const scale_vec: VectorType = @splat(scale);
+    const neg_two_vec: VectorType = @splat(-2.0);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const out = scale_vec * @sqrt(neg_two_vec * @log(uniform_vec));
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        dest[i] = scale * @sqrt(-2 * @log(dest[i]));
     }
 }
 
