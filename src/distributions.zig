@@ -2973,6 +2973,10 @@ pub fn fillUnitBall(rng: Rng, comptime T: type, dest: [][3]T) void {
 }
 
 pub fn fillUnitBallFrom(source: anytype, comptime T: type, dest: [][3]T) void {
+    if (T == f64) {
+        fillUnitBallF64From(source, dest);
+        return;
+    }
     for (dest) |*item| item.* = unitBallFrom(source, T);
 }
 
@@ -3056,6 +3060,32 @@ fn fillUnitSphereF64From(source: anytype, dest: [][3]f64) void {
             if (sum < 1) {
                 const factor = 2 * @sqrt(1 - sum);
                 dest[filled] = .{ x * factor, y * factor, 1 - 2 * sum };
+                filled += 1;
+            }
+        }
+    }
+}
+
+fn fillUnitBallF64From(source: anytype, dest: [][3]f64) void {
+    var x_candidates: [4096]f64 = undefined;
+    var y_candidates: [4096]f64 = undefined;
+    var z_candidates: [4096]f64 = undefined;
+
+    var filled: usize = 0;
+    while (filled < dest.len) {
+        const remaining = dest.len - filled;
+        const candidate_count = @min(x_candidates.len, @max(remaining, remaining * 2));
+        fillSignedUnitF64(source, x_candidates[0..candidate_count]);
+        fillSignedUnitF64(source, y_candidates[0..candidate_count]);
+        fillSignedUnitF64(source, z_candidates[0..candidate_count]);
+
+        var i: usize = 0;
+        while (i < candidate_count and filled < dest.len) : (i += 1) {
+            const x = x_candidates[i];
+            const y = y_candidates[i];
+            const z = z_candidates[i];
+            if (x * x + y * y + z * z <= 1) {
+                dest[filled] = .{ x, y, z };
                 filled += 1;
             }
         }

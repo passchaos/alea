@@ -25,6 +25,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(io, stdout, "unit disc batched candidates", 0xd15c, sample_count, batchedUnitDisc);
     try benchFill3(io, stdout, "unit sphere current fill", 0x59e7e, sample_count, currentUnitSphere);
     try benchFill3(io, stdout, "unit sphere batched candidates", 0x59e7e, sample_count, batchedUnitSphere);
+    try benchFill3(io, stdout, "unit ball current fill", 0xba11, sample_count, currentUnitBall);
+    try benchFill3(io, stdout, "unit ball batched candidates", 0xba11, sample_count, batchedUnitBall);
     try stdout.flush();
 }
 
@@ -118,6 +120,10 @@ fn currentUnitSphere(source: *alea.ScalarPrng, dest: [][3]f64) void {
     alea.distributions.fillUnitSphereFrom(source, f64, dest);
 }
 
+fn currentUnitBall(source: *alea.ScalarPrng, dest: [][3]f64) void {
+    alea.distributions.fillUnitBallFrom(source, f64, dest);
+}
+
 fn batchedUnitCircle(source: *alea.ScalarPrng, dest: [][2]f64) void {
     var x_candidates: [2048]f64 = undefined;
     var y_candidates: [2048]f64 = undefined;
@@ -184,6 +190,32 @@ fn batchedUnitSphere(source: *alea.ScalarPrng, dest: [][3]f64) void {
             if (sum < 1) {
                 const factor = 2 * @sqrt(1 - sum);
                 dest[filled] = .{ x * factor, y * factor, 1 - 2 * sum };
+                filled += 1;
+            }
+        }
+    }
+}
+
+fn batchedUnitBall(source: *alea.ScalarPrng, dest: [][3]f64) void {
+    var x_candidates: [4096]f64 = undefined;
+    var y_candidates: [4096]f64 = undefined;
+    var z_candidates: [4096]f64 = undefined;
+
+    var filled: usize = 0;
+    while (filled < dest.len) {
+        const remaining = dest.len - filled;
+        const candidate_count = @min(x_candidates.len, @max(remaining, remaining * 2));
+        fillSignedUnit(source, x_candidates[0..candidate_count]);
+        fillSignedUnit(source, y_candidates[0..candidate_count]);
+        fillSignedUnit(source, z_candidates[0..candidate_count]);
+
+        var i: usize = 0;
+        while (i < candidate_count and filled < dest.len) : (i += 1) {
+            const x = x_candidates[i];
+            const y = y_candidates[i];
+            const z = z_candidates[i];
+            if (x * x + y * y + z * z <= 1) {
+                dest[filled] = .{ x, y, z };
                 filled += 1;
             }
         }
