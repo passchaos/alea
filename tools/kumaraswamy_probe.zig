@@ -21,20 +21,28 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("kumaraswamy probe count={}\n", .{sample_count});
     try benchSample(alea.FastPrng, io, stdout, "fast sample current alpha=1 beta=5", 0x9a15, sample_count, sampleAlphaOneCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast sample alpha-one equivalent", 0x9a15, sample_count, sampleAlphaOneEquivalent);
+    try benchSample(alea.FastPrng, io, stdout, "fast sampler current alpha=1 beta=5", 0x9a15, sample_count, samplerAlphaOneCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample current alpha=1 beta=5", 0x9a15, sample_count, sampleAlphaOneCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample alpha-one equivalent", 0x9a15, sample_count, sampleAlphaOneEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sampler current alpha=1 beta=5", 0x9a15, sample_count, samplerAlphaOneCurrent);
     try benchFill(alea.FastPrng, io, stdout, "fast fill current alpha=1 beta=5", 0x9a15, sample_count, fillAlphaOneCurrent);
     try benchFill(alea.FastPrng, io, stdout, "fast fill alpha-one equivalent", 0x9a15, sample_count, fillAlphaOneEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast sampler fill current alpha=1 beta=5", 0x9a15, sample_count, samplerAlphaOneFillCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar fill current alpha=1 beta=5", 0x9a15, sample_count, fillAlphaOneCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar fill alpha-one equivalent", 0x9a15, sample_count, fillAlphaOneEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar sampler fill current alpha=1 beta=5", 0x9a15, sample_count, samplerAlphaOneFillCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast sample current alpha=2 beta=1", 0x9a21, sample_count, sampleBetaOneCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast sample beta-one equivalent", 0x9a21, sample_count, sampleBetaOneEquivalent);
+    try benchSample(alea.FastPrng, io, stdout, "fast sampler current alpha=2 beta=1", 0x9a21, sample_count, samplerBetaOneCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample current alpha=2 beta=1", 0x9a21, sample_count, sampleBetaOneCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample beta-one equivalent", 0x9a21, sample_count, sampleBetaOneEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sampler current alpha=2 beta=1", 0x9a21, sample_count, samplerBetaOneCurrent);
     try benchFill(alea.FastPrng, io, stdout, "fast fill current alpha=2 beta=1", 0x9a21, sample_count, fillBetaOneCurrent);
     try benchFill(alea.FastPrng, io, stdout, "fast fill beta-one equivalent", 0x9a21, sample_count, fillBetaOneEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast sampler fill current alpha=2 beta=1", 0x9a21, sample_count, samplerBetaOneFillCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar fill current alpha=2 beta=1", 0x9a21, sample_count, fillBetaOneCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar fill beta-one equivalent", 0x9a21, sample_count, fillBetaOneEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar sampler fill current alpha=2 beta=1", 0x9a21, sample_count, samplerBetaOneFillCurrent);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x9a78, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar pow", 0x9a78, sample_count, stagedScalarPow);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar exp-log", 0x9a78, sample_count, stagedScalarExpLog);
@@ -141,6 +149,16 @@ fn fillAlphaOneEquivalent(source: anytype, dest: []f64) void {
     for (dest) |*item| item.* = 1 - std.math.pow(f64, 1 - item.*, 0.2);
 }
 
+fn samplerAlphaOneCurrent(source: anytype) f64 {
+    const sampler = alea.distributions.Kumaraswamy(f64).init(1, 5) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+fn samplerAlphaOneFillCurrent(source: anytype, dest: []f64) void {
+    const sampler = alea.distributions.Kumaraswamy(f64).init(1, 5) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
 fn sampleBetaOneCurrent(source: anytype) f64 {
     return alea.distributions.kumaraswamyFrom(source, f64, 2, 1);
 }
@@ -156,6 +174,16 @@ fn fillBetaOneCurrent(source: anytype, dest: []f64) void {
 fn fillBetaOneEquivalent(source: anytype, dest: []f64) void {
     alea.Rng.fillOpenFrom(source, f64, dest);
     for (dest) |*item| item.* = @sqrt(item.*);
+}
+
+fn samplerBetaOneCurrent(source: anytype) f64 {
+    const sampler = alea.distributions.Kumaraswamy(f64).init(2, 1) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+fn samplerBetaOneFillCurrent(source: anytype, dest: []f64) void {
+    const sampler = alea.distributions.Kumaraswamy(f64).init(2, 1) catch unreachable;
+    sampler.fillFrom(source, dest);
 }
 
 fn stagedScalarPow(source: anytype, dest: []f64) void {

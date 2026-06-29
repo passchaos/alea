@@ -2435,9 +2435,11 @@ pub fn fillKumaraswamyFrom(source: anytype, comptime T: type, dest: []T, alpha: 
 pub fn Kumaraswamy(comptime T: type) type {
     return struct {
         const Self = @This();
+        const Method = enum { generic, alpha_one, beta_one, beta_one_sqrt };
 
         inverse_alpha: T,
         inverse_beta: T,
+        method: Method,
 
         pub fn init(alpha: T, beta_param: T) Error!Self {
             comptime requireFloat(T);
@@ -2446,6 +2448,14 @@ pub fn Kumaraswamy(comptime T: type) type {
             return .{
                 .inverse_alpha = 1 / alpha,
                 .inverse_beta = 1 / beta_param,
+                .method = if (alpha == 2 and beta_param == 1)
+                    .beta_one_sqrt
+                else if (beta_param == 1)
+                    .beta_one
+                else if (alpha == 1)
+                    .alpha_one
+                else
+                    .generic,
             };
         }
 
@@ -2454,6 +2464,13 @@ pub fn Kumaraswamy(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            switch (self.method) {
+                .beta_one_sqrt => return @sqrt(Rng.floatOpenFrom(source, T)),
+                .beta_one => return std.math.pow(T, Rng.floatOpenFrom(source, T), self.inverse_alpha),
+                .alpha_one => return 1 - std.math.pow(T, 1 - Rng.floatOpenFrom(source, T), self.inverse_beta),
+                .generic => {},
+            }
+
             const u = Rng.floatOpenFrom(source, T);
             return std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
         }
@@ -2463,6 +2480,25 @@ pub fn Kumaraswamy(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            switch (self.method) {
+                .beta_one_sqrt => {
+                    Rng.fillOpenFrom(source, T, dest);
+                    for (dest) |*item| item.* = @sqrt(item.*);
+                    return;
+                },
+                .beta_one => {
+                    Rng.fillOpenFrom(source, T, dest);
+                    for (dest) |*item| item.* = std.math.pow(T, item.*, self.inverse_alpha);
+                    return;
+                },
+                .alpha_one => {
+                    Rng.fillOpenFrom(source, T, dest);
+                    for (dest) |*item| item.* = 1 - std.math.pow(T, 1 - item.*, self.inverse_beta);
+                    return;
+                },
+                .generic => {},
+            }
+
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
