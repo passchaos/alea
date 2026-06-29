@@ -101,7 +101,7 @@ Single-shot helpers:
   `studentTFrom`
 - `triangular`, `triangularFrom`, `fillTriangular`, `fillTriangularFrom`,
   `arcsine`, `arcsineFrom`, `fillArcsine`, `fillArcsineFrom`,
-  `cauchy`, `cauchyFrom`, `laplace`, `laplaceFrom`, `fillLaplace`,
+  `cauchy`, `cauchyFrom`, `fillCauchy`, `fillCauchyFrom`, `laplace`, `laplaceFrom`, `fillLaplace`,
   `fillLaplaceFrom`, `logistic`, `logisticFrom`, `fillLogistic`,
   `fillLogisticFrom`, `logLogistic`, `logLogisticFrom`,
   `fillLogLogistic`, `fillLogLogisticFrom`, `kumaraswamy`,
@@ -191,6 +191,8 @@ Reusable samplers:
 - `Arcsine(T).fillFrom`
 - `Cauchy(T)`
 - `Cauchy(T).sampleFrom`
+- `Cauchy(T).fill`
+- `Cauchy(T).fillFrom`
 - `Laplace(T)`
 - `Laplace(T).sampleFrom`
 - `Laplace(T).fill`

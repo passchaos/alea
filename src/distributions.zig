@@ -1368,6 +1368,16 @@ pub fn cauchyFrom(source: anytype, comptime T: type, median: T, scale: T) T {
     return median + scale * @tan(@as(T, @floatCast(std.math.pi)) * (u - 0.5));
 }
 
+pub fn fillCauchy(rng: Rng, comptime T: type, dest: []T, median: T, scale: T) void {
+    fillCauchyFrom(rng, T, dest, median, scale);
+}
+
+pub fn fillCauchyFrom(source: anytype, comptime T: type, dest: []T, median: T, scale: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0);
+    for (dest) |*item| item.* = cauchyFrom(source, T, median, scale);
+}
+
 pub fn Cauchy(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1388,6 +1398,14 @@ pub fn Cauchy(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return cauchyFrom(source, T, self.median, self.scale);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3277,6 +3295,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var cauchys = rng.sampleIter(f64, try Cauchy(f64).init(0, 1));
     _ = cauchys.next().?;
     try std.testing.expect(std.math.isFinite((try Cauchy(f64).init(0, 1)).sampleFrom(&direct_engine)));
+    var cauchy_buf: [8]f64 = undefined;
+    fillCauchy(rng, f64, &cauchy_buf, 0, 1);
+    for (cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    var direct_cauchy_buf: [8]f64 = undefined;
+    fillCauchyFrom(&direct_engine, f64, &direct_cauchy_buf, 0, 1);
+    for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    const cauchy_sampler = try Cauchy(f64).init(0, 1);
+    cauchy_sampler.fillFrom(&direct_engine, &direct_cauchy_buf);
+    for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
     var laplaces = rng.sampleIter(f64, try Laplace(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(laplaces.next().?));
