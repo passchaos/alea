@@ -26,7 +26,9 @@ pub fn main(init: std.process.Init) !void {
     try benchFill3(io, stdout, "unit sphere current fill", 0x59e7e, sample_count, currentUnitSphere);
     try benchFill3(io, stdout, "unit sphere batched candidates", 0x59e7e, sample_count, batchedUnitSphere);
     try benchFill3(io, stdout, "unit ball current fill", 0xba11, sample_count, currentUnitBall);
-    try benchFill3(io, stdout, "unit ball batched candidates", 0xba11, sample_count, batchedUnitBall);
+    try benchFill3(io, stdout, "unit ball batched x2", 0xba11, sample_count, batchedUnitBall2);
+    try benchFill3(io, stdout, "unit ball batched x3", 0xba11, sample_count, batchedUnitBall3);
+    try benchFill3(io, stdout, "unit ball batched x4", 0xba11, sample_count, batchedUnitBall4);
     try stdout.flush();
 }
 
@@ -196,7 +198,19 @@ fn batchedUnitSphere(source: *alea.ScalarPrng, dest: [][3]f64) void {
     }
 }
 
-fn batchedUnitBall(source: *alea.ScalarPrng, dest: [][3]f64) void {
+fn batchedUnitBall2(source: *alea.ScalarPrng, dest: [][3]f64) void {
+    batchedUnitBall(source, dest, 2);
+}
+
+fn batchedUnitBall3(source: *alea.ScalarPrng, dest: [][3]f64) void {
+    batchedUnitBall(source, dest, 3);
+}
+
+fn batchedUnitBall4(source: *alea.ScalarPrng, dest: [][3]f64) void {
+    batchedUnitBall(source, dest, 4);
+}
+
+fn batchedUnitBall(source: *alea.ScalarPrng, dest: [][3]f64, comptime multiplier: usize) void {
     var x_candidates: [4096]f64 = undefined;
     var y_candidates: [4096]f64 = undefined;
     var z_candidates: [4096]f64 = undefined;
@@ -204,7 +218,7 @@ fn batchedUnitBall(source: *alea.ScalarPrng, dest: [][3]f64) void {
     var filled: usize = 0;
     while (filled < dest.len) {
         const remaining = dest.len - filled;
-        const candidate_count = @min(x_candidates.len, @max(remaining, remaining * 2));
+        const candidate_count = @min(x_candidates.len, @max(remaining, remaining * multiplier));
         fillSignedUnit(source, x_candidates[0..candidate_count]);
         fillSignedUnit(source, y_candidates[0..candidate_count]);
         fillSignedUnit(source, z_candidates[0..candidate_count]);
