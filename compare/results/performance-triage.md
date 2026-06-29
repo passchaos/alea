@@ -129,7 +129,6 @@ project does not repeat unproductive work.
 
 Continue performance triage on the remaining large gaps:
 
-- large-parameter Hypergeometric still needs an H2PE-equivalent fast path,
 - normal `f64` facade still trails local `rand_distr`,
 - `fillOpenClosed(f64)` bulk still trails local Rust evidence,
 - Cauchy remains a small performance watch item after adding Rust rows,
