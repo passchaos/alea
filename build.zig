@@ -199,6 +199,23 @@ pub fn build(b: *std.Build) void {
     const inverse_gaussian_probe_step = b.step("inverse-gaussian-probe", "Run InverseGaussian bulk expression-shape microbenchmarks");
     inverse_gaussian_probe_step.dependOn(&run_inverse_gaussian_probe.step);
 
+    const skew_normal_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/skew_normal_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    skew_normal_probe_mod.addImport("alea", module);
+
+    const skew_normal_probe = b.addExecutable(.{
+        .name = "alea-skew-normal-probe",
+        .root_module = skew_normal_probe_mod,
+    });
+    const run_skew_normal_probe = b.addRunArtifact(skew_normal_probe);
+    if (b.args) |args| run_skew_normal_probe.addArgs(args);
+
+    const skew_normal_probe_step = b.step("skew-normal-probe", "Run SkewNormal bulk expression-shape microbenchmarks");
+    skew_normal_probe_step.dependOn(&run_skew_normal_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
