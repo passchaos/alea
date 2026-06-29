@@ -1809,6 +1809,7 @@ pub fn betaFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
     if (alpha == 1 and beta_param == 1) return Rng.floatFrom(source, T);
     if (alpha == 2 and beta_param == 1) return @sqrt(Rng.floatOpenFrom(source, T));
+    if (alpha == 1 and beta_param == 2) return 1 - @sqrt(Rng.floatOpenFrom(source, T));
     if (beta_param == 1) return std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / alpha);
 
     const x = gammaFrom(source, T, alpha, 1);
@@ -1828,6 +1829,11 @@ pub fn fillBetaFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta
     if (alpha == 2 and beta_param == 1) {
         Rng.fillOpenFrom(source, T, dest);
         for (dest) |*item| item.* = @sqrt(item.*);
+        return;
+    }
+    if (alpha == 1 and beta_param == 2) {
+        Rng.fillOpenFrom(source, T, dest);
+        for (dest) |*item| item.* = 1 - @sqrt(item.*);
         return;
     }
     if (beta_param == 1) {
@@ -4835,6 +4841,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     var beta_alpha_two_buf: [8]f64 = undefined;
     fillBetaFrom(&direct_engine, f64, &beta_alpha_two_buf, 2, 1);
     for (beta_alpha_two_buf) |value| try std.testing.expect(value > 0 and value <= 1);
+    var beta_one_two_buf: [8]f64 = undefined;
+    fillBetaFrom(&direct_engine, f64, &beta_one_two_buf, 1, 2);
+    for (beta_one_two_buf) |value| try std.testing.expect(value >= 0 and value < 1);
 
     var fisher = rng.sampleIter(f64, try FisherF(f64).init(5, 20));
     try std.testing.expect(fisher.next().? > 0);

@@ -43,6 +43,14 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast complement-root fill equivalent", 0xbe15, sample_count, complementRootFillEquivalent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar beta fill current 1,5", 0xbe15, sample_count, betaBetaFillCurrent);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar complement-root fill equivalent", 0xbe15, sample_count, complementRootFillEquivalent);
+    try benchSample(alea.FastPrng, io, stdout, "fast beta current 1,2", 0xbe12, sample_count, betaBetaTwoCurrent);
+    try benchSample(alea.FastPrng, io, stdout, "fast complement-sqrt equivalent", 0xbe12, sample_count, complementSqrtEquivalent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar beta current 1,2", 0xbe12, sample_count, betaBetaTwoCurrent);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar complement-sqrt equivalent", 0xbe12, sample_count, complementSqrtEquivalent);
+    try benchFill(alea.FastPrng, io, stdout, "fast beta fill current 1,2", 0xbe12, sample_count, betaBetaTwoFillCurrent);
+    try benchFill(alea.FastPrng, io, stdout, "fast complement-sqrt fill equivalent", 0xbe12, sample_count, complementSqrtFillEquivalent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar beta fill current 1,2", 0xbe12, sample_count, betaBetaTwoFillCurrent);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar complement-sqrt fill equivalent", 0xbe12, sample_count, complementSqrtFillEquivalent);
     try stdout.flush();
 }
 
@@ -168,4 +176,21 @@ fn betaBetaFillCurrent(source: anytype, dest: []f64) void {
 fn complementRootFillEquivalent(source: anytype, dest: []f64) void {
     alea.Rng.fillOpenFrom(source, f64, dest);
     for (dest) |*item| item.* = 1.0 - std.math.pow(f64, item.*, 0.2);
+}
+
+fn betaBetaTwoCurrent(source: anytype) f64 {
+    return alea.distributions.betaFrom(source, f64, 1, 2);
+}
+
+fn complementSqrtEquivalent(source: anytype) f64 {
+    return 1.0 - @sqrt(alea.Rng.floatOpenFrom(source, f64));
+}
+
+fn betaBetaTwoFillCurrent(source: anytype, dest: []f64) void {
+    alea.distributions.fillBetaFrom(source, f64, dest, 1, 2);
+}
+
+fn complementSqrtFillEquivalent(source: anytype, dest: []f64) void {
+    alea.Rng.fillOpenFrom(source, f64, dest);
+    for (dest) |*item| item.* = 1.0 - @sqrt(item.*);
 }
