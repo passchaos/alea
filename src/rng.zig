@@ -224,6 +224,10 @@ pub fn fillRatioFrom(source: anytype, dest: []bool, numerator: u32, denominator:
         fillChanceQuarterFrom(source, dest);
         return;
     }
+    if (std.math.isPowerOfTwo(denominator)) {
+        fillRatioPowerOfTwoFrom(source, dest, numerator, denominator);
+        return;
+    }
     for (dest) |*item| item.* = uintLessThanFrom(source, u32, denominator) < numerator;
 }
 
@@ -405,6 +409,24 @@ fn fillChanceQuarterFrom(source: anytype, dest: []bool) void {
         while (lane < take) : (lane += 1) {
             dest[i + lane] = (bits & 0b11) == 0;
             bits >>= 2;
+        }
+        i += take;
+    }
+}
+
+fn fillRatioPowerOfTwoFrom(source: anytype, dest: []bool, numerator: u32, denominator: u32) void {
+    const bits_per_sample = std.math.log2_int(u32, denominator);
+    const samples_per_word = 64 / @as(usize, bits_per_sample);
+    const mask = @as(u64, denominator - 1);
+
+    var i: usize = 0;
+    while (i < dest.len) {
+        var bits = nextFrom(source);
+        var lane: usize = 0;
+        const take = @min(samples_per_word, dest.len - i);
+        while (lane < take) : (lane += 1) {
+            dest[i + lane] = @as(u32, @intCast(bits & mask)) < numerator;
+            bits >>= @intCast(bits_per_sample);
         }
         i += take;
     }
@@ -760,6 +782,7 @@ pub fn vectorRatioFrom(source: anytype, comptime VectorType: type, numerator: u3
     if (numerator == denominator) return @splat(true);
     if (denominator == 2 and numerator == 1) return vectorBoolsFrom(source, VectorType);
     if (denominator == 4 and numerator == 1) return vectorChanceQuarterFrom(source, VectorType);
+    if (std.math.isPowerOfTwo(denominator)) return vectorRatioPowerOfTwoFrom(source, VectorType, numerator, denominator);
 
     var out: VectorType = undefined;
     inline for (0..info.len) |i| out[i] = uintLessThanFrom(source, u32, denominator) < numerator;
@@ -1108,6 +1131,24 @@ fn vectorChanceQuarterFrom(source: anytype, comptime VectorType: type) VectorTyp
         if (i % 32 == 0) bits = nextFrom(source);
         out[i] = (bits & 0b11) == 0;
         bits >>= 2;
+    }
+    return out;
+}
+
+fn vectorRatioPowerOfTwoFrom(source: anytype, comptime VectorType: type, numerator: u32, denominator: u32) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("vectorRatioPowerOfTwoFrom expects a bool vector");
+
+    const bits_per_sample = std.math.log2_int(u32, denominator);
+    const samples_per_word = 64 / @as(usize, bits_per_sample);
+    const mask = @as(u64, denominator - 1);
+
+    var out: VectorType = undefined;
+    var bits: u64 = 0;
+    inline for (0..info.len) |i| {
+        if (i % samples_per_word == 0) bits = nextFrom(source);
+        out[i] = @as(u32, @intCast(bits & mask)) < numerator;
+        bits >>= @intCast(bits_per_sample);
     }
     return out;
 }
