@@ -148,6 +148,23 @@ pub fn build(b: *std.Build) void {
     const open_closed_probe_step = b.step("open-closed-probe", "Run OpenClosed01 f64 bulk conversion microbenchmarks");
     open_closed_probe_step.dependOn(&run_open_closed_probe.step);
 
+    const log_normal_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/log_normal_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    log_normal_probe_mod.addImport("alea", module);
+
+    const log_normal_probe = b.addExecutable(.{
+        .name = "alea-log-normal-probe",
+        .root_module = log_normal_probe_mod,
+    });
+    const run_log_normal_probe = b.addRunArtifact(log_normal_probe);
+    if (b.args) |args| run_log_normal_probe.addArgs(args);
+
+    const log_normal_probe_step = b.step("log-normal-probe", "Run LogNormal bulk expression-shape microbenchmarks");
+    log_normal_probe_step.dependOn(&run_log_normal_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

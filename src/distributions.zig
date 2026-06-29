@@ -1047,7 +1047,8 @@ pub fn fillLogNormal(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) 
 pub fn fillLogNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
-    for (dest) |*item| item.* = logNormalFrom(source, T, mean, stddev);
+    Rng.fillNormalFrom(source, T, dest, mean, stddev);
+    expInPlace(T, dest);
 }
 
 pub fn LogNormal(comptime T: type) type {
@@ -1073,7 +1074,8 @@ pub fn LogNormal(comptime T: type) type {
         }
 
         pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            self.normal_sampler.fillFrom(source, dest);
+            expInPlace(T, dest);
         }
     };
 }
@@ -3785,6 +3787,27 @@ fn rangeLessEqual(comptime T: type, low: T, high: T) bool {
 
 fn requireFloat(comptime T: type) void {
     if (@typeInfo(T) != .float) @compileError("expected float type, found " ++ @typeName(T));
+}
+
+fn expInPlace(comptime T: type, dest: []T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => expInPlaceVector(T, @Vector(8, f32), dest),
+        f64 => expInPlaceVector(T, @Vector(4, f64), dest),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn expInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var vec: VectorType = undefined;
+        inline for (0..len) |lane| vec[lane] = dest[i + lane];
+        vec = @exp(vec);
+        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
 }
 
 test "basic distributions stay in expected ranges" {
