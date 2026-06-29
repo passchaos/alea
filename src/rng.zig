@@ -500,18 +500,7 @@ fn fillInts(self: Rng, comptime T: type, dest: []T) void {
 fn fillFloats(self: Rng, comptime T: type, dest: []T) void {
     comptime requireFloat(T);
     switch (T) {
-        f32 => {
-            var i: usize = 0;
-            while (i < dest.len) {
-                const bits = self.next();
-                dest[i] = f32FromBits(@truncate(bits >> 40));
-                i += 1;
-                if (i < dest.len) {
-                    dest[i] = f32FromBits(@truncate(bits >> 16));
-                    i += 1;
-                }
-            }
-        },
+        f32 => fillF32From(self, dest),
         f64 => {
             fillF64From(self, dest);
         },
@@ -519,8 +508,35 @@ fn fillFloats(self: Rng, comptime T: type, dest: []T) void {
     }
 }
 
-fn fillOpenF32From(source: anytype, dest: []f32) void {
+fn fillF32From(source: anytype, dest: []f32) void {
+    const VectorType = @Vector(8, f32);
+
     var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec = vectorF32From(source, VectorType);
+        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+    }
+
+    while (i < dest.len) {
+        const bits = nextFrom(source);
+        dest[i] = f32FromBits(@truncate(bits >> 40));
+        i += 1;
+        if (i < dest.len) {
+            dest[i] = f32FromBits(@truncate(bits >> 16));
+            i += 1;
+        }
+    }
+}
+
+fn fillOpenF32From(source: anytype, dest: []f32) void {
+    const VectorType = @Vector(8, f32);
+
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec = vectorOpenF32From(source, VectorType);
+        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+    }
+
     while (i < dest.len) {
         const bits = nextFrom(source);
         dest[i] = f32OpenFromBits(@truncate(bits >> 40));
@@ -533,7 +549,14 @@ fn fillOpenF32From(source: anytype, dest: []f32) void {
 }
 
 fn fillOpenClosedF32From(source: anytype, dest: []f32) void {
+    const VectorType = @Vector(8, f32);
+
     var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec = vectorOpenClosedF32From(source, VectorType);
+        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+    }
+
     while (i < dest.len) {
         const bits = nextFrom(source);
         dest[i] = (@as(f32, @floatFromInt(@as(u24, @truncate(bits >> 40)))) + 1.0) * (1.0 / 16777216.0);
