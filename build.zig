@@ -488,6 +488,23 @@ pub fn build(b: *std.Build) void {
     const weighted_tree_probe_step = b.step("weighted-tree-probe", "Run WeightedTree expression-shape microbenchmarks");
     weighted_tree_probe_step.dependOn(&run_weighted_tree_probe.step);
 
+    const standard_fill_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/standard_fill_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    standard_fill_probe_mod.addImport("alea", module);
+
+    const standard_fill_probe = b.addExecutable(.{
+        .name = "alea-standard-fill-probe",
+        .root_module = standard_fill_probe_mod,
+    });
+    const run_standard_fill_probe = b.addRunArtifact(standard_fill_probe);
+    if (b.args) |args| run_standard_fill_probe.addArgs(args);
+
+    const standard_fill_probe_step = b.step("standard-fill-probe", "Run standard distribution fill microbenchmarks");
+    standard_fill_probe_step.dependOn(&run_standard_fill_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
