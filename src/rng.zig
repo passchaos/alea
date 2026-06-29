@@ -260,6 +260,38 @@ pub fn fillVectorRangeChecked(self: Rng, comptime VectorType: type, dest: []Vect
     self.fillVectorRange(VectorType, dest, min, max);
 }
 
+pub fn fillVectorChance(self: Rng, comptime VectorType: type, dest: []VectorType, p: f64) void {
+    fillVectorChanceFrom(self, VectorType, dest, p);
+}
+
+pub fn fillVectorChanceFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("Rng.fillVectorChance expects a bool vector");
+    std.debug.assert(p >= 0 and p <= 1);
+    for (dest) |*item| item.* = vectorChanceFrom(source, VectorType, p);
+}
+
+pub fn fillVectorChanceChecked(self: Rng, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+    self.fillVectorChance(VectorType, dest, p);
+}
+
+pub fn fillVectorRatio(self: Rng, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) void {
+    fillVectorRatioFrom(self, VectorType, dest, numerator, denominator);
+}
+
+pub fn fillVectorRatioFrom(source: anytype, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("Rng.fillVectorRatio expects a bool vector");
+    std.debug.assert(denominator > 0 and numerator <= denominator);
+    for (dest) |*item| item.* = vectorRatioFrom(source, VectorType, numerator, denominator);
+}
+
+pub fn fillVectorRatioChecked(self: Rng, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) Error!void {
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
+    self.fillVectorRatio(VectorType, dest, numerator, denominator);
+}
+
 pub fn fillVectorNormal(self: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
     fillVectorNormalFrom(self, VectorType, dest, mean, stddev);
 }
@@ -1365,6 +1397,19 @@ test "rng facade covers scalar APIs" {
     var direct_vec_range_buf: [4]@Vector(8, f32) = undefined;
     Rng.fillVectorRangeFrom(&engine, @Vector(8, f32), &direct_vec_range_buf, -1, 1);
     for (direct_vec_range_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= -1 and vec[i] < 1);
+
+    var vec_chance_buf: [4]@Vector(8, bool) = undefined;
+    try rng.fillVectorChanceChecked(@Vector(8, bool), &vec_chance_buf, 0);
+    for (vec_chance_buf) |vec| inline for (0..8) |i| try std.testing.expect(!vec[i]);
+    Rng.fillVectorChanceFrom(&engine, @Vector(8, bool), &vec_chance_buf, 1);
+    for (vec_chance_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i]);
+
+    var vec_ratio_buf: [4]@Vector(8, bool) = undefined;
+    try rng.fillVectorRatioChecked(@Vector(8, bool), &vec_ratio_buf, 0, 1);
+    for (vec_ratio_buf) |vec| inline for (0..8) |i| try std.testing.expect(!vec[i]);
+    Rng.fillVectorRatioFrom(&engine, @Vector(8, bool), &vec_ratio_buf, 1, 1);
+    for (vec_ratio_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i]);
+    try std.testing.expectError(error.InvalidProbability, rng.fillVectorRatioChecked(@Vector(8, bool), &vec_ratio_buf, 2, 1));
 
     var vec_normal_buf: [8]@Vector(8, f32) = undefined;
     try rng.fillVectorNormalChecked(@Vector(8, f32), &vec_normal_buf, 0, 1);

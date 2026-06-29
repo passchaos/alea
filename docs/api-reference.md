@@ -23,10 +23,12 @@ expectations.
   `fillSampleFrom`, `fillRange`, `fillRangeChecked`, `fillChance`,
   `fillChanceChecked`, `fillRatio`, `fillRatioChecked`, `fillNormal`, `fillNormalChecked`,
   `fillExponential`, `fillExponentialChecked`, `fillVectorRange`,
-  `fillVectorRangeChecked`, `fillVectorNormal`, `fillVectorNormalChecked`,
-  `fillVectorExponential`, `fillVectorExponentialChecked`, `fillNormalFrom`,
+  `fillVectorRangeChecked`, `fillVectorChance`, `fillVectorChanceChecked`,
+  `fillVectorRatio`, `fillVectorRatioChecked`, `fillVectorNormal`,
+  `fillVectorNormalChecked`, `fillVectorExponential`, `fillVectorExponentialChecked`, `fillNormalFrom`,
   `fillExponentialFrom`, `fillChanceFrom`, `fillRatioFrom`, `fillVectorFrom`, `fillVectorRangeFrom`,
-  `fillVectorNormalFrom`, `fillVectorExponentialFrom`
+  `fillVectorChanceFrom`, `fillVectorRatioFrom`, `fillVectorNormalFrom`,
+  `fillVectorExponentialFrom`
 - Raw/scalars: `next`, `boolean`, `chance`, `chanceChecked`, `ratio`,
   `chanceFrom`, `ratioFrom`, `ratioChecked`, `uint`, `uintLessThan`, `uintLessThanChecked`,
   `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`
