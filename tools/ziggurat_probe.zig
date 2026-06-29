@@ -21,6 +21,18 @@ const norm_threshold = blk: {
     break :blk out;
 };
 
+const norm_lower_threshold = blk: {
+    var out: [256]u64 = undefined;
+    for (&out, 0..) |*item, i| item.* = (@as(u64, 1) << 51) - norm_threshold[i];
+    break :blk out;
+};
+
+const norm_upper_threshold = blk: {
+    var out: [256]u64 = undefined;
+    for (&out, 0..) |*item, i| item.* = (@as(u64, 1) << 51) + norm_threshold[i];
+    break :blk out;
+};
+
 const exp_ratio = blk: {
     var out: [256]f64 = undefined;
     for (&out, 0..) |*item, i| item.* = ziggurat.ExpDist.x[i + 1] / ziggurat.ExpDist.x[i];
@@ -55,6 +67,7 @@ pub fn main(init: std.process.Init) !void {
     try benchF64(io, stdout, "standard normal raw", sample_count, 0xd15a, standardNormal);
     try benchF64(io, stdout, "ratio normal inline candidate", sample_count, 0xd15a, ratioNormal);
     try benchF64(io, stdout, "mantissa-threshold normal candidate", sample_count, 0xd15a, thresholdNormal);
+    try benchF64(io, stdout, "mantissa-range normal candidate", sample_count, 0xd15a, thresholdRangeNormal);
     try benchF64(io, stdout, "table-bound normal candidate", sample_count, 0xd15a, tableBoundNormal);
     try benchF64(io, stdout, "generic exponentialFastFrom", sample_count, 0xe15a, genericExponential);
     try benchF64(io, stdout, "standard exponential raw", sample_count, 0xe15a, standardExponential);
@@ -200,6 +213,27 @@ fn thresholdNormal(engine: *alea.ScalarPrng) f64 {
             (@as(u64, 1) << 51) - mantissa;
 
         if (abs_mantissa < norm_threshold[i]) {
+            @branchHint(.likely);
+            return u * ziggurat.NormDist.x[i];
+        }
+        const x = u * ziggurat.NormDist.x[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return normalTail(engine, u);
+        }
+        if (ziggurat.NormDist.f[i + 1] + (ziggurat.NormDist.f[i] - ziggurat.NormDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x * x / 2.0)) return x;
+    }
+}
+
+fn thresholdRangeNormal(engine: *alea.ScalarPrng) f64 {
+    while (true) {
+        const bits = engine.next();
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 12;
+        const repr = (@as(u64, 0x400) << 52) | mantissa;
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+
+        if (mantissa > norm_lower_threshold[i] and mantissa < norm_upper_threshold[i]) {
             @branchHint(.likely);
             return u * ziggurat.NormDist.x[i];
         }
