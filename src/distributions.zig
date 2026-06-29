@@ -32,10 +32,21 @@ pub fn uniformInclusiveFrom(source: anytype, comptime T: type, min: T, max: T) T
         .int => return Rng.intRangeAtMostFrom(source, T, min, max),
         .float => {
             std.debug.assert(min <= max);
-            return Rng.floatRangeFrom(source, T, min, max);
+            return min + (max - min) * uniformClosedUnitFrom(source, T);
         },
         else => @compileError("uniformInclusive supports integer and floating-point types"),
     }
+}
+
+fn uniformClosedUnitFrom(source: anytype, comptime T: type) T {
+    comptime requireFloat(T);
+    return switch (T) {
+        f32 => @as(f32, @floatFromInt(@as(u24, @truncate(Rng.nextFrom(source) >> 40)))) *
+            (1.0 / 16777215.0),
+        f64 => @as(f64, @floatFromInt(Rng.nextFrom(source) >> 11)) *
+            (1.0 / 9007199254740991.0),
+        else => @compileError("alea supports f32 and f64 floats"),
+    };
 }
 
 pub fn bernoulli(rng: Rng, p: f64) bool {
@@ -3767,6 +3778,26 @@ test "basic distributions stay in expected ranges" {
     const die = try Uniform(u8).initInclusive(1, 6);
     const roll = die.sample(rng);
     try std.testing.expect(roll >= 1 and roll <= 6);
+
+    const float_edge = struct {
+        value: u64,
+
+        pub fn next(self: *@This()) u64 {
+            return self.value;
+        }
+
+        pub fn fill(self: *@This(), buf: []u8) void {
+            var i: usize = 0;
+            while (i < buf.len) : (i += 1) {
+                if ((i & 7) == 0) self.value +%= 0x9e3779b97f4a7c15;
+                buf[i] = @truncate(self.value >> @intCast((i & 7) * 8));
+            }
+        }
+    };
+    var min_float_engine = float_edge{ .value = 0 };
+    try std.testing.expectEqual(@as(f64, -1), uniformInclusiveFrom(&min_float_engine, f64, -1, 3));
+    var max_float_engine = float_edge{ .value = std.math.maxInt(u64) };
+    try std.testing.expectEqual(@as(f64, 3), uniformInclusiveFrom(&max_float_engine, f64, -1, 3));
 }
 
 test "alias table samples valid indexes" {

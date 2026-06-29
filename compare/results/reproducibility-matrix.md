@@ -33,7 +33,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 
 | Area | Reason |
 | --- | --- |
-| Non-uniform distributions | Algorithms may be improved for statistical quality or speed, as happened with Poisson and binomial. |
+| Non-uniform distributions and reusable distribution samplers | Algorithms may be improved for statistical quality, endpoint semantics, or speed, as happened with Poisson, binomial, and floating-point inclusive uniform samplers. |
 | `Rng.fill` for non-`u8` integer, `f32`, and bool slices; `Rng.fillOpen` / `fillOpenClosed` float slices | Bulk packing and slice conversion policy may change to improve throughput; use scalar `valueIter`, `floatOpen`, or `floatOpenClosed` if per-element draw compatibility is required. |
 | `seq.sampleIndices` returning `[]usize` | `usize` width and compact conversion policy can vary by target. |
 | `seq.sampleWeightedIndices` and weighted no-replacement helpers | Heap ordering ties and floating-point keys are deterministic for a target, but algorithm changes may alter output. |
