@@ -590,6 +590,23 @@ pub fn build(b: *std.Build) void {
     const gamma_shape_probe_step = b.step("gamma-shape-probe", "Run gamma shape-specialization microbenchmarks");
     gamma_shape_probe_step.dependOn(&run_gamma_shape_probe.step);
 
+    const student_t_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/student_t_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    student_t_probe_mod.addImport("alea", module);
+
+    const student_t_probe = b.addExecutable(.{
+        .name = "alea-student-t-probe",
+        .root_module = student_t_probe_mod,
+    });
+    const run_student_t_probe = b.addRunArtifact(student_t_probe);
+    if (b.args) |args| run_student_t_probe.addArgs(args);
+
+    const student_t_probe_step = b.step("student-t-probe", "Run StudentT special-case microbenchmarks");
+    student_t_probe_step.dependOn(&run_student_t_probe.step);
+
     const beta_special_probe_mod = b.createModule(.{
         .root_source_file = b.path("tools/beta_special_probe.zig"),
         .target = target,
