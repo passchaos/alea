@@ -976,7 +976,7 @@ pub fn Normal(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            Rng.fillNormalFrom(source, T, dest, self.mean, self.stddev);
         }
     };
 }
