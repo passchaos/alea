@@ -17,7 +17,7 @@ pub fn uniformFrom(source: anytype, comptime T: type, min: T, max: T) T {
         .int => return Rng.intRangeLessThanFrom(source, T, min, max),
         .float => {
             std.debug.assert(min <= max);
-            return min + (max - min) * Rng.floatFrom(source, T);
+            return Rng.floatRangeFrom(source, T, min, max);
         },
         else => @compileError("uniform supports integer and floating-point types"),
     }
@@ -32,7 +32,7 @@ pub fn uniformInclusiveFrom(source: anytype, comptime T: type, min: T, max: T) T
         .int => return Rng.intRangeAtMostFrom(source, T, min, max),
         .float => {
             std.debug.assert(min <= max);
-            return min + (max - min) * Rng.floatFrom(source, T);
+            return Rng.floatRangeFrom(source, T, min, max);
         },
         else => @compileError("uniformInclusive supports integer and floating-point types"),
     }
@@ -817,7 +817,7 @@ pub fn geometric(rng: Rng, p: f64) u64 {
 pub fn geometricFrom(source: anytype, p: f64) u64 {
     std.debug.assert(p > 0 and p <= 1);
     if (p == 1) return 1;
-    const failures: u64 = @intFromFloat(@floor(@log(1 - openFloatFrom(source, f64)) / @log(1 - p)));
+    const failures: u64 = @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(source, f64)) / @log(1 - p)));
     return failures + 1;
 }
 
@@ -1207,7 +1207,7 @@ pub fn arcsineFrom(source: anytype, comptime T: type, min: T, max: T) T {
     comptime requireFloat(T);
     std.debug.assert(min < max and std.math.isFinite(min) and std.math.isFinite(max));
 
-    const u = openFloatFrom(source, T);
+    const u = Rng.floatOpenFrom(source, T);
     const s = @sin(@as(T, @floatCast(std.math.pi)) * u / 2);
     return min + (max - min) * s * s;
 }
@@ -1242,7 +1242,7 @@ pub fn cauchy(rng: Rng, comptime T: type, median: T, scale: T) T {
 pub fn cauchyFrom(source: anytype, comptime T: type, median: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0);
-    const u = openFloatFrom(source, T);
+    const u = Rng.floatOpenFrom(source, T);
     return median + scale * @tan(@as(T, @floatCast(std.math.pi)) * (u - 0.5));
 }
 
@@ -1278,7 +1278,7 @@ pub fn laplaceFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
 
-    const u = openFloatFrom(source, T) - @as(T, 0.5);
+    const u = Rng.floatOpenFrom(source, T) - @as(T, 0.5);
     const one: T = 1;
     const sign: T = if (u < 0) -1 else 1;
     return location - scale * sign * @log(one - 2 * @abs(u));
@@ -1316,7 +1316,7 @@ pub fn logisticFrom(source: anytype, comptime T: type, location: T, scale: T) T 
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
 
-    const u = openFloatFrom(source, T);
+    const u = Rng.floatOpenFrom(source, T);
     return location + scale * @log(u / (1 - u));
 }
 
@@ -1352,7 +1352,7 @@ pub fn logLogisticFrom(source: anytype, comptime T: type, scale: T, shape: T) T 
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
 
-    const u = openFloatFrom(source, T);
+    const u = Rng.floatOpenFrom(source, T);
     return scale * std.math.pow(T, u / (1 - u), 1 / shape);
 }
 
@@ -1375,7 +1375,7 @@ pub fn LogLogistic(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            const u = openFloatFrom(source, T);
+            const u = Rng.floatOpenFrom(source, T);
             return self.scale * std.math.pow(T, u / (1 - u), self.inverse_shape);
         }
     };
@@ -1389,7 +1389,7 @@ pub fn kumaraswamyFrom(source: anytype, comptime T: type, alpha: T, beta_param: 
     comptime requireFloat(T);
     std.debug.assert(alpha > 0 and beta_param > 0 and std.math.isFinite(alpha) and std.math.isFinite(beta_param));
 
-    const u = openFloatFrom(source, T);
+    const u = Rng.floatOpenFrom(source, T);
     return std.math.pow(T, 1 - std.math.pow(T, 1 - u, 1 / beta_param), 1 / alpha);
 }
 
@@ -1415,7 +1415,7 @@ pub fn Kumaraswamy(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            const u = openFloatFrom(source, T);
+            const u = Rng.floatOpenFrom(source, T);
             return std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
         }
     };
@@ -1430,7 +1430,7 @@ pub fn powerFunctionFrom(source: anytype, comptime T: type, min: T, max: T, shap
     std.debug.assert(min < max and shape > 0);
     std.debug.assert(std.math.isFinite(min) and std.math.isFinite(max) and std.math.isFinite(shape));
 
-    return min + (max - min) * std.math.pow(T, openFloatFrom(source, T), 1 / shape);
+    return min + (max - min) * std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / shape);
 }
 
 pub fn PowerFunction(comptime T: type) type {
@@ -1457,7 +1457,7 @@ pub fn PowerFunction(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            return self.min + self.range * std.math.pow(T, openFloatFrom(source, T), self.inverse_shape);
+            return self.min + self.range * std.math.pow(T, Rng.floatOpenFrom(source, T), self.inverse_shape);
         }
     };
 }
@@ -1470,7 +1470,7 @@ pub fn rayleighFrom(source: anytype, comptime T: type, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and std.math.isFinite(scale));
 
-    return scale * @sqrt(-2 * @log(openFloatFrom(source, T)));
+    return scale * @sqrt(-2 * @log(Rng.floatOpenFrom(source, T)));
 }
 
 pub fn Rayleigh(comptime T: type) type {
@@ -1531,30 +1531,6 @@ pub fn Maxwell(comptime T: type) type {
     };
 }
 
-fn openFloatFrom(source: anytype, comptime T: type) T {
-    return switch (T) {
-        f32 => blk: {
-            const fraction: u32 = @truncate(Rng.nextFrom(source) >> 41);
-            const bits = (@as(u32, 127) << 23) | fraction;
-            break :blk @as(f32, @bitCast(bits)) - (1.0 - std.math.floatEps(f32) / 2.0);
-        },
-        f64 => blk: {
-            const fraction = Rng.nextFrom(source) >> 12;
-            const bits = (@as(u64, 1023) << 52) | fraction;
-            break :blk @as(f64, @bitCast(bits)) - (1.0 - std.math.floatEps(f64) / 2.0);
-        },
-        else => @compileError("alea supports f32 and f64 floats"),
-    };
-}
-
-fn openClosedFloatFrom(source: anytype, comptime T: type) T {
-    return switch (T) {
-        f32 => (@as(f32, @floatFromInt(Rng.nextFrom(source) >> 40)) + 1.0) * (1.0 / 16777216.0),
-        f64 => (@as(f64, @floatFromInt(Rng.nextFrom(source) >> 11)) + 1.0) * (1.0 / 9007199254740992.0),
-        else => @compileError("alea supports f32 and f64 floats"),
-    };
-}
-
 pub fn pareto(rng: Rng, comptime T: type, scale: T, shape: T) T {
     return paretoFrom(rng, T, scale, shape);
 }
@@ -1562,7 +1538,7 @@ pub fn pareto(rng: Rng, comptime T: type, scale: T, shape: T) T {
 pub fn paretoFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0);
-    return scale / std.math.pow(T, openFloatFrom(source, T), 1 / shape);
+    return scale / std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / shape);
 }
 
 pub fn Pareto(comptime T: type) type {
@@ -1596,7 +1572,7 @@ pub fn weibull(rng: Rng, comptime T: type, scale: T, shape: T) T {
 pub fn weibullFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0);
-    return scale * std.math.pow(T, -@log(openFloatFrom(source, T)), 1 / shape);
+    return scale * std.math.pow(T, -@log(Rng.floatOpenFrom(source, T)), 1 / shape);
 }
 
 pub fn Weibull(comptime T: type) type {
@@ -1630,7 +1606,7 @@ pub fn gumbel(rng: Rng, comptime T: type, location: T, scale: T) T {
 pub fn gumbelFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
-    const u = openClosedFloatFrom(source, T);
+    const u = Rng.floatOpenClosedFrom(source, T);
     return location - scale * @log(-@log(u));
 }
 
@@ -1665,7 +1641,7 @@ pub fn frechet(rng: Rng, comptime T: type, location: T, scale: T, shape: T) T {
 pub fn frechetFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and shape > 0);
-    const u = openClosedFloatFrom(source, T);
+    const u = Rng.floatOpenClosedFrom(source, T);
     return location + scale * std.math.pow(T, -@log(u), -1 / shape);
 }
 
@@ -2179,7 +2155,7 @@ pub fn Zeta(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             while (true) {
-                const u = openClosedFloatFrom(source, T);
+                const u = Rng.floatOpenClosedFrom(source, T);
                 const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
                 if (std.math.isInf(x)) return x;
 

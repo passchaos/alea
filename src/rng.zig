@@ -658,34 +658,15 @@ pub fn float(self: Rng, comptime T: type) T {
 }
 
 pub fn floatOpen(self: Rng, comptime T: type) T {
-    comptime requireFloat(T);
-    return switch (T) {
-        f32 => blk: {
-            const fraction: u32 = @truncate(self.next() >> 41);
-            const bits = (@as(u32, 127) << 23) | fraction;
-            break :blk @as(f32, @bitCast(bits)) - (1.0 - std.math.floatEps(f32) / 2.0);
-        },
-        f64 => blk: {
-            const fraction = self.next() >> 12;
-            const bits = (@as(u64, 1023) << 52) | fraction;
-            break :blk @as(f64, @bitCast(bits)) - (1.0 - std.math.floatEps(f64) / 2.0);
-        },
-        else => @compileError("alea supports f32 and f64 floats"),
-    };
+    return floatOpenFrom(self, T);
 }
 
 pub fn floatOpenClosed(self: Rng, comptime T: type) T {
-    comptime requireFloat(T);
-    return switch (T) {
-        f32 => (@as(f32, @floatFromInt(self.next() >> 40)) + 1.0) * (1.0 / 16777216.0),
-        f64 => (@as(f64, @floatFromInt(self.next() >> 11)) + 1.0) * (1.0 / 9007199254740992.0),
-        else => @compileError("alea supports f32 and f64 floats"),
-    };
+    return floatOpenClosedFrom(self, T);
 }
 
 pub fn floatRange(self: Rng, comptime T: type, min: T, max: T) T {
-    std.debug.assert(min <= max);
-    return min + (max - min) * self.float(T);
+    return floatRangeFrom(self, T, min, max);
 }
 
 pub fn floatRangeChecked(self: Rng, comptime T: type, min: T, max: T) Error!T {
@@ -1261,6 +1242,38 @@ pub fn floatFrom(source: anytype, comptime T: type) T {
     };
 }
 
+pub fn floatOpenFrom(source: anytype, comptime T: type) T {
+    comptime requireFloat(T);
+    return switch (T) {
+        f32 => blk: {
+            const fraction: u32 = @truncate(nextFrom(source) >> 41);
+            const bits = (@as(u32, 127) << 23) | fraction;
+            break :blk @as(f32, @bitCast(bits)) - (1.0 - std.math.floatEps(f32) / 2.0);
+        },
+        f64 => blk: {
+            const fraction = nextFrom(source) >> 12;
+            const bits = (@as(u64, 1023) << 52) | fraction;
+            break :blk @as(f64, @bitCast(bits)) - (1.0 - std.math.floatEps(f64) / 2.0);
+        },
+        else => @compileError("alea supports f32 and f64 floats"),
+    };
+}
+
+pub fn floatOpenClosedFrom(source: anytype, comptime T: type) T {
+    comptime requireFloat(T);
+    return switch (T) {
+        f32 => (@as(f32, @floatFromInt(nextFrom(source) >> 40)) + 1.0) * (1.0 / 16777216.0),
+        f64 => (@as(f64, @floatFromInt(nextFrom(source) >> 11)) + 1.0) * (1.0 / 9007199254740992.0),
+        else => @compileError("alea supports f32 and f64 floats"),
+    };
+}
+
+pub fn floatRangeFrom(source: anytype, comptime T: type, min: T, max: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(min <= max);
+    return min + (max - min) * floatFrom(source, T);
+}
+
 pub fn probabilityThreshold(p: f64) u64 {
     std.debug.assert(p >= 0 and p <= 1);
     if (p <= 0) return 0;
@@ -1280,6 +1293,11 @@ test "rng facade covers scalar APIs" {
     try std.testing.expect(rng.intRangeLessThan(i32, -5, 5) >= -5);
     try std.testing.expect(rng.float(f64) < 1.0);
     try std.testing.expect(rng.floatOpen(f64) > 0.0);
+    try std.testing.expect(Rng.floatOpenFrom(&engine, f64) > 0.0);
+    const direct_open_closed = Rng.floatOpenClosedFrom(&engine, f64);
+    try std.testing.expect(direct_open_closed > 0.0 and direct_open_closed <= 1.0);
+    const direct_float_range = Rng.floatRangeFrom(&engine, f64, -1, 1);
+    try std.testing.expect(direct_float_range >= -1 and direct_float_range < 1);
     try std.testing.expect(rng.chance(1));
     try std.testing.expect(Rng.chanceFrom(&engine, 1));
     try std.testing.expect(!rng.ratio(0, 7));
