@@ -855,6 +855,14 @@ pub const Open01 = struct {
     pub fn sampleFrom(_: Open01, source: anytype, comptime T: type) T {
         return Rng.floatOpenFrom(source, T);
     }
+
+    pub fn fill(_: Open01, rng: Rng, comptime T: type, dest: []T) void {
+        Rng.fillOpenFrom(rng, T, dest);
+    }
+
+    pub fn fillFrom(_: Open01, source: anytype, comptime T: type, dest: []T) void {
+        Rng.fillOpenFrom(source, T, dest);
+    }
 };
 
 pub const OpenClosed01 = struct {
@@ -864,6 +872,14 @@ pub const OpenClosed01 = struct {
 
     pub fn sampleFrom(_: OpenClosed01, source: anytype, comptime T: type) T {
         return Rng.floatOpenClosedFrom(source, T);
+    }
+
+    pub fn fill(_: OpenClosed01, rng: Rng, comptime T: type, dest: []T) void {
+        Rng.fillOpenClosedFrom(rng, T, dest);
+    }
+
+    pub fn fillFrom(_: OpenClosed01, source: anytype, comptime T: type, dest: []T) void {
+        Rng.fillOpenClosedFrom(source, T, dest);
     }
 };
 
@@ -3987,9 +4003,19 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     const direct_open = (Open01{}).sampleFrom(&direct_engine, f64);
     try std.testing.expect(direct_open > 0 and direct_open < 1);
+    var open01_buf: [8]f64 = undefined;
+    (Open01{}).fill(rng, f64, &open01_buf);
+    for (open01_buf) |value| try std.testing.expect(value > 0 and value < 1);
+    (Open01{}).fillFrom(&direct_engine, f64, &open01_buf);
+    for (open01_buf) |value| try std.testing.expect(value > 0 and value < 1);
 
     const direct_open_closed = (OpenClosed01{}).sampleFrom(&direct_engine, f64);
     try std.testing.expect(direct_open_closed > 0 and direct_open_closed <= 1);
+    var open_closed01_buf: [8]f64 = undefined;
+    (OpenClosed01{}).fill(rng, f64, &open_closed01_buf);
+    for (open_closed01_buf) |value| try std.testing.expect(value > 0 and value <= 1);
+    (OpenClosed01{}).fillFrom(&direct_engine, f64, &open_closed01_buf);
+    for (open_closed01_buf) |value| try std.testing.expect(value > 0 and value <= 1);
 
     var normals = rng.sampleIter(f64, try Normal(f64).init(10, 2));
     try std.testing.expect(normals.next().? > 0);
