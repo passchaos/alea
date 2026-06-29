@@ -2790,7 +2790,7 @@ pub fn SkewNormal(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillSkewNormalFrom(source, T, dest, self.location, self.scale, self.shape);
         }
     };
 }
