@@ -150,7 +150,8 @@ Continue performance triage on the remaining large gaps:
   but remains a watch item because exact `(0, 1]` conversion is sensitive to
   expression shape,
 - Cauchy remains a small performance watch item after adding Rust rows,
-- log-normal and NIG still trail local `rand_distr`,
+- log-normal scalar direct still trails local `rand_distr`, while log-normal,
+  inverse-Gaussian, and NIG bulk fills now exceed the local Rust rows,
 - skew-normal still trails local `rand_distr`,
 - SIMD/vector distribution kernels need stronger default-path wins before they
   can replace scalar ziggurat paths.
