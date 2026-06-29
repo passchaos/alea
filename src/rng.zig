@@ -584,18 +584,40 @@ fn fillOpenClosedF64From(source: anytype, dest: []f64) void {
 fn fillFloatRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
     comptime requireFloat(T);
     switch (T) {
-        f32 => {
-            self.fill(f32, dest);
-            const width = max - min;
-            for (dest) |*item| item.* = min + width * item.*;
-        },
-        f64 => {
-            fillF64From(self, dest);
-            const width = max - min;
-            for (dest) |*item| item.* = min + width * item.*;
-        },
+        f32 => fillRangeF32From(self, dest, min, max),
+        f64 => fillRangeF64From(self, dest, min, max),
         else => @compileError("alea supports f32 and f64 floats"),
     }
+}
+
+fn fillRangeF32From(source: anytype, dest: []f32, min: f32, max: f32) void {
+    const VectorType = @Vector(8, f32);
+    const min_vec: VectorType = @splat(min);
+    const width_vec: VectorType = @splat(max - min);
+
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec = min_vec + width_vec * vectorF32From(source, VectorType);
+        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+    }
+
+    const width = max - min;
+    while (i < dest.len) : (i += 1) dest[i] = min + width * floatFrom(source, f32);
+}
+
+fn fillRangeF64From(source: anytype, dest: []f64, min: f64, max: f64) void {
+    const VectorType = @Vector(4, f64);
+    const min_vec: VectorType = @splat(min);
+    const width_vec: VectorType = @splat(max - min);
+
+    var i: usize = 0;
+    while (i + 4 <= dest.len) : (i += 4) {
+        const vec = min_vec + width_vec * vectorF64From(source, VectorType);
+        inline for (0..4) |lane| dest[i + lane] = vec[lane];
+    }
+
+    const width = max - min;
+    while (i < dest.len) : (i += 1) dest[i] = min + width * floatFrom(source, f64);
 }
 
 pub fn next(self: Rng) u64 {
