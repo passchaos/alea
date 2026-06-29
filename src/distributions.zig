@@ -2347,6 +2347,9 @@ pub fn kumaraswamyFrom(source: anytype, comptime T: type, alpha: T, beta_param: 
     comptime requireFloat(T);
     std.debug.assert(alpha > 0 and beta_param > 0 and std.math.isFinite(alpha) and std.math.isFinite(beta_param));
 
+    if (alpha == 2 and beta_param == 1) return @sqrt(Rng.floatOpenFrom(source, T));
+    if (beta_param == 1) return std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / alpha);
+
     const u = Rng.floatOpenFrom(source, T);
     return std.math.pow(T, 1 - std.math.pow(T, 1 - u, 1 / beta_param), 1 / alpha);
 }
@@ -2358,6 +2361,18 @@ pub fn fillKumaraswamy(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_par
 pub fn fillKumaraswamyFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
     comptime requireFloat(T);
     std.debug.assert(alpha > 0 and beta_param > 0 and std.math.isFinite(alpha) and std.math.isFinite(beta_param));
+    if (alpha == 2 and beta_param == 1) {
+        Rng.fillOpenFrom(source, T, dest);
+        for (dest) |*item| item.* = @sqrt(item.*);
+        return;
+    }
+    if (beta_param == 1) {
+        Rng.fillOpenFrom(source, T, dest);
+        const inverse_alpha = 1 / alpha;
+        for (dest) |*item| item.* = std.math.pow(T, item.*, inverse_alpha);
+        return;
+    }
+
     for (dest) |*item| item.* = kumaraswamyFrom(source, T, alpha, beta_param);
 }
 
@@ -5008,6 +5023,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const kumaraswamy_sampler = try Kumaraswamy(f64).init(2, 5);
     kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf);
     for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    var kumaraswamy_beta_one_buf: [8]f64 = undefined;
+    fillKumaraswamyFrom(&direct_engine, f64, &kumaraswamy_beta_one_buf, 2, 1);
+    for (kumaraswamy_beta_one_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
 
     var power_functions = rng.sampleIter(f64, try PowerFunction(f64).init(-1, 2, 3));
     const power_value = power_functions.next().?;
