@@ -170,6 +170,36 @@ pub fn fillRangeChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) 
     self.fillRange(T, dest, min, max);
 }
 
+pub fn fillOpen(self: Rng, comptime T: type, dest: []T) void {
+    fillOpenFrom(self, T, dest);
+}
+
+pub fn fillOpenFrom(source: anytype, comptime T: type, dest: []T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => fillOpenF32From(source, dest),
+        f64 => {
+            for (dest) |*item| item.* = floatOpenFrom(source, f64);
+        },
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+pub fn fillOpenClosed(self: Rng, comptime T: type, dest: []T) void {
+    fillOpenClosedFrom(self, T, dest);
+}
+
+pub fn fillOpenClosedFrom(source: anytype, comptime T: type, dest: []T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => fillOpenClosedF32From(source, dest),
+        f64 => {
+            for (dest) |*item| item.* = floatOpenClosedFrom(source, f64);
+        },
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
 pub fn fillChance(self: Rng, dest: []bool, p: f64) void {
     fillChanceFrom(self, dest, p);
 }
@@ -490,6 +520,32 @@ fn fillFloats(self: Rng, comptime T: type, dest: []T) void {
             for (dest) |*item| item.* = self.float(f64);
         },
         else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn fillOpenF32From(source: anytype, dest: []f32) void {
+    var i: usize = 0;
+    while (i < dest.len) {
+        const bits = nextFrom(source);
+        dest[i] = f32OpenFromBits(@truncate(bits >> 40));
+        i += 1;
+        if (i < dest.len) {
+            dest[i] = f32OpenFromBits(@truncate(bits >> 16));
+            i += 1;
+        }
+    }
+}
+
+fn fillOpenClosedF32From(source: anytype, dest: []f32) void {
+    var i: usize = 0;
+    while (i < dest.len) {
+        const bits = nextFrom(source);
+        dest[i] = (@as(f32, @floatFromInt(@as(u24, @truncate(bits >> 40)))) + 1.0) * (1.0 / 16777216.0);
+        i += 1;
+        if (i < dest.len) {
+            dest[i] = (@as(f32, @floatFromInt(@as(u24, @truncate(bits >> 16)))) + 1.0) * (1.0 / 16777216.0);
+            i += 1;
+        }
     }
 }
 
@@ -1437,6 +1493,22 @@ test "rng facade covers scalar APIs" {
     var ranged_float_buf: [16]f32 = undefined;
     try rng.fillRangeChecked(f32, &ranged_float_buf, -1, 1);
     for (ranged_float_buf) |item| try std.testing.expect(item >= -1 and item < 1);
+
+    var open_float_buf: [17]f32 = undefined;
+    rng.fillOpen(f32, &open_float_buf);
+    for (open_float_buf) |item| try std.testing.expect(item > 0 and item < 1);
+
+    var direct_open_float_buf: [17]f32 = undefined;
+    Rng.fillOpenFrom(&engine, f32, &direct_open_float_buf);
+    for (direct_open_float_buf) |item| try std.testing.expect(item > 0 and item < 1);
+
+    var open_closed_float_buf: [17]f32 = undefined;
+    rng.fillOpenClosed(f32, &open_closed_float_buf);
+    for (open_closed_float_buf) |item| try std.testing.expect(item > 0 and item <= 1);
+
+    var direct_open_closed_float_buf: [17]f32 = undefined;
+    Rng.fillOpenClosedFrom(&engine, f32, &direct_open_closed_float_buf);
+    for (direct_open_closed_float_buf) |item| try std.testing.expect(item > 0 and item <= 1);
 
     var f32_buf: [17]f32 = undefined;
     rng.fill(f32, &f32_buf);
