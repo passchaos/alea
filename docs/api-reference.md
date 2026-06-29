@@ -99,7 +99,8 @@ Single-shot helpers:
 - `gamma`, `gammaFrom`, `chiSquared`, `chiSquaredFrom`, `erlang`,
   `erlangFrom`, `beta`, `betaFrom`, `fisherF`, `fisherFFrom`, `studentT`,
   `studentTFrom`
-- `triangular`, `triangularFrom`, `arcsine`, `arcsineFrom`,
+- `triangular`, `triangularFrom`, `fillTriangular`, `fillTriangularFrom`,
+  `arcsine`, `arcsineFrom`,
   `cauchy`, `cauchyFrom`, `laplace`, `laplaceFrom`, `fillLaplace`,
   `fillLaplaceFrom`, `logistic`, `logisticFrom`, `fillLogistic`,
   `fillLogisticFrom`, `logLogistic`, `logLogisticFrom`,
@@ -182,6 +183,8 @@ Reusable samplers:
 - `StudentT(T).sampleFrom`
 - `Triangular(T)`
 - `Triangular(T).sampleFrom`
+- `Triangular(T).fill`
+- `Triangular(T).fillFrom`
 - `Arcsine(T)`
 - `Arcsine(T).sampleFrom`
 - `Cauchy(T)`

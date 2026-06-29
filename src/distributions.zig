@@ -1260,6 +1260,16 @@ pub fn triangularFrom(source: anytype, comptime T: type, min: T, mode: T, max: T
     return max - @sqrt((1 - u) * (max - min) * (max - mode));
 }
 
+pub fn fillTriangular(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, max: T) void {
+    fillTriangularFrom(rng, T, dest, min, mode, max);
+}
+
+pub fn fillTriangularFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: T, max: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(min <= mode and mode <= max and min < max);
+    for (dest) |*item| item.* = triangularFrom(source, T, min, mode, max);
+}
+
 pub fn Triangular(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1281,6 +1291,14 @@ pub fn Triangular(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return triangularFrom(source, T, self.min, self.mode, self.max);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3215,6 +3233,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(triangular_value >= -1 and triangular_value <= 2);
     const direct_triangular = (try Triangular(f64).init(-1, 0, 2)).sampleFrom(&direct_engine);
     try std.testing.expect(direct_triangular >= -1 and direct_triangular <= 2);
+    var triangular_buf: [8]f64 = undefined;
+    fillTriangular(rng, f64, &triangular_buf, -1, 0, 2);
+    for (triangular_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    var direct_triangular_buf: [8]f64 = undefined;
+    fillTriangularFrom(&direct_engine, f64, &direct_triangular_buf, -1, 0, 2);
+    for (direct_triangular_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    const triangular_sampler = try Triangular(f64).init(-1, 0, 2);
+    triangular_sampler.fillFrom(&direct_engine, &direct_triangular_buf);
+    for (direct_triangular_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
 
     var arcsines = rng.sampleIter(f64, try Arcsine(f64).init(-1, 3));
     const arcsine_value = arcsines.next().?;
