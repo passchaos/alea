@@ -2186,7 +2186,8 @@ pub fn fillLogistic(rng: Rng, comptime T: type, dest: []T, location: T, scale: T
 pub fn fillLogisticFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) void {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
-    for (dest) |*item| item.* = logisticFrom(source, T, location, scale);
+    Rng.fillOpenFrom(source, T, dest);
+    logisticFromOpenUniforms(T, dest, location, scale);
 }
 
 pub fn Logistic(comptime T: type) type {
@@ -2216,7 +2217,7 @@ pub fn Logistic(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillLogisticFrom(source, T, dest, self.location, self.scale);
         }
     };
 }
@@ -3958,6 +3959,35 @@ fn rayleighFromOpenUniformsVector(comptime T: type, comptime VectorType: type, d
 
     while (i < dest.len) : (i += 1) {
         dest[i] = scale * @sqrt(-2 * @log(dest[i]));
+    }
+}
+
+fn logisticFromOpenUniforms(comptime T: type, dest: []T, location: T, scale: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => logisticFromOpenUniformsVector(T, @Vector(8, f32), dest, location, scale),
+        f64 => logisticFromOpenUniformsVector(T, @Vector(4, f64), dest, location, scale),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn logisticFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, location: T, scale: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const location_vec: VectorType = @splat(location);
+    const scale_vec: VectorType = @splat(scale);
+    const one_vec: VectorType = @splat(1.0);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var uniform_vec: VectorType = undefined;
+        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const out = location_vec + scale_vec * @log(uniform_vec / (one_vec - uniform_vec));
+        inline for (0..len) |lane| dest[i + lane] = out[lane];
+    }
+
+    while (i < dest.len) : (i += 1) {
+        const u = dest[i];
+        dest[i] = location + scale * @log(u / (1 - u));
     }
 }
 

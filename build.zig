@@ -250,6 +250,23 @@ pub fn build(b: *std.Build) void {
     const rayleigh_probe_step = b.step("rayleigh-probe", "Run Rayleigh bulk expression-shape microbenchmarks");
     rayleigh_probe_step.dependOn(&run_rayleigh_probe.step);
 
+    const logistic_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/logistic_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    logistic_probe_mod.addImport("alea", module);
+
+    const logistic_probe = b.addExecutable(.{
+        .name = "alea-logistic-probe",
+        .root_module = logistic_probe_mod,
+    });
+    const run_logistic_probe = b.addRunArtifact(logistic_probe);
+    if (b.args) |args| run_logistic_probe.addArgs(args);
+
+    const logistic_probe_step = b.step("logistic-probe", "Run Logistic bulk expression-shape microbenchmarks");
+    logistic_probe_step.dependOn(&run_logistic_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
