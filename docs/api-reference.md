@@ -393,8 +393,10 @@ Dynamic weighted helpers:
   `sampleIndicesFrom`, `sampleIndicesU32`, `sampleIndicesU32From`,
   `sampleArray`
 - Collections: `chooseMultiple`, `partialShuffle`, `reservoirSample`
-- Iterators: `chooseIterator`, `sampleIterator`, `chooseIteratorWeighted`,
-  `sampleIteratorWeighted`
+- Iterators: `chooseIterator`, `chooseIteratorFrom`, `sampleIterator`,
+  `sampleIteratorFrom`, `chooseIteratorWeighted`,
+  `chooseIteratorWeightedFrom`, `sampleIteratorWeighted`,
+  `sampleIteratorWeightedFrom`
 - Reusable samplers: `Choice(T)`, `chooseIter`, `WeightedChoice(T, Weight)`,
   `Choice.sample`, `Choice.sampleFrom`, `Choice.sampleValue`,
   `Choice.sampleValueFrom`, `Choice.fill`, `Choice.fillFrom`,

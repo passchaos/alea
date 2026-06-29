@@ -165,12 +165,16 @@ pub fn chooseMultiple(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
 }
 
 pub fn chooseIterator(rng: Rng, comptime T: type, iterator: anytype) ?T {
+    return chooseIteratorFrom(rng, T, iterator);
+}
+
+pub fn chooseIteratorFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
     var seen: usize = 0;
     var result: ?T = null;
 
     while (iterator.next()) |item| {
         seen += 1;
-        if (rng.uintLessThan(usize, seen) == 0) {
+        if (Rng.uintLessThanFrom(source, usize, seen) == 0) {
             result = item;
         }
     }
@@ -179,6 +183,10 @@ pub fn chooseIterator(rng: Rng, comptime T: type, iterator: anytype) ?T {
 }
 
 pub fn sampleIterator(allocator: std.mem.Allocator, rng: Rng, comptime T: type, iterator: anytype, amount: usize) ![]T {
+    return sampleIteratorFrom(allocator, rng, T, iterator, amount);
+}
+
+pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     var reservoir = try std.ArrayList(T).initCapacity(allocator, amount);
     errdefer reservoir.deinit(allocator);
     if (amount == 0) return reservoir.toOwnedSlice(allocator);
@@ -191,7 +199,7 @@ pub fn sampleIterator(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
     var seen = reservoir.items.len;
     while (iterator.next()) |item| {
         seen += 1;
-        const index = rng.uintLessThan(usize, seen);
+        const index = Rng.uintLessThanFrom(source, usize, seen);
         if (index < amount) reservoir.items[index] = item;
     }
 
@@ -199,6 +207,10 @@ pub fn sampleIterator(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
 }
 
 pub fn chooseIteratorWeighted(rng: Rng, comptime T: type, iterator: anytype) !?T {
+    return chooseIteratorWeightedFrom(rng, T, iterator);
+}
+
+pub fn chooseIteratorWeightedFrom(source: anytype, comptime T: type, iterator: anytype) !?T {
     var total: f64 = 0;
     var result: ?T = null;
 
@@ -208,7 +220,7 @@ pub fn chooseIteratorWeighted(rng: Rng, comptime T: type, iterator: anytype) !?T
         if (weight == 0) continue;
 
         total += weight;
-        if (rng.float(f64) * total < weight) {
+        if (Rng.floatFrom(source, f64) * total < weight) {
             result = entry.item;
         }
     }
@@ -217,6 +229,10 @@ pub fn chooseIteratorWeighted(rng: Rng, comptime T: type, iterator: anytype) !?T
 }
 
 pub fn sampleIteratorWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T: type, iterator: anytype, amount: usize) ![]T {
+    return sampleIteratorWeightedFrom(allocator, rng, T, iterator, amount);
+}
+
+pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
 
     var heap = WeightedIteratorQueue(T).initContext({});
@@ -230,7 +246,7 @@ pub fn sampleIteratorWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T
 
         const candidate = WeightedIteratorCandidate(T){
             .item = entry.item,
-            .key = @log(rng.floatOpen(f64)) / weight,
+            .key = @log(Rng.floatOpenFrom(source, f64)) / weight,
         };
 
         if (heap.count() < amount) {
@@ -872,12 +888,20 @@ test "iterator sampling works without collecting first" {
     var choose_iter = RangeIter{ .next_value = 0, .end = 100 };
     const chosen = chooseIterator(rng, u32, &choose_iter).?;
     try std.testing.expect(chosen < 100);
+    var direct_choose_iter = RangeIter{ .next_value = 0, .end = 100 };
+    const direct_chosen = chooseIteratorFrom(&engine, u32, &direct_choose_iter).?;
+    try std.testing.expect(direct_chosen < 100);
 
     var sample_iter = RangeIter{ .next_value = 0, .end = 100 };
     const sample = try sampleIterator(std.testing.allocator, rng, u32, &sample_iter, 8);
     defer std.testing.allocator.free(sample);
     try std.testing.expectEqual(@as(usize, 8), sample.len);
     for (sample) |item| try std.testing.expect(item < 100);
+    var direct_sample_iter = RangeIter{ .next_value = 0, .end = 100 };
+    const direct_sample = try sampleIteratorFrom(std.testing.allocator, &engine, u32, &direct_sample_iter, 8);
+    defer std.testing.allocator.free(direct_sample);
+    try std.testing.expectEqual(@as(usize, 8), direct_sample.len);
+    for (direct_sample) |item| try std.testing.expect(item < 100);
 
     var short_iter = RangeIter{ .next_value = 0, .end = 3 };
     const short = try sampleIterator(std.testing.allocator, rng, u32, &short_iter, 8);
@@ -914,6 +938,9 @@ test "weighted iterator choice works without collecting first" {
     var iter = WeightedIter{ .items = &entries };
     const picked = (try chooseIteratorWeighted(rng, u8, &iter)).?;
     try std.testing.expect(picked == 2 or picked == 3);
+    var direct_iter = WeightedIter{ .items = &entries };
+    const direct_picked = (try chooseIteratorWeightedFrom(&engine, u8, &direct_iter)).?;
+    try std.testing.expect(direct_picked == 2 or direct_picked == 3);
 
     var empty_iter = WeightedIter{ .items = &.{} };
     try std.testing.expect((try chooseIteratorWeighted(rng, u8, &empty_iter)) == null);
@@ -927,4 +954,9 @@ test "weighted iterator choice works without collecting first" {
     defer std.testing.allocator.free(sample);
     try std.testing.expectEqual(@as(usize, 2), sample.len);
     for (sample) |item| try std.testing.expect(item == 2 or item == 3);
+    var direct_sample_iter = WeightedIter{ .items = &entries };
+    const direct_sample = try sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &direct_sample_iter, 2);
+    defer std.testing.allocator.free(direct_sample);
+    try std.testing.expectEqual(@as(usize, 2), direct_sample.len);
+    for (direct_sample) |item| try std.testing.expect(item == 2 or item == 3);
 }

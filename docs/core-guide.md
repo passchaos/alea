@@ -95,8 +95,10 @@ Use:
 - `seq.sampleIndices`, `seq.sampleIndexVec`, `seq.sampleIndicesU32`
 - `seq.sampleArray`
 - `seq.chooseMultiple`
-- `seq.chooseIterator`, `seq.sampleIterator`
-- `seq.chooseIteratorWeighted`, `seq.sampleIteratorWeighted`
+- `seq.chooseIterator`, `seq.chooseIteratorFrom`, `seq.sampleIterator`,
+  `seq.sampleIteratorFrom`
+- `seq.chooseIteratorWeighted`, `seq.chooseIteratorWeightedFrom`,
+  `seq.sampleIteratorWeighted`, `seq.sampleIteratorWeightedFrom`
 - `seq.Choice`, `seq.WeightedChoice`
 - `distributions.AliasTable` for O(1) repeated weighted index sampling
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
