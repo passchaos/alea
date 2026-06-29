@@ -1262,6 +1262,15 @@ pub fn fisherFFrom(source: anytype, comptime T: type, d1: T, d2: T) T {
     return x / y;
 }
 
+pub fn fillFisherF(rng: Rng, comptime T: type, dest: []T, d1: T, d2: T) void {
+    fillFisherFFrom(rng, T, dest, d1, d2);
+}
+
+pub fn fillFisherFFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: T) void {
+    const sampler = FisherF(T).init(d1, d2) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
 pub fn FisherF(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1290,6 +1299,14 @@ pub fn FisherF(comptime T: type) type {
         pub fn sampleFrom(self: Self, source: anytype) T {
             return self.numerator.sampleFrom(source) / self.denominator.sampleFrom(source);
         }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
     };
 }
 
@@ -1301,6 +1318,15 @@ pub fn studentTFrom(source: anytype, comptime T: type, dof: T) T {
     comptime requireFloat(T);
     std.debug.assert(dof > 0);
     return Rng.normalFastFrom(source, T, 0, 1) * @sqrt(dof / chiSquaredFrom(source, T, dof));
+}
+
+pub fn fillStudentT(rng: Rng, comptime T: type, dest: []T, dof: T) void {
+    fillStudentTFrom(rng, T, dest, dof);
+}
+
+pub fn fillStudentTFrom(source: anytype, comptime T: type, dest: []T, dof: T) void {
+    const sampler = StudentT(T).init(dof) catch unreachable;
+    sampler.fillFrom(source, dest);
 }
 
 pub fn StudentT(comptime T: type) type {
@@ -1325,6 +1351,14 @@ pub fn StudentT(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return Rng.normalFastFrom(source, T, 0, 1) * @sqrt(self.dof / self.chi_squared_sampler.sampleFrom(source));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3391,10 +3425,28 @@ test "non-uniform samplers can be reused with sample iterators" {
     var fisher = rng.sampleIter(f64, try FisherF(f64).init(5, 20));
     try std.testing.expect(fisher.next().? > 0);
     try std.testing.expect(fisherFFrom(&direct_engine, f64, 5, 20) > 0);
+    var fisher_buf: [8]f64 = undefined;
+    fillFisherF(rng, f64, &fisher_buf, 5, 20);
+    for (fisher_buf) |value| try std.testing.expect(value > 0);
+    var direct_fisher_buf: [8]f64 = undefined;
+    fillFisherFFrom(&direct_engine, f64, &direct_fisher_buf, 5, 20);
+    for (direct_fisher_buf) |value| try std.testing.expect(value > 0);
+    const fisher_sampler = try FisherF(f64).init(5, 20);
+    fisher_sampler.fillFrom(&direct_engine, &direct_fisher_buf);
+    for (direct_fisher_buf) |value| try std.testing.expect(value > 0);
 
     var student = rng.sampleIter(f64, try StudentT(f64).init(10));
     _ = student.next().?;
     try std.testing.expect(std.math.isFinite(studentTFrom(&direct_engine, f64, 10)));
+    var student_buf: [8]f64 = undefined;
+    fillStudentT(rng, f64, &student_buf, 10);
+    for (student_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    var direct_student_buf: [8]f64 = undefined;
+    fillStudentTFrom(&direct_engine, f64, &direct_student_buf, 10);
+    for (direct_student_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    const student_sampler = try StudentT(f64).init(10);
+    student_sampler.fillFrom(&direct_engine, &direct_student_buf);
+    for (direct_student_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
     var triangulars = rng.sampleIter(f64, try Triangular(f64).init(-1, 0, 2));
     const triangular_value = triangulars.next().?;
