@@ -437,6 +437,23 @@ pub fn build(b: *std.Build) void {
     const weibull_probe_step = b.step("weibull-probe", "Run Weibull bulk expression-shape microbenchmarks");
     weibull_probe_step.dependOn(&run_weibull_probe.step);
 
+    const half_normal_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/half_normal_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    half_normal_probe_mod.addImport("alea", module);
+
+    const half_normal_probe = b.addExecutable(.{
+        .name = "alea-half-normal-probe",
+        .root_module = half_normal_probe_mod,
+    });
+    const run_half_normal_probe = b.addRunArtifact(half_normal_probe);
+    if (b.args) |args| run_half_normal_probe.addArgs(args);
+
+    const half_normal_probe_step = b.step("half-normal-probe", "Run HalfNormal bulk expression-shape microbenchmarks");
+    half_normal_probe_step.dependOn(&run_half_normal_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,
