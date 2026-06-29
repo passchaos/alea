@@ -573,6 +573,23 @@ pub fn build(b: *std.Build) void {
     const normal_affine_probe_step = b.step("normal-affine-probe", "Run normal affine bulk microbenchmarks");
     normal_affine_probe_step.dependOn(&run_normal_affine_probe.step);
 
+    const gamma_shape_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/gamma_shape_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    gamma_shape_probe_mod.addImport("alea", module);
+
+    const gamma_shape_probe = b.addExecutable(.{
+        .name = "alea-gamma-shape-probe",
+        .root_module = gamma_shape_probe_mod,
+    });
+    const run_gamma_shape_probe = b.addRunArtifact(gamma_shape_probe);
+    if (b.args) |args| run_gamma_shape_probe.addArgs(args);
+
+    const gamma_shape_probe_step = b.step("gamma-shape-probe", "Run gamma shape-specialization microbenchmarks");
+    gamma_shape_probe_step.dependOn(&run_gamma_shape_probe.step);
+
     const statcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/statcheck.zig"),
         .target = target,

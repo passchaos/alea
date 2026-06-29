@@ -1504,6 +1504,8 @@ pub fn gammaFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(shape > 0 and scale > 0);
 
+    if (shape == 1) return scale * Rng.standardExponentialFastFrom(source, T);
+
     if (shape < 1) {
         const boosted = gammaFrom(source, T, shape + 1, 1);
         return scale * boosted * std.math.pow(T, Rng.floatFrom(source, T), 1 / shape);
@@ -1558,6 +1560,8 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.shape == 1) return self.scale * Rng.standardExponentialFastFrom(source, T);
+
             if (self.is_boosted) {
                 return self.scale * self.sampleMarsaglia(source, self.boosted_d, self.boosted_c) *
                     std.math.pow(T, Rng.floatFrom(source, T), self.boost_inverse_shape);
@@ -4710,6 +4714,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     const gamma_sampler = try Gamma(f64).init(2, 3);
     gamma_sampler.fillFrom(&direct_engine, &direct_gamma_buf);
     for (direct_gamma_buf) |value| try std.testing.expect(value > 0);
+    var gamma_shape_one_buf: [8]f64 = undefined;
+    fillGammaFrom(&direct_engine, f64, &gamma_shape_one_buf, 1, 3);
+    for (gamma_shape_one_buf) |value| try std.testing.expect(value > 0);
+    const gamma_shape_one = try Gamma(f64).init(1, 3);
+    try std.testing.expect(gamma_shape_one.sampleFrom(&direct_engine) > 0);
 
     var chi_squared = rng.sampleIter(f64, try ChiSquared(f64).init(4));
     try std.testing.expect(chi_squared.next().? > 0);
