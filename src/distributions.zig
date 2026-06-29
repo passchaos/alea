@@ -1806,6 +1806,16 @@ pub fn weibullFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     return scale * std.math.pow(T, -@log(Rng.floatOpenFrom(source, T)), 1 / shape);
 }
 
+pub fn fillWeibull(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) void {
+    fillWeibullFrom(rng, T, dest, scale, shape);
+}
+
+pub fn fillWeibullFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(scale > 0 and shape > 0);
+    for (dest) |*item| item.* = weibullFrom(source, T, scale, shape);
+}
+
 pub fn Weibull(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1826,6 +1836,14 @@ pub fn Weibull(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             return weibullFrom(source, T, self.scale, self.shape);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -3253,6 +3271,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var weibulls = rng.sampleIter(f64, try Weibull(f64).init(2, 1.5));
     try std.testing.expect(weibulls.next().? >= 0);
     try std.testing.expect((try Weibull(f64).init(2, 1.5)).sampleFrom(&direct_engine) >= 0);
+    var weibull_buf: [8]f64 = undefined;
+    fillWeibull(rng, f64, &weibull_buf, 2, 1.5);
+    for (weibull_buf) |value| try std.testing.expect(value >= 0);
+    var direct_weibull_buf: [8]f64 = undefined;
+    fillWeibullFrom(&direct_engine, f64, &direct_weibull_buf, 2, 1.5);
+    for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
+    const weibull_sampler = try Weibull(f64).init(2, 1.5);
+    weibull_sampler.fillFrom(&direct_engine, &direct_weibull_buf);
+    for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
 
     var gumbels = rng.sampleIter(f64, try Gumbel(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(gumbels.next().?));
