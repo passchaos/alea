@@ -124,7 +124,9 @@ Reusable samplers:
 - `Uniform(T)`
 - `Uniform(T).sampleFrom`
 - `Open01`
+- `Open01.sampleFrom`
 - `OpenClosed01`
+- `OpenClosed01.sampleFrom`
 - `StandardNormal(T)`
 - `StandardNormal(T).sampleFrom`
 - `Normal(T)`

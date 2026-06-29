@@ -421,13 +421,21 @@ pub fn Uniform(comptime T: type) type {
 
 pub const Open01 = struct {
     pub fn sample(_: Open01, rng: Rng, comptime T: type) T {
-        return rng.floatOpen(T);
+        return Rng.floatOpenFrom(rng, T);
+    }
+
+    pub fn sampleFrom(_: Open01, source: anytype, comptime T: type) T {
+        return Rng.floatOpenFrom(source, T);
     }
 };
 
 pub const OpenClosed01 = struct {
     pub fn sample(_: OpenClosed01, rng: Rng, comptime T: type) T {
-        return rng.floatOpenClosed(T);
+        return Rng.floatOpenClosedFrom(rng, T);
+    }
+
+    pub fn sampleFrom(_: OpenClosed01, source: anytype, comptime T: type) T {
+        return Rng.floatOpenClosedFrom(source, T);
     }
 };
 
@@ -2771,6 +2779,12 @@ test "non-uniform samplers can be reused with sample iterators" {
     const inclusive_uniform = try Uniform(u32).initInclusive(3, 9);
     const inclusive_value = inclusive_uniform.sampleFrom(&direct_engine);
     try std.testing.expect(inclusive_value >= 3 and inclusive_value <= 9);
+
+    const direct_open = (Open01{}).sampleFrom(&direct_engine, f64);
+    try std.testing.expect(direct_open > 0 and direct_open < 1);
+
+    const direct_open_closed = (OpenClosed01{}).sampleFrom(&direct_engine, f64);
+    try std.testing.expect(direct_open_closed > 0 and direct_open_closed <= 1);
 
     var normals = rng.sampleIter(f64, try Normal(f64).init(10, 2));
     try std.testing.expect(normals.next().? > 0);
