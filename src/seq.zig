@@ -1006,6 +1006,32 @@ test "weighted sampling without replacement returns distinct positive-weight ite
     try std.testing.expectError(error.LengthMismatch, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 1));
 }
 
+test "weighted sampling without replacement preserves direct stream shape" {
+    const alea = @import("root.zig");
+    const weights = [_]f64{ 0, 1, 5, 0, 9 };
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var unchecked = Engine.init(0x5150_0447);
+        var direct = Engine.init(0x5150_0447);
+
+        const rng = Rng.init(&unchecked);
+        const indices = try sampleWeightedIndices(std.testing.allocator, rng, f64, &weights, 4);
+        defer std.testing.allocator.free(indices);
+        const direct_indices = try sampleWeightedIndicesFrom(std.testing.allocator, &direct, f64, &weights, 4);
+        defer std.testing.allocator.free(direct_indices);
+        try std.testing.expectEqualSlices(usize, indices, direct_indices);
+        try std.testing.expectEqual(unchecked.next(), direct.next());
+
+        const sample = try sampleWeighted(std.testing.allocator, rng, u8, f64, &items, &weights, 2);
+        defer std.testing.allocator.free(sample);
+        const direct_sample = try sampleWeightedFrom(std.testing.allocator, &direct, u8, f64, &items, &weights, 2);
+        defer std.testing.allocator.free(direct_sample);
+        try std.testing.expectEqualSlices(u8, sample, direct_sample);
+        try std.testing.expectEqual(unchecked.next(), direct.next());
+    }
+}
+
 test "iterator sampling works without collecting first" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(448);
