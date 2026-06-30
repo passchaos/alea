@@ -801,6 +801,24 @@ test "sample indices are distinct and bounded" {
     for (direct_fixed) |index| try std.testing.expect(index < 32);
 }
 
+test "portable index sampling has stable snapshots" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x1234_5678_9abc_def0);
+    const rng = alea.Rng.init(&engine);
+
+    const indices = try sampleIndicesU32(std.testing.allocator, rng, 100, 8);
+    defer std.testing.allocator.free(indices);
+    try std.testing.expectEqualSlices(u32, &.{ 62, 59, 88, 29, 79, 22, 26, 35 }, indices);
+    try std.testing.expectEqual(@as(u64, 0x3a7abfece698fa60), engine.next());
+
+    const index_vec = try sampleIndexVec(std.testing.allocator, rng, 100, 8);
+    defer index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 8), index_vec.len());
+    const expected = [_]usize{ 70, 11, 8, 89, 0, 1, 18, 74 };
+    for (expected, 0..) |value, i| try std.testing.expectEqual(value, index_vec.at(i));
+    try std.testing.expectEqual(@as(u64, 0xe2fc197c64f3dd72), engine.next());
+}
+
 test "index vec keeps compact backing for u32 lengths" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(334);
