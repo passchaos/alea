@@ -66,7 +66,7 @@ expectations.
   `vectorStandardNormalFrom`, `vectorNormalFrom`, `vectorNormalCheckedFrom`,
   `vectorStandardExponentialFrom`, `vectorExponentialFrom`,
   `vectorExponentialCheckedFrom`
-- Unicode: `unicodeScalar`
+- Unicode: `unicodeScalar`, `unicodeScalarFrom`
 - Distributions: `normal`, `exponential`, `standardNormalFastFrom`,
   `standardExponentialFastFrom`, `normalFastFrom`, `exponentialFastFrom`
 - Enums and collections: `enumValue`, `shuffle`, `shuffleFrom`, `choose`,

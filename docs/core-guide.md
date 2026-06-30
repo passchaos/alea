@@ -46,7 +46,7 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
   `fillChance`, `fillRatio`
 - durations: `durationRangeLessThan`, `durationRangeAtMost`,
   `durationRangeLessThanFrom`, `durationRangeAtMostFrom`
-- Unicode scalar values: `unicodeScalar`
+- Unicode scalar values: `unicodeScalar`, `unicodeScalarFrom`
 - structured values: `value(T)` for bools, ints, floats, enums, arrays, and tuples
 - bulk sampling: `fill` / `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,

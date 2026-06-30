@@ -74,10 +74,7 @@ pub fn unicodeScalar(rng: Rng) u21 {
 }
 
 pub fn unicodeScalarFrom(source: anytype) u21 {
-    const gap_size = 0xDFFF - 0xD800 + 1;
-    var scalar = Rng.intRangeLessThanFrom(source, u21, gap_size, 0x11_0000);
-    if (scalar <= 0xDFFF) scalar -= gap_size;
-    return scalar;
+    return Rng.unicodeScalarFrom(source);
 }
 
 pub fn unicodeUtf8Alloc(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {

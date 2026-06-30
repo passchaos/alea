@@ -1234,8 +1234,12 @@ pub fn durationRangeAtMostCheckedFrom(source: anytype, min: std.Io.Duration, max
 }
 
 pub fn unicodeScalar(self: Rng) u21 {
+    return unicodeScalarFrom(self);
+}
+
+pub fn unicodeScalarFrom(source: anytype) u21 {
     const gap_size = 0xDFFF - 0xD800 + 1;
-    var scalar = self.intRangeLessThan(u21, gap_size, 0x11_0000);
+    var scalar = intRangeLessThanFrom(source, u21, gap_size, 0x11_0000);
     if (scalar <= 0xDFFF) scalar -= gap_size;
     return scalar;
 }
@@ -1884,6 +1888,9 @@ test "rng facade covers scalar APIs" {
     const scalar = rng.unicodeScalar();
     try std.testing.expect(scalar < 0xD800 or scalar > 0xDFFF);
     try std.testing.expect(scalar < 0x11_0000);
+    const direct_scalar = Rng.unicodeScalarFrom(&engine);
+    try std.testing.expect(direct_scalar < 0xD800 or direct_scalar > 0xDFFF);
+    try std.testing.expect(direct_scalar < 0x11_0000);
 
     var buf: [16]u16 = undefined;
     rng.fill(u16, &buf);
