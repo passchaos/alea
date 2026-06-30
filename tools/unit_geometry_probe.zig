@@ -20,12 +20,15 @@ pub fn main(init: std.process.Init) !void {
 
     try stdout.print("unit geometry probe count={}\n", .{sample_count});
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
+    try benchAlea4x64Sample2(io, stdout, "fast unit circle point lane-pair", 0xc11c1e, sample_count, sampleUnitCircleLanePair);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point pair", 0xc11c1e, sample_count, sampleUnitCirclePair);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point range", 0xc11c1e, sample_count, sampleUnitCircleRange);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point current", 0xd15c, sample_count, sampleUnitDiscCurrent);
+    try benchAlea4x64Sample2(io, stdout, "fast unit disc point lane-pair", 0xd15c, sample_count, sampleUnitDiscLanePair);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point pair", 0xd15c, sample_count, sampleUnitDiscPair);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point range", 0xd15c, sample_count, sampleUnitDiscRange);
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point current", 0x59e7e, sample_count, sampleUnitSphereCurrent);
+    try benchAlea4x64Sample3(io, stdout, "fast unit sphere point lane-pair", 0x59e7e, sample_count, sampleUnitSphereLanePair);
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point pair", 0x59e7e, sample_count, sampleUnitSpherePair);
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point range", 0x59e7e, sample_count, sampleUnitSphereRange);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
@@ -56,6 +59,72 @@ pub fn main(init: std.process.Init) !void {
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball batched x3", 0xba11, sample_count, batchedUnitBall3);
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball batched x4", 0xba11, sample_count, batchedUnitBall4);
     try stdout.flush();
+}
+
+fn benchAlea4x64Sample2(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime sampleFn: fn (*LaneAlea4x64) [2]f64,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = LaneAlea4x64.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += sampleFn(&engine)[0];
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchAlea4x64Sample3(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime sampleFn: fn (*LaneAlea4x64) [3]f64,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = LaneAlea4x64.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += sampleFn(&engine)[0];
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchSample2(
@@ -232,6 +301,45 @@ fn sampleUnitDiscCurrent(source: anytype) [2]f64 {
 
 fn sampleUnitSphereCurrent(source: anytype) [3]f64 {
     return alea.distributions.unitSphereFrom(source, f64);
+}
+
+const LaneAlea4x64 = struct {
+    state: [4]u64,
+    index: usize,
+
+    const increment = [_]u64{
+        0xa0761d6478bd642f,
+        0xe7037ed1a0b428db,
+        0x8ebc6af09c88c6e3,
+        0x589965cc75374cc3,
+    };
+
+    fn init(seed: u64) LaneAlea4x64 {
+        const engine = alea.FastPrng.init(seed);
+        return .{ .state = engine.state, .index = 0 };
+    }
+
+    pub fn next(self: *LaneAlea4x64) u64 {
+        const lane_index = self.index & 3;
+        self.index += 1;
+        self.state[lane_index] +%= increment[lane_index];
+        var z = self.state[lane_index];
+        z = (z ^ (z >> 30)) *% 0xbf58476d1ce4e5b9;
+        z = (z ^ (z >> 27)) *% 0x94d049bb133111eb;
+        return z ^ (z >> 31);
+    }
+};
+
+fn sampleUnitCircleLanePair(source: *LaneAlea4x64) [2]f64 {
+    return sampleUnitCirclePair(source);
+}
+
+fn sampleUnitDiscLanePair(source: *LaneAlea4x64) [2]f64 {
+    return sampleUnitDiscPair(source);
+}
+
+fn sampleUnitSphereLanePair(source: *LaneAlea4x64) [3]f64 {
+    return sampleUnitSpherePair(source);
 }
 
 fn signedUnitPair(source: anytype) @Vector(2, f64) {
