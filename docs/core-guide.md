@@ -49,7 +49,7 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - bulk sampling: `fill` / `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,
   `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`,
-  `fillVectorOpenFrom`, `fillVectorOpenClosedFrom`, `fillStandardNormal`,
+  `fillVectorOpen`, `fillVectorOpenClosed`, `fillVectorOpenFrom`, `fillVectorOpenClosedFrom`, `fillStandardNormal`,
   `fillNormal`, `fillLogNormal`, `fillVectorNormal`, `fillStandardExponential`,
   `fillExponential`, and `fillVectorExponential`
 

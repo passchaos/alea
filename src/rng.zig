@@ -295,6 +295,14 @@ pub fn fillVectorRange(self: Rng, comptime VectorType: type, dest: []VectorType,
     fillVectorRangeFrom(self, VectorType, dest, min, max);
 }
 
+pub fn fillVectorOpen(self: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorOpenFrom(self, VectorType, dest);
+}
+
+pub fn fillVectorOpenClosed(self: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorOpenClosedFrom(self, VectorType, dest);
+}
+
 pub fn fillVectorFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
     _ = vectorInfo(VectorType);
     for (dest) |*item| item.* = vectorFrom(source, VectorType);
@@ -1848,9 +1856,17 @@ test "rng facade covers scalar APIs" {
     Rng.fillVectorFrom(&engine, @Vector(8, f32), &direct_vec_buf);
     for (direct_vec_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0 and vec[i] < 1);
 
+    var vec_open_buf: [4]@Vector(8, f32) = undefined;
+    rng.fillVectorOpen(@Vector(8, f32), &vec_open_buf);
+    for (vec_open_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] > 0 and vec[i] < 1);
+
     var direct_vec_open_buf: [4]@Vector(8, f32) = undefined;
     Rng.fillVectorOpenFrom(&engine, @Vector(8, f32), &direct_vec_open_buf);
     for (direct_vec_open_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] > 0 and vec[i] < 1);
+
+    var vec_open_closed_buf: [4]@Vector(8, f32) = undefined;
+    rng.fillVectorOpenClosed(@Vector(8, f32), &vec_open_closed_buf);
+    for (vec_open_closed_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] > 0 and vec[i] <= 1);
 
     var direct_vec_open_closed_buf: [4]@Vector(8, f32) = undefined;
     Rng.fillVectorOpenClosedFrom(&engine, @Vector(8, f32), &direct_vec_open_closed_buf);
@@ -1868,9 +1884,17 @@ test "rng facade covers scalar APIs" {
     rng.fill(@Vector(4, f64), &vec_f64_buf);
     for (vec_f64_buf) |vec| inline for (0..4) |i| try std.testing.expect(vec[i] >= 0 and vec[i] < 1);
 
+    var vec_open_f64_buf: [4]@Vector(4, f64) = undefined;
+    rng.fillVectorOpen(@Vector(4, f64), &vec_open_f64_buf);
+    for (vec_open_f64_buf) |vec| inline for (0..4) |i| try std.testing.expect(vec[i] > 0 and vec[i] < 1);
+
     var direct_vec_open_f64_buf: [4]@Vector(4, f64) = undefined;
     Rng.fillVectorOpenFrom(&engine, @Vector(4, f64), &direct_vec_open_f64_buf);
     for (direct_vec_open_f64_buf) |vec| inline for (0..4) |i| try std.testing.expect(vec[i] > 0 and vec[i] < 1);
+
+    var vec_open_closed_f64_buf: [4]@Vector(4, f64) = undefined;
+    rng.fillVectorOpenClosed(@Vector(4, f64), &vec_open_closed_f64_buf);
+    for (vec_open_closed_f64_buf) |vec| inline for (0..4) |i| try std.testing.expect(vec[i] > 0 and vec[i] <= 1);
 
     var direct_vec_open_closed_f64_buf: [4]@Vector(4, f64) = undefined;
     Rng.fillVectorOpenClosedFrom(&engine, @Vector(4, f64), &direct_vec_open_closed_f64_buf);
