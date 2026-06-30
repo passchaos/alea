@@ -2636,6 +2636,15 @@ pub fn kumaraswamy(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
     return kumaraswamyFrom(rng, T, alpha, beta_param);
 }
 
+pub fn kumaraswamyChecked(rng: Rng, comptime T: type, alpha: T, beta_param: T) Error!T {
+    return kumaraswamyCheckedFrom(rng, T, alpha, beta_param);
+}
+
+pub fn kumaraswamyCheckedFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) Error!T {
+    const dist = try Kumaraswamy(T).init(alpha, beta_param);
+    return dist.sampleFrom(source);
+}
+
 pub fn kumaraswamyFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
     std.debug.assert(alpha > 0 and beta_param > 0 and std.math.isFinite(alpha) and std.math.isFinite(beta_param));
@@ -2750,6 +2759,15 @@ pub fn Kumaraswamy(comptime T: type) type {
 
 pub fn powerFunction(rng: Rng, comptime T: type, min: T, max: T, shape: T) T {
     return powerFunctionFrom(rng, T, min, max, shape);
+}
+
+pub fn powerFunctionChecked(rng: Rng, comptime T: type, min: T, max: T, shape: T) Error!T {
+    return powerFunctionCheckedFrom(rng, T, min, max, shape);
+}
+
+pub fn powerFunctionCheckedFrom(source: anytype, comptime T: type, min: T, max: T, shape: T) Error!T {
+    const dist = try PowerFunction(T).init(min, max, shape);
+    return dist.sampleFrom(source);
 }
 
 pub fn powerFunctionFrom(source: anytype, comptime T: type, min: T, max: T, shape: T) T {
@@ -5473,6 +5491,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const kumaraswamy_sampler = try Kumaraswamy(f64).init(2, 5);
     kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf);
     for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    const direct_checked_kumaraswamy = try kumaraswamyCheckedFrom(&direct_engine, f64, 2, 5);
+    try std.testing.expect(direct_checked_kumaraswamy >= 0 and direct_checked_kumaraswamy <= 1);
+    try std.testing.expectError(error.InvalidParameter, kumaraswamyCheckedFrom(&direct_engine, f64, 0, 5));
     var kumaraswamy_beta_one_buf: [8]f64 = undefined;
     fillKumaraswamyFrom(&direct_engine, f64, &kumaraswamy_beta_one_buf, 2, 1);
     for (kumaraswamy_beta_one_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
@@ -5492,6 +5513,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const power_function_sampler = try PowerFunction(f64).init(-1, 2, 3);
     power_function_sampler.fillFrom(&direct_engine, &direct_power_function_buf);
     for (direct_power_function_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    const direct_checked_power = try powerFunctionCheckedFrom(&direct_engine, f64, -1, 2, 3);
+    try std.testing.expect(direct_checked_power >= -1 and direct_checked_power <= 2);
+    try std.testing.expectError(error.InvalidParameter, powerFunctionCheckedFrom(&direct_engine, f64, -1, 2, 0));
     var power_function_shape_one_buf: [8]f64 = undefined;
     fillPowerFunctionFrom(&direct_engine, f64, &power_function_shape_one_buf, -1, 2, 1);
     for (power_function_shape_one_buf) |value| try std.testing.expect(value >= -1 and value < 2);
