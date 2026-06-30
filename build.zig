@@ -26,9 +26,6 @@ pub fn build(b: *std.Build) void {
     });
     const run_tests = b.addRunArtifact(tests);
 
-    const test_step = b.step("test", "Run alea unit tests");
-    test_step.dependOn(&run_tests.step);
-
     const example_mod = b.createModule(.{
         .root_source_file = b.path("examples/basic.zig"),
         .target = target,
@@ -690,6 +687,10 @@ pub fn build(b: *std.Build) void {
 
     const apicheck_step = b.step("apicheck", "Check public API reference coverage");
     apicheck_step.dependOn(&run_apicheck.step);
+
+    const test_step = b.step("test", "Run alea unit tests and API reference checks");
+    test_step.dependOn(&run_tests.step);
+    test_step.dependOn(&run_apicheck.step);
 
     const stream_mod = b.createModule(.{
         .root_source_file = b.path("tools/stream.zig"),
