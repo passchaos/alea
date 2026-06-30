@@ -2492,6 +2492,15 @@ pub fn logistic(rng: Rng, comptime T: type, location: T, scale: T) T {
     return logisticFrom(rng, T, location, scale);
 }
 
+pub fn logisticChecked(rng: Rng, comptime T: type, location: T, scale: T) Error!T {
+    return logisticCheckedFrom(rng, T, location, scale);
+}
+
+pub fn logisticCheckedFrom(source: anytype, comptime T: type, location: T, scale: T) Error!T {
+    const dist = try Logistic(T).init(location, scale);
+    return dist.sampleFrom(source);
+}
+
 pub fn logisticFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
@@ -2545,6 +2554,15 @@ pub fn Logistic(comptime T: type) type {
 
 pub fn logLogistic(rng: Rng, comptime T: type, scale: T, shape: T) T {
     return logLogisticFrom(rng, T, scale, shape);
+}
+
+pub fn logLogisticChecked(rng: Rng, comptime T: type, scale: T, shape: T) Error!T {
+    return logLogisticCheckedFrom(rng, T, scale, shape);
+}
+
+pub fn logLogisticCheckedFrom(source: anytype, comptime T: type, scale: T, shape: T) Error!T {
+    const dist = try LogLogistic(T).init(scale, shape);
+    return dist.sampleFrom(source);
 }
 
 pub fn logLogisticFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
@@ -5423,6 +5441,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const logistic_sampler = try Logistic(f64).init(0, 1);
     logistic_sampler.fillFrom(&direct_engine, &direct_logistic_buf);
     for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expect(std.math.isFinite(try logisticCheckedFrom(&direct_engine, f64, 0, 1)));
+    try std.testing.expectError(error.InvalidParameter, logisticCheckedFrom(&direct_engine, f64, 0, 0));
 
     var log_logistics = rng.sampleIter(f64, try LogLogistic(f64).init(2, 3));
     try std.testing.expect(log_logistics.next().? > 0);
@@ -5435,6 +5455,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const log_logistic_sampler = try LogLogistic(f64).init(2, 3);
     log_logistic_sampler.fillFrom(&direct_engine, &direct_log_logistic_buf);
     for (direct_log_logistic_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expect(try logLogisticCheckedFrom(&direct_engine, f64, 2, 3) > 0);
+    try std.testing.expectError(error.InvalidParameter, logLogisticCheckedFrom(&direct_engine, f64, 0, 3));
     var log_logistic_shape_one_buf: [8]f64 = undefined;
     fillLogLogisticFrom(&direct_engine, f64, &log_logistic_shape_one_buf, 2, 1);
     for (log_logistic_shape_one_buf) |value| try std.testing.expect(value > 0 and std.math.isFinite(value));
