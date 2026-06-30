@@ -12,7 +12,7 @@ expectations.
 - Aliases: `DefaultPrng`, `FastPrng`, `HashPrng`, `ReproduciblePrng`,
   `ScalarPrng`, `SecurePrng`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
-  `scalar`, `scalarSecure`, `reproducible`, `reproducibleSecure`,
+  `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
   `secureFromSeed`, `secure`, `secureBytes`, `rng`
 
 ## Rng

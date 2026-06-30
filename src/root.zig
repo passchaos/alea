@@ -53,6 +53,14 @@ pub fn scalarSecure(io: std.Io) !ScalarPrng {
     return ScalarPrng.init((try Seed.secure(io)).state);
 }
 
+pub fn hash(seed: u64) HashPrng {
+    return HashPrng.init(seed);
+}
+
+pub fn hashSecure(io: std.Io) !HashPrng {
+    return HashPrng.init((try Seed.secure(io)).state);
+}
+
 pub fn reproducible(seed: u64) ReproduciblePrng {
     return ReproduciblePrng.init(seed);
 }
@@ -81,4 +89,10 @@ pub fn rng(engine: anytype) Rng {
 
 test {
     std.testing.refAllDecls(@This());
+}
+
+test "root hash constructors mirror HashPrng" {
+    const seeded = hash(123);
+    const direct = HashPrng.init(123);
+    try std.testing.expectEqual(direct.state, seeded.state);
 }
