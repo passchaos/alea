@@ -119,11 +119,12 @@ Single-shot helpers:
   `fillNegativeBinomialFrom`, `hypergeometric`, `hypergeometricFrom`,
   `fillHypergeometric`, `fillHypergeometricFrom`
 - `standardNormal`, `standardNormalFrom`, `fillStandardNormal`,
-  `fillStandardNormalFrom`, `normal`, `logNormal`,
+  `fillStandardNormalFrom`, `normal`, `normalFrom`, `logNormal`,
   `logNormalFrom`, `fillLogNormal`, `fillLogNormalFrom`, `halfNormal`,
   `halfNormalFrom`, `fillHalfNormal`, `fillHalfNormalFrom`, `chi`, `chiFrom`,
   `standardExponential`, `standardExponentialFrom`,
-  `fillStandardExponential`, `fillStandardExponentialFrom`, `exponential`
+  `fillStandardExponential`, `fillStandardExponentialFrom`, `exponential`,
+  `exponentialFrom`
 - `poisson`, `fillPoisson`, `fillPoissonFrom`, `geometric`,
   `geometricFrom`, `fillGeometric`, `fillGeometricFrom`,
   `geometricFailures`, `geometricFailuresFrom`, `fillGeometricFailures`,
