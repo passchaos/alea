@@ -157,6 +157,7 @@ Run:
 
 ```sh
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench
 RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/rand_bench/Cargo.toml
 ```
 
