@@ -13,9 +13,10 @@ const TRIALS: usize = 3;
 static BENCH_FILTER: OnceLock<String> = OnceLock::new();
 
 fn include_bench(name: &str) -> bool {
-    BENCH_FILTER
-        .get()
-        .map_or(true, |filter| name.contains(filter))
+    BENCH_FILTER.get().map_or(true, |filter| {
+        name.to_ascii_lowercase()
+            .contains(&filter.to_ascii_lowercase())
+    })
 }
 
 fn main() {

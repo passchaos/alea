@@ -95,7 +95,7 @@ The Rust command benchmarks against the local `rand` checkout in
 as packed bool chance/ratio, strict-interval vector float fills, vector ranges,
 and scalar-lane normal/exponential vector fills without slowing the full
 throughput suite. The optional second `bench` argument filters rows by
-substring, which is useful for focused full-harness reruns; the Rust comparison
+case-insensitive substring, which is useful for focused full-harness reruns; the Rust comparison
 binary accepts the same `[bytes] [filter]` argument shape. Use focused probes such as `ziggurat-probe`
 when investigating a specific hot path before changing production algorithms.
 
