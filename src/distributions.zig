@@ -36,6 +36,28 @@ pub fn uniformCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Err
     }
 }
 
+pub fn fillUniform(rng: Rng, comptime T: type, dest: []T, min: T, max: T) void {
+    fillUniformFrom(rng, T, dest, min, max);
+}
+
+pub fn fillUniformFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
+    switch (@typeInfo(T)) {
+        .int, .float => Rng.fillRangeFrom(source, T, dest, min, max),
+        else => @compileError("fillUniform supports integer and floating-point slices"),
+    }
+}
+
+pub fn fillUniformChecked(rng: Rng, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    return fillUniformCheckedFrom(rng, T, dest, min, max);
+}
+
+pub fn fillUniformCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    switch (@typeInfo(T)) {
+        .int, .float => try Rng.fillRangeCheckedFrom(source, T, dest, min, max),
+        else => @compileError("fillUniformChecked supports integer and floating-point slices"),
+    }
+}
+
 pub fn uniformInclusive(rng: Rng, comptime T: type, min: T, max: T) T {
     return uniformInclusiveFrom(rng, T, min, max);
 }
@@ -63,6 +85,42 @@ pub fn uniformInclusiveCheckedFrom(source: anytype, comptime T: type, min: T, ma
             return uniformInclusiveFrom(source, T, min, max);
         },
         else => @compileError("uniformInclusiveChecked supports integer and floating-point types"),
+    }
+}
+
+pub fn fillUniformInclusive(rng: Rng, comptime T: type, dest: []T, min: T, max: T) void {
+    fillUniformInclusiveFrom(rng, T, dest, min, max);
+}
+
+pub fn fillUniformInclusiveFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
+    switch (@typeInfo(T)) {
+        .int => {
+            for (dest) |*item| item.* = Rng.intRangeAtMostFrom(source, T, min, max);
+        },
+        .float => {
+            std.debug.assert(min <= max and std.math.isFinite(min) and std.math.isFinite(max));
+            const width = max - min;
+            for (dest) |*item| item.* = min + width * uniformClosedUnitFrom(source, T);
+        },
+        else => @compileError("fillUniformInclusive supports integer and floating-point slices"),
+    }
+}
+
+pub fn fillUniformInclusiveChecked(rng: Rng, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    return fillUniformInclusiveCheckedFrom(rng, T, dest, min, max);
+}
+
+pub fn fillUniformInclusiveCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    switch (@typeInfo(T)) {
+        .int => {
+            _ = try Rng.intRangeAtMostCheckedFrom(source, T, min, max);
+            fillUniformInclusiveFrom(source, T, dest, min, max);
+        },
+        .float => {
+            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+            fillUniformInclusiveFrom(source, T, dest, min, max);
+        },
+        else => @compileError("fillUniformInclusiveChecked supports integer and floating-point slices"),
     }
 }
 
@@ -5450,6 +5508,37 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect(try uniformInclusiveCheckedFrom(&engine, f64, -1, 1) <= 1);
     try std.testing.expectError(error.EmptyRange, uniformCheckedFrom(&engine, u32, 9, 5));
     try std.testing.expectError(error.EmptyRange, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    var uniform_int_buf: [8]u32 = undefined;
+    fillUniform(rng, u32, &uniform_int_buf, 5, 9);
+    for (uniform_int_buf) |value| try std.testing.expect(value >= 5 and value < 9);
+    fillUniformFrom(&engine, u32, &uniform_int_buf, 5, 9);
+    for (uniform_int_buf) |value| try std.testing.expect(value >= 5 and value < 9);
+    try fillUniformChecked(rng, u32, &uniform_int_buf, 5, 9);
+    for (uniform_int_buf) |value| try std.testing.expect(value >= 5 and value < 9);
+    try fillUniformCheckedFrom(&engine, u32, &uniform_int_buf, 5, 9);
+    for (uniform_int_buf) |value| try std.testing.expect(value >= 5 and value < 9);
+    try std.testing.expectError(error.EmptyRange, fillUniformCheckedFrom(&engine, u32, &uniform_int_buf, 9, 5));
+    var uniform_float_buf: [8]f64 = undefined;
+    fillUniform(rng, f64, &uniform_float_buf, -1, 1);
+    for (uniform_float_buf) |value| try std.testing.expect(value >= -1 and value < 1);
+    try fillUniformCheckedFrom(&engine, f64, &uniform_float_buf, -1, 1);
+    for (uniform_float_buf) |value| try std.testing.expect(value >= -1 and value < 1);
+    var inclusive_int_buf: [8]u32 = undefined;
+    fillUniformInclusive(rng, u32, &inclusive_int_buf, 5, 9);
+    for (inclusive_int_buf) |value| try std.testing.expect(value >= 5 and value <= 9);
+    fillUniformInclusiveFrom(&engine, u32, &inclusive_int_buf, 5, 9);
+    for (inclusive_int_buf) |value| try std.testing.expect(value >= 5 and value <= 9);
+    try fillUniformInclusiveChecked(rng, u32, &inclusive_int_buf, 5, 9);
+    for (inclusive_int_buf) |value| try std.testing.expect(value >= 5 and value <= 9);
+    try fillUniformInclusiveCheckedFrom(&engine, u32, &inclusive_int_buf, 5, 9);
+    for (inclusive_int_buf) |value| try std.testing.expect(value >= 5 and value <= 9);
+    try std.testing.expectError(error.EmptyRange, fillUniformInclusiveCheckedFrom(&engine, u32, &inclusive_int_buf, 9, 5));
+    var inclusive_float_buf: [8]f64 = undefined;
+    fillUniformInclusive(rng, f64, &inclusive_float_buf, -1, 1);
+    for (inclusive_float_buf) |value| try std.testing.expect(value >= -1 and value <= 1);
+    try fillUniformInclusiveCheckedFrom(&engine, f64, &inclusive_float_buf, -1, 1);
+    for (inclusive_float_buf) |value| try std.testing.expect(value >= -1 and value <= 1);
+    try std.testing.expectError(error.EmptyRange, fillUniformInclusiveCheckedFrom(&engine, f64, &inclusive_float_buf, std.math.inf(f64), 1));
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sample(rng));
     try std.testing.expect(!(try Bernoulli.init(0)).sample(rng));
     try std.testing.expect((try Bernoulli.init(1.0 - std.math.floatEps(f64) / 2.0)).sample(rng));

@@ -114,7 +114,10 @@ Single-shot helpers:
 
 - `uniform`, `uniformFrom`, `uniformChecked`, `uniformCheckedFrom`,
   `uniformInclusive`, `uniformInclusiveFrom`, `uniformInclusiveChecked`,
-  `uniformInclusiveCheckedFrom`
+  `uniformInclusiveCheckedFrom`, `fillUniform`, `fillUniformFrom`,
+  `fillUniformChecked`, `fillUniformCheckedFrom`, `fillUniformInclusive`,
+  `fillUniformInclusiveFrom`, `fillUniformInclusiveChecked`,
+  `fillUniformInclusiveCheckedFrom`
 - `bernoulli`, `bernoulliFrom`, `bernoulliChecked`,
   `bernoulliCheckedFrom`, `fillBernoulli`, `fillBernoulliFrom`,
   `fillBernoulliChecked`, `fillBernoulliCheckedFrom`, `binomial`,
