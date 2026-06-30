@@ -246,8 +246,12 @@ Reusable samplers:
 - `Multinomial`
 - `Multinomial.sampleInto`
 - `Multinomial.sampleIntoFrom`
+- `Multinomial.sampleIntoChecked`
+- `Multinomial.sampleIntoCheckedFrom`
 - `Multinomial.sampleManyInto`
 - `Multinomial.sampleManyIntoFrom`
+- `Multinomial.sampleManyIntoChecked`
+- `Multinomial.sampleManyIntoCheckedFrom`
 - `NegativeBinomial`
 - `NegativeBinomial.sampleFrom`
 - `NegativeBinomial.fill`
@@ -447,8 +451,12 @@ Reusable samplers:
 - `Dirichlet(T)`
 - `Dirichlet(T).sampleInto`
 - `Dirichlet(T).sampleIntoFrom`
+- `Dirichlet(T).sampleIntoChecked`
+- `Dirichlet(T).sampleIntoCheckedFrom`
 - `Dirichlet(T).sampleManyInto`
 - `Dirichlet(T).sampleManyIntoFrom`
+- `Dirichlet(T).sampleManyIntoChecked`
+- `Dirichlet(T).sampleManyIntoCheckedFrom`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
 - `WeightedIntTree(Weight)`

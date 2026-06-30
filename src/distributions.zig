@@ -6,6 +6,7 @@ pub const Error = error{
     InvalidProbability,
     InvalidWeight,
     InvalidParameter,
+    InvalidLength,
 };
 
 pub fn uniform(rng: Rng, comptime T: type, min: T, max: T) T {
@@ -281,8 +282,26 @@ pub const Multinomial = struct {
         self.sampleIntoFrom(rng, out);
     }
 
+    pub fn sampleIntoChecked(self: Multinomial, rng: Rng, out: []u64) Error!void {
+        try self.sampleIntoCheckedFrom(rng, out);
+    }
+
+    pub fn sampleIntoCheckedFrom(self: Multinomial, source: anytype, out: []u64) Error!void {
+        if (out.len != self.probabilities.len) return error.InvalidLength;
+        self.sampleIntoFrom(source, out);
+    }
+
     pub fn sampleManyInto(self: Multinomial, rng: Rng, out: []u64) void {
         self.sampleManyIntoFrom(rng, out);
+    }
+
+    pub fn sampleManyIntoChecked(self: Multinomial, rng: Rng, out: []u64) Error!void {
+        try self.sampleManyIntoCheckedFrom(rng, out);
+    }
+
+    pub fn sampleManyIntoCheckedFrom(self: Multinomial, source: anytype, out: []u64) Error!void {
+        if (out.len % self.probabilities.len != 0) return error.InvalidLength;
+        self.sampleManyIntoFrom(source, out);
     }
 
     pub fn sampleManyIntoFrom(self: Multinomial, source: anytype, out: []u64) void {
@@ -4408,8 +4427,26 @@ pub fn Dirichlet(comptime T: type) type {
             self.sampleIntoFrom(rng, out);
         }
 
+        pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            try self.sampleIntoCheckedFrom(rng, out);
+        }
+
+        pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len != self.alpha.len) return error.InvalidLength;
+            self.sampleIntoFrom(source, out);
+        }
+
         pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
             self.sampleManyIntoFrom(rng, out);
+        }
+
+        pub fn sampleManyIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            try self.sampleManyIntoCheckedFrom(rng, out);
+        }
+
+        pub fn sampleManyIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len % self.alpha.len != 0) return error.InvalidLength;
+            self.sampleManyIntoFrom(source, out);
         }
 
         pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
@@ -6457,9 +6494,19 @@ test "multinomial sampler returns category counts" {
     total = 0;
     for (stack_counts) |count| total += count;
     try std.testing.expectEqual(@as(u64, 100), total);
+    try dist.sampleIntoChecked(rng, &stack_counts);
+    total = 0;
+    for (stack_counts) |count| total += count;
+    try std.testing.expectEqual(@as(u64, 100), total);
+    var wrong_counts: [2]u64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, &wrong_counts));
 
     var direct_engine = alea.ScalarPrng.init(70);
     dist.sampleIntoFrom(&direct_engine, &stack_counts);
+    total = 0;
+    for (stack_counts) |count| total += count;
+    try std.testing.expectEqual(@as(u64, 100), total);
+    try dist.sampleIntoCheckedFrom(&direct_engine, &stack_counts);
     total = 0;
     for (stack_counts) |count| total += count;
     try std.testing.expectEqual(@as(u64, 100), total);
@@ -6471,7 +6518,23 @@ test "multinomial sampler returns category counts" {
         for (many_counts[offset..][0..3]) |count| total += count;
         try std.testing.expectEqual(@as(u64, 100), total);
     }
+    try dist.sampleManyIntoChecked(rng, &many_counts);
+    offset = 0;
+    while (offset < many_counts.len) : (offset += 3) {
+        total = 0;
+        for (many_counts[offset..][0..3]) |count| total += count;
+        try std.testing.expectEqual(@as(u64, 100), total);
+    }
+    var wrong_many_counts: [8]u64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.sampleManyIntoChecked(rng, &wrong_many_counts));
     dist.sampleManyIntoFrom(&direct_engine, &many_counts);
+    offset = 0;
+    while (offset < many_counts.len) : (offset += 3) {
+        total = 0;
+        for (many_counts[offset..][0..3]) |count| total += count;
+        try std.testing.expectEqual(@as(u64, 100), total);
+    }
+    try dist.sampleManyIntoCheckedFrom(&direct_engine, &many_counts);
     offset = 0;
     while (offset < many_counts.len) : (offset += 3) {
         total = 0;
@@ -6728,9 +6791,19 @@ test "dirichlet sampler returns simplex vectors" {
     var stack_total: f64 = 0;
     for (stack_sample) |value| stack_total += value;
     try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
+    try dist.sampleIntoChecked(rng, &stack_sample);
+    stack_total = 0;
+    for (stack_sample) |value| stack_total += value;
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
+    var wrong_sample: [2]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, &wrong_sample));
 
     var direct_engine = alea.ScalarPrng.init(68);
     dist.sampleIntoFrom(&direct_engine, &stack_sample);
+    stack_total = 0;
+    for (stack_sample) |value| stack_total += value;
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
+    try dist.sampleIntoCheckedFrom(&direct_engine, &stack_sample);
     stack_total = 0;
     for (stack_sample) |value| stack_total += value;
     try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
@@ -6742,7 +6815,23 @@ test "dirichlet sampler returns simplex vectors" {
         for (many_samples[offset..][0..3]) |value| stack_total += value;
         try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
     }
+    try dist.sampleManyIntoChecked(rng, &many_samples);
+    offset = 0;
+    while (offset < many_samples.len) : (offset += 3) {
+        stack_total = 0;
+        for (many_samples[offset..][0..3]) |value| stack_total += value;
+        try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
+    }
+    var wrong_many_samples: [8]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.sampleManyIntoChecked(rng, &wrong_many_samples));
     dist.sampleManyIntoFrom(&direct_engine, &many_samples);
+    offset = 0;
+    while (offset < many_samples.len) : (offset += 3) {
+        stack_total = 0;
+        for (many_samples[offset..][0..3]) |value| stack_total += value;
+        try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
+    }
+    try dist.sampleManyIntoCheckedFrom(&direct_engine, &many_samples);
     offset = 0;
     while (offset < many_samples.len) : (offset += 3) {
         stack_total = 0;
