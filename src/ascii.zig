@@ -149,3 +149,50 @@ test "unicode scalar string generation produces valid utf8" {
     defer std.testing.allocator.free(direct_text);
     try std.testing.expectEqual(@as(usize, 64), try std.unicode.utf8CountCodepoints(direct_text));
 }
+
+test "ascii helpers preserve direct stream shape" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_a5c1);
+        var direct_engine = Engine.init(0x5150_a5c1);
+        const rng = alea.Rng.init(&facade_engine);
+
+        try std.testing.expectEqual(Alphanumeric.sample(rng), Alphanumeric.sampleFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_buf: [32]u8 = undefined;
+        var direct_buf: [32]u8 = undefined;
+        Alphanumeric.fill(rng, &facade_buf);
+        Alphanumeric.fillFrom(&direct_engine, &direct_buf);
+        try std.testing.expectEqualSlices(u8, &facade_buf, &direct_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_alloc = try Alphanumeric.alloc(std.testing.allocator, rng, 32);
+        defer std.testing.allocator.free(facade_alloc);
+        const direct_alloc = try Alphanumeric.allocFrom(std.testing.allocator, &direct_engine, 32);
+        defer std.testing.allocator.free(direct_alloc);
+        try std.testing.expectEqualSlices(u8, facade_alloc, direct_alloc);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try std.testing.expectEqual(char(rng), charFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_string = try string(std.testing.allocator, rng, 32);
+        defer std.testing.allocator.free(facade_string);
+        const direct_string = try stringFrom(std.testing.allocator, &direct_engine, 32);
+        defer std.testing.allocator.free(direct_string);
+        try std.testing.expectEqualSlices(u8, facade_string, direct_string);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try std.testing.expectEqual(unicodeScalar(rng), unicodeScalarFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_text = try unicodeUtf8Alloc(std.testing.allocator, rng, 16);
+        defer std.testing.allocator.free(facade_text);
+        const direct_text = try unicodeUtf8AllocFrom(std.testing.allocator, &direct_engine, 16);
+        defer std.testing.allocator.free(direct_text);
+        try std.testing.expectEqualSlices(u8, facade_text, direct_text);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
