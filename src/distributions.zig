@@ -7088,6 +7088,80 @@ test "dirichlet sampler returns simplex vectors" {
     }
 }
 
+test "multivariate samplers preserve direct stream shape" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_d1ce);
+        var direct_engine = Engine.init(0x5150_d1ce);
+        const rng = Rng.init(&facade_engine);
+
+        const multinomial = try Multinomial.init(40, &.{ 1.0, 2.0, 3.0 });
+        const counts = try multinomial.sample(std.testing.allocator, rng);
+        defer std.testing.allocator.free(counts);
+        const direct_counts = try multinomial.sampleFrom(std.testing.allocator, &direct_engine);
+        defer std.testing.allocator.free(direct_counts);
+        try std.testing.expectEqualSlices(u64, counts, direct_counts);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var count_buf: [3]u64 = undefined;
+        var direct_count_buf: [3]u64 = undefined;
+        multinomial.sampleInto(rng, &count_buf);
+        multinomial.sampleIntoFrom(&direct_engine, &direct_count_buf);
+        try std.testing.expectEqualSlices(u64, &count_buf, &direct_count_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try multinomial.sampleIntoChecked(rng, &count_buf);
+        try multinomial.sampleIntoCheckedFrom(&direct_engine, &direct_count_buf);
+        try std.testing.expectEqualSlices(u64, &count_buf, &direct_count_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var many_counts: [9]u64 = undefined;
+        var direct_many_counts: [9]u64 = undefined;
+        multinomial.sampleManyInto(rng, &many_counts);
+        multinomial.sampleManyIntoFrom(&direct_engine, &direct_many_counts);
+        try std.testing.expectEqualSlices(u64, &many_counts, &direct_many_counts);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try multinomial.sampleManyIntoChecked(rng, &many_counts);
+        try multinomial.sampleManyIntoCheckedFrom(&direct_engine, &direct_many_counts);
+        try std.testing.expectEqualSlices(u64, &many_counts, &direct_many_counts);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const dirichlet = try Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
+        const simplex = try dirichlet.sample(std.testing.allocator, rng);
+        defer std.testing.allocator.free(simplex);
+        const direct_simplex = try dirichlet.sampleFrom(std.testing.allocator, &direct_engine);
+        defer std.testing.allocator.free(direct_simplex);
+        try std.testing.expectEqualSlices(f64, simplex, direct_simplex);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var simplex_buf: [3]f64 = undefined;
+        var direct_simplex_buf: [3]f64 = undefined;
+        dirichlet.sampleInto(rng, &simplex_buf);
+        dirichlet.sampleIntoFrom(&direct_engine, &direct_simplex_buf);
+        try std.testing.expectEqualSlices(f64, &simplex_buf, &direct_simplex_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try dirichlet.sampleIntoChecked(rng, &simplex_buf);
+        try dirichlet.sampleIntoCheckedFrom(&direct_engine, &direct_simplex_buf);
+        try std.testing.expectEqualSlices(f64, &simplex_buf, &direct_simplex_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var many_simplex: [9]f64 = undefined;
+        var direct_many_simplex: [9]f64 = undefined;
+        dirichlet.sampleManyInto(rng, &many_simplex);
+        dirichlet.sampleManyIntoFrom(&direct_engine, &direct_many_simplex);
+        try std.testing.expectEqualSlices(f64, &many_simplex, &direct_many_simplex);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try dirichlet.sampleManyIntoChecked(rng, &many_simplex);
+        try dirichlet.sampleManyIntoCheckedFrom(&direct_engine, &direct_many_simplex);
+        try std.testing.expectEqualSlices(f64, &many_simplex, &direct_many_simplex);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
+
 test "checked fill helpers preserve valid-parameter stream shape" {
     const alea = @import("root.zig");
 
