@@ -2599,6 +2599,58 @@ test "collection helpers preserve direct stream shape" {
     }
 }
 
+test "value and iterator helpers preserve direct stream shape" {
+    const alea = @import("root.zig");
+    const ValueType = struct { u8, bool, f32 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_0a1e);
+        var direct_engine = Engine.init(0x5150_0a1e);
+        const rng = Rng.init(&facade_engine);
+
+        try std.testing.expectEqual(rng.value(ValueType), valueFrom(&direct_engine, ValueType));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_bytes: [16]u8 = undefined;
+        var direct_bytes: [16]u8 = undefined;
+        rng.fill(u8, &facade_bytes);
+        fillFrom(&direct_engine, u8, &direct_bytes);
+        try std.testing.expectEqualSlices(u8, &facade_bytes, &direct_bytes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_vectors: [4]@Vector(4, u16) = undefined;
+        var direct_vectors: [4]@Vector(4, u16) = undefined;
+        rng.fill(@Vector(4, u16), &facade_vectors);
+        fillFrom(&direct_engine, @Vector(4, u16), &direct_vectors);
+        try std.testing.expectEqualSlices(@Vector(4, u16), &facade_vectors, &direct_vectors);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var value_iter = rng.valueIter(ValueType);
+        var direct_value_iter = valueIterFrom(&direct_engine, ValueType);
+        try std.testing.expectEqual(value_iter.nextValue(), direct_value_iter.nextValue());
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var random_iter = rng.randomIter(u16);
+        var direct_random_iter = randomIterFrom(&direct_engine, u16);
+        var random_buf: [8]u16 = undefined;
+        var direct_random_buf: [8]u16 = undefined;
+        random_iter.fill(&random_buf);
+        direct_random_iter.fill(&direct_random_buf);
+        try std.testing.expectEqualSlices(u16, &random_buf, &direct_random_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const die = try alea.distributions.Uniform(u8).initInclusive(1, 6);
+        var sample_iter = rng.sampleIter(u8, die);
+        var direct_sample_iter = sampleIterFrom(&direct_engine, u8, die);
+        var sample_buf: [8]u8 = undefined;
+        var direct_sample_buf: [8]u8 = undefined;
+        sample_iter.fill(&sample_buf);
+        direct_sample_iter.fill(&direct_sample_buf);
+        try std.testing.expectEqualSlices(u8, &sample_buf, &direct_sample_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
+
 test "value and sampler iterators produce unbounded samples" {
     const alea = @import("root.zig");
     var engine = alea.Xoshiro256.init(123);
