@@ -125,7 +125,7 @@ Single-shot helpers:
   `standardExponential`, `standardExponentialFrom`,
   `fillStandardExponential`, `fillStandardExponentialFrom`, `exponential`,
   `exponentialFrom`
-- `poisson`, `fillPoisson`, `fillPoissonFrom`, `geometric`,
+- `poisson`, `poissonFrom`, `fillPoisson`, `fillPoissonFrom`, `geometric`,
   `geometricFrom`, `fillGeometric`, `fillGeometricFrom`,
   `geometricFailures`, `geometricFailuresFrom`, `fillGeometricFailures`,
   `fillGeometricFailuresFrom`, `standardGeometric`,

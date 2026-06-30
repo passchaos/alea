@@ -1145,14 +1145,18 @@ pub fn HalfNormal(comptime T: type) type {
 }
 
 pub fn poisson(rng: Rng, lambda: f64) u64 {
+    return poissonFrom(rng, lambda);
+}
+
+pub fn poissonFrom(source: anytype, lambda: f64) u64 {
     std.debug.assert(lambda >= 0 and std.math.isFinite(lambda));
     if (lambda == 0) return 0;
 
     if (lambda < 12) {
-        return poissonProduct(rng, @exp(-lambda));
+        return poissonProductFrom(source, @exp(-lambda));
     }
 
-    return poissonAhrensDieter(rng, lambda);
+    return poissonAhrensDieterFrom(source, lambda);
 }
 
 pub fn fillPoisson(rng: Rng, dest: []u64, lambda: f64) void {
@@ -4660,6 +4664,7 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect(bernoulliFrom(&direct_bernoulli_engine, 1.0));
     try std.testing.expect(std.math.isFinite(normalFrom(&direct_bernoulli_engine, f64, 0, 1)));
     try std.testing.expect(exponentialFrom(&direct_bernoulli_engine, f64, 2) >= 0);
+    try std.testing.expect(poissonFrom(&direct_bernoulli_engine, 4) < 32);
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sampleFrom(&direct_bernoulli_engine));
     var bernoulli_buf: [8]bool = undefined;
     fillBernoulli(rng, &bernoulli_buf, 1);
