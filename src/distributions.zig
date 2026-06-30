@@ -1300,6 +1300,7 @@ pub fn logNormalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: 
 
 pub fn logNormalFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
+    if (mean == 0) return @exp(stddev * Rng.standardNormalFastFrom(source, T));
     return @exp(mean + stddev * Rng.standardNormalFastFrom(source, T));
 }
 
