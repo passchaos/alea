@@ -70,7 +70,8 @@ assert-fast `fill*` helpers and add checked `fill*Checked` /
 families, and tail/bounded families such as triangular, arcsine, Cauchy,
 Laplace, logistic, log-logistic, Kumaraswamy, power-function, Rayleigh,
 Maxwell, Pareto, Weibull, Gumbel, Frechet, skew-normal, PERT, and
-inverse-Gaussian-family sampling.
+inverse-Gaussian-family sampling. Top-level Zipf/Zeta fills mirror their
+reusable sampler fills with checked variants for fallible bulk workflows.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar

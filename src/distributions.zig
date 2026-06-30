@@ -4222,6 +4222,24 @@ pub fn zipfFrom(source: anytype, comptime T: type, n: T, exponent: T) T {
     return sampler.sampleFrom(source);
 }
 
+pub fn fillZipf(rng: Rng, comptime T: type, dest: []T, n: T, exponent: T) void {
+    fillZipfFrom(rng, T, dest, n, exponent);
+}
+
+pub fn fillZipfFrom(source: anytype, comptime T: type, dest: []T, n: T, exponent: T) void {
+    const sampler = Zipf(T).init(n, exponent) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillZipfChecked(rng: Rng, comptime T: type, dest: []T, n: T, exponent: T) Error!void {
+    return fillZipfCheckedFrom(rng, T, dest, n, exponent);
+}
+
+pub fn fillZipfCheckedFrom(source: anytype, comptime T: type, dest: []T, n: T, exponent: T) Error!void {
+    const sampler = try Zipf(T).init(n, exponent);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Zipf(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -4301,6 +4319,24 @@ pub fn zetaFrom(source: anytype, comptime T: type, exponent: T) T {
 
     const sampler = Zeta(T).init(exponent) catch unreachable;
     return sampler.sampleFrom(source);
+}
+
+pub fn fillZeta(rng: Rng, comptime T: type, dest: []T, exponent: T) void {
+    fillZetaFrom(rng, T, dest, exponent);
+}
+
+pub fn fillZetaFrom(source: anytype, comptime T: type, dest: []T, exponent: T) void {
+    const sampler = Zeta(T).init(exponent) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillZetaChecked(rng: Rng, comptime T: type, dest: []T, exponent: T) Error!void {
+    return fillZetaCheckedFrom(rng, T, dest, exponent);
+}
+
+pub fn fillZetaCheckedFrom(source: anytype, comptime T: type, dest: []T, exponent: T) Error!void {
+    const sampler = try Zeta(T).init(exponent);
+    sampler.fillFrom(source, dest);
 }
 
 pub fn Zeta(comptime T: type) type {
@@ -6291,6 +6327,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_zipf_buf: [8]f64 = undefined;
     zipf_sampler.fillFrom(&direct_engine, &direct_zipf_buf);
     for (direct_zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
+    fillZipf(rng, f64, &zipf_buf, 10, 1.5);
+    for (zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
+    fillZipfFrom(&direct_engine, f64, &direct_zipf_buf, 10, 1.5);
+    for (direct_zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
+    try fillZipfChecked(rng, f64, &zipf_buf, 10, 1.5);
+    for (zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
+    try fillZipfCheckedFrom(&direct_engine, f64, &direct_zipf_buf, 10, 1.5);
+    for (direct_zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
+    try std.testing.expectError(error.InvalidParameter, fillZipfCheckedFrom(&direct_engine, f64, &direct_zipf_buf, 0, 1));
 
     var zetas = rng.sampleIter(f64, try Zeta(f64).init(3));
     try std.testing.expect(zetas.next().? >= 1);
@@ -6302,6 +6347,15 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_zeta_buf: [8]f64 = undefined;
     zeta_sampler.fillFrom(&direct_engine, &direct_zeta_buf);
     for (direct_zeta_buf) |value| try std.testing.expect(value >= 1);
+    fillZeta(rng, f64, &zeta_buf, 3);
+    for (zeta_buf) |value| try std.testing.expect(value >= 1);
+    fillZetaFrom(&direct_engine, f64, &direct_zeta_buf, 3);
+    for (direct_zeta_buf) |value| try std.testing.expect(value >= 1);
+    try fillZetaChecked(rng, f64, &zeta_buf, 3);
+    for (zeta_buf) |value| try std.testing.expect(value >= 1);
+    try fillZetaCheckedFrom(&direct_engine, f64, &direct_zeta_buf, 3);
+    for (direct_zeta_buf) |value| try std.testing.expect(value >= 1);
+    try std.testing.expectError(error.InvalidParameter, fillZetaCheckedFrom(&direct_engine, f64, &direct_zeta_buf, 1));
 
     var unit_circles = rng.sampleIter([2]f64, UnitCircle(f64){});
     const unit_circle = unit_circles.next().?;

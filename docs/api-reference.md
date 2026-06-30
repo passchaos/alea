@@ -222,8 +222,10 @@ Single-shot helpers:
   `normalInverseGaussianChecked`, `normalInverseGaussianCheckedFrom`,
   `fillNormalInverseGaussian`, `fillNormalInverseGaussianFrom`,
   `fillNormalInverseGaussianChecked`, `fillNormalInverseGaussianCheckedFrom`,
-  `zipf`, `zipfFrom`, `zipfChecked`, `zipfCheckedFrom`, `zeta`, `zetaFrom`,
-  `zetaChecked`, `zetaCheckedFrom`
+  `zipf`, `zipfFrom`, `zipfChecked`, `zipfCheckedFrom`, `fillZipf`,
+  `fillZipfFrom`, `fillZipfChecked`, `fillZipfCheckedFrom`, `zeta`,
+  `zetaFrom`, `zetaChecked`, `zetaCheckedFrom`, `fillZeta`, `fillZetaFrom`,
+  `fillZetaChecked`, `fillZetaCheckedFrom`
 - `unitCircle`, `unitCircleFrom`, `fillUnitCircle`, `fillUnitCircleFrom`,
   `unitDisc`, `unitDiscFrom`, `fillUnitDisc`, `fillUnitDiscFrom`,
   `unitSphere`, `unitSphereFrom`, `fillUnitSphere`, `fillUnitSphereFrom`,
