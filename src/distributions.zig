@@ -1905,6 +1905,15 @@ pub fn erlang(rng: Rng, comptime T: type, shape: u64, scale: T) T {
     return erlangFrom(rng, T, shape, scale);
 }
 
+pub fn erlangChecked(rng: Rng, comptime T: type, shape: u64, scale: T) Error!T {
+    return erlangCheckedFrom(rng, T, shape, scale);
+}
+
+pub fn erlangCheckedFrom(source: anytype, comptime T: type, shape: u64, scale: T) Error!T {
+    const dist = try Erlang(T).init(shape, scale);
+    return dist.sampleFrom(source);
+}
+
 pub fn erlangFrom(source: anytype, comptime T: type, shape: u64, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(shape > 0 and scale > 0);
@@ -5208,6 +5217,8 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var erlangs = rng.sampleIter(f64, try Erlang(f64).init(3, 2));
     try std.testing.expect(erlangs.next().? > 0);
+    try std.testing.expect(try erlangCheckedFrom(&direct_engine, f64, 3, 2) > 0);
+    try std.testing.expectError(error.InvalidParameter, erlangCheckedFrom(&direct_engine, f64, 0, 2));
     var erlang_buf: [8]f64 = undefined;
     fillErlang(rng, f64, &erlang_buf, 3, 2);
     for (erlang_buf) |value| try std.testing.expect(value > 0);

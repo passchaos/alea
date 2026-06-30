@@ -146,7 +146,7 @@ Single-shot helpers:
   `chiSquaredFrom`, `chiSquaredChecked`, `chiSquaredCheckedFrom`,
   `fillChiSquared`, `fillChiSquaredFrom`, `chi`,
   `chiFrom`, `chiChecked`, `chiCheckedFrom`, `fillChi`, `fillChiFrom`,
-  `erlang`, `erlangFrom`,
+  `erlang`, `erlangFrom`, `erlangChecked`, `erlangCheckedFrom`,
   `fillErlang`, `fillErlangFrom`, `beta`, `betaFrom`, `fillBeta`,
   `fillBetaFrom`, `fisherF`, `fisherFFrom`, `fillFisherF`,
   `fillFisherFFrom`, `studentT`, `studentTFrom`, `fillStudentT`,
