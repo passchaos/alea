@@ -69,7 +69,8 @@ assert-fast `fill*` helpers and add checked `fill*Checked` /
 `fill*CheckedFrom` variants for common discrete families, core continuous
 families, and tail/bounded families such as triangular, arcsine, Cauchy,
 Laplace, logistic, log-logistic, Kumaraswamy, power-function, Rayleigh,
-Maxwell, Pareto, Weibull, Gumbel, Frechet, skew-normal, and PERT.
+Maxwell, Pareto, Weibull, Gumbel, Frechet, skew-normal, PERT, and
+inverse-Gaussian-family sampling.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar

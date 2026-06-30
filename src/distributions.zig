@@ -4073,6 +4073,15 @@ pub fn fillInverseGaussianFrom(source: anytype, comptime T: type, dest: []T, mea
     inverseGaussianFromNormals(source, T, dest, mean, shape);
 }
 
+pub fn fillInverseGaussianChecked(rng: Rng, comptime T: type, dest: []T, mean: T, shape: T) Error!void {
+    return fillInverseGaussianCheckedFrom(rng, T, dest, mean, shape);
+}
+
+pub fn fillInverseGaussianCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) Error!void {
+    const sampler = try InverseGaussian(T).init(mean, shape);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn InverseGaussian(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -4134,6 +4143,15 @@ pub fn fillNormalInverseGaussian(rng: Rng, comptime T: type, dest: []T, alpha: T
 
 pub fn fillNormalInverseGaussianFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
     const sampler = NormalInverseGaussian(T).init(alpha, beta_param) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillNormalInverseGaussianChecked(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
+    return fillNormalInverseGaussianCheckedFrom(rng, T, dest, alpha, beta_param);
+}
+
+pub fn fillNormalInverseGaussianCheckedFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
+    const sampler = try NormalInverseGaussian(T).init(alpha, beta_param);
     sampler.fillFrom(source, dest);
 }
 
@@ -6235,6 +6253,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_inverse_gaussian_buf: [8]f64 = undefined;
     fillInverseGaussianFrom(&direct_engine, f64, &direct_inverse_gaussian_buf, 1, 2);
     for (direct_inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
+    try fillInverseGaussianChecked(rng, f64, &inverse_gaussian_buf, 1, 2);
+    for (inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
+    try fillInverseGaussianCheckedFrom(&direct_engine, f64, &direct_inverse_gaussian_buf, 1, 2);
+    for (direct_inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expectError(error.InvalidParameter, fillInverseGaussianCheckedFrom(&direct_engine, f64, &direct_inverse_gaussian_buf, 0, 2));
     const inverse_gaussian_sampler = try InverseGaussian(f64).init(1, 2);
     inverse_gaussian_sampler.fillFrom(&direct_engine, &direct_inverse_gaussian_buf);
     for (direct_inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
@@ -6247,6 +6270,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_nig_buf: [8]f64 = undefined;
     fillNormalInverseGaussianFrom(&direct_engine, f64, &direct_nig_buf, 2, 1);
     for (direct_nig_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillNormalInverseGaussianChecked(rng, f64, &nig_buf, 2, 1);
+    for (nig_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillNormalInverseGaussianCheckedFrom(&direct_engine, f64, &direct_nig_buf, 2, 1);
+    for (direct_nig_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expectError(error.InvalidParameter, fillNormalInverseGaussianCheckedFrom(&direct_engine, f64, &direct_nig_buf, 1, 1));
     const nig_sampler = try NormalInverseGaussian(f64).init(2, 1);
     nig_sampler.fillFrom(&direct_engine, &direct_nig_buf);
     for (direct_nig_buf) |value| try std.testing.expect(std.math.isFinite(value));

@@ -217,9 +217,11 @@ Single-shot helpers:
   `fillPertFrom`, `fillPertChecked`, `fillPertCheckedFrom`
 - `inverseGaussian`, `inverseGaussianFrom`, `inverseGaussianChecked`,
   `inverseGaussianCheckedFrom`, `fillInverseGaussian`, `fillInverseGaussianFrom`,
+  `fillInverseGaussianChecked`, `fillInverseGaussianCheckedFrom`,
   `normalInverseGaussian`, `normalInverseGaussianFrom`,
   `normalInverseGaussianChecked`, `normalInverseGaussianCheckedFrom`,
   `fillNormalInverseGaussian`, `fillNormalInverseGaussianFrom`,
+  `fillNormalInverseGaussianChecked`, `fillNormalInverseGaussianCheckedFrom`,
   `zipf`, `zipfFrom`, `zipfChecked`, `zipfCheckedFrom`, `zeta`, `zetaFrom`,
   `zetaChecked`, `zetaCheckedFrom`
 - `unitCircle`, `unitCircleFrom`, `fillUnitCircle`, `fillUnitCircleFrom`,
