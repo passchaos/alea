@@ -383,6 +383,10 @@ pub fn Choice(comptime T: type) type {
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
             return rng.sampleIter(*const T, self);
         }
+
+        pub fn iterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
+            return Rng.sampleIterFrom(source, *const T, self);
+        }
     };
 }
 
@@ -451,6 +455,10 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
             return rng.sampleIter(*const T, self);
+        }
+
+        pub fn iterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
+            return Rng.sampleIterFrom(source, *const T, self);
         }
     };
 }
@@ -823,6 +831,10 @@ test "choice sampler repeatedly samples slice references" {
         try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
     }
 
+    var direct_iter = choice.iterFrom(&engine);
+    const direct_iter_item = direct_iter.next().?;
+    try std.testing.expect(direct_iter_item == &values[0] or direct_iter_item == &values[1] or direct_iter_item == &values[2] or direct_iter_item == &values[3]);
+
     var convenience_iter = chooseIter(rng, u8, &values).?;
     const picked = convenience_iter.next().?.*;
     try std.testing.expect(picked == 2 or picked == 4 or picked == 6 or picked == 8);
@@ -872,6 +884,10 @@ test "weighted choice sampler maps alias indexes to items" {
     var iter = choice.iter(rng);
     const picked = iter.next().?.*;
     try std.testing.expect(std.mem.eql(u8, picked, "rare") or std.mem.eql(u8, picked, "often"));
+
+    var direct_iter = choice.iterFrom(&engine);
+    const direct_picked = direct_iter.next().?.*;
+    try std.testing.expect(std.mem.eql(u8, direct_picked, "rare") or std.mem.eql(u8, direct_picked, "often"));
 
     try std.testing.expectError(error.EmptyInput, WeightedChoice(u8, u32).init(std.testing.allocator, &.{}, &.{}));
     try std.testing.expectError(error.LengthMismatch, WeightedChoice(u8, u32).init(std.testing.allocator, &.{1}, &.{ 1, 2 }));

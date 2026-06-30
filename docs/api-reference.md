@@ -431,12 +431,13 @@ Dynamic weighted helpers:
   `Choice.len`, `Choice.sample`, `Choice.sampleFrom`, `Choice.sampleValue`,
   `Choice.sampleValueFrom`, `Choice.fill`, `Choice.fillFrom`,
   `Choice.fillValues`, `Choice.fillValuesFrom`, `Choice.iter`,
+  `Choice.iterFrom`,
   `WeightedChoice.deinit`, `WeightedChoice.len`, `WeightedChoice.sample`,
   `WeightedChoice.sampleFrom`,
   `WeightedChoice.sampleValue`, `WeightedChoice.sampleValueFrom`,
   `WeightedChoice.fill`, `WeightedChoice.fillFrom`,
   `WeightedChoice.fillValues`, `WeightedChoice.fillValuesFrom`,
-  `WeightedChoice.iter`
+  `WeightedChoice.iter`, `WeightedChoice.iterFrom`
 - Weighted no-replacement: `sampleWeightedIndices`,
   `sampleWeightedIndicesFrom`, `sampleWeighted`, `sampleWeightedFrom`
 
