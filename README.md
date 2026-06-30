@@ -88,7 +88,10 @@ RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/ran
 
 The Rust command benchmarks against the local `rand` checkout in
 `~/Work/rand`. Latest comparison data is kept under
-`compare/results/`.
+`compare/results/`. Use `vectorbench` for focused vector-slice evidence such
+as packed bool chance/ratio, strict-interval vector float fills, vector ranges,
+and scalar-lane normal/exponential vector fills without slowing the full
+throughput suite.
 
 ## Design Notes
 
