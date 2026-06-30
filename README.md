@@ -74,6 +74,7 @@ pub fn main() !void {
 
 ```sh
 zig build test
+zig build apicheck
 zig build run-basic
 zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast distcheck
