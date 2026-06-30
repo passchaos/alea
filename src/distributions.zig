@@ -59,6 +59,15 @@ pub fn bernoulliFrom(source: anytype, p: f64) bool {
     return dist.sampleFrom(source);
 }
 
+pub fn bernoulliChecked(rng: Rng, p: f64) Error!bool {
+    return bernoulliCheckedFrom(rng, p);
+}
+
+pub fn bernoulliCheckedFrom(source: anytype, p: f64) Error!bool {
+    const dist = try Bernoulli.init(p);
+    return dist.sampleFrom(source);
+}
+
 pub fn fillBernoulli(rng: Rng, dest: []bool, p: f64) void {
     fillBernoulliFrom(rng, dest, p);
 }
@@ -4676,8 +4685,10 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sample(rng));
     try std.testing.expect(!(try Bernoulli.init(0)).sample(rng));
     try std.testing.expect((try Bernoulli.init(1.0 - std.math.floatEps(f64) / 2.0)).sample(rng));
+    try std.testing.expect(try bernoulliChecked(rng, 1.0));
     var direct_bernoulli_engine = alea.ScalarPrng.init(64);
     try std.testing.expect(bernoulliFrom(&direct_bernoulli_engine, 1.0));
+    try std.testing.expect(try bernoulliCheckedFrom(&direct_bernoulli_engine, 1.0));
     try std.testing.expect(std.math.isFinite(normalFrom(&direct_bernoulli_engine, f64, 0, 1)));
     try std.testing.expect(std.math.isFinite(try normalCheckedFrom(&direct_bernoulli_engine, f64, 0, 1)));
     try std.testing.expect(exponentialFrom(&direct_bernoulli_engine, f64, 2) >= 0);
@@ -4691,6 +4702,7 @@ test "basic distributions stay in expected ranges" {
     for (bernoulli_buf) |value| try std.testing.expect(!value);
     const bernoulli_sampler = try Bernoulli.init(0.5);
     bernoulli_sampler.fillFrom(&direct_bernoulli_engine, &bernoulli_buf);
+    try std.testing.expectError(error.InvalidProbability, bernoulliCheckedFrom(&direct_bernoulli_engine, 1.1));
     try std.testing.expect((try Binomial.init(10, 1)).sample(rng) == 10);
     var binomial_buf: [8]u64 = undefined;
     fillBinomial(rng, &binomial_buf, 10, 1);
