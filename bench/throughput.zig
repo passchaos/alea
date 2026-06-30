@@ -271,11 +271,20 @@ pub fn main(init: std.process.Init) !void {
     try benchFillFrechet(io, stdout, "alea fillFrechet", bytes / 128);
     try benchFillFrechetScalar(io, stdout, "alea fillFrechet scalar direct", bytes / 128);
     try benchSkewNormal(io, stdout, "alea skew-normal", bytes / 128);
+    try benchSkewNormalFastDirect(io, stdout, "alea skew-normal fast direct", bytes / 128);
+    try benchSkewNormalRaw(alea.FastPrng, io, stdout, "alea skew-normal raw fast direct", bytes / 128, 0x5ce9, 1);
     try benchSkewNormalScalar(io, stdout, "alea skew-normal scalar direct", bytes / 128);
+    try benchSkewNormalRaw(alea.ScalarPrng, io, stdout, "alea skew-normal raw scalar direct", bytes / 128, 0x5ce9, 1);
     try benchSkewNormalShape2(io, stdout, "alea skew-normal shape=2", bytes / 128);
+    try benchSkewNormalShape2FastDirect(io, stdout, "alea skew-normal shape=2 fast direct", bytes / 128);
+    try benchSkewNormalRaw(alea.FastPrng, io, stdout, "alea skew-normal shape=2 raw fast direct", bytes / 128, 0x5ce2, 2);
     try benchSkewNormalShape2Scalar(io, stdout, "alea skew-normal shape=2 scalar direct", bytes / 128);
+    try benchSkewNormalRaw(alea.ScalarPrng, io, stdout, "alea skew-normal shape=2 raw scalar direct", bytes / 128, 0x5ce2, 2);
     try benchFillSkewNormal(io, stdout, "alea fillSkewNormal", bytes / 128);
+    try benchFillSkewNormalFastDirect(io, stdout, "alea fillSkewNormal fast direct", bytes / 128);
     try benchFillSkewNormalScalar(io, stdout, "alea fillSkewNormal scalar direct", bytes / 128);
+    try benchFillSkewNormalShape2(io, stdout, "alea fillSkewNormal shape=2", bytes / 128);
+    try benchFillSkewNormalShape2FastDirect(io, stdout, "alea fillSkewNormal shape=2 fast direct", bytes / 128);
     try benchFillSkewNormalShape2Scalar(io, stdout, "alea fillSkewNormal shape=2 scalar direct", bytes / 128);
     try benchPert(io, stdout, "alea pert", bytes / 128);
     try benchFillPert(io, stdout, "alea fillPert", bytes / 128);
@@ -6762,6 +6771,63 @@ fn benchSkewNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchSkewNormalRaw(
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    count: usize,
+    seed: u64,
+    comptime shape: f64,
+) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += alea.distributions.skewNormalFrom(&engine, f64, 0, 1, shape);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchSkewNormalFastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const dist = alea.distributions.SkewNormal(f64).init(0, 1, 1) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5ce9);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchSkewNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
@@ -6799,6 +6865,31 @@ fn benchSkewNormalShape2(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
         var i: usize = 0;
         var checksum: f64 = 0;
         while (i < count) : (i += 1) checksum += alea.distributions.skewNormal(rng, f64, 0, 1, 2);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchSkewNormalShape2FastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const dist = alea.distributions.SkewNormal(f64).init(0, 1, 2) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5ce2);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
@@ -6868,6 +6959,36 @@ fn benchFillSkewNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillSkewNormalFastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024]f64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5ce8);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillSkewNormalFrom(&engine, f64, out[0..n], 0, 1, 1);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchFillSkewNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
@@ -6882,6 +7003,68 @@ fn benchFillSkewNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             alea.distributions.fillSkewNormalFrom(&engine, f64, out[0..n], 0, 1, 1);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillSkewNormalShape2(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024]f64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5ce2);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillSkewNormal(rng, f64, out[0..n], 0, 1, 2);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillSkewNormalShape2FastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024]f64 = undefined;
+    const dist = alea.distributions.SkewNormal(f64).init(0, 1, 2) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5ce2);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            dist.fillFrom(&engine, out[0..n]);
             for (out[0..n]) |value| checksum += value;
             remaining -= n;
         }
