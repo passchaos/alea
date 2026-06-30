@@ -100,11 +100,11 @@ Reusable samplers expose `sample(rng)`, and direct-source samplers expose
 `sampleFrom(source)` where comptime-known engine dispatch is useful. They can be
 used with `rng.sampleIter(T, sampler)` or
 `Rng.sampleIterFrom(source, T, sampler)` when the sample type is scalar. `Dirichlet`
-supports allocation-returning `sample(allocator, rng)` and allocation-free
-`sampleInto(rng, out)` / `sampleIntoFrom(source, out)` and flat
-`sampleManyInto` / `sampleManyIntoFrom` batch APIs; `Multinomial` and
-`Dirichlet` also expose checked `sampleInto*` / `sampleManyInto*` variants for
-user-supplied output buffers. Unit geometry samplers also
+and `Multinomial` support allocation-returning `sample(allocator, rng)` /
+`sampleFrom(allocator, source)` and allocation-free `sampleInto(rng, out)` /
+`sampleIntoFrom(source, out)` and flat `sampleManyInto` / `sampleManyIntoFrom`
+batch APIs; both also expose checked `sampleInto*` / `sampleManyInto*` variants
+for user-supplied output buffers. Unit geometry samplers also
 expose `fill` / `fillFrom`, and the module-level `fillUnitCircle`,
 `fillUnitDisc`, `fillUnitSphere`, and `fillUnitBall` helpers fill slices of
 fixed-size point arrays.

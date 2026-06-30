@@ -250,6 +250,7 @@ Reusable samplers:
 - `Binomial.fill`
 - `Binomial.fillFrom`
 - `Multinomial`
+- `Multinomial.sampleFrom`
 - `Multinomial.sampleInto`
 - `Multinomial.sampleIntoFrom`
 - `Multinomial.sampleIntoChecked`
@@ -455,6 +456,7 @@ Reusable samplers:
 - `UnitBall(T).fill`
 - `UnitBall(T).fillFrom`
 - `Dirichlet(T)`
+- `Dirichlet(T).sampleFrom`
 - `Dirichlet(T).sampleInto`
 - `Dirichlet(T).sampleIntoFrom`
 - `Dirichlet(T).sampleIntoChecked`

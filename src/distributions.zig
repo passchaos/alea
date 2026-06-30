@@ -330,9 +330,13 @@ pub const Multinomial = struct {
     }
 
     pub fn sample(self: Multinomial, allocator: std.mem.Allocator, rng: Rng) ![]u64 {
+        return self.sampleFrom(allocator, rng);
+    }
+
+    pub fn sampleFrom(self: Multinomial, allocator: std.mem.Allocator, source: anytype) ![]u64 {
         const out = try allocator.alloc(u64, self.probabilities.len);
         errdefer allocator.free(out);
-        self.sampleInto(rng, out);
+        self.sampleIntoFrom(source, out);
         return out;
     }
 
@@ -4507,9 +4511,13 @@ pub fn Dirichlet(comptime T: type) type {
         }
 
         pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            return self.sampleFrom(allocator, rng);
+        }
+
+        pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
             const out = try allocator.alloc(T, self.alpha.len);
             errdefer allocator.free(out);
-            self.sampleInto(rng, out);
+            self.sampleIntoFrom(source, out);
             return out;
         }
 
@@ -6643,6 +6651,12 @@ test "multinomial sampler returns category counts" {
     try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, &wrong_counts));
 
     var direct_engine = alea.ScalarPrng.init(70);
+    const direct_counts = try dist.sampleFrom(std.testing.allocator, &direct_engine);
+    defer std.testing.allocator.free(direct_counts);
+    try std.testing.expectEqual(@as(usize, 3), direct_counts.len);
+    total = 0;
+    for (direct_counts) |count| total += count;
+    try std.testing.expectEqual(@as(u64, 100), total);
     dist.sampleIntoFrom(&direct_engine, &stack_counts);
     total = 0;
     for (stack_counts) |count| total += count;
@@ -6940,6 +6954,12 @@ test "dirichlet sampler returns simplex vectors" {
     try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, &wrong_sample));
 
     var direct_engine = alea.ScalarPrng.init(68);
+    const direct_sample = try dist.sampleFrom(std.testing.allocator, &direct_engine);
+    defer std.testing.allocator.free(direct_sample);
+    try std.testing.expectEqual(@as(usize, 3), direct_sample.len);
+    stack_total = 0;
+    for (direct_sample) |value| stack_total += value;
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
     dist.sampleIntoFrom(&direct_engine, &stack_sample);
     stack_total = 0;
     for (stack_sample) |value| stack_total += value;
