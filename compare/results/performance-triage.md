@@ -212,6 +212,8 @@ Continue performance triage on the remaining focused watch items:
   gap,
 - Cauchy bulk fill now exceeds filtered local Rust evidence, while scalar
   single-sample Cauchy remains a small watch item,
+- Poisson scalar-fast direct sample/fill now exceeds filtered Rust evidence,
+  while facade/cached single-sample Poisson remains a small watch item,
 - log-normal remains a small filtered scalar/bulk boundary item, while
   inverse-Gaussian and NIG bulk fills now exceed the local Rust rows,
 - skew-normal filtered facade/fill rows now exceed local Rust evidence; keep only
