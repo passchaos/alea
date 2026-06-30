@@ -1773,6 +1773,15 @@ pub fn chiSquared(rng: Rng, comptime T: type, dof: T) T {
     return chiSquaredFrom(rng, T, dof);
 }
 
+pub fn chiSquaredChecked(rng: Rng, comptime T: type, dof: T) Error!T {
+    return chiSquaredCheckedFrom(rng, T, dof);
+}
+
+pub fn chiSquaredCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T {
+    const dist = try ChiSquared(T).init(dof);
+    return dist.sampleFrom(source);
+}
+
 pub fn chiSquaredFrom(source: anytype, comptime T: type, dof: T) T {
     comptime requireFloat(T);
     std.debug.assert(dof > 0);
@@ -1832,6 +1841,15 @@ pub fn ChiSquared(comptime T: type) type {
 
 pub fn chi(rng: Rng, comptime T: type, dof: T) T {
     return chiFrom(rng, T, dof);
+}
+
+pub fn chiChecked(rng: Rng, comptime T: type, dof: T) Error!T {
+    return chiCheckedFrom(rng, T, dof);
+}
+
+pub fn chiCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T {
+    const dist = try Chi(T).init(dof);
+    return dist.sampleFrom(source);
 }
 
 pub fn chiFrom(source: anytype, comptime T: type, dof: T) T {
@@ -5165,6 +5183,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const chi_squared_sampler = try ChiSquared(f64).init(4);
     chi_squared_sampler.fillFrom(&direct_engine, &direct_chi_squared_buf);
     for (direct_chi_squared_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expect(try chiSquaredCheckedFrom(&direct_engine, f64, 4) > 0);
+    try std.testing.expectError(error.InvalidParameter, chiSquaredCheckedFrom(&direct_engine, f64, 0));
     var chi_squared_one_buf: [8]f64 = undefined;
     fillChiSquaredFrom(&direct_engine, f64, &chi_squared_one_buf, 1);
     for (chi_squared_one_buf) |value| try std.testing.expect(value >= 0);
@@ -5182,6 +5202,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (chi_one_buf) |value| try std.testing.expect(value >= 0);
     const chi_sampler = try Chi(f64).init(4);
     chi_sampler.fillFrom(&direct_engine, &direct_chi_buf);
+    try std.testing.expect(try chiCheckedFrom(&direct_engine, f64, 4) > 0);
+    try std.testing.expectError(error.InvalidParameter, chiCheckedFrom(&direct_engine, f64, 0));
     for (direct_chi_buf) |value| try std.testing.expect(value > 0);
 
     var erlangs = rng.sampleIter(f64, try Erlang(f64).init(3, 2));

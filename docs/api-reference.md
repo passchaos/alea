@@ -143,8 +143,10 @@ Single-shot helpers:
   `fillStandardGeometricFrom`, `poissonAhrensDieter`,
   `poissonAhrensDieterFrom`
 - `gamma`, `gammaFrom`, `gammaChecked`, `gammaCheckedFrom`, `fillGamma`, `fillGammaFrom`, `chiSquared`,
-  `chiSquaredFrom`, `fillChiSquared`, `fillChiSquaredFrom`, `chi`,
-  `chiFrom`, `fillChi`, `fillChiFrom`, `erlang`, `erlangFrom`,
+  `chiSquaredFrom`, `chiSquaredChecked`, `chiSquaredCheckedFrom`,
+  `fillChiSquared`, `fillChiSquaredFrom`, `chi`,
+  `chiFrom`, `chiChecked`, `chiCheckedFrom`, `fillChi`, `fillChiFrom`,
+  `erlang`, `erlangFrom`,
   `fillErlang`, `fillErlangFrom`, `beta`, `betaFrom`, `fillBeta`,
   `fillBetaFrom`, `fisherF`, `fisherFFrom`, `fillFisherF`,
   `fillFisherFFrom`, `studentT`, `studentTFrom`, `fillStudentT`,
