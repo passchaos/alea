@@ -3707,12 +3707,10 @@ pub inline fn skewNormalFrom(source: anytype, comptime T: type, location: T, sca
     if (shape == 0) return location + scale * z1;
 
     const z2 = Rng.normalFastFrom(source, T, 0, 1);
-    const high = @max(z1, z2);
-    const low = @min(z1, z2);
     const normalized = if (shape == -1)
-        low
+        @min(z1, z2)
     else if (shape == 1)
-        high
+        @max(z1, z2)
     else blk: {
         const delta = shape / @sqrt(1 + shape * shape);
         break :blk delta * @abs(z1) + @sqrt(1 - delta * delta) * z2;
