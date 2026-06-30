@@ -19,6 +19,18 @@ pub fn main(init: std.process.Init) !void {
         default_count;
 
     try stdout.print("unit geometry probe count={}\n", .{sample_count});
+    try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
+    try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point range", 0xc11c1e, sample_count, sampleUnitCircleRange);
+    try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point current", 0xd15c, sample_count, sampleUnitDiscCurrent);
+    try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point range", 0xd15c, sample_count, sampleUnitDiscRange);
+    try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point current", 0x59e7e, sample_count, sampleUnitSphereCurrent);
+    try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point range", 0x59e7e, sample_count, sampleUnitSphereRange);
+    try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
+    try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point range", 0xc11c1e, sample_count, sampleUnitCircleRange);
+    try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit disc point current", 0xd15c, sample_count, sampleUnitDiscCurrent);
+    try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit disc point range", 0xd15c, sample_count, sampleUnitDiscRange);
+    try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point current", 0x59e7e, sample_count, sampleUnitSphereCurrent);
+    try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point range", 0x59e7e, sample_count, sampleUnitSphereRange);
     try benchFill(alea.FastPrng, io, stdout, "fast unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
     try benchFill(alea.FastPrng, io, stdout, "fast unit circle batched candidates", 0xc11c1e, sample_count, batchedUnitCircle);
     try benchFill(alea.FastPrng, io, stdout, "fast unit disc current fill", 0xd15c, sample_count, currentUnitDisc);
@@ -38,6 +50,74 @@ pub fn main(init: std.process.Init) !void {
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball batched x3", 0xba11, sample_count, batchedUnitBall3);
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball batched x4", 0xba11, sample_count, batchedUnitBall4);
     try stdout.flush();
+}
+
+fn benchSample2(
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime sampleFn: anytype,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += sampleFn(&engine)[0];
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchSample3(
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime sampleFn: anytype,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += sampleFn(&engine)[0];
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchFill(
@@ -134,6 +214,47 @@ fn currentUnitSphere(source: anytype, dest: [][3]f64) void {
 
 fn currentUnitBall(source: anytype, dest: [][3]f64) void {
     alea.distributions.fillUnitBallFrom(source, f64, dest);
+}
+
+fn sampleUnitCircleCurrent(source: anytype) [2]f64 {
+    return alea.distributions.unitCircleFrom(source, f64);
+}
+
+fn sampleUnitDiscCurrent(source: anytype) [2]f64 {
+    return alea.distributions.unitDiscFrom(source, f64);
+}
+
+fn sampleUnitSphereCurrent(source: anytype) [3]f64 {
+    return alea.distributions.unitSphereFrom(source, f64);
+}
+
+fn sampleUnitCircleRange(source: anytype) [2]f64 {
+    while (true) {
+        const x = alea.Rng.floatRangeFrom(source, f64, -1, 1);
+        const y = alea.Rng.floatRangeFrom(source, f64, -1, 1);
+        const sum = x * x + y * y;
+        if (!(sum > 0 and sum < 1)) continue;
+        return .{ (x * x - y * y) / sum, 2 * x * y / sum };
+    }
+}
+
+fn sampleUnitDiscRange(source: anytype) [2]f64 {
+    while (true) {
+        const x = alea.Rng.floatRangeFrom(source, f64, -1, 1);
+        const y = alea.Rng.floatRangeFrom(source, f64, -1, 1);
+        if (x * x + y * y <= 1) return .{ x, y };
+    }
+}
+
+fn sampleUnitSphereRange(source: anytype) [3]f64 {
+    while (true) {
+        const x = alea.Rng.floatRangeFrom(source, f64, -1, 1);
+        const y = alea.Rng.floatRangeFrom(source, f64, -1, 1);
+        const sum = x * x + y * y;
+        if (sum >= 1) continue;
+        const factor = 2 * @sqrt(1 - sum);
+        return .{ x * factor, y * factor, 1 - 2 * sum };
+    }
 }
 
 fn batchedUnitCircle(source: anytype, dest: [][2]f64) void {
