@@ -726,6 +726,12 @@ pub fn build(b: *std.Build) void {
     const distcheck_step = b.step("distcheck", "Run parameter-grid distribution checks");
     distcheck_step.dependOn(&run_distcheck.step);
 
+    const validate_step = b.step("validate", "Run unit, API, statistical, and distribution checks");
+    validate_step.dependOn(&run_tests.step);
+    validate_step.dependOn(&run_apicheck.step);
+    validate_step.dependOn(&run_statcheck.step);
+    validate_step.dependOn(&run_distcheck.step);
+
     const hypergeo_h2pe_probe_mod = b.createModule(.{
         .root_source_file = b.path("tools/hypergeo_h2pe_probe.zig"),
         .target = target,

@@ -484,6 +484,7 @@ Build steps:
 - `zig build test`
 - `zig build run-basic`
 - `zig build apicheck`
+- `zig build validate`
 - `zig build statcheck`
 - `zig build distcheck`
 - `zig build stream -- --engine <engine> --bytes <n>`
