@@ -1188,6 +1188,15 @@ pub fn fillLogNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, 
     expInPlace(T, dest);
 }
 
+pub fn fillLogNormalChecked(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
+    return fillLogNormalCheckedFrom(rng, T, dest, mean, stddev);
+}
+
+pub fn fillLogNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
+    var dist = try LogNormal(T).init(mean, stddev);
+    dist.fillFrom(source, dest);
+}
+
 pub fn LogNormal(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1245,6 +1254,15 @@ pub fn fillHalfNormalFrom(source: anytype, comptime T: type, dest: []T, scale: T
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and std.math.isFinite(scale));
     for (dest) |*item| item.* = halfNormalFrom(source, T, scale);
+}
+
+pub fn fillHalfNormalChecked(rng: Rng, comptime T: type, dest: []T, scale: T) Error!void {
+    return fillHalfNormalCheckedFrom(rng, T, dest, scale);
+}
+
+pub fn fillHalfNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T) Error!void {
+    const dist = try HalfNormal(T).init(scale);
+    dist.fillFrom(source, dest);
 }
 
 pub fn HalfNormal(comptime T: type) type {
@@ -1775,6 +1793,15 @@ pub fn fillGammaFrom(source: anytype, comptime T: type, dest: []T, shape: T, sca
     sampler.fillFrom(source, dest);
 }
 
+pub fn fillGammaChecked(rng: Rng, comptime T: type, dest: []T, shape: T, scale: T) Error!void {
+    return fillGammaCheckedFrom(rng, T, dest, shape, scale);
+}
+
+pub fn fillGammaCheckedFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) Error!void {
+    const sampler = try Gamma(T).init(shape, scale);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Gamma(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1895,6 +1922,15 @@ pub fn fillChiSquaredFrom(source: anytype, comptime T: type, dest: []T, dof: T) 
     sampler.fillFrom(source, dest);
 }
 
+pub fn fillChiSquaredChecked(rng: Rng, comptime T: type, dest: []T, dof: T) Error!void {
+    return fillChiSquaredCheckedFrom(rng, T, dest, dof);
+}
+
+pub fn fillChiSquaredCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T) Error!void {
+    const sampler = try ChiSquared(T).init(dof);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn ChiSquared(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1963,6 +1999,15 @@ pub fn fillChiFrom(source: anytype, comptime T: type, dest: []T, dof: T) void {
     sampler.fillFrom(source, dest);
 }
 
+pub fn fillChiChecked(rng: Rng, comptime T: type, dest: []T, dof: T) Error!void {
+    return fillChiCheckedFrom(rng, T, dest, dof);
+}
+
+pub fn fillChiCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T) Error!void {
+    const sampler = try Chi(T).init(dof);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Chi(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -2016,6 +2061,15 @@ pub fn fillErlang(rng: Rng, comptime T: type, dest: []T, shape: u64, scale: T) v
 
 pub fn fillErlangFrom(source: anytype, comptime T: type, dest: []T, shape: u64, scale: T) void {
     const sampler = Erlang(T).init(shape, scale) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillErlangChecked(rng: Rng, comptime T: type, dest: []T, shape: u64, scale: T) Error!void {
+    return fillErlangCheckedFrom(rng, T, dest, shape, scale);
+}
+
+pub fn fillErlangCheckedFrom(source: anytype, comptime T: type, dest: []T, shape: u64, scale: T) Error!void {
+    const sampler = try Erlang(T).init(shape, scale);
     sampler.fillFrom(source, dest);
 }
 
@@ -2106,6 +2160,15 @@ pub fn fillBetaFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta
     }
 
     const sampler = Beta(T).init(alpha, beta_param) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillBetaChecked(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
+    return fillBetaCheckedFrom(rng, T, dest, alpha, beta_param);
+}
+
+pub fn fillBetaCheckedFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
+    const sampler = try Beta(T).init(alpha, beta_param);
     sampler.fillFrom(source, dest);
 }
 
@@ -2215,6 +2278,15 @@ pub fn fillFisherFFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: 
     sampler.fillFrom(source, dest);
 }
 
+pub fn fillFisherFChecked(rng: Rng, comptime T: type, dest: []T, d1: T, d2: T) Error!void {
+    return fillFisherFCheckedFrom(rng, T, dest, d1, d2);
+}
+
+pub fn fillFisherFCheckedFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: T) Error!void {
+    const sampler = try FisherF(T).init(d1, d2);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn FisherF(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -2279,6 +2351,15 @@ pub fn fillStudentT(rng: Rng, comptime T: type, dest: []T, dof: T) void {
 
 pub fn fillStudentTFrom(source: anytype, comptime T: type, dest: []T, dof: T) void {
     const sampler = StudentT(T).init(dof) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillStudentTChecked(rng: Rng, comptime T: type, dest: []T, dof: T) Error!void {
+    return fillStudentTCheckedFrom(rng, T, dest, dof);
+}
+
+pub fn fillStudentTCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T) Error!void {
+    const sampler = try StudentT(T).init(dof);
     sampler.fillFrom(source, dest);
 }
 
@@ -5405,6 +5486,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_log_normal_buf: [8]f64 = undefined;
     fillLogNormalFrom(&direct_engine, f64, &direct_log_normal_buf, 0, 0.25);
     for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
+    try fillLogNormalChecked(rng, f64, &log_normal_buf, 0, 0.25);
+    for (log_normal_buf) |value| try std.testing.expect(value > 0);
+    try fillLogNormalCheckedFrom(&direct_engine, f64, &direct_log_normal_buf, 0, 0.25);
+    for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expectError(error.InvalidParameter, fillLogNormalCheckedFrom(&direct_engine, f64, &direct_log_normal_buf, 0, -1));
     var log_normal_sampler = try LogNormal(f64).init(0, 0.25);
     log_normal_sampler.fillFrom(&direct_engine, &direct_log_normal_buf);
     for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
@@ -5419,6 +5505,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_half_normal_buf: [8]f64 = undefined;
     fillHalfNormalFrom(&direct_engine, f64, &direct_half_normal_buf, 2);
     for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
+    try fillHalfNormalChecked(rng, f64, &half_normal_buf, 2);
+    for (half_normal_buf) |value| try std.testing.expect(value >= 0);
+    try fillHalfNormalCheckedFrom(&direct_engine, f64, &direct_half_normal_buf, 2);
+    for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expectError(error.InvalidParameter, fillHalfNormalCheckedFrom(&direct_engine, f64, &direct_half_normal_buf, 0));
     const half_normal_sampler = try HalfNormal(f64).init(2);
     half_normal_sampler.fillFrom(&direct_engine, &direct_half_normal_buf);
     for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
@@ -5494,6 +5585,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_gamma_buf: [8]f64 = undefined;
     fillGammaFrom(&direct_engine, f64, &direct_gamma_buf, 2, 3);
     for (direct_gamma_buf) |value| try std.testing.expect(value > 0);
+    try fillGammaChecked(rng, f64, &gamma_buf, 2, 3);
+    for (gamma_buf) |value| try std.testing.expect(value > 0);
+    try fillGammaCheckedFrom(&direct_engine, f64, &direct_gamma_buf, 2, 3);
+    for (direct_gamma_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expectError(error.InvalidParameter, fillGammaCheckedFrom(&direct_engine, f64, &direct_gamma_buf, 0, 3));
     const gamma_sampler = try Gamma(f64).init(2, 3);
     gamma_sampler.fillFrom(&direct_engine, &direct_gamma_buf);
     for (direct_gamma_buf) |value| try std.testing.expect(value > 0);
@@ -5518,6 +5614,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_chi_squared_buf: [8]f64 = undefined;
     fillChiSquaredFrom(&direct_engine, f64, &direct_chi_squared_buf, 4);
     for (direct_chi_squared_buf) |value| try std.testing.expect(value > 0);
+    try fillChiSquaredChecked(rng, f64, &chi_squared_buf, 4);
+    for (chi_squared_buf) |value| try std.testing.expect(value > 0);
+    try fillChiSquaredCheckedFrom(&direct_engine, f64, &direct_chi_squared_buf, 4);
+    for (direct_chi_squared_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expectError(error.InvalidParameter, fillChiSquaredCheckedFrom(&direct_engine, f64, &direct_chi_squared_buf, 0));
     const chi_squared_sampler = try ChiSquared(f64).init(4);
     chi_squared_sampler.fillFrom(&direct_engine, &direct_chi_squared_buf);
     for (direct_chi_squared_buf) |value| try std.testing.expect(value > 0);
@@ -5535,6 +5636,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_chi_buf: [8]f64 = undefined;
     fillChiFrom(&direct_engine, f64, &direct_chi_buf, 4);
     for (direct_chi_buf) |value| try std.testing.expect(value > 0);
+    try fillChiChecked(rng, f64, &chi_buf, 4);
+    for (chi_buf) |value| try std.testing.expect(value > 0);
+    try fillChiCheckedFrom(&direct_engine, f64, &direct_chi_buf, 4);
+    for (direct_chi_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expectError(error.InvalidParameter, fillChiCheckedFrom(&direct_engine, f64, &direct_chi_buf, 0));
     var chi_one_buf: [8]f64 = undefined;
     fillChiFrom(&direct_engine, f64, &chi_one_buf, 1);
     for (chi_one_buf) |value| try std.testing.expect(value >= 0);
@@ -5554,6 +5660,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_erlang_buf: [8]f64 = undefined;
     fillErlangFrom(&direct_engine, f64, &direct_erlang_buf, 3, 2);
     for (direct_erlang_buf) |value| try std.testing.expect(value > 0);
+    try fillErlangChecked(rng, f64, &erlang_buf, 3, 2);
+    for (erlang_buf) |value| try std.testing.expect(value > 0);
+    try fillErlangCheckedFrom(&direct_engine, f64, &direct_erlang_buf, 3, 2);
+    for (direct_erlang_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expectError(error.InvalidParameter, fillErlangCheckedFrom(&direct_engine, f64, &direct_erlang_buf, 0, 2));
     const erlang_sampler = try Erlang(f64).init(3, 2);
     erlang_sampler.fillFrom(&direct_engine, &direct_erlang_buf);
     for (direct_erlang_buf) |value| try std.testing.expect(value > 0);
@@ -5572,6 +5683,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_beta_buf: [8]f64 = undefined;
     fillBetaFrom(&direct_engine, f64, &direct_beta_buf, 2, 5);
     for (direct_beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    try fillBetaChecked(rng, f64, &beta_buf, 2, 5);
+    for (beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    try fillBetaCheckedFrom(&direct_engine, f64, &direct_beta_buf, 2, 5);
+    for (direct_beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    try std.testing.expectError(error.InvalidParameter, fillBetaCheckedFrom(&direct_engine, f64, &direct_beta_buf, 1, 0));
     const beta_sampler = try Beta(f64).init(2, 5);
     beta_sampler.fillFrom(&direct_engine, &direct_beta_buf);
     for (direct_beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
@@ -5594,6 +5710,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_fisher_buf: [8]f64 = undefined;
     fillFisherFFrom(&direct_engine, f64, &direct_fisher_buf, 5, 20);
     for (direct_fisher_buf) |value| try std.testing.expect(value > 0);
+    try fillFisherFChecked(rng, f64, &fisher_buf, 5, 20);
+    for (fisher_buf) |value| try std.testing.expect(value > 0);
+    try fillFisherFCheckedFrom(&direct_engine, f64, &direct_fisher_buf, 5, 20);
+    for (direct_fisher_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expectError(error.InvalidParameter, fillFisherFCheckedFrom(&direct_engine, f64, &direct_fisher_buf, 0, 20));
     const fisher_sampler = try FisherF(f64).init(5, 20);
     fisher_sampler.fillFrom(&direct_engine, &direct_fisher_buf);
     for (direct_fisher_buf) |value| try std.testing.expect(value > 0);
@@ -5611,6 +5732,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_student_buf: [8]f64 = undefined;
     fillStudentTFrom(&direct_engine, f64, &direct_student_buf, 10);
     for (direct_student_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillStudentTChecked(rng, f64, &student_buf, 10);
+    for (student_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillStudentTCheckedFrom(&direct_engine, f64, &direct_student_buf, 10);
+    for (direct_student_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expectError(error.InvalidParameter, fillStudentTCheckedFrom(&direct_engine, f64, &direct_student_buf, 0));
     const student_sampler = try StudentT(f64).init(10);
     student_sampler.fillFrom(&direct_engine, &direct_student_buf);
     for (direct_student_buf) |value| try std.testing.expect(std.math.isFinite(value));

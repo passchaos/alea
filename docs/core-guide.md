@@ -66,8 +66,9 @@ probability vectors, and parameterized normal/exponential vectors/fills when
 the engine type is comptime-known.
 Distribution-level bulk fills that cache a reusable sampler also keep
 assert-fast `fill*` helpers and add checked `fill*Checked` /
-`fill*CheckedFrom` variants for common discrete families such as Bernoulli,
-binomial, negative-binomial, hypergeometric, Poisson, and geometric sampling.
+`fill*CheckedFrom` variants for common discrete families and core
+continuous/derived families such as log-normal, half-normal, gamma,
+chi-squared, chi, Erlang, beta, Fisher F, and Student t.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar
