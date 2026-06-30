@@ -2691,7 +2691,8 @@ pub fn cauchyFrom(source: anytype, comptime T: type, median: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0);
     const u = Rng.floatOpenFrom(source, T);
-    return median + scale * @tan(@as(T, @floatCast(std.math.pi)) * (u - 0.5));
+    const angle = @mulAdd(T, @as(T, @floatCast(std.math.pi)), u, -@as(T, @floatCast(std.math.pi / 2.0)));
+    return median + scale * @tan(angle);
 }
 
 pub fn fillCauchy(rng: Rng, comptime T: type, dest: []T, median: T, scale: T) void {
