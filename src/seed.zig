@@ -60,3 +60,26 @@ test "seed from strings and streams is reproducible" {
     try std.testing.expectEqual(base.stream(3).state, base.stream(3).state);
     try std.testing.expect(base.stream(3).state != base.stream(4).state);
 }
+
+test "seed derivation and byte output have stable snapshots" {
+    const base = Seed.fromString("experiment-a");
+    try std.testing.expectEqual(@as(u64, 0x64bab27be76df0c1), base.state);
+    try std.testing.expectEqual(base.state, Seed.fromBytes("experiment-a").state);
+    try std.testing.expectEqual(@as(u64, 0x172c0c1763e19935), base.mix("fold-1").state);
+    try std.testing.expectEqual(@as(u64, 0x4fa7b3f2a955e9bd), base.stream(3).state);
+
+    var sequence = base;
+    try std.testing.expectEqual(@as(u64, 0x7a14e9e97a98bab8), sequence.next());
+    try std.testing.expectEqual(@as(u64, 0x9519e353f5722873), sequence.next());
+    try std.testing.expectEqual(@as(u64, 0xa129a5eee602e8eb), sequence.state);
+
+    var bytes_seed = base;
+    var out: [20]u8 = undefined;
+    bytes_seed.bytes(&out);
+    try std.testing.expectEqualSlices(u8, &.{
+        0xb8, 0xba, 0x98, 0x7a, 0xe9, 0xe9, 0x14, 0x7a,
+        0x73, 0x28, 0x72, 0xf5, 0x53, 0xe3, 0x19, 0x95,
+        0x3d, 0x9d, 0xdf, 0x3d,
+    }, &out);
+    try std.testing.expectEqual(@as(u64, 0x3f611fa8654d6500), bytes_seed.state);
+}
