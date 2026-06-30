@@ -172,13 +172,15 @@ Run:
 
 ```sh
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
+zig build -Doptimize=ReleaseFast -Dcpu=native bench -- "standard-normal"
 zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench
 zig build -Doptimize=ReleaseFast -Dcpu=native ziggurat-probe
 RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/rand_bench/Cargo.toml
 ```
 
 The benchmark intentionally separates facade/type-erased paths from direct
-static engine paths. `alea.Rng` has function-pointer dispatch comparable to
+static engine paths. `bench -- [bytes] [filter]` optionally overrides the byte
+count and filters row names by substring for focused full-harness reruns. `alea.Rng` has function-pointer dispatch comparable to
 `std.Random`; direct helpers are closer to Rust's monomorphized `SmallRng`
 benchmark shape.
 
