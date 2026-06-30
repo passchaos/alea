@@ -99,7 +99,9 @@ exposes `random()` for standard-library consumers, and `Rng.random()` returns a
 
 `DefaultPrng` is `Xoshiro256`, `FastPrng` is `Alea4x64`, `ScalarPrng` and
 `HashPrng` are `Wyhash64`, `ReproduciblePrng` is `Pcg64`, and `SecurePrng` is
-`ChaCha12`.
+`ChaCha12`. Root helpers such as `default`, `fast`, `scalar`, `hash`,
+`reproducible`, and their secure-seeded variants initialize the matching
+aliases without spelling out the concrete engine type.
 
 See `docs/core-guide.md` for the core API guide, `docs/api-reference.md` for
 the public API reference, and
