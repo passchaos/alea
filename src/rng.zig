@@ -2571,6 +2571,34 @@ test "checked weighted sampling preserves valid-parameter stream shape" {
     }
 }
 
+test "collection helpers preserve direct stream shape" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c011);
+        var direct_engine = Engine.init(0x5150_c011);
+        const rng = Rng.init(&facade_engine);
+
+        try std.testing.expectEqual(rng.choose(u8, &items), Rng.chooseFrom(&direct_engine, u8, &items));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_items = items;
+        var direct_items = items;
+        const facade_ptr = rng.choosePtr(u8, &facade_items).?;
+        const direct_ptr = Rng.choosePtrFrom(&direct_engine, u8, &direct_items).?;
+        try std.testing.expectEqual(facade_ptr.*, direct_ptr.*);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_shuffle = items;
+        var direct_shuffle = items;
+        rng.shuffle(u8, &facade_shuffle);
+        Rng.shuffleFrom(&direct_engine, u8, &direct_shuffle);
+        try std.testing.expectEqualSlices(u8, &facade_shuffle, &direct_shuffle);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
+
 test "value and sampler iterators produce unbounded samples" {
     const alea = @import("root.zig");
     var engine = alea.Xoshiro256.init(123);

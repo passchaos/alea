@@ -878,6 +878,39 @@ test "partial shuffle and reservoir sample respect counts" {
     try std.testing.expectEqual(@as(usize, 3), direct_multiple.len);
 }
 
+test "collection sequence helpers preserve direct stream shape" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c012);
+        var direct_engine = Engine.init(0x5150_c012);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_values = items;
+        var direct_values = items;
+        const facade_head = partialShuffle(rng, u8, &facade_values, 3);
+        const direct_head = partialShuffleFrom(&direct_engine, u8, &direct_values, 3);
+        try std.testing.expectEqualSlices(u8, facade_head, direct_head);
+        try std.testing.expectEqualSlices(u8, &facade_values, &direct_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const sampled = try reservoirSample(std.testing.allocator, rng, u8, &items, 4);
+        defer std.testing.allocator.free(sampled);
+        const direct_sampled = try reservoirSampleFrom(std.testing.allocator, &direct_engine, u8, &items, 4);
+        defer std.testing.allocator.free(direct_sampled);
+        try std.testing.expectEqualSlices(u8, sampled, direct_sampled);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const multiple = try chooseMultiple(std.testing.allocator, rng, u8, &items, 3);
+        defer std.testing.allocator.free(multiple);
+        const direct_multiple = try chooseMultipleFrom(std.testing.allocator, &direct_engine, u8, &items, 3);
+        defer std.testing.allocator.free(direct_multiple);
+        try std.testing.expectEqualSlices(u8, multiple, direct_multiple);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
+
 test "choice sampler repeatedly samples slice references" {
     const alea = @import("root.zig");
     var engine = alea.DefaultPrng.init(445);
