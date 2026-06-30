@@ -55,7 +55,7 @@ platform and longer-run requirements.
 | S2-M3 | Parameter-grid distribution validation | For each public distribution family, add deterministic mean/variance or support checks across multiple parameter regimes, not just one representative case. | Closed: `zig build distcheck` covers scalar, discrete, continuous, bounded-support, and vector distribution families across multiple parameter regimes |
 | S2-M4 | Benchmark parity matrix | Add Rust-side benchmark rows for comparable distribution and sequence workloads where `rand`/`rand_distr` exposes matching functionality, and keep Zig/Rust native CPU flags aligned. | Closed: Rust rows cover default-`rand` bytes/range/float/open-float/sequence/bool/string/weighted-index plus `rand_distr` normal, exponential, poisson, binomial, gamma, and beta |
 | S2-M5 | Cross-platform reproducibility | Validate and document stable outputs on at least two architectures or OS targets, or document why the current environment cannot provide this evidence. | Closed for local environment: x86_64 Linux snapshot exists and second architecture/OS blocker is documented in `compare/results/cross-platform-repro-blocker.md` |
-| S2-M6 | API reference completeness | Add public API reference docs or generated documentation covering all exported modules and examples. | Closed: `docs/api-reference.md` lists the public API surface and tooling |
+| S2-M6 | API reference completeness | Add public API reference docs or generated documentation covering all exported modules and examples. | Closed: `docs/api-reference.md` lists the public API surface and tooling, and `zig build apicheck` now gates public symbol coverage for exported modules and engines |
 
 ## Stage 3 Required Milestones
 
