@@ -103,7 +103,9 @@ Use:
 - `rng.shuffle`, `Rng.shuffleFrom`
 - `seq.partialShuffle`, `seq.partialShuffleFrom`
 - `seq.reservoirSample`, `seq.reservoirSampleFrom`
-- `seq.sampleIndices`, `seq.sampleIndexVec`, `seq.sampleIndicesU32`
+- `seq.sampleIndices`, `seq.sampleIndicesCheckedFrom`, `seq.sampleIndexVec`,
+  `seq.sampleIndexVecCheckedFrom`, `seq.sampleIndicesU32`,
+  `seq.sampleIndicesU32CheckedFrom`
 - `seq.sampleArray`, `seq.sampleArrayFrom`
 - `seq.chooseMultiple`, `seq.chooseMultipleFrom`
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`, `seq.sampleIterator`,

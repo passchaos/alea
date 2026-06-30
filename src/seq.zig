@@ -33,8 +33,12 @@ pub const Error = error{
 };
 
 pub fn sampleIndexVec(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) !IndexVec {
+    return sampleIndexVecCheckedFrom(allocator, rng, length, amount);
+}
+
+pub fn sampleIndexVecCheckedFrom(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) !IndexVec {
     if (amount > length) return error.InvalidParameter;
-    return sampleIndexVecFrom(allocator, rng, length, amount);
+    return sampleIndexVecFrom(allocator, source, length, amount);
 }
 
 pub fn sampleIndexVecFrom(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) !IndexVec {
@@ -46,8 +50,12 @@ pub fn sampleIndexVecFrom(allocator: std.mem.Allocator, source: anytype, length:
 }
 
 pub fn sampleIndices(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) ![]usize {
+    return sampleIndicesCheckedFrom(allocator, rng, length, amount);
+}
+
+pub fn sampleIndicesCheckedFrom(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
     if (amount > length) return error.InvalidParameter;
-    return sampleIndicesFrom(allocator, rng, length, amount);
+    return sampleIndicesFrom(allocator, source, length, amount);
 }
 
 pub fn sampleIndicesFrom(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
@@ -66,8 +74,12 @@ pub fn sampleIndicesFrom(allocator: std.mem.Allocator, source: anytype, length: 
 }
 
 pub fn sampleIndicesU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]u32 {
+    return sampleIndicesU32CheckedFrom(allocator, rng, length, amount);
+}
+
+pub fn sampleIndicesU32CheckedFrom(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]u32 {
     if (amount > length) return error.InvalidParameter;
-    return sampleIndicesU32From(allocator, rng, length, amount);
+    return sampleIndicesU32From(allocator, source, length, amount);
 }
 
 pub fn sampleIndicesU32From(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]u32 {
@@ -771,6 +783,19 @@ test "sample indices are distinct and bounded" {
     }
 
     try std.testing.expectError(error.InvalidParameter, sampleIndices(std.testing.allocator, rng, 3, 4));
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesCheckedFrom(std.testing.allocator, &engine, 3, 4));
+
+    const direct_checked_indices = try sampleIndicesCheckedFrom(std.testing.allocator, &engine, 1_000, 16);
+    defer std.testing.allocator.free(direct_checked_indices);
+    try std.testing.expectEqual(@as(usize, 16), direct_checked_indices.len);
+
+    const direct_checked_u32 = try sampleIndicesU32CheckedFrom(std.testing.allocator, &engine, 1_000, 16);
+    defer std.testing.allocator.free(direct_checked_u32);
+    try std.testing.expectEqual(@as(usize, 16), direct_checked_u32.len);
+
+    const direct_checked_vec = try sampleIndexVecCheckedFrom(std.testing.allocator, &engine, 1_000, 16);
+    defer direct_checked_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 16), direct_checked_vec.len());
 
     const direct_fixed = sampleArrayFrom(&engine, 4, 32).?;
     for (direct_fixed) |index| try std.testing.expect(index < 32);

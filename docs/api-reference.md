@@ -427,7 +427,8 @@ Dynamic weighted helpers:
 - Error type: `Error`
 - Index vectors: `IndexVec.len`, `IndexVec.at`, `IndexVec.deinit`
 - Indices: `sampleIndexVec`, `sampleIndexVecFrom`, `sampleIndices`,
-  `sampleIndicesFrom`, `sampleIndicesU32`, `sampleIndicesU32From`,
+  `sampleIndexVecCheckedFrom`, `sampleIndicesFrom`, `sampleIndicesCheckedFrom`,
+  `sampleIndicesU32`, `sampleIndicesU32From`, `sampleIndicesU32CheckedFrom`,
   `sampleArray`, `sampleArrayFrom`
 - Collections: `chooseMultiple`, `chooseMultipleFrom`, `partialShuffle`,
   `partialShuffleFrom`, `reservoirSample`, `reservoirSampleFrom`
