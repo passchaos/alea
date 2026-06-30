@@ -222,9 +222,6 @@ Continue performance triage on the remaining focused watch items:
 - log-normal raw direct rows confirm reusable wrappers are not the scalar
   bottleneck; it remains a small filtered scalar/bulk boundary item, while
   inverse-Gaussian and NIG bulk fills now exceed the local Rust rows,
-- skew-normal focused scalar and fill rows now exceed current filtered Rust
-  evidence after wrapper inline, generic min/max, delta precompute, and
-  shape-branch hoist fixes,
 - unit geometry bulk signed-unit generation now uses optimized Rng/Alea4x64
   range fill and narrows FastPrng surface/disc/sphere gaps; point samplers and
   FastPrng circle/sphere remain engine/algorithm watch items,
