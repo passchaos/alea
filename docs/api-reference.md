@@ -52,7 +52,8 @@ expectations.
   `vectorStandardExponential`, `vectorExponential`, `vectorExponentialChecked`,
   `vectorFrom`, `vectorOpenFrom`, `vectorOpenClosedFrom`,
   `vectorRangeFrom`, `vectorChanceFrom`, `vectorRatioFrom`,
-  `vectorStandardNormalFrom`, `vectorStandardExponentialFrom`
+  `vectorStandardNormalFrom`, `vectorNormalCheckedFrom`,
+  `vectorStandardExponentialFrom`, `vectorExponentialCheckedFrom`
 - Unicode: `unicodeScalar`
 - Distributions: `normal`, `exponential`, `standardNormalFastFrom`,
   `standardExponentialFastFrom`, `normalFastFrom`, `exponentialFastFrom`
