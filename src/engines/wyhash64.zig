@@ -66,3 +66,14 @@ test "wyhash64 deterministic sequence" {
         try std.testing.expect(value_a != value_c);
     }
 }
+
+test "wyhash64 fill has stable byte snapshot" {
+    var rng = Wyhash64.init(0x1234_5678_9abc_def0);
+    var buf: [24]u8 = undefined;
+    rng.fill(&buf);
+    try std.testing.expectEqualSlices(u8, &.{
+        0x5b, 0xbd, 0x36, 0xab, 0x9c, 0xea, 0xe3, 0x23,
+        0x78, 0x52, 0x12, 0xa3, 0x3c, 0xa3, 0x9d, 0x63,
+        0xd8, 0x32, 0xda, 0xee, 0x77, 0x79, 0x30, 0x88,
+    }, &buf);
+}

@@ -74,3 +74,14 @@ test "pcg64 initTwo has stable snapshots" {
     try std.testing.expectEqual(@as(u64, 0xf0d8729930c00555), stream.next());
     try std.testing.expectEqual(@as(u64, 0xb70772f9f2173593), stream.next());
 }
+
+test "pcg64 fill has stable byte snapshot" {
+    var rng = Pcg64.init(0x1234_5678_9abc_def0);
+    var buf: [24]u8 = undefined;
+    rng.fill(&buf);
+    try std.testing.expectEqualSlices(u8, &.{
+        0x29, 0xef, 0x56, 0x72, 0x7e, 0x96, 0x9c, 0x99,
+        0xfa, 0x18, 0x49, 0xd5, 0x89, 0xd3, 0x5d, 0x67,
+        0xe1, 0x65, 0x93, 0x76, 0xfd, 0x80, 0xbb, 0xac,
+    }, &buf);
+}

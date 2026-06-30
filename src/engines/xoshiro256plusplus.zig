@@ -97,3 +97,14 @@ test "xoshiro256++ jump has stable snapshots" {
     try std.testing.expectEqual(@as(u64, 0xcbf20e55c1eca77c), jumped.next());
     try std.testing.expectEqual(@as(u64, 0x65b235c8b9458037), jumped.next());
 }
+
+test "xoshiro256++ fill has stable byte snapshot" {
+    var rng = Xoshiro256PlusPlus.init(0x1234_5678_9abc_def0);
+    var buf: [24]u8 = undefined;
+    rng.fill(&buf);
+    try std.testing.expectEqualSlices(u8, &.{
+        0xd6, 0x21, 0xbc, 0x83, 0xf8, 0x9f, 0x8b, 0x13,
+        0x80, 0x7c, 0x21, 0xfc, 0x00, 0xd0, 0xe9, 0x4f,
+        0xc0, 0x03, 0x9c, 0xab, 0x5c, 0x58, 0x75, 0x33,
+    }, &buf);
+}

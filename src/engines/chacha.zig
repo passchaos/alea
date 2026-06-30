@@ -84,3 +84,14 @@ test "chacha deterministic bytes" {
     b.fill(&buf_b);
     try std.testing.expectEqualSlices(u8, &buf_a, &buf_b);
 }
+
+test "chacha fill has stable byte snapshot" {
+    var rng = ChaCha.initFromU64(0x1234_5678_9abc_def0);
+    var buf: [24]u8 = undefined;
+    rng.fill(&buf);
+    try std.testing.expectEqualSlices(u8, &.{
+        0xf1, 0x1c, 0xd9, 0x81, 0xce, 0x73, 0x82, 0x95,
+        0x01, 0x5f, 0xc5, 0x4d, 0x2d, 0x43, 0x88, 0xe8,
+        0x3b, 0xec, 0x27, 0x9d, 0xb0, 0xb7, 0xba, 0xe0,
+    }, &buf);
+}

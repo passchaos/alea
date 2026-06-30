@@ -66,3 +66,14 @@ test "alea4x64 deterministic" {
     b.fill(&buf_b);
     try std.testing.expectEqualSlices(u8, &buf_a, &buf_b);
 }
+
+test "alea4x64 fill has stable byte snapshot" {
+    var rng = Alea4x64.init(0x1234_5678_9abc_def0);
+    var buf: [24]u8 = undefined;
+    rng.fill(&buf);
+    try std.testing.expectEqualSlices(u8, &.{
+        0x30, 0x9f, 0x7a, 0x9a, 0x5e, 0xbd, 0xfc, 0x99,
+        0x44, 0x32, 0x1e, 0x91, 0x5a, 0x05, 0xe4, 0xdb,
+        0xe9, 0x31, 0x6c, 0xab, 0x40, 0x5b, 0xfa, 0x08,
+    }, &buf);
+}
