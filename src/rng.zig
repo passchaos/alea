@@ -1271,6 +1271,16 @@ pub fn normal(self: Rng, comptime T: type, mean: T, stddev: T) T {
     return normalFastFrom(self, T, mean, stddev);
 }
 
+pub fn normalChecked(self: Rng, comptime T: type, mean: T, stddev: T) Error!T {
+    return normalCheckedFrom(self, T, mean, stddev);
+}
+
+pub fn normalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: T) Error!T {
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    return normalFastFrom(source, T, mean, stddev);
+}
+
 pub inline fn standardNormalFastFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
@@ -1288,6 +1298,16 @@ pub inline fn normalFastFrom(source: anytype, comptime T: type, mean: T, stddev:
 
 pub fn exponential(self: Rng, comptime T: type, rate: T) T {
     return exponentialFastFrom(self, T, rate);
+}
+
+pub fn exponentialChecked(self: Rng, comptime T: type, rate: T) Error!T {
+    return exponentialCheckedFrom(self, T, rate);
+}
+
+pub fn exponentialCheckedFrom(source: anytype, comptime T: type, rate: T) Error!T {
+    comptime requireFloat(T);
+    if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+    return exponentialFastFrom(source, T, rate);
 }
 
 pub inline fn standardExponentialFastFrom(source: anytype, comptime T: type) T {
@@ -2298,6 +2318,10 @@ test "rng facade covers scalar APIs" {
 
     const fast_normal = Rng.normalFastFrom(&engine, f64, 0, 1);
     try std.testing.expect(std.math.isFinite(fast_normal));
+    const checked_normal = try rng.normalChecked(f64, 0, 1);
+    try std.testing.expect(std.math.isFinite(checked_normal));
+    const direct_checked_normal = try Rng.normalCheckedFrom(&engine, f64, 0, 1);
+    try std.testing.expect(std.math.isFinite(direct_checked_normal));
 
     const TailSource = struct {
         index: usize = 0,
@@ -2349,6 +2373,11 @@ test "rng facade covers scalar APIs" {
     const exponentials = rng.vectorExponential(@Vector(4, f64), 2);
     inline for (0..4) |i| try std.testing.expect(exponentials[i] >= 0);
 
+    const checked_exponential = try rng.exponentialChecked(f64, 2);
+    try std.testing.expect(checked_exponential >= 0);
+    const direct_checked_exponential = try Rng.exponentialCheckedFrom(&engine, f64, 2);
+    try std.testing.expect(direct_checked_exponential >= 0);
+
     const checked_exponentials = try rng.vectorExponentialChecked(@Vector(4, f64), 2);
     inline for (0..4) |i| try std.testing.expect(checked_exponentials[i] >= 0);
 
@@ -2394,6 +2423,10 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.InvalidParameter, rng.fillExponentialChecked(f64, &exp_buf, 0));
     try std.testing.expectError(error.InvalidParameter, Rng.fillNormalCheckedFrom(&engine, f64, &normal_buf, 0, -1));
     try std.testing.expectError(error.InvalidParameter, Rng.fillExponentialCheckedFrom(&engine, f64, &exp_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, rng.normalChecked(f64, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, Rng.normalCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, rng.exponentialChecked(f64, 0));
+    try std.testing.expectError(error.InvalidParameter, Rng.exponentialCheckedFrom(&engine, f64, std.math.inf(f64)));
 }
 
 test "shuffle and sampling keep item set" {
