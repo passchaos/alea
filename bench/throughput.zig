@@ -287,10 +287,12 @@ pub fn main(init: std.process.Init) !void {
     try benchFillUnitSphere(io, stdout, "alea fillUnitSphere scalar direct", bytes / 128);
     try benchFillUnitBall(io, stdout, "alea fillUnitBall scalar direct", bytes / 128);
     try benchInverseGaussian(io, stdout, "alea inverse-gaussian", bytes / 128);
+    try benchInverseGaussianFastDirect(io, stdout, "alea inverse-gaussian fast direct", bytes / 128);
     try benchFillInverseGaussian(io, stdout, "alea fillInverseGaussian", bytes / 128);
     try benchFillInverseGaussianScalar(io, stdout, "alea fillInverseGaussian scalar direct", bytes / 128);
     try benchInverseGaussianCached(io, stdout, "alea inverse-gaussian cached", bytes / 128);
     try benchNormalInverseGaussian(io, stdout, "alea normal-inverse-gaussian", bytes / 128);
+    try benchNormalInverseGaussianFastDirect(io, stdout, "alea normal-inverse-gaussian fast direct", bytes / 128);
     try benchFillNormalInverseGaussian(io, stdout, "alea fillNormalInverseGaussian", bytes / 128);
     try benchFillNormalInverseGaussianScalar(io, stdout, "alea fillNormalInverseGaussian scalar direct", bytes / 128);
     try benchNormalInverseGaussianCached(io, stdout, "alea normal-inverse-gaussian cached", bytes / 128);
@@ -7202,6 +7204,30 @@ fn benchInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchInverseGaussianFastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x164a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += alea.distributions.inverseGaussianFrom(&engine, f64, 1, 2);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchFillInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
@@ -7300,6 +7326,30 @@ fn benchNormalInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []const 
         var i: usize = 0;
         var checksum: f64 = 0;
         while (i < count) : (i += 1) checksum += alea.distributions.normalInverseGaussian(rng, f64, 2, 1);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchNormalInverseGaussianFastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x916a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += alea.distributions.normalInverseGaussianFrom(&engine, f64, 2, 1);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
