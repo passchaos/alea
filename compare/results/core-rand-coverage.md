@@ -19,7 +19,7 @@ platform and longer-run requirements.
 | --- | --- | --- |
 | Deterministic engines | `Alea4x64`, `Wyhash64`, `Xoshiro256`, `Xoshiro256PlusPlus`, `Pcg64`, `SplitMix64` | Engine unit tests and `zig build test` |
 | Secure-style stream | `ChaCha12` engine and `secure(io)` | `src/engines/chacha.zig`, `src/root.zig` |
-| System entropy | `Seed.secure`, `defaultSecure`, `fastSecure`, `reproducibleSecure`, `secureBytes` | `src/seed.zig`, `src/root.zig` |
+| System entropy | `Seed.secure`, `defaultSecure`, `fastSecure`, `scalarSecure`, `reproducibleSecure`, `secureBytes` | `src/seed.zig`, `src/root.zig` |
 | `std.Random` interop | Engine `random()` methods and `Rng.random()` | `src/root.zig`, `src/rng.zig` |
 | Scalar sampling | integers, floats, booleans, ranges, ratio/chance, chance/ratio fill and vector sampling, bytes | `src/rng.zig` tests |
 | Structured sampling | arrays, tuples, enums | `Rng.value(T)` tests |

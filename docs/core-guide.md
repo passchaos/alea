@@ -26,8 +26,8 @@ engine helpers when benchmark shape matters.
 
 Use `Seed.fromString`, `Seed.fromBytes`, `Seed.mix`, and `Seed.stream` for
 stable named streams. Use `Seed.secure(io)`, `defaultSecure`, `fastSecure`,
-`reproducibleSecure`, `secure(io)`, or `secureBytes` when the seed must come
-from system entropy.
+`scalarSecure`, `reproducibleSecure`, `secure(io)`, or `secureBytes` when the
+seed must come from system entropy.
 
 See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 
