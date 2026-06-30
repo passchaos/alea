@@ -149,6 +149,7 @@ pub fn main(init: std.process.Init) !void {
     try benchExponentialSamplerFillScalar(io, stdout, "alea Exponential.fillFrom scalar direct", bytes / 64);
     try benchFillExponentialF32(io, stdout, "alea fillExponential f32", bytes / 64);
     try benchPoisson(io, stdout, "alea poisson", bytes / 64);
+    try benchPoissonFastDirect(io, stdout, "alea poisson fast direct", bytes / 64);
     try benchPoissonWyhash(io, stdout, "alea poisson wyhash64 direct", bytes / 64);
     try benchPoissonCached(io, stdout, "alea poisson cached", bytes / 64);
     try benchFillPoisson(io, stdout, "alea fillPoisson", bytes / 64);
@@ -3284,6 +3285,31 @@ fn benchPoisson(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
         var i: usize = 0;
         var checksum: u64 = 0;
         while (i < count) : (i += 1) checksum +%= alea.distributions.poisson(rng, 20);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchPoissonFastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    const dist = alea.distributions.Poisson.init(20) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xa157);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) checksum +%= dist.sampleFrom(&engine);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

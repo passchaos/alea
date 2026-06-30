@@ -8,7 +8,7 @@ project does not repeat unproductive work.
 
 | Area | Local Rust evidence | Current Alea evidence | Status |
 | --- | --- | --- | --- |
-| Poisson `lambda = 20` | Filtered `rand_distr poisson`: about 68M samples/s | Filtered Alea rows after hoisting `Poisson.fillFrom` method dispatch out of the per-sample loop: facade/cached/facade fill are about 62-64M, `fillPoissonFrom(ScalarPrng)` about 69M, and reusable `Poisson.sampleFrom(ScalarPrng)` about 71M | Closed for scalar-fast direct sample/fill; single-sample facade/cached remain slightly below Rust |
+| Poisson `lambda = 20` | Filtered `rand_distr poisson`: about 68M samples/s | Filtered Alea rows after hoisting `Poisson.fillFrom` method dispatch out of the per-sample loop: facade/cached/facade fill are about 62-64M, `Poisson.sampleFrom(FastPrng)` about 75M, `Poisson.sampleFrom(ScalarPrng)` about 71M, and `fillPoissonFrom(ScalarPrng)` about 68-69M | Closed for direct-engine sample/fill; single-sample facade/cached remain slightly below Rust and are now isolated as facade/context overhead |
 | Geometric `p = 0.25` | `rand_distr geometric`: about 44M samples/s and returns failures before first success | `alea geometric failures`: about 117M samples/s; direct-source fill about 128M | Closed for current local Rust evidence; Alea now exposes both one-based trial-count and rand-style failure-count semantics |
 | StandardGeometric `p = 0.5` | `rand_distr standard-geometric`: about 913M samples/s | `alea standard-geometric`: about 748-758M facade, about 1263M scalar direct, and about 994M direct-source fill | Closed for scalar-fast and direct-source bulk workflows; use `ScalarPrng` for high-volume p=0.5 failure-count sampling |
 | Hypergeometric `(100, 30, 10)` | `rand_distr hypergeometric`: about 50M samples/s | `alea hypergeometric`: about 51M facade after HIN inverse-transform fast path, about 49M fill, about 48M direct-source fill | Closed for current local Rust evidence on this parameter set; broader H2PE parameter coverage remains future performance work |
@@ -212,8 +212,8 @@ Continue performance triage on the remaining focused watch items:
   gap,
 - Cauchy bulk fill now exceeds filtered local Rust evidence, while scalar
   single-sample Cauchy remains a small watch item,
-- Poisson scalar-fast direct sample/fill now exceeds filtered Rust evidence,
-  while facade/cached single-sample Poisson remains a small watch item,
+- Poisson direct-engine sample/fill now exceeds filtered Rust evidence, while
+  facade/cached single-sample Poisson remains a small facade/context watch item,
 - log-normal remains a small filtered scalar/bulk boundary item, while
   inverse-Gaussian and NIG bulk fills now exceed the local Rust rows,
 - skew-normal filtered facade/fill rows now exceed local Rust evidence; keep only
