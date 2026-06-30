@@ -181,7 +181,7 @@ RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/ran
 
 The benchmark intentionally separates facade/type-erased paths from direct
 static engine paths. `bench -- [bytes] [filter]` optionally overrides the byte
-count and filters row names by substring for focused full-harness reruns; the
+count and filters row names by case-insensitive substring for focused full-harness reruns; the
 Rust comparison binary accepts the same argument shape. `alea.Rng` has
 function-pointer dispatch comparable to
 `std.Random`; direct helpers are closer to Rust's monomorphized `SmallRng`

@@ -305,7 +305,7 @@ pub fn main(init: std.process.Init) !void {
 }
 
 fn benchEngine(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime Engine: type, bytes: usize, buffer: []u8) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_mib_per_s: f64 = 0;
     var best_checksum: u8 = 0;
     var trial: usize = 0;
@@ -334,7 +334,7 @@ fn benchEngine(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime En
 }
 
 fn benchNext(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime Engine: type, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -358,7 +358,7 @@ fn benchNext(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime Engi
 }
 
 fn benchFillOnly(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime Engine: type, bytes: usize, buffer: []u8) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_mib_per_s: f64 = 0;
     var best_tail: u8 = 0;
     var trial: usize = 0;
@@ -385,7 +385,7 @@ fn benchFillOnly(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime 
 }
 
 fn benchFillTypedU32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u32 = undefined;
@@ -416,7 +416,7 @@ fn benchFillTypedU32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillTypedBool(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]bool = undefined;
@@ -447,7 +447,7 @@ fn benchFillTypedBool(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchFillChance(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]bool = undefined;
@@ -478,7 +478,7 @@ fn benchFillChance(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchFillChanceHalf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]bool = undefined;
@@ -509,7 +509,7 @@ fn benchFillChanceHalf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFillRatioQuarter(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]bool = undefined;
@@ -540,7 +540,7 @@ fn benchFillRatioQuarter(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchFillRatioThreeEighths(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]bool = undefined;
@@ -571,7 +571,7 @@ fn benchFillRatioThreeEighths(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchFillRatioHalf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]bool = undefined;
@@ -602,7 +602,7 @@ fn benchFillRatioHalf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchFillTypedF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [4096]f32 = undefined;
@@ -633,7 +633,7 @@ fn benchFillTypedF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillOpenF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [4096]f32 = undefined;
@@ -664,7 +664,7 @@ fn benchFillOpenF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillOpenClosedF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [4096]f32 = undefined;
@@ -695,7 +695,7 @@ fn benchFillOpenClosedF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchFillTypedF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -726,7 +726,7 @@ fn benchFillTypedF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillTypedF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -756,7 +756,7 @@ fn benchFillTypedF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchFillOpenF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -787,7 +787,7 @@ fn benchFillOpenF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillOpenClosedF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -818,7 +818,7 @@ fn benchFillOpenClosedF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchRangeFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -845,7 +845,7 @@ fn benchRangeFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchRangeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -871,7 +871,7 @@ fn benchRangeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFloatF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -896,7 +896,7 @@ fn benchFloatF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
 }
 
 fn benchFloatF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -920,7 +920,7 @@ fn benchFloatF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFloatOpenF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -945,7 +945,7 @@ fn benchFloatOpenF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFloatOpenF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -969,7 +969,7 @@ fn benchFloatOpenF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchFloatOpenClosedF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -994,7 +994,7 @@ fn benchFloatOpenClosedF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchFloatOpenClosedF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -1018,7 +1018,7 @@ fn benchFloatOpenClosedF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []con
 }
 
 fn benchFloatRangeF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -1043,7 +1043,7 @@ fn benchFloatRangeF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchFloatRangeF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -1067,7 +1067,7 @@ fn benchFloatRangeF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8
 }
 
 fn benchFloatF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1092,7 +1092,7 @@ fn benchFloatF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
 }
 
 fn benchFloatF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1116,7 +1116,7 @@ fn benchFloatF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFloatOpenF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1141,7 +1141,7 @@ fn benchFloatOpenF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFloatOpenF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1165,7 +1165,7 @@ fn benchFloatOpenF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchFloatOpenClosedF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1190,7 +1190,7 @@ fn benchFloatOpenClosedF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchFloatOpenClosedF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1214,7 +1214,7 @@ fn benchFloatOpenClosedF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []con
 }
 
 fn benchFloatRangeF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1239,7 +1239,7 @@ fn benchFloatRangeF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchFloatRangeF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1263,7 +1263,7 @@ fn benchFloatRangeF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8
 }
 
 fn benchVectorBool(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -1291,7 +1291,7 @@ fn benchVectorBool(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchVectorChance(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -1319,7 +1319,7 @@ fn benchVectorChance(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchVectorChanceHalf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -1347,7 +1347,7 @@ fn benchVectorChanceHalf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchVectorRatioQuarter(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -1375,7 +1375,7 @@ fn benchVectorRatioQuarter(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchVectorRatioThreeEighths(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -1403,7 +1403,7 @@ fn benchVectorRatioThreeEighths(io: std.Io, stdout: *std.Io.Writer, name: []cons
 }
 
 fn benchVectorRatioHalf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -1431,7 +1431,7 @@ fn benchVectorRatioHalf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchVectorInt(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -1459,7 +1459,7 @@ fn benchVectorInt(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
 }
 
 fn benchVectorIntDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -1486,7 +1486,7 @@ fn benchVectorIntDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchVectorRange(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: i64 = 0;
     var trial: usize = 0;
@@ -1514,7 +1514,7 @@ fn benchVectorRange(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchVectorRangeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: i64 = 0;
     var trial: usize = 0;
@@ -1541,7 +1541,7 @@ fn benchVectorRangeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchVectorFloat(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -1569,7 +1569,7 @@ fn benchVectorFloat(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillRange(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: i64 = 0;
     var out: [4096]i32 = undefined;
@@ -1600,7 +1600,7 @@ fn benchFillRange(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
 }
 
 fn benchFillRangeF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [4096]f32 = undefined;
@@ -1631,7 +1631,7 @@ fn benchFillRangeF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillRangeF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -1662,7 +1662,7 @@ fn benchFillRangeF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillRangeF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -1692,7 +1692,7 @@ fn benchFillRangeF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchUniformFillF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -1723,7 +1723,7 @@ fn benchUniformFillF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchAlphanumeric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u8 = undefined;
@@ -1754,7 +1754,7 @@ fn benchAlphanumeric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchSeqFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: usize, amount: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_thousand_per_s: f64 = 0;
     var best_checksum: usize = 0;
     var trial: usize = 0;
@@ -1780,7 +1780,7 @@ fn benchSeqFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: 
 }
 
 fn benchSeqDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: usize, amount: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_thousand_per_s: f64 = 0;
     var best_checksum: usize = 0;
     var trial: usize = 0;
@@ -1805,7 +1805,7 @@ fn benchSeqDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: 
 }
 
 fn benchSeqIndexVecFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: usize, amount: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_thousand_per_s: f64 = 0;
     var best_checksum: usize = 0;
     var trial: usize = 0;
@@ -1832,7 +1832,7 @@ fn benchSeqIndexVecFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchSeqIndexVecDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: usize, amount: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_thousand_per_s: f64 = 0;
     var best_checksum: usize = 0;
     var trial: usize = 0;
@@ -1858,7 +1858,7 @@ fn benchSeqIndexVecDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchSeqU32Facade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: u32, amount: u32) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_thousand_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -1884,7 +1884,7 @@ fn benchSeqU32Facade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lengt
 }
 
 fn benchSeqU32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, length: u32, amount: u32) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_thousand_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -1909,7 +1909,7 @@ fn benchSeqU32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lengt
 }
 
 fn benchNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1934,7 +1934,7 @@ fn benchNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usiz
 }
 
 fn benchNormalSplitMix(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1958,7 +1958,7 @@ fn benchNormalSplitMix(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchNormalWyhash(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -1982,7 +1982,7 @@ fn benchNormalWyhash(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchNormalWyhashStdRandom(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -2007,7 +2007,7 @@ fn benchNormalWyhashStdRandom(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchNormalStdRandom(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -2032,7 +2032,7 @@ fn benchNormalStdRandom(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchNormalFast(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -2056,7 +2056,7 @@ fn benchNormalFast(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchStandardNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.StandardNormal(f64){};
@@ -2081,7 +2081,7 @@ fn benchStandardNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchStandardNormalRawScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -2105,7 +2105,7 @@ fn benchStandardNormalRawScalar(io: std.Io, stdout: *std.Io.Writer, name: []cons
 }
 
 fn benchStandardNormalScalarF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     const dist = alea.distributions.StandardNormal(f32){};
@@ -2130,7 +2130,7 @@ fn benchStandardNormalScalarF32(io: std.Io, stdout: *std.Io.Writer, name: []cons
 }
 
 fn benchVectorNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -2158,7 +2158,7 @@ fn benchVectorNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchFillStandardNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -2189,7 +2189,7 @@ fn benchFillStandardNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchFillStandardNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -2219,7 +2219,7 @@ fn benchFillStandardNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []con
 }
 
 fn benchFillStandardNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [4096]f32 = undefined;
@@ -2250,7 +2250,7 @@ fn benchFillStandardNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchFillStandardNormalF32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [4096]f32 = undefined;
@@ -2280,7 +2280,7 @@ fn benchFillStandardNormalF32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []
 }
 
 fn benchFillNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -2311,7 +2311,7 @@ fn benchFillNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchFillNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -2341,7 +2341,7 @@ fn benchFillNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchNormalSamplerFillScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -2372,7 +2372,7 @@ fn benchNormalSamplerFillScalar(io: std.Io, stdout: *std.Io.Writer, name: []cons
 }
 
 fn benchFillNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [4096]f32 = undefined;
@@ -2403,7 +2403,7 @@ fn benchFillNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.Bernoulli.init(0.25) catch unreachable;
@@ -2429,7 +2429,7 @@ fn benchBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
 }
 
 fn benchFillBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]bool = undefined;
@@ -2460,7 +2460,7 @@ fn benchFillBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchAliasTable(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: usize = 0;
     const weights = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
@@ -2491,7 +2491,7 @@ fn benchAliasTable(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchAliasTableDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: usize = 0;
     const weights = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
@@ -2521,7 +2521,7 @@ fn benchAliasTableDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchAliasTableFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: usize = 0;
     var out: [1024]usize = undefined;
@@ -2555,7 +2555,7 @@ fn benchAliasTableFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchWeightedChoice(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const values = [_]u64{ 1, 2, 3, 4, 5, 8, 13, 21 };
@@ -2587,7 +2587,7 @@ fn benchWeightedChoice(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchWeightedChoiceDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const values = [_]u64{ 1, 2, 3, 4, 5, 8, 13, 21 };
@@ -2618,7 +2618,7 @@ fn benchWeightedChoiceDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchWeightedChoiceFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [1024]u64 = undefined;
@@ -2653,7 +2653,7 @@ fn benchWeightedChoiceFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []con
 }
 
 fn benchWeightedTree(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: usize = 0;
     const initial = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
@@ -2686,7 +2686,7 @@ fn benchWeightedTree(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchWeightedTreeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: usize = 0;
     const initial = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
@@ -2718,7 +2718,7 @@ fn benchWeightedTreeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchWeightedTreeFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: usize = 0;
     var out: [1024]usize = undefined;
@@ -2752,7 +2752,7 @@ fn benchWeightedTreeFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const
 }
 
 fn benchWeightedIntTree(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: usize = 0;
     const initial = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
@@ -2785,7 +2785,7 @@ fn benchWeightedIntTree(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchWeightedIntTreeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: usize = 0;
     const initial = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
@@ -2817,7 +2817,7 @@ fn benchWeightedIntTreeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchWeightedIntTreeFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: usize = 0;
     var out: [1024]usize = undefined;
@@ -2851,7 +2851,7 @@ fn benchWeightedIntTreeFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []co
 }
 
 fn benchExponential(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -2876,7 +2876,7 @@ fn benchExponential(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchExponentialWyhash(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -2900,7 +2900,7 @@ fn benchExponentialWyhash(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchExponentialFast(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -2924,7 +2924,7 @@ fn benchExponentialFast(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchStandardExponentialScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.StandardExponential(f64){};
@@ -2949,7 +2949,7 @@ fn benchStandardExponentialScalar(io: std.Io, stdout: *std.Io.Writer, name: []co
 }
 
 fn benchStandardExponentialRawScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -2973,7 +2973,7 @@ fn benchStandardExponentialRawScalar(io: std.Io, stdout: *std.Io.Writer, name: [
 }
 
 fn benchStandardExponentialScalarF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     const dist = alea.distributions.StandardExponential(f32){};
@@ -2998,7 +2998,7 @@ fn benchStandardExponentialScalarF32(io: std.Io, stdout: *std.Io.Writer, name: [
 }
 
 fn benchVectorExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -3026,7 +3026,7 @@ fn benchVectorExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchFillStandardExponential(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -3057,7 +3057,7 @@ fn benchFillStandardExponential(io: std.Io, stdout: *std.Io.Writer, name: []cons
 }
 
 fn benchFillStandardExponentialScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -3087,7 +3087,7 @@ fn benchFillStandardExponentialScalar(io: std.Io, stdout: *std.Io.Writer, name: 
 }
 
 fn benchFillStandardExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [4096]f32 = undefined;
@@ -3118,7 +3118,7 @@ fn benchFillStandardExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []c
 }
 
 fn benchFillStandardExponentialF32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [4096]f32 = undefined;
@@ -3148,7 +3148,7 @@ fn benchFillStandardExponentialF32Scalar(io: std.Io, stdout: *std.Io.Writer, nam
 }
 
 fn benchFillExponential(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -3179,7 +3179,7 @@ fn benchFillExponential(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchFillExponentialScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -3209,7 +3209,7 @@ fn benchFillExponentialScalar(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchExponentialSamplerFillScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -3240,7 +3240,7 @@ fn benchExponentialSamplerFillScalar(io: std.Io, stdout: *std.Io.Writer, name: [
 }
 
 fn benchFillExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [4096]f32 = undefined;
@@ -3271,7 +3271,7 @@ fn benchFillExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchPoisson(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -3296,7 +3296,7 @@ fn benchPoisson(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
 }
 
 fn benchPoissonWyhash(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.Poisson.init(20) catch unreachable;
@@ -3321,7 +3321,7 @@ fn benchPoissonWyhash(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchPoissonCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.Poisson.init(20) catch unreachable;
@@ -3347,7 +3347,7 @@ fn benchPoissonCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchFillPoisson(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3378,7 +3378,7 @@ fn benchFillPoisson(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillPoissonScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3408,7 +3408,7 @@ fn benchFillPoissonScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchGeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.Geometric.init(0.25) catch unreachable;
@@ -3434,7 +3434,7 @@ fn benchGeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
 }
 
 fn benchFillGeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3465,7 +3465,7 @@ fn benchFillGeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchFillGeometricScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3495,7 +3495,7 @@ fn benchFillGeometricScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8
 }
 
 fn benchGeometricFailures(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.GeometricFailures.init(0.25) catch unreachable;
@@ -3521,7 +3521,7 @@ fn benchGeometricFailures(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchFillGeometricFailures(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3552,7 +3552,7 @@ fn benchFillGeometricFailures(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchFillGeometricFailuresScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3582,7 +3582,7 @@ fn benchFillGeometricFailuresScalar(io: std.Io, stdout: *std.Io.Writer, name: []
 }
 
 fn benchStandardGeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.StandardGeometric{};
@@ -3608,7 +3608,7 @@ fn benchStandardGeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchStandardGeometricScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.StandardGeometric{};
@@ -3633,7 +3633,7 @@ fn benchStandardGeometricScalar(io: std.Io, stdout: *std.Io.Writer, name: []cons
 }
 
 fn benchFillStandardGeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3664,7 +3664,7 @@ fn benchFillStandardGeometric(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchFillStandardGeometricScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3694,7 +3694,7 @@ fn benchFillStandardGeometricScalar(io: std.Io, stdout: *std.Io.Writer, name: []
 }
 
 fn benchBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -3719,7 +3719,7 @@ fn benchBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
 }
 
 fn benchFillBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3750,7 +3750,7 @@ fn benchFillBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillBinomialScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3780,7 +3780,7 @@ fn benchFillBinomialScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchBinomialLarge(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -3805,7 +3805,7 @@ fn benchBinomialLarge(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchBinomialApprox(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
@@ -3830,7 +3830,7 @@ fn benchBinomialApprox(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchNegativeBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.NegativeBinomial.init(5, 0.4) catch unreachable;
@@ -3856,7 +3856,7 @@ fn benchNegativeBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchFillNegativeBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3887,7 +3887,7 @@ fn benchFillNegativeBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchFillNegativeBinomialScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3917,7 +3917,7 @@ fn benchFillNegativeBinomialScalar(io: std.Io, stdout: *std.Io.Writer, name: []c
 }
 
 fn benchHypergeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.Hypergeometric.init(100, 30, 10) catch unreachable;
@@ -3943,7 +3943,7 @@ fn benchHypergeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFillHypergeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -3974,7 +3974,7 @@ fn benchFillHypergeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchFillHypergeometricScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -4004,7 +4004,7 @@ fn benchFillHypergeometricScalar(io: std.Io, stdout: *std.Io.Writer, name: []con
 }
 
 fn benchHypergeometricLarge(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.Hypergeometric.init(5000, 2500, 500) catch unreachable;
@@ -4030,7 +4030,7 @@ fn benchHypergeometricLarge(io: std.Io, stdout: *std.Io.Writer, name: []const u8
 }
 
 fn benchFillHypergeometricLarge(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -4061,7 +4061,7 @@ fn benchFillHypergeometricLarge(io: std.Io, stdout: *std.Io.Writer, name: []cons
 }
 
 fn benchFillHypergeometricLargeScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;
@@ -4091,7 +4091,7 @@ fn benchFillHypergeometricLargeScalar(io: std.Io, stdout: *std.Io.Writer, name: 
 }
 
 fn benchMultinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.Multinomial.init(100, &.{ 1.0, 2.0, 3.0 }) catch unreachable;
@@ -4121,7 +4121,7 @@ fn benchMultinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchMultinomialDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.Multinomial.init(100, &.{ 1.0, 2.0, 3.0 }) catch unreachable;
@@ -4150,7 +4150,7 @@ fn benchMultinomialDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchMultinomialManyDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     const dist = alea.distributions.Multinomial.init(100, &.{ 1.0, 2.0, 3.0 }) catch unreachable;
@@ -4183,7 +4183,7 @@ fn benchMultinomialManyDirect(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -4208,7 +4208,7 @@ fn benchGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize
 }
 
 fn benchGammaScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Gamma(f64).init(2, 3) catch unreachable;
@@ -4233,7 +4233,7 @@ fn benchGammaScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4264,7 +4264,7 @@ fn benchFillGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
 }
 
 fn benchFillGammaScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4294,7 +4294,7 @@ fn benchFillGammaScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchFillSampleGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4326,7 +4326,7 @@ fn benchFillSampleGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchFillSampleGammaScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4357,7 +4357,7 @@ fn benchFillSampleGammaScalar(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchChiSquared(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -4382,7 +4382,7 @@ fn benchChiSquared(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchChiSquaredCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.ChiSquared(f64).init(4) catch unreachable;
@@ -4407,7 +4407,7 @@ fn benchChiSquaredCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchFillChiSquared(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4438,7 +4438,7 @@ fn benchFillChiSquared(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFillChiSquaredScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4468,7 +4468,7 @@ fn benchFillChiSquaredScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchChi(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Chi(f64).init(4) catch unreachable;
@@ -4493,7 +4493,7 @@ fn benchChi(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) 
 }
 
 fn benchFillChi(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4524,7 +4524,7 @@ fn benchFillChi(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
 }
 
 fn benchFillChiScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4554,7 +4554,7 @@ fn benchFillChiScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchErlang(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Erlang(f64).init(3, 2) catch unreachable;
@@ -4579,7 +4579,7 @@ fn benchErlang(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usiz
 }
 
 fn benchFillErlang(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4610,7 +4610,7 @@ fn benchFillErlang(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchFillErlangScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4640,7 +4640,7 @@ fn benchFillErlangScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchBeta(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -4665,7 +4665,7 @@ fn benchBeta(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize)
 }
 
 fn benchBetaCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Beta(f64).init(2, 5) catch unreachable;
@@ -4690,7 +4690,7 @@ fn benchBetaCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchFillBeta(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4721,7 +4721,7 @@ fn benchFillBeta(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
 }
 
 fn benchFillBetaScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4751,7 +4751,7 @@ fn benchFillBetaScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFisherF(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -4776,7 +4776,7 @@ fn benchFisherF(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
 }
 
 fn benchFisherFDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -4800,7 +4800,7 @@ fn benchFisherFDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchFisherFCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.FisherF(f64).init(5, 20) catch unreachable;
@@ -4825,7 +4825,7 @@ fn benchFisherFCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchFillFisherF(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4856,7 +4856,7 @@ fn benchFillFisherF(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillFisherFScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -4886,7 +4886,7 @@ fn benchFillFisherFScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchTriangular(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -4911,7 +4911,7 @@ fn benchTriangular(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchTriangularDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Triangular(f64).init(-1, 0, 2) catch unreachable;
@@ -4936,7 +4936,7 @@ fn benchTriangularDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchFillTriangular(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -4967,7 +4967,7 @@ fn benchFillTriangular(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFillTriangularScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -4997,7 +4997,7 @@ fn benchFillTriangularScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchArcsine(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Arcsine(f64).init(-1, 3) catch unreachable;
@@ -5022,7 +5022,7 @@ fn benchArcsine(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
 }
 
 fn benchFillArcsine(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5053,7 +5053,7 @@ fn benchFillArcsine(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillArcsineScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5083,7 +5083,7 @@ fn benchFillArcsineScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchCauchy(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -5108,7 +5108,7 @@ fn benchCauchy(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usiz
 }
 
 fn benchFillCauchy(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5139,7 +5139,7 @@ fn benchFillCauchy(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchFillCauchyScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5169,7 +5169,7 @@ fn benchFillCauchyScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchLaplace(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Laplace(f64).init(0, 1) catch unreachable;
@@ -5194,7 +5194,7 @@ fn benchLaplace(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
 }
 
 fn benchFillLaplace(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5225,7 +5225,7 @@ fn benchFillLaplace(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillLaplaceScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5255,7 +5255,7 @@ fn benchFillLaplaceScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchLogistic(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Logistic(f64).init(0, 1) catch unreachable;
@@ -5280,7 +5280,7 @@ fn benchLogistic(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
 }
 
 fn benchFillLogistic(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5311,7 +5311,7 @@ fn benchFillLogistic(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillLogisticScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5341,7 +5341,7 @@ fn benchFillLogisticScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchLogLogistic(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.LogLogistic(f64).init(2, 3) catch unreachable;
@@ -5366,7 +5366,7 @@ fn benchLogLogistic(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillLogLogistic(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5397,7 +5397,7 @@ fn benchFillLogLogistic(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchFillLogLogisticScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5427,7 +5427,7 @@ fn benchFillLogLogisticScalar(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchKumaraswamy(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Kumaraswamy(f64).init(2, 5) catch unreachable;
@@ -5452,7 +5452,7 @@ fn benchKumaraswamy(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillKumaraswamy(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5483,7 +5483,7 @@ fn benchFillKumaraswamy(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchFillKumaraswamyScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5513,7 +5513,7 @@ fn benchFillKumaraswamyScalar(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchPowerFunction(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.PowerFunction(f64).init(-1, 2, 3) catch unreachable;
@@ -5538,7 +5538,7 @@ fn benchPowerFunction(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchFillPowerFunction(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5569,7 +5569,7 @@ fn benchFillPowerFunction(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchFillPowerFunctionScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5599,7 +5599,7 @@ fn benchFillPowerFunctionScalar(io: std.Io, stdout: *std.Io.Writer, name: []cons
 }
 
 fn benchRayleigh(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Rayleigh(f64).init(2) catch unreachable;
@@ -5624,7 +5624,7 @@ fn benchRayleigh(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
 }
 
 fn benchFillRayleigh(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5655,7 +5655,7 @@ fn benchFillRayleigh(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillRayleighScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5685,7 +5685,7 @@ fn benchFillRayleighScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchMaxwell(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Maxwell(f64).init(2) catch unreachable;
@@ -5710,7 +5710,7 @@ fn benchMaxwell(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
 }
 
 fn benchFillMaxwell(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5741,7 +5741,7 @@ fn benchFillMaxwell(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillMaxwellScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5771,7 +5771,7 @@ fn benchFillMaxwellScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchDirichlet(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const alpha = [_]f64{ 1, 2, 3 };
@@ -5802,7 +5802,7 @@ fn benchDirichlet(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
 }
 
 fn benchDirichletDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const alpha = [_]f64{ 1, 2, 3 };
@@ -5832,7 +5832,7 @@ fn benchDirichletDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchDirichletManyDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const alpha = [_]f64{ 1, 2, 3 };
@@ -5866,7 +5866,7 @@ fn benchDirichletManyDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8
 }
 
 fn benchLogNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -5892,7 +5892,7 @@ fn benchLogNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
 }
 
 fn benchLogNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var dist = alea.distributions.LogNormal(f64).init(0, 0.25) catch unreachable;
@@ -5917,7 +5917,7 @@ fn benchLogNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchFillLogNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5948,7 +5948,7 @@ fn benchFillLogNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 }
 
 fn benchFillLogNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -5978,7 +5978,7 @@ fn benchFillLogNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8
 }
 
 fn benchHalfNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.HalfNormal(f64).init(2) catch unreachable;
@@ -6003,7 +6003,7 @@ fn benchHalfNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchFillHalfNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6034,7 +6034,7 @@ fn benchFillHalfNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFillHalfNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6064,7 +6064,7 @@ fn benchFillHalfNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchStudentT(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6089,7 +6089,7 @@ fn benchStudentT(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
 }
 
 fn benchStudentTDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6113,7 +6113,7 @@ fn benchStudentTDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchStudentTCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.StudentT(f64).init(10) catch unreachable;
@@ -6138,7 +6138,7 @@ fn benchStudentTCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFillStudentT(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -6169,7 +6169,7 @@ fn benchFillStudentT(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillStudentTScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [4096]f64 = undefined;
@@ -6199,7 +6199,7 @@ fn benchFillStudentTScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchPareto(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6224,7 +6224,7 @@ fn benchPareto(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usiz
 }
 
 fn benchFillPareto(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6255,7 +6255,7 @@ fn benchFillPareto(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchFillParetoScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6285,7 +6285,7 @@ fn benchFillParetoScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchWeibull(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6310,7 +6310,7 @@ fn benchWeibull(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
 }
 
 fn benchFillWeibull(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6341,7 +6341,7 @@ fn benchFillWeibull(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillWeibullScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6371,7 +6371,7 @@ fn benchFillWeibullScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchGumbel(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6396,7 +6396,7 @@ fn benchGumbel(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usiz
 }
 
 fn benchGumbelDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Gumbel(f64).init(0, 1) catch unreachable;
@@ -6421,7 +6421,7 @@ fn benchGumbelDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillGumbel(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6452,7 +6452,7 @@ fn benchFillGumbel(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchFillGumbelScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6482,7 +6482,7 @@ fn benchFillGumbelScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchFrechet(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6507,7 +6507,7 @@ fn benchFrechet(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
 }
 
 fn benchFillFrechet(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6538,7 +6538,7 @@ fn benchFillFrechet(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
 }
 
 fn benchFillFrechetScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6568,7 +6568,7 @@ fn benchFillFrechetScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchSkewNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6593,7 +6593,7 @@ fn benchSkewNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchSkewNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.SkewNormal(f64).init(0, 1, 1) catch unreachable;
@@ -6618,7 +6618,7 @@ fn benchSkewNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchSkewNormalShape2(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6643,7 +6643,7 @@ fn benchSkewNormalShape2(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchSkewNormalShape2Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.SkewNormal(f64).init(0, 1, 2) catch unreachable;
@@ -6668,7 +6668,7 @@ fn benchSkewNormalShape2Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const
 }
 
 fn benchFillSkewNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6699,7 +6699,7 @@ fn benchFillSkewNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFillSkewNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6729,7 +6729,7 @@ fn benchFillSkewNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchFillSkewNormalShape2Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6760,7 +6760,7 @@ fn benchFillSkewNormalShape2Scalar(io: std.Io, stdout: *std.Io.Writer, name: []c
 }
 
 fn benchPert(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6785,7 +6785,7 @@ fn benchPert(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize)
 }
 
 fn benchFillPert(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6816,7 +6816,7 @@ fn benchFillPert(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
 }
 
 fn benchFillPertScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -6846,7 +6846,7 @@ fn benchFillPertScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchUnitCircle(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6874,7 +6874,7 @@ fn benchUnitCircle(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchUnitCircleScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.UnitCircle(f64){};
@@ -6899,7 +6899,7 @@ fn benchUnitCircleScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchUnitDisc(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6927,7 +6927,7 @@ fn benchUnitDisc(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
 }
 
 fn benchUnitDiscScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.UnitDisc(f64){};
@@ -6952,7 +6952,7 @@ fn benchUnitDiscScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchUnitSphere(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -6980,7 +6980,7 @@ fn benchUnitSphere(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchUnitSphereScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.UnitSphere(f64){};
@@ -7005,7 +7005,7 @@ fn benchUnitSphereScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
 }
 
 fn benchUnitBall(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -7033,7 +7033,7 @@ fn benchUnitBall(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: us
 }
 
 fn benchUnitBallScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.UnitBall(f64){};
@@ -7058,7 +7058,7 @@ fn benchUnitBallScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFillUnitCircle(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024][2]f64 = undefined;
@@ -7088,7 +7088,7 @@ fn benchFillUnitCircle(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFillUnitDisc(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024][2]f64 = undefined;
@@ -7118,7 +7118,7 @@ fn benchFillUnitDisc(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchFillUnitSphere(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024][3]f64 = undefined;
@@ -7148,7 +7148,7 @@ fn benchFillUnitSphere(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchFillUnitBall(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024][3]f64 = undefined;
@@ -7178,7 +7178,7 @@ fn benchFillUnitBall(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 }
 
 fn benchInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -7203,7 +7203,7 @@ fn benchInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
 }
 
 fn benchFillInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -7234,7 +7234,7 @@ fn benchFillInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []const u8
 }
 
 fn benchFillInverseGaussianScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -7264,7 +7264,7 @@ fn benchFillInverseGaussianScalar(io: std.Io, stdout: *std.Io.Writer, name: []co
 }
 
 fn benchInverseGaussianCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.InverseGaussian(f64).init(1, 2) catch unreachable;
@@ -7289,7 +7289,7 @@ fn benchInverseGaussianCached(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchNormalInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -7314,7 +7314,7 @@ fn benchNormalInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []const 
 }
 
 fn benchFillNormalInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -7345,7 +7345,7 @@ fn benchFillNormalInverseGaussian(io: std.Io, stdout: *std.Io.Writer, name: []co
 }
 
 fn benchFillNormalInverseGaussianScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -7375,7 +7375,7 @@ fn benchFillNormalInverseGaussianScalar(io: std.Io, stdout: *std.Io.Writer, name
 }
 
 fn benchNormalInverseGaussianCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.NormalInverseGaussian(f64).init(2, 1) catch unreachable;
@@ -7400,7 +7400,7 @@ fn benchNormalInverseGaussianCached(io: std.Io, stdout: *std.Io.Writer, name: []
 }
 
 fn benchNormalInverseGaussianScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -7424,7 +7424,7 @@ fn benchNormalInverseGaussianScalar(io: std.Io, stdout: *std.Io.Writer, name: []
 }
 
 fn benchZipf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Zipf(f64).init(10, 1.5) catch unreachable;
@@ -7450,7 +7450,7 @@ fn benchZipf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize)
 }
 
 fn benchZipfDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Zipf(f64).init(10, 1.5) catch unreachable;
@@ -7475,7 +7475,7 @@ fn benchZipfDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchZipfFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -7506,7 +7506,7 @@ fn benchZipfFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 }
 
 fn benchZeta(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Zeta(f64).init(3) catch unreachable;
@@ -7532,7 +7532,7 @@ fn benchZeta(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize)
 }
 
 fn benchZetaDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const dist = alea.distributions.Zeta(f64).init(3) catch unreachable;
@@ -7557,7 +7557,7 @@ fn benchZetaDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
 }
 
 fn benchZetaFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
-    if (bench_filter) |filter| if (std.mem.indexOf(u8, name, filter) == null) return;
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
