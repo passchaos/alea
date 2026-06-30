@@ -37,7 +37,8 @@ expectations.
   `fillVectorExponentialFrom`
 - Raw/scalars: `next`, `boolean`, `chance`, `chanceChecked`, `ratio`,
   `chanceFrom`, `ratioFrom`, `ratioChecked`, `uint`, `uintLessThan`, `uintLessThanChecked`,
-  `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`
+  `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`,
+  `probabilityThreshold`
 - Ranges: `intRangeLessThan`, `intRangeLessThanChecked`, `intRangeAtMost`,
   `intRangeAtMostChecked`, `intRangeLessThanFrom`, `intRangeAtMostFrom`,
   `floatRange`, `floatRangeFrom`, `floatRangeChecked`, `durationRangeLessThan`,
