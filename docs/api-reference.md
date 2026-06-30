@@ -326,6 +326,8 @@ Reusable samplers:
 - `SkewNormal(T).fill`
 - `SkewNormal(T).fillFrom`
 - `Pert(T)`
+- `Pert(T).initDefault`
+- `Pert(T).initMean`
 - `Pert(T).sampleFrom`
 - `Pert(T).fill`
 - `Pert(T).fillFrom`
