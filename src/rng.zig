@@ -2471,6 +2471,20 @@ test "value and vector sampling have stable snapshots" {
     try std.testing.expectEqual(@as(u64, 0x931f893ca11f58de), engine.next());
 }
 
+test "duration range sampling has stable snapshots" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x1234_5678_9abc_def0);
+    const rng = Rng.init(&engine);
+    const min = std.Io.Duration.fromMilliseconds(10);
+    const max = std.Io.Duration.fromMilliseconds(20);
+
+    try std.testing.expectEqual(@as(i96, 16_369_983), rng.durationRangeLessThan(min, max).nanoseconds);
+    try std.testing.expectEqual(@as(i96, 13_038_310), rng.durationRangeAtMost(min, max).nanoseconds);
+    try std.testing.expectEqual(@as(i96, 12_317_639), (try rng.durationRangeLessThanChecked(min, max)).nanoseconds);
+    try std.testing.expectEqual(@as(i96, 13_554_320), (try rng.durationRangeAtMostChecked(min, max)).nanoseconds);
+    try std.testing.expectEqual(@as(u64, 0x3a7abfece698fa60), engine.next());
+}
+
 test "shuffle and sampling keep item set" {
     const Wyhash64 = @import("engines/wyhash64.zig");
     var engine = Wyhash64.init(9);
