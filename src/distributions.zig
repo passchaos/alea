@@ -1,5 +1,6 @@
 const std = @import("std");
 const Rng = @import("rng.zig");
+const Alea4x64 = @import("engines/alea4x64.zig");
 
 pub const Error = error{
     EmptyRange,
@@ -4116,6 +4117,10 @@ fn fillUnitBallF64From(source: anytype, dest: [][3]f64) void {
 }
 
 fn fillSignedUnitF64(source: anytype, dest: []f64) void {
+    if (comptime @TypeOf(source) == Rng or @TypeOf(source) == *Alea4x64) {
+        Rng.fillRangeFrom(source, f64, dest, -1, 1);
+        return;
+    }
     for (dest) |*item| {
         const repr = (@as(u64, 0x400) << 52) | (Rng.nextFrom(source) >> 12);
         item.* = @as(f64, @bitCast(repr)) - 3.0;
