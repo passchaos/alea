@@ -1211,6 +1211,15 @@ pub fn poissonFrom(source: anytype, lambda: f64) u64 {
     return poissonAhrensDieterFrom(source, lambda);
 }
 
+pub fn poissonChecked(rng: Rng, lambda: f64) Error!u64 {
+    return poissonCheckedFrom(rng, lambda);
+}
+
+pub fn poissonCheckedFrom(source: anytype, lambda: f64) Error!u64 {
+    const dist = try Poisson.init(lambda);
+    return dist.sampleFrom(source);
+}
+
 pub fn fillPoisson(rng: Rng, dest: []u64, lambda: f64) void {
     fillPoissonFrom(rng, dest, lambda);
 }
@@ -4739,6 +4748,8 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect(exponentialFrom(&direct_bernoulli_engine, f64, 2) >= 0);
     try std.testing.expect(try exponentialCheckedFrom(&direct_bernoulli_engine, f64, 2) >= 0);
     try std.testing.expect(poissonFrom(&direct_bernoulli_engine, 4) < 32);
+    try std.testing.expect(try poissonCheckedFrom(&direct_bernoulli_engine, 4) < 32);
+    try std.testing.expectError(error.InvalidParameter, poissonCheckedFrom(&direct_bernoulli_engine, std.math.inf(f64)));
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sampleFrom(&direct_bernoulli_engine));
     var bernoulli_buf: [8]bool = undefined;
     fillBernoulli(rng, &bernoulli_buf, 1);
