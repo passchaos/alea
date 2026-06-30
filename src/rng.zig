@@ -2449,6 +2449,28 @@ test "scalar sampling has stable snapshots" {
     try std.testing.expectEqual(@as(u64, 0x43178923ee65cac3), engine.next());
 }
 
+test "value and vector sampling have stable snapshots" {
+    const alea = @import("root.zig");
+    const ValueType = struct { u8, bool, f32 };
+    var engine = alea.ScalarPrng.init(0x1234_5678_9abc_def0);
+    const rng = Rng.init(&engine);
+
+    const tuple = rng.value(ValueType);
+    try std.testing.expectEqual(@as(u8, 91), tuple[0]);
+    try std.testing.expectEqual(false, tuple[1]);
+    try std.testing.expectEqual(@as(f32, 0.531989630), tuple[2]);
+
+    try std.testing.expectEqual(@Vector(4, u16){ 56793, 19911, 15026, 53670 }, rng.vector(@Vector(4, u16)));
+    try std.testing.expectEqual(@Vector(4, f32){ 0.5746226, 0.1789791, 0.014100373, 0.23528028 }, rng.vector(@Vector(4, f32)));
+    try std.testing.expectEqual(@Vector(4, f32){ 0.6079088, 0.5205912, 0.8753759, 0.03263837 }, rng.vectorOpen(@Vector(4, f32)));
+    try std.testing.expectEqual(@Vector(4, f32){ 0.22843552, 0.92539364, 0.9817874, 0.54203504 }, rng.vectorOpenClosed(@Vector(4, f32)));
+    try std.testing.expectEqual(@Vector(4, i32){ -8, -9, 8, -10 }, rng.vectorRange(@Vector(4, i32), -10, 10));
+    try std.testing.expectEqual(@Vector(4, f32){ 1.8454661, -0.5662591, 0.5891118, 0.549078 }, rng.vectorRange(@Vector(4, f32), -1, 2));
+    try std.testing.expectEqual(@Vector(8, bool){ false, false, false, false, false, false, false, false }, rng.vectorChance(@Vector(8, bool), 0.25));
+    try std.testing.expectEqual(@Vector(8, bool){ true, false, false, false, false, false, false, false }, rng.vectorRatio(@Vector(8, bool), 3, 8));
+    try std.testing.expectEqual(@as(u64, 0x931f893ca11f58de), engine.next());
+}
+
 test "shuffle and sampling keep item set" {
     const Wyhash64 = @import("engines/wyhash64.zig");
     var engine = Wyhash64.init(9);
