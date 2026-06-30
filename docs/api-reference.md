@@ -20,7 +20,7 @@ expectations.
 - Error type: `Error`
 - Construction and interop: `init`, `fromRandom`, `random`
 - Values: `value`, `valueFrom`, `valueIter`, `valueIterFrom`, `randomIter`,
-  `sampleIter`
+  `sampleIter`, `sampleIterFrom`
 - Bytes/fill: `bytes`, `fill` and `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`,
   `fillRangeChecked`, `fillRangeCheckedFrom`, `fillOpen`,
@@ -76,7 +76,7 @@ expectations.
   `sampleWithoutReplacement`, `sampleWithoutReplacementFrom`,
   `sampleWithoutReplacementChecked`, `sampleWithoutReplacementCheckedFrom`
 - Iterator types: `ValueIterator(T)`, `ValueIteratorFrom(Source, T)`,
-  `SampleIterator(Sampler, T)`
+  `SampleIterator(Sampler, T)`, `SampleIteratorFrom(Source, Sampler, T)`
 
 ## Seed
 

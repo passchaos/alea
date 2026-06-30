@@ -146,6 +146,13 @@ pub fn sampleIter(self: Rng, comptime T: type, sampler: anytype) SampleIterator(
     };
 }
 
+pub fn sampleIterFrom(source: anytype, comptime T: type, sampler: anytype) SampleIteratorFrom(@TypeOf(source), @TypeOf(sampler), T) {
+    return .{
+        .source = source,
+        .sampler = sampler,
+    };
+}
+
 pub fn bytes(self: Rng, buf: []u8) void {
     self.fillFn(self.ptr, buf);
 }
@@ -1456,6 +1463,27 @@ pub fn SampleIterator(comptime Sampler: type, comptime T: type) type {
     };
 }
 
+pub fn SampleIteratorFrom(comptime Source: type, comptime Sampler: type, comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        source: Source,
+        sampler: Sampler,
+
+        pub fn next(self: *Self) ?T {
+            return self.nextValue();
+        }
+
+        pub fn nextValue(self: *Self) T {
+            return self.sampler.sampleFrom(self.source);
+        }
+
+        pub fn fill(self: *Self, dest: []T) void {
+            for (dest) |*item| item.* = self.nextValue();
+        }
+    };
+}
+
 fn uintBits(self: Rng, comptime T: type, comptime bits: comptime_int) T {
     return uintBitsFrom(self, T, bits);
 }
@@ -2437,4 +2465,9 @@ test "value and sampler iterators produce unbounded samples" {
         const roll = rolls.next().?;
         try std.testing.expect(roll >= 1 and roll <= 6);
     }
+
+    var direct_rolls = Rng.sampleIterFrom(&engine, u8, die);
+    var direct_roll_buf: [16]u8 = undefined;
+    direct_rolls.fill(&direct_roll_buf);
+    for (direct_roll_buf) |roll| try std.testing.expect(roll >= 1 and roll <= 6);
 }

@@ -86,7 +86,8 @@ Single-shot helpers and reusable samplers cover:
 
 Reusable samplers expose `sample(rng)`, and direct-source samplers expose
 `sampleFrom(source)` where comptime-known engine dispatch is useful. They can be
-used with `rng.sampleIter(T, sampler)` when the sample type is scalar. `Dirichlet`
+used with `rng.sampleIter(T, sampler)` or
+`Rng.sampleIterFrom(source, T, sampler)` when the sample type is scalar. `Dirichlet`
 supports allocation-returning `sample(allocator, rng)` and allocation-free
 `sampleInto(rng, out)` / `sampleIntoFrom(source, out)` and flat
 `sampleManyInto` / `sampleManyIntoFrom` batch APIs. Unit geometry samplers also
