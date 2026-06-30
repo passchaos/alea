@@ -123,7 +123,8 @@ Single-shot helpers:
   `fillBernoulliChecked`, `fillBernoulliCheckedFrom`, `binomial`,
   `binomialFrom`, `binomialChecked`, `binomialCheckedFrom`, `fillBinomial`, `fillBinomialFrom`,
   `fillBinomialChecked`, `fillBinomialCheckedFrom`,
-  `binomialPoissonApprox`
+  `binomialPoissonApprox`, `binomialPoissonApproxFrom`,
+  `binomialPoissonApproxChecked`, `binomialPoissonApproxCheckedFrom`
 - `negativeBinomial`, `negativeBinomialFrom`, `negativeBinomialChecked`,
   `negativeBinomialCheckedFrom`, `fillNegativeBinomial`,
   `fillNegativeBinomialFrom`, `fillNegativeBinomialChecked`,

@@ -299,14 +299,27 @@ pub fn binomialFrom(source: anytype, trials: u64, p: f64) u64 {
 }
 
 pub fn binomialPoissonApprox(rng: Rng, trials: u64, p: f64) u64 {
+    return binomialPoissonApproxFrom(rng, trials, p);
+}
+
+pub fn binomialPoissonApproxFrom(source: anytype, trials: u64, p: f64) u64 {
     std.debug.assert(p >= 0 and p <= 1);
     if (trials == 0 or p == 0) return 0;
     if (p == 1) return trials;
 
     const q = if (p <= 0.5) p else 1.0 - p;
     const mean = @as(f64, @floatFromInt(trials)) * q;
-    const sampled = @min(poisson(rng, mean), trials);
+    const sampled = @min(poissonFrom(source, mean), trials);
     return if (p <= 0.5) sampled else trials - sampled;
+}
+
+pub fn binomialPoissonApproxChecked(rng: Rng, trials: u64, p: f64) Error!u64 {
+    return binomialPoissonApproxCheckedFrom(rng, trials, p);
+}
+
+pub fn binomialPoissonApproxCheckedFrom(source: anytype, trials: u64, p: f64) Error!u64 {
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+    return binomialPoissonApproxFrom(source, trials, p);
 }
 
 pub const Multinomial = struct {
@@ -6621,6 +6634,10 @@ test "binomial sampler has plausible moments" {
     fillBinomialFrom(&direct_engine, &binomial_buf, 8, 0.5);
     for (binomial_buf) |value| try std.testing.expect(value <= 8);
     try std.testing.expect(binomialPoissonApprox(rng, 10_000, 0.01) < 200);
+    try std.testing.expect(binomialPoissonApproxFrom(&direct_engine, 10_000, 0.01) < 200);
+    try std.testing.expect(try binomialPoissonApproxChecked(rng, 10_000, 0.01) < 200);
+    try std.testing.expect(try binomialPoissonApproxCheckedFrom(&direct_engine, 10_000, 0.01) < 200);
+    try std.testing.expectError(error.InvalidProbability, binomialPoissonApproxCheckedFrom(&direct_engine, 10_000, 1.1));
     try std.testing.expectError(error.InvalidProbability, Binomial.init(1, 1.1));
 }
 
