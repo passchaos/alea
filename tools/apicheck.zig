@@ -12,6 +12,13 @@ const checks = [_]Check{
     .{ .path = "src/seq.zig", .label = "seq" },
     .{ .path = "src/ascii.zig", .label = "ascii" },
     .{ .path = "src/seed.zig", .label = "Seed" },
+    .{ .path = "src/engines/alea4x64.zig", .label = "Alea4x64" },
+    .{ .path = "src/engines/chacha.zig", .label = "ChaCha" },
+    .{ .path = "src/engines/pcg64.zig", .label = "Pcg64" },
+    .{ .path = "src/engines/splitmix64.zig", .label = "SplitMix64" },
+    .{ .path = "src/engines/wyhash64.zig", .label = "Wyhash64" },
+    .{ .path = "src/engines/xoshiro256.zig", .label = "Xoshiro256" },
+    .{ .path = "src/engines/xoshiro256plusplus.zig", .label = "Xoshiro256PlusPlus" },
 };
 
 pub fn main(init: std.process.Init) !void {
