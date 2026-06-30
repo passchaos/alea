@@ -81,6 +81,7 @@ zig build -Doptimize=ReleaseFast distcheck
 zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/alea.bin
 sh tools/practrand.sh fast 1073741824
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench
 RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/rand_bench/Cargo.toml
 ```
 
