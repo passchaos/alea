@@ -1968,6 +1968,15 @@ pub fn beta(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
     return betaFrom(rng, T, alpha, beta_param);
 }
 
+pub fn betaChecked(rng: Rng, comptime T: type, alpha: T, beta_param: T) Error!T {
+    return betaCheckedFrom(rng, T, alpha, beta_param);
+}
+
+pub fn betaCheckedFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) Error!T {
+    const dist = try Beta(T).init(alpha, beta_param);
+    return dist.sampleFrom(source);
+}
+
 pub fn betaFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
     if (alpha == 1 and beta_param == 1) return Rng.floatFrom(source, T);
@@ -5234,6 +5243,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(beta_value >= 0 and beta_value <= 1);
     const direct_beta = betaFrom(&direct_engine, f64, 2, 5);
     try std.testing.expect(direct_beta >= 0 and direct_beta <= 1);
+    const direct_checked_beta = try betaCheckedFrom(&direct_engine, f64, 2, 5);
+    try std.testing.expect(direct_checked_beta >= 0 and direct_checked_beta <= 1);
+    try std.testing.expectError(error.InvalidParameter, betaCheckedFrom(&direct_engine, f64, 1, 0));
     var beta_buf: [8]f64 = undefined;
     fillBeta(rng, f64, &beta_buf, 2, 5);
     for (beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
