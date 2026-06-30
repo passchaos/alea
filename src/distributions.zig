@@ -2865,6 +2865,15 @@ pub fn rayleigh(rng: Rng, comptime T: type, scale: T) T {
     return rayleighFrom(rng, T, scale);
 }
 
+pub fn rayleighChecked(rng: Rng, comptime T: type, scale: T) Error!T {
+    return rayleighCheckedFrom(rng, T, scale);
+}
+
+pub fn rayleighCheckedFrom(source: anytype, comptime T: type, scale: T) Error!T {
+    const dist = try Rayleigh(T).init(scale);
+    return dist.sampleFrom(source);
+}
+
 pub fn rayleighFrom(source: anytype, comptime T: type, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and std.math.isFinite(scale));
@@ -2915,6 +2924,15 @@ pub fn Rayleigh(comptime T: type) type {
 
 pub fn maxwell(rng: Rng, comptime T: type, scale: T) T {
     return maxwellFrom(rng, T, scale);
+}
+
+pub fn maxwellChecked(rng: Rng, comptime T: type, scale: T) Error!T {
+    return maxwellCheckedFrom(rng, T, scale);
+}
+
+pub fn maxwellCheckedFrom(source: anytype, comptime T: type, scale: T) Error!T {
+    const dist = try Maxwell(T).init(scale);
+    return dist.sampleFrom(source);
 }
 
 pub fn maxwellFrom(source: anytype, comptime T: type, scale: T) T {
@@ -5534,6 +5552,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const rayleigh_sampler = try Rayleigh(f64).init(2);
     rayleigh_sampler.fillFrom(&direct_engine, &direct_rayleigh_buf);
     for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expect(try rayleighCheckedFrom(&direct_engine, f64, 2) >= 0);
+    try std.testing.expectError(error.InvalidParameter, rayleighCheckedFrom(&direct_engine, f64, 0));
 
     var maxwells = rng.sampleIter(f64, try Maxwell(f64).init(2));
     try std.testing.expect(maxwells.next().? >= 0);
@@ -5546,6 +5566,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const maxwell_sampler = try Maxwell(f64).init(2);
     maxwell_sampler.fillFrom(&direct_engine, &direct_maxwell_buf);
     for (direct_maxwell_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expect(try maxwellCheckedFrom(&direct_engine, f64, 2) >= 0);
+    try std.testing.expectError(error.InvalidParameter, maxwellCheckedFrom(&direct_engine, f64, 0));
 
     var paretos = rng.sampleIter(f64, try Pareto(f64).init(2, 3));
     try std.testing.expect(paretos.next().? >= 2);

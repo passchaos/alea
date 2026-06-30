@@ -169,8 +169,10 @@ Single-shot helpers:
   `fillKumaraswamy`, `fillKumaraswamyFrom`,
   `powerFunction`, `powerFunctionFrom`, `powerFunctionChecked`,
   `powerFunctionCheckedFrom`, `fillPowerFunction`,
-  `fillPowerFunctionFrom`, `rayleigh`, `rayleighFrom`, `fillRayleigh`,
-  `fillRayleighFrom`, `maxwell`, `maxwellFrom`, `fillMaxwell`,
+  `fillPowerFunctionFrom`, `rayleigh`, `rayleighFrom`, `rayleighChecked`,
+  `rayleighCheckedFrom`, `fillRayleigh`,
+  `fillRayleighFrom`, `maxwell`, `maxwellFrom`, `maxwellChecked`,
+  `maxwellCheckedFrom`, `fillMaxwell`,
   `fillMaxwellFrom`,
   `pareto`, `paretoFrom`, `fillPareto`, `fillParetoFrom`, `weibull`,
   `weibullFrom`, `fillWeibull`, `fillWeibullFrom`
