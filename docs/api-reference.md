@@ -20,7 +20,7 @@ expectations.
 - Error type: `Error`
 - Construction and interop: `init`, `fromRandom`, `random`
 - Values: `value`, `valueFrom`, `valueIter`, `valueIterFrom`, `randomIter`,
-  `sampleIter`, `sampleIterFrom`
+  `randomIterFrom`, `sampleIter`, `sampleIterFrom`
 - Bytes/fill: `bytes`, `fill` and `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`,
   `fillRangeChecked`, `fillRangeCheckedFrom`, `fillOpen`,

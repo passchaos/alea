@@ -139,6 +139,10 @@ pub fn randomIter(self: Rng, comptime T: type) ValueIterator(T) {
     return self.valueIter(T);
 }
 
+pub fn randomIterFrom(source: anytype, comptime T: type) ValueIteratorFrom(@TypeOf(source), T) {
+    return valueIterFrom(source, T);
+}
+
 pub fn sampleIter(self: Rng, comptime T: type, sampler: anytype) SampleIterator(@TypeOf(sampler), T) {
     return .{
         .rng = self,
@@ -2449,6 +2453,10 @@ test "value and sampler iterators produce unbounded samples" {
     var direct_bool_iter = Rng.valueIterFrom(&engine, bool);
     var direct_bools: [8]bool = undefined;
     direct_bool_iter.fill(&direct_bools);
+
+    var direct_random_iter = Rng.randomIterFrom(&engine, bool);
+    var direct_random_bools: [8]bool = undefined;
+    direct_random_iter.fill(&direct_random_bools);
 
     var tuple_iter = rng.valueIter(struct { u8, bool, f32 });
     const tuple = tuple_iter.nextValue();
