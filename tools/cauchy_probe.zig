@@ -26,6 +26,10 @@ pub fn main(init: std.process.Init) !void {
     try benchF64(io, stdout, "open precomputed angle", sample_count, openPrecomputedAngle);
     try benchF64(io, stdout, "open mulAdd angle", sample_count, openMulAddAngle);
     try benchF64(io, stdout, "open negative cot", sample_count, openNegativeCot);
+    try benchF64Source(alea.FastPrng, io, stdout, "fast current centered open", sample_count, currentCenteredOpenAny);
+    try benchF64Source(alea.FastPrng, io, stdout, "fast rust-shaped half-open", sample_count, rustShapedHalfOpenAny);
+    try benchF64Source(alea.ScalarPrng, io, stdout, "scalar current centered open", sample_count, currentCenteredOpenAny);
+    try benchF64Source(alea.ScalarPrng, io, stdout, "scalar rust-shaped half-open", sample_count, rustShapedHalfOpenAny);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar tan", sample_count, stagedScalarTan);
     try benchFill(alea.FastPrng, io, stdout, "fast staged vector4 tan", sample_count, stagedVector4Tan);
@@ -64,8 +68,42 @@ fn benchF64(
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchF64Source(
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    sample_count: usize,
+    comptime sampleFn: anytype,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(0xca11);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += sampleFn(&engine);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn currentCenteredOpen(engine: *alea.ScalarPrng) f64 {
     return alea.distributions.cauchyFrom(engine, f64, 0, 1);
+}
+
+fn currentCenteredOpenAny(source: anytype) f64 {
+    return alea.distributions.cauchyFrom(source, f64, 0, 1);
 }
 
 fn centeredHalfOpen(engine: *alea.ScalarPrng) f64 {
@@ -75,6 +113,11 @@ fn centeredHalfOpen(engine: *alea.ScalarPrng) f64 {
 
 fn rustShapedHalfOpen(engine: *alea.ScalarPrng) f64 {
     const u = alea.Rng.floatFrom(engine, f64);
+    return @tan(pi * u);
+}
+
+fn rustShapedHalfOpenAny(source: anytype) f64 {
+    const u = alea.Rng.floatFrom(source, f64);
     return @tan(pi * u);
 }
 
