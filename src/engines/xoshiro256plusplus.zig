@@ -90,3 +90,10 @@ test "xoshiro256++ deterministic" {
     var i: usize = 0;
     while (i < 32) : (i += 1) try std.testing.expectEqual(a.next(), b.next());
 }
+
+test "xoshiro256++ jump has stable snapshots" {
+    var jumped = Xoshiro256PlusPlus.init(99);
+    jumped.jump();
+    try std.testing.expectEqual(@as(u64, 0xcbf20e55c1eca77c), jumped.next());
+    try std.testing.expectEqual(@as(u64, 0x65b235c8b9458037), jumped.next());
+}

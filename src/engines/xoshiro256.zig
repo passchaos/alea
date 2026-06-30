@@ -107,3 +107,22 @@ test "xoshiro256 split creates deterministic independent stream" {
     try std.testing.expectEqual(child_a.next(), child_b.next());
     try std.testing.expect(parent_a.next() != child_a.next());
 }
+
+test "xoshiro256 transitions have stable snapshots" {
+    var parent = Xoshiro256.init(99);
+    var child = parent.split();
+    try std.testing.expectEqual(@as(u64, 0xc934258fd5563f14), parent.next());
+    try std.testing.expectEqual(@as(u64, 0x34af27f3d7a89660), parent.next());
+    try std.testing.expectEqual(@as(u64, 0xb0a34956f8dd977f), child.next());
+    try std.testing.expectEqual(@as(u64, 0xbaca3a3656213c2c), child.next());
+
+    var jumped = Xoshiro256.init(99);
+    jumped.jump();
+    try std.testing.expectEqual(@as(u64, 0xb193d099972f6eaa), jumped.next());
+    try std.testing.expectEqual(@as(u64, 0xb85a11383ff56dd2), jumped.next());
+
+    var long_jumped = Xoshiro256.init(99);
+    long_jumped.longJump();
+    try std.testing.expectEqual(@as(u64, 0x1853f73ab19cefa6), long_jumped.next());
+    try std.testing.expectEqual(@as(u64, 0xf77c78c0f0db04e8), long_jumped.next());
+}

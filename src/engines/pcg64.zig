@@ -68,3 +68,9 @@ test "pcg64 stream selection is deterministic" {
         try std.testing.expect(value_a != value_c);
     }
 }
+
+test "pcg64 initTwo has stable snapshots" {
+    var stream = Pcg64.initTwo(1, 7);
+    try std.testing.expectEqual(@as(u64, 0xf0d8729930c00555), stream.next());
+    try std.testing.expectEqual(@as(u64, 0xb70772f9f2173593), stream.next());
+}
