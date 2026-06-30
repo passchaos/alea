@@ -2363,6 +2363,15 @@ pub fn cauchy(rng: Rng, comptime T: type, median: T, scale: T) T {
     return cauchyFrom(rng, T, median, scale);
 }
 
+pub fn cauchyChecked(rng: Rng, comptime T: type, median: T, scale: T) Error!T {
+    return cauchyCheckedFrom(rng, T, median, scale);
+}
+
+pub fn cauchyCheckedFrom(source: anytype, comptime T: type, median: T, scale: T) Error!T {
+    const dist = try Cauchy(T).init(median, scale);
+    return dist.sampleFrom(source);
+}
+
 pub fn cauchyFrom(source: anytype, comptime T: type, median: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0);
@@ -2415,6 +2424,15 @@ pub fn Cauchy(comptime T: type) type {
 
 pub fn laplace(rng: Rng, comptime T: type, location: T, scale: T) T {
     return laplaceFrom(rng, T, location, scale);
+}
+
+pub fn laplaceChecked(rng: Rng, comptime T: type, location: T, scale: T) Error!T {
+    return laplaceCheckedFrom(rng, T, location, scale);
+}
+
+pub fn laplaceCheckedFrom(source: anytype, comptime T: type, location: T, scale: T) Error!T {
+    const dist = try Laplace(T).init(location, scale);
+    return dist.sampleFrom(source);
 }
 
 pub fn laplaceFrom(source: anytype, comptime T: type, location: T, scale: T) T {
@@ -5377,6 +5395,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const cauchy_sampler = try Cauchy(f64).init(0, 1);
     cauchy_sampler.fillFrom(&direct_engine, &direct_cauchy_buf);
     for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expect(std.math.isFinite(try cauchyCheckedFrom(&direct_engine, f64, 0, 1)));
+    try std.testing.expectError(error.InvalidParameter, cauchyCheckedFrom(&direct_engine, f64, 0, 0));
 
     var laplaces = rng.sampleIter(f64, try Laplace(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(laplaces.next().?));
@@ -5389,6 +5409,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const laplace_sampler = try Laplace(f64).init(0, 1);
     laplace_sampler.fillFrom(&direct_engine, &direct_laplace_buf);
     for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expect(std.math.isFinite(try laplaceCheckedFrom(&direct_engine, f64, 0, 1)));
+    try std.testing.expectError(error.InvalidParameter, laplaceCheckedFrom(&direct_engine, f64, 0, 0));
 
     var logistics = rng.sampleIter(f64, try Logistic(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(logistics.next().?));
