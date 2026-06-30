@@ -178,7 +178,9 @@ Single-shot helpers:
   `fillPareto`, `fillParetoFrom`, `weibull`, `weibullFrom`,
   `weibullChecked`, `weibullCheckedFrom`, `fillWeibull`, `fillWeibullFrom`
 - `gumbel`, `gumbelFrom`, `fillGumbel`, `fillGumbelFrom`,
-  `frechet`, `frechetFrom`, `fillFrechet`, `fillFrechetFrom`,
+  `gumbelChecked`, `gumbelCheckedFrom`,
+  `frechet`, `frechetFrom`, `frechetChecked`, `frechetCheckedFrom`,
+  `fillFrechet`, `fillFrechetFrom`,
   `skewNormal`, `skewNormalFrom`, `fillSkewNormal`, `fillSkewNormalFrom`,
   `pert`, `pertFrom`, `fillPert`, `fillPertFrom`
 - `inverseGaussian`, `inverseGaussianFrom`, `fillInverseGaussian`,

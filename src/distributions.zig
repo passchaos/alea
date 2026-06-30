@@ -3125,6 +3125,15 @@ pub fn gumbel(rng: Rng, comptime T: type, location: T, scale: T) T {
     return gumbelFrom(rng, T, location, scale);
 }
 
+pub fn gumbelChecked(rng: Rng, comptime T: type, location: T, scale: T) Error!T {
+    return gumbelCheckedFrom(rng, T, location, scale);
+}
+
+pub fn gumbelCheckedFrom(source: anytype, comptime T: type, location: T, scale: T) Error!T {
+    const dist = try Gumbel(T).init(location, scale);
+    return dist.sampleFrom(source);
+}
+
 pub fn gumbelFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
@@ -3177,6 +3186,15 @@ pub fn Gumbel(comptime T: type) type {
 
 pub fn frechet(rng: Rng, comptime T: type, location: T, scale: T, shape: T) T {
     return frechetFrom(rng, T, location, scale, shape);
+}
+
+pub fn frechetChecked(rng: Rng, comptime T: type, location: T, scale: T, shape: T) Error!T {
+    return frechetCheckedFrom(rng, T, location, scale, shape);
+}
+
+pub fn frechetCheckedFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) Error!T {
+    const dist = try Frechet(T).init(location, scale, shape);
+    return dist.sampleFrom(source);
 }
 
 pub fn frechetFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
@@ -5635,6 +5653,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const gumbel_sampler = try Gumbel(f64).init(0, 1);
     gumbel_sampler.fillFrom(&direct_engine, &direct_gumbel_buf);
     for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expect(std.math.isFinite(try gumbelCheckedFrom(&direct_engine, f64, 0, 1)));
+    try std.testing.expectError(error.InvalidParameter, gumbelCheckedFrom(&direct_engine, f64, 0, 0));
 
     var frechets = rng.sampleIter(f64, try Frechet(f64).init(0, 1, 2));
     try std.testing.expect(frechets.next().? >= 0);
@@ -5648,6 +5668,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const frechet_sampler = try Frechet(f64).init(0, 1, 2);
     frechet_sampler.fillFrom(&direct_engine, &direct_frechet_buf);
     for (direct_frechet_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expect(try frechetCheckedFrom(&direct_engine, f64, 0, 1, 2) >= 0);
+    try std.testing.expectError(error.InvalidParameter, frechetCheckedFrom(&direct_engine, f64, 0, 1, 0));
     var frechet_shape_one_buf: [8]f64 = undefined;
     fillFrechetFrom(&direct_engine, f64, &frechet_shape_one_buf, 0, 1, 1);
     for (frechet_shape_one_buf) |value| try std.testing.expect(value >= 0);
