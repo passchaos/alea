@@ -165,6 +165,15 @@ pub fn binomial(rng: Rng, trials: u64, p: f64) u64 {
     return binomialFrom(rng, trials, p);
 }
 
+pub fn binomialChecked(rng: Rng, trials: u64, p: f64) Error!u64 {
+    return binomialCheckedFrom(rng, trials, p);
+}
+
+pub fn binomialCheckedFrom(source: anytype, trials: u64, p: f64) Error!u64 {
+    const dist = try Binomial.init(trials, p);
+    return dist.sampleFrom(source);
+}
+
 pub fn fillBinomial(rng: Rng, dest: []u64, trials: u64, p: f64) void {
     fillBinomialFrom(rng, dest, trials, p);
 }
@@ -4704,6 +4713,9 @@ test "basic distributions stay in expected ranges" {
     bernoulli_sampler.fillFrom(&direct_bernoulli_engine, &bernoulli_buf);
     try std.testing.expectError(error.InvalidProbability, bernoulliCheckedFrom(&direct_bernoulli_engine, 1.1));
     try std.testing.expect((try Binomial.init(10, 1)).sample(rng) == 10);
+    try std.testing.expectEqual(@as(u64, 10), try binomialChecked(rng, 10, 1));
+    try std.testing.expectEqual(@as(u64, 10), try binomialCheckedFrom(&direct_bernoulli_engine, 10, 1));
+    try std.testing.expectError(error.InvalidProbability, binomialCheckedFrom(&direct_bernoulli_engine, 10, 1.1));
     var binomial_buf: [8]u64 = undefined;
     fillBinomial(rng, &binomial_buf, 10, 1);
     for (binomial_buf) |value| try std.testing.expectEqual(@as(u64, 10), value);

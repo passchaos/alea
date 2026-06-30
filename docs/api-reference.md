@@ -115,7 +115,7 @@ Single-shot helpers:
 - `uniform`, `uniformFrom`, `uniformInclusive`, `uniformInclusiveFrom`
 - `bernoulli`, `bernoulliFrom`, `bernoulliChecked`,
   `bernoulliCheckedFrom`, `fillBernoulli`, `fillBernoulliFrom`, `binomial`,
-  `binomialFrom`, `fillBinomial`, `fillBinomialFrom`,
+  `binomialFrom`, `binomialChecked`, `binomialCheckedFrom`, `fillBinomial`, `fillBinomialFrom`,
   `binomialPoissonApprox`
 - `negativeBinomial`, `negativeBinomialFrom`, `fillNegativeBinomial`,
   `fillNegativeBinomialFrom`, `hypergeometric`, `hypergeometricFrom`,
