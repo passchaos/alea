@@ -66,9 +66,10 @@ probability vectors, and parameterized normal/exponential vectors/fills when
 the engine type is comptime-known.
 Distribution-level bulk fills that cache a reusable sampler also keep
 assert-fast `fill*` helpers and add checked `fill*Checked` /
-`fill*CheckedFrom` variants for common discrete families and core
-continuous/derived families such as log-normal, half-normal, gamma,
-chi-squared, chi, Erlang, beta, Fisher F, and Student t.
+`fill*CheckedFrom` variants for common discrete families, core continuous
+families, and tail/bounded families such as triangular, arcsine, Cauchy,
+Laplace, logistic, log-logistic, Kumaraswamy, power-function, Rayleigh,
+Maxwell, Pareto, Weibull, Gumbel, Frechet, skew-normal, and PERT.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar

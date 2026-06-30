@@ -2433,6 +2433,15 @@ pub fn fillTriangularFrom(source: anytype, comptime T: type, dest: []T, min: T, 
     triangularFromUniforms(T, dest, min, mode, max);
 }
 
+pub fn fillTriangularChecked(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, max: T) Error!void {
+    return fillTriangularCheckedFrom(rng, T, dest, min, mode, max);
+}
+
+pub fn fillTriangularCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: T, max: T) Error!void {
+    const sampler = try Triangular(T).init(min, mode, max);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Triangular(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -2499,6 +2508,15 @@ pub fn fillArcsineFrom(source: anytype, comptime T: type, dest: []T, min: T, max
     arcsineFromOpenUniforms(T, dest, min, max - min);
 }
 
+pub fn fillArcsineChecked(rng: Rng, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    return fillArcsineCheckedFrom(rng, T, dest, min, max);
+}
+
+pub fn fillArcsineCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    const sampler = try Arcsine(T).init(min, max);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Arcsine(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -2559,6 +2577,15 @@ pub fn fillCauchyFrom(source: anytype, comptime T: type, dest: []T, median: T, s
     std.debug.assert(scale > 0);
     Rng.fillOpenFrom(source, T, dest);
     cauchyFromOpenUniforms(T, dest, median, scale);
+}
+
+pub fn fillCauchyChecked(rng: Rng, comptime T: type, dest: []T, median: T, scale: T) Error!void {
+    return fillCauchyCheckedFrom(rng, T, dest, median, scale);
+}
+
+pub fn fillCauchyCheckedFrom(source: anytype, comptime T: type, dest: []T, median: T, scale: T) Error!void {
+    const sampler = try Cauchy(T).init(median, scale);
+    sampler.fillFrom(source, dest);
 }
 
 pub fn Cauchy(comptime T: type) type {
@@ -2627,6 +2654,15 @@ pub fn fillLaplaceFrom(source: anytype, comptime T: type, dest: []T, location: T
     laplaceFromOpenUniforms(T, dest, location, scale);
 }
 
+pub fn fillLaplaceChecked(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) Error!void {
+    return fillLaplaceCheckedFrom(rng, T, dest, location, scale);
+}
+
+pub fn fillLaplaceCheckedFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) Error!void {
+    const sampler = try Laplace(T).init(location, scale);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Laplace(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -2689,6 +2725,15 @@ pub fn fillLogisticFrom(source: anytype, comptime T: type, dest: []T, location: 
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
     Rng.fillOpenFrom(source, T, dest);
     logisticFromOpenUniforms(T, dest, location, scale);
+}
+
+pub fn fillLogisticChecked(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) Error!void {
+    return fillLogisticCheckedFrom(rng, T, dest, location, scale);
+}
+
+pub fn fillLogisticCheckedFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) Error!void {
+    const sampler = try Logistic(T).init(location, scale);
+    sampler.fillFrom(source, dest);
 }
 
 pub fn Logistic(comptime T: type) type {
@@ -2759,6 +2804,15 @@ pub fn fillLogLogisticFrom(source: anytype, comptime T: type, dest: []T, scale: 
     }
 
     logLogisticFromOpenUniforms(T, dest, scale, 1 / shape);
+}
+
+pub fn fillLogLogisticChecked(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
+    return fillLogLogisticCheckedFrom(rng, T, dest, scale, shape);
+}
+
+pub fn fillLogLogisticCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
+    const sampler = try LogLogistic(T).init(scale, shape);
+    sampler.fillFrom(source, dest);
 }
 
 pub fn LogLogistic(comptime T: type) type {
@@ -2854,6 +2908,15 @@ pub fn fillKumaraswamyFrom(source: anytype, comptime T: type, dest: []T, alpha: 
     }
 
     for (dest) |*item| item.* = kumaraswamyFrom(source, T, alpha, beta_param);
+}
+
+pub fn fillKumaraswamyChecked(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
+    return fillKumaraswamyCheckedFrom(rng, T, dest, alpha, beta_param);
+}
+
+pub fn fillKumaraswamyCheckedFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
+    const sampler = try Kumaraswamy(T).init(alpha, beta_param);
+    sampler.fillFrom(source, dest);
 }
 
 pub fn Kumaraswamy(comptime T: type) type {
@@ -2974,6 +3037,15 @@ pub fn fillPowerFunctionFrom(source: anytype, comptime T: type, dest: []T, min: 
     powerFunctionFromOpenUniforms(T, dest, min, max - min, 1 / shape);
 }
 
+pub fn fillPowerFunctionChecked(rng: Rng, comptime T: type, dest: []T, min: T, max: T, shape: T) Error!void {
+    return fillPowerFunctionCheckedFrom(rng, T, dest, min, max, shape);
+}
+
+pub fn fillPowerFunctionCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T, shape: T) Error!void {
+    const sampler = try PowerFunction(T).init(min, max, shape);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn PowerFunction(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -3063,6 +3135,15 @@ pub fn fillRayleighFrom(source: anytype, comptime T: type, dest: []T, scale: T) 
     rayleighFromOpenUniforms(T, dest, scale);
 }
 
+pub fn fillRayleighChecked(rng: Rng, comptime T: type, dest: []T, scale: T) Error!void {
+    return fillRayleighCheckedFrom(rng, T, dest, scale);
+}
+
+pub fn fillRayleighCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T) Error!void {
+    const sampler = try Rayleigh(T).init(scale);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Rayleigh(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -3124,6 +3205,15 @@ pub fn fillMaxwellFrom(source: anytype, comptime T: type, dest: []T, scale: T) v
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and std.math.isFinite(scale));
     for (dest) |*item| item.* = maxwellFrom(source, T, scale);
+}
+
+pub fn fillMaxwellChecked(rng: Rng, comptime T: type, dest: []T, scale: T) Error!void {
+    return fillMaxwellCheckedFrom(rng, T, dest, scale);
+}
+
+pub fn fillMaxwellCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T) Error!void {
+    const sampler = try Maxwell(T).init(scale);
+    sampler.fillFrom(source, dest);
 }
 
 pub fn Maxwell(comptime T: type) type {
@@ -3190,6 +3280,15 @@ pub fn fillParetoFrom(source: anytype, comptime T: type, dest: []T, scale: T, sh
 
     Rng.fillOpenFrom(source, T, dest);
     paretoFromOpenUniforms(T, dest, scale, 1 / shape);
+}
+
+pub fn fillParetoChecked(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
+    return fillParetoCheckedFrom(rng, T, dest, scale, shape);
+}
+
+pub fn fillParetoCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
+    const sampler = try Pareto(T).init(scale, shape);
+    sampler.fillFrom(source, dest);
 }
 
 pub fn Pareto(comptime T: type) type {
@@ -3260,6 +3359,15 @@ pub fn fillWeibullFrom(source: anytype, comptime T: type, dest: []T, scale: T, s
     weibullFromOpenUniforms(T, dest, scale, 1 / shape);
 }
 
+pub fn fillWeibullChecked(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
+    return fillWeibullCheckedFrom(rng, T, dest, scale, shape);
+}
+
+pub fn fillWeibullCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
+    const sampler = try Weibull(T).init(scale, shape);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn Weibull(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -3321,6 +3429,15 @@ pub fn fillGumbelFrom(source: anytype, comptime T: type, dest: []T, location: T,
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
     Rng.fillOpenClosedFrom(source, T, dest);
     gumbelFromOpenClosedUniforms(T, dest, location, scale);
+}
+
+pub fn fillGumbelChecked(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) Error!void {
+    return fillGumbelCheckedFrom(rng, T, dest, location, scale);
+}
+
+pub fn fillGumbelCheckedFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) Error!void {
+    const sampler = try Gumbel(T).init(location, scale);
+    sampler.fillFrom(source, dest);
 }
 
 pub fn Gumbel(comptime T: type) type {
@@ -3389,6 +3506,15 @@ pub fn fillFrechetFrom(source: anytype, comptime T: type, dest: []T, location: T
     }
 
     frechetFromOpenClosedUniforms(T, dest, location, scale, -1 / shape);
+}
+
+pub fn fillFrechetChecked(rng: Rng, comptime T: type, dest: []T, location: T, scale: T, shape: T) Error!void {
+    return fillFrechetCheckedFrom(rng, T, dest, location, scale, shape);
+}
+
+pub fn fillFrechetCheckedFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) Error!void {
+    const sampler = try Frechet(T).init(location, scale, shape);
+    sampler.fillFrom(source, dest);
 }
 
 pub fn Frechet(comptime T: type) type {
@@ -3469,6 +3595,15 @@ pub fn fillSkewNormalFrom(source: anytype, comptime T: type, dest: []T, location
     for (dest) |*item| item.* = skewNormalFrom(source, T, location, scale, shape);
 }
 
+pub fn fillSkewNormalChecked(rng: Rng, comptime T: type, dest: []T, location: T, scale: T, shape: T) Error!void {
+    return fillSkewNormalCheckedFrom(rng, T, dest, location, scale, shape);
+}
+
+pub fn fillSkewNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) Error!void {
+    const sampler = try SkewNormal(T).init(location, scale, shape);
+    sampler.fillFrom(source, dest);
+}
+
 pub fn SkewNormal(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -3533,6 +3668,15 @@ pub fn fillPertFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: 
     comptime requireFloat(T);
     std.debug.assert(min < max and min <= mode and mode <= max and shape >= 0);
     const sampler = Pert(T).init(min, mode, max, shape) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillPertChecked(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, max: T, shape: T) Error!void {
+    return fillPertCheckedFrom(rng, T, dest, min, mode, max, shape);
+}
+
+pub fn fillPertCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: T, max: T, shape: T) Error!void {
+    const sampler = try Pert(T).init(min, mode, max, shape);
     sampler.fillFrom(source, dest);
 }
 
@@ -5752,6 +5896,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_triangular_buf: [8]f64 = undefined;
     fillTriangularFrom(&direct_engine, f64, &direct_triangular_buf, -1, 0, 2);
     for (direct_triangular_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    try fillTriangularChecked(rng, f64, &triangular_buf, -1, 0, 2);
+    for (triangular_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    try fillTriangularCheckedFrom(&direct_engine, f64, &direct_triangular_buf, -1, 0, 2);
+    for (direct_triangular_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    try std.testing.expectError(error.InvalidParameter, fillTriangularCheckedFrom(&direct_engine, f64, &direct_triangular_buf, 1, 0, 2));
     const triangular_sampler = try Triangular(f64).init(-1, 0, 2);
     triangular_sampler.fillFrom(&direct_engine, &direct_triangular_buf);
     for (direct_triangular_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
@@ -5768,6 +5917,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_arcsine_buf: [8]f64 = undefined;
     fillArcsineFrom(&direct_engine, f64, &direct_arcsine_buf, -1, 3);
     for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
+    try fillArcsineChecked(rng, f64, &arcsine_buf, -1, 3);
+    for (arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
+    try fillArcsineCheckedFrom(&direct_engine, f64, &direct_arcsine_buf, -1, 3);
+    for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
+    try std.testing.expectError(error.InvalidParameter, fillArcsineCheckedFrom(&direct_engine, f64, &direct_arcsine_buf, 1, 1));
     const arcsine_sampler = try Arcsine(f64).init(-1, 3);
     arcsine_sampler.fillFrom(&direct_engine, &direct_arcsine_buf);
     for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
@@ -5784,6 +5938,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_cauchy_buf: [8]f64 = undefined;
     fillCauchyFrom(&direct_engine, f64, &direct_cauchy_buf, 0, 1);
     for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillCauchyChecked(rng, f64, &cauchy_buf, 0, 1);
+    for (cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillCauchyCheckedFrom(&direct_engine, f64, &direct_cauchy_buf, 0, 1);
+    for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&direct_engine, f64, &direct_cauchy_buf, 0, 0));
     const cauchy_sampler = try Cauchy(f64).init(0, 1);
     cauchy_sampler.fillFrom(&direct_engine, &direct_cauchy_buf);
     for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
@@ -5798,6 +5957,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_laplace_buf: [8]f64 = undefined;
     fillLaplaceFrom(&direct_engine, f64, &direct_laplace_buf, 0, 1);
     for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillLaplaceChecked(rng, f64, &laplace_buf, 0, 1);
+    for (laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillLaplaceCheckedFrom(&direct_engine, f64, &direct_laplace_buf, 0, 1);
+    for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expectError(error.InvalidParameter, fillLaplaceCheckedFrom(&direct_engine, f64, &direct_laplace_buf, 0, 0));
     const laplace_sampler = try Laplace(f64).init(0, 1);
     laplace_sampler.fillFrom(&direct_engine, &direct_laplace_buf);
     for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
@@ -5812,6 +5976,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_logistic_buf: [8]f64 = undefined;
     fillLogisticFrom(&direct_engine, f64, &direct_logistic_buf, 0, 1);
     for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillLogisticChecked(rng, f64, &logistic_buf, 0, 1);
+    for (logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillLogisticCheckedFrom(&direct_engine, f64, &direct_logistic_buf, 0, 1);
+    for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expectError(error.InvalidParameter, fillLogisticCheckedFrom(&direct_engine, f64, &direct_logistic_buf, 0, 0));
     const logistic_sampler = try Logistic(f64).init(0, 1);
     logistic_sampler.fillFrom(&direct_engine, &direct_logistic_buf);
     for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
@@ -5826,6 +5995,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_log_logistic_buf: [8]f64 = undefined;
     fillLogLogisticFrom(&direct_engine, f64, &direct_log_logistic_buf, 2, 3);
     for (direct_log_logistic_buf) |value| try std.testing.expect(value > 0);
+    try fillLogLogisticChecked(rng, f64, &log_logistic_buf, 2, 3);
+    for (log_logistic_buf) |value| try std.testing.expect(value > 0);
+    try fillLogLogisticCheckedFrom(&direct_engine, f64, &direct_log_logistic_buf, 2, 3);
+    for (direct_log_logistic_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expectError(error.InvalidParameter, fillLogLogisticCheckedFrom(&direct_engine, f64, &direct_log_logistic_buf, 0, 3));
     const log_logistic_sampler = try LogLogistic(f64).init(2, 3);
     log_logistic_sampler.fillFrom(&direct_engine, &direct_log_logistic_buf);
     for (direct_log_logistic_buf) |value| try std.testing.expect(value > 0);
@@ -5844,6 +6018,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_kumaraswamy_buf: [8]f64 = undefined;
     fillKumaraswamyFrom(&direct_engine, f64, &direct_kumaraswamy_buf, 2, 5);
     for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    try fillKumaraswamyChecked(rng, f64, &kumaraswamy_buf, 2, 5);
+    for (kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    try fillKumaraswamyCheckedFrom(&direct_engine, f64, &direct_kumaraswamy_buf, 2, 5);
+    for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    try std.testing.expectError(error.InvalidParameter, fillKumaraswamyCheckedFrom(&direct_engine, f64, &direct_kumaraswamy_buf, 0, 5));
     const kumaraswamy_sampler = try Kumaraswamy(f64).init(2, 5);
     kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf);
     for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
@@ -5866,6 +6045,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_power_function_buf: [8]f64 = undefined;
     fillPowerFunctionFrom(&direct_engine, f64, &direct_power_function_buf, -1, 2, 3);
     for (direct_power_function_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    try fillPowerFunctionChecked(rng, f64, &power_function_buf, -1, 2, 3);
+    for (power_function_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    try fillPowerFunctionCheckedFrom(&direct_engine, f64, &direct_power_function_buf, -1, 2, 3);
+    for (direct_power_function_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    try std.testing.expectError(error.InvalidParameter, fillPowerFunctionCheckedFrom(&direct_engine, f64, &direct_power_function_buf, -1, 2, 0));
     const power_function_sampler = try PowerFunction(f64).init(-1, 2, 3);
     power_function_sampler.fillFrom(&direct_engine, &direct_power_function_buf);
     for (direct_power_function_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
@@ -5887,6 +6071,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_rayleigh_buf: [8]f64 = undefined;
     fillRayleighFrom(&direct_engine, f64, &direct_rayleigh_buf, 2);
     for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
+    try fillRayleighChecked(rng, f64, &rayleigh_buf, 2);
+    for (rayleigh_buf) |value| try std.testing.expect(value >= 0);
+    try fillRayleighCheckedFrom(&direct_engine, f64, &direct_rayleigh_buf, 2);
+    for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expectError(error.InvalidParameter, fillRayleighCheckedFrom(&direct_engine, f64, &direct_rayleigh_buf, 0));
     const rayleigh_sampler = try Rayleigh(f64).init(2);
     rayleigh_sampler.fillFrom(&direct_engine, &direct_rayleigh_buf);
     for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
@@ -5901,6 +6090,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_maxwell_buf: [8]f64 = undefined;
     fillMaxwellFrom(&direct_engine, f64, &direct_maxwell_buf, 2);
     for (direct_maxwell_buf) |value| try std.testing.expect(value >= 0);
+    try fillMaxwellChecked(rng, f64, &maxwell_buf, 2);
+    for (maxwell_buf) |value| try std.testing.expect(value >= 0);
+    try fillMaxwellCheckedFrom(&direct_engine, f64, &direct_maxwell_buf, 2);
+    for (direct_maxwell_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expectError(error.InvalidParameter, fillMaxwellCheckedFrom(&direct_engine, f64, &direct_maxwell_buf, 0));
     const maxwell_sampler = try Maxwell(f64).init(2);
     maxwell_sampler.fillFrom(&direct_engine, &direct_maxwell_buf);
     for (direct_maxwell_buf) |value| try std.testing.expect(value >= 0);
@@ -5916,6 +6110,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_pareto_buf: [8]f64 = undefined;
     fillParetoFrom(&direct_engine, f64, &direct_pareto_buf, 2, 3);
     for (direct_pareto_buf) |value| try std.testing.expect(value >= 2);
+    try fillParetoChecked(rng, f64, &pareto_buf, 2, 3);
+    for (pareto_buf) |value| try std.testing.expect(value >= 2);
+    try fillParetoCheckedFrom(&direct_engine, f64, &direct_pareto_buf, 2, 3);
+    for (direct_pareto_buf) |value| try std.testing.expect(value >= 2);
+    try std.testing.expectError(error.InvalidParameter, fillParetoCheckedFrom(&direct_engine, f64, &direct_pareto_buf, 0, 3));
     const pareto_sampler = try Pareto(f64).init(2, 3);
     pareto_sampler.fillFrom(&direct_engine, &direct_pareto_buf);
     for (direct_pareto_buf) |value| try std.testing.expect(value >= 2);
@@ -5934,6 +6133,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_weibull_buf: [8]f64 = undefined;
     fillWeibullFrom(&direct_engine, f64, &direct_weibull_buf, 2, 1.5);
     for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
+    try fillWeibullChecked(rng, f64, &weibull_buf, 2, 1.5);
+    for (weibull_buf) |value| try std.testing.expect(value >= 0);
+    try fillWeibullCheckedFrom(&direct_engine, f64, &direct_weibull_buf, 2, 1.5);
+    for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expectError(error.InvalidParameter, fillWeibullCheckedFrom(&direct_engine, f64, &direct_weibull_buf, 0, 1.5));
     const weibull_sampler = try Weibull(f64).init(2, 1.5);
     weibull_sampler.fillFrom(&direct_engine, &direct_weibull_buf);
     for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
@@ -5952,6 +6156,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_gumbel_buf: [8]f64 = undefined;
     fillGumbelFrom(&direct_engine, f64, &direct_gumbel_buf, 0, 1);
     for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillGumbelChecked(rng, f64, &gumbel_buf, 0, 1);
+    for (gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillGumbelCheckedFrom(&direct_engine, f64, &direct_gumbel_buf, 0, 1);
+    for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expectError(error.InvalidParameter, fillGumbelCheckedFrom(&direct_engine, f64, &direct_gumbel_buf, 0, 0));
     const gumbel_sampler = try Gumbel(f64).init(0, 1);
     gumbel_sampler.fillFrom(&direct_engine, &direct_gumbel_buf);
     for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
@@ -5967,6 +6176,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_frechet_buf: [8]f64 = undefined;
     fillFrechetFrom(&direct_engine, f64, &direct_frechet_buf, 0, 1, 2);
     for (direct_frechet_buf) |value| try std.testing.expect(value >= 0);
+    try fillFrechetChecked(rng, f64, &frechet_buf, 0, 1, 2);
+    for (frechet_buf) |value| try std.testing.expect(value >= 0);
+    try fillFrechetCheckedFrom(&direct_engine, f64, &direct_frechet_buf, 0, 1, 2);
+    for (direct_frechet_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expectError(error.InvalidParameter, fillFrechetCheckedFrom(&direct_engine, f64, &direct_frechet_buf, 0, 1, 0));
     const frechet_sampler = try Frechet(f64).init(0, 1, 2);
     frechet_sampler.fillFrom(&direct_engine, &direct_frechet_buf);
     for (direct_frechet_buf) |value| try std.testing.expect(value >= 0);
@@ -5984,6 +6198,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_skew_normal_buf: [8]f64 = undefined;
     fillSkewNormalFrom(&direct_engine, f64, &direct_skew_normal_buf, 0, 1, 1);
     for (direct_skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillSkewNormalChecked(rng, f64, &skew_normal_buf, 0, 1, 1);
+    for (skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillSkewNormalCheckedFrom(&direct_engine, f64, &direct_skew_normal_buf, 0, 1, 1);
+    for (direct_skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expectError(error.InvalidParameter, fillSkewNormalCheckedFrom(&direct_engine, f64, &direct_skew_normal_buf, 0, 0, 1));
     const skew_normal_sampler = try SkewNormal(f64).init(0, 1, 1);
     skew_normal_sampler.fillFrom(&direct_engine, &direct_skew_normal_buf);
     for (direct_skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
@@ -5999,6 +6218,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_pert_buf: [8]f64 = undefined;
     fillPertFrom(&direct_engine, f64, &direct_pert_buf, -1, 0.5, 2, 4);
     for (direct_pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    try fillPertChecked(rng, f64, &pert_buf, -1, 0.5, 2, 4);
+    for (pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    try fillPertCheckedFrom(&direct_engine, f64, &direct_pert_buf, -1, 0.5, 2, 4);
+    for (direct_pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    try std.testing.expectError(error.InvalidParameter, fillPertCheckedFrom(&direct_engine, f64, &direct_pert_buf, 0, 2, 1, 4));
     const pert_sampler = try Pert(f64).init(-1, 0.5, 2, 4);
     pert_sampler.fillFrom(&direct_engine, &direct_pert_buf);
     for (direct_pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
