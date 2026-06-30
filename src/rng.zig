@@ -187,6 +187,10 @@ pub fn fillRangeFrom(source: anytype, comptime T: type, dest: []T, min: T, max: 
 }
 
 pub fn fillRangeChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    return fillRangeCheckedFrom(self, T, dest, min, max);
+}
+
+pub fn fillRangeCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
     switch (@typeInfo(T)) {
         .int => {
             if (min >= max) return error.EmptyRange;
@@ -196,7 +200,7 @@ pub fn fillRangeChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) 
         },
         else => @compileError("alea.Rng.fillRangeChecked supports integer and floating-point slices"),
     }
-    self.fillRange(T, dest, min, max);
+    fillRangeFrom(source, T, dest, min, max);
 }
 
 pub fn fillOpen(self: Rng, comptime T: type, dest: []T) void {
@@ -253,8 +257,12 @@ pub fn fillChanceFrom(source: anytype, dest: []bool, p: f64) void {
 }
 
 pub fn fillChanceChecked(self: Rng, dest: []bool, p: f64) Error!void {
+    return fillChanceCheckedFrom(self, dest, p);
+}
+
+pub fn fillChanceCheckedFrom(source: anytype, dest: []bool, p: f64) Error!void {
     if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
-    self.fillChance(dest, p);
+    fillChanceFrom(source, dest, p);
 }
 
 pub fn fillRatio(self: Rng, dest: []bool, numerator: u32, denominator: u32) void {
@@ -287,8 +295,12 @@ pub fn fillRatioFrom(source: anytype, dest: []bool, numerator: u32, denominator:
 }
 
 pub fn fillRatioChecked(self: Rng, dest: []bool, numerator: u32, denominator: u32) Error!void {
+    return fillRatioCheckedFrom(self, dest, numerator, denominator);
+}
+
+pub fn fillRatioCheckedFrom(source: anytype, dest: []bool, numerator: u32, denominator: u32) Error!void {
     if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
-    self.fillRatio(dest, numerator, denominator);
+    fillRatioFrom(source, dest, numerator, denominator);
 }
 
 pub fn fillVectorRange(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
@@ -470,9 +482,13 @@ pub fn fillNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, std
 }
 
 pub fn fillNormalChecked(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
+    return fillNormalCheckedFrom(self, T, dest, mean, stddev);
+}
+
+pub fn fillNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
     comptime requireFloat(T);
     if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
-    self.fillNormal(T, dest, mean, stddev);
+    fillNormalFrom(source, T, dest, mean, stddev);
 }
 
 pub fn fillExponential(self: Rng, comptime T: type, dest: []T, rate: T) void {
@@ -486,9 +502,13 @@ pub fn fillExponentialFrom(source: anytype, comptime T: type, dest: []T, rate: T
 }
 
 pub fn fillExponentialChecked(self: Rng, comptime T: type, dest: []T, rate: T) Error!void {
+    return fillExponentialCheckedFrom(self, T, dest, rate);
+}
+
+pub fn fillExponentialCheckedFrom(source: anytype, comptime T: type, dest: []T, rate: T) Error!void {
     comptime requireFloat(T);
     if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
-    self.fillExponential(T, dest, rate);
+    fillExponentialFrom(source, T, dest, rate);
 }
 
 pub fn fillSample(self: Rng, comptime T: type, dest: []T, sampler: anytype) void {
@@ -1809,10 +1829,14 @@ test "rng facade covers scalar APIs" {
     for (chance_buf) |item| try std.testing.expect(!item);
     Rng.fillChanceFrom(&engine, &chance_buf, 1);
     for (chance_buf) |item| try std.testing.expect(item);
+    try Rng.fillChanceCheckedFrom(&engine, &chance_buf, 0);
+    for (chance_buf) |item| try std.testing.expect(!item);
     rng.fillRatio(&chance_buf, 0, 1);
     for (chance_buf) |item| try std.testing.expect(!item);
     Rng.fillRatioFrom(&engine, &chance_buf, 1, 1);
     for (chance_buf) |item| try std.testing.expect(item);
+    try Rng.fillRatioCheckedFrom(&engine, &chance_buf, 0, 1);
+    for (chance_buf) |item| try std.testing.expect(!item);
 
     var ranged_buf: [16]i16 = undefined;
     rng.fillRange(i16, &ranged_buf, -20, 20);
@@ -1821,6 +1845,10 @@ test "rng facade covers scalar APIs" {
     var ranged_float_buf: [16]f32 = undefined;
     try rng.fillRangeChecked(f32, &ranged_float_buf, -1, 1);
     for (ranged_float_buf) |item| try std.testing.expect(item >= -1 and item < 1);
+
+    var direct_checked_ranged_float_buf: [16]f32 = undefined;
+    try Rng.fillRangeCheckedFrom(&engine, f32, &direct_checked_ranged_float_buf, -1, 1);
+    for (direct_checked_ranged_float_buf) |item| try std.testing.expect(item >= -1 and item < 1);
 
     var open_float_buf: [17]f32 = undefined;
     rng.fillOpen(f32, &open_float_buf);
@@ -1874,6 +1902,10 @@ test "rng facade covers scalar APIs" {
     Rng.fillNormalFrom(&engine, f64, &direct_normal_buf, 0, 1);
     for (direct_normal_buf) |item| try std.testing.expect(std.math.isFinite(item));
 
+    var direct_checked_normal_buf: [16]f64 = undefined;
+    try Rng.fillNormalCheckedFrom(&engine, f64, &direct_checked_normal_buf, 0, 1);
+    for (direct_checked_normal_buf) |item| try std.testing.expect(std.math.isFinite(item));
+
     var normal_f32_buf: [33]f32 = undefined;
     try rng.fillNormalChecked(f32, &normal_f32_buf, 0, 1);
     for (normal_f32_buf) |item| try std.testing.expect(std.math.isFinite(item));
@@ -1885,6 +1917,10 @@ test "rng facade covers scalar APIs" {
     var direct_exp_buf: [16]f64 = undefined;
     Rng.fillExponentialFrom(&engine, f64, &direct_exp_buf, 2);
     for (direct_exp_buf) |item| try std.testing.expect(item >= 0);
+
+    var direct_checked_exp_buf: [16]f64 = undefined;
+    try Rng.fillExponentialCheckedFrom(&engine, f64, &direct_checked_exp_buf, 2);
+    for (direct_checked_exp_buf) |item| try std.testing.expect(item >= 0);
 
     var exp_f32_buf: [17]f32 = undefined;
     try rng.fillExponentialChecked(f32, &exp_f32_buf, 2);
@@ -2178,8 +2214,13 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.InvalidParameter, Rng.vectorNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1));
     try std.testing.expectError(error.InvalidParameter, Rng.vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectError(error.EmptyRange, rng.fillRangeChecked(u32, &.{}, 3, 3));
+    try std.testing.expectError(error.EmptyRange, Rng.fillRangeCheckedFrom(&engine, u32, &.{}, 3, 3));
+    try std.testing.expectError(error.InvalidProbability, Rng.fillChanceCheckedFrom(&engine, &.{}, -0.1));
+    try std.testing.expectError(error.InvalidProbability, Rng.fillRatioCheckedFrom(&engine, &.{}, 2, 1));
     try std.testing.expectError(error.InvalidParameter, rng.fillNormalChecked(f64, &normal_buf, 0, -1));
     try std.testing.expectError(error.InvalidParameter, rng.fillExponentialChecked(f64, &exp_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, Rng.fillNormalCheckedFrom(&engine, f64, &normal_buf, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, Rng.fillExponentialCheckedFrom(&engine, f64, &exp_buf, 0));
 }
 
 test "shuffle and sampling keep item set" {
