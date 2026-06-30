@@ -1491,7 +1491,15 @@ pub const Poisson = struct {
     }
 
     pub fn fillFrom(self: Poisson, source: anytype, dest: []u64) void {
-        for (dest) |*item| item.* = self.sampleFrom(source);
+        switch (self.method) {
+            .zero => @memset(dest, 0),
+            .product => |threshold| {
+                for (dest) |*item| item.* = poissonProductFrom(source, threshold);
+            },
+            .ahrens_dieter => |method| {
+                for (dest) |*item| item.* = method.sampleFrom(source);
+            },
+        }
     }
 };
 
