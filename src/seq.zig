@@ -130,6 +130,10 @@ fn sampleIndicesLarge(allocator: std.mem.Allocator, source: anytype, length: usi
 }
 
 pub fn sampleArray(rng: Rng, comptime N: usize, length: usize) ?[N]usize {
+    return sampleArrayFrom(rng, N, length);
+}
+
+pub fn sampleArrayFrom(source: anytype, comptime N: usize, length: usize) ?[N]usize {
     if (N > length) return null;
     var indices: [N]usize = undefined;
 
@@ -139,7 +143,7 @@ pub fn sampleArray(rng: Rng, comptime N: usize, length: usize) ?[N]usize {
         j += 1;
         i += 1;
     }) {
-        const t = rng.uintAtMost(usize, j);
+        const t = Rng.uintAtMostFrom(source, usize, j);
         var found: ?usize = null;
         for (indices[0..i], 0..) |existing, pos| {
             if (existing == t) {
@@ -742,6 +746,9 @@ test "sample indices are distinct and bounded" {
     }
 
     try std.testing.expectError(error.InvalidParameter, sampleIndices(std.testing.allocator, rng, 3, 4));
+
+    const direct_fixed = sampleArrayFrom(&engine, 4, 32).?;
+    for (direct_fixed) |index| try std.testing.expect(index < 32);
 }
 
 test "index vec keeps compact backing for u32 lengths" {

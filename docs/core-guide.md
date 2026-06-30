@@ -102,7 +102,7 @@ Use:
 - `seq.partialShuffle`
 - `seq.reservoirSample`
 - `seq.sampleIndices`, `seq.sampleIndexVec`, `seq.sampleIndicesU32`
-- `seq.sampleArray`
+- `seq.sampleArray`, `seq.sampleArrayFrom`
 - `seq.chooseMultiple`
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`, `seq.sampleIterator`,
   `seq.sampleIteratorFrom`
