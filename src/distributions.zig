@@ -1449,6 +1449,15 @@ pub fn geometricFrom(source: anytype, p: f64) u64 {
     return geometricFailuresFrom(source, p) + 1;
 }
 
+pub fn geometricChecked(rng: Rng, p: f64) Error!u64 {
+    return geometricCheckedFrom(rng, p);
+}
+
+pub fn geometricCheckedFrom(source: anytype, p: f64) Error!u64 {
+    const dist = try Geometric.init(p);
+    return dist.sampleFrom(source);
+}
+
 pub fn geometricFailures(rng: Rng, p: f64) u64 {
     return geometricFailuresFrom(rng, p);
 }
@@ -1457,6 +1466,15 @@ pub fn geometricFailuresFrom(source: anytype, p: f64) u64 {
     std.debug.assert(p > 0 and p <= 1);
     if (p == 1) return 0;
     return @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(source, f64)) / @log(1 - p)));
+}
+
+pub fn geometricFailuresChecked(rng: Rng, p: f64) Error!u64 {
+    return geometricFailuresCheckedFrom(rng, p);
+}
+
+pub fn geometricFailuresCheckedFrom(source: anytype, p: f64) Error!u64 {
+    const dist = try GeometricFailures.init(p);
+    return dist.sampleFrom(source);
 }
 
 pub fn fillGeometricFailures(rng: Rng, dest: []u64, p: f64) void {
@@ -5037,6 +5055,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const geometric_sampler = try Geometric.init(0.25);
     geometric_sampler.fillFrom(&direct_engine, &direct_geometric_buf);
     for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
+    try std.testing.expect(try geometricCheckedFrom(&direct_engine, 0.25) >= 1);
+    try std.testing.expectError(error.InvalidProbability, geometricCheckedFrom(&direct_engine, 0));
     var geometric_failures = rng.sampleIter(u64, try GeometricFailures.init(0.25));
     _ = geometric_failures.next().?;
     var geometric_failures_buf: [8]u64 = undefined;
@@ -5045,6 +5065,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const geometric_failures_sampler = try GeometricFailures.init(0.25);
     geometric_failures_sampler.fillFrom(&direct_engine, &geometric_failures_buf);
     try std.testing.expectEqual(@as(u64, 0), geometricFailures(rng, 1));
+    try std.testing.expect(try geometricFailuresCheckedFrom(&direct_engine, 0.25) < 64);
+    try std.testing.expectError(error.InvalidProbability, geometricFailuresCheckedFrom(&direct_engine, 0));
     const always_success_failures = GeometricFailures.init(1) catch unreachable;
     try std.testing.expectEqual(@as(u64, 0), always_success_failures.sample(rng));
     var standard_geometric_buf: [8]u64 = undefined;

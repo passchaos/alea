@@ -131,8 +131,10 @@ Single-shot helpers:
   `fillStandardExponential`, `fillStandardExponentialFrom`, `exponential`,
   `exponentialFrom`, `exponentialChecked`, `exponentialCheckedFrom`
 - `poisson`, `poissonFrom`, `fillPoisson`, `fillPoissonFrom`, `geometric`,
-  `geometricFrom`, `fillGeometric`, `fillGeometricFrom`,
-  `geometricFailures`, `geometricFailuresFrom`, `fillGeometricFailures`,
+  `geometricFrom`, `geometricChecked`, `geometricCheckedFrom`,
+  `fillGeometric`, `fillGeometricFrom`,
+  `geometricFailures`, `geometricFailuresFrom`, `geometricFailuresChecked`,
+  `geometricFailuresCheckedFrom`, `fillGeometricFailures`,
   `fillGeometricFailuresFrom`, `standardGeometric`,
   `standardGeometricFrom`, `fillStandardGeometric`,
   `fillStandardGeometricFrom`, `poissonAhrensDieter`,
