@@ -113,7 +113,7 @@ pub fn fillUniformInclusiveChecked(rng: Rng, comptime T: type, dest: []T, min: T
 pub fn fillUniformInclusiveCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
     switch (@typeInfo(T)) {
         .int => {
-            _ = try Rng.intRangeAtMostCheckedFrom(source, T, min, max);
+            if (min > max) return error.EmptyRange;
             fillUniformInclusiveFrom(source, T, dest, min, max);
         },
         .float => {
@@ -5554,6 +5554,21 @@ test "basic distributions stay in expected ranges" {
     try fillUniformInclusiveCheckedFrom(&engine, u32, &inclusive_int_buf, 5, 9);
     for (inclusive_int_buf) |value| try std.testing.expect(value >= 5 and value <= 9);
     try std.testing.expectError(error.EmptyRange, fillUniformInclusiveCheckedFrom(&engine, u32, &inclusive_int_buf, 9, 5));
+    const counting_source = struct {
+        count: usize = 0,
+
+        pub fn next(self: *@This()) u64 {
+            self.count += 1;
+            return 0;
+        }
+    };
+    var unchecked_counter = counting_source{};
+    var checked_counter = counting_source{};
+    var unchecked_inclusive: [4]u32 = undefined;
+    var checked_inclusive: [4]u32 = undefined;
+    fillUniformInclusiveFrom(&unchecked_counter, u32, &unchecked_inclusive, 5, 5);
+    try fillUniformInclusiveCheckedFrom(&checked_counter, u32, &checked_inclusive, 5, 5);
+    try std.testing.expectEqual(unchecked_counter.count, checked_counter.count);
     var inclusive_float_buf: [8]f64 = undefined;
     fillUniformInclusive(rng, f64, &inclusive_float_buf, -1, 1);
     for (inclusive_float_buf) |value| try std.testing.expect(value >= -1 and value <= 1);
