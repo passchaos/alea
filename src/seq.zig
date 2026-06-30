@@ -818,6 +818,40 @@ test "index vec keeps compact backing for u32 lengths" {
     while (i < indices.len()) : (i += 1) try std.testing.expect(indices.at(i) < 10_000);
 }
 
+test "checked index sampling preserves valid-parameter stream shape" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var unchecked = Engine.init(0x5150_3333);
+        var checked = Engine.init(0x5150_3333);
+
+        const indices = try sampleIndicesFrom(std.testing.allocator, &unchecked, 1_000, 16);
+        defer std.testing.allocator.free(indices);
+        const checked_indices = try sampleIndicesCheckedFrom(std.testing.allocator, &checked, 1_000, 16);
+        defer std.testing.allocator.free(checked_indices);
+        try std.testing.expectEqualSlices(usize, indices, checked_indices);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const indices_u32 = try sampleIndicesU32From(std.testing.allocator, &unchecked, 1_000, 16);
+        defer std.testing.allocator.free(indices_u32);
+        const checked_indices_u32 = try sampleIndicesU32CheckedFrom(std.testing.allocator, &checked, 1_000, 16);
+        defer std.testing.allocator.free(checked_indices_u32);
+        try std.testing.expectEqualSlices(u32, indices_u32, checked_indices_u32);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const index_vec = try sampleIndexVecFrom(std.testing.allocator, &unchecked, 1_000, 16);
+        defer index_vec.deinit(std.testing.allocator);
+        const checked_index_vec = try sampleIndexVecCheckedFrom(std.testing.allocator, &checked, 1_000, 16);
+        defer checked_index_vec.deinit(std.testing.allocator);
+        try std.testing.expectEqual(index_vec.len(), checked_index_vec.len());
+        var i: usize = 0;
+        while (i < index_vec.len()) : (i += 1) {
+            try std.testing.expectEqual(index_vec.at(i), checked_index_vec.at(i));
+        }
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+    }
+}
+
 test "partial shuffle and reservoir sample respect counts" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(444);
