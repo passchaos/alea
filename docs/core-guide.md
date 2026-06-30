@@ -180,3 +180,12 @@ The benchmark intentionally separates facade/type-erased paths from direct
 static engine paths. `alea.Rng` has function-pointer dispatch comparable to
 `std.Random`; direct helpers are closer to Rust's monomorphized `SmallRng`
 benchmark shape.
+
+Use `vectorbench` for focused SIMD/vector-slice evidence without slowing the
+full throughput suite. The current local rows cover packed bool chance/ratio,
+strict-open/open-closed/range vector float fills, and scalar-lane
+normal/exponential vector fills; representative rows are about 1.01B lanes/s
+for `fillVectorRange(f32x8)`, about 694M lanes/s for
+`fillVectorRange(f64x4)`, about 391M lanes/s for normal `f32x8`, about 383-385M
+lanes/s for normal `f64x4`, and about 361-370M lanes/s for exponential vector
+fills.
