@@ -741,7 +741,8 @@ fn fillOpenF64From(source: anytype, dest: []f64) void {
 
 fn fillOpenClosedF64From(source: anytype, dest: []f64) void {
     if (comptime sourceCanFillBytes(@TypeOf(source))) {
-        var raw_words: [128]u64 = undefined;
+        const buffer_len = if (@TypeOf(source) == Rng) 192 else 128;
+        var raw_words: [buffer_len]u64 = undefined;
 
         var i: usize = 0;
         while (i < dest.len) {
