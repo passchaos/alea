@@ -168,6 +168,7 @@ Reusable samplers:
 
 - `Bernoulli`
 - `Bernoulli.initRatio`
+- `Bernoulli.probability`
 - `Bernoulli.sampleFrom`
 - `Bernoulli.fill`
 - `Bernoulli.fillFrom`
@@ -176,6 +177,7 @@ Reusable samplers:
 - `Binomial.fill`
 - `Binomial.fillFrom`
 - `Multinomial`
+- `Multinomial.sampleInto`
 - `Multinomial.sampleIntoFrom`
 - `Multinomial.sampleManyInto`
 - `Multinomial.sampleManyIntoFrom`
@@ -367,6 +369,7 @@ Reusable samplers:
 - `UnitBall(T).fill`
 - `UnitBall(T).fillFrom`
 - `Dirichlet(T)`
+- `Dirichlet(T).sampleInto`
 - `Dirichlet(T).sampleIntoFrom`
 - `Dirichlet(T).sampleManyInto`
 - `Dirichlet(T).sampleManyIntoFrom`

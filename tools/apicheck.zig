@@ -59,12 +59,28 @@ fn checkFile(io: std.Io, allocator: std.mem.Allocator, stderr: *std.Io.Writer, a
     var lines = std.mem.splitScalar(u8, source, '\n');
     while (lines.next()) |line| {
         const name = publicSymbolName(line) orelse continue;
-        if (std.mem.indexOf(u8, api, name) == null) {
+        if (!containsSymbol(api, name)) {
             try stderr.print("{s}: missing `{s}`\n", .{ label, name });
             missing += 1;
         }
     }
     return missing;
+}
+
+fn containsSymbol(haystack: []const u8, needle: []const u8) bool {
+    var offset: usize = 0;
+    while (std.mem.indexOfPos(u8, haystack, offset, needle)) |index| {
+        const before_ok = index == 0 or !isSymbolChar(haystack[index - 1]);
+        const after_index = index + needle.len;
+        const after_ok = after_index == haystack.len or !isSymbolChar(haystack[after_index]);
+        if (before_ok and after_ok) return true;
+        offset = index + 1;
+    }
+    return false;
+}
+
+fn isSymbolChar(c: u8) bool {
+    return std.ascii.isAlphanumeric(c) or c == '_';
 }
 
 fn publicSymbolName(line: []const u8) ?[]const u8 {
@@ -79,7 +95,7 @@ fn publicSymbolName(line: []const u8) ?[]const u8 {
     var end: usize = 0;
     while (end < rest.len) : (end += 1) {
         const c = rest[end];
-        if (!std.ascii.isAlphanumeric(c) and c != '_') break;
+        if (!isSymbolChar(c)) break;
     }
     if (end == 0) return null;
     return rest[0..end];
@@ -90,7 +106,7 @@ fn consumeToken(rest: *[]const u8, token: []const u8) bool {
     if (!std.mem.startsWith(u8, s, token)) return false;
     if (s.len > token.len) {
         const next = s[token.len];
-        if (std.ascii.isAlphanumeric(next) or next == '_') return false;
+        if (isSymbolChar(next)) return false;
     }
     s = s[token.len..];
     rest.* = s;
