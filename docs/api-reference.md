@@ -17,6 +17,7 @@ expectations.
 
 ## Rng
 
+- Error type: `Error`
 - Construction and interop: `init`, `fromRandom`, `random`
 - Values: `value`, `valueIter`, `randomIter`, `sampleIter`
 - Bytes/fill: `bytes`, `fill` and `fillFrom` for scalar and vector slices,
@@ -92,6 +93,8 @@ appropriate.
 
 ## Distributions
 
+- Error type: `Error`
+
 Single-shot helpers:
 
 - `uniform`, `uniformFrom`, `uniformInclusive`, `uniformInclusiveFrom`
@@ -112,7 +115,7 @@ Single-shot helpers:
   `geometricFailures`, `geometricFailuresFrom`, `fillGeometricFailures`,
   `fillGeometricFailuresFrom`, `standardGeometric`,
   `standardGeometricFrom`, `fillStandardGeometric`,
-  `fillStandardGeometricFrom`
+  `fillStandardGeometricFrom`, `poissonAhrensDieter`
 - `gamma`, `gammaFrom`, `fillGamma`, `fillGammaFrom`, `chiSquared`,
   `chiSquaredFrom`, `fillChiSquared`, `fillChiSquaredFrom`, `chi`,
   `chiFrom`, `fillChi`, `fillChiFrom`, `erlang`, `erlangFrom`,
@@ -137,7 +140,8 @@ Single-shot helpers:
   `frechet`, `frechetFrom`, `fillFrechet`, `fillFrechetFrom`,
   `skewNormal`, `skewNormalFrom`, `fillSkewNormal`, `fillSkewNormalFrom`,
   `pert`, `pertFrom`, `fillPert`, `fillPertFrom`
-- `inverseGaussian`, `fillInverseGaussian`, `fillInverseGaussianFrom`,
+- `inverseGaussian`, `inverseGaussianFrom`, `fillInverseGaussian`,
+  `fillInverseGaussianFrom`,
   `normalInverseGaussian`, `normalInverseGaussianFrom`,
   `fillNormalInverseGaussian`, `fillNormalInverseGaussianFrom`,
   `zipf`, `zipfFrom`, `zeta`, `zetaFrom`
@@ -399,6 +403,7 @@ Dynamic weighted helpers:
 
 ## Sequence Sampling
 
+- Error type: `Error`
 - Index vectors: `IndexVec.len`, `IndexVec.at`, `IndexVec.deinit`
 - Indices: `sampleIndexVec`, `sampleIndexVecFrom`, `sampleIndices`,
   `sampleIndicesFrom`, `sampleIndicesU32`, `sampleIndicesU32From`,
@@ -422,6 +427,8 @@ Dynamic weighted helpers:
 
 - Charset constants: `Alphanumeric`, `Alphabetic`, `Lowercase`, `Uppercase`,
   `Digits`
+- Raw charset byte sets: `alphanumeric`, `alphabetic`, `lowercase`,
+  `uppercase`, `digits`
 - Charset type: `Charset.init`, `Charset.initChecked`, `Charset.sample`,
   `Charset.fill`, `Charset.alloc`
 - Helpers: `char`, `string`, `unicodeScalar`, `unicodeUtf8Alloc`
