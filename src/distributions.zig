@@ -5092,9 +5092,13 @@ fn expInPlace(comptime T: type, dest: []T) void {
     comptime requireFloat(T);
     switch (T) {
         f32 => expInPlaceVector(T, @Vector(8, f32), dest),
-        f64 => expInPlaceVector(T, @Vector(4, f64), dest),
+        f64 => expInPlaceScalar(T, dest),
         else => @compileError("alea supports f32 and f64 floats"),
     }
+}
+
+fn expInPlaceScalar(comptime T: type, dest: []T) void {
+    for (dest) |*item| item.* = @exp(item.*);
 }
 
 fn expInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T) void {
