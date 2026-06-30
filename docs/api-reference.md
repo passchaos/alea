@@ -153,8 +153,10 @@ Single-shot helpers:
   `fisherFCheckedFrom`, `fillFisherF`, `fillFisherFFrom`, `studentT`,
   `studentTFrom`, `studentTChecked`, `studentTCheckedFrom`, `fillStudentT`,
   `fillStudentTFrom`
-- `triangular`, `triangularFrom`, `fillTriangular`, `fillTriangularFrom`,
-  `arcsine`, `arcsineFrom`, `fillArcsine`, `fillArcsineFrom`,
+- `triangular`, `triangularFrom`, `triangularChecked`,
+  `triangularCheckedFrom`, `fillTriangular`, `fillTriangularFrom`,
+  `arcsine`, `arcsineFrom`, `arcsineChecked`, `arcsineCheckedFrom`,
+  `fillArcsine`, `fillArcsineFrom`,
   `cauchy`, `cauchyFrom`, `fillCauchy`, `fillCauchyFrom`, `laplace`, `laplaceFrom`, `fillLaplace`,
   `fillLaplaceFrom`, `logistic`, `logisticFrom`, `fillLogistic`,
   `fillLogisticFrom`, `logLogistic`, `logLogisticFrom`,

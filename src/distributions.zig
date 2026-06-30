@@ -2230,6 +2230,15 @@ pub fn triangular(rng: Rng, comptime T: type, min: T, mode: T, max: T) T {
     return triangularFrom(rng, T, min, mode, max);
 }
 
+pub fn triangularChecked(rng: Rng, comptime T: type, min: T, mode: T, max: T) Error!T {
+    return triangularCheckedFrom(rng, T, min, mode, max);
+}
+
+pub fn triangularCheckedFrom(source: anytype, comptime T: type, min: T, mode: T, max: T) Error!T {
+    const dist = try Triangular(T).init(min, mode, max);
+    return dist.sampleFrom(source);
+}
+
 pub fn triangularFrom(source: anytype, comptime T: type, min: T, mode: T, max: T) T {
     comptime requireFloat(T);
     std.debug.assert(min <= mode and mode <= max and min < max);
@@ -2288,6 +2297,15 @@ pub fn Triangular(comptime T: type) type {
 
 pub fn arcsine(rng: Rng, comptime T: type, min: T, max: T) T {
     return arcsineFrom(rng, T, min, max);
+}
+
+pub fn arcsineChecked(rng: Rng, comptime T: type, min: T, max: T) Error!T {
+    return arcsineCheckedFrom(rng, T, min, max);
+}
+
+pub fn arcsineCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
+    const dist = try Arcsine(T).init(min, max);
+    return dist.sampleFrom(source);
 }
 
 pub fn arcsineFrom(source: anytype, comptime T: type, min: T, max: T) T {
@@ -5327,6 +5345,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const triangular_sampler = try Triangular(f64).init(-1, 0, 2);
     triangular_sampler.fillFrom(&direct_engine, &direct_triangular_buf);
     for (direct_triangular_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    const direct_checked_triangular = try triangularCheckedFrom(&direct_engine, f64, -1, 0, 2);
+    try std.testing.expect(direct_checked_triangular >= -1 and direct_checked_triangular <= 2);
+    try std.testing.expectError(error.InvalidParameter, triangularCheckedFrom(&direct_engine, f64, 1, 0, 2));
 
     var arcsines = rng.sampleIter(f64, try Arcsine(f64).init(-1, 3));
     const arcsine_value = arcsines.next().?;
@@ -5340,6 +5361,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const arcsine_sampler = try Arcsine(f64).init(-1, 3);
     arcsine_sampler.fillFrom(&direct_engine, &direct_arcsine_buf);
     for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
+    const direct_checked_arcsine = try arcsineCheckedFrom(&direct_engine, f64, -1, 3);
+    try std.testing.expect(direct_checked_arcsine >= -1 and direct_checked_arcsine <= 3);
+    try std.testing.expectError(error.InvalidParameter, arcsineCheckedFrom(&direct_engine, f64, 1, 1));
 
     var cauchys = rng.sampleIter(f64, try Cauchy(f64).init(0, 1));
     _ = cauchys.next().?;
