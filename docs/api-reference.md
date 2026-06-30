@@ -430,7 +430,8 @@ Dynamic weighted helpers:
   `WeightedChoice.sampleValue`, `WeightedChoice.sampleValueFrom`,
   `WeightedChoice.fill`, `WeightedChoice.fillFrom`,
   `WeightedChoice.fillValues`, `WeightedChoice.fillValuesFrom`
-- Weighted no-replacement: `sampleWeightedIndices`, `sampleWeighted`
+- Weighted no-replacement: `sampleWeightedIndices`,
+  `sampleWeightedIndicesFrom`, `sampleWeighted`, `sampleWeightedFrom`
 
 ## ASCII And Unicode
 

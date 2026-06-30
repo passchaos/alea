@@ -108,6 +108,8 @@ Use:
   `seq.sampleIteratorFrom`
 - `seq.chooseIteratorWeighted`, `seq.chooseIteratorWeightedFrom`,
   `seq.sampleIteratorWeighted`, `seq.sampleIteratorWeightedFrom`
+- `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
+  `seq.sampleWeighted`, `seq.sampleWeightedFrom`
 - `seq.Choice`, `seq.WeightedChoice`
 - `distributions.AliasTable` for O(1) repeated weighted index sampling
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
@@ -117,8 +119,9 @@ Use:
 
 Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput index
 sampling. Use `sampleIndices` when a `[]usize` result is more convenient.
-Use `AliasTable.sampleFrom` and `WeightedChoice.sampleValueFrom` for repeated
-weighted sampling with a comptime-known engine source.
+Use `sampleWeightedFrom`, `AliasTable.sampleFrom`, and
+`WeightedChoice.sampleValueFrom` for weighted sampling with a comptime-known
+engine source.
 
 ## Strings
 

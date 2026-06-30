@@ -269,6 +269,10 @@ pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype,
 }
 
 pub fn sampleWeightedIndices(allocator: std.mem.Allocator, rng: Rng, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
+    return sampleWeightedIndicesFrom(allocator, rng, Weight, weights, amount);
+}
+
+pub fn sampleWeightedIndicesFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
     if (amount == 0) return allocator.alloc(usize, 0);
     if (weights.len == 0) return error.EmptyInput;
 
@@ -284,7 +288,7 @@ pub fn sampleWeightedIndices(allocator: std.mem.Allocator, rng: Rng, comptime We
 
         const candidate = WeightedCandidate{
             .index = index,
-            .key = @log(rng.floatOpen(f64)) / value,
+            .key = @log(Rng.floatOpenFrom(source, f64)) / value,
         };
 
         if (heap.count() < limit) {
@@ -307,9 +311,13 @@ pub fn sampleWeightedIndices(allocator: std.mem.Allocator, rng: Rng, comptime We
 }
 
 pub fn sampleWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
+    return sampleWeightedFrom(allocator, rng, T, Weight, items, weights, amount);
+}
+
+pub fn sampleWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
     if (items.len != weights.len) return error.LengthMismatch;
     const count = @min(amount, items.len);
-    const indices = try sampleWeightedIndices(allocator, rng, Weight, weights, count);
+    const indices = try sampleWeightedIndicesFrom(allocator, source, Weight, weights, count);
     defer allocator.free(indices);
 
     const out = try allocator.alloc(T, indices.len);
@@ -863,9 +871,24 @@ test "weighted sampling without replacement returns distinct positive-weight ite
     try std.testing.expect(sample[0] != sample[1]);
     for (sample) |item| try std.testing.expect(item == 20 or item == 30 or item == 50);
 
+    const direct_indices = try sampleWeightedIndicesFrom(std.testing.allocator, &engine, f64, &weights, 4);
+    defer std.testing.allocator.free(direct_indices);
+    try std.testing.expectEqual(@as(usize, 3), direct_indices.len);
+    for (direct_indices) |index| {
+        try std.testing.expect(index < weights.len);
+        try std.testing.expect(weights[index] > 0);
+    }
+
+    const direct_sample = try sampleWeightedFrom(std.testing.allocator, &engine, u8, f64, &items, &weights, 2);
+    defer std.testing.allocator.free(direct_sample);
+    try std.testing.expectEqual(@as(usize, 2), direct_sample.len);
+    for (direct_sample) |item| try std.testing.expect(item == 20 or item == 30 or item == 50);
+
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndices(std.testing.allocator, rng, u32, &.{}, 1));
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesFrom(std.testing.allocator, &engine, u32, &.{}, 1));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndices(std.testing.allocator, rng, f64, &.{ 1.0, std.math.nan(f64) }, 1));
     try std.testing.expectError(error.LengthMismatch, sampleWeighted(std.testing.allocator, rng, u8, u32, &.{ 1, 2 }, &.{1}, 1));
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 1));
 }
 
 test "iterator sampling works without collecting first" {
