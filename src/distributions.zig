@@ -915,6 +915,14 @@ pub fn normalFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     return Rng.normalFastFrom(source, T, mean, stddev);
 }
 
+pub fn normalChecked(rng: Rng, comptime T: type, mean: T, stddev: T) Error!T {
+    return normalCheckedFrom(rng, T, mean, stddev);
+}
+
+pub fn normalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: T) Error!T {
+    return Rng.normalCheckedFrom(source, T, mean, stddev);
+}
+
 pub fn StandardNormal(comptime T: type) type {
     return struct {
         pub fn sample(_: @This(), rng: Rng) T {
@@ -960,6 +968,14 @@ pub fn exponentialFrom(source: anytype, comptime T: type, rate: T) T {
     comptime requireFloat(T);
     std.debug.assert(rate > 0);
     return Rng.exponentialFastFrom(source, T, rate);
+}
+
+pub fn exponentialChecked(rng: Rng, comptime T: type, rate: T) Error!T {
+    return exponentialCheckedFrom(rng, T, rate);
+}
+
+pub fn exponentialCheckedFrom(source: anytype, comptime T: type, rate: T) Error!T {
+    return Rng.exponentialCheckedFrom(source, T, rate);
 }
 
 pub fn Normal(comptime T: type) type {
@@ -4663,7 +4679,9 @@ test "basic distributions stay in expected ranges" {
     var direct_bernoulli_engine = alea.ScalarPrng.init(64);
     try std.testing.expect(bernoulliFrom(&direct_bernoulli_engine, 1.0));
     try std.testing.expect(std.math.isFinite(normalFrom(&direct_bernoulli_engine, f64, 0, 1)));
+    try std.testing.expect(std.math.isFinite(try normalCheckedFrom(&direct_bernoulli_engine, f64, 0, 1)));
     try std.testing.expect(exponentialFrom(&direct_bernoulli_engine, f64, 2) >= 0);
+    try std.testing.expect(try exponentialCheckedFrom(&direct_bernoulli_engine, f64, 2) >= 0);
     try std.testing.expect(poissonFrom(&direct_bernoulli_engine, 4) < 32);
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sampleFrom(&direct_bernoulli_engine));
     var bernoulli_buf: [8]bool = undefined;
