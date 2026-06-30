@@ -204,9 +204,9 @@ Continue performance triage on the remaining large gaps:
 - normal scalar ziggurat paths still trail local `rand_distr`,
 - exponential scalar paths are closer after the mantissa-threshold fast path,
   but still sit below local `rand_distr` rows in some full-benchmark shapes,
-- `fillOpenClosed(f64)` bulk is now at the local Rust evidence noise boundary,
-  but remains a watch item because exact `(0, 1]` conversion is sensitive to
-  expression shape,
+- `fillOpenClosed(f64)` split-buffer bulk is now at the local Rust evidence
+  boundary, so keep it as a precision-sensitive watch item rather than a large
+  gap,
 - Cauchy bulk fill is now at the local Rust evidence boundary, while scalar
   single-sample Cauchy remains a small watch item,
 - log-normal scalar direct still trails local `rand_distr`, while log-normal,
