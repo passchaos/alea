@@ -3726,6 +3726,15 @@ pub fn inverseGaussian(rng: Rng, comptime T: type, mean: T, shape: T) T {
     return inverseGaussianFrom(rng, T, mean, shape);
 }
 
+pub fn inverseGaussianChecked(rng: Rng, comptime T: type, mean: T, shape: T) Error!T {
+    return inverseGaussianCheckedFrom(rng, T, mean, shape);
+}
+
+pub fn inverseGaussianCheckedFrom(source: anytype, comptime T: type, mean: T, shape: T) Error!T {
+    const dist = try InverseGaussian(T).init(mean, shape);
+    return dist.sampleFrom(source);
+}
+
 pub fn inverseGaussianFrom(source: anytype, comptime T: type, mean: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(mean > 0 and shape > 0);
@@ -3783,6 +3792,15 @@ pub fn InverseGaussian(comptime T: type) type {
 
 pub fn normalInverseGaussian(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
     return normalInverseGaussianFrom(rng, T, alpha, beta_param);
+}
+
+pub fn normalInverseGaussianChecked(rng: Rng, comptime T: type, alpha: T, beta_param: T) Error!T {
+    return normalInverseGaussianCheckedFrom(rng, T, alpha, beta_param);
+}
+
+pub fn normalInverseGaussianCheckedFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) Error!T {
+    const dist = try NormalInverseGaussian(T).init(alpha, beta_param);
+    return dist.sampleFrom(source);
 }
 
 pub fn normalInverseGaussianFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
@@ -3855,6 +3873,15 @@ pub fn zipf(rng: Rng, comptime T: type, n: T, exponent: T) T {
     return zipfFrom(rng, T, n, exponent);
 }
 
+pub fn zipfChecked(rng: Rng, comptime T: type, n: T, exponent: T) Error!T {
+    return zipfCheckedFrom(rng, T, n, exponent);
+}
+
+pub fn zipfCheckedFrom(source: anytype, comptime T: type, n: T, exponent: T) Error!T {
+    const dist = try Zipf(T).init(n, exponent);
+    return dist.sampleFrom(source);
+}
+
 pub fn zipfFrom(source: anytype, comptime T: type, n: T, exponent: T) T {
     comptime requireFloat(T);
     std.debug.assert(exponent >= 0 and n >= 1);
@@ -3924,6 +3951,15 @@ pub fn Zipf(comptime T: type) type {
 
 pub fn zeta(rng: Rng, comptime T: type, exponent: T) T {
     return zetaFrom(rng, T, exponent);
+}
+
+pub fn zetaChecked(rng: Rng, comptime T: type, exponent: T) Error!T {
+    return zetaCheckedFrom(rng, T, exponent);
+}
+
+pub fn zetaCheckedFrom(source: anytype, comptime T: type, exponent: T) Error!T {
+    const dist = try Zeta(T).init(exponent);
+    return dist.sampleFrom(source);
 }
 
 pub fn zetaFrom(source: anytype, comptime T: type, exponent: T) T {
@@ -6035,6 +6071,17 @@ test "inverse-gaussian and rank samplers have plausible behavior" {
     try std.testing.expect(nig_sum / n > 0.53 and nig_sum / n < 0.62);
     try std.testing.expect(zipf_sum / n > 2.3 and zipf_sum / n < 2.7);
     try std.testing.expect(zeta_sum / n > 1.30 and zeta_sum / n < 1.45);
+
+    var direct_engine = alea.ScalarPrng.init(174);
+    try std.testing.expect(try inverseGaussianCheckedFrom(&direct_engine, f64, 1, 2) > 0);
+    try std.testing.expectError(error.InvalidParameter, inverseGaussianCheckedFrom(&direct_engine, f64, 0, 2));
+    try std.testing.expect(std.math.isFinite(try normalInverseGaussianCheckedFrom(&direct_engine, f64, 2, 1)));
+    try std.testing.expectError(error.InvalidParameter, normalInverseGaussianCheckedFrom(&direct_engine, f64, 1, 1));
+    const direct_zipf = try zipfCheckedFrom(&direct_engine, f64, 10, 1.5);
+    try std.testing.expect(direct_zipf >= 1 and direct_zipf <= 10);
+    try std.testing.expectError(error.InvalidParameter, zipfCheckedFrom(&direct_engine, f64, 0, 1));
+    try std.testing.expect(try zetaCheckedFrom(&direct_engine, f64, 3) >= 1);
+    try std.testing.expectError(error.InvalidParameter, zetaCheckedFrom(&direct_engine, f64, 1));
 
     const high_exponent = try Zipf(f64).init(10, std.math.inf(f64));
     try std.testing.expectEqual(@as(f64, 1), high_exponent.sample(rng));
