@@ -58,8 +58,9 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 Checked variants exist for user-supplied probabilities and scalar ranges.
 The same checked/error-returning style is available for vector ranges,
 vector probabilities, and parameterized vector normal/exponential sampling,
-including direct-source `From` helpers for single vectors and vector-slice
-fills when the engine type is comptime-known.
+including direct-source `From` helpers for ranges, probability vectors, and
+parameterized normal/exponential vectors/fills when the engine type is
+comptime-known.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar

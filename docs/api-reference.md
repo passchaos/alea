@@ -51,8 +51,9 @@ expectations.
 - Floats: `float`, `floatFrom`, `floatOpen`, `floatOpenFrom`,
   `floatOpenClosed`, `floatOpenClosedFrom`
 - Vectors: `vector`, `vectorOpen`, `vectorOpenClosed`, `vectorRange`,
-  `vectorRangeChecked`, `vectorChance`,
-  `vectorChanceChecked`, `vectorRatio`, `vectorRatioChecked`,
+  `vectorRangeChecked`, `vectorRangeCheckedFrom`, `vectorChance`,
+  `vectorChanceChecked`, `vectorChanceCheckedFrom`, `vectorRatio`,
+  `vectorRatioChecked`, `vectorRatioCheckedFrom`,
   `vectorStandardNormal`, `vectorNormal`, `vectorNormalChecked`,
   `vectorStandardExponential`, `vectorExponential`, `vectorExponentialChecked`,
   `vectorFrom`, `vectorOpenFrom`, `vectorOpenClosedFrom`,

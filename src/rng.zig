@@ -1008,6 +1008,10 @@ pub fn vectorRangeFrom(source: anytype, comptime VectorType: type, min: vectorCh
 }
 
 pub fn vectorRangeChecked(self: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
+    return vectorRangeCheckedFrom(self, VectorType, min, max);
+}
+
+pub fn vectorRangeCheckedFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
     const info = vectorInfo(VectorType);
     switch (@typeInfo(info.child)) {
         .int => {
@@ -1018,7 +1022,7 @@ pub fn vectorRangeChecked(self: Rng, comptime VectorType: type, min: vectorChild
         },
         else => @compileError("Rng.vectorRangeChecked supports integer and floating-point vectors"),
     }
-    return self.vectorRange(VectorType, min, max);
+    return vectorRangeFrom(source, VectorType, min, max);
 }
 
 pub fn vectorChance(self: Rng, comptime VectorType: type, p: f64) VectorType {
@@ -1041,8 +1045,12 @@ pub fn vectorChanceFrom(source: anytype, comptime VectorType: type, p: f64) Vect
 }
 
 pub fn vectorChanceChecked(self: Rng, comptime VectorType: type, p: f64) Error!VectorType {
+    return vectorChanceCheckedFrom(self, VectorType, p);
+}
+
+pub fn vectorChanceCheckedFrom(source: anytype, comptime VectorType: type, p: f64) Error!VectorType {
     if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
-    return self.vectorChance(VectorType, p);
+    return vectorChanceFrom(source, VectorType, p);
 }
 
 pub fn vectorRatio(self: Rng, comptime VectorType: type, numerator: u32, denominator: u32) VectorType {
@@ -1065,8 +1073,12 @@ pub fn vectorRatioFrom(source: anytype, comptime VectorType: type, numerator: u3
 }
 
 pub fn vectorRatioChecked(self: Rng, comptime VectorType: type, numerator: u32, denominator: u32) Error!VectorType {
+    return vectorRatioCheckedFrom(self, VectorType, numerator, denominator);
+}
+
+pub fn vectorRatioCheckedFrom(source: anytype, comptime VectorType: type, numerator: u32, denominator: u32) Error!VectorType {
     if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
-    return self.vectorRatio(VectorType, numerator, denominator);
+    return vectorRatioFrom(source, VectorType, numerator, denominator);
 }
 
 pub fn vectorStandardNormal(self: Rng, comptime VectorType: type) VectorType {
@@ -2057,6 +2069,15 @@ test "rng facade covers scalar APIs" {
     const ranged_f = rng.vectorRange(@Vector(4, f64), -1, 2);
     inline for (0..4) |i| try std.testing.expect(ranged_f[i] >= -1 and ranged_f[i] < 2);
 
+    const direct_checked_ranged_f = try Rng.vectorRangeCheckedFrom(&engine, @Vector(4, f64), -1, 2);
+    inline for (0..4) |i| try std.testing.expect(direct_checked_ranged_f[i] >= -1 and direct_checked_ranged_f[i] < 2);
+
+    const direct_checked_false_chance_vec = try Rng.vectorChanceCheckedFrom(&engine, @Vector(8, bool), 0);
+    inline for (0..8) |i| try std.testing.expect(!direct_checked_false_chance_vec[i]);
+
+    const direct_checked_false_ratio_vec = try Rng.vectorRatioCheckedFrom(&engine, @Vector(8, bool), 0, 1);
+    inline for (0..8) |i| try std.testing.expect(!direct_checked_false_ratio_vec[i]);
+
     const normals = rng.vectorNormal(@Vector(4, f64), 0, 1);
     inline for (0..4) |i| try std.testing.expect(std.math.isFinite(normals[i]));
 
@@ -2139,6 +2160,9 @@ test "rng facade covers scalar APIs" {
 
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, u32), 3, 3));
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectError(error.EmptyRange, Rng.vectorRangeCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectError(error.InvalidProbability, Rng.vectorChanceCheckedFrom(&engine, @Vector(8, bool), -0.1));
+    try std.testing.expectError(error.InvalidProbability, Rng.vectorRatioCheckedFrom(&engine, @Vector(8, bool), 2, 1));
     try std.testing.expectError(error.EmptyRange, rng.fillVectorRangeChecked(@Vector(8, f32), &vec_range_buf, 2, 1));
     try std.testing.expectError(error.EmptyRange, Rng.fillVectorRangeCheckedFrom(&engine, @Vector(8, f32), &vec_range_buf, 2, 1));
     try std.testing.expectError(error.InvalidProbability, Rng.fillVectorChanceCheckedFrom(&engine, @Vector(8, bool), &vec_chance_buf, -0.1));
