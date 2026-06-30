@@ -196,6 +196,23 @@ pub fn build(b: *std.Build) void {
     const inverse_gaussian_probe_step = b.step("inverse-gaussian-probe", "Run InverseGaussian bulk expression-shape microbenchmarks");
     inverse_gaussian_probe_step.dependOn(&run_inverse_gaussian_probe.step);
 
+    const poisson_probe_mod = b.createModule(.{
+        .root_source_file = b.path("tools/poisson_probe.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    poisson_probe_mod.addImport("alea", module);
+
+    const poisson_probe = b.addExecutable(.{
+        .name = "alea-poisson-probe",
+        .root_module = poisson_probe_mod,
+    });
+    const run_poisson_probe = b.addRunArtifact(poisson_probe);
+    if (b.args) |args| run_poisson_probe.addArgs(args);
+
+    const poisson_probe_step = b.step("poisson-probe", "Run Poisson lambda=20 profile microbenchmarks");
+    poisson_probe_step.dependOn(&run_poisson_probe.step);
+
     const skew_normal_probe_mod = b.createModule(.{
         .root_source_file = b.path("tools/skew_normal_probe.zig"),
         .target = target,
