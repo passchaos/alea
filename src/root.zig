@@ -96,3 +96,50 @@ test "root hash constructors mirror HashPrng" {
     const direct = HashPrng.init(123);
     try std.testing.expectEqual(direct.state, seeded.state);
 }
+
+test "root deterministic constructors have stable snapshots" {
+    const seed: u64 = 0x1234_5678_9abc_def0;
+
+    var default_engine = default(seed);
+    const direct_default = DefaultPrng.init(seed);
+    try std.testing.expectEqual(direct_default.state, default_engine.state);
+    try std.testing.expectEqual(@as(u64, 0xe01d6fafc557f1b9), default_engine.next());
+
+    var fast_engine = fast(seed);
+    const direct_fast = FastPrng.init(seed);
+    try std.testing.expectEqual(direct_fast.state, fast_engine.state);
+    try std.testing.expectEqual(@as(u64, 0x99fcbd5e9a7a9f30), fast_engine.next());
+
+    var scalar_engine = scalar(seed);
+    const direct_scalar = ScalarPrng.init(seed);
+    try std.testing.expectEqual(direct_scalar.state, scalar_engine.state);
+    try std.testing.expectEqual(@as(u64, 0x23e3ea9cab36bd5b), scalar_engine.next());
+
+    var hash_engine = hash(seed);
+    const direct_hash = HashPrng.init(seed);
+    try std.testing.expectEqual(direct_hash.state, hash_engine.state);
+    try std.testing.expectEqual(@as(u64, 0x23e3ea9cab36bd5b), hash_engine.next());
+
+    var reproducible_engine = reproducible(seed);
+    const direct_reproducible = ReproduciblePrng.init(seed);
+    try std.testing.expectEqual(direct_reproducible.state, reproducible_engine.state);
+    try std.testing.expectEqual(direct_reproducible.inc, reproducible_engine.inc);
+    try std.testing.expectEqual(@as(u64, 0x999c967e7256ef29), reproducible_engine.next());
+
+    var secure_engine = secureFromSeed(seed);
+    var direct_secure = SecurePrng.initFromU64(seed);
+    var secure_bytes: [16]u8 = undefined;
+    var direct_secure_bytes: [16]u8 = undefined;
+    secure_engine.fill(&secure_bytes);
+    direct_secure.fill(&direct_secure_bytes);
+    try std.testing.expectEqualSlices(u8, &direct_secure_bytes, &secure_bytes);
+    try std.testing.expectEqualSlices(u8, &.{
+        0xf1, 0x1c, 0xd9, 0x81, 0xce, 0x73, 0x82, 0x95,
+        0x01, 0x5f, 0xc5, 0x4d, 0x2d, 0x43, 0x88, 0xe8,
+    }, &secure_bytes);
+
+    var direct_rng_engine = scalar(seed);
+    var wrapper_engine = scalar(seed);
+    const wrapper = rng(&wrapper_engine);
+    try std.testing.expectEqual(direct_rng_engine.next(), wrapper.next());
+}
