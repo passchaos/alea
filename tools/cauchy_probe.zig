@@ -26,10 +26,13 @@ pub fn main(init: std.process.Init) !void {
     try benchF64(io, stdout, "open precomputed angle", sample_count, openPrecomputedAngle);
     try benchF64(io, stdout, "open mulAdd angle", sample_count, openMulAddAngle);
     try benchF64(io, stdout, "open negative cot", sample_count, openNegativeCot);
+    try benchF64(io, stdout, "open sin-cos cot", sample_count, openSinCosCot);
     try benchF64Source(alea.FastPrng, io, stdout, "fast current centered open", sample_count, currentCenteredOpenAny);
     try benchF64Source(alea.FastPrng, io, stdout, "fast rust-shaped half-open", sample_count, rustShapedHalfOpenAny);
+    try benchF64Source(alea.FastPrng, io, stdout, "fast sin-cos cot", sample_count, sinCosCotAny);
     try benchF64Source(alea.ScalarPrng, io, stdout, "scalar current centered open", sample_count, currentCenteredOpenAny);
     try benchF64Source(alea.ScalarPrng, io, stdout, "scalar rust-shaped half-open", sample_count, rustShapedHalfOpenAny);
+    try benchF64Source(alea.ScalarPrng, io, stdout, "scalar sin-cos cot", sample_count, sinCosCotAny);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar tan", sample_count, stagedScalarTan);
     try benchFill(alea.FastPrng, io, stdout, "fast staged vector4 tan", sample_count, stagedVector4Tan);
@@ -134,6 +137,15 @@ fn openMulAddAngle(engine: *alea.ScalarPrng) f64 {
 fn openNegativeCot(engine: *alea.ScalarPrng) f64 {
     const angle = pi * alea.Rng.floatOpenFrom(engine, f64);
     return -1.0 / @tan(angle);
+}
+
+fn openSinCosCot(engine: *alea.ScalarPrng) f64 {
+    return sinCosCotAny(engine);
+}
+
+fn sinCosCotAny(source: anytype) f64 {
+    const angle = pi * alea.Rng.floatOpenFrom(source, f64);
+    return -@cos(angle) / @sin(angle);
 }
 
 fn benchFill(
