@@ -1063,6 +1063,13 @@ pub fn vectorNormal(self: Rng, comptime VectorType: type, mean: vectorChild(Vect
     return vectorNormalFrom(self, VectorType, mean, stddev);
 }
 
+pub fn vectorNormalChecked(self: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    return self.vectorNormal(VectorType, mean, stddev);
+}
+
 pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
@@ -1076,6 +1083,13 @@ pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vector
 
 pub fn vectorExponential(self: Rng, comptime VectorType: type, rate: vectorChild(VectorType)) VectorType {
     return vectorExponentialFrom(self, VectorType, rate);
+}
+
+pub fn vectorExponentialChecked(self: Rng, comptime VectorType: type, rate: vectorChild(VectorType)) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+    return self.vectorExponential(VectorType, rate);
 }
 
 pub fn vectorExponentialFrom(source: anytype, comptime VectorType: type, rate: vectorChild(VectorType)) VectorType {
@@ -2048,11 +2062,17 @@ test "rng facade covers scalar APIs" {
     const vector_normals_f32 = rng.vectorNormal(@Vector(8, f32), 0, 1);
     inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vector_normals_f32[i]));
 
+    const checked_vector_normals_f32 = try rng.vectorNormalChecked(@Vector(8, f32), 0, 1);
+    inline for (0..8) |i| try std.testing.expect(std.math.isFinite(checked_vector_normals_f32[i]));
+
     const vector_standard_normals_f32 = rng.vectorStandardNormal(@Vector(8, f32));
     inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vector_standard_normals_f32[i]));
 
     const exponentials = rng.vectorExponential(@Vector(4, f64), 2);
     inline for (0..4) |i| try std.testing.expect(exponentials[i] >= 0);
+
+    const checked_exponentials = try rng.vectorExponentialChecked(@Vector(4, f64), 2);
+    inline for (0..4) |i| try std.testing.expect(checked_exponentials[i] >= 0);
 
     const standard_exponentials = rng.vectorStandardExponential(@Vector(4, f64));
     inline for (0..4) |i| try std.testing.expect(standard_exponentials[i] >= 0);
@@ -2071,6 +2091,10 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.EmptyRange, rng.fillVectorRangeChecked(@Vector(8, f32), &vec_range_buf, 2, 1));
     try std.testing.expectError(error.InvalidParameter, rng.fillVectorNormalChecked(@Vector(8, f32), &vec_normal_buf, 0, -1));
     try std.testing.expectError(error.InvalidParameter, rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_exp_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), 0));
+    try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), std.math.inf(f64)));
     try std.testing.expectError(error.EmptyRange, rng.fillRangeChecked(u32, &.{}, 3, 3));
     try std.testing.expectError(error.InvalidParameter, rng.fillNormalChecked(f64, &normal_buf, 0, -1));
     try std.testing.expectError(error.InvalidParameter, rng.fillExponentialChecked(f64, &exp_buf, 0));

@@ -48,8 +48,9 @@ expectations.
 - Vectors: `vector`, `vectorOpen`, `vectorOpenClosed`, `vectorRange`,
   `vectorRangeChecked`, `vectorChance`,
   `vectorChanceChecked`, `vectorRatio`, `vectorRatioChecked`,
-  `vectorStandardNormal`, `vectorNormal`, `vectorStandardExponential`,
-  `vectorExponential`, `vectorFrom`, `vectorOpenFrom`, `vectorOpenClosedFrom`,
+  `vectorStandardNormal`, `vectorNormal`, `vectorNormalChecked`,
+  `vectorStandardExponential`, `vectorExponential`, `vectorExponentialChecked`,
+  `vectorFrom`, `vectorOpenFrom`, `vectorOpenClosedFrom`,
   `vectorRangeFrom`, `vectorChanceFrom`, `vectorRatioFrom`,
   `vectorStandardNormalFrom`, `vectorStandardExponentialFrom`
 - Unicode: `unicodeScalar`
