@@ -19,26 +19,35 @@ pub fn main(init: std.process.Init) !void {
         default_count;
 
     try stdout.print("unit geometry probe count={}\n", .{sample_count});
-    try benchFill(io, stdout, "unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
-    try benchFill(io, stdout, "unit circle batched candidates", 0xc11c1e, sample_count, batchedUnitCircle);
-    try benchFill(io, stdout, "unit disc current fill", 0xd15c, sample_count, currentUnitDisc);
-    try benchFill(io, stdout, "unit disc batched candidates", 0xd15c, sample_count, batchedUnitDisc);
-    try benchFill3(io, stdout, "unit sphere current fill", 0x59e7e, sample_count, currentUnitSphere);
-    try benchFill3(io, stdout, "unit sphere batched candidates", 0x59e7e, sample_count, batchedUnitSphere);
-    try benchFill3(io, stdout, "unit ball current fill", 0xba11, sample_count, currentUnitBall);
-    try benchFill3(io, stdout, "unit ball batched x2", 0xba11, sample_count, batchedUnitBall2);
-    try benchFill3(io, stdout, "unit ball batched x3", 0xba11, sample_count, batchedUnitBall3);
-    try benchFill3(io, stdout, "unit ball batched x4", 0xba11, sample_count, batchedUnitBall4);
+    try benchFill(alea.FastPrng, io, stdout, "fast unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
+    try benchFill(alea.FastPrng, io, stdout, "fast unit circle batched candidates", 0xc11c1e, sample_count, batchedUnitCircle);
+    try benchFill(alea.FastPrng, io, stdout, "fast unit disc current fill", 0xd15c, sample_count, currentUnitDisc);
+    try benchFill(alea.FastPrng, io, stdout, "fast unit disc batched candidates", 0xd15c, sample_count, batchedUnitDisc);
+    try benchFill3(alea.FastPrng, io, stdout, "fast unit sphere current fill", 0x59e7e, sample_count, currentUnitSphere);
+    try benchFill3(alea.FastPrng, io, stdout, "fast unit sphere batched candidates", 0x59e7e, sample_count, batchedUnitSphere);
+    try benchFill3(alea.FastPrng, io, stdout, "fast unit ball current fill", 0xba11, sample_count, currentUnitBall);
+    try benchFill3(alea.FastPrng, io, stdout, "fast unit ball batched x2", 0xba11, sample_count, batchedUnitBall2);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar unit circle batched candidates", 0xc11c1e, sample_count, batchedUnitCircle);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar unit disc current fill", 0xd15c, sample_count, currentUnitDisc);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar unit disc batched candidates", 0xd15c, sample_count, batchedUnitDisc);
+    try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit sphere current fill", 0x59e7e, sample_count, currentUnitSphere);
+    try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit sphere batched candidates", 0x59e7e, sample_count, batchedUnitSphere);
+    try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball current fill", 0xba11, sample_count, currentUnitBall);
+    try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball batched x2", 0xba11, sample_count, batchedUnitBall2);
+    try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball batched x3", 0xba11, sample_count, batchedUnitBall3);
+    try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball batched x4", 0xba11, sample_count, batchedUnitBall4);
     try stdout.flush();
 }
 
 fn benchFill(
+    comptime Source: type,
     io: std.Io,
     stdout: *std.Io.Writer,
     comptime name: []const u8,
     seed: u64,
     sample_count: usize,
-    comptime fillFn: fn (*alea.ScalarPrng, [][2]f64) void,
+    comptime fillFn: anytype,
 ) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
@@ -46,7 +55,7 @@ fn benchFill(
 
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
-        var engine = alea.ScalarPrng.init(seed);
+        var engine = Source.init(seed);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
 
         var remaining = sample_count;
@@ -72,12 +81,13 @@ fn benchFill(
 }
 
 fn benchFill3(
+    comptime Source: type,
     io: std.Io,
     stdout: *std.Io.Writer,
     comptime name: []const u8,
     seed: u64,
     sample_count: usize,
-    comptime fillFn: fn (*alea.ScalarPrng, [][3]f64) void,
+    comptime fillFn: anytype,
 ) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
@@ -85,7 +95,7 @@ fn benchFill3(
 
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
-        var engine = alea.ScalarPrng.init(seed);
+        var engine = Source.init(seed);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
 
         var remaining = sample_count;
@@ -110,23 +120,23 @@ fn benchFill3(
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
-fn currentUnitDisc(source: *alea.ScalarPrng, dest: [][2]f64) void {
+fn currentUnitDisc(source: anytype, dest: [][2]f64) void {
     alea.distributions.fillUnitDiscFrom(source, f64, dest);
 }
 
-fn currentUnitCircle(source: *alea.ScalarPrng, dest: [][2]f64) void {
+fn currentUnitCircle(source: anytype, dest: [][2]f64) void {
     alea.distributions.fillUnitCircleFrom(source, f64, dest);
 }
 
-fn currentUnitSphere(source: *alea.ScalarPrng, dest: [][3]f64) void {
+fn currentUnitSphere(source: anytype, dest: [][3]f64) void {
     alea.distributions.fillUnitSphereFrom(source, f64, dest);
 }
 
-fn currentUnitBall(source: *alea.ScalarPrng, dest: [][3]f64) void {
+fn currentUnitBall(source: anytype, dest: [][3]f64) void {
     alea.distributions.fillUnitBallFrom(source, f64, dest);
 }
 
-fn batchedUnitCircle(source: *alea.ScalarPrng, dest: [][2]f64) void {
+fn batchedUnitCircle(source: anytype, dest: [][2]f64) void {
     var x_candidates: [2048]f64 = undefined;
     var y_candidates: [2048]f64 = undefined;
 
@@ -150,7 +160,7 @@ fn batchedUnitCircle(source: *alea.ScalarPrng, dest: [][2]f64) void {
     }
 }
 
-fn batchedUnitDisc(source: *alea.ScalarPrng, dest: [][2]f64) void {
+fn batchedUnitDisc(source: anytype, dest: [][2]f64) void {
     var x_candidates: [2048]f64 = undefined;
     var y_candidates: [2048]f64 = undefined;
 
@@ -173,7 +183,7 @@ fn batchedUnitDisc(source: *alea.ScalarPrng, dest: [][2]f64) void {
     }
 }
 
-fn batchedUnitSphere(source: *alea.ScalarPrng, dest: [][3]f64) void {
+fn batchedUnitSphere(source: anytype, dest: [][3]f64) void {
     var x_candidates: [2048]f64 = undefined;
     var y_candidates: [2048]f64 = undefined;
 
@@ -198,19 +208,19 @@ fn batchedUnitSphere(source: *alea.ScalarPrng, dest: [][3]f64) void {
     }
 }
 
-fn batchedUnitBall2(source: *alea.ScalarPrng, dest: [][3]f64) void {
+fn batchedUnitBall2(source: anytype, dest: [][3]f64) void {
     batchedUnitBall(source, dest, 2);
 }
 
-fn batchedUnitBall3(source: *alea.ScalarPrng, dest: [][3]f64) void {
+fn batchedUnitBall3(source: anytype, dest: [][3]f64) void {
     batchedUnitBall(source, dest, 3);
 }
 
-fn batchedUnitBall4(source: *alea.ScalarPrng, dest: [][3]f64) void {
+fn batchedUnitBall4(source: anytype, dest: [][3]f64) void {
     batchedUnitBall(source, dest, 4);
 }
 
-fn batchedUnitBall(source: *alea.ScalarPrng, dest: [][3]f64, comptime multiplier: usize) void {
+fn batchedUnitBall(source: anytype, dest: [][3]f64, comptime multiplier: usize) void {
     var x_candidates: [4096]f64 = undefined;
     var y_candidates: [4096]f64 = undefined;
     var z_candidates: [4096]f64 = undefined;
@@ -236,9 +246,9 @@ fn batchedUnitBall(source: *alea.ScalarPrng, dest: [][3]f64, comptime multiplier
     }
 }
 
-fn fillSignedUnit(source: *alea.ScalarPrng, dest: []f64) void {
+fn fillSignedUnit(source: anytype, dest: []f64) void {
     for (dest) |*item| {
-        const repr = (@as(u64, 0x400) << 52) | (source.next() >> 12);
+        const repr = (@as(u64, 0x400) << 52) | (alea.Rng.nextFrom(source) >> 12);
         item.* = @as(f64, @bitCast(repr)) - 3.0;
     }
 }
