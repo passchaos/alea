@@ -5781,6 +5781,61 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectError(error.InvalidParameter, tree.update(9, 1));
 }
 
+test "weighted reusable samplers preserve direct stream shape" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_aa11);
+        var direct_engine = Engine.init(0x5150_aa11);
+        const rng = Rng.init(&facade_engine);
+
+        var alias = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+        defer alias.deinit();
+        try std.testing.expectEqual(alias.sample(rng), alias.sampleFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        var alias_buf: [8]usize = undefined;
+        var direct_alias_buf: [8]usize = undefined;
+        alias.fill(rng, &alias_buf);
+        alias.fillFrom(&direct_engine, &direct_alias_buf);
+        try std.testing.expectEqualSlices(usize, &alias_buf, &direct_alias_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+        defer tree.deinit();
+        try std.testing.expectEqual(tree.sample(rng), tree.sampleFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        try std.testing.expectEqual(try tree.sampleChecked(rng), try tree.sampleCheckedFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        var tree_buf: [8]usize = undefined;
+        var direct_tree_buf: [8]usize = undefined;
+        tree.fill(rng, &tree_buf);
+        tree.fillFrom(&direct_engine, &direct_tree_buf);
+        try std.testing.expectEqualSlices(usize, &tree_buf, &direct_tree_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        try tree.fillChecked(rng, &tree_buf);
+        try tree.fillCheckedFrom(&direct_engine, &direct_tree_buf);
+        try std.testing.expectEqualSlices(usize, &tree_buf, &direct_tree_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+        defer int_tree.deinit();
+        try std.testing.expectEqual(int_tree.sample(rng), int_tree.sampleFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        try std.testing.expectEqual(try int_tree.sampleChecked(rng), try int_tree.sampleCheckedFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        var int_tree_buf: [8]usize = undefined;
+        var direct_int_tree_buf: [8]usize = undefined;
+        int_tree.fill(rng, &int_tree_buf);
+        int_tree.fillFrom(&direct_engine, &direct_int_tree_buf);
+        try std.testing.expectEqualSlices(usize, &int_tree_buf, &direct_int_tree_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        try int_tree.fillChecked(rng, &int_tree_buf);
+        try int_tree.fillCheckedFrom(&direct_engine, &direct_int_tree_buf);
+        try std.testing.expectEqualSlices(usize, &int_tree_buf, &direct_int_tree_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
+
 test "poisson large lambda has plausible moments" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(55);
