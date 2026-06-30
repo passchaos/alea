@@ -85,7 +85,7 @@ fn benchF64(
     comptime name: []const u8,
     sample_count: usize,
     seed: u64,
-    comptime sampleFn: fn (*alea.ScalarPrng) f64,
+    comptime sampleFn: anytype,
 ) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
@@ -115,7 +115,7 @@ fn benchVectorF64(
     comptime name: []const u8,
     sample_count: usize,
     seed: u64,
-    comptime sampleFn: fn (*alea.ScalarPrng) @Vector(4, f64),
+    comptime sampleFn: anytype,
 ) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
