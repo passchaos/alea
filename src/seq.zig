@@ -1124,3 +1124,81 @@ test "weighted iterator choice works without collecting first" {
     try std.testing.expectEqual(@as(usize, 2), direct_sample.len);
     for (direct_sample) |item| try std.testing.expect(item == 2 or item == 3);
 }
+
+test "iterator sampling preserves direct stream shape" {
+    const alea = @import("root.zig");
+
+    const RangeIter = struct {
+        next_value: u32,
+        end: u32,
+
+        fn next(self: *@This()) ?u32 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+
+    const Entry = struct {
+        item: u8,
+        weight: f64,
+    };
+    const WeightedIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .item = 1, .weight = 0 },
+        .{ .item = 2, .weight = 1 },
+        .{ .item = 3, .weight = 5 },
+        .{ .item = 4, .weight = 9 },
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_0449);
+        var direct_engine = Engine.init(0x5150_0449);
+        const rng = Rng.init(&facade_engine);
+
+        var choose_iter = RangeIter{ .next_value = 0, .end = 100 };
+        var direct_choose_iter = RangeIter{ .next_value = 0, .end = 100 };
+        try std.testing.expectEqual(
+            chooseIterator(rng, u32, &choose_iter),
+            chooseIteratorFrom(&direct_engine, u32, &direct_choose_iter),
+        );
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var sample_iter = RangeIter{ .next_value = 0, .end = 100 };
+        var direct_sample_iter = RangeIter{ .next_value = 0, .end = 100 };
+        const sample = try sampleIterator(std.testing.allocator, rng, u32, &sample_iter, 8);
+        defer std.testing.allocator.free(sample);
+        const direct_sample = try sampleIteratorFrom(std.testing.allocator, &direct_engine, u32, &direct_sample_iter, 8);
+        defer std.testing.allocator.free(direct_sample);
+        try std.testing.expectEqualSlices(u32, sample, direct_sample);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var weighted_iter = WeightedIter{ .items = &entries };
+        var direct_weighted_iter = WeightedIter{ .items = &entries };
+        try std.testing.expectEqual(
+            try chooseIteratorWeighted(rng, u8, &weighted_iter),
+            try chooseIteratorWeightedFrom(&direct_engine, u8, &direct_weighted_iter),
+        );
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var weighted_sample_iter = WeightedIter{ .items = &entries };
+        var direct_weighted_sample_iter = WeightedIter{ .items = &entries };
+        const weighted_sample = try sampleIteratorWeighted(std.testing.allocator, rng, u8, &weighted_sample_iter, 2);
+        defer std.testing.allocator.free(weighted_sample);
+        const direct_weighted_sample = try sampleIteratorWeightedFrom(std.testing.allocator, &direct_engine, u8, &direct_weighted_sample_iter, 2);
+        defer std.testing.allocator.free(direct_weighted_sample);
+        try std.testing.expectEqualSlices(u8, weighted_sample, direct_weighted_sample);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
