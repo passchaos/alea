@@ -2099,6 +2099,15 @@ pub fn fisherF(rng: Rng, comptime T: type, d1: T, d2: T) T {
     return fisherFFrom(rng, T, d1, d2);
 }
 
+pub fn fisherFChecked(rng: Rng, comptime T: type, d1: T, d2: T) Error!T {
+    return fisherFCheckedFrom(rng, T, d1, d2);
+}
+
+pub fn fisherFCheckedFrom(source: anytype, comptime T: type, d1: T, d2: T) Error!T {
+    const dist = try FisherF(T).init(d1, d2);
+    return dist.sampleFrom(source);
+}
+
 pub fn fisherFFrom(source: anytype, comptime T: type, d1: T, d2: T) T {
     comptime requireFloat(T);
     std.debug.assert(d1 > 0 and d2 > 0);
@@ -2157,6 +2166,15 @@ pub fn FisherF(comptime T: type) type {
 
 pub fn studentT(rng: Rng, comptime T: type, dof: T) T {
     return studentTFrom(rng, T, dof);
+}
+
+pub fn studentTChecked(rng: Rng, comptime T: type, dof: T) Error!T {
+    return studentTCheckedFrom(rng, T, dof);
+}
+
+pub fn studentTCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T {
+    const dist = try StudentT(T).init(dof);
+    return dist.sampleFrom(source);
 }
 
 pub fn studentTFrom(source: anytype, comptime T: type, dof: T) T {
@@ -5277,10 +5295,14 @@ test "non-uniform samplers can be reused with sample iterators" {
     const fisher_sampler = try FisherF(f64).init(5, 20);
     fisher_sampler.fillFrom(&direct_engine, &direct_fisher_buf);
     for (direct_fisher_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expect(try fisherFCheckedFrom(&direct_engine, f64, 5, 20) > 0);
+    try std.testing.expectError(error.InvalidParameter, fisherFCheckedFrom(&direct_engine, f64, 0, 20));
 
     var student = rng.sampleIter(f64, try StudentT(f64).init(10));
     _ = student.next().?;
     try std.testing.expect(std.math.isFinite(studentTFrom(&direct_engine, f64, 10)));
+    try std.testing.expect(std.math.isFinite(try studentTCheckedFrom(&direct_engine, f64, 10)));
+    try std.testing.expectError(error.InvalidParameter, studentTCheckedFrom(&direct_engine, f64, 0));
     var student_buf: [8]f64 = undefined;
     fillStudentT(rng, f64, &student_buf, 10);
     for (student_buf) |value| try std.testing.expect(std.math.isFinite(value));

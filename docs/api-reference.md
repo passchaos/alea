@@ -149,8 +149,9 @@ Single-shot helpers:
   `erlang`, `erlangFrom`, `erlangChecked`, `erlangCheckedFrom`,
   `fillErlang`, `fillErlangFrom`, `beta`, `betaFrom`, `betaChecked`,
   `betaCheckedFrom`, `fillBeta`,
-  `fillBetaFrom`, `fisherF`, `fisherFFrom`, `fillFisherF`,
-  `fillFisherFFrom`, `studentT`, `studentTFrom`, `fillStudentT`,
+  `fillBetaFrom`, `fisherF`, `fisherFFrom`, `fisherFChecked`,
+  `fisherFCheckedFrom`, `fillFisherF`, `fillFisherFFrom`, `studentT`,
+  `studentTFrom`, `studentTChecked`, `studentTCheckedFrom`, `fillStudentT`,
   `fillStudentTFrom`
 - `triangular`, `triangularFrom`, `fillTriangular`, `fillTriangularFrom`,
   `arcsine`, `arcsineFrom`, `fillArcsine`, `fillArcsineFrom`,
