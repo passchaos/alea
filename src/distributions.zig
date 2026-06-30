@@ -4217,12 +4217,19 @@ pub fn InverseGaussian(comptime T: type) type {
 
         mean: T,
         shape: T,
+        mean_over_2shape: T,
+        mean_squared: T,
 
         pub fn init(mean: T, shape: T) Error!Self {
             comptime requireFloat(T);
             if (!(mean > 0) or !(shape > 0)) return error.InvalidParameter;
             if (!std.math.isFinite(mean) or !std.math.isFinite(shape)) return error.InvalidParameter;
-            return .{ .mean = mean, .shape = shape };
+            return .{
+                .mean = mean,
+                .shape = shape,
+                .mean_over_2shape = mean / (2 * shape),
+                .mean_squared = mean * mean,
+            };
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -4230,7 +4237,11 @@ pub fn InverseGaussian(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            return inverseGaussianFrom(source, T, self.mean, self.shape);
+            const z = Rng.normalFastFrom(source, T, 0, 1);
+            const y = self.mean * z * z;
+            const x = self.mean + self.mean_over_2shape * (y - @sqrt(4 * self.shape * y + y * y));
+            if (Rng.floatFrom(source, T) <= self.mean / (self.mean + x)) return x;
+            return self.mean_squared / x;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
