@@ -2469,6 +2469,50 @@ test "shuffle and sampling keep item set" {
     try std.testing.expectError(error.InvalidWeight, Rng.weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
 }
 
+test "checked fill helpers preserve valid-parameter stream shape" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var unchecked = Engine.init(0x5eed_5150);
+        var checked = Engine.init(0x5eed_5150);
+
+        var range_unchecked: [8]u32 = undefined;
+        var range_checked: [8]u32 = undefined;
+        fillRangeFrom(&unchecked, u32, &range_unchecked, 5, 9);
+        try fillRangeCheckedFrom(&checked, u32, &range_checked, 5, 9);
+        try std.testing.expectEqualSlices(u32, &range_unchecked, &range_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var chance_unchecked: [16]bool = undefined;
+        var chance_checked: [16]bool = undefined;
+        fillChanceFrom(&unchecked, &chance_unchecked, 0.25);
+        try fillChanceCheckedFrom(&checked, &chance_checked, 0.25);
+        try std.testing.expectEqualSlices(bool, &chance_unchecked, &chance_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var ratio_unchecked: [16]bool = undefined;
+        var ratio_checked: [16]bool = undefined;
+        fillRatioFrom(&unchecked, &ratio_unchecked, 3, 8);
+        try fillRatioCheckedFrom(&checked, &ratio_checked, 3, 8);
+        try std.testing.expectEqualSlices(bool, &ratio_unchecked, &ratio_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var normal_unchecked: [8]f64 = undefined;
+        var normal_checked: [8]f64 = undefined;
+        fillNormalFrom(&unchecked, f64, &normal_unchecked, 0, 1);
+        try fillNormalCheckedFrom(&checked, f64, &normal_checked, 0, 1);
+        try std.testing.expectEqualSlices(f64, &normal_unchecked, &normal_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var exponential_unchecked: [8]f64 = undefined;
+        var exponential_checked: [8]f64 = undefined;
+        fillExponentialFrom(&unchecked, f64, &exponential_unchecked, 2);
+        try fillExponentialCheckedFrom(&checked, f64, &exponential_checked, 2);
+        try std.testing.expectEqualSlices(f64, &exponential_unchecked, &exponential_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+    }
+}
+
 test "value and sampler iterators produce unbounded samples" {
     const alea = @import("root.zig");
     var engine = alea.Xoshiro256.init(123);
