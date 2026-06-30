@@ -64,6 +64,10 @@ available for vector ranges, vector probabilities, and parameterized vector
 normal/exponential sampling, including direct-source `From` helpers for ranges,
 probability vectors, and parameterized normal/exponential vectors/fills when
 the engine type is comptime-known.
+Distribution-level bulk fills that cache a reusable sampler also keep
+assert-fast `fill*` helpers and add checked `fill*Checked` /
+`fill*CheckedFrom` variants for common discrete families such as Bernoulli,
+binomial, negative-binomial, hypergeometric, Poisson, and geometric sampling.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar

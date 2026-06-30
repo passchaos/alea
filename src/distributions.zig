@@ -104,6 +104,15 @@ pub fn fillBernoulliFrom(source: anytype, dest: []bool, p: f64) void {
     dist.fillFrom(source, dest);
 }
 
+pub fn fillBernoulliChecked(rng: Rng, dest: []bool, p: f64) Error!void {
+    return fillBernoulliCheckedFrom(rng, dest, p);
+}
+
+pub fn fillBernoulliCheckedFrom(source: anytype, dest: []bool, p: f64) Error!void {
+    const dist = try Bernoulli.init(p);
+    dist.fillFrom(source, dest);
+}
+
 pub const Bernoulli = struct {
     const always_true = std.math.maxInt(u64);
     const scale = 0x1.0p64;
@@ -207,6 +216,15 @@ pub fn fillBinomial(rng: Rng, dest: []u64, trials: u64, p: f64) void {
 
 pub fn fillBinomialFrom(source: anytype, dest: []u64, trials: u64, p: f64) void {
     const dist = Binomial.init(trials, p) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillBinomialChecked(rng: Rng, dest: []u64, trials: u64, p: f64) Error!void {
+    return fillBinomialCheckedFrom(rng, dest, trials, p);
+}
+
+pub fn fillBinomialCheckedFrom(source: anytype, dest: []u64, trials: u64, p: f64) Error!void {
+    const dist = try Binomial.init(trials, p);
     dist.fillFrom(source, dest);
 }
 
@@ -343,6 +361,15 @@ pub fn fillNegativeBinomialFrom(source: anytype, dest: []u64, successes: u64, p:
     dist.fillFrom(source, dest);
 }
 
+pub fn fillNegativeBinomialChecked(rng: Rng, dest: []u64, successes: u64, p: f64) Error!void {
+    return fillNegativeBinomialCheckedFrom(rng, dest, successes, p);
+}
+
+pub fn fillNegativeBinomialCheckedFrom(source: anytype, dest: []u64, successes: u64, p: f64) Error!void {
+    const dist = try NegativeBinomial.init(successes, p);
+    dist.fillFrom(source, dest);
+}
+
 pub fn negativeBinomialFrom(source: anytype, successes: u64, p: f64) u64 {
     std.debug.assert(successes > 0 and p > 0 and p <= 1);
     if (p == 1) return 0;
@@ -421,6 +448,15 @@ pub fn fillHypergeometric(rng: Rng, dest: []u64, population: u64, successes: u64
 
 pub fn fillHypergeometricFrom(source: anytype, dest: []u64, population: u64, successes: u64, draws: u64) void {
     const dist = Hypergeometric.init(population, successes, draws) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillHypergeometricChecked(rng: Rng, dest: []u64, population: u64, successes: u64, draws: u64) Error!void {
+    return fillHypergeometricCheckedFrom(rng, dest, population, successes, draws);
+}
+
+pub fn fillHypergeometricCheckedFrom(source: anytype, dest: []u64, population: u64, successes: u64, draws: u64) Error!void {
+    const dist = try Hypergeometric.init(population, successes, draws);
     dist.fillFrom(source, dest);
 }
 
@@ -1274,6 +1310,15 @@ pub fn fillPoissonFrom(source: anytype, dest: []u64, lambda: f64) void {
     dist.fillFrom(source, dest);
 }
 
+pub fn fillPoissonChecked(rng: Rng, dest: []u64, lambda: f64) Error!void {
+    return fillPoissonCheckedFrom(rng, dest, lambda);
+}
+
+pub fn fillPoissonCheckedFrom(source: anytype, dest: []u64, lambda: f64) Error!void {
+    const dist = try Poisson.init(lambda);
+    dist.fillFrom(source, dest);
+}
+
 pub const Poisson = struct {
     method: PoissonMethod,
 
@@ -1549,6 +1594,15 @@ pub fn fillGeometricFailuresFrom(source: anytype, dest: []u64, p: f64) void {
     dist.fillFrom(source, dest);
 }
 
+pub fn fillGeometricFailuresChecked(rng: Rng, dest: []u64, p: f64) Error!void {
+    return fillGeometricFailuresCheckedFrom(rng, dest, p);
+}
+
+pub fn fillGeometricFailuresCheckedFrom(source: anytype, dest: []u64, p: f64) Error!void {
+    const dist = try GeometricFailures.init(p);
+    dist.fillFrom(source, dest);
+}
+
 pub fn standardGeometric(rng: Rng) u64 {
     return standardGeometricFrom(rng);
 }
@@ -1576,6 +1630,15 @@ pub fn fillGeometric(rng: Rng, dest: []u64, p: f64) void {
 
 pub fn fillGeometricFrom(source: anytype, dest: []u64, p: f64) void {
     const dist = Geometric.init(p) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillGeometricChecked(rng: Rng, dest: []u64, p: f64) Error!void {
+    return fillGeometricCheckedFrom(rng, dest, p);
+}
+
+pub fn fillGeometricCheckedFrom(source: anytype, dest: []u64, p: f64) Error!void {
+    const dist = try Geometric.init(p);
     dist.fillFrom(source, dest);
 }
 
@@ -5059,6 +5122,11 @@ test "basic distributions stay in expected ranges" {
     for (bernoulli_buf) |value| try std.testing.expect(value);
     fillBernoulliFrom(&direct_bernoulli_engine, &bernoulli_buf, 0);
     for (bernoulli_buf) |value| try std.testing.expect(!value);
+    try fillBernoulliChecked(rng, &bernoulli_buf, 1);
+    for (bernoulli_buf) |value| try std.testing.expect(value);
+    try fillBernoulliCheckedFrom(&direct_bernoulli_engine, &bernoulli_buf, 0);
+    for (bernoulli_buf) |value| try std.testing.expect(!value);
+    try std.testing.expectError(error.InvalidProbability, fillBernoulliCheckedFrom(&direct_bernoulli_engine, &bernoulli_buf, -0.1));
     const bernoulli_sampler = try Bernoulli.init(0.5);
     bernoulli_sampler.fillFrom(&direct_bernoulli_engine, &bernoulli_buf);
     try std.testing.expectError(error.InvalidProbability, bernoulliCheckedFrom(&direct_bernoulli_engine, 1.1));
@@ -5069,6 +5137,11 @@ test "basic distributions stay in expected ranges" {
     var binomial_buf: [8]u64 = undefined;
     fillBinomial(rng, &binomial_buf, 10, 1);
     for (binomial_buf) |value| try std.testing.expectEqual(@as(u64, 10), value);
+    try fillBinomialChecked(rng, &binomial_buf, 10, 1);
+    for (binomial_buf) |value| try std.testing.expectEqual(@as(u64, 10), value);
+    try fillBinomialCheckedFrom(&direct_bernoulli_engine, &binomial_buf, 10, 1);
+    for (binomial_buf) |value| try std.testing.expectEqual(@as(u64, 10), value);
+    try std.testing.expectError(error.InvalidProbability, fillBinomialCheckedFrom(&direct_bernoulli_engine, &binomial_buf, 10, 1.1));
     const binomial_sampler = try Binomial.init(10, 0.5);
     binomial_sampler.fillFrom(&direct_bernoulli_engine, &binomial_buf);
     for (binomial_buf) |value| try std.testing.expect(value <= 10);
@@ -5360,6 +5433,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_poisson_buf: [8]u64 = undefined;
     fillPoissonFrom(&direct_engine, &direct_poisson_buf, 12);
     for (direct_poisson_buf) |value| try std.testing.expect(value < 64);
+    try fillPoissonChecked(rng, &poisson_buf, 12);
+    for (poisson_buf) |value| try std.testing.expect(value < 64);
+    try fillPoissonCheckedFrom(&direct_engine, &direct_poisson_buf, 12);
+    for (direct_poisson_buf) |value| try std.testing.expect(value < 64);
+    try std.testing.expectError(error.InvalidParameter, fillPoissonCheckedFrom(&direct_engine, &direct_poisson_buf, std.math.inf(f64)));
     const poisson_sampler = try Poisson.init(12);
     poisson_sampler.fillFrom(&direct_engine, &direct_poisson_buf);
     for (direct_poisson_buf) |value| try std.testing.expect(value < 64);
@@ -5373,6 +5451,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_geometric_buf: [8]u64 = undefined;
     fillGeometricFrom(&direct_engine, &direct_geometric_buf, 0.25);
     for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
+    try fillGeometricChecked(rng, &geometric_buf, 0.25);
+    for (geometric_buf) |value| try std.testing.expect(value >= 1);
+    try fillGeometricCheckedFrom(&direct_engine, &direct_geometric_buf, 0.25);
+    for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
+    try std.testing.expectError(error.InvalidProbability, fillGeometricCheckedFrom(&direct_engine, &direct_geometric_buf, 0));
     const geometric_sampler = try Geometric.init(0.25);
     geometric_sampler.fillFrom(&direct_engine, &direct_geometric_buf);
     for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
@@ -5383,6 +5466,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     var geometric_failures_buf: [8]u64 = undefined;
     fillGeometricFailures(rng, &geometric_failures_buf, 0.25);
     fillGeometricFailuresFrom(&direct_engine, &geometric_failures_buf, 0.25);
+    try fillGeometricFailuresChecked(rng, &geometric_failures_buf, 1);
+    for (geometric_failures_buf) |value| try std.testing.expectEqual(@as(u64, 0), value);
+    try fillGeometricFailuresCheckedFrom(&direct_engine, &geometric_failures_buf, 1);
+    for (geometric_failures_buf) |value| try std.testing.expectEqual(@as(u64, 0), value);
+    try std.testing.expectError(error.InvalidProbability, fillGeometricFailuresCheckedFrom(&direct_engine, &geometric_failures_buf, 0));
     const geometric_failures_sampler = try GeometricFailures.init(0.25);
     geometric_failures_sampler.fillFrom(&direct_engine, &geometric_failures_buf);
     try std.testing.expectEqual(@as(u64, 0), geometricFailures(rng, 1));
@@ -5997,6 +6085,12 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     for (nb_buf) |value| try std.testing.expect(value < 64);
     fillNegativeBinomialFrom(&direct_engine, &nb_buf, 5, 0.4);
     for (nb_buf) |value| try std.testing.expect(value < 64);
+    try fillNegativeBinomialChecked(rng, &nb_buf, 5, 1);
+    for (nb_buf) |value| try std.testing.expectEqual(@as(u64, 0), value);
+    try fillNegativeBinomialCheckedFrom(&direct_engine, &nb_buf, 5, 1);
+    for (nb_buf) |value| try std.testing.expectEqual(@as(u64, 0), value);
+    try std.testing.expectError(error.InvalidParameter, fillNegativeBinomialCheckedFrom(&direct_engine, &nb_buf, 0, 0.4));
+    try std.testing.expectError(error.InvalidProbability, fillNegativeBinomialCheckedFrom(&direct_engine, &nb_buf, 5, 0));
     nb.fillFrom(&direct_engine, &nb_buf);
     for (nb_buf) |value| try std.testing.expect(value < 64);
     var hg_buf: [8]u64 = undefined;
@@ -6004,6 +6098,11 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     for (hg_buf) |value| try std.testing.expect(value <= 10);
     fillHypergeometricFrom(&direct_engine, &hg_buf, 100, 30, 10);
     for (hg_buf) |value| try std.testing.expect(value <= 10);
+    try fillHypergeometricChecked(rng, &hg_buf, 100, 30, 10);
+    for (hg_buf) |value| try std.testing.expect(value <= 10);
+    try fillHypergeometricCheckedFrom(&direct_engine, &hg_buf, 100, 30, 10);
+    for (hg_buf) |value| try std.testing.expect(value <= 10);
+    try std.testing.expectError(error.InvalidParameter, fillHypergeometricCheckedFrom(&direct_engine, &hg_buf, 10, 11, 1));
     hg.fillFrom(&direct_engine, &hg_buf);
     for (hg_buf) |value| try std.testing.expect(value <= 10);
 
