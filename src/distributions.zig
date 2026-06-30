@@ -3725,6 +3725,26 @@ pub fn fillSkewNormal(rng: Rng, comptime T: type, dest: []T, location: T, scale:
 pub fn fillSkewNormalFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(shape));
+    if (shape == 0) {
+        for (dest) |*item| item.* = location + scale * Rng.normalFastFrom(source, T, 0, 1);
+        return;
+    }
+    if (shape == -1) {
+        for (dest) |*item| {
+            const z1 = Rng.normalFastFrom(source, T, 0, 1);
+            const z2 = Rng.normalFastFrom(source, T, 0, 1);
+            item.* = location + scale * @min(z1, z2);
+        }
+        return;
+    }
+    if (shape == 1) {
+        for (dest) |*item| {
+            const z1 = Rng.normalFastFrom(source, T, 0, 1);
+            const z2 = Rng.normalFastFrom(source, T, 0, 1);
+            item.* = location + scale * @max(z1, z2);
+        }
+        return;
+    }
     if (shape != 0 and shape != -1 and shape != 1) {
         const delta = shape / @sqrt(1 + shape * shape);
         const orthogonal = @sqrt(1 - delta * delta);
@@ -3735,7 +3755,6 @@ pub fn fillSkewNormalFrom(source: anytype, comptime T: type, dest: []T, location
         }
         return;
     }
-    for (dest) |*item| item.* = skewNormalFrom(source, T, location, scale, shape);
 }
 
 pub fn fillSkewNormalChecked(rng: Rng, comptime T: type, dest: []T, location: T, scale: T, shape: T) Error!void {
