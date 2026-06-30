@@ -56,16 +56,45 @@ fn checkFile(io: std.Io, allocator: std.mem.Allocator, stderr: *std.Io.Writer, a
     defer allocator.free(source);
 
     var missing: usize = 0;
+    var public_type_stack: [32]PublicType = undefined;
+    var public_type_count: usize = 0;
     var lines = std.mem.splitScalar(u8, source, '\n');
     while (lines.next()) |line| {
+        const indent = lineIndent(line);
+        while (public_type_count > 0 and indent <= public_type_stack[public_type_count - 1].indent) {
+            public_type_count -= 1;
+        }
+
         const name = publicSymbolName(line) orelse continue;
-        if (!containsSymbol(api, name)) {
-            try stderr.print("{s}: missing `{s}`\n", .{ label, name });
-            missing += 1;
+        if (publicTypeName(line)) |type_name| {
+            if (public_type_count < public_type_stack.len) {
+                public_type_stack[public_type_count] = .{ .name = type_name, .indent = indent };
+                public_type_count += 1;
+            }
+        }
+
+        if (public_type_count > 0 and indent > public_type_stack[public_type_count - 1].indent) {
+            const parent = public_type_stack[public_type_count - 1].name;
+            const dotted = try std.fmt.allocPrint(allocator, "{s}.{s}", .{ parent, name });
+            defer allocator.free(dotted);
+            if (!containsNestedSymbol(api, parent, name)) {
+                try stderr.print("{s}: missing `{s}`\n", .{ label, dotted });
+                missing += 1;
+            }
+        } else {
+            if (!containsSymbol(api, name)) {
+                try stderr.print("{s}: missing `{s}`\n", .{ label, name });
+                missing += 1;
+            }
         }
     }
     return missing;
 }
+
+const PublicType = struct {
+    name: []const u8,
+    indent: usize,
+};
 
 fn containsSymbol(haystack: []const u8, needle: []const u8) bool {
     var offset: usize = 0;
@@ -74,6 +103,36 @@ fn containsSymbol(haystack: []const u8, needle: []const u8) bool {
         const after_index = index + needle.len;
         const after_ok = after_index == haystack.len or !isSymbolChar(haystack[after_index]);
         if (before_ok and after_ok) return true;
+        offset = index + 1;
+    }
+    return false;
+}
+
+fn containsNestedSymbol(haystack: []const u8, parent: []const u8, child: []const u8) bool {
+    var dotted_buffer: [128]u8 = undefined;
+    if (parent.len + child.len + 1 <= dotted_buffer.len) {
+        const dotted = std.fmt.bufPrint(&dotted_buffer, "{s}.{s}", .{ parent, child }) catch unreachable;
+        if (containsSymbol(haystack, dotted)) return true;
+    }
+
+    var offset: usize = 0;
+    while (std.mem.indexOfPos(u8, haystack, offset, parent)) |index| {
+        const before_ok = index == 0 or !isSymbolChar(haystack[index - 1]);
+        const after_parent = index + parent.len;
+        if (before_ok and after_parent < haystack.len and haystack[after_parent] == '(') {
+            if (std.mem.indexOfScalarPos(u8, haystack, after_parent, ')')) |close| {
+                const dot = close + 1;
+                const child_start = dot + 1;
+                const child_end = child_start + child.len;
+                if (dot < haystack.len and haystack[dot] == '.' and
+                    child_end <= haystack.len and
+                    std.mem.eql(u8, haystack[child_start..child_end], child) and
+                    (child_end == haystack.len or !isSymbolChar(haystack[child_end])))
+                {
+                    return true;
+                }
+            }
+        }
         offset = index + 1;
     }
     return false;
@@ -99,6 +158,42 @@ fn publicSymbolName(line: []const u8) ?[]const u8 {
     }
     if (end == 0) return null;
     return rest[0..end];
+}
+
+fn publicTypeName(line: []const u8) ?[]const u8 {
+    var rest = std.mem.trimStart(u8, line, " \t");
+    if (!consumeToken(&rest, "pub")) return null;
+    if (!(consumeToken(&rest, "const") or consumeToken(&rest, "fn"))) return null;
+
+    rest = std.mem.trimStart(u8, rest, " \t");
+    var end: usize = 0;
+    while (end < rest.len) : (end += 1) {
+        const c = rest[end];
+        if (!isSymbolChar(c)) break;
+    }
+    if (end == 0) return null;
+    const name = rest[0..end];
+
+    rest = std.mem.trimStart(u8, rest[end..], " \t");
+    if (std.mem.startsWith(u8, rest, "=")) {
+        rest = std.mem.trimStart(u8, rest[1..], " \t");
+        if (std.mem.startsWith(u8, rest, "struct") or
+            std.mem.startsWith(u8, rest, "union") or
+            std.mem.startsWith(u8, rest, "enum"))
+        {
+            return name;
+        }
+    }
+    if (std.mem.startsWith(u8, rest, "(")) {
+        if (std.mem.indexOf(u8, rest, ") type")) |_| return name;
+    }
+    return null;
+}
+
+fn lineIndent(line: []const u8) usize {
+    var count: usize = 0;
+    while (count < line.len and (line[count] == ' ' or line[count] == '\t')) : (count += 1) {}
+    return count;
 }
 
 fn consumeToken(rest: *[]const u8, token: []const u8) bool {
