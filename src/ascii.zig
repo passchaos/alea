@@ -196,3 +196,30 @@ test "ascii helpers preserve direct stream shape" {
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 }
+
+test "ascii helpers have stable snapshots" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x1234_5678_9abc_def0);
+    const rng = alea.Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(u8, 'I'), char(rng));
+
+    var filled: [16]u8 = undefined;
+    Alphanumeric.fill(rng, &filled);
+    try std.testing.expectEqualSlices(u8, "YgyjAl2O8koQA6gG", &filled);
+
+    const sampled = try string(std.testing.allocator, rng, 16);
+    defer std.testing.allocator.free(sampled);
+    try std.testing.expectEqualSlices(u8, "2jpYtsabnOVHQtfb", sampled);
+
+    try std.testing.expectEqual(@as(u21, 0x59e2b), unicodeScalar(rng));
+
+    const utf8 = try unicodeUtf8Alloc(std.testing.allocator, rng, 6);
+    defer std.testing.allocator.free(utf8);
+    try std.testing.expectEqualSlices(u8, &.{
+        0xf1, 0x9e, 0xb9, 0x99, 0xf2, 0xa8, 0x9b, 0x83,
+        0xf1, 0xaa, 0xaf, 0xae, 0xf1, 0x93, 0xb5, 0xae,
+        0xf3, 0x9f, 0xa8, 0xa9, 0xf4, 0x85, 0xa2, 0x8c,
+    }, utf8);
+    try std.testing.expectEqual(@as(u64, 0x11b40122bde6eb6a), engine.next());
+}
