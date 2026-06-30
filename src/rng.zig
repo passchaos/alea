@@ -2510,6 +2510,41 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try fillExponentialCheckedFrom(&checked, f64, &exponential_checked, 2);
         try std.testing.expectEqualSlices(f64, &exponential_unchecked, &exponential_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_range_unchecked: [4]@Vector(8, f32) = undefined;
+        var vector_range_checked: [4]@Vector(8, f32) = undefined;
+        fillVectorRangeFrom(&unchecked, @Vector(8, f32), &vector_range_unchecked, -1, 1);
+        try fillVectorRangeCheckedFrom(&checked, @Vector(8, f32), &vector_range_checked, -1, 1);
+        try std.testing.expectEqualSlices(@Vector(8, f32), &vector_range_unchecked, &vector_range_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_chance_unchecked: [4]@Vector(8, bool) = undefined;
+        var vector_chance_checked: [4]@Vector(8, bool) = undefined;
+        fillVectorChanceFrom(&unchecked, @Vector(8, bool), &vector_chance_unchecked, 0.25);
+        try fillVectorChanceCheckedFrom(&checked, @Vector(8, bool), &vector_chance_checked, 0.25);
+        try std.testing.expectEqualSlices(@Vector(8, bool), &vector_chance_unchecked, &vector_chance_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_ratio_unchecked: [4]@Vector(8, bool) = undefined;
+        var vector_ratio_checked: [4]@Vector(8, bool) = undefined;
+        fillVectorRatioFrom(&unchecked, @Vector(8, bool), &vector_ratio_unchecked, 3, 8);
+        try fillVectorRatioCheckedFrom(&checked, @Vector(8, bool), &vector_ratio_checked, 3, 8);
+        try std.testing.expectEqualSlices(@Vector(8, bool), &vector_ratio_unchecked, &vector_ratio_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_normal_unchecked: [4]@Vector(8, f32) = undefined;
+        var vector_normal_checked: [4]@Vector(8, f32) = undefined;
+        fillVectorNormalFrom(&unchecked, @Vector(8, f32), &vector_normal_unchecked, 0, 1);
+        try fillVectorNormalCheckedFrom(&checked, @Vector(8, f32), &vector_normal_checked, 0, 1);
+        try std.testing.expectEqualSlices(@Vector(8, f32), &vector_normal_unchecked, &vector_normal_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_exponential_unchecked: [4]@Vector(8, f32) = undefined;
+        var vector_exponential_checked: [4]@Vector(8, f32) = undefined;
+        fillVectorExponentialFrom(&unchecked, @Vector(8, f32), &vector_exponential_unchecked, 2);
+        try fillVectorExponentialCheckedFrom(&checked, @Vector(8, f32), &vector_exponential_checked, 2);
+        try std.testing.expectEqualSlices(@Vector(8, f32), &vector_exponential_unchecked, &vector_exponential_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
     }
 }
 
