@@ -72,6 +72,9 @@ Laplace, logistic, log-logistic, Kumaraswamy, power-function, Rayleigh,
 Maxwell, Pareto, Weibull, Gumbel, Frechet, skew-normal, PERT, and
 inverse-Gaussian-family sampling. Top-level Zipf/Zeta fills mirror their
 reusable sampler fills with checked variants for fallible bulk workflows.
+The distributions module also mirrors `Rng.fillNormal*` and
+`Rng.fillExponential*` as top-level helpers for callers who prefer the
+distribution namespace.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar

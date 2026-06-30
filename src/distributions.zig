@@ -1041,6 +1041,22 @@ pub fn normalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: T) 
     return Rng.normalCheckedFrom(source, T, mean, stddev);
 }
 
+pub fn fillNormal(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
+    fillNormalFrom(rng, T, dest, mean, stddev);
+}
+
+pub fn fillNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
+    Rng.fillNormalFrom(source, T, dest, mean, stddev);
+}
+
+pub fn fillNormalChecked(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
+    return fillNormalCheckedFrom(rng, T, dest, mean, stddev);
+}
+
+pub fn fillNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
+    try Rng.fillNormalCheckedFrom(source, T, dest, mean, stddev);
+}
+
 pub fn StandardNormal(comptime T: type) type {
     return struct {
         pub fn sample(_: @This(), rng: Rng) T {
@@ -1094,6 +1110,22 @@ pub fn exponentialChecked(rng: Rng, comptime T: type, rate: T) Error!T {
 
 pub fn exponentialCheckedFrom(source: anytype, comptime T: type, rate: T) Error!T {
     return Rng.exponentialCheckedFrom(source, T, rate);
+}
+
+pub fn fillExponential(rng: Rng, comptime T: type, dest: []T, rate: T) void {
+    fillExponentialFrom(rng, T, dest, rate);
+}
+
+pub fn fillExponentialFrom(source: anytype, comptime T: type, dest: []T, rate: T) void {
+    Rng.fillExponentialFrom(source, T, dest, rate);
+}
+
+pub fn fillExponentialChecked(rng: Rng, comptime T: type, dest: []T, rate: T) Error!void {
+    return fillExponentialCheckedFrom(rng, T, dest, rate);
+}
+
+pub fn fillExponentialCheckedFrom(source: anytype, comptime T: type, dest: []T, rate: T) Error!void {
+    try Rng.fillExponentialCheckedFrom(source, T, dest, rate);
 }
 
 pub fn Normal(comptime T: type) type {
@@ -5427,8 +5459,28 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect(try bernoulliCheckedFrom(&direct_bernoulli_engine, 1.0));
     try std.testing.expect(std.math.isFinite(normalFrom(&direct_bernoulli_engine, f64, 0, 1)));
     try std.testing.expect(std.math.isFinite(try normalCheckedFrom(&direct_bernoulli_engine, f64, 0, 1)));
+    var top_normal_buf: [8]f64 = undefined;
+    fillNormal(rng, f64, &top_normal_buf, 0, 1);
+    for (top_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    fillNormalFrom(&direct_bernoulli_engine, f64, &top_normal_buf, 0, 1);
+    for (top_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillNormalChecked(rng, f64, &top_normal_buf, 0, 1);
+    for (top_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try fillNormalCheckedFrom(&direct_bernoulli_engine, f64, &top_normal_buf, 0, 1);
+    for (top_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    try std.testing.expectError(error.InvalidParameter, fillNormalCheckedFrom(&direct_bernoulli_engine, f64, &top_normal_buf, 0, -1));
     try std.testing.expect(exponentialFrom(&direct_bernoulli_engine, f64, 2) >= 0);
     try std.testing.expect(try exponentialCheckedFrom(&direct_bernoulli_engine, f64, 2) >= 0);
+    var top_exponential_buf: [8]f64 = undefined;
+    fillExponential(rng, f64, &top_exponential_buf, 2);
+    for (top_exponential_buf) |value| try std.testing.expect(value >= 0);
+    fillExponentialFrom(&direct_bernoulli_engine, f64, &top_exponential_buf, 2);
+    for (top_exponential_buf) |value| try std.testing.expect(value >= 0);
+    try fillExponentialChecked(rng, f64, &top_exponential_buf, 2);
+    for (top_exponential_buf) |value| try std.testing.expect(value >= 0);
+    try fillExponentialCheckedFrom(&direct_bernoulli_engine, f64, &top_exponential_buf, 2);
+    for (top_exponential_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expectError(error.InvalidParameter, fillExponentialCheckedFrom(&direct_bernoulli_engine, f64, &top_exponential_buf, 0));
     try std.testing.expect(poissonFrom(&direct_bernoulli_engine, 4) < 32);
     try std.testing.expect(try poissonCheckedFrom(&direct_bernoulli_engine, 4) < 32);
     try std.testing.expectError(error.InvalidParameter, poissonCheckedFrom(&direct_bernoulli_engine, std.math.inf(f64)));
