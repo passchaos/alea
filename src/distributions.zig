@@ -298,6 +298,15 @@ pub fn negativeBinomial(rng: Rng, successes: u64, p: f64) u64 {
     return negativeBinomialFrom(rng, successes, p);
 }
 
+pub fn negativeBinomialChecked(rng: Rng, successes: u64, p: f64) Error!u64 {
+    return negativeBinomialCheckedFrom(rng, successes, p);
+}
+
+pub fn negativeBinomialCheckedFrom(source: anytype, successes: u64, p: f64) Error!u64 {
+    const dist = try NegativeBinomial.init(successes, p);
+    return dist.sampleFrom(source);
+}
+
 pub fn fillNegativeBinomial(rng: Rng, dest: []u64, successes: u64, p: f64) void {
     fillNegativeBinomialFrom(rng, dest, successes, p);
 }
@@ -5578,6 +5587,9 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
 
     var direct_engine = alea.ScalarPrng.init(72);
     try std.testing.expect(nb.sampleFrom(&direct_engine) >= 0);
+    try std.testing.expect(try negativeBinomialCheckedFrom(&direct_engine, 5, 0.4) < 64);
+    try std.testing.expectError(error.InvalidParameter, negativeBinomialCheckedFrom(&direct_engine, 0, 0.4));
+    try std.testing.expectError(error.InvalidProbability, negativeBinomialCheckedFrom(&direct_engine, 5, 0));
     try std.testing.expect(hg.sampleFrom(&direct_engine) <= 10);
     var nb_buf: [8]u64 = undefined;
     fillNegativeBinomial(rng, &nb_buf, 5, 0.4);

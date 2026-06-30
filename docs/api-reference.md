@@ -117,7 +117,8 @@ Single-shot helpers:
   `bernoulliCheckedFrom`, `fillBernoulli`, `fillBernoulliFrom`, `binomial`,
   `binomialFrom`, `binomialChecked`, `binomialCheckedFrom`, `fillBinomial`, `fillBinomialFrom`,
   `binomialPoissonApprox`
-- `negativeBinomial`, `negativeBinomialFrom`, `fillNegativeBinomial`,
+- `negativeBinomial`, `negativeBinomialFrom`, `negativeBinomialChecked`,
+  `negativeBinomialCheckedFrom`, `fillNegativeBinomial`,
   `fillNegativeBinomialFrom`, `hypergeometric`, `hypergeometricFrom`,
   `fillHypergeometric`, `fillHypergeometricFrom`
 - `standardNormal`, `standardNormalFrom`, `fillStandardNormal`,
