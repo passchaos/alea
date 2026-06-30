@@ -383,6 +383,8 @@ Alias helpers:
 Dynamic weighted helpers:
 
 - `WeightedTree.init`
+- `WeightedTree.len`
+- `WeightedTree.isEmpty`
 - `WeightedTree.push`
 - `WeightedTree.pop`
 - `WeightedTree.update`
@@ -401,6 +403,7 @@ Dynamic weighted helpers:
 - Prefer `WeightedIntTree` when weights are unsigned integers and frequent
   update/sample throughput is the priority.
 - `WeightedIntTree.init`
+- `WeightedIntTree.len`
 - `WeightedIntTree.update`
 - `WeightedIntTree.get`
 - `WeightedIntTree.sample`
