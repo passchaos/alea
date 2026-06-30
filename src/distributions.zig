@@ -23,6 +23,18 @@ pub fn uniformFrom(source: anytype, comptime T: type, min: T, max: T) T {
     }
 }
 
+pub fn uniformChecked(rng: Rng, comptime T: type, min: T, max: T) Error!T {
+    return uniformCheckedFrom(rng, T, min, max);
+}
+
+pub fn uniformCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
+    switch (@typeInfo(T)) {
+        .int => return Rng.intRangeLessThanCheckedFrom(source, T, min, max),
+        .float => return Rng.floatRangeCheckedFrom(source, T, min, max),
+        else => @compileError("uniformChecked supports integer and floating-point types"),
+    }
+}
+
 pub fn uniformInclusive(rng: Rng, comptime T: type, min: T, max: T) T {
     return uniformInclusiveFrom(rng, T, min, max);
 }
@@ -35,6 +47,21 @@ pub fn uniformInclusiveFrom(source: anytype, comptime T: type, min: T, max: T) T
             return min + (max - min) * uniformClosedUnitFrom(source, T);
         },
         else => @compileError("uniformInclusive supports integer and floating-point types"),
+    }
+}
+
+pub fn uniformInclusiveChecked(rng: Rng, comptime T: type, min: T, max: T) Error!T {
+    return uniformInclusiveCheckedFrom(rng, T, min, max);
+}
+
+pub fn uniformInclusiveCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
+    switch (@typeInfo(T)) {
+        .int => return Rng.intRangeAtMostCheckedFrom(source, T, min, max),
+        .float => {
+            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+            return uniformInclusiveFrom(source, T, min, max);
+        },
+        else => @compileError("uniformInclusiveChecked supports integer and floating-point types"),
     }
 }
 
@@ -4736,6 +4763,12 @@ test "basic distributions stay in expected ranges" {
 
     try std.testing.expect(uniform(rng, u32, 5, 9) >= 5);
     try std.testing.expect(uniform(rng, f64, -1, 1) < 1);
+    try std.testing.expect(try uniformChecked(rng, u32, 5, 9) >= 5);
+    try std.testing.expect(try uniformCheckedFrom(&engine, f64, -1, 1) < 1);
+    try std.testing.expect(try uniformInclusiveChecked(rng, u32, 5, 9) <= 9);
+    try std.testing.expect(try uniformInclusiveCheckedFrom(&engine, f64, -1, 1) <= 1);
+    try std.testing.expectError(error.EmptyRange, uniformCheckedFrom(&engine, u32, 9, 5));
+    try std.testing.expectError(error.EmptyRange, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sample(rng));
     try std.testing.expect(!(try Bernoulli.init(0)).sample(rng));
     try std.testing.expect((try Bernoulli.init(1.0 - std.math.floatEps(f64) / 2.0)).sample(rng));
