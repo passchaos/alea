@@ -2548,6 +2548,29 @@ test "checked fill helpers preserve valid-parameter stream shape" {
     }
 }
 
+test "checked weighted sampling preserves valid-parameter stream shape" {
+    const alea = @import("root.zig");
+    const weights = [_]f64{ 1, 2, 3, 4 };
+    const items = [_]u8{ 10, 20, 30, 40 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var unchecked = Engine.init(0x5150_4477);
+        var checked = Engine.init(0x5150_4477);
+
+        const weighted = weightedIndexFrom(&unchecked, &weights);
+        const checked_weighted = try weightedIndexCheckedFrom(&checked, &weights);
+        try std.testing.expectEqual(weighted, checked_weighted);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const sample = try sampleWithoutReplacementFrom(&unchecked, u8, std.testing.allocator, &items, 3);
+        defer std.testing.allocator.free(sample);
+        const checked_sample = try sampleWithoutReplacementCheckedFrom(&checked, u8, std.testing.allocator, &items, 3);
+        defer std.testing.allocator.free(checked_sample);
+        try std.testing.expectEqualSlices(u8, sample, checked_sample);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+    }
+}
+
 test "value and sampler iterators produce unbounded samples" {
     const alea = @import("root.zig");
     var engine = alea.Xoshiro256.init(123);
