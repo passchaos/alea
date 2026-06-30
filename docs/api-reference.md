@@ -441,8 +441,10 @@ Dynamic weighted helpers:
 - Raw charset byte sets: `alphanumeric`, `alphabetic`, `lowercase`,
   `uppercase`, `digits`
 - Charset type: `Charset.init`, `Charset.initChecked`, `Charset.sample`,
-  `Charset.fill`, `Charset.alloc`
-- Helpers: `char`, `string`, `unicodeScalar`, `unicodeUtf8Alloc`
+  `Charset.sampleFrom`, `Charset.fill`, `Charset.fillFrom`, `Charset.alloc`,
+  `Charset.allocFrom`
+- Helpers: `char`, `charFrom`, `string`, `stringFrom`, `unicodeScalar`,
+  `unicodeScalarFrom`, `unicodeUtf8Alloc`, `unicodeUtf8AllocFrom`
 
 ## Validation And Tooling
 

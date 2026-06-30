@@ -127,7 +127,9 @@ engine source.
 
 `ascii.zig` includes ASCII `Alphanumeric`, `Alphabetic`, `Lowercase`,
 `Uppercase`, `Digits`, custom `Charset`, and Unicode scalar UTF-8 string
-generation.
+generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
+`Charset.allocFrom`, `charFrom`, `stringFrom`, `unicodeScalarFrom`, and
+`unicodeUtf8AllocFrom` when the engine type is comptime-known.
 
 ## Validation
 
