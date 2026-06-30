@@ -19,7 +19,8 @@ expectations.
 
 - Error type: `Error`
 - Construction and interop: `init`, `fromRandom`, `random`
-- Values: `value`, `valueIter`, `randomIter`, `sampleIter`
+- Values: `value`, `valueFrom`, `valueIter`, `valueIterFrom`, `randomIter`,
+  `sampleIter`
 - Bytes/fill: `bytes`, `fill` and `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`,
   `fillRangeChecked`, `fillRangeCheckedFrom`, `fillOpen`,
@@ -69,12 +70,13 @@ expectations.
 - Unicode: `unicodeScalar`, `unicodeScalarFrom`
 - Distributions: `normal`, `exponential`, `standardNormalFastFrom`,
   `standardExponentialFastFrom`, `normalFastFrom`, `exponentialFastFrom`
-- Enums and collections: `enumValue`, `shuffle`, `shuffleFrom`, `choose`,
+- Enums and collections: `enumValue`, `enumValueFrom`, `shuffle`, `shuffleFrom`, `choose`,
   `chooseFrom`, `choosePtr`, `choosePtrFrom`, `weightedIndex`,
   `weightedIndexFrom`, `weightedIndexChecked`, `weightedIndexCheckedFrom`,
   `sampleWithoutReplacement`, `sampleWithoutReplacementFrom`,
   `sampleWithoutReplacementChecked`, `sampleWithoutReplacementCheckedFrom`
-- Iterator types: `ValueIterator(T)`, `SampleIterator(Sampler, T)`
+- Iterator types: `ValueIterator(T)`, `ValueIteratorFrom(Source, T)`,
+  `SampleIterator(Sampler, T)`
 
 ## Seed
 

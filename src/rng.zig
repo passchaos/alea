@@ -98,22 +98,26 @@ pub fn random(self: Rng) std.Random {
 }
 
 pub fn value(self: Rng, comptime T: type) T {
+    return valueFrom(self, T);
+}
+
+pub fn valueFrom(source: anytype, comptime T: type) T {
     return switch (@typeInfo(T)) {
-        .bool => self.boolean(),
-        .int => self.uint(T),
-        .float => self.float(T),
-        .vector => self.vector(T),
-        .@"enum" => self.enumValue(T),
+        .bool => nextFrom(source) & 1 != 0,
+        .int => uintFrom(source, T),
+        .float => floatFrom(source, T),
+        .vector => vectorFrom(source, T),
+        .@"enum" => enumValueFrom(source, T),
         .array => |array_info| blk: {
             var out: T = undefined;
-            for (&out) |*item| item.* = self.value(array_info.child);
+            for (&out) |*item| item.* = valueFrom(source, array_info.child);
             break :blk out;
         },
         .@"struct" => |struct_info| blk: {
             if (struct_info.is_tuple) {
                 var out: T = undefined;
                 inline for (struct_info.fields) |field| {
-                    @field(out, field.name) = self.value(field.type);
+                    @field(out, field.name) = valueFrom(source, field.type);
                 }
                 break :blk out;
             }
@@ -125,6 +129,10 @@ pub fn value(self: Rng, comptime T: type) T {
 
 pub fn valueIter(self: Rng, comptime T: type) ValueIterator(T) {
     return .{ .rng = self };
+}
+
+pub fn valueIterFrom(source: anytype, comptime T: type) ValueIteratorFrom(@TypeOf(source), T) {
+    return .{ .source = source };
 }
 
 pub fn randomIter(self: Rng, comptime T: type) ValueIterator(T) {
@@ -1283,13 +1291,17 @@ pub inline fn exponentialFastFrom(source: anytype, comptime T: type, rate: T) T 
 }
 
 pub fn enumValue(self: Rng, comptime EnumType: type) EnumType {
+    return enumValueFrom(self, EnumType);
+}
+
+pub fn enumValueFrom(source: anytype, comptime EnumType: type) EnumType {
     comptime {
         if (@typeInfo(EnumType) != .@"enum") @compileError("enumValue expects an enum type");
     }
     const values = comptime std.enums.values(EnumType);
     comptime std.debug.assert(values.len > 0);
     if (values.len == 1) return values[0];
-    return values[self.uintLessThan(usize, values.len)];
+    return values[uintLessThanFrom(source, usize, values.len)];
 }
 
 pub fn shuffle(self: Rng, comptime T: type, items: []T) void {
@@ -1395,6 +1407,26 @@ pub fn ValueIterator(comptime T: type) type {
 
         pub fn nextValue(self: *Self) T {
             return self.rng.value(T);
+        }
+
+        pub fn fill(self: *Self, dest: []T) void {
+            for (dest) |*item| item.* = self.nextValue();
+        }
+    };
+}
+
+pub fn ValueIteratorFrom(comptime Source: type, comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        source: Source,
+
+        pub fn next(self: *Self) ?T {
+            return self.nextValue();
+        }
+
+        pub fn nextValue(self: *Self) T {
+            return valueFrom(self.source, T);
         }
 
         pub fn fill(self: *Self, dest: []T) void {
@@ -1885,6 +1917,14 @@ test "rng facade covers scalar APIs" {
     const tuple = rng.value(struct { u8, bool, f32 });
     try std.testing.expect(tuple[2] < 1.0);
 
+    const direct_tuple = Rng.valueFrom(&engine, struct { u8, bool, f32 });
+    try std.testing.expect(direct_tuple[2] >= 0 and direct_tuple[2] < 1.0);
+
+    const direct_array = Rng.valueFrom(&engine, [4]u16);
+    var any_direct_array_non_zero = false;
+    for (direct_array) |item| any_direct_array_non_zero = any_direct_array_non_zero or item != 0;
+    try std.testing.expect(any_direct_array_non_zero);
+
     const scalar = rng.unicodeScalar();
     try std.testing.expect(scalar < 0xD800 or scalar > 0xDFFF);
     try std.testing.expect(scalar < 0x11_0000);
@@ -2369,13 +2409,26 @@ test "value and sampler iterators produce unbounded samples" {
     const second = values.nextValue();
     try std.testing.expect(first != second);
 
+    var direct_values = Rng.valueIterFrom(&engine, u16);
+    const direct_first = direct_values.next().?;
+    const direct_second = direct_values.nextValue();
+    try std.testing.expect(direct_first != direct_second);
+
     var bool_iter = rng.randomIter(bool);
     var bools: [8]bool = undefined;
     bool_iter.fill(&bools);
 
+    var direct_bool_iter = Rng.valueIterFrom(&engine, bool);
+    var direct_bools: [8]bool = undefined;
+    direct_bool_iter.fill(&direct_bools);
+
     var tuple_iter = rng.valueIter(struct { u8, bool, f32 });
     const tuple = tuple_iter.nextValue();
     try std.testing.expect(tuple[2] >= 0 and tuple[2] < 1);
+
+    var direct_tuple_iter = Rng.valueIterFrom(&engine, struct { u8, bool, f32 });
+    const direct_tuple = direct_tuple_iter.nextValue();
+    try std.testing.expect(direct_tuple[2] >= 0 and direct_tuple[2] < 1);
 
     const die = try alea.distributions.Uniform(u8).initInclusive(1, 6);
     var rolls = rng.sampleIter(u8, die);
