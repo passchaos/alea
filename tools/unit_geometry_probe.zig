@@ -20,16 +20,22 @@ pub fn main(init: std.process.Init) !void {
 
     try stdout.print("unit geometry probe count={}\n", .{sample_count});
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
+    try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point pair", 0xc11c1e, sample_count, sampleUnitCirclePair);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point range", 0xc11c1e, sample_count, sampleUnitCircleRange);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point current", 0xd15c, sample_count, sampleUnitDiscCurrent);
+    try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point pair", 0xd15c, sample_count, sampleUnitDiscPair);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point range", 0xd15c, sample_count, sampleUnitDiscRange);
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point current", 0x59e7e, sample_count, sampleUnitSphereCurrent);
+    try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point pair", 0x59e7e, sample_count, sampleUnitSpherePair);
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point range", 0x59e7e, sample_count, sampleUnitSphereRange);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
+    try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point pair", 0xc11c1e, sample_count, sampleUnitCirclePair);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point range", 0xc11c1e, sample_count, sampleUnitCircleRange);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit disc point current", 0xd15c, sample_count, sampleUnitDiscCurrent);
+    try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit disc point pair", 0xd15c, sample_count, sampleUnitDiscPair);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit disc point range", 0xd15c, sample_count, sampleUnitDiscRange);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point current", 0x59e7e, sample_count, sampleUnitSphereCurrent);
+    try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point pair", 0x59e7e, sample_count, sampleUnitSpherePair);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point range", 0x59e7e, sample_count, sampleUnitSphereRange);
     try benchFill(alea.FastPrng, io, stdout, "fast unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
     try benchFill(alea.FastPrng, io, stdout, "fast unit circle batched candidates", 0xc11c1e, sample_count, batchedUnitCircle);
@@ -226,6 +232,47 @@ fn sampleUnitDiscCurrent(source: anytype) [2]f64 {
 
 fn sampleUnitSphereCurrent(source: anytype) [3]f64 {
     return alea.distributions.unitSphereFrom(source, f64);
+}
+
+fn signedUnitPair(source: anytype) @Vector(2, f64) {
+    const RawVector = @Vector(2, u64);
+    const raw: RawVector = .{
+        (@as(u64, 0x400) << 52) | (alea.Rng.nextFrom(source) >> 12),
+        (@as(u64, 0x400) << 52) | (alea.Rng.nextFrom(source) >> 12),
+    };
+    return @as(@Vector(2, f64), @bitCast(raw)) - @as(@Vector(2, f64), @splat(3.0));
+}
+
+fn sampleUnitCirclePair(source: anytype) [2]f64 {
+    while (true) {
+        const pair = signedUnitPair(source);
+        const x = pair[0];
+        const y = pair[1];
+        const sum = x * x + y * y;
+        if (!(sum > 0 and sum < 1)) continue;
+        return .{ (x * x - y * y) / sum, 2 * x * y / sum };
+    }
+}
+
+fn sampleUnitDiscPair(source: anytype) [2]f64 {
+    while (true) {
+        const pair = signedUnitPair(source);
+        const x = pair[0];
+        const y = pair[1];
+        if (x * x + y * y <= 1) return .{ x, y };
+    }
+}
+
+fn sampleUnitSpherePair(source: anytype) [3]f64 {
+    while (true) {
+        const pair = signedUnitPair(source);
+        const x = pair[0];
+        const y = pair[1];
+        const sum = x * x + y * y;
+        if (sum >= 1) continue;
+        const factor = 2 * @sqrt(1 - sum);
+        return .{ x * factor, y * factor, 1 - 2 * sum };
+    }
 }
 
 fn sampleUnitCircleRange(source: anytype) [2]f64 {
