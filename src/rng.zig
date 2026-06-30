@@ -2429,6 +2429,26 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.InvalidParameter, Rng.exponentialCheckedFrom(&engine, f64, std.math.inf(f64)));
 }
 
+test "scalar sampling has stable snapshots" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x1234_5678_9abc_def0);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(false, rng.boolean());
+    try std.testing.expectEqual(@as(u32, 0xa3125278), rng.uint(u32));
+    try std.testing.expectEqual(@as(u32, 933), rng.uintLessThan(u32, 1000));
+    try std.testing.expectEqual(@as(u32, 304), rng.uintAtMost(u32, 1000));
+    try std.testing.expectEqual(@as(i32, 31), rng.intRangeLessThan(i32, -50, 50));
+    try std.testing.expectEqual(@as(i32, -27), rng.intRangeAtMost(i32, -50, 50));
+    try std.testing.expectEqual(@as(f64, 0.60790881637282410), rng.float(f64));
+    try std.testing.expectEqual(@as(f64, 0.87537592843999900), rng.floatOpen(f64));
+    try std.testing.expectEqual(@as(f64, 0.22843551191053635), rng.floatOpenClosed(f64));
+    try std.testing.expectEqual(@as(f64, 0.96357471251905120), rng.floatRange(f64, -1, 1));
+    try std.testing.expectEqual(false, rng.chance(0.25));
+    try std.testing.expectEqual(true, rng.ratio(3, 8));
+    try std.testing.expectEqual(@as(u64, 0x43178923ee65cac3), engine.next());
+}
+
 test "shuffle and sampling keep item set" {
     const Wyhash64 = @import("engines/wyhash64.zig");
     var engine = Wyhash64.init(9);
