@@ -76,7 +76,8 @@ expectations.
   `sampleWithoutReplacement`, `sampleWithoutReplacementFrom`,
   `sampleWithoutReplacementChecked`, `sampleWithoutReplacementCheckedFrom`
 - Iterator types: `ValueIterator(T)`, `ValueIteratorFrom(Source, T)`,
-  `SampleIterator(Sampler, T)`, `SampleIteratorFrom(Source, Sampler, T)`
+  `ValueIterator.nextValue`, `SampleIterator(Sampler, T)`,
+  `SampleIterator.nextValue`, `SampleIteratorFrom(Source, Sampler, T)`
 
 ## Seed
 
@@ -166,6 +167,7 @@ Single-shot helpers:
 Reusable samplers:
 
 - `Bernoulli`
+- `Bernoulli.initRatio`
 - `Bernoulli.sampleFrom`
 - `Bernoulli.fill`
 - `Bernoulli.fillFrom`
@@ -186,6 +188,7 @@ Reusable samplers:
 - `Hypergeometric.fill`
 - `Hypergeometric.fillFrom`
 - `Uniform(T)`
+- `Uniform(T).initInclusive`
 - `Uniform(T).sampleFrom`
 - `Uniform(T).fill`
 - `Uniform(T).fillFrom`
@@ -465,6 +468,7 @@ Build steps:
 
 - `zig build test`
 - `zig build run-basic`
+- `zig build apicheck`
 - `zig build statcheck`
 - `zig build distcheck`
 - `zig build stream -- --engine <engine> --bytes <n>`
@@ -477,6 +481,7 @@ Build steps:
 Tools:
 
 - `tools/statcheck.zig`
+- `tools/apicheck.zig`
 - `tools/distcheck.zig`
 - `tools/stream.zig`
 - `tools/ziggurat_probe.zig`

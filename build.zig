@@ -675,6 +675,22 @@ pub fn build(b: *std.Build) void {
     const statcheck_step = b.step("statcheck", "Run extended statistical smoke checks");
     statcheck_step.dependOn(&run_statcheck.step);
 
+    const apicheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/apicheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const apicheck = b.addExecutable(.{
+        .name = "alea-apicheck",
+        .root_module = apicheck_mod,
+    });
+    const run_apicheck = b.addRunArtifact(apicheck);
+    if (b.args) |args| run_apicheck.addArgs(args);
+
+    const apicheck_step = b.step("apicheck", "Check public API reference coverage");
+    apicheck_step.dependOn(&run_apicheck.step);
+
     const stream_mod = b.createModule(.{
         .root_source_file = b.path("tools/stream.zig"),
         .target = target,
