@@ -89,6 +89,7 @@ Rust parity.
 ## Current Rule
 
 Continue feature-first work on the earliest open stage milestone. Use
+`zig build validate` for broad local validation, and at minimum
 `zig build statcheck` after changes that affect engines, distributions, ranges,
 or sampling internals. Use `zig build stream -- ...` to feed raw engine output
 into external statistical tools when validating engine changes. Defer pure
