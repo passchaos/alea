@@ -120,6 +120,7 @@ Single-shot helpers:
 - `negativeBinomial`, `negativeBinomialFrom`, `negativeBinomialChecked`,
   `negativeBinomialCheckedFrom`, `fillNegativeBinomial`,
   `fillNegativeBinomialFrom`, `hypergeometric`, `hypergeometricFrom`,
+  `hypergeometricChecked`, `hypergeometricCheckedFrom`,
   `fillHypergeometric`, `fillHypergeometricFrom`
 - `standardNormal`, `standardNormalFrom`, `fillStandardNormal`,
   `fillStandardNormalFrom`, `normal`, `normalFrom`, `normalChecked`,

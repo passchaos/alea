@@ -379,6 +379,15 @@ pub fn hypergeometric(rng: Rng, population: u64, successes: u64, draws: u64) u64
     return hypergeometricFrom(rng, population, successes, draws);
 }
 
+pub fn hypergeometricChecked(rng: Rng, population: u64, successes: u64, draws: u64) Error!u64 {
+    return hypergeometricCheckedFrom(rng, population, successes, draws);
+}
+
+pub fn hypergeometricCheckedFrom(source: anytype, population: u64, successes: u64, draws: u64) Error!u64 {
+    const dist = try Hypergeometric.init(population, successes, draws);
+    return dist.sampleFrom(source);
+}
+
 pub fn fillHypergeometric(rng: Rng, dest: []u64, population: u64, successes: u64, draws: u64) void {
     fillHypergeometricFrom(rng, dest, population, successes, draws);
 }
@@ -5591,6 +5600,8 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     try std.testing.expectError(error.InvalidParameter, negativeBinomialCheckedFrom(&direct_engine, 0, 0.4));
     try std.testing.expectError(error.InvalidProbability, negativeBinomialCheckedFrom(&direct_engine, 5, 0));
     try std.testing.expect(hg.sampleFrom(&direct_engine) <= 10);
+    try std.testing.expect(try hypergeometricCheckedFrom(&direct_engine, 100, 30, 10) <= 10);
+    try std.testing.expectError(error.InvalidParameter, hypergeometricCheckedFrom(&direct_engine, 10, 11, 1));
     var nb_buf: [8]u64 = undefined;
     fillNegativeBinomial(rng, &nb_buf, 5, 0.4);
     for (nb_buf) |value| try std.testing.expect(value < 64);
