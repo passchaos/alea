@@ -99,11 +99,11 @@ Use:
 
 - `rng.choose`, `rng.choosePtr`
 - `rng.shuffle`
-- `seq.partialShuffle`
-- `seq.reservoirSample`
+- `seq.partialShuffle`, `seq.partialShuffleFrom`
+- `seq.reservoirSample`, `seq.reservoirSampleFrom`
 - `seq.sampleIndices`, `seq.sampleIndexVec`, `seq.sampleIndicesU32`
 - `seq.sampleArray`, `seq.sampleArrayFrom`
-- `seq.chooseMultiple`
+- `seq.chooseMultiple`, `seq.chooseMultipleFrom`
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`, `seq.sampleIterator`,
   `seq.sampleIteratorFrom`
 - `seq.chooseIteratorWeighted`, `seq.chooseIteratorWeightedFrom`,

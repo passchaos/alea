@@ -159,8 +159,12 @@ pub fn sampleArrayFrom(source: anytype, comptime N: usize, length: usize) ?[N]us
 }
 
 pub fn chooseMultiple(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
+    return chooseMultipleFrom(allocator, rng, T, items, amount);
+}
+
+pub fn chooseMultipleFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
     const count = @min(amount, items.len);
-    const indices = try sampleIndices(allocator, rng, items.len, count);
+    const indices = try sampleIndicesFrom(allocator, source, items.len, count);
     defer allocator.free(indices);
 
     const out = try allocator.alloc(T, count);
@@ -452,16 +456,24 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 }
 
 pub fn partialShuffle(rng: Rng, comptime T: type, items: []T, amount: usize) []T {
+    return partialShuffleFrom(rng, T, items, amount);
+}
+
+pub fn partialShuffleFrom(source: anytype, comptime T: type, items: []T, amount: usize) []T {
     const count = @min(amount, items.len);
     var i: usize = 0;
     while (i < count) : (i += 1) {
-        const j = rng.intRangeLessThan(usize, i, items.len);
+        const j = Rng.intRangeLessThanFrom(source, usize, i, items.len);
         std.mem.swap(T, &items[i], &items[j]);
     }
     return items[0..count];
 }
 
 pub fn reservoirSample(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
+    return reservoirSampleFrom(allocator, rng, T, items, amount);
+}
+
+pub fn reservoirSampleFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
     const count = @min(amount, items.len);
     const out = try allocator.alloc(T, count);
     if (count == 0) return out;
@@ -469,7 +481,7 @@ pub fn reservoirSample(allocator: std.mem.Allocator, rng: Rng, comptime T: type,
     @memcpy(out, items[0..count]);
     var i = count;
     while (i < items.len) : (i += 1) {
-        const j = rng.uintAtMost(usize, i);
+        const j = Rng.uintAtMostFrom(source, usize, i);
         if (j < count) out[j] = items[i];
     }
     return out;
@@ -777,9 +789,21 @@ test "partial shuffle and reservoir sample respect counts" {
     const head = partialShuffle(rng, u8, &values, 3);
     try std.testing.expectEqual(@as(usize, 3), head.len);
 
+    var direct_values = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const direct_head = partialShuffleFrom(&engine, u8, &direct_values, 3);
+    try std.testing.expectEqual(@as(usize, 3), direct_head.len);
+
     const sampled = try reservoirSample(std.testing.allocator, rng, u8, &values, 4);
     defer std.testing.allocator.free(sampled);
     try std.testing.expectEqual(@as(usize, 4), sampled.len);
+
+    const direct_sampled = try reservoirSampleFrom(std.testing.allocator, &engine, u8, &values, 4);
+    defer std.testing.allocator.free(direct_sampled);
+    try std.testing.expectEqual(@as(usize, 4), direct_sampled.len);
+
+    const direct_multiple = try chooseMultipleFrom(std.testing.allocator, &engine, u8, &values, 3);
+    defer std.testing.allocator.free(direct_multiple);
+    try std.testing.expectEqual(@as(usize, 3), direct_multiple.len);
 }
 
 test "choice sampler repeatedly samples slice references" {
