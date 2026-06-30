@@ -14,8 +14,9 @@ The first milestone is intentionally broad:
 - `Rng.value(T)` for scalar, enum, tuple, and array sampling
 - `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling
 - bulk `fillSample`, `fillRange`, strict-interval scalar and vector float
-  fill, `fillNormal`, `fillExponential`, and unit geometry fill APIs for
-  high-volume sampling without iterator ceremony
+  fill, standard/parameterized vector normal and exponential fills, `fillNormal`,
+  `fillExponential`, and unit geometry fill APIs for high-volume sampling
+  without iterator ceremony
 - deterministic seed derivation with named streams and system-entropy helpers
 - scalar helpers for integers, floats, durations, ranges, booleans, and bytes
 - collection helpers for `choose`, `shuffle`, partial shuffle, weighted indexes,

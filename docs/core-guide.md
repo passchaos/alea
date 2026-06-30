@@ -39,8 +39,9 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - signed and unsigned ranges: `intRangeLessThan`, `intRangeAtMost`
 - floats: `float`, `floatOpen`, `floatOpenClosed`, `floatRange`
 - vectors: `value(@Vector(N, T))`, `vectorOpen`, `vectorOpenClosed`,
-  `vectorRange`, `vectorChance`, `vectorRatio`, `vectorNormal`,
-  `vectorExponential` for `f32`/`f64`, integer, and boolean lanes
+  `vectorRange`, `vectorChance`, `vectorRatio`, `vectorStandardNormal`,
+  `vectorNormal`, `vectorStandardExponential`, `vectorExponential` for
+  `f32`/`f64`, integer, and boolean lanes
 - booleans: `boolean`, `chance`, `chanceFrom`, `ratio`, `ratioFrom`,
   `fillChance`, `fillRatio`
 - durations: `durationRangeLessThan`, `durationRangeAtMost`
@@ -50,8 +51,9 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,
   `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`,
   `fillVectorOpen`, `fillVectorOpenClosed`, `fillVectorOpenFrom`, `fillVectorOpenClosedFrom`, `fillStandardNormal`,
-  `fillNormal`, `fillLogNormal`, `fillVectorNormal`, `fillStandardExponential`,
-  `fillExponential`, and `fillVectorExponential`
+  `fillNormal`, `fillLogNormal`, `fillVectorStandardNormal`, `fillVectorNormal`,
+  `fillStandardExponential`, `fillExponential`, `fillVectorStandardExponential`,
+  and `fillVectorExponential`
 
 Checked variants exist for user-supplied probabilities and scalar ranges.
 Use `standardNormalFastFrom`, `normalFastFrom`,

@@ -369,6 +369,16 @@ pub fn fillVectorRatioChecked(self: Rng, comptime VectorType: type, dest: []Vect
     self.fillVectorRatio(VectorType, dest, numerator, denominator);
 }
 
+pub fn fillVectorStandardNormal(self: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorStandardNormalFrom(self, VectorType, dest);
+}
+
+pub fn fillVectorStandardNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    fillVectorNormalScalarFrom(source, VectorType, dest, 0, 1);
+}
+
 pub fn fillVectorNormal(self: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
     fillVectorNormalFrom(self, VectorType, dest, mean, stddev);
 }
@@ -411,6 +421,16 @@ pub fn fillVectorExponentialChecked(self: Rng, comptime VectorType: type, dest: 
     comptime requireFloat(info.child);
     if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
     self.fillVectorExponential(VectorType, dest, rate);
+}
+
+pub fn fillVectorStandardExponential(self: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorStandardExponentialFrom(self, VectorType, dest);
+}
+
+pub fn fillVectorStandardExponentialFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    fillVectorExponentialScalarFrom(source, VectorType, dest, 1);
 }
 
 pub fn fillNormal(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
@@ -1029,6 +1049,16 @@ pub fn vectorRatioChecked(self: Rng, comptime VectorType: type, numerator: u32, 
     return self.vectorRatio(VectorType, numerator, denominator);
 }
 
+pub fn vectorStandardNormal(self: Rng, comptime VectorType: type) VectorType {
+    return vectorStandardNormalFrom(self, VectorType);
+}
+
+pub fn vectorStandardNormalFrom(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    return vectorNormalScalarFrom(source, VectorType, 0, 1);
+}
+
 pub fn vectorNormal(self: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
     return vectorNormalFrom(self, VectorType, mean, stddev);
 }
@@ -1057,6 +1087,16 @@ pub fn vectorExponentialFrom(source: anytype, comptime VectorType: type, rate: v
     var std_random = randomFrom(source);
     inline for (0..info.len) |i| out[i] = std_random.floatExp(info.child) / rate;
     return out;
+}
+
+pub fn vectorStandardExponential(self: Rng, comptime VectorType: type) VectorType {
+    return vectorStandardExponentialFrom(self, VectorType);
+}
+
+pub fn vectorStandardExponentialFrom(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    return vectorExponentialScalarFrom(source, VectorType, 1);
 }
 
 pub fn durationRangeLessThan(self: Rng, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
@@ -1917,17 +1957,33 @@ test "rng facade covers scalar APIs" {
     for (vec_ratio_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i]);
     try std.testing.expectError(error.InvalidProbability, rng.fillVectorRatioChecked(@Vector(8, bool), &vec_ratio_buf, 2, 1));
 
+    var vec_standard_normal_buf: [4]@Vector(8, f32) = undefined;
+    rng.fillVectorStandardNormal(@Vector(8, f32), &vec_standard_normal_buf);
+    for (vec_standard_normal_buf) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
+
     var vec_normal_buf: [8]@Vector(8, f32) = undefined;
     try rng.fillVectorNormalChecked(@Vector(8, f32), &vec_normal_buf, 0, 1);
     for (vec_normal_buf) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
+
+    var direct_vec_standard_normal_buf: [4]@Vector(8, f32) = undefined;
+    Rng.fillVectorStandardNormalFrom(&engine, @Vector(8, f32), &direct_vec_standard_normal_buf);
+    for (direct_vec_standard_normal_buf) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
 
     var direct_vec_normal_buf: [4]@Vector(8, f32) = undefined;
     Rng.fillVectorNormalFrom(&engine, @Vector(8, f32), &direct_vec_normal_buf, 0, 1);
     for (direct_vec_normal_buf) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
 
+    var vec_standard_exp_buf: [4]@Vector(8, f32) = undefined;
+    rng.fillVectorStandardExponential(@Vector(8, f32), &vec_standard_exp_buf);
+    for (vec_standard_exp_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0);
+
     var vec_exp_buf: [8]@Vector(8, f32) = undefined;
     try rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_exp_buf, 2);
     for (vec_exp_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0);
+
+    var direct_vec_standard_exp_buf: [4]@Vector(8, f32) = undefined;
+    Rng.fillVectorStandardExponentialFrom(&engine, @Vector(8, f32), &direct_vec_standard_exp_buf);
+    for (direct_vec_standard_exp_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0);
 
     var direct_vec_exp_buf: [4]@Vector(8, f32) = undefined;
     Rng.fillVectorExponentialFrom(&engine, @Vector(8, f32), &direct_vec_exp_buf, 2);
@@ -1944,6 +2000,12 @@ test "rng facade covers scalar APIs" {
 
     const normals = rng.vectorNormal(@Vector(4, f64), 0, 1);
     inline for (0..4) |i| try std.testing.expect(std.math.isFinite(normals[i]));
+
+    const standard_normals = rng.vectorStandardNormal(@Vector(4, f64));
+    inline for (0..4) |i| try std.testing.expect(std.math.isFinite(standard_normals[i]));
+
+    const direct_standard_normals = Rng.vectorStandardNormalFrom(&engine, @Vector(4, f64));
+    inline for (0..4) |i| try std.testing.expect(std.math.isFinite(direct_standard_normals[i]));
 
     const fast_normal = Rng.normalFastFrom(&engine, f64, 0, 1);
     try std.testing.expect(std.math.isFinite(fast_normal));
@@ -1986,11 +2048,23 @@ test "rng facade covers scalar APIs" {
     const vector_normals_f32 = rng.vectorNormal(@Vector(8, f32), 0, 1);
     inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vector_normals_f32[i]));
 
+    const vector_standard_normals_f32 = rng.vectorStandardNormal(@Vector(8, f32));
+    inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vector_standard_normals_f32[i]));
+
     const exponentials = rng.vectorExponential(@Vector(4, f64), 2);
     inline for (0..4) |i| try std.testing.expect(exponentials[i] >= 0);
 
+    const standard_exponentials = rng.vectorStandardExponential(@Vector(4, f64));
+    inline for (0..4) |i| try std.testing.expect(standard_exponentials[i] >= 0);
+
+    const direct_standard_exponentials = Rng.vectorStandardExponentialFrom(&engine, @Vector(4, f64));
+    inline for (0..4) |i| try std.testing.expect(direct_standard_exponentials[i] >= 0);
+
     const vector_exp_f32 = rng.vectorExponential(@Vector(8, f32), 2);
     inline for (0..8) |i| try std.testing.expect(vector_exp_f32[i] >= 0);
+
+    const vector_standard_exp_f32 = rng.vectorStandardExponential(@Vector(8, f32));
+    inline for (0..8) |i| try std.testing.expect(vector_standard_exp_f32[i] >= 0);
 
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, u32), 3, 3));
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
