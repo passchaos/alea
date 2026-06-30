@@ -103,7 +103,7 @@ pub fn value(self: Rng, comptime T: type) T {
 
 pub fn valueFrom(source: anytype, comptime T: type) T {
     return switch (@typeInfo(T)) {
-        .bool => nextFrom(source) & 1 != 0,
+        .bool => booleanFrom(source),
         .int => uintFrom(source, T),
         .float => floatFrom(source, T),
         .vector => vectorFrom(source, T),
@@ -808,7 +808,11 @@ pub fn next(self: Rng) u64 {
 }
 
 pub fn boolean(self: Rng) bool {
-    return (@as(i64, @bitCast(self.next())) < 0);
+    return booleanFrom(self);
+}
+
+pub fn booleanFrom(source: anytype) bool {
+    return (@as(i64, @bitCast(nextFrom(source))) < 0);
 }
 
 pub fn chance(self: Rng, p: f64) bool {
@@ -1900,6 +1904,7 @@ test "rng facade covers scalar APIs" {
     try std.testing.expect(rng.float(f64) < 1.0);
     try std.testing.expect(rng.floatOpen(f64) > 0.0);
     try std.testing.expect(Rng.floatOpenFrom(&engine, f64) > 0.0);
+    _ = Rng.booleanFrom(&engine);
     const direct_open_closed = Rng.floatOpenClosedFrom(&engine, f64);
     try std.testing.expect(direct_open_closed > 0.0 and direct_open_closed <= 1.0);
     const direct_float_range = Rng.floatRangeFrom(&engine, f64, -1, 1);

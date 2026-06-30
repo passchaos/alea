@@ -42,7 +42,7 @@ expectations.
   `fillVectorChanceFrom`, `fillVectorRatioFrom`, `fillVectorNormalFrom`,
   `fillVectorStandardExponential`, `fillVectorStandardExponentialFrom`,
   `fillVectorExponentialFrom`
-- Raw/scalars: `next`, `boolean`, `chance`, `chanceChecked`, `ratio`,
+- Raw/scalars: `next`, `boolean`, `booleanFrom`, `chance`, `chanceChecked`, `ratio`,
   `chanceFrom`, `chanceCheckedFrom`, `ratioFrom`, `ratioChecked`,
   `ratioCheckedFrom`, `uint`, `uintLessThan`, `uintLessThanChecked`,
   `uintLessThanCheckedFrom`, `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`,

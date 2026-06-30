@@ -42,7 +42,7 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
   `vectorRange`, `vectorChance`, `vectorRatio`, `vectorStandardNormal`,
   `vectorNormal`, `vectorStandardExponential`, `vectorExponential` for
   `f32`/`f64`, integer, and boolean lanes
-- booleans: `boolean`, `chance`, `chanceFrom`, `ratio`, `ratioFrom`,
+- booleans: `boolean`, `booleanFrom`, `chance`, `chanceFrom`, `ratio`, `ratioFrom`,
   `fillChance`, `fillRatio`
 - durations: `durationRangeLessThan`, `durationRangeAtMost`,
   `durationRangeLessThanFrom`, `durationRangeAtMostFrom`
