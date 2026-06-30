@@ -153,6 +153,7 @@ pub fn main(init: std.process.Init) !void {
     try benchPoissonWyhash(io, stdout, "alea poisson wyhash64 direct", bytes / 64);
     try benchPoissonCached(io, stdout, "alea poisson cached", bytes / 64);
     try benchFillPoisson(io, stdout, "alea fillPoisson", bytes / 64);
+    try benchFillPoissonFastDirect(io, stdout, "alea fillPoisson fast direct", bytes / 64);
     try benchFillPoissonScalar(io, stdout, "alea fillPoisson scalar direct", bytes / 64);
     try benchGeometric(io, stdout, "alea geometric", bytes / 64);
     try benchFillGeometric(io, stdout, "alea fillGeometric", bytes / 64);
@@ -3397,6 +3398,36 @@ fn benchFillPoisson(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             alea.distributions.fillPoisson(rng, out[0..n], 20);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillPoissonFastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xa159);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillPoissonFrom(&engine, out[0..n], 20);
             for (out[0..n]) |value| checksum +%= value;
             remaining -= n;
         }
