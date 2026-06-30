@@ -2471,6 +2471,20 @@ test "byte fill has stable snapshots" {
     try std.testing.expectEqual(@as(u64, 0x931a772dd193d170), engine.next());
 }
 
+test "open-closed f64 fill preserves facade stream shape" {
+    const alea = @import("root.zig");
+    var facade_engine = alea.FastPrng.init(0xf642);
+    var direct_engine = alea.FastPrng.init(0xf642);
+    const rng = Rng.init(&facade_engine);
+
+    var facade_values: [200]f64 = undefined;
+    var direct_values: [200]f64 = undefined;
+    rng.fillOpenClosed(f64, &facade_values);
+    fillOpenClosedFrom(&direct_engine, f64, &direct_values);
+    try std.testing.expectEqualSlices(f64, &facade_values, &direct_values);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+}
+
 test "value and vector sampling have stable snapshots" {
     const alea = @import("root.zig");
     const ValueType = struct { u8, bool, f32 };
