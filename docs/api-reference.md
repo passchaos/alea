@@ -126,9 +126,10 @@ Single-shot helpers:
   `fillHypergeometric`, `fillHypergeometricFrom`
 - `standardNormal`, `standardNormalFrom`, `fillStandardNormal`,
   `fillStandardNormalFrom`, `normal`, `normalFrom`, `normalChecked`,
-  `normalCheckedFrom`, `logNormal`,
-  `logNormalFrom`, `fillLogNormal`, `fillLogNormalFrom`, `halfNormal`,
-  `halfNormalFrom`, `fillHalfNormal`, `fillHalfNormalFrom`, `chi`, `chiFrom`,
+  `normalCheckedFrom`, `logNormal`, `logNormalFrom`, `logNormalChecked`,
+  `logNormalCheckedFrom`, `fillLogNormal`, `fillLogNormalFrom`, `halfNormal`,
+  `halfNormalFrom`, `halfNormalChecked`, `halfNormalCheckedFrom`,
+  `fillHalfNormal`, `fillHalfNormalFrom`, `chi`, `chiFrom`,
   `standardExponential`, `standardExponentialFrom`,
   `fillStandardExponential`, `fillStandardExponentialFrom`, `exponential`,
   `exponentialFrom`, `exponentialChecked`, `exponentialCheckedFrom`

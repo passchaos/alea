@@ -1127,6 +1127,15 @@ pub fn logNormal(rng: Rng, comptime T: type, mean: T, stddev: T) T {
     return logNormalFrom(rng, T, mean, stddev);
 }
 
+pub fn logNormalChecked(rng: Rng, comptime T: type, mean: T, stddev: T) Error!T {
+    return logNormalCheckedFrom(rng, T, mean, stddev);
+}
+
+pub fn logNormalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: T) Error!T {
+    var dist = try LogNormal(T).init(mean, stddev);
+    return dist.sampleFrom(source);
+}
+
 pub fn logNormalFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     return @exp(Rng.normalFastFrom(source, T, mean, stddev));
@@ -1174,6 +1183,15 @@ pub fn LogNormal(comptime T: type) type {
 
 pub fn halfNormal(rng: Rng, comptime T: type, scale: T) T {
     return halfNormalFrom(rng, T, scale);
+}
+
+pub fn halfNormalChecked(rng: Rng, comptime T: type, scale: T) Error!T {
+    return halfNormalCheckedFrom(rng, T, scale);
+}
+
+pub fn halfNormalCheckedFrom(source: anytype, comptime T: type, scale: T) Error!T {
+    const dist = try HalfNormal(T).init(scale);
+    return dist.sampleFrom(source);
 }
 
 pub fn halfNormalFrom(source: anytype, comptime T: type, scale: T) T {
@@ -5305,6 +5323,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     var log_normal_sampler = try LogNormal(f64).init(0, 0.25);
     log_normal_sampler.fillFrom(&direct_engine, &direct_log_normal_buf);
     for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expect(try logNormalCheckedFrom(&direct_engine, f64, 0, 0.25) > 0);
+    try std.testing.expectError(error.InvalidParameter, logNormalCheckedFrom(&direct_engine, f64, 0, -1));
 
     var half_normals = rng.sampleIter(f64, try HalfNormal(f64).init(2));
     try std.testing.expect(half_normals.next().? >= 0);
@@ -5317,6 +5337,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const half_normal_sampler = try HalfNormal(f64).init(2);
     half_normal_sampler.fillFrom(&direct_engine, &direct_half_normal_buf);
     for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expect(try halfNormalCheckedFrom(&direct_engine, f64, 2) >= 0);
+    try std.testing.expectError(error.InvalidParameter, halfNormalCheckedFrom(&direct_engine, f64, 0));
 
     var poissons = rng.sampleIter(u64, try Poisson.init(12));
     try std.testing.expect(poissons.next().? < 64);
