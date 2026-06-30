@@ -2989,6 +2989,15 @@ pub fn pareto(rng: Rng, comptime T: type, scale: T, shape: T) T {
     return paretoFrom(rng, T, scale, shape);
 }
 
+pub fn paretoChecked(rng: Rng, comptime T: type, scale: T, shape: T) Error!T {
+    return paretoCheckedFrom(rng, T, scale, shape);
+}
+
+pub fn paretoCheckedFrom(source: anytype, comptime T: type, scale: T, shape: T) Error!T {
+    const dist = try Pareto(T).init(scale, shape);
+    return dist.sampleFrom(source);
+}
+
 pub fn paretoFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and shape > 0);
@@ -3046,6 +3055,15 @@ pub fn Pareto(comptime T: type) type {
 
 pub fn weibull(rng: Rng, comptime T: type, scale: T, shape: T) T {
     return weibullFrom(rng, T, scale, shape);
+}
+
+pub fn weibullChecked(rng: Rng, comptime T: type, scale: T, shape: T) Error!T {
+    return weibullCheckedFrom(rng, T, scale, shape);
+}
+
+pub fn weibullCheckedFrom(source: anytype, comptime T: type, scale: T, shape: T) Error!T {
+    const dist = try Weibull(T).init(scale, shape);
+    return dist.sampleFrom(source);
 }
 
 pub fn weibullFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
@@ -5581,6 +5599,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const pareto_sampler = try Pareto(f64).init(2, 3);
     pareto_sampler.fillFrom(&direct_engine, &direct_pareto_buf);
     for (direct_pareto_buf) |value| try std.testing.expect(value >= 2);
+    try std.testing.expect(try paretoCheckedFrom(&direct_engine, f64, 2, 3) >= 2);
+    try std.testing.expectError(error.InvalidParameter, paretoCheckedFrom(&direct_engine, f64, 0, 3));
     var pareto_shape_one_buf: [8]f64 = undefined;
     fillParetoFrom(&direct_engine, f64, &pareto_shape_one_buf, 2, 1);
     for (pareto_shape_one_buf) |value| try std.testing.expect(value >= 2);
@@ -5597,6 +5617,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const weibull_sampler = try Weibull(f64).init(2, 1.5);
     weibull_sampler.fillFrom(&direct_engine, &direct_weibull_buf);
     for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
+    try std.testing.expect(try weibullCheckedFrom(&direct_engine, f64, 2, 1.5) >= 0);
+    try std.testing.expectError(error.InvalidParameter, weibullCheckedFrom(&direct_engine, f64, 0, 1.5));
     var weibull_shape_one_buf: [8]f64 = undefined;
     fillWeibullFrom(&direct_engine, f64, &weibull_shape_one_buf, 2, 1);
     for (weibull_shape_one_buf) |value| try std.testing.expect(value >= 0);

@@ -174,8 +174,9 @@ Single-shot helpers:
   `fillRayleighFrom`, `maxwell`, `maxwellFrom`, `maxwellChecked`,
   `maxwellCheckedFrom`, `fillMaxwell`,
   `fillMaxwellFrom`,
-  `pareto`, `paretoFrom`, `fillPareto`, `fillParetoFrom`, `weibull`,
-  `weibullFrom`, `fillWeibull`, `fillWeibullFrom`
+  `pareto`, `paretoFrom`, `paretoChecked`, `paretoCheckedFrom`,
+  `fillPareto`, `fillParetoFrom`, `weibull`, `weibullFrom`,
+  `weibullChecked`, `weibullCheckedFrom`, `fillWeibull`, `fillWeibullFrom`
 - `gumbel`, `gumbelFrom`, `fillGumbel`, `fillGumbelFrom`,
   `frechet`, `frechetFrom`, `fillFrechet`, `fillFrechetFrom`,
   `skewNormal`, `skewNormalFrom`, `fillSkewNormal`, `fillSkewNormalFrom`,
