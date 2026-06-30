@@ -11,6 +11,7 @@ const checks = [_]Check{
     .{ .path = "src/distributions.zig", .label = "distributions" },
     .{ .path = "src/seq.zig", .label = "seq" },
     .{ .path = "src/ascii.zig", .label = "ascii" },
+    .{ .path = "src/quality.zig", .label = "quality" },
     .{ .path = "src/seed.zig", .label = "Seed" },
     .{ .path = "src/engines/alea4x64.zig", .label = "Alea4x64" },
     .{ .path = "src/engines/chacha.zig", .label = "ChaCha" },
