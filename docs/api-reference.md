@@ -42,12 +42,14 @@ expectations.
   `fillVectorStandardExponential`, `fillVectorStandardExponentialFrom`,
   `fillVectorExponentialFrom`
 - Raw/scalars: `next`, `boolean`, `chance`, `chanceChecked`, `ratio`,
-  `chanceFrom`, `ratioFrom`, `ratioChecked`, `uint`, `uintLessThan`, `uintLessThanChecked`,
-  `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`,
+  `chanceFrom`, `chanceCheckedFrom`, `ratioFrom`, `ratioChecked`,
+  `ratioCheckedFrom`, `uint`, `uintLessThan`, `uintLessThanChecked`,
+  `uintLessThanCheckedFrom`, `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`,
   `probabilityThreshold`
 - Ranges: `intRangeLessThan`, `intRangeLessThanChecked`, `intRangeAtMost`,
-  `intRangeAtMostChecked`, `intRangeLessThanFrom`, `intRangeAtMostFrom`,
-  `floatRange`, `floatRangeFrom`, `floatRangeChecked`, `durationRangeLessThan`,
+  `intRangeLessThanCheckedFrom`, `intRangeAtMostChecked`,
+  `intRangeAtMostCheckedFrom`, `intRangeLessThanFrom`, `intRangeAtMostFrom`,
+  `floatRange`, `floatRangeFrom`, `floatRangeChecked`, `floatRangeCheckedFrom`, `durationRangeLessThan`,
   `durationRangeAtMost`, `durationRangeLessThanChecked`,
   `durationRangeAtMostChecked`
 - Floats: `float`, `floatFrom`, `floatOpen`, `floatOpenFrom`,

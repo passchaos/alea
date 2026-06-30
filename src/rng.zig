@@ -804,8 +804,12 @@ pub fn chanceFrom(source: anytype, p: f64) bool {
 }
 
 pub fn chanceChecked(self: Rng, p: f64) Error!bool {
+    return chanceCheckedFrom(self, p);
+}
+
+pub fn chanceCheckedFrom(source: anytype, p: f64) Error!bool {
     if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
-    return self.chance(p);
+    return chanceFrom(source, p);
 }
 
 pub fn ratio(self: Rng, numerator: u32, denominator: u32) bool {
@@ -820,8 +824,12 @@ pub fn ratioFrom(source: anytype, numerator: u32, denominator: u32) bool {
 }
 
 pub fn ratioChecked(self: Rng, numerator: u32, denominator: u32) Error!bool {
+    return ratioCheckedFrom(self, numerator, denominator);
+}
+
+pub fn ratioCheckedFrom(source: anytype, numerator: u32, denominator: u32) Error!bool {
     if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
-    return self.ratio(numerator, denominator);
+    return ratioFrom(source, numerator, denominator);
 }
 
 pub fn uint(self: Rng, comptime T: type) T {
@@ -833,8 +841,12 @@ pub fn uintLessThan(self: Rng, comptime T: type, less_than: T) T {
 }
 
 pub fn uintLessThanChecked(self: Rng, comptime T: type, less_than: T) Error!T {
+    return uintLessThanCheckedFrom(self, T, less_than);
+}
+
+pub fn uintLessThanCheckedFrom(source: anytype, comptime T: type, less_than: T) Error!T {
     if (less_than == 0) return error.EmptyRange;
-    return self.uintLessThan(T, less_than);
+    return uintLessThanFrom(source, T, less_than);
 }
 
 pub fn uintAtMost(self: Rng, comptime T: type, at_most: T) T {
@@ -889,8 +901,12 @@ pub fn intRangeLessThan(self: Rng, comptime T: type, at_least: T, less_than: T) 
 }
 
 pub fn intRangeLessThanChecked(self: Rng, comptime T: type, at_least: T, less_than: T) Error!T {
+    return intRangeLessThanCheckedFrom(self, T, at_least, less_than);
+}
+
+pub fn intRangeLessThanCheckedFrom(source: anytype, comptime T: type, at_least: T, less_than: T) Error!T {
     if (at_least >= less_than) return error.EmptyRange;
-    return self.intRangeLessThan(T, at_least, less_than);
+    return intRangeLessThanFrom(source, T, at_least, less_than);
 }
 
 pub fn intRangeAtMost(self: Rng, comptime T: type, at_least: T, at_most: T) T {
@@ -898,8 +914,12 @@ pub fn intRangeAtMost(self: Rng, comptime T: type, at_least: T, at_most: T) T {
 }
 
 pub fn intRangeAtMostChecked(self: Rng, comptime T: type, at_least: T, at_most: T) Error!T {
+    return intRangeAtMostCheckedFrom(self, T, at_least, at_most);
+}
+
+pub fn intRangeAtMostCheckedFrom(source: anytype, comptime T: type, at_least: T, at_most: T) Error!T {
     if (at_least > at_most) return error.EmptyRange;
-    return self.intRangeAtMost(T, at_least, at_most);
+    return intRangeAtMostFrom(source, T, at_least, at_most);
 }
 
 pub fn intRangeLessThanFrom(source: anytype, comptime T: type, at_least: T, less_than: T) T {
@@ -956,8 +976,12 @@ pub fn floatRange(self: Rng, comptime T: type, min: T, max: T) T {
 }
 
 pub fn floatRangeChecked(self: Rng, comptime T: type, min: T, max: T) Error!T {
+    return floatRangeCheckedFrom(self, T, min, max);
+}
+
+pub fn floatRangeCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
     if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
-    return self.floatRange(T, min, max);
+    return floatRangeFrom(source, T, min, max);
 }
 
 pub fn vector(self: Rng, comptime VectorType: type) VectorType {
@@ -1773,17 +1797,29 @@ test "rng facade covers scalar APIs" {
     try std.testing.expect(Rng.ratioFrom(&engine, 1, 1));
     try std.testing.expect(rng.chance(1.0 - std.math.floatEps(f64) / 2.0));
     try std.testing.expect(try rng.chanceChecked(0.5) or true);
+    try std.testing.expect(try Rng.chanceCheckedFrom(&engine, 1));
+    try std.testing.expect(try Rng.ratioCheckedFrom(&engine, 1, 1));
+    try std.testing.expect(try Rng.uintLessThanCheckedFrom(&engine, u32, 10) < 10);
+    try std.testing.expect(try Rng.intRangeLessThanCheckedFrom(&engine, i32, -5, 5) >= -5);
+    try std.testing.expect(try Rng.intRangeAtMostCheckedFrom(&engine, i32, -5, 5) <= 5);
+    try std.testing.expect(try Rng.floatRangeCheckedFrom(&engine, f64, -1, 1) >= -1);
     try std.testing.expectError(error.InvalidProbability, rng.chanceChecked(1.1));
+    try std.testing.expectError(error.InvalidProbability, Rng.chanceCheckedFrom(&engine, 1.1));
     var empty_bool_buf: [0]bool = .{};
     try std.testing.expectError(error.InvalidProbability, rng.fillChanceChecked(&empty_bool_buf, 1.1));
     try std.testing.expectError(error.InvalidProbability, rng.fillRatioChecked(&empty_bool_buf, 2, 1));
     try std.testing.expectError(error.InvalidProbability, rng.vectorChanceChecked(@Vector(4, bool), -0.1));
     try std.testing.expectError(error.InvalidProbability, rng.vectorRatioChecked(@Vector(4, bool), 2, 1));
     try std.testing.expectError(error.InvalidProbability, rng.ratioChecked(2, 1));
+    try std.testing.expectError(error.InvalidProbability, Rng.ratioCheckedFrom(&engine, 2, 1));
     try std.testing.expectError(error.EmptyRange, rng.uintLessThanChecked(u32, 0));
+    try std.testing.expectError(error.EmptyRange, Rng.uintLessThanCheckedFrom(&engine, u32, 0));
     try std.testing.expectError(error.EmptyRange, rng.intRangeLessThanChecked(u32, 3, 3));
+    try std.testing.expectError(error.EmptyRange, Rng.intRangeLessThanCheckedFrom(&engine, u32, 3, 3));
     try std.testing.expectError(error.EmptyRange, rng.intRangeAtMostChecked(u32, 4, 3));
+    try std.testing.expectError(error.EmptyRange, Rng.intRangeAtMostCheckedFrom(&engine, u32, 4, 3));
     try std.testing.expectError(error.EmptyRange, rng.floatRangeChecked(f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.EmptyRange, Rng.floatRangeCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     const duration = rng.durationRangeAtMost(.fromMilliseconds(10), .fromMilliseconds(20));
     try std.testing.expect(duration.nanoseconds >= std.time.ns_per_ms * 10);
     try std.testing.expect(duration.nanoseconds <= std.time.ns_per_ms * 20);
