@@ -50,8 +50,9 @@ expectations.
   `intRangeLessThanCheckedFrom`, `intRangeAtMostChecked`,
   `intRangeAtMostCheckedFrom`, `intRangeLessThanFrom`, `intRangeAtMostFrom`,
   `floatRange`, `floatRangeFrom`, `floatRangeChecked`, `floatRangeCheckedFrom`, `durationRangeLessThan`,
-  `durationRangeAtMost`, `durationRangeLessThanChecked`,
-  `durationRangeAtMostChecked`
+  `durationRangeLessThanFrom`, `durationRangeAtMost`, `durationRangeAtMostFrom`,
+  `durationRangeLessThanChecked`, `durationRangeLessThanCheckedFrom`,
+  `durationRangeAtMostChecked`, `durationRangeAtMostCheckedFrom`
 - Floats: `float`, `floatFrom`, `floatOpen`, `floatOpenFrom`,
   `floatOpenClosed`, `floatOpenClosedFrom`
 - Vectors: `vector`, `vectorOpen`, `vectorOpenClosed`, `vectorRange`,

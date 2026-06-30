@@ -1198,23 +1198,39 @@ pub fn vectorStandardExponentialFrom(source: anytype, comptime VectorType: type)
 }
 
 pub fn durationRangeLessThan(self: Rng, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
+    return durationRangeLessThanFrom(self, min, max);
+}
+
+pub fn durationRangeLessThanFrom(source: anytype, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
     std.debug.assert(min.nanoseconds < max.nanoseconds);
-    return .{ .nanoseconds = self.intRangeLessThan(i96, min.nanoseconds, max.nanoseconds) };
+    return .{ .nanoseconds = intRangeLessThanFrom(source, i96, min.nanoseconds, max.nanoseconds) };
 }
 
 pub fn durationRangeAtMost(self: Rng, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
+    return durationRangeAtMostFrom(self, min, max);
+}
+
+pub fn durationRangeAtMostFrom(source: anytype, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
     std.debug.assert(min.nanoseconds <= max.nanoseconds);
-    return .{ .nanoseconds = self.intRangeAtMost(i96, min.nanoseconds, max.nanoseconds) };
+    return .{ .nanoseconds = intRangeAtMostFrom(source, i96, min.nanoseconds, max.nanoseconds) };
 }
 
 pub fn durationRangeLessThanChecked(self: Rng, min: std.Io.Duration, max: std.Io.Duration) Error!std.Io.Duration {
+    return durationRangeLessThanCheckedFrom(self, min, max);
+}
+
+pub fn durationRangeLessThanCheckedFrom(source: anytype, min: std.Io.Duration, max: std.Io.Duration) Error!std.Io.Duration {
     if (min.nanoseconds >= max.nanoseconds) return error.EmptyRange;
-    return self.durationRangeLessThan(min, max);
+    return durationRangeLessThanFrom(source, min, max);
 }
 
 pub fn durationRangeAtMostChecked(self: Rng, min: std.Io.Duration, max: std.Io.Duration) Error!std.Io.Duration {
+    return durationRangeAtMostCheckedFrom(self, min, max);
+}
+
+pub fn durationRangeAtMostCheckedFrom(source: anytype, min: std.Io.Duration, max: std.Io.Duration) Error!std.Io.Duration {
     if (min.nanoseconds > max.nanoseconds) return error.EmptyRange;
-    return self.durationRangeAtMost(min, max);
+    return durationRangeAtMostFrom(source, min, max);
 }
 
 pub fn unicodeScalar(self: Rng) u21 {
@@ -1823,7 +1839,15 @@ test "rng facade covers scalar APIs" {
     const duration = rng.durationRangeAtMost(.fromMilliseconds(10), .fromMilliseconds(20));
     try std.testing.expect(duration.nanoseconds >= std.time.ns_per_ms * 10);
     try std.testing.expect(duration.nanoseconds <= std.time.ns_per_ms * 20);
+    const direct_duration = Rng.durationRangeAtMostFrom(&engine, .fromMilliseconds(10), .fromMilliseconds(20));
+    try std.testing.expect(direct_duration.nanoseconds >= std.time.ns_per_ms * 10);
+    try std.testing.expect(direct_duration.nanoseconds <= std.time.ns_per_ms * 20);
+    const checked_direct_duration = try Rng.durationRangeLessThanCheckedFrom(&engine, .fromMilliseconds(10), .fromMilliseconds(20));
+    try std.testing.expect(checked_direct_duration.nanoseconds >= std.time.ns_per_ms * 10);
+    try std.testing.expect(checked_direct_duration.nanoseconds < std.time.ns_per_ms * 20);
     try std.testing.expectError(error.EmptyRange, rng.durationRangeLessThanChecked(.fromSeconds(2), .fromSeconds(1)));
+    try std.testing.expectError(error.EmptyRange, Rng.durationRangeLessThanCheckedFrom(&engine, .fromSeconds(2), .fromSeconds(1)));
+    try std.testing.expectError(error.EmptyRange, Rng.durationRangeAtMostCheckedFrom(&engine, .fromSeconds(2), .fromSeconds(1)));
 
     const tuple = rng.value(struct { u8, bool, f32 });
     try std.testing.expect(tuple[2] < 1.0);
