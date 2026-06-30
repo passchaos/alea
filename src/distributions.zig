@@ -5836,6 +5836,59 @@ test "weighted reusable samplers preserve direct stream shape" {
     }
 }
 
+test "invalid checked distribution helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d15a);
+
+    try std.testing.expectError(error.InvalidProbability, bernoulliCheckedFrom(&engine, -0.1));
+    try std.testing.expectEqual(@as(u64, 0xc8c84e0eb11b6c5c), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, binomialCheckedFrom(&engine, 10, 1.1));
+    try std.testing.expectEqual(@as(u64, 0x6fa8adba01bcb54b), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, binomialPoissonApproxCheckedFrom(&engine, 10, 1.1));
+    try std.testing.expectEqual(@as(u64, 0xecf8465edb82c03b), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, negativeBinomialCheckedFrom(&engine, 0, 0.5));
+    try std.testing.expectEqual(@as(u64, 0xd56d49693f95654f), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, hypergeometricCheckedFrom(&engine, 10, 11, 1));
+    try std.testing.expectEqual(@as(u64, 0xe8ca59451a5ce1b4), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, poissonCheckedFrom(&engine, std.math.inf(f64)));
+    try std.testing.expectEqual(@as(u64, 0x25b1148f9e0f74e6), engine.next());
+
+    var u64_buf: [4]u64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillPoissonCheckedFrom(&engine, &u64_buf, std.math.inf(f64)));
+    try std.testing.expectEqual(@as(u64, 0xb446f7886dcf7815), engine.next());
+
+    var f64_buf: [4]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillGammaCheckedFrom(&engine, f64, &f64_buf, 0, 1));
+    try std.testing.expectEqual(@as(u64, 0x2b82cf28019809c7), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, triangularCheckedFrom(&engine, f64, 1, 0, 2));
+    try std.testing.expectEqual(@as(u64, 0x55399c665cffeced), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&engine, f64, &f64_buf, 0, 0));
+    try std.testing.expectEqual(@as(u64, 0xffc62ac12a0f359b), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, inverseGaussianCheckedFrom(&engine, f64, 0, 1));
+    try std.testing.expectEqual(@as(u64, 0xa1a16919c0a88685), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, zipfCheckedFrom(&engine, f64, 0, 1));
+    try std.testing.expectEqual(@as(u64, 0x93845468b76116a4), engine.next());
+
+    var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 0, 0 });
+    defer tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, tree.sampleCheckedFrom(&engine));
+    try std.testing.expectEqual(@as(u64, 0x1ad57bbf42203964), engine.next());
+
+    var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0 });
+    defer int_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &u64_buf));
+    try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
+}
+
 test "poisson large lambda has plausible moments" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(55);
