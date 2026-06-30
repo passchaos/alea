@@ -395,6 +395,11 @@ pub fn chooseIter(rng: Rng, comptime T: type, items: []const T) ?Rng.SampleItera
     return choice.iter(rng);
 }
 
+pub fn chooseIterFrom(source: anytype, comptime T: type, items: []const T) ?Rng.SampleIteratorFrom(@TypeOf(source), Choice(T), *const T) {
+    const choice = Choice(T).init(items) orelse return null;
+    return choice.iterFrom(source);
+}
+
 pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
     return struct {
         const Self = @This();
@@ -838,6 +843,9 @@ test "choice sampler repeatedly samples slice references" {
     var convenience_iter = chooseIter(rng, u8, &values).?;
     const picked = convenience_iter.next().?.*;
     try std.testing.expect(picked == 2 or picked == 4 or picked == 6 or picked == 8);
+    var direct_convenience_iter = chooseIterFrom(&engine, u8, &values).?;
+    const direct_picked = direct_convenience_iter.next().?.*;
+    try std.testing.expect(direct_picked == 2 or direct_picked == 4 or direct_picked == 6 or direct_picked == 8);
     var pointer_buf: [8]*const u8 = undefined;
     choice.fill(rng, &pointer_buf);
     for (pointer_buf) |item| try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
@@ -849,6 +857,7 @@ test "choice sampler repeatedly samples slice references" {
     choice.fillValuesFrom(&engine, &value_buf);
     for (value_buf) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
     try std.testing.expect(chooseIter(rng, u8, &.{}) == null);
+    try std.testing.expect(chooseIterFrom(&engine, u8, &.{}) == null);
 }
 
 test "weighted choice sampler maps alias indexes to items" {
