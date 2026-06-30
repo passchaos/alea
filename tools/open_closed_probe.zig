@@ -20,6 +20,9 @@ pub fn main(init: std.process.Init) !void {
 
     try stdout.print("open-closed f64 probe count={}\n", .{sample_count});
     try benchFill(io, stdout, "facade fillOpenClosed", sample_count, facadeFill);
+    try benchFill(io, stdout, "facade raw words 128", sample_count, facadeRawFill128);
+    try benchFill(io, stdout, "facade raw words 192", sample_count, facadeRawFill192);
+    try benchFill(io, stdout, "facade raw words 256", sample_count, facadeRawFill256);
     try benchFill(io, stdout, "direct fillOpenClosedFrom", sample_count, directFill);
     try benchFill(io, stdout, "scalar next conversion", sample_count, scalarNextFill);
     try benchFill(io, stdout, "raw fill words 128", sample_count, rawFill128);
@@ -71,6 +74,18 @@ fn facadeFill(engine: *alea.FastPrng, dest: []f64) void {
     rng.fillOpenClosed(f64, dest);
 }
 
+fn facadeRawFill128(engine: *alea.FastPrng, dest: []f64) void {
+    facadeRawFill(engine, dest, 128);
+}
+
+fn facadeRawFill192(engine: *alea.FastPrng, dest: []f64) void {
+    facadeRawFill(engine, dest, 192);
+}
+
+fn facadeRawFill256(engine: *alea.FastPrng, dest: []f64) void {
+    facadeRawFill(engine, dest, 256);
+}
+
 fn directFill(engine: *alea.FastPrng, dest: []f64) void {
     alea.Rng.fillOpenClosedFrom(engine, f64, dest);
 }
@@ -89,6 +104,24 @@ fn rawFill512(engine: *alea.FastPrng, dest: []f64) void {
 
 fn rawFill2048(engine: *alea.FastPrng, dest: []f64) void {
     rawFill(engine, dest, 2048);
+}
+
+fn facadeRawFill(engine: *alea.FastPrng, dest: []f64, comptime word_count: usize) void {
+    const rng = alea.Rng.init(engine);
+    var raw_words: [word_count]u64 = undefined;
+
+    var i: usize = 0;
+    while (i < dest.len) {
+        const take = @min(dest.len - i, raw_words.len);
+        rng.bytes(std.mem.sliceAsBytes(raw_words[0..take]));
+
+        var lane: usize = 0;
+        while (lane < take) : (lane += 1) {
+            const raw = std.mem.littleToNative(u64, raw_words[lane]);
+            dest[i + lane] = f64OpenClosedFromRaw(raw);
+        }
+        i += take;
+    }
 }
 
 fn rawFill(engine: *alea.FastPrng, dest: []f64, comptime word_count: usize) void {
