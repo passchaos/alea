@@ -1390,6 +1390,15 @@ pub fn poissonAhrensDieterFrom(source: anytype, lambda: f64) u64 {
     return PoissonAhrensDieter.init(lambda).sampleFrom(source);
 }
 
+pub fn poissonAhrensDieterChecked(rng: Rng, lambda: f64) Error!u64 {
+    return poissonAhrensDieterCheckedFrom(rng, lambda);
+}
+
+pub fn poissonAhrensDieterCheckedFrom(source: anytype, lambda: f64) Error!u64 {
+    if (!(lambda >= 12) or !std.math.isFinite(lambda)) return error.InvalidParameter;
+    return poissonAhrensDieterFrom(source, lambda);
+}
+
 fn poissonProduct(rng: Rng, threshold: f64) u64 {
     return poissonProductFrom(rng, threshold);
 }
@@ -5224,6 +5233,9 @@ test "poisson large lambda has plausible moments" {
 
     const direct_value = poissonAhrensDieterFrom(&engine, lambda);
     try std.testing.expect(direct_value < 120);
+    const checked_direct_value = try poissonAhrensDieterCheckedFrom(&engine, lambda);
+    try std.testing.expect(checked_direct_value < 120);
+    try std.testing.expectError(error.InvalidParameter, poissonAhrensDieterCheckedFrom(&engine, 11));
 
     const mean = sum / @as(f64, @floatFromInt(samples));
     const variance = sum_sq / @as(f64, @floatFromInt(samples)) - mean * mean;
