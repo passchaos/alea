@@ -220,7 +220,8 @@ Continue performance triage on the remaining focused watch items:
   evidence, while FastPrng facade/direct single-sample Cauchy remains a small
   engine/transform watch item,
 - Poisson direct/cached/fill workflows now exceed filtered Rust evidence after
-  hot-path inlining; only facade top-level Poisson remains a context watch item,
+  hot-path inlining; defer further work unless the facade top-level context row
+  proves user-significant,
 - log-normal raw direct rows confirm reusable wrappers are not the scalar
   bottleneck; it remains a small filtered scalar/bulk boundary item, while
   inverse-Gaussian and NIG bulk fills now exceed the local Rust rows,
