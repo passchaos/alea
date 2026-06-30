@@ -3258,6 +3258,15 @@ pub fn skewNormal(rng: Rng, comptime T: type, location: T, scale: T, shape: T) T
     return skewNormalFrom(rng, T, location, scale, shape);
 }
 
+pub fn skewNormalChecked(rng: Rng, comptime T: type, location: T, scale: T, shape: T) Error!T {
+    return skewNormalCheckedFrom(rng, T, location, scale, shape);
+}
+
+pub fn skewNormalCheckedFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) Error!T {
+    const dist = try SkewNormal(T).init(location, scale, shape);
+    return dist.sampleFrom(source);
+}
+
 pub inline fn skewNormalFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(shape));
@@ -3325,6 +3334,15 @@ pub fn SkewNormal(comptime T: type) type {
 
 pub fn pert(rng: Rng, comptime T: type, min: T, mode: T, max: T, shape: T) T {
     return pertFrom(rng, T, min, mode, max, shape);
+}
+
+pub fn pertChecked(rng: Rng, comptime T: type, min: T, mode: T, max: T, shape: T) Error!T {
+    return pertCheckedFrom(rng, T, min, mode, max, shape);
+}
+
+pub fn pertCheckedFrom(source: anytype, comptime T: type, min: T, mode: T, max: T, shape: T) Error!T {
+    const dist = try Pert(T).init(min, mode, max, shape);
+    return dist.sampleFrom(source);
 }
 
 pub fn pertFrom(source: anytype, comptime T: type, min: T, mode: T, max: T, shape: T) T {
@@ -5971,6 +5989,13 @@ test "extreme-value and shape samplers have plausible means" {
     try std.testing.expect(frechet_sum / n > 1.30 and frechet_sum / n < 1.40);
     try std.testing.expect(skew_sum / n > 0.52 and skew_sum / n < 0.60);
     try std.testing.expect(pert_sum / n > 0.45 and pert_sum / n < 0.55);
+
+    var direct_engine = alea.ScalarPrng.init(172);
+    try std.testing.expect(std.math.isFinite(try skewNormalCheckedFrom(&direct_engine, f64, 0, 1, 1)));
+    try std.testing.expectError(error.InvalidParameter, skewNormalCheckedFrom(&direct_engine, f64, 0, 0, 1));
+    const direct_checked_pert = try pertCheckedFrom(&direct_engine, f64, -1, 0.5, 2, 4);
+    try std.testing.expect(direct_checked_pert >= -1 and direct_checked_pert <= 2);
+    try std.testing.expectError(error.InvalidParameter, pertCheckedFrom(&direct_engine, f64, 0, 2, 1, 4));
 
     const by_mean = try Pert(f64).initMean(-1, 0.5, 2, 4);
     const by_mode = try Pert(f64).init(-1, 0.5, 2, 4);

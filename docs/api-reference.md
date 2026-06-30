@@ -181,8 +181,10 @@ Single-shot helpers:
   `gumbelChecked`, `gumbelCheckedFrom`,
   `frechet`, `frechetFrom`, `frechetChecked`, `frechetCheckedFrom`,
   `fillFrechet`, `fillFrechetFrom`,
-  `skewNormal`, `skewNormalFrom`, `fillSkewNormal`, `fillSkewNormalFrom`,
-  `pert`, `pertFrom`, `fillPert`, `fillPertFrom`
+  `skewNormal`, `skewNormalFrom`, `skewNormalChecked`,
+  `skewNormalCheckedFrom`, `fillSkewNormal`, `fillSkewNormalFrom`,
+  `pert`, `pertFrom`, `pertChecked`, `pertCheckedFrom`, `fillPert`,
+  `fillPertFrom`
 - `inverseGaussian`, `inverseGaussianFrom`, `fillInverseGaussian`,
   `fillInverseGaussianFrom`,
   `normalInverseGaussian`, `normalInverseGaussianFrom`,
