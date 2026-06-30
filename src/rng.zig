@@ -2648,6 +2648,53 @@ test "checked weighted sampling preserves valid-parameter stream shape" {
     }
 }
 
+test "invalid checked helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_bad);
+
+    try std.testing.expectError(error.InvalidProbability, chanceCheckedFrom(&engine, -0.1));
+    try std.testing.expectEqual(@as(u64, 0x9ccf0caa836c3975), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, ratioCheckedFrom(&engine, 2, 1));
+    try std.testing.expectEqual(@as(u64, 0x6a422e0bc228f676), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, uintLessThanCheckedFrom(&engine, u32, 0));
+    try std.testing.expectEqual(@as(u64, 0x16f941763a3b5c32), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, intRangeLessThanCheckedFrom(&engine, u32, 3, 3));
+    try std.testing.expectEqual(@as(u64, 0xba4d054547a7f857), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, floatRangeCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectEqual(@as(u64, 0x52050e6daf1ffc3d), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, durationRangeLessThanCheckedFrom(&engine, .fromSeconds(2), .fromSeconds(1)));
+    try std.testing.expectEqual(@as(u64, 0x1d69e48242c57737), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, normalCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectEqual(@as(u64, 0x9900c6c9195b42f9), engine.next());
+
+    var f64_buf: [4]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillNormalCheckedFrom(&engine, f64, &f64_buf, 0, -1));
+    try std.testing.expectEqual(@as(u64, 0x32ac91fd8b7e3970), engine.next());
+
+    var bool_buf: [8]bool = undefined;
+    try std.testing.expectError(error.InvalidProbability, fillRatioCheckedFrom(&engine, &bool_buf, 2, 1));
+    try std.testing.expectEqual(@as(u64, 0x8a9c3d610f339467), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, vectorRangeCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectEqual(@as(u64, 0xfedbe66623c1adc2), engine.next());
+
+    var vec_buf: [2]@Vector(4, f64) = undefined;
+    try std.testing.expectError(error.EmptyRange, fillVectorRangeCheckedFrom(&engine, @Vector(4, f64), &vec_buf, std.math.inf(f64), 1));
+    try std.testing.expectEqual(@as(u64, 0xa360fbcd83acd8d7), engine.next());
+
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
+    try std.testing.expectEqual(@as(u64, 0x8a685176c49005b1), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(u64, 0xf6aed2fe799c54ee), engine.next());
+}
+
 test "collection helpers preserve direct stream shape" {
     const alea = @import("root.zig");
     const items = [_]u8{ 10, 20, 30, 40, 50 };
