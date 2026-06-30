@@ -1,16 +1,37 @@
+use rand::distr::uniform::{SampleUniform, UniformSampler};
+use rand::distr::{Open01, OpenClosed01};
 use rand::prelude::*;
 use rand::seq;
-use rand::distr::{Open01, OpenClosed01};
-use rand::distr::uniform::{SampleUniform, UniformSampler};
 use rand_distr::Distribution as RandDistrDistribution;
 use std::hint::black_box;
+use std::sync::OnceLock;
 use std::time::Instant;
 
 const MIB: usize = 1024 * 1024;
 const TRIALS: usize = 3;
 
+static BENCH_FILTER: OnceLock<String> = OnceLock::new();
+
+fn include_bench(name: &str) -> bool {
+    BENCH_FILTER
+        .get()
+        .map_or(true, |filter| name.contains(filter))
+}
+
 fn main() {
-    let bytes = 128 * MIB;
+    let mut bytes = 128 * MIB;
+    let mut args = std::env::args().skip(1);
+    if let Some(arg) = args.next() {
+        match arg.parse::<usize>() {
+            Ok(value) => bytes = value,
+            Err(_) => {
+                let _ = BENCH_FILTER.set(arg);
+            }
+        }
+    }
+    if let Some(arg) = args.next() {
+        let _ = BENCH_FILTER.set(arg);
+    }
     let mut buffer = [0u8; 4096];
 
     println!("byte throughput");
@@ -84,6 +105,9 @@ fn bench_bytes<R>(name: &str, bytes: usize, buffer: &mut [u8])
 where
     R: SeedableRng + Rng,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_mib_per_s = 0.0;
     let mut best_checksum = 0u8;
     for _ in 0..TRIALS {
@@ -117,6 +141,9 @@ fn bench_fill_only<R>(name: &str, bytes: usize, buffer: &mut [u8])
 where
     R: SeedableRng + Rng,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_mib_per_s = 0.0;
     let mut best_tail = 0u8;
     for _ in 0..TRIALS {
@@ -146,6 +173,9 @@ fn bench_next_u64<R>(name: &str, count: usize)
 where
     R: SeedableRng + Rng,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0u64;
     for _ in 0..TRIALS {
@@ -170,6 +200,9 @@ where
 }
 
 fn bench_range(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0u64;
     for _ in 0..TRIALS {
@@ -198,6 +231,9 @@ where
     rand::distr::StandardUniform: rand::distr::Distribution<T>,
     T: Copy + Into<f64>,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0.0;
     for _ in 0..TRIALS {
@@ -226,6 +262,9 @@ where
     Open01: rand::distr::Distribution<T>,
     T: Copy + Into<f64>,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0.0;
     for _ in 0..TRIALS {
@@ -254,6 +293,9 @@ where
     OpenClosed01: rand::distr::Distribution<T>,
     T: Copy + Into<f64>,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0.0;
     for _ in 0..TRIALS {
@@ -282,6 +324,9 @@ where
     T: SampleUniform + Copy + Into<f64>,
     <T as SampleUniform>::Sampler: UniformSampler<X = T>,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0.0;
     for _ in 0..TRIALS {
@@ -290,7 +335,9 @@ where
         let mut checksum = 0.0;
 
         for _ in 0..count {
-            checksum += T::Sampler::sample_single(min, max, &mut rng).unwrap().into();
+            checksum += T::Sampler::sample_single(min, max, &mut rng)
+                .unwrap()
+                .into();
         }
 
         let seconds = start.elapsed().as_secs_f64();
@@ -306,6 +353,9 @@ where
 }
 
 fn bench_seq(name: &str, length: usize, amount: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_thousand_per_s = 0.0;
     let mut best_checksum = 0usize;
     for _ in 0..TRIALS {
@@ -330,6 +380,9 @@ fn bench_seq(name: &str, length: usize, amount: usize) {
 }
 
 fn bench_bool(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0u64;
     for _ in 0..TRIALS {
@@ -354,6 +407,9 @@ fn bench_bool(name: &str, count: usize) {
 }
 
 fn bench_alphanumeric(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0u64;
     for _ in 0..TRIALS {
@@ -381,6 +437,9 @@ fn bench_alphanumeric(name: &str, count: usize) {
 }
 
 fn bench_weighted_index(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let weights = [1u32, 2, 3, 0, 5, 8, 13, 21];
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0usize;
@@ -407,6 +466,9 @@ fn bench_weighted_index(name: &str, count: usize) {
 }
 
 fn bench_weighted_tree(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let initial = [1u32, 2, 3, 0, 5, 8, 13, 21];
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0usize;
@@ -435,149 +497,242 @@ fn bench_weighted_tree(name: &str, count: usize) {
 }
 
 fn bench_distr_standard_normal(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     bench_distr_f64(name, count, 0xd15a, rand_distr::StandardNormal);
 }
 
 fn bench_distr_normal(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Normal::new(0.0, 1.0).unwrap();
     bench_distr_f64(name, count, 0xd15a, dist);
 }
 
 fn bench_distr_exp1(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     bench_distr_f64(name, count, 0xe151, rand_distr::Exp1);
 }
 
 fn bench_distr_exponential(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Exp::new(2.0).unwrap();
     bench_distr_f64(name, count, 0xe15a, dist);
 }
 
 fn bench_distr_standard_normal_f32(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     bench_distr_f32(name, count, 0xd15a, rand_distr::StandardNormal);
 }
 
 fn bench_distr_normal_f32(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Normal::new(0.0f32, 1.0f32).unwrap();
     bench_distr_f32(name, count, 0xd15a, dist);
 }
 
 fn bench_distr_exp1_f32(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     bench_distr_f32(name, count, 0xe151, rand_distr::Exp1);
 }
 
 fn bench_distr_exponential_f32(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Exp::new(2.0f32).unwrap();
     bench_distr_f32(name, count, 0xe15a, dist);
 }
 
 fn bench_distr_gamma(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Gamma::new(2.0, 3.0).unwrap();
     bench_distr_f64(name, count, 0x6a44a, dist);
 }
 
 fn bench_distr_chi_squared(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::ChiSquared::new(4.0).unwrap();
     bench_distr_f64(name, count, 0xc415, dist);
 }
 
 fn bench_distr_beta(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Beta::new(2.0, 5.0).unwrap();
     bench_distr_f64(name, count, 0xbe7a, dist);
 }
 
 fn bench_distr_fisher_f(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::FisherF::new(5.0, 20.0).unwrap();
     bench_distr_f64(name, count, 0xf15c, dist);
 }
 
 fn bench_distr_student_t(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::StudentT::new(10.0).unwrap();
     bench_distr_f64(name, count, 0x57dd, dist);
 }
 
 fn bench_distr_triangular(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Triangular::new(-1.0, 2.0, 0.0).unwrap();
     bench_distr_f64(name, count, 0x751a, dist);
 }
 
 fn bench_distr_cauchy(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Cauchy::new(0.0, 1.0).unwrap();
     bench_distr_f64(name, count, 0xca11, dist);
 }
 
 fn bench_distr_pareto(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Pareto::new(2.0, 3.0).unwrap();
     bench_distr_f64(name, count, 0x9a7e70, dist);
 }
 
 fn bench_distr_weibull(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Weibull::new(2.0, 1.5).unwrap();
     bench_distr_f64(name, count, 0xe1b011, dist);
 }
 
 fn bench_distr_log_normal(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::LogNormal::new(0.0, 0.25).unwrap();
     bench_distr_f64(name, count, 0x1060, dist);
 }
 
 fn bench_distr_gumbel(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Gumbel::new(0.0, 1.0).unwrap();
     bench_distr_f64(name, count, 0x6cbe1, dist);
 }
 
 fn bench_distr_frechet(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Frechet::new(0.0, 1.0, 3.0).unwrap();
     bench_distr_f64(name, count, 0xf7ec, dist);
 }
 
 fn bench_distr_skew_normal(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::SkewNormal::new(0.0, 1.0, 1.0).unwrap();
     bench_distr_f64(name, count, 0x5ce9, dist);
 }
 
 fn bench_distr_skew_normal_shape2(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::SkewNormal::new(0.0, 1.0, 2.0).unwrap();
     bench_distr_f64(name, count, 0x5ce2, dist);
 }
 
 fn bench_distr_pert(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Pert::new(-1.0, 2.0).with_mode(0.5).unwrap();
     bench_distr_f64(name, count, 0x9e71, dist);
 }
 
 fn bench_distr_inverse_gaussian(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::InverseGaussian::new(1.0, 2.0).unwrap();
     bench_distr_f64(name, count, 0x164a, dist);
 }
 
 fn bench_distr_normal_inverse_gaussian(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::NormalInverseGaussian::new(2.0, 1.0).unwrap();
     bench_distr_f64(name, count, 0x916a, dist);
 }
 
 fn bench_distr_zipf(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Zipf::new(10.0, 1.5).unwrap();
     bench_distr_f64(name, count, 0x719f, dist);
 }
 
 fn bench_distr_zeta(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Zeta::new(3.0).unwrap();
     bench_distr_f64(name, count, 0x7e7a, dist);
 }
 
 fn bench_distr_unit_circle(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     bench_distr_array2(name, count, 0xc11c1e, rand_distr::UnitCircle);
 }
 
 fn bench_distr_unit_disc(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     bench_distr_array2(name, count, 0xd15c, rand_distr::UnitDisc);
 }
 
 fn bench_distr_unit_sphere(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     bench_distr_array3(name, count, 0x59e7e, rand_distr::UnitSphere);
 }
 
 fn bench_distr_unit_ball(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     bench_distr_array3(name, count, 0xba11, rand_distr::UnitBall);
 }
 
@@ -585,6 +740,9 @@ fn bench_distr_array2<D>(name: &str, count: usize, seed: u64, dist: D)
 where
     D: RandDistrDistribution<[f64; 2]> + Copy,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0.0;
     for _ in 0..TRIALS {
@@ -612,6 +770,9 @@ fn bench_distr_array3<D>(name: &str, count: usize, seed: u64, dist: D)
 where
     D: RandDistrDistribution<[f64; 3]> + Copy,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0.0;
     for _ in 0..TRIALS {
@@ -639,6 +800,9 @@ fn bench_distr_f64<D>(name: &str, count: usize, seed: u64, dist: D)
 where
     D: RandDistrDistribution<f64> + Copy,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0.0;
     for _ in 0..TRIALS {
@@ -666,6 +830,9 @@ fn bench_distr_f32<D>(name: &str, count: usize, seed: u64, dist: D)
 where
     D: RandDistrDistribution<f32> + Copy,
 {
+    if !include_bench(name) {
+        return;
+    }
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0.0f32;
     for _ in 0..TRIALS {
@@ -690,6 +857,9 @@ where
 }
 
 fn bench_distr_poisson(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Poisson::new(20.0).unwrap();
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0u64;
@@ -715,6 +885,9 @@ fn bench_distr_poisson(name: &str, count: usize) {
 }
 
 fn bench_distr_geometric(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Geometric::new(0.25).unwrap();
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0u64;
@@ -740,6 +913,9 @@ fn bench_distr_geometric(name: &str, count: usize) {
 }
 
 fn bench_distr_standard_geometric(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::StandardGeometric;
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0u64;
@@ -765,6 +941,9 @@ fn bench_distr_standard_geometric(name: &str, count: usize) {
 }
 
 fn bench_distr_binomial(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Binomial::new(40, 0.25).unwrap();
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0u64;
@@ -790,6 +969,9 @@ fn bench_distr_binomial(name: &str, count: usize) {
 }
 
 fn bench_distr_hypergeometric(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Hypergeometric::new(100, 30, 10).unwrap();
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0u64;
@@ -815,6 +997,9 @@ fn bench_distr_hypergeometric(name: &str, count: usize) {
 }
 
 fn bench_distr_hypergeometric_large(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
     let dist = rand_distr::Hypergeometric::new(5000, 2500, 500).unwrap();
     let mut best_million_per_s = 0.0;
     let mut best_checksum = 0u64;
