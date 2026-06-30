@@ -26,6 +26,25 @@ is explicitly documented.
 | `ascii.Charset` sampling | Same bytes for fixed engine stream and charset bytes. |
 | `seq.sampleIndicesU32`, `sampleIndexVec` with `.u32` backing | Same sampled index sequence for fixed engine stream, length, and amount. |
 
+## Checked-in Snapshot Evidence
+
+The stable contracts above are backed by focused unit snapshots and stream-shape
+tests so accidental compatibility drift is caught by `zig build test`.
+
+| Evidence | Covered contract |
+| --- | --- |
+| `src/seed.zig`: `seed derivation and byte output have stable snapshots` | `Seed.fromBytes`, `Seed.fromString`, `Seed.mix`, `Seed.stream`, `Seed.next`, `Seed.bytes` |
+| `src/root.zig`: `root deterministic constructors have stable snapshots` | Root deterministic constructors mirror engine initialization and `secureFromSeed` output |
+| `src/engines/splitmix64.zig`: `splitmix64 next has stable snapshots` | `SplitMix64.next` |
+| `src/engines/*`: engine `fill has stable byte snapshot` tests | `Alea4x64.fill`, `Wyhash64.fill`, `Xoshiro256.fill`, `Xoshiro256PlusPlus.fill`, `Pcg64.fill`, `ChaCha.fill` |
+| `src/engines/xoshiro256.zig`: `xoshiro256 transitions have stable snapshots`; `src/engines/xoshiro256plusplus.zig`: `xoshiro256++ jump has stable snapshots`; `src/engines/pcg64.zig`: `pcg64 initTwo has stable snapshots` | Stable stream transitions for `split`, `jump`, `longJump`, and `initTwo` |
+| `src/engines/chacha.zig`: `chacha addEntropy has stable byte snapshot` | `ChaCha.addEntropy` operation-order stability |
+| `src/rng.zig`: `scalar sampling has stable snapshots`, `byte fill has stable snapshots`, `value and vector sampling have stable snapshots`, `duration range sampling has stable snapshots` | Scalar, byte, structured-value, vector, and duration sampling contracts |
+| `src/ascii.zig`: `ascii helpers have stable snapshots` | ASCII charset/string and Unicode scalar UTF-8 generation for a fixed stream |
+| `src/seq.zig`: `portable index sampling has stable snapshots` | `sampleIndicesU32` and compact `.u32` `sampleIndexVec` output |
+| `src/rng.zig`, `src/seq.zig`, `src/distributions.zig`, `src/ascii.zig`: `preserve direct stream shape` tests | Facade/direct-source helpers preserve stream shape for valid inputs |
+| `src/rng.zig`, `src/seq.zig`, `src/distributions.zig`: invalid checked/no-consume tests | Invalid checked/error paths return before consuming randomness |
+
 ## Versioned Stable Outputs
 
 These APIs are deterministic but may change when algorithms are intentionally
