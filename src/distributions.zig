@@ -51,7 +51,12 @@ fn uniformClosedUnitFrom(source: anytype, comptime T: type) T {
 
 pub fn bernoulli(rng: Rng, p: f64) bool {
     const dist = Bernoulli.init(p) catch unreachable;
-    return dist.sample(rng);
+    return dist.sampleFrom(rng);
+}
+
+pub fn bernoulliFrom(source: anytype, p: f64) bool {
+    const dist = Bernoulli.init(p) catch unreachable;
+    return dist.sampleFrom(source);
 }
 
 pub fn fillBernoulli(rng: Rng, dest: []bool, p: f64) void {
@@ -4644,6 +4649,7 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect(!(try Bernoulli.init(0)).sample(rng));
     try std.testing.expect((try Bernoulli.init(1.0 - std.math.floatEps(f64) / 2.0)).sample(rng));
     var direct_bernoulli_engine = alea.ScalarPrng.init(64);
+    try std.testing.expect(bernoulliFrom(&direct_bernoulli_engine, 1.0));
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sampleFrom(&direct_bernoulli_engine));
     var bernoulli_buf: [8]bool = undefined;
     fillBernoulli(rng, &bernoulli_buf, 1);

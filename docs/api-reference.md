@@ -112,7 +112,7 @@ appropriate.
 Single-shot helpers:
 
 - `uniform`, `uniformFrom`, `uniformInclusive`, `uniformInclusiveFrom`
-- `bernoulli`, `fillBernoulli`, `fillBernoulliFrom`, `binomial`,
+- `bernoulli`, `bernoulliFrom`, `fillBernoulli`, `fillBernoulliFrom`, `binomial`,
   `binomialFrom`, `fillBinomial`, `fillBinomialFrom`,
   `binomialPoissonApprox`
 - `negativeBinomial`, `negativeBinomialFrom`, `fillNegativeBinomial`,
