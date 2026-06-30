@@ -214,9 +214,6 @@ Continue performance triage on the remaining focused watch items:
 - normal/exponential standard scalar rows now exceed local Rust in filtered
   full-harness runs; remaining work is benchmark harness/order context, not
   reusable sampler wrapper dispatch,
-- `fillOpenClosed(f64)` split-buffer bulk has facade/FastPrng/ScalarPrng
-  rows at the latest focused Rust boundary, but remains a precision-sensitive
-  exact-endpoint watch item,
 - log-normal raw direct rows confirm reusable wrappers are not the scalar
   bottleneck; it remains a small filtered scalar/bulk boundary item, while
   inverse-Gaussian and NIG bulk fills now exceed the local Rust rows,
