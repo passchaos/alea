@@ -1479,7 +1479,7 @@ pub const Poisson = struct {
         return self.sampleFrom(rng);
     }
 
-    pub fn sampleFrom(self: Poisson, source: anytype) u64 {
+    pub inline fn sampleFrom(self: Poisson, source: anytype) u64 {
         return switch (self.method) {
             .zero => 0,
             .product => |threshold| poissonProductFrom(source, threshold),
@@ -1491,7 +1491,7 @@ pub const Poisson = struct {
         self.fillFrom(rng, dest);
     }
 
-    pub fn fillFrom(self: Poisson, source: anytype, dest: []u64) void {
+    pub inline fn fillFrom(self: Poisson, source: anytype, dest: []u64) void {
         switch (self.method) {
             .zero => @memset(dest, 0),
             .product => |threshold| {
@@ -1548,7 +1548,7 @@ const PoissonAhrensDieter = struct {
         return self.sampleFrom(rng);
     }
 
-    fn sampleFrom(self: PoissonAhrensDieter, source: anytype) u64 {
+    inline fn sampleFrom(self: PoissonAhrensDieter, source: anytype) u64 {
         while (true) {
             const g = Rng.normalFastFrom(source, f64, self.lambda, self.s);
             if (g >= 0) {
