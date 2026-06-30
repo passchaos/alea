@@ -83,6 +83,7 @@ zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/
 sh tools/practrand.sh fast 1073741824
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
 zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench
+zig build -Doptimize=ReleaseFast -Dcpu=native ziggurat-probe
 RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/rand_bench/Cargo.toml
 ```
 
@@ -91,7 +92,8 @@ The Rust command benchmarks against the local `rand` checkout in
 `compare/results/`. Use `vectorbench` for focused vector-slice evidence such
 as packed bool chance/ratio, strict-interval vector float fills, vector ranges,
 and scalar-lane normal/exponential vector fills without slowing the full
-throughput suite.
+throughput suite. Use focused probes such as `ziggurat-probe` when
+investigating a specific hot path before changing production algorithms.
 
 ## Design Notes
 
