@@ -276,12 +276,16 @@ pub fn main(init: std.process.Init) !void {
     try benchFillPert(io, stdout, "alea fillPert", bytes / 128);
     try benchFillPertScalar(io, stdout, "alea fillPert scalar direct", bytes / 128);
     try benchUnitCircle(io, stdout, "alea unit circle", bytes / 128);
+    try benchUnit2FastDirect(io, stdout, "alea unit circle fast direct", bytes / 128, 0xc11c1e, alea.distributions.unitCircleFrom);
     try benchUnitCircleScalar(io, stdout, "alea unit circle scalar direct", bytes / 128);
     try benchUnitDisc(io, stdout, "alea unit disc", bytes / 128);
+    try benchUnit2FastDirect(io, stdout, "alea unit disc fast direct", bytes / 128, 0xd15c, alea.distributions.unitDiscFrom);
     try benchUnitDiscScalar(io, stdout, "alea unit disc scalar direct", bytes / 128);
     try benchUnitSphere(io, stdout, "alea unit sphere", bytes / 128);
+    try benchUnit3FastDirect(io, stdout, "alea unit sphere fast direct", bytes / 128, 0x59e7e, alea.distributions.unitSphereFrom);
     try benchUnitSphereScalar(io, stdout, "alea unit sphere scalar direct", bytes / 128);
     try benchUnitBall(io, stdout, "alea unit ball", bytes / 128);
+    try benchUnit3FastDirect(io, stdout, "alea unit ball fast direct", bytes / 128, 0xba11, alea.distributions.unitBallFrom);
     try benchUnitBallScalar(io, stdout, "alea unit ball scalar direct", bytes / 128);
     try benchFillUnitCircle(io, stdout, "alea fillUnitCircle", bytes / 128);
     try benchFillUnitDisc(io, stdout, "alea fillUnitDisc", bytes / 128);
@@ -6901,6 +6905,30 @@ fn benchUnitCircle(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchUnit2FastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, seed: u64, comptime sampleFn: anytype) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += sampleFn(&engine, f64)[0];
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchUnitCircleScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
@@ -6994,6 +7022,30 @@ fn benchUnitSphere(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
             const value = alea.distributions.unitSphere(rng, f64);
             checksum += value[0];
         }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchUnit3FastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, seed: u64, comptime sampleFn: anytype) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += sampleFn(&engine, f64)[0];
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
