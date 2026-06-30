@@ -7032,3 +7032,47 @@ test "dirichlet sampler returns simplex vectors" {
         try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
     }
 }
+
+test "checked fill helpers preserve valid-parameter stream shape" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var unchecked = Engine.init(0x5eed_1234);
+        var checked = Engine.init(0x5eed_1234);
+
+        var uniform_unchecked: [8]u32 = undefined;
+        var uniform_checked: [8]u32 = undefined;
+        fillUniformFrom(&unchecked, u32, &uniform_unchecked, 5, 9);
+        try fillUniformCheckedFrom(&checked, u32, &uniform_checked, 5, 9);
+        try std.testing.expectEqualSlices(u32, &uniform_unchecked, &uniform_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var normal_unchecked: [8]f64 = undefined;
+        var normal_checked: [8]f64 = undefined;
+        fillNormalFrom(&unchecked, f64, &normal_unchecked, 0, 1);
+        try fillNormalCheckedFrom(&checked, f64, &normal_checked, 0, 1);
+        try std.testing.expectEqualSlices(f64, &normal_unchecked, &normal_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var exponential_unchecked: [8]f64 = undefined;
+        var exponential_checked: [8]f64 = undefined;
+        fillExponentialFrom(&unchecked, f64, &exponential_unchecked, 2);
+        try fillExponentialCheckedFrom(&checked, f64, &exponential_checked, 2);
+        try std.testing.expectEqualSlices(f64, &exponential_unchecked, &exponential_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var poisson_unchecked: [8]u64 = undefined;
+        var poisson_checked: [8]u64 = undefined;
+        fillPoissonFrom(&unchecked, &poisson_unchecked, 12);
+        try fillPoissonCheckedFrom(&checked, &poisson_checked, 12);
+        try std.testing.expectEqualSlices(u64, &poisson_unchecked, &poisson_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var triangular_unchecked: [8]f64 = undefined;
+        var triangular_checked: [8]f64 = undefined;
+        fillTriangularFrom(&unchecked, f64, &triangular_unchecked, -1, 0, 2);
+        try fillTriangularCheckedFrom(&checked, f64, &triangular_checked, -1, 0, 2);
+        try std.testing.expectEqualSlices(f64, &triangular_unchecked, &triangular_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+    }
+}
