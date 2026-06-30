@@ -4080,7 +4080,10 @@ fn fillUnitBallF64From(source: anytype, dest: [][3]f64) void {
 }
 
 fn fillSignedUnitF64(source: anytype, dest: []f64) void {
-    for (dest) |*item| item.* = signedUnitFloatFrom(source, f64);
+    for (dest) |*item| {
+        const repr = (@as(u64, 0x400) << 52) | (Rng.nextFrom(source) >> 12);
+        item.* = @as(f64, @bitCast(repr)) - 3.0;
+    }
 }
 
 pub fn UnitCircle(comptime T: type) type {
