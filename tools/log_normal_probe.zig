@@ -19,6 +19,9 @@ pub fn main(init: std.process.Init) !void {
         default_count;
 
     try stdout.print("log-normal probe count={}\n", .{sample_count});
+    try benchSample(alea.FastPrng, io, stdout, "fast sample current", 0x1060, sample_count, sampleCurrent);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample standard+scale", 0x1060, sample_count, sampleStandardScale);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample mulAdd", 0x1060, sample_count, sampleMulAdd);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample current", 0x1061, sample_count, sampleCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample standard+scale", 0x1061, sample_count, sampleStandardScale);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample mulAdd", 0x1061, sample_count, sampleMulAdd);
