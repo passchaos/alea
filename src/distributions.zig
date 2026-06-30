@@ -1300,7 +1300,7 @@ pub fn logNormalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: 
 
 pub fn logNormalFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
-    return @exp(Rng.normalFastFrom(source, T, mean, stddev));
+    return @exp(mean + stddev * Rng.standardNormalFastFrom(source, T));
 }
 
 pub fn fillLogNormal(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
@@ -1338,7 +1338,7 @@ pub fn LogNormal(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: *Self, source: anytype) T {
-            return @exp(self.normal_sampler.sampleFrom(source));
+            return logNormalFrom(source, T, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
 
         pub fn fill(self: *Self, rng: Rng, dest: []T) void {
