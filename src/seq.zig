@@ -870,6 +870,47 @@ test "checked index sampling preserves valid-parameter stream shape" {
     }
 }
 
+test "invalid sequence helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_5e1);
+
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesCheckedFrom(std.testing.allocator, &engine, 3, 4));
+    try std.testing.expectEqual(@as(u64, 0xf2611037b789ad41), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesU32CheckedFrom(std.testing.allocator, &engine, 3, 4));
+    try std.testing.expectEqual(@as(u64, 0xb46fead74e7345fe), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleIndexVecCheckedFrom(std.testing.allocator, &engine, 3, 4));
+    try std.testing.expectEqual(@as(u64, 0x7136283275fc14a7), engine.next());
+
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesFrom(std.testing.allocator, &engine, u32, &.{}, 1));
+    try std.testing.expectEqual(@as(u64, 0xc964db7573788751), engine.next());
+
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 1));
+    try std.testing.expectEqual(@as(u64, 0x8ac4bc884c0ac5fc), engine.next());
+
+    const Entry = struct { item: u8, weight: f64 };
+    const BadIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+    };
+    const bad_entries = [_]Entry{.{ .item = 1, .weight = std.math.nan(f64) }};
+    var bad_choose_iter = BadIter{ .items = &bad_entries };
+    try std.testing.expectError(error.InvalidWeight, chooseIteratorWeightedFrom(&engine, u8, &bad_choose_iter));
+    try std.testing.expectEqual(@as(u64, 0x54bf90173d0a647f), engine.next());
+
+    var bad_sample_iter = BadIter{ .items = &bad_entries };
+    try std.testing.expectError(error.InvalidWeight, sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &bad_sample_iter, 1));
+    try std.testing.expectEqual(@as(u64, 0x3a629804e3b708f), engine.next());
+}
+
 test "partial shuffle and reservoir sample respect counts" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(444);
