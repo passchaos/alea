@@ -200,7 +200,7 @@ project does not repeat unproductive work.
 
 ## Next Candidate
 
-Continue performance triage on the remaining large gaps:
+Continue performance triage on the remaining focused watch items:
 
 - normal/exponential standard scalar rows now exceed local Rust in filtered
   full-harness runs; remaining work is benchmark harness/order context, not
