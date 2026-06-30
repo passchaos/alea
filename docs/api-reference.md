@@ -129,7 +129,8 @@ Single-shot helpers:
   `geometricFailures`, `geometricFailuresFrom`, `fillGeometricFailures`,
   `fillGeometricFailuresFrom`, `standardGeometric`,
   `standardGeometricFrom`, `fillStandardGeometric`,
-  `fillStandardGeometricFrom`, `poissonAhrensDieter`
+  `fillStandardGeometricFrom`, `poissonAhrensDieter`,
+  `poissonAhrensDieterFrom`
 - `gamma`, `gammaFrom`, `fillGamma`, `fillGammaFrom`, `chiSquared`,
   `chiSquaredFrom`, `fillChiSquared`, `fillChiSquaredFrom`, `chi`,
   `chiFrom`, `fillChi`, `fillChiFrom`, `erlang`, `erlangFrom`,

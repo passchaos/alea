@@ -1259,8 +1259,12 @@ const PoissonAhrensDieter = struct {
 };
 
 pub fn poissonAhrensDieter(rng: Rng, lambda: f64) u64 {
+    return poissonAhrensDieterFrom(rng, lambda);
+}
+
+pub fn poissonAhrensDieterFrom(source: anytype, lambda: f64) u64 {
     std.debug.assert(lambda >= 12 and std.math.isFinite(lambda));
-    return PoissonAhrensDieter.init(lambda).sample(rng);
+    return PoissonAhrensDieter.init(lambda).sampleFrom(source);
 }
 
 fn poissonProduct(rng: Rng, threshold: f64) u64 {
@@ -4813,6 +4817,9 @@ test "poisson large lambda has plausible moments" {
         sum += value;
         sum_sq += value * value;
     }
+
+    const direct_value = poissonAhrensDieterFrom(&engine, lambda);
+    try std.testing.expect(direct_value < 120);
 
     const mean = sum / @as(f64, @floatFromInt(samples));
     const variance = sum_sq / @as(f64, @floatFromInt(samples)) - mean * mean;
