@@ -97,8 +97,8 @@ fixed-size point arrays.
 
 Use:
 
-- `rng.choose`, `rng.choosePtr`
-- `rng.shuffle`
+- `rng.choose`, `Rng.chooseFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`
+- `rng.shuffle`, `Rng.shuffleFrom`
 - `seq.partialShuffle`, `seq.partialShuffleFrom`
 - `seq.reservoirSample`, `seq.reservoirSampleFrom`
 - `seq.sampleIndices`, `seq.sampleIndexVec`, `seq.sampleIndicesU32`
@@ -119,9 +119,9 @@ Use:
 
 Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput index
 sampling. Use `sampleIndices` when a `[]usize` result is more convenient.
-Use `sampleWeightedFrom`, `AliasTable.sampleFrom`, and
-`WeightedChoice.sampleValueFrom` for weighted sampling with a comptime-known
-engine source.
+Use `Rng.weightedIndexFrom`, `Rng.sampleWithoutReplacementFrom`,
+`sampleWeightedFrom`, `AliasTable.sampleFrom`, and `WeightedChoice.sampleValueFrom`
+for weighted or collection sampling with a comptime-known engine source.
 
 ## Strings
 

@@ -69,9 +69,11 @@ expectations.
 - Unicode: `unicodeScalar`
 - Distributions: `normal`, `exponential`, `standardNormalFastFrom`,
   `standardExponentialFastFrom`, `normalFastFrom`, `exponentialFastFrom`
-- Enums and collections: `enumValue`, `shuffle`, `choose`, `choosePtr`,
-  `weightedIndex`, `weightedIndexChecked`, `sampleWithoutReplacement`,
-  `sampleWithoutReplacementChecked`
+- Enums and collections: `enumValue`, `shuffle`, `shuffleFrom`, `choose`,
+  `chooseFrom`, `choosePtr`, `choosePtrFrom`, `weightedIndex`,
+  `weightedIndexFrom`, `weightedIndexChecked`, `weightedIndexCheckedFrom`,
+  `sampleWithoutReplacement`, `sampleWithoutReplacementFrom`,
+  `sampleWithoutReplacementChecked`, `sampleWithoutReplacementCheckedFrom`
 - Iterator types: `ValueIterator(T)`, `SampleIterator(Sampler, T)`
 
 ## Seed

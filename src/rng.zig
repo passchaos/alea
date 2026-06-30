@@ -1289,29 +1289,49 @@ pub fn enumValue(self: Rng, comptime EnumType: type) EnumType {
 }
 
 pub fn shuffle(self: Rng, comptime T: type, items: []T) void {
+    shuffleFrom(self, T, items);
+}
+
+pub fn shuffleFrom(source: anytype, comptime T: type, items: []T) void {
     if (items.len < 2) return;
     var i = items.len - 1;
     while (i > 0) : (i -= 1) {
-        const j = self.uintAtMost(usize, i);
+        const j = uintAtMostFrom(source, usize, i);
         std.mem.swap(T, &items[i], &items[j]);
     }
 }
 
 pub fn choose(self: Rng, comptime T: type, items: []const T) ?T {
+    return chooseFrom(self, T, items);
+}
+
+pub fn chooseFrom(source: anytype, comptime T: type, items: []const T) ?T {
     if (items.len == 0) return null;
-    return items[self.uintLessThan(usize, items.len)];
+    return items[uintLessThanFrom(source, usize, items.len)];
 }
 
 pub fn choosePtr(self: Rng, comptime T: type, items: []T) ?*T {
+    return choosePtrFrom(self, T, items);
+}
+
+pub fn choosePtrFrom(source: anytype, comptime T: type, items: []T) ?*T {
     if (items.len == 0) return null;
-    return &items[self.uintLessThan(usize, items.len)];
+    return &items[uintLessThanFrom(source, usize, items.len)];
 }
 
 pub fn weightedIndex(self: Rng, weights: []const f64) ?usize {
-    return self.weightedIndexChecked(weights) catch unreachable;
+    return weightedIndexFrom(self, weights);
+}
+
+pub fn weightedIndexFrom(source: anytype, weights: []const f64) ?usize {
+    return weightedIndexCheckedFrom(source, weights) catch unreachable;
 }
 
 pub fn weightedIndexChecked(self: Rng, weights: []const f64) Error!?usize {
+    return weightedIndexCheckedFrom(self, weights);
+}
+
+pub fn weightedIndexCheckedFrom(source: anytype, weights: []const f64) Error!?usize {
     var total: f64 = 0;
     for (weights) |weight| {
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
@@ -1319,7 +1339,7 @@ pub fn weightedIndexChecked(self: Rng, weights: []const f64) Error!?usize {
     }
     if (weights.len == 0 or total == 0) return null;
 
-    const point = self.float(f64) * total;
+    const point = floatFrom(source, f64) * total;
     var acc: f64 = 0;
     for (weights, 0..) |weight, i| {
         acc += weight;
@@ -1330,10 +1350,19 @@ pub fn weightedIndexChecked(self: Rng, weights: []const f64) Error!?usize {
 
 pub fn sampleWithoutReplacement(self: Rng, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
     std.debug.assert(count <= items.len);
-    return self.sampleWithoutReplacementChecked(T, allocator, items, count) catch unreachable;
+    return sampleWithoutReplacementFrom(self, T, allocator, items, count);
+}
+
+pub fn sampleWithoutReplacementFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
+    std.debug.assert(count <= items.len);
+    return sampleWithoutReplacementCheckedFrom(source, T, allocator, items, count) catch unreachable;
 }
 
 pub fn sampleWithoutReplacementChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
+    return sampleWithoutReplacementCheckedFrom(self, T, allocator, items, count);
+}
+
+pub fn sampleWithoutReplacementCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
     if (count > items.len) return error.InvalidParameter;
     var pool = try std.ArrayList(T).initCapacity(allocator, items.len);
     defer pool.deinit(allocator);
@@ -1343,7 +1372,7 @@ pub fn sampleWithoutReplacementChecked(self: Rng, comptime T: type, allocator: s
     errdefer out.deinit(allocator);
 
     while (out.items.len < count) {
-        const index = self.uintLessThan(usize, pool.items.len);
+        const index = uintLessThanFrom(source, usize, pool.items.len);
         try out.append(allocator, pool.swapRemove(index));
     }
 
@@ -2294,11 +2323,33 @@ test "shuffle and sampling keep item set" {
     for (values) |item| sum += item;
     try std.testing.expectEqual(@as(u32, 15), sum);
 
+    var direct_values = [_]u8{ 1, 2, 3, 4, 5 };
+    Rng.shuffleFrom(&engine, u8, &direct_values);
+    var direct_sum: u32 = 0;
+    for (direct_values) |item| direct_sum += item;
+    try std.testing.expectEqual(@as(u32, 15), direct_sum);
+
+    const chosen = Rng.chooseFrom(&engine, u8, &values).?;
+    try std.testing.expect(chosen >= 1 and chosen <= 5);
+
+    const chosen_ptr = Rng.choosePtrFrom(&engine, u8, &values).?;
+    try std.testing.expect(chosen_ptr.* >= 1 and chosen_ptr.* <= 5);
+
+    const weighted = Rng.weightedIndexFrom(&engine, &.{ 0.0, 1.0, 3.0 }).?;
+    try std.testing.expect(weighted == 1 or weighted == 2);
+
     const sample = try rng.sampleWithoutReplacement(u8, std.testing.allocator, &values, 3);
     defer std.testing.allocator.free(sample);
     try std.testing.expectEqual(@as(usize, 3), sample.len);
+
+    const direct_sample = try Rng.sampleWithoutReplacementFrom(&engine, u8, std.testing.allocator, &values, 3);
+    defer std.testing.allocator.free(direct_sample);
+    try std.testing.expectEqual(@as(usize, 3), direct_sample.len);
+
     try std.testing.expectError(error.InvalidParameter, rng.sampleWithoutReplacementChecked(u8, std.testing.allocator, &values, 99));
+    try std.testing.expectError(error.InvalidParameter, Rng.sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &values, 99));
     try std.testing.expectError(error.InvalidWeight, rng.weightedIndexChecked(&.{ 1.0, std.math.nan(f64) }));
+    try std.testing.expectError(error.InvalidWeight, Rng.weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
 }
 
 test "value and sampler iterators produce unbounded samples" {
