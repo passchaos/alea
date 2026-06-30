@@ -1381,6 +1381,11 @@ pub fn fillHalfNormal(rng: Rng, comptime T: type, dest: []T, scale: T) void {
 pub fn fillHalfNormalFrom(source: anytype, comptime T: type, dest: []T, scale: T) void {
     comptime requireFloat(T);
     std.debug.assert(scale > 0 and std.math.isFinite(scale));
+    if (comptime T == f64 and (@TypeOf(source) == Rng or @TypeOf(source) == *Alea4x64)) {
+        Rng.fillNormalFrom(source, T, dest, 0, scale);
+        absInPlace(T, dest);
+        return;
+    }
     for (dest) |*item| item.* = halfNormalFrom(source, T, scale);
 }
 
@@ -5116,6 +5121,26 @@ fn expInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T) void
         inline for (0..len) |lane| dest[i + lane] = vec[lane];
     }
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
+}
+
+fn absInPlace(comptime T: type, dest: []T) void {
+    switch (T) {
+        f32 => absInPlaceVector(T, @Vector(8, f32), dest),
+        f64 => absInPlaceVector(T, @Vector(4, f64), dest),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn absInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var vec: VectorType = undefined;
+        inline for (0..len) |lane| vec[lane] = dest[i + lane];
+        vec = @abs(vec);
+        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = @abs(dest[i]);
 }
 
 fn inverseGaussianFromNormals(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) void {
