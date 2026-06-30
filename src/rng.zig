@@ -324,6 +324,10 @@ pub fn fillVectorRangeFrom(source: anytype, comptime VectorType: type, dest: []V
 }
 
 pub fn fillVectorRangeChecked(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    return fillVectorRangeCheckedFrom(self, VectorType, dest, min, max);
+}
+
+pub fn fillVectorRangeCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
     const info = vectorInfo(VectorType);
     switch (@typeInfo(info.child)) {
         .int => {
@@ -334,7 +338,7 @@ pub fn fillVectorRangeChecked(self: Rng, comptime VectorType: type, dest: []Vect
         },
         else => @compileError("Rng.fillVectorRangeChecked supports integer and floating-point vectors"),
     }
-    self.fillVectorRange(VectorType, dest, min, max);
+    fillVectorRangeFrom(source, VectorType, dest, min, max);
 }
 
 pub fn fillVectorChance(self: Rng, comptime VectorType: type, dest: []VectorType, p: f64) void {
@@ -349,8 +353,12 @@ pub fn fillVectorChanceFrom(source: anytype, comptime VectorType: type, dest: []
 }
 
 pub fn fillVectorChanceChecked(self: Rng, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
+    return fillVectorChanceCheckedFrom(self, VectorType, dest, p);
+}
+
+pub fn fillVectorChanceCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
     if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
-    self.fillVectorChance(VectorType, dest, p);
+    fillVectorChanceFrom(source, VectorType, dest, p);
 }
 
 pub fn fillVectorRatio(self: Rng, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) void {
@@ -365,8 +373,12 @@ pub fn fillVectorRatioFrom(source: anytype, comptime VectorType: type, dest: []V
 }
 
 pub fn fillVectorRatioChecked(self: Rng, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) Error!void {
+    return fillVectorRatioCheckedFrom(self, VectorType, dest, numerator, denominator);
+}
+
+pub fn fillVectorRatioCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) Error!void {
     if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
-    self.fillVectorRatio(VectorType, dest, numerator, denominator);
+    fillVectorRatioFrom(source, VectorType, dest, numerator, denominator);
 }
 
 pub fn fillVectorStandardNormal(self: Rng, comptime VectorType: type, dest: []VectorType) void {
@@ -395,10 +407,14 @@ pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []
 }
 
 pub fn fillVectorNormalChecked(self: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!void {
+    return fillVectorNormalCheckedFrom(self, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorNormalCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
-    self.fillVectorNormal(VectorType, dest, mean, stddev);
+    fillVectorNormalFrom(source, VectorType, dest, mean, stddev);
 }
 
 pub fn fillVectorExponential(self: Rng, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) void {
@@ -417,10 +433,14 @@ pub fn fillVectorExponentialFrom(source: anytype, comptime VectorType: type, des
 }
 
 pub fn fillVectorExponentialChecked(self: Rng, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) Error!void {
+    return fillVectorExponentialCheckedFrom(self, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) Error!void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
-    self.fillVectorExponential(VectorType, dest, rate);
+    fillVectorExponentialFrom(source, VectorType, dest, rate);
 }
 
 pub fn fillVectorStandardExponential(self: Rng, comptime VectorType: type, dest: []VectorType) void {
@@ -1938,6 +1958,10 @@ test "rng facade covers scalar APIs" {
     try rng.fillVectorRangeChecked(@Vector(8, f32), &vec_range_buf, -1, 1);
     for (vec_range_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= -1 and vec[i] < 1);
 
+    var direct_checked_vec_range_buf: [4]@Vector(8, f32) = undefined;
+    try Rng.fillVectorRangeCheckedFrom(&engine, @Vector(8, f32), &direct_checked_vec_range_buf, -1, 1);
+    for (direct_checked_vec_range_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= -1 and vec[i] < 1);
+
     var direct_vec_range_buf: [4]@Vector(8, f32) = undefined;
     Rng.fillVectorRangeFrom(&engine, @Vector(8, f32), &direct_vec_range_buf, -1, 1);
     for (direct_vec_range_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= -1 and vec[i] < 1);
@@ -1972,11 +1996,16 @@ test "rng facade covers scalar APIs" {
     Rng.fillVectorChanceFrom(&engine, @Vector(8, bool), &vec_chance_buf, 1);
     for (vec_chance_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i]);
 
+    try Rng.fillVectorChanceCheckedFrom(&engine, @Vector(8, bool), &vec_chance_buf, 0);
+    for (vec_chance_buf) |vec| inline for (0..8) |i| try std.testing.expect(!vec[i]);
+
     var vec_ratio_buf: [4]@Vector(8, bool) = undefined;
     try rng.fillVectorRatioChecked(@Vector(8, bool), &vec_ratio_buf, 0, 1);
     for (vec_ratio_buf) |vec| inline for (0..8) |i| try std.testing.expect(!vec[i]);
     Rng.fillVectorRatioFrom(&engine, @Vector(8, bool), &vec_ratio_buf, 1, 1);
     for (vec_ratio_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i]);
+    try Rng.fillVectorRatioCheckedFrom(&engine, @Vector(8, bool), &vec_ratio_buf, 0, 1);
+    for (vec_ratio_buf) |vec| inline for (0..8) |i| try std.testing.expect(!vec[i]);
     try std.testing.expectError(error.InvalidProbability, rng.fillVectorRatioChecked(@Vector(8, bool), &vec_ratio_buf, 2, 1));
 
     var vec_standard_normal_buf: [4]@Vector(8, f32) = undefined;
@@ -1995,6 +2024,10 @@ test "rng facade covers scalar APIs" {
     Rng.fillVectorNormalFrom(&engine, @Vector(8, f32), &direct_vec_normal_buf, 0, 1);
     for (direct_vec_normal_buf) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
 
+    var direct_checked_vec_normal_buf: [4]@Vector(8, f32) = undefined;
+    try Rng.fillVectorNormalCheckedFrom(&engine, @Vector(8, f32), &direct_checked_vec_normal_buf, 0, 1);
+    for (direct_checked_vec_normal_buf) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
+
     var vec_standard_exp_buf: [4]@Vector(8, f32) = undefined;
     rng.fillVectorStandardExponential(@Vector(8, f32), &vec_standard_exp_buf);
     for (vec_standard_exp_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0);
@@ -2010,6 +2043,10 @@ test "rng facade covers scalar APIs" {
     var direct_vec_exp_buf: [4]@Vector(8, f32) = undefined;
     Rng.fillVectorExponentialFrom(&engine, @Vector(8, f32), &direct_vec_exp_buf, 2);
     for (direct_vec_exp_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0);
+
+    var direct_checked_vec_exp_buf: [4]@Vector(8, f32) = undefined;
+    try Rng.fillVectorExponentialCheckedFrom(&engine, @Vector(8, f32), &direct_checked_vec_exp_buf, 2);
+    for (direct_checked_vec_exp_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0);
 
     const ranged_i = rng.vectorRange(@Vector(4, i32), -10, 10);
     inline for (0..4) |i| try std.testing.expect(ranged_i[i] >= -10 and ranged_i[i] < 10);
@@ -2103,8 +2140,13 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, u32), 3, 3));
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
     try std.testing.expectError(error.EmptyRange, rng.fillVectorRangeChecked(@Vector(8, f32), &vec_range_buf, 2, 1));
+    try std.testing.expectError(error.EmptyRange, Rng.fillVectorRangeCheckedFrom(&engine, @Vector(8, f32), &vec_range_buf, 2, 1));
+    try std.testing.expectError(error.InvalidProbability, Rng.fillVectorChanceCheckedFrom(&engine, @Vector(8, bool), &vec_chance_buf, -0.1));
+    try std.testing.expectError(error.InvalidProbability, Rng.fillVectorRatioCheckedFrom(&engine, @Vector(8, bool), &vec_ratio_buf, 2, 1));
     try std.testing.expectError(error.InvalidParameter, rng.fillVectorNormalChecked(@Vector(8, f32), &vec_normal_buf, 0, -1));
     try std.testing.expectError(error.InvalidParameter, rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_exp_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, Rng.fillVectorNormalCheckedFrom(&engine, @Vector(8, f32), &vec_normal_buf, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, Rng.fillVectorExponentialCheckedFrom(&engine, @Vector(8, f32), &vec_exp_buf, 0));
     try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), 0, -1));
     try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), std.math.inf(f64), 1));
     try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), 0));
