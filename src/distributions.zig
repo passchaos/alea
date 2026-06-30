@@ -1627,6 +1627,15 @@ pub fn gamma(rng: Rng, comptime T: type, shape: T, scale: T) T {
     return gammaFrom(rng, T, shape, scale);
 }
 
+pub fn gammaChecked(rng: Rng, comptime T: type, shape: T, scale: T) Error!T {
+    return gammaCheckedFrom(rng, T, shape, scale);
+}
+
+pub fn gammaCheckedFrom(source: anytype, comptime T: type, shape: T, scale: T) Error!T {
+    const dist = try Gamma(T).init(shape, scale);
+    return dist.sampleFrom(source);
+}
+
 pub fn gammaFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(shape > 0 and scale > 0);
@@ -5132,6 +5141,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const gamma_sampler = try Gamma(f64).init(2, 3);
     gamma_sampler.fillFrom(&direct_engine, &direct_gamma_buf);
     for (direct_gamma_buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expect(try gammaCheckedFrom(&direct_engine, f64, 2, 3) > 0);
+    try std.testing.expectError(error.InvalidParameter, gammaCheckedFrom(&direct_engine, f64, 0, 3));
     var gamma_shape_one_buf: [8]f64 = undefined;
     fillGammaFrom(&direct_engine, f64, &gamma_shape_one_buf, 1, 3);
     for (gamma_shape_one_buf) |value| try std.testing.expect(value > 0);
