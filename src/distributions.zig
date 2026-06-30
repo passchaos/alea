@@ -3759,7 +3759,7 @@ pub fn SkewNormal(comptime T: type) type {
             return self.sampleFrom(rng);
         }
 
-        pub fn sampleFrom(self: Self, source: anytype) T {
+        pub inline fn sampleFrom(self: Self, source: anytype) T {
             return skewNormalFrom(source, T, self.location, self.scale, self.shape);
         }
 
@@ -3767,7 +3767,7 @@ pub fn SkewNormal(comptime T: type) type {
             self.fillFrom(rng, dest);
         }
 
-        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+        pub inline fn fillFrom(self: Self, source: anytype, dest: []T) void {
             fillSkewNormalFrom(source, T, dest, self.location, self.scale, self.shape);
         }
     };
