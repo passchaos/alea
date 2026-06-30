@@ -2449,6 +2449,27 @@ test "scalar sampling has stable snapshots" {
     try std.testing.expectEqual(@as(u64, 0x43178923ee65cac3), engine.next());
 }
 
+test "byte fill has stable snapshots" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x1234_5678_9abc_def0);
+    const rng = Rng.init(&engine);
+
+    var bytes_buf: [16]u8 = undefined;
+    rng.bytes(&bytes_buf);
+    try std.testing.expectEqualSlices(u8, &.{
+        0x5b, 0xbd, 0x36, 0xab, 0x9c, 0xea, 0xe3, 0x23,
+        0x78, 0x52, 0x12, 0xa3, 0x3c, 0xa3, 0x9d, 0x63,
+    }, &bytes_buf);
+
+    var fill_buf: [16]u8 = undefined;
+    rng.fill(u8, &fill_buf);
+    try std.testing.expectEqualSlices(u8, &.{
+        0xd8, 0x32, 0xda, 0xee, 0x77, 0x79, 0x30, 0x88,
+        0xd9, 0xdd, 0xc7, 0x4d, 0xb2, 0x3a, 0xa6, 0xd1,
+    }, &fill_buf);
+    try std.testing.expectEqual(@as(u64, 0x931a772dd193d170), engine.next());
+}
+
 test "value and vector sampling have stable snapshots" {
     const alea = @import("root.zig");
     const ValueType = struct { u8, bool, f32 };
