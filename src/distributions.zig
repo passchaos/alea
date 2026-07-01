@@ -1995,6 +1995,7 @@ pub fn fillGammaChecked(rng: Rng, comptime T: type, dest: []T, shape: T, scale: 
 }
 
 pub fn fillGammaCheckedFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Gamma(T).init(shape, scale);
     sampler.fillFrom(source, dest);
 }
@@ -2124,6 +2125,7 @@ pub fn fillChiSquaredChecked(rng: Rng, comptime T: type, dest: []T, dof: T) Erro
 }
 
 pub fn fillChiSquaredCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try ChiSquared(T).init(dof);
     sampler.fillFrom(source, dest);
 }
@@ -2201,6 +2203,7 @@ pub fn fillChiChecked(rng: Rng, comptime T: type, dest: []T, dof: T) Error!void 
 }
 
 pub fn fillChiCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Chi(T).init(dof);
     sampler.fillFrom(source, dest);
 }
@@ -2266,6 +2269,7 @@ pub fn fillErlangChecked(rng: Rng, comptime T: type, dest: []T, shape: u64, scal
 }
 
 pub fn fillErlangCheckedFrom(source: anytype, comptime T: type, dest: []T, shape: u64, scale: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Erlang(T).init(shape, scale);
     sampler.fillFrom(source, dest);
 }
@@ -2365,6 +2369,7 @@ pub fn fillBetaChecked(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_par
 }
 
 pub fn fillBetaCheckedFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Beta(T).init(alpha, beta_param);
     sampler.fillFrom(source, dest);
 }
@@ -2480,6 +2485,7 @@ pub fn fillFisherFChecked(rng: Rng, comptime T: type, dest: []T, d1: T, d2: T) E
 }
 
 pub fn fillFisherFCheckedFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try FisherF(T).init(d1, d2);
     sampler.fillFrom(source, dest);
 }
@@ -2556,6 +2562,7 @@ pub fn fillStudentTChecked(rng: Rng, comptime T: type, dest: []T, dof: T) Error!
 }
 
 pub fn fillStudentTCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try StudentT(T).init(dof);
     sampler.fillFrom(source, dest);
 }
@@ -6364,6 +6371,40 @@ test "invalid checked distribution helpers do not consume random stream" {
     defer int_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &u64_buf));
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
+}
+
+test "zero-length core continuous distribution fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1aa);
+    var control = alea.ScalarPrng.init(0x5150_d1aa);
+    const rng = Rng.init(&engine);
+
+    var out: [0]f64 = .{};
+
+    try fillGammaCheckedFrom(&engine, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillChiSquaredCheckedFrom(&engine, f64, &out, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillChiCheckedFrom(&engine, f64, &out, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillErlangCheckedFrom(&engine, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillBetaCheckedFrom(&engine, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillFisherFCheckedFrom(&engine, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillStudentTCheckedFrom(&engine, f64, &out, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillGammaChecked(rng, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillBetaChecked(rng, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillStudentTChecked(rng, f64, &out, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one: [1]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillGammaCheckedFrom(&engine, f64, &one, 0, 1));
 }
 
 test "zero-length discrete distribution fills do not validate or consume random stream" {
