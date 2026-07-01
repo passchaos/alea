@@ -113,7 +113,9 @@ and sub-64-bit integer fills keep repeated-`nextValue` stream shape.
 `sampleFrom(allocator, source)` and allocation-free `sampleInto(rng, out)` /
 `sampleIntoFrom(source, out)` and flat `sampleManyInto` / `sampleManyIntoFrom`
 batch APIs; both also expose checked `sampleInto*` / `sampleManyInto*` variants
-for user-supplied output buffers. `Normal(T).initMeanCv` and
+for user-supplied output buffers. Initial allocation failures in
+allocation-returning multivariate samples are reported before any component
+draws. `Normal(T).initMeanCv` and
 `LogNormal(T).initMeanCv` cover coefficient-of-variation parameterization
 without requiring users to hand-convert to log-space parameters; both samplers
 also expose z-score conversion helpers for correlated draws. `Pert(T).initRange`
