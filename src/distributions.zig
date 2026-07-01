@@ -6505,6 +6505,31 @@ test "invalid probability distribution fills do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid distribution facade misc scalars do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1fd1);
+    var control = alea.ScalarPrng.init(0x5150_d1fd1);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.EmptyRange, uniformChecked(rng, u32, 9, 5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, uniformInclusiveChecked(rng, f64, std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, poissonChecked(rng, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, poissonAhrensDieterChecked(rng, 11));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, geometricFailuresChecked(rng, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, zetaChecked(rng, f64, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid distribution facade discrete scalars do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1fd);
