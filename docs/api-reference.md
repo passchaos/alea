@@ -80,7 +80,8 @@ expectations.
   `ValueIterator.nextValue`, `ValueIterator.fill`,
   `ValueIteratorFrom.fill`, `SampleIterator(Sampler, T)`,
   `SampleIterator.nextValue`, `SampleIterator.fill`,
-  `SampleIteratorFrom(Source, Sampler, T)`, `SampleIteratorFrom.fill`
+  `SampleIteratorFrom(Source, Sampler, T)`, `SampleIteratorFrom.nextValue`,
+  `SampleIteratorFrom.fill`
 
 ## Seed
 
