@@ -606,7 +606,7 @@ Dynamic weighted helpers:
 - `WeightedTree.isValid`
 - `WeightedTree.deinit`
 - Prefer `WeightedIntTree` when weights are unsigned integers and frequent
-  update/sample throughput is the priority.
+  update/push/pop/sample throughput is the priority.
 - `WeightedIntTree.init`
 - `WeightedIntTree.len`
 - `WeightedIntTree.isEmpty`
