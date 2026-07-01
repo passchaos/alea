@@ -301,6 +301,17 @@ pub fn sampleIteratorWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T
     return sampleIteratorWeightedFrom(allocator, rng, T, iterator, amount);
 }
 
+pub fn sampleIteratorWeightedChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, iterator: anytype, amount: usize) ![]T {
+    return sampleIteratorWeightedCheckedFrom(allocator, rng, T, iterator, amount);
+}
+
+pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
+    const out = try sampleIteratorWeightedFrom(allocator, source, T, iterator, amount);
+    errdefer allocator.free(out);
+    if (out.len != amount) return error.InvalidParameter;
+    return out;
+}
+
 pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
 
@@ -1474,6 +1485,14 @@ test "weighted iterator choice works without collecting first" {
     defer std.testing.allocator.free(direct_sample);
     try std.testing.expectEqual(@as(usize, 2), direct_sample.len);
     for (direct_sample) |item| try std.testing.expect(item == 2 or item == 3);
+    var checked_sample_iter = WeightedIter{ .items = &entries };
+    const checked_sample = try sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &checked_sample_iter, 2);
+    defer std.testing.allocator.free(checked_sample);
+    try std.testing.expectEqual(@as(usize, 2), checked_sample.len);
+    for (checked_sample) |item| try std.testing.expect(item == 2 or item == 3);
+
+    var short_weighted_iter = WeightedIter{ .items = entries[0..1] };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &short_weighted_iter, 2));
 }
 
 test "iterator sampling preserves direct stream shape" {
@@ -1575,6 +1594,15 @@ test "iterator sampling preserves direct stream shape" {
         const direct_weighted_sample = try sampleIteratorWeightedFrom(std.testing.allocator, &direct_engine, u8, &direct_weighted_sample_iter, 2);
         defer std.testing.allocator.free(direct_weighted_sample);
         try std.testing.expectEqualSlices(u8, weighted_sample, direct_weighted_sample);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_weighted_sample_iter = WeightedIter{ .items = &entries };
+        var direct_checked_weighted_sample_iter = WeightedIter{ .items = &entries };
+        const checked_weighted_sample = try sampleIteratorWeightedChecked(std.testing.allocator, rng, u8, &checked_weighted_sample_iter, 2);
+        defer std.testing.allocator.free(checked_weighted_sample);
+        const direct_checked_weighted_sample = try sampleIteratorWeightedCheckedFrom(std.testing.allocator, &direct_engine, u8, &direct_checked_weighted_sample_iter, 2);
+        defer std.testing.allocator.free(direct_checked_weighted_sample);
+        try std.testing.expectEqualSlices(u8, checked_weighted_sample, direct_checked_weighted_sample);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 }

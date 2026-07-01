@@ -644,7 +644,8 @@ Dynamic weighted helpers:
   `sampleIteratorChecked`, `sampleIteratorCheckedFrom`, `chooseIteratorWeighted`,
   `chooseIteratorWeightedFrom`, `chooseIteratorWeightedChecked`,
   `chooseIteratorWeightedCheckedFrom`, `sampleIteratorWeighted`,
-  `sampleIteratorWeightedFrom`
+  `sampleIteratorWeightedFrom`, `sampleIteratorWeightedChecked`,
+  `sampleIteratorWeightedCheckedFrom`
 - Reusable samplers: `Choice(T)`, `chooseIter`, `chooseIterFrom`,
   `chooseIterChecked`, `chooseIterCheckedFrom`,
   `WeightedChoice(T, Weight)`,

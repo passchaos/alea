@@ -142,7 +142,7 @@ Use:
   `seq.sampleIteratorCheckedFrom`
 - `seq.chooseIteratorWeighted`, `seq.chooseIteratorWeightedFrom`,
   `seq.chooseIteratorWeightedCheckedFrom`, `seq.sampleIteratorWeighted`,
-  `seq.sampleIteratorWeightedFrom`
+  `seq.sampleIteratorWeightedFrom`, `seq.sampleIteratorWeightedCheckedFrom`
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeighted`,
   `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`
