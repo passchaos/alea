@@ -6014,6 +6014,22 @@ test "alias table samples valid indexes" {
     try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{ 0, 0 }));
 }
 
+test "zero-length alias table fills do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a11b);
+    var control = alea.ScalarPrng.init(0x5150_a11b);
+    const rng = Rng.init(&engine);
+
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    var empty: [0]usize = .{};
+    table.fill(rng, &empty);
+    try std.testing.expectEqual(control.next(), engine.next());
+    table.fillFrom(&engine, &empty);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "alias table update allocation failure preserves table" {
     const alea = @import("root.zig");
 

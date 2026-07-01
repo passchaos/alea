@@ -195,8 +195,8 @@ zero-count no-draw policy.
 Fixed-size index arrays with `N == 0` are valid and return before drawing.
 Zero-count partial shuffles are no-ops: they return an empty head without
 mutating the input slice or drawing.
-Zero-length reusable `Choice` / `WeightedChoice` fills are no-ops and do not
-draw.
+Zero-length reusable `Choice` / `WeightedChoice` / `AliasTable` fills are
+no-ops and do not draw.
 Allocation failures while preparing the sample-without-replacement temporary
 pool/output also return before drawing.
 Successful sample-without-replacement calls return their exact-capacity output
