@@ -6533,6 +6533,33 @@ test "invalid poisson ahrens-dieter helper does not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid remaining tail scalar helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1fa);
+    var control = alea.ScalarPrng.init(0x5150_d1fa);
+
+    try std.testing.expectError(error.InvalidParameter, maxwellCheckedFrom(&engine, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, paretoCheckedFrom(&engine, f64, 0, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, weibullCheckedFrom(&engine, f64, 0, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, gumbelCheckedFrom(&engine, f64, 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, frechetCheckedFrom(&engine, f64, 0, 1, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, skewNormalCheckedFrom(&engine, f64, 0, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, pertCheckedFrom(&engine, f64, 0, 2, 1, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid inverse and rank scalar helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1f9);
