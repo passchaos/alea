@@ -77,8 +77,10 @@ expectations.
   `sampleWithoutReplacement`, `sampleWithoutReplacementFrom`,
   `sampleWithoutReplacementChecked`, `sampleWithoutReplacementCheckedFrom`
 - Iterator types: `ValueIterator(T)`, `ValueIteratorFrom(Source, T)`,
-  `ValueIterator.nextValue`, `SampleIterator(Sampler, T)`,
-  `SampleIterator.nextValue`, `SampleIteratorFrom(Source, Sampler, T)`
+  `ValueIterator.nextValue`, `ValueIterator.fill`,
+  `ValueIteratorFrom.fill`, `SampleIterator(Sampler, T)`,
+  `SampleIterator.nextValue`, `SampleIterator.fill`,
+  `SampleIteratorFrom(Source, Sampler, T)`, `SampleIteratorFrom.fill`
 
 ## Seed
 

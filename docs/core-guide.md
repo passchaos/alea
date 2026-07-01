@@ -99,8 +99,11 @@ Single-shot helpers and reusable samplers cover:
 Reusable samplers expose `sample(rng)`, and direct-source samplers expose
 `sampleFrom(source)` where comptime-known engine dispatch is useful. They can be
 used with `rng.sampleIter(T, sampler)` or
-`Rng.sampleIterFrom(source, T, sampler)` when the sample type is scalar. `Dirichlet`
-and `Multinomial` support allocation-returning `sample(allocator, rng)` /
+`Rng.sampleIterFrom(source, T, sampler)` when the sample type is scalar, and
+their iterator `fill` methods inherit sampler-specific bulk fills where
+available. `valueIter(T)` / `valueIterFrom(source, T)` likewise delegate
+iterator fills to `Rng.fill` / `fillFrom` for scalar and vector slice types.
+`Dirichlet` and `Multinomial` support allocation-returning `sample(allocator, rng)` /
 `sampleFrom(allocator, source)` and allocation-free `sampleInto(rng, out)` /
 `sampleIntoFrom(source, out)` and flat `sampleManyInto` / `sampleManyIntoFrom`
 batch APIs; both also expose checked `sampleInto*` / `sampleManyInto*` variants
