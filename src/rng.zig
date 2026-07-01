@@ -3010,41 +3010,45 @@ test "invalid checked helpers do not consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), empty_enum_array.len);
     try std.testing.expectEqual(@as(u64, 0x1e449ba06e4ee306), engine.next());
 
-    if (valueCheckedFrom(&engine, [2]EmptyEnum)) |_| {
-        return error.TestExpectedError;
-    } else |err| {
-        try std.testing.expectEqual(error.EmptyRange, err);
-    }
+    const empty_void_array = try valueCheckedFrom(&engine, [0]void);
+    try std.testing.expectEqual(@as(usize, 0), empty_void_array.len);
     try std.testing.expectEqual(@as(u64, 0xa05fd0d145ac28f5), engine.next());
 
-    if (valueCheckedFrom(&engine, NestedEmptyEnum)) |_| {
+    if (valueCheckedFrom(&engine, [2]EmptyEnum)) |_| {
         return error.TestExpectedError;
     } else |err| {
         try std.testing.expectEqual(error.EmptyRange, err);
     }
     try std.testing.expectEqual(@as(u64, 0x709790abbb828191), engine.next());
 
-    if (valueCheckedFrom(&engine, LateNestedEmptyEnum)) |_| {
+    if (valueCheckedFrom(&engine, NestedEmptyEnum)) |_| {
         return error.TestExpectedError;
     } else |err| {
         try std.testing.expectEqual(error.EmptyRange, err);
     }
     try std.testing.expectEqual(@as(u64, 0x3956218e7dd11342), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
+    if (valueCheckedFrom(&engine, LateNestedEmptyEnum)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     try std.testing.expectEqual(@as(u64, 0xdbf744335ced8b7d), engine.next());
 
-    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{}));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectEqual(@as(u64, 0x4a25e952d381d57c), engine.next());
 
-    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{ 0.0, 0.0 }));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{}));
     try std.testing.expectEqual(@as(u64, 0xb6ab229c8fe7505b), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{ 0.0, 0.0 }));
     try std.testing.expectEqual(@as(u64, 0x9ed0fe54839ae4f3), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
     try std.testing.expectEqual(@as(u64, 0x25bad2ea3ddc339c), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(u64, 0x1f96d05125db1460), engine.next());
 }
 
 test "collection helpers preserve direct stream shape" {
