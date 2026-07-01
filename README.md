@@ -101,10 +101,14 @@ The Rust command benchmarks against the local `rand` checkout in
 `compare/results/`. Use `vectorbench` for focused vector-slice evidence such
 as packed bool chance/ratio, strict-interval vector float fills, vector ranges,
 and scalar-lane normal/exponential vector fills without slowing the full
-throughput suite. The optional `bench -- [bytes] [filter]` arguments override the byte count and
+throughput suite; `compare/results/simd-distribution-kernel-notes.md` records
+requirements for future dense SIMD distribution kernels. The optional
+`bench -- [bytes] [filter]` arguments override the byte count and
 filter rows by case-insensitive substring, which is useful for focused
-full-harness reruns; the Rust comparison binary accepts the same shape. Use focused probes such as `ziggurat-probe`
-when investigating a specific hot path before changing production algorithms.
+full-harness reruns; the Rust comparison binary accepts the same shape. Use
+focused probes such as `ziggurat-probe` when investigating a specific hot path
+before changing production algorithms, and record accepted/rejected outcomes in
+`compare/results/performance-triage.md`.
 
 ## Design Notes
 
@@ -124,3 +128,5 @@ aliases without spelling out the concrete engine type.
 See `docs/core-guide.md` for the core API guide, `docs/api-reference.md` for
 the public API reference, and
 `compare/results/core-rand-coverage.md` for the roadmap and validation matrix.
+Current hard performance gaps and rejected optimization attempts are tracked in
+`compare/results/performance-triage.md`.
