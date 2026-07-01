@@ -129,4 +129,5 @@ See `docs/core-guide.md` for the core API guide, `docs/api-reference.md` for
 the public API reference, and
 `compare/results/core-rand-coverage.md` for the roadmap and validation matrix.
 Current hard performance gaps and rejected optimization attempts are tracked in
-`compare/results/performance-triage.md`.
+`compare/results/performance-triage.md`; LogNormal transform tradeoffs are
+summarized in `compare/results/lognormal-transform-notes.md`.
