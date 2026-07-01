@@ -1529,6 +1529,7 @@ pub fn weightedIndexCheckedFrom(source: anytype, weights: []const f64) Error!?us
     for (weights) |weight| {
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         total += weight;
+        if (!std.math.isFinite(total)) return error.InvalidWeight;
     }
     if (weights.len == 0 or total == 0) return null;
 
@@ -2873,8 +2874,11 @@ test "invalid checked helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectEqual(@as(u64, 0x8a685176c49005b1), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
     try std.testing.expectEqual(@as(u64, 0xf6aed2fe799c54ee), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(u64, 0xd3ab62c69321f758), engine.next());
 }
 
 test "collection helpers preserve direct stream shape" {

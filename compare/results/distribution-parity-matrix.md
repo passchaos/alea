@@ -23,7 +23,7 @@ Zig-native way.
 | `Bernoulli` | Covered by `Bernoulli`, `chance`, `ratio`, checked variants |
 | `Alphanumeric`, `Alphabetic` | Covered by ASCII charsets and `Charset` |
 | `Slice::Choose` | Covered by `seq.Choice` and `chooseIter` |
-| `WeightedIndex` | Covered by `weightedIndex`, `AliasTable`, `WeightedChoice`; `AliasTable.update` supports weight replacement |
+| `WeightedIndex` | Covered by `weightedIndex`, `AliasTable`, `WeightedChoice`; checked paths reject non-finite weights and overflowing totals, and `AliasTable.update` / `WeightedChoice.update` support weight replacement |
 
 ## Historical Rust `rand` Non-Uniform Distributions
 
