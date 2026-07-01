@@ -440,6 +440,8 @@ Reusable samplers:
 - `Arcsine(T).fillFrom`
 - `Cauchy(T)`
 - `Cauchy(T).init`
+- `Cauchy(T).medianValue`
+- `Cauchy(T).scaleValue`
 - `Cauchy(T).sample`
 - `Cauchy(T).sampleFrom`
 - `Cauchy(T).fill`

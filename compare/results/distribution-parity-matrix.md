@@ -64,7 +64,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Beta | Covered: `beta`, `Beta(T)`, including alpha/beta accessors |
 | Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max accessors |
 | Arcsine | Covered: `arcsine`, `Arcsine(T)` |
-| Cauchy | Covered: `cauchy`, `Cauchy(T)` |
+| Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/scale accessors |
 | Laplace | Covered: `laplace`, `Laplace(T)` |
 | Logistic | Covered: `logistic`, `Logistic(T)` |
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)` |

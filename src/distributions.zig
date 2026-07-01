@@ -2879,6 +2879,14 @@ pub fn Cauchy(comptime T: type) type {
             return .{ .median = median, .scale = scale };
         }
 
+        pub fn medianValue(self: Self) T {
+            return self.median;
+        }
+
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -7896,6 +7904,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&direct_engine, f64, &direct_cauchy_buf, 0, 0));
     const cauchy_sampler = try Cauchy(f64).init(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), cauchy_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), cauchy_sampler.scaleValue(), 1e-12);
     cauchy_sampler.fillFrom(&direct_engine, &direct_cauchy_buf);
     for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try cauchyCheckedFrom(&direct_engine, f64, 0, 1)));
