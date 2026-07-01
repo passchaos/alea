@@ -474,6 +474,8 @@ Reusable samplers:
 - `LogLogistic(T).fillFrom`
 - `Kumaraswamy(T)`
 - `Kumaraswamy(T).init`
+- `Kumaraswamy(T).alphaValue`
+- `Kumaraswamy(T).betaValue`
 - `Kumaraswamy(T).sample`
 - `Kumaraswamy(T).sampleFrom`
 - `Kumaraswamy(T).fill`

@@ -3267,6 +3267,14 @@ pub fn Kumaraswamy(comptime T: type) type {
             };
         }
 
+        pub fn alphaValue(self: Self) T {
+            return 1 / self.inverse_alpha;
+        }
+
+        pub fn betaValue(self: Self) T {
+            return 1 / self.inverse_beta;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8034,6 +8042,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
     try std.testing.expectError(error.InvalidParameter, fillKumaraswamyCheckedFrom(&direct_engine, f64, &direct_kumaraswamy_buf, 0, 5));
     const kumaraswamy_sampler = try Kumaraswamy(f64).init(2, 5);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), kumaraswamy_sampler.alphaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), kumaraswamy_sampler.betaValue(), 1e-12);
     kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf);
     for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
     const direct_checked_kumaraswamy = try kumaraswamyCheckedFrom(&direct_engine, f64, 2, 5);
