@@ -289,8 +289,8 @@ fn normalTail(engine: *alea.ScalarPrng, u: f64) f64 {
     var x: f64 = 1;
     var y: f64 = 0;
     while (-2.0 * y < x * x) {
-        x = @log(alea.Rng.floatFrom(engine, f64)) / ziggurat.norm_r;
-        y = @log(alea.Rng.floatFrom(engine, f64));
+        x = @log(alea.Rng.floatOpenFrom(engine, f64)) / ziggurat.norm_r;
+        y = @log(alea.Rng.floatOpenFrom(engine, f64));
     }
     return if (u < 0) x - ziggurat.norm_r else ziggurat.norm_r - x;
 }
@@ -309,7 +309,7 @@ fn ratioExponential(engine: *alea.ScalarPrng) f64 {
         const x = u * ziggurat.ExpDist.x[i];
         if (i == 0) {
             @branchHint(.unlikely);
-            return ziggurat.exp_r - @log(alea.Rng.floatFrom(engine, f64));
+            return ziggurat.exp_r - @log(alea.Rng.floatOpenFrom(engine, f64));
         }
         if (ziggurat.ExpDist.f[i + 1] + (ziggurat.ExpDist.f[i] - ziggurat.ExpDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x)) return x;
     }
@@ -329,7 +329,7 @@ fn tableBoundExponential(engine: *alea.ScalarPrng) f64 {
         }
         if (i == 0) {
             @branchHint(.unlikely);
-            return ziggurat.exp_r - @log(alea.Rng.floatFrom(engine, f64));
+            return ziggurat.exp_r - @log(alea.Rng.floatOpenFrom(engine, f64));
         }
         if (ziggurat.ExpDist.f[i + 1] + (ziggurat.ExpDist.f[i] - ziggurat.ExpDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x)) return x;
     }
@@ -350,7 +350,7 @@ fn thresholdExponential(engine: *alea.ScalarPrng) f64 {
         const x = u * ziggurat.ExpDist.x[i];
         if (i == 0) {
             @branchHint(.unlikely);
-            return ziggurat.exp_r - @log(alea.Rng.floatFrom(engine, f64));
+            return ziggurat.exp_r - @log(alea.Rng.floatOpenFrom(engine, f64));
         }
         if (ziggurat.ExpDist.f[i + 1] + (ziggurat.ExpDist.f[i] - ziggurat.ExpDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x)) return x;
     }
