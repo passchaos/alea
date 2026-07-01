@@ -311,6 +311,24 @@ test "invalid charset init does not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0xf4008d0537611435), engine.next());
 }
 
+test "invalid charset facade helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a5cc);
+    var control = alea.ScalarPrng.init(0x5150_a5cc);
+    const rng = alea.Rng.init(&engine);
+    const empty = Charset{ .bytes = "" };
+
+    try std.testing.expectError(error.EmptyCharset, empty.sampleChecked(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var buf: [4]u8 = undefined;
+    try std.testing.expectError(error.EmptyCharset, empty.fillChecked(rng, &buf));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyCharset, empty.allocChecked(std.testing.allocator, rng, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "zero-length string helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_a5c3);
