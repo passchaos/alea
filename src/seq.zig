@@ -1126,6 +1126,14 @@ test "empty checked weighted iterator choice does not consume random stream" {
     var bad_iter = BadWeightedIter{ .items = &bad_entries };
     try std.testing.expectError(error.InvalidWeight, chooseIteratorWeightedCheckedFrom(&engine, u8, &bad_iter));
     try std.testing.expectEqual(@as(u64, 0xfe72624376fb6a1e), engine.next());
+
+    const zero_entries = [_]Entry{
+        .{ .item = 1, .weight = 0 },
+        .{ .item = 2, .weight = 0 },
+    };
+    var zero_iter = BadWeightedIter{ .items = &zero_entries };
+    try std.testing.expectError(error.EmptyInput, chooseIteratorWeightedCheckedFrom(&engine, u8, &zero_iter));
+    try std.testing.expectEqual(@as(u64, 0x9c8af023645fd559), engine.next());
 }
 
 test "short checked iterator samples do not consume past source" {
