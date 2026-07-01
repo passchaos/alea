@@ -24,8 +24,8 @@ Latest `vectorbench` evidence is tracked in `performance-triage.md` and
 - Vector Box-Muller normal kernels are too slow for default use.
 - Vector-log exponential kernels are too slow for default use.
 - f64x4 ziggurat fast-path plus scalar repair loses to scalar lane-fill.
-- f32x8 repair probes are promising in isolated `ziggurat-probe` rows, but
-  the advantage does not survive the real vector-slice fill harness:
+- f32x8 repair probes are useful evidence in isolated `ziggurat-probe` rows,
+  but the advantage does not survive the real vector-slice fill harness:
   standard repair rows match but do not beat the current direct rows, and
   parameterized repair rows trail the current parameterized defaults.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
