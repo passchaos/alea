@@ -3427,6 +3427,7 @@ pub fn fillMaxwellChecked(rng: Rng, comptime T: type, dest: []T, scale: T) Error
 }
 
 pub fn fillMaxwellCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Maxwell(T).init(scale);
     sampler.fillFrom(source, dest);
 }
@@ -3502,6 +3503,7 @@ pub fn fillParetoChecked(rng: Rng, comptime T: type, dest: []T, scale: T, shape:
 }
 
 pub fn fillParetoCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Pareto(T).init(scale, shape);
     sampler.fillFrom(source, dest);
 }
@@ -3579,6 +3581,7 @@ pub fn fillWeibullChecked(rng: Rng, comptime T: type, dest: []T, scale: T, shape
 }
 
 pub fn fillWeibullCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Weibull(T).init(scale, shape);
     sampler.fillFrom(source, dest);
 }
@@ -3651,6 +3654,7 @@ pub fn fillGumbelChecked(rng: Rng, comptime T: type, dest: []T, location: T, sca
 }
 
 pub fn fillGumbelCheckedFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Gumbel(T).init(location, scale);
     sampler.fillFrom(source, dest);
 }
@@ -3728,6 +3732,7 @@ pub fn fillFrechetChecked(rng: Rng, comptime T: type, dest: []T, location: T, sc
 }
 
 pub fn fillFrechetCheckedFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Frechet(T).init(location, scale, shape);
     sampler.fillFrom(source, dest);
 }
@@ -4416,6 +4421,7 @@ pub fn fillInverseGaussianChecked(rng: Rng, comptime T: type, dest: []T, mean: T
 }
 
 pub fn fillInverseGaussianCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try InverseGaussian(T).init(mean, shape);
     sampler.fillFrom(source, dest);
 }
@@ -4500,6 +4506,7 @@ pub fn fillNormalInverseGaussianChecked(rng: Rng, comptime T: type, dest: []T, a
 }
 
 pub fn fillNormalInverseGaussianCheckedFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try NormalInverseGaussian(T).init(alpha, beta_param);
     sampler.fillFrom(source, dest);
 }
@@ -4585,6 +4592,7 @@ pub fn fillZipfChecked(rng: Rng, comptime T: type, dest: []T, n: T, exponent: T)
 }
 
 pub fn fillZipfCheckedFrom(source: anytype, comptime T: type, dest: []T, n: T, exponent: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Zipf(T).init(n, exponent);
     sampler.fillFrom(source, dest);
 }
@@ -4684,6 +4692,7 @@ pub fn fillZetaChecked(rng: Rng, comptime T: type, dest: []T, exponent: T) Error
 }
 
 pub fn fillZetaCheckedFrom(source: anytype, comptime T: type, dest: []T, exponent: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Zeta(T).init(exponent);
     sampler.fillFrom(source, dest);
 }
@@ -6382,6 +6391,44 @@ test "invalid checked distribution helpers do not consume random stream" {
     defer int_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &u64_buf));
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
+}
+
+test "zero-length inverse and zeta distribution fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1da);
+    var control = alea.ScalarPrng.init(0x5150_d1da);
+    const rng = Rng.init(&engine);
+
+    var out: [0]f64 = .{};
+
+    try fillMaxwellCheckedFrom(&engine, f64, &out, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillParetoCheckedFrom(&engine, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillWeibullCheckedFrom(&engine, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillGumbelCheckedFrom(&engine, f64, &out, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillFrechetCheckedFrom(&engine, f64, &out, 0, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillInverseGaussianCheckedFrom(&engine, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillNormalInverseGaussianCheckedFrom(&engine, f64, &out, 1, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillZipfCheckedFrom(&engine, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillZetaCheckedFrom(&engine, f64, &out, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillParetoChecked(rng, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillInverseGaussianChecked(rng, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillZetaChecked(rng, f64, &out, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one: [1]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillParetoCheckedFrom(&engine, f64, &one, 0, 1));
 }
 
 test "zero-length tail distribution fills do not validate or consume random stream" {
