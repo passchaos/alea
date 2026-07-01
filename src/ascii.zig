@@ -377,6 +377,10 @@ test "unicode utf8 output buffer validation does not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_a5c9);
     var control = alea.ScalarPrng.init(0x5150_a5c9);
 
+    var tiny: [0]u8 = .{};
+    try std.testing.expectError(error.OutOfMemory, unicodeUtf8IntoFrom(&engine, &tiny, std.math.maxInt(usize)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var short: [7]u8 = undefined;
     try std.testing.expectError(error.NoSpaceLeft, unicodeUtf8IntoFrom(&engine, &short, 2));
     try std.testing.expectEqual(control.next(), engine.next());
