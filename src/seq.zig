@@ -209,6 +209,14 @@ pub fn chooseIterator(rng: Rng, comptime T: type, iterator: anytype) ?T {
     return chooseIteratorFrom(rng, T, iterator);
 }
 
+pub fn chooseIteratorChecked(rng: Rng, comptime T: type, iterator: anytype) Error!T {
+    return chooseIteratorCheckedFrom(rng, T, iterator);
+}
+
+pub fn chooseIteratorCheckedFrom(source: anytype, comptime T: type, iterator: anytype) Error!T {
+    return chooseIteratorFrom(source, T, iterator) orelse error.EmptyInput;
+}
+
 pub fn chooseIteratorFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
     var seen: usize = 0;
     var result: ?T = null;
@@ -1324,6 +1332,10 @@ test "iterator sampling works without collecting first" {
     const direct_chosen = chooseIteratorFrom(&engine, u32, &direct_choose_iter).?;
     try std.testing.expect(direct_chosen < 100);
 
+    var checked_choose_iter = RangeIter{ .next_value = 0, .end = 100 };
+    const checked_chosen = try chooseIteratorCheckedFrom(&engine, u32, &checked_choose_iter);
+    try std.testing.expect(checked_chosen < 100);
+
     var sample_iter = RangeIter{ .next_value = 0, .end = 100 };
     const sample = try sampleIterator(std.testing.allocator, rng, u32, &sample_iter, 8);
     defer std.testing.allocator.free(sample);
@@ -1339,6 +1351,9 @@ test "iterator sampling works without collecting first" {
     const short = try sampleIterator(std.testing.allocator, rng, u32, &short_iter, 8);
     defer std.testing.allocator.free(short);
     try std.testing.expectEqual(@as(usize, 3), short.len);
+
+    var empty_checked_iter = RangeIter{ .next_value = 0, .end = 0 };
+    try std.testing.expectError(error.EmptyInput, chooseIteratorCheckedFrom(&engine, u32, &empty_checked_iter));
 }
 
 test "weighted iterator choice works without collecting first" {

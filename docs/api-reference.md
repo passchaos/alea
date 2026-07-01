@@ -638,8 +638,8 @@ Dynamic weighted helpers:
   `partialShuffleFrom`, `partialShuffleChecked`, `partialShuffleCheckedFrom`,
   `reservoirSample`, `reservoirSampleFrom`, `reservoirSampleChecked`,
   `reservoirSampleCheckedFrom`
-- Iterators: `chooseIterator`, `chooseIteratorFrom`, `sampleIterator`,
-  `sampleIteratorFrom`, `chooseIteratorWeighted`,
+- Iterators: `chooseIterator`, `chooseIteratorFrom`, `chooseIteratorChecked`,
+  `chooseIteratorCheckedFrom`, `sampleIterator`, `sampleIteratorFrom`, `chooseIteratorWeighted`,
   `chooseIteratorWeightedFrom`, `sampleIteratorWeighted`,
   `sampleIteratorWeightedFrom`
 - Reusable samplers: `Choice(T)`, `chooseIter`, `chooseIterFrom`,
