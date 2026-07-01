@@ -1110,6 +1110,12 @@ test "invalid checked weighted sample counts do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2, 3 }, &.{ 0, 5, 0 }, 2));
     try std.testing.expectEqual(@as(u64, 0x5862e0f61b2d9eea), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, u32, &.{ 0, 0, 0 }, 1));
+    try std.testing.expectEqual(@as(u64, 0xc859aaa7f585bb63), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2, 3 }, &.{ 0, 0, 0 }, 1));
+    try std.testing.expectEqual(@as(u64, 0x2fe6d69480ac1690), engine.next());
 }
 
 test "empty checked weighted iterator choice does not consume random stream" {
