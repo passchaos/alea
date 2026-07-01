@@ -408,12 +408,15 @@ Reusable samplers:
 - `Beta(T).fillFrom`
 - `FisherF(T)`
 - `FisherF(T).init`
+- `FisherF(T).d1Value`
+- `FisherF(T).d2Value`
 - `FisherF(T).sample`
 - `FisherF(T).sampleFrom`
 - `FisherF(T).fill`
 - `FisherF(T).fillFrom`
 - `StudentT(T)`
 - `StudentT(T).init`
+- `StudentT(T).dofValue`
 - `StudentT(T).sample`
 - `StudentT(T).sampleFrom`
 - `StudentT(T).fill`

@@ -2549,6 +2549,14 @@ pub fn FisherF(comptime T: type) type {
             };
         }
 
+        pub fn d1Value(self: Self) T {
+            return self.d1;
+        }
+
+        pub fn d2Value(self: Self) T {
+            return self.d2;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -2619,6 +2627,10 @@ pub fn StudentT(comptime T: type) type {
                 .dof = dof,
                 .chi_squared_sampler = try ChiSquared(T).init(dof),
             };
+        }
+
+        pub fn dofValue(self: Self) T {
+            return self.dof;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -7772,6 +7784,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_fisher_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expectError(error.InvalidParameter, fillFisherFCheckedFrom(&direct_engine, f64, &direct_fisher_buf, 0, 20));
     const fisher_sampler = try FisherF(f64).init(5, 20);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), fisher_sampler.d1Value(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 20), fisher_sampler.d2Value(), 1e-12);
     fisher_sampler.fillFrom(&direct_engine, &direct_fisher_buf);
     for (direct_fisher_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try fisherFCheckedFrom(&direct_engine, f64, 5, 20) > 0);
@@ -7794,6 +7808,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_student_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expectError(error.InvalidParameter, fillStudentTCheckedFrom(&direct_engine, f64, &direct_student_buf, 0));
     const student_sampler = try StudentT(f64).init(10);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), student_sampler.dofValue(), 1e-12);
     student_sampler.fillFrom(&direct_engine, &direct_student_buf);
     for (direct_student_buf) |value| try std.testing.expect(std.math.isFinite(value));
 

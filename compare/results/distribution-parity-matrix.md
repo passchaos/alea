@@ -34,8 +34,8 @@ Zig-native way.
 | Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)`, including reusable-sampler rate accessors |
 | Gamma | Covered: `gamma`, `Gamma(T)`, including shape/scale accessors |
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof accessor |
-| FisherF | Covered: `fisherF`, `FisherF(T)` |
-| StudentT | Covered: `studentT`, `StudentT(T)` |
+| FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2 accessors |
+| StudentT | Covered: `studentT`, `StudentT(T)`, including dof accessor |
 | Gumbel | Covered: `gumbel`, `Gumbel(T)` |
 | Frechet | Covered: `frechet`, `Frechet(T)` |
 | SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter accessors |
