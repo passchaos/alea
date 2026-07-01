@@ -6029,6 +6029,9 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expect(empty_tree.isValid());
     try std.testing.expectApproxEqAbs(@as(f64, 6), empty_tree.totalWeight(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 6), try empty_tree.get(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 6), empty_tree.pop().?, 1e-12);
+    try std.testing.expect(empty_tree.isEmpty());
+    try std.testing.expect(!empty_tree.isValid());
 
     var single_tree = try WeightedTree(u32).init(std.testing.allocator, &.{4});
     defer single_tree.deinit();
@@ -6108,6 +6111,9 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expect(empty_tree.isValid());
     try std.testing.expectEqual(@as(u64, 6), empty_tree.totalWeight());
     try std.testing.expectEqual(@as(u64, 6), try empty_tree.get(0));
+    try std.testing.expectEqual(@as(u64, 6), empty_tree.pop().?);
+    try std.testing.expect(empty_tree.isEmpty());
+    try std.testing.expect(!empty_tree.isValid());
 
     var single_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{4});
     defer single_tree.deinit();
