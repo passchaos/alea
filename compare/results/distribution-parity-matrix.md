@@ -96,5 +96,5 @@ toolkit functionality and reduce reliance on companion crates:
   evidence or Alea's public distribution surface changes.
 - Continue expanding benchmark parity where new local Rust rows reveal concrete
   performance gaps; current follow-up is tracked in `performance-triage.md`.
-- Continue Zig-native vector/SIMD sampling after scalar functionality and
-  validation remain stable.
+- Continue Zig-native vector/SIMD sampling through the constraints in
+  `simd-distribution-kernel-notes.md`.
