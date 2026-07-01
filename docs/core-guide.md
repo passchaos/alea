@@ -125,7 +125,8 @@ Use:
 
 - `rng.choose`, `Rng.chooseFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`
 - `rng.shuffle`, `Rng.shuffleFrom`
-- `seq.partialShuffle`, `seq.partialShuffleFrom`
+- `seq.partialShuffle`, `seq.partialShuffleFrom`,
+  `seq.partialShuffleCheckedFrom`
 - `seq.reservoirSample`, `seq.reservoirSampleFrom`
 - `seq.sampleIndices`, `seq.sampleIndicesCheckedFrom`, `seq.sampleIndexVec`,
   `seq.sampleIndexVecCheckedFrom`, `seq.sampleIndicesU32`,
