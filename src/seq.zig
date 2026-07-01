@@ -1509,6 +1509,18 @@ test "short checked iterator samples do not consume past source" {
     try std.testing.expectEqual(@as(u64, 0x176d099d72bcd05c), engine.next());
 }
 
+test "zero-count partial shuffle does not mutate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7719);
+    var control = alea.ScalarPrng.init(0x5150_7719);
+
+    var items = [_]u8{ 1, 2, 3, 4 };
+    const head = try partialShuffleCheckedFrom(&engine, u8, &items, 0);
+    try std.testing.expectEqual(@as(usize, 0), head.len);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, &items);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "zero-count checked sequence helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_7717);

@@ -191,6 +191,8 @@ Full reservoir iterator samples return their exact-capacity buffer without a
 post-sampling ownership allocation.
 Checked index-vector, choose-multiple, and reservoir helpers follow the same
 zero-count no-draw policy.
+Zero-count partial shuffles are no-ops: they return an empty head without
+mutating the input slice or drawing.
 Allocation failures while preparing the sample-without-replacement temporary
 pool/output also return before drawing.
 Successful sample-without-replacement calls return their exact-capacity output
