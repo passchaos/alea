@@ -632,7 +632,8 @@ Dynamic weighted helpers:
   `sampleIndicesU32`, `sampleIndicesU32From`, `sampleIndicesU32CheckedFrom`,
   `sampleArray`, `sampleArrayFrom`, `sampleArrayChecked`,
   `sampleArrayCheckedFrom`
-- Collections: `chooseMultiple`, `chooseMultipleFrom`, `partialShuffle`,
+- Collections: `chooseMultiple`, `chooseMultipleFrom`,
+  `chooseMultipleChecked`, `chooseMultipleCheckedFrom`, `partialShuffle`,
   `partialShuffleFrom`, `reservoirSample`, `reservoirSampleFrom`
 - Iterators: `chooseIterator`, `chooseIteratorFrom`, `sampleIterator`,
   `sampleIteratorFrom`, `chooseIteratorWeighted`,
