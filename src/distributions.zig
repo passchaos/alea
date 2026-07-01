@@ -5087,7 +5087,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             errdefer subtotals.deinit(allocator);
 
             for (weights) |weight| try subtotals.append(allocator, @intCast(weight));
-            buildSubtotals(subtotals.items);
+            try buildSubtotals(subtotals.items);
 
             return .{ .subtotals = subtotals, .allocator = allocator };
         }
@@ -5101,13 +5101,49 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return self.subtotals.items.len;
         }
 
+        pub fn isEmpty(self: Self) bool {
+            return self.len() == 0;
+        }
+
         pub fn totalWeight(self: Self) u64 {
             return if (self.subtotals.items.len == 0) 0 else self.subtotals.items[0];
+        }
+
+        pub fn isValid(self: Self) bool {
+            return self.totalWeight() > 0;
         }
 
         pub fn get(self: Self, index: usize) Error!u64 {
             if (index >= self.subtotals.items.len) return error.InvalidParameter;
             return self.subtotals.items[index] - self.subtotal(2 * index + 1) - self.subtotal(2 * index + 2);
+        }
+
+        pub fn push(self: *Self, weight: Weight) !void {
+            const value: u64 = @intCast(weight);
+            const next_total = std.math.add(u64, self.totalWeight(), value) catch return error.InvalidWeight;
+
+            try self.subtotals.append(self.allocator, value);
+            var index = self.subtotals.items.len - 1;
+            while (index != 0) {
+                index = (index - 1) / 2;
+                self.subtotals.items[index] += value;
+            }
+            std.debug.assert(self.totalWeight() == next_total);
+        }
+
+        pub fn pop(self: *Self) ?u64 {
+            if (self.subtotals.items.len == 0) return null;
+
+            const index = self.subtotals.items.len - 1;
+            const weight = self.get(index) catch unreachable;
+            _ = self.subtotals.pop();
+
+            var parent_index = index;
+            while (parent_index != 0) {
+                parent_index = (parent_index - 1) / 2;
+                self.subtotals.items[parent_index] -= weight;
+            }
+            return weight;
         }
 
         pub fn update(self: *Self, index: usize, weight: Weight) !void {
@@ -5116,6 +5152,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             const old = try self.get(index);
             if (value >= old) {
                 const delta = value - old;
+                _ = std.math.add(u64, self.totalWeight(), delta) catch return error.InvalidWeight;
                 var cursor = index;
                 while (true) {
                     self.subtotals.items[cursor] += delta;
@@ -5199,11 +5236,12 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return if (index < self.subtotals.items.len) self.subtotals.items[index] else 0;
         }
 
-        fn buildSubtotals(subtotals: []u64) void {
+        fn buildSubtotals(subtotals: []u64) Error!void {
             var i = subtotals.len;
             while (i > 1) {
                 i -= 1;
-                subtotals[(i - 1) / 2] += subtotals[i];
+                const parent = (i - 1) / 2;
+                subtotals[parent] = std.math.add(u64, subtotals[parent], subtotals[i]) catch return error.InvalidWeight;
             }
         }
     };
@@ -5982,6 +6020,8 @@ test "weighted int tree supports dynamic updates" {
     defer tree.deinit();
 
     try std.testing.expectEqual(@as(usize, 3), tree.len());
+    try std.testing.expect(!tree.isEmpty());
+    try std.testing.expect(tree.isValid());
     try std.testing.expectEqual(@as(u64, 10), tree.totalWeight());
     try std.testing.expectEqual(@as(u64, 9), try tree.get(0));
     try std.testing.expectEqual(@as(u64, 1), try tree.get(1));
@@ -5989,17 +6029,50 @@ test "weighted int tree supports dynamic updates" {
 
     try tree.update(0, 0);
     try tree.update(1, 0);
+    try std.testing.expect(!tree.isValid());
     try std.testing.expectError(error.InvalidWeight, tree.sampleChecked(rng));
 
-    try tree.update(2, 5);
+    try tree.push(5);
+    try std.testing.expectEqual(@as(usize, 4), tree.len());
+    try std.testing.expectEqual(@as(u64, 5), tree.totalWeight());
+    try std.testing.expectEqual(@as(u64, 5), try tree.get(3));
     var i: usize = 0;
-    while (i < 16) : (i += 1) try std.testing.expectEqual(@as(usize, 2), tree.sampleFrom(&engine));
-    try std.testing.expectEqual(@as(usize, 2), try tree.sampleCheckedFrom(&engine));
+    while (i < 16) : (i += 1) try std.testing.expectEqual(@as(usize, 3), tree.sampleFrom(&engine));
+    try std.testing.expectEqual(@as(usize, 3), try tree.sampleCheckedFrom(&engine));
     var tree_buf: [8]usize = undefined;
     try tree.fillCheckedFrom(&engine, &tree_buf);
-    for (tree_buf) |index| try std.testing.expectEqual(@as(usize, 2), index);
+    for (tree_buf) |index| try std.testing.expectEqual(@as(usize, 3), index);
+
+    try tree.update(2, 5);
+    try std.testing.expectEqual(@as(u64, 10), tree.totalWeight());
+    const popped = tree.pop().?;
+    try std.testing.expectEqual(@as(u64, 5), popped);
+    try std.testing.expectEqual(@as(usize, 3), tree.len());
+    try std.testing.expectEqual(@as(u64, 5), tree.totalWeight());
+    try std.testing.expectEqual(@as(usize, 2), tree.sample(rng));
 
     try std.testing.expectError(error.InvalidParameter, tree.update(9, 1));
+
+    var empty_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{});
+    defer empty_tree.deinit();
+    try std.testing.expect(empty_tree.isEmpty());
+    try std.testing.expect(!empty_tree.isValid());
+    try std.testing.expectEqual(@as(?u64, null), empty_tree.pop());
+
+    var overflow_tree = try WeightedIntTree(u64).init(std.testing.allocator, &.{std.math.maxInt(u64)});
+    defer overflow_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, overflow_tree.push(1));
+    try std.testing.expectEqual(@as(u64, std.math.maxInt(u64)), overflow_tree.totalWeight());
+
+    var update_overflow_tree = try WeightedIntTree(u64).init(std.testing.allocator, &.{ std.math.maxInt(u64), 0 });
+    defer update_overflow_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, update_overflow_tree.update(1, 1));
+    try std.testing.expectEqual(@as(u64, std.math.maxInt(u64)), update_overflow_tree.totalWeight());
+
+    try std.testing.expectError(error.InvalidWeight, WeightedIntTree(u64).init(std.testing.allocator, &.{
+        std.math.maxInt(u64),
+        1,
+    }));
 }
 
 test "weighted reusable samplers preserve direct stream shape" {

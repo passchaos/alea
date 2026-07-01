@@ -606,6 +606,9 @@ Dynamic weighted helpers:
   update/sample throughput is the priority.
 - `WeightedIntTree.init`
 - `WeightedIntTree.len`
+- `WeightedIntTree.isEmpty`
+- `WeightedIntTree.push`
+- `WeightedIntTree.pop`
 - `WeightedIntTree.update`
 - `WeightedIntTree.get`
 - `WeightedIntTree.sample`
@@ -617,6 +620,7 @@ Dynamic weighted helpers:
 - `WeightedIntTree.fillFrom`
 - `WeightedIntTree.fillCheckedFrom`
 - `WeightedIntTree.totalWeight`
+- `WeightedIntTree.isValid`
 - `WeightedIntTree.deinit`
 
 ## Sequence Sampling
