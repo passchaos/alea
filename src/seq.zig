@@ -1406,6 +1406,18 @@ test "weighted choice update rejects invalid float weights without replacing tab
     for (out) |value| try std.testing.expectEqual(@as(u8, 3), value);
 }
 
+test "weighted choice length mismatch update does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_0448);
+
+    const items = [_]u8{ 1, 2, 3 };
+    var choice = try WeightedChoice(u8, u32).init(std.testing.allocator, &items, &.{ 0, 0, 1 });
+    defer choice.deinit();
+
+    try std.testing.expectError(error.LengthMismatch, choice.update(&.{ 1, 2 }));
+    try std.testing.expectEqual(@as(u64, 0x591a834aea6177d9), engine.next());
+}
+
 test "weighted sampling without replacement returns distinct positive-weight items" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(447);
