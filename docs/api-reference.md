@@ -640,7 +640,8 @@ Dynamic weighted helpers:
   `reservoirSample`, `reservoirSampleFrom`, `reservoirSampleChecked`,
   `reservoirSampleCheckedFrom`
 - Iterators: `chooseIterator`, `chooseIteratorFrom`, `chooseIteratorChecked`,
-  `chooseIteratorCheckedFrom`, `sampleIterator`, `sampleIteratorFrom`, `chooseIteratorWeighted`,
+  `chooseIteratorCheckedFrom`, `sampleIterator`, `sampleIteratorFrom`,
+  `sampleIteratorChecked`, `sampleIteratorCheckedFrom`, `chooseIteratorWeighted`,
   `chooseIteratorWeightedFrom`, `chooseIteratorWeightedChecked`,
   `chooseIteratorWeightedCheckedFrom`, `sampleIteratorWeighted`,
   `sampleIteratorWeightedFrom`

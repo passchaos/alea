@@ -235,6 +235,17 @@ pub fn sampleIterator(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
     return sampleIteratorFrom(allocator, rng, T, iterator, amount);
 }
 
+pub fn sampleIteratorChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, iterator: anytype, amount: usize) ![]T {
+    return sampleIteratorCheckedFrom(allocator, rng, T, iterator, amount);
+}
+
+pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
+    const out = try sampleIteratorFrom(allocator, source, T, iterator, amount);
+    errdefer allocator.free(out);
+    if (out.len != amount) return error.InvalidParameter;
+    return out;
+}
+
 pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     var reservoir = try std.ArrayList(T).initCapacity(allocator, amount);
     errdefer reservoir.deinit(allocator);
@@ -1390,11 +1401,18 @@ test "iterator sampling works without collecting first" {
     defer std.testing.allocator.free(direct_sample);
     try std.testing.expectEqual(@as(usize, 8), direct_sample.len);
     for (direct_sample) |item| try std.testing.expect(item < 100);
+    var checked_sample_iter = RangeIter{ .next_value = 0, .end = 100 };
+    const checked_sample = try sampleIteratorCheckedFrom(std.testing.allocator, &engine, u32, &checked_sample_iter, 8);
+    defer std.testing.allocator.free(checked_sample);
+    try std.testing.expectEqual(@as(usize, 8), checked_sample.len);
+    for (checked_sample) |item| try std.testing.expect(item < 100);
 
     var short_iter = RangeIter{ .next_value = 0, .end = 3 };
     const short = try sampleIterator(std.testing.allocator, rng, u32, &short_iter, 8);
     defer std.testing.allocator.free(short);
     try std.testing.expectEqual(@as(usize, 3), short.len);
+    var short_checked_iter = RangeIter{ .next_value = 0, .end = 3 };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorCheckedFrom(std.testing.allocator, &engine, u32, &short_checked_iter, 8));
 
     var empty_checked_iter = RangeIter{ .next_value = 0, .end = 0 };
     try std.testing.expectError(error.EmptyInput, chooseIteratorCheckedFrom(&engine, u32, &empty_checked_iter));
@@ -1523,6 +1541,15 @@ test "iterator sampling preserves direct stream shape" {
         const direct_sample = try sampleIteratorFrom(std.testing.allocator, &direct_engine, u32, &direct_sample_iter, 8);
         defer std.testing.allocator.free(direct_sample);
         try std.testing.expectEqualSlices(u32, sample, direct_sample);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_sample_iter = RangeIter{ .next_value = 0, .end = 100 };
+        var direct_checked_sample_iter = RangeIter{ .next_value = 0, .end = 100 };
+        const checked_sample = try sampleIteratorChecked(std.testing.allocator, rng, u32, &checked_sample_iter, 8);
+        defer std.testing.allocator.free(checked_sample);
+        const direct_checked_sample = try sampleIteratorCheckedFrom(std.testing.allocator, &direct_engine, u32, &direct_checked_sample_iter, 8);
+        defer std.testing.allocator.free(direct_checked_sample);
+        try std.testing.expectEqualSlices(u32, checked_sample, direct_checked_sample);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         var weighted_iter = WeightedIter{ .items = &entries };

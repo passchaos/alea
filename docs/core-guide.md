@@ -138,7 +138,8 @@ Use:
 - `seq.chooseMultiple`, `seq.chooseMultipleFrom`,
   `seq.chooseMultipleCheckedFrom`
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`,
-  `seq.chooseIteratorCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`
+  `seq.chooseIteratorCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`,
+  `seq.sampleIteratorCheckedFrom`
 - `seq.chooseIteratorWeighted`, `seq.chooseIteratorWeightedFrom`,
   `seq.chooseIteratorWeightedCheckedFrom`, `seq.sampleIteratorWeighted`,
   `seq.sampleIteratorWeightedFrom`
