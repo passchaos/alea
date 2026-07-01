@@ -16,9 +16,22 @@ pub fn main(init: std.process.Init) !void {
     try checkInverseAndRank();
     try checkBoundedSupport();
     try checkVectorDistributions();
+    try checkConstructorErgonomics();
 
     try stdout.print("distcheck ok\n", .{});
     try stdout.flush();
+}
+
+fn checkConstructorErgonomics() !void {
+    var engine = alea.FastPrng.init(0xc057);
+    const rng = alea.Rng.init(&engine);
+
+    try expectContinuousMean("log-normal-mean-cv", rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            var dist = alea.distributions.LogNormal(f64).initMeanCv(2, 0.5) catch unreachable;
+            return dist.sample(r);
+        }
+    }.sample, 1.95, 2.05);
 }
 
 fn checkBernoulli() !void {
