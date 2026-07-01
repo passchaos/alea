@@ -199,10 +199,18 @@ test "ascii helpers preserve direct stream shape" {
         try std.testing.expectEqual(Alphanumeric.sample(rng), Alphanumeric.sampleFrom(&direct_engine));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+        try std.testing.expectEqual(try Alphanumeric.sampleChecked(rng), try Alphanumeric.sampleCheckedFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         var facade_buf: [32]u8 = undefined;
         var direct_buf: [32]u8 = undefined;
         Alphanumeric.fill(rng, &facade_buf);
         Alphanumeric.fillFrom(&direct_engine, &direct_buf);
+        try std.testing.expectEqualSlices(u8, &facade_buf, &direct_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try Alphanumeric.fillChecked(rng, &facade_buf);
+        try Alphanumeric.fillCheckedFrom(&direct_engine, &direct_buf);
         try std.testing.expectEqualSlices(u8, &facade_buf, &direct_buf);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
@@ -211,6 +219,13 @@ test "ascii helpers preserve direct stream shape" {
         const direct_alloc = try Alphanumeric.allocFrom(std.testing.allocator, &direct_engine, 32);
         defer std.testing.allocator.free(direct_alloc);
         try std.testing.expectEqualSlices(u8, facade_alloc, direct_alloc);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_alloc = try Alphanumeric.allocChecked(std.testing.allocator, rng, 32);
+        defer std.testing.allocator.free(facade_checked_alloc);
+        const direct_checked_alloc = try Alphanumeric.allocCheckedFrom(std.testing.allocator, &direct_engine, 32);
+        defer std.testing.allocator.free(direct_checked_alloc);
+        try std.testing.expectEqualSlices(u8, facade_checked_alloc, direct_checked_alloc);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         try std.testing.expectEqual(char(rng), charFrom(&direct_engine));
