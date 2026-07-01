@@ -101,6 +101,15 @@ pub fn value(self: Rng, comptime T: type) T {
     return valueFrom(self, T);
 }
 
+pub fn valueChecked(self: Rng, comptime T: type) Error!T {
+    return valueCheckedFrom(self, T);
+}
+
+pub fn valueCheckedFrom(source: anytype, comptime T: type) Error!T {
+    if (comptime isEmptyEnum(T)) return error.EmptyRange;
+    return valueFrom(source, T);
+}
+
 pub fn valueFrom(source: anytype, comptime T: type) T {
     return switch (@typeInfo(T)) {
         .bool => booleanFrom(source),
@@ -125,6 +134,10 @@ pub fn valueFrom(source: anytype, comptime T: type) T {
         },
         else => @compileError("alea.Rng.value does not support " ++ @typeName(T)),
     };
+}
+
+fn isEmptyEnum(comptime T: type) bool {
+    return @typeInfo(T) == .@"enum" and std.enums.values(T).len == 0;
 }
 
 pub fn valueIter(self: Rng, comptime T: type) ValueIterator(T) {
@@ -2692,7 +2705,6 @@ test "value and vector sampling have stable snapshots" {
     try std.testing.expectEqual(@as(u8, 91), tuple[0]);
     try std.testing.expectEqual(false, tuple[1]);
     try std.testing.expectEqual(@as(f32, 0.531989630), tuple[2]);
-
     try std.testing.expectEqual(@Vector(4, u16){ 56793, 19911, 15026, 53670 }, rng.vector(@Vector(4, u16)));
     try std.testing.expectEqual(@Vector(4, f32){ 0.5746226, 0.1789791, 0.014100373, 0.23528028 }, rng.vector(@Vector(4, f32)));
     try std.testing.expectEqual(@Vector(4, f32){ 0.6079088, 0.5205912, 0.8753759, 0.03263837 }, rng.vectorOpen(@Vector(4, f32)));
@@ -2929,20 +2941,27 @@ test "invalid checked helpers do not consume random stream" {
     }
     try std.testing.expectEqual(@as(u64, 0xd3ab62c69321f758), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
+    if (valueCheckedFrom(&engine, EmptyEnum)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     try std.testing.expectEqual(@as(u64, 0x1832e3ae643b1913), engine.next());
 
-    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{}));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectEqual(@as(u64, 0x1e449ba06e4ee306), engine.next());
 
-    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{ 0.0, 0.0 }));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{}));
     try std.testing.expectEqual(@as(u64, 0xa05fd0d145ac28f5), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{ 0.0, 0.0 }));
     try std.testing.expectEqual(@as(u64, 0x709790abbb828191), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
     try std.testing.expectEqual(@as(u64, 0x3956218e7dd11342), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(u64, 0xdbf744335ced8b7d), engine.next());
 }
 
 test "collection helpers preserve direct stream shape" {
