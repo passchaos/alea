@@ -23,7 +23,7 @@ Only the Zig 0.16.0 x86_64 Linux toolchain is suitable for this project in the
 current environment. Zig can list cross-compilation targets, but S4-M1 requires
 executed snapshots, not merely cross-compiled artifacts.
 
-Checked runtime tools on 2026-06-28:
+Checked runtime tools on 2026-07-01:
 
 ```text
 qemu-aarch64: missing
@@ -45,7 +45,10 @@ compare/results/2026-06-28-repro-x86_64-linux.md
 ```
 
 The x86_64 Linux snapshot was re-run during S4-M1 review and still matches the
-checked-in baseline.
+checked-in baseline. It was rechecked again on 2026-07-01 with `zig build repro`,
+`zig build test`, and `zig build -Doptimize=ReleaseFast statcheck`; all passed
+on the local x86_64 Linux Zig 0.16.0 toolchain, while no second-platform runtime
+was available.
 
 ## Follow-Up
 
