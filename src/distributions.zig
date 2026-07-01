@@ -6443,6 +6443,25 @@ test "invalid checked distribution helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
 }
 
+test "invalid discrete distribution helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1f4);
+    var control = alea.ScalarPrng.init(0x5150_d1f4);
+
+    try std.testing.expectError(error.InvalidProbability, negativeBinomialCheckedFrom(&engine, 5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, geometricFailuresCheckedFrom(&engine, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, geometricCheckedFrom(&engine, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var buf: [4]u64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillHypergeometricCheckedFrom(&engine, &buf, 10, 11, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid probability distribution fills do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1f3);
