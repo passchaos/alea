@@ -104,7 +104,9 @@ and `Multinomial` support allocation-returning `sample(allocator, rng)` /
 `sampleFrom(allocator, source)` and allocation-free `sampleInto(rng, out)` /
 `sampleIntoFrom(source, out)` and flat `sampleManyInto` / `sampleManyIntoFrom`
 batch APIs; both also expose checked `sampleInto*` / `sampleManyInto*` variants
-for user-supplied output buffers. Unit geometry samplers also
+for user-supplied output buffers. `Normal(T).initMeanCv` and
+`LogNormal(T).initMeanCv` cover coefficient-of-variation parameterization
+without requiring users to hand-convert to log-space parameters. Unit geometry samplers also
 expose `fill` / `fillFrom`, and the module-level `fillUnitCircle`,
 `fillUnitDisc`, `fillUnitSphere`, and `fillUnitBall` helpers fill slices of
 fixed-size point arrays.

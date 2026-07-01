@@ -1218,6 +1218,12 @@ pub fn Normal(comptime T: type) type {
             return .{ .mean = mean, .stddev = stddev };
         }
 
+        pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
+            comptime requireFloat(T);
+            if (!(coefficient_of_variation >= 0) or !std.math.isFinite(coefficient_of_variation)) return error.InvalidParameter;
+            return Self.init(mean, @abs(mean) * coefficient_of_variation);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return rng.normal(T, self.mean, self.stddev);
         }
@@ -1333,6 +1339,24 @@ pub fn LogNormal(comptime T: type) type {
 
         pub fn init(mean: T, stddev: T) Error!Self {
             return .{ .normal_sampler = try Normal(T).init(mean, stddev) };
+        }
+
+        pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
+            comptime requireFloat(T);
+            if (coefficient_of_variation == 0) {
+                if (mean == 0) {
+                    return .{ .normal_sampler = .{ .mean = -std.math.inf(T), .stddev = 0 } };
+                }
+                if (!(mean > 0) or !std.math.isFinite(mean)) return error.InvalidParameter;
+                return .{ .normal_sampler = try Normal(T).init(@log(mean), 0) };
+            }
+            if (!(mean > 0) or !std.math.isFinite(mean)) return error.InvalidParameter;
+            if (!(coefficient_of_variation >= 0) or !std.math.isFinite(coefficient_of_variation)) return error.InvalidParameter;
+
+            const variance_ratio = coefficient_of_variation * coefficient_of_variation;
+            const stddev = @sqrt(std.math.log1p(variance_ratio));
+            const log_mean = @log(mean) - 0.5 * stddev * stddev;
+            return .{ .normal_sampler = try Normal(T).init(log_mean, stddev) };
         }
 
         pub fn sample(self: *Self, rng: Rng) T {
@@ -6049,6 +6073,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_normal_buf: [8]f64 = undefined;
     normal_sampler.fillFrom(&direct_engine, &direct_normal_buf);
     for (direct_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    const normal_cv_sampler = try Normal(f64).initMeanCv(-10, 0.2);
+    try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.mean, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), normal_cv_sampler.stddev, 1e-15);
 
     var exponentials = rng.sampleIter(f64, try Exponential(f64).init(2));
     try std.testing.expect(exponentials.next().? >= 0);
@@ -6097,6 +6124,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, fillLogNormalCheckedFrom(&direct_engine, f64, &direct_log_normal_buf, 0, -1));
     var log_normal_sampler = try LogNormal(f64).init(0, 0.25);
     log_normal_sampler.fillFrom(&direct_engine, &direct_log_normal_buf);
+    for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
+    const log_normal_zero_cv_sampler = try LogNormal(f64).initMeanCv(0, 0);
+    try std.testing.expect(std.math.isNegativeInf(log_normal_zero_cv_sampler.normal_sampler.mean));
+    var log_normal_mean_cv_sampler = try LogNormal(f64).initMeanCv(2, 0.5);
+    log_normal_mean_cv_sampler.fillFrom(&direct_engine, &direct_log_normal_buf);
     for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try logNormalCheckedFrom(&direct_engine, f64, 0, 0.25) > 0);
     try std.testing.expectError(error.InvalidParameter, logNormalCheckedFrom(&direct_engine, f64, 0, -1));
@@ -6772,8 +6804,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), unit_sphere[0] * unit_sphere[0] + unit_sphere[1] * unit_sphere[1] + unit_sphere[2] * unit_sphere[2], 1e-12);
 
     try std.testing.expectError(error.InvalidParameter, Normal(f64).init(0, -1));
+    try std.testing.expectError(error.InvalidParameter, Normal(f64).initMeanCv(0, -1));
     try std.testing.expectError(error.InvalidParameter, Exponential(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).init(0, -1));
+    try std.testing.expectError(error.InvalidParameter, LogNormal(f64).initMeanCv(-1, 0.5));
+    try std.testing.expectError(error.InvalidParameter, LogNormal(f64).initMeanCv(1, -0.5));
     try std.testing.expectError(error.InvalidParameter, HalfNormal(f64).init(0));
     try std.testing.expectError(error.EmptyRange, Uniform(f64).init(std.math.inf(f64), 1));
     try std.testing.expectError(error.EmptyRange, Uniform(f64).initInclusive(0, std.math.inf(f64)));
