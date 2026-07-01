@@ -400,6 +400,8 @@ Reusable samplers:
 - `Erlang(T).fillFrom`
 - `Beta(T)`
 - `Beta(T).init`
+- `Beta(T).alphaValue`
+- `Beta(T).betaValue`
 - `Beta(T).sample`
 - `Beta(T).sampleFrom`
 - `Beta(T).fill`

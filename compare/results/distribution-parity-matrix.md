@@ -61,7 +61,7 @@ toolkit functionality and reduce reliance on companion crates:
 
 | Alea distribution | Status |
 | --- | --- |
-| Beta | Covered: `beta`, `Beta(T)` |
+| Beta | Covered: `beta`, `Beta(T)`, including alpha/beta accessors |
 | Triangular | Covered: `triangular`, `Triangular(T)` |
 | Arcsine | Covered: `arcsine`, `Arcsine(T)` |
 | Cauchy | Covered: `cauchy`, `Cauchy(T)` |
