@@ -3024,6 +3024,33 @@ test "value and sampler iterators produce unbounded samples" {
     for (direct_open_closed_fill_buf) |item| try std.testing.expect(item > 0 and item <= 1);
 }
 
+test "sample iterator fill delegates to sampler bulk fill policy" {
+    const alea = @import("root.zig");
+
+    var open_iter_engine = alea.ScalarPrng.init(0x5a1e);
+    const open_rng = Rng.init(&open_iter_engine);
+    var open_direct_engine = alea.ScalarPrng.init(0x5a1e);
+    const open_dist = alea.distributions.Open01{};
+    var open_iter = open_rng.sampleIter(f64, open_dist);
+    var open_iter_fill: [8]f64 = undefined;
+    var open_direct_fill: [8]f64 = undefined;
+    open_iter.fill(&open_iter_fill);
+    open_dist.fillFrom(&open_direct_engine, f64, &open_direct_fill);
+    try std.testing.expectEqualSlices(f64, &open_direct_fill, &open_iter_fill);
+    try std.testing.expectEqual(open_direct_engine.next(), open_iter_engine.next());
+
+    var open_closed_iter_engine = alea.ScalarPrng.init(0x5a1e);
+    var open_closed_direct_engine = alea.ScalarPrng.init(0x5a1e);
+    const open_closed_dist = alea.distributions.OpenClosed01{};
+    var open_closed_iter = sampleIterFrom(&open_closed_iter_engine, f64, open_closed_dist);
+    var open_closed_iter_fill: [8]f64 = undefined;
+    var open_closed_direct_fill: [8]f64 = undefined;
+    open_closed_iter.fill(&open_closed_iter_fill);
+    open_closed_dist.fillFrom(&open_closed_direct_engine, f64, &open_closed_direct_fill);
+    try std.testing.expectEqualSlices(f64, &open_closed_direct_fill, &open_closed_iter_fill);
+    try std.testing.expectEqual(open_closed_direct_engine.next(), open_closed_iter_engine.next());
+}
+
 test "value iterator fill preserves scalar fallback where bulk fill packs draws" {
     const alea = @import("root.zig");
 
