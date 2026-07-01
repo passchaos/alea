@@ -33,7 +33,7 @@ Zig-native way.
 | LogNormal | Covered: `logNormal`, `LogNormal(T)`, including linear-space mean/coefficient-of-variation construction, z-score conversion, and f32/f64 benchmark rows |
 | Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)`, including reusable-sampler rate accessors |
 | Gamma | Covered: `gamma`, `Gamma(T)`, including shape/scale accessors |
-| ChiSquared | Covered: `chiSquared`, `ChiSquared(T)` |
+| ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof accessor |
 | FisherF | Covered: `fisherF`, `FisherF(T)` |
 | StudentT | Covered: `studentT`, `StudentT(T)` |
 | Gumbel | Covered: `gumbel`, `Gumbel(T)` |
@@ -70,7 +70,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)` |
 | HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale accessor |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)` |
-| Chi | Covered: `chi`, `Chi(T)` |
+| Chi | Covered: `chi`, `Chi(T)`, including dof accessor |
 | Erlang | Covered: `erlang`, `Erlang(T)` |
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)` |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)` |

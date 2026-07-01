@@ -380,12 +380,14 @@ Reusable samplers:
 - `Gamma(T).fillFrom`
 - `ChiSquared(T)`
 - `ChiSquared(T).init`
+- `ChiSquared(T).dofValue`
 - `ChiSquared(T).sample`
 - `ChiSquared(T).sampleFrom`
 - `ChiSquared(T).fill`
 - `ChiSquared(T).fillFrom`
 - `Chi(T)`
 - `Chi(T).init`
+- `Chi(T).dofValue`
 - `Chi(T).sample`
 - `Chi(T).sampleFrom`
 - `Chi(T).fill`
