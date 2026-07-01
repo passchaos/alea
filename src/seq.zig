@@ -1483,6 +1483,24 @@ test "empty checked weighted iterator choice does not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0x9c8af023645fd559), engine.next());
 }
 
+test "rejection index set allocation failures do not consume random stream" {
+    const alea = @import("root.zig");
+
+    var u32_engine = alea.ScalarPrng.init(0x5150_5f4);
+    var u32_control = alea.ScalarPrng.init(0x5150_5f4);
+    var u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, sampleIndicesU32From(u32_alloc.allocator(), &u32_engine, 100_000, 200));
+    try std.testing.expect(u32_alloc.has_induced_failure);
+    try std.testing.expectEqual(u32_control.next(), u32_engine.next());
+
+    var usize_engine = alea.ScalarPrng.init(0x5150_5f5);
+    var usize_control = alea.ScalarPrng.init(0x5150_5f5);
+    var usize_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, sampleIndicesFrom(usize_alloc.allocator(), &usize_engine, 100_000, 200));
+    try std.testing.expect(usize_alloc.has_induced_failure);
+    try std.testing.expectEqual(usize_control.next(), usize_engine.next());
+}
+
 test "short checked iterator samples do not consume past source" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_7713);
