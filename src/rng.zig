@@ -566,6 +566,40 @@ pub fn fillSampleFrom(source: anytype, comptime T: type, dest: []T, sampler: any
     }
 }
 
+fn sampleWith(sampler: anytype, rng: Rng) samplerSampleType(@TypeOf(sampler)) {
+    var local_sampler = sampler;
+    return if (comptime samplerSampleTakesType(@TypeOf(local_sampler)))
+        local_sampler.sample(rng, samplerSampleType(@TypeOf(local_sampler)))
+    else
+        local_sampler.sample(rng);
+}
+
+fn sampleFromWith(sampler: anytype, source: anytype) samplerSampleFromType(@TypeOf(sampler), @TypeOf(source)) {
+    var local_sampler = sampler;
+    return if (comptime samplerSampleFromTakesType(@TypeOf(local_sampler)))
+        local_sampler.sampleFrom(source, samplerSampleFromType(@TypeOf(local_sampler), @TypeOf(source)))
+    else
+        local_sampler.sampleFrom(source);
+}
+
+fn samplerSampleType(comptime Sampler: type) type {
+    const Base = samplerBaseType(Sampler);
+    const info = @typeInfo(@TypeOf(@field(Base, "sample"))).@"fn";
+    return info.return_type.?;
+}
+
+fn samplerSampleFromType(comptime Sampler: type, comptime Source: type) type {
+    const Base = samplerBaseType(Sampler);
+    const info = @typeInfo(@TypeOf(@field(Base, "sampleFrom"))).@"fn";
+    if (info.return_type) |Return| return Return;
+    if (samplerSampleFromTakesType(Sampler)) {
+        const sample_info = @typeInfo(@TypeOf(@field(Base, "sample"))).@"fn";
+        return sample_info.return_type.?;
+    }
+    _ = Source;
+    @compileError(@typeName(Base) ++ ".sampleFrom return type could not be inferred");
+}
+
 fn samplerCanFill(comptime Sampler: type, comptime T: type) bool {
     const Base = samplerBaseType(Sampler);
     if (!@hasDecl(Base, "fill")) return false;
@@ -1604,11 +1638,11 @@ pub fn SampleIterator(comptime Sampler: type, comptime T: type) type {
         }
 
         pub fn nextValue(self: *Self) T {
-            return self.sampler.sample(self.rng);
+            return sampleWith(self.sampler, self.rng);
         }
 
         pub fn fill(self: *Self, dest: []T) void {
-            for (dest) |*item| item.* = self.nextValue();
+            fillSample(self.rng, T, dest, self.sampler);
         }
     };
 }
@@ -1625,11 +1659,11 @@ pub fn SampleIteratorFrom(comptime Source: type, comptime Sampler: type, comptim
         }
 
         pub fn nextValue(self: *Self) T {
-            return self.sampler.sampleFrom(self.source);
+            return sampleFromWith(self.sampler, self.source);
         }
 
         pub fn fill(self: *Self, dest: []T) void {
-            for (dest) |*item| item.* = self.nextValue();
+            fillSampleFrom(self.source, T, dest, self.sampler);
         }
     };
 }
