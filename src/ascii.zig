@@ -207,6 +207,10 @@ test "unicode scalar string generation produces valid utf8" {
     const direct_text = try unicodeUtf8AllocFrom(std.testing.allocator, &engine, 64);
     defer std.testing.allocator.free(direct_text);
     try std.testing.expectEqual(@as(usize, 64), try std.unicode.utf8CountCodepoints(direct_text));
+
+    var into_buf: [64 * 4]u8 = undefined;
+    const into_text = try unicodeUtf8Into(rng, &into_buf, 64);
+    try std.testing.expectEqual(@as(usize, 64), try std.unicode.utf8CountCodepoints(into_text));
 }
 
 test "ascii helpers preserve direct stream shape" {
