@@ -270,7 +270,7 @@ pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype,
 
         const candidate = WeightedIteratorCandidate(T){
             .item = entry.item,
-            .key = @log(Rng.floatOpenFrom(source, f64)) / weight,
+            .key = weightedSelectionKeyFrom(source, weight),
         };
 
         if (heap.count() < amount) {
@@ -312,7 +312,7 @@ pub fn sampleWeightedIndicesFrom(allocator: std.mem.Allocator, source: anytype, 
 
         const candidate = WeightedCandidate{
             .index = index,
-            .key = @log(Rng.floatOpenFrom(source, f64)) / value,
+            .key = weightedSelectionKeyFrom(source, value),
         };
 
         if (heap.count() < limit) {
@@ -724,6 +724,12 @@ fn weightAsF64(comptime Weight: type, weight: Weight) f64 {
     };
 }
 
+fn weightedSelectionKeyFrom(source: anytype, weight: f64) f64 {
+    std.debug.assert(weight > 0 and std.math.isFinite(weight));
+    const key = @log(Rng.floatOpenFrom(source, f64)) / weight;
+    return if (std.math.isFinite(key)) key else -std.math.floatMax(f64);
+}
+
 const U32Set = struct {
     keys: []u32,
     used: []u8,
@@ -931,6 +937,12 @@ test "invalid sequence helpers do not consume random stream" {
     var huge_choose_iter = BadIter{ .items = &huge_entries };
     try std.testing.expectError(error.InvalidWeight, chooseIteratorWeightedFrom(&engine, u8, &huge_choose_iter));
     try std.testing.expectEqual(@as(u64, 0x12f96538e2946977), engine.next());
+
+    var huge_sample_iter = BadIter{ .items = &huge_entries };
+    const huge_sample = try sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &huge_sample_iter, 2);
+    defer std.testing.allocator.free(huge_sample);
+    try std.testing.expectEqual(@as(usize, 2), huge_sample.len);
+    try std.testing.expectEqual(@as(u64, 0x979291c5b220befd), engine.next());
 }
 
 test "partial shuffle and reservoir sample respect counts" {
