@@ -1344,6 +1344,7 @@ pub fn fillLogNormalChecked(rng: Rng, comptime T: type, dest: []T, mean: T, stdd
 }
 
 pub fn fillLogNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
+    if (dest.len == 0) return;
     var dist = try LogNormal(T).init(mean, stddev);
     dist.fillFrom(source, dest);
 }
@@ -1447,6 +1448,7 @@ pub fn fillHalfNormalChecked(rng: Rng, comptime T: type, dest: []T, scale: T) Er
 }
 
 pub fn fillHalfNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T) Error!void {
+    if (dest.len == 0) return;
     const dist = try HalfNormal(T).init(scale);
     dist.fillFrom(source, dest);
 }
@@ -2642,6 +2644,7 @@ pub fn fillTriangularChecked(rng: Rng, comptime T: type, dest: []T, min: T, mode
 }
 
 pub fn fillTriangularCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: T, max: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Triangular(T).init(min, mode, max);
     sampler.fillFrom(source, dest);
 }
@@ -2717,6 +2720,7 @@ pub fn fillArcsineChecked(rng: Rng, comptime T: type, dest: []T, min: T, max: T)
 }
 
 pub fn fillArcsineCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Arcsine(T).init(min, max);
     sampler.fillFrom(source, dest);
 }
@@ -2788,6 +2792,7 @@ pub fn fillCauchyChecked(rng: Rng, comptime T: type, dest: []T, median: T, scale
 }
 
 pub fn fillCauchyCheckedFrom(source: anytype, comptime T: type, dest: []T, median: T, scale: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Cauchy(T).init(median, scale);
     sampler.fillFrom(source, dest);
 }
@@ -2863,6 +2868,7 @@ pub fn fillLaplaceChecked(rng: Rng, comptime T: type, dest: []T, location: T, sc
 }
 
 pub fn fillLaplaceCheckedFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Laplace(T).init(location, scale);
     sampler.fillFrom(source, dest);
 }
@@ -6371,6 +6377,38 @@ test "invalid checked distribution helpers do not consume random stream" {
     defer int_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &u64_buf));
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
+}
+
+test "zero-length derived distribution fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1ba);
+    var control = alea.ScalarPrng.init(0x5150_d1ba);
+    const rng = Rng.init(&engine);
+
+    var out: [0]f64 = .{};
+
+    try fillLogNormalCheckedFrom(&engine, f64, &out, 0, -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillHalfNormalCheckedFrom(&engine, f64, &out, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillTriangularCheckedFrom(&engine, f64, &out, 1, 0, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillArcsineCheckedFrom(&engine, f64, &out, 1, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillCauchyCheckedFrom(&engine, f64, &out, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillLaplaceCheckedFrom(&engine, f64, &out, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillLogNormalChecked(rng, f64, &out, 0, -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillTriangularChecked(rng, f64, &out, 1, 0, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillCauchyChecked(rng, f64, &out, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one: [1]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&engine, f64, &one, 0, 0));
 }
 
 test "zero-length core continuous distribution fills do not validate or consume random stream" {
