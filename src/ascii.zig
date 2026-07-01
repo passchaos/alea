@@ -387,6 +387,7 @@ test "unicode utf8 output buffer validation does not consume random stream" {
 
     try std.testing.expectEqual(@as(usize, 0), try unicodeUtf8Capacity(0));
     try std.testing.expectEqual(@as(usize, 8), try unicodeUtf8Capacity(2));
+    try std.testing.expectEqual(@as(usize, std.math.maxInt(usize) - 3), try unicodeUtf8Capacity(std.math.maxInt(usize) / 4));
     try std.testing.expectError(error.OutOfMemory, unicodeUtf8Capacity(std.math.maxInt(usize)));
 
     var tiny: [0]u8 = .{};
