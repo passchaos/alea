@@ -280,7 +280,7 @@ pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptim
         if (index < amount) reservoir.items[index] = item;
     }
 
-    return reservoir.toOwnedSlice(allocator);
+    return reservoir.toOwnedSliceAssert();
 }
 
 pub fn chooseIteratorWeighted(rng: Rng, comptime T: type, iterator: anytype) !?T {
@@ -1542,6 +1542,33 @@ test "zero-count checked sequence helpers do not consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), sampled.len);
     try std.testing.expect(!reservoir_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "full iterator reservoir avoids post-sampling ownership allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7718);
+
+    const RangeIter = struct {
+        next_value: u8 = 0,
+        end: u8 = 16,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+
+    var iter = RangeIter{};
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{
+        .fail_index = 1,
+        .resize_fail_index = 0,
+    });
+    const sample = try sampleIteratorFrom(failing.allocator(), &engine, u8, &iter, 8);
+    defer failing.allocator().free(sample);
+    try std.testing.expectEqual(@as(usize, 8), sample.len);
+    try std.testing.expect(!failing.has_induced_failure);
 }
 
 test "zero-count iterator samples do not read iterator or build reservoir" {
