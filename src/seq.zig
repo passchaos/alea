@@ -1509,6 +1509,26 @@ test "weighted choice update rejects invalid float weights without replacing tab
     for (out) |value| try std.testing.expectEqual(@as(u8, 3), value);
 }
 
+test "weighted choice update allocation failure preserves table" {
+    const alea = @import("root.zig");
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    const items = [_]u8{ 1, 2, 3 };
+    var choice = try WeightedChoice(u8, u32).init(failing.allocator(), &items, &.{ 0, 0, 1 });
+    defer choice.deinit();
+
+    var engine = alea.ScalarPrng.init(0x5150_0447);
+    var control = alea.ScalarPrng.init(0x5150_0447);
+    failing.fail_index = failing.alloc_index;
+    try std.testing.expectError(error.OutOfMemory, choice.update(&.{ 1, 2, 3 }));
+    try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [8]u8 = undefined;
+    choice.fillValuesFrom(&engine, &out);
+    for (out) |value| try std.testing.expectEqual(@as(u8, 3), value);
+}
+
 test "weighted choice length mismatch update does not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_0448);

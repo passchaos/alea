@@ -170,6 +170,9 @@ Use `Rng.weightedIndexFrom`, `Rng.sampleWithoutReplacementFrom`,
 `sampleWeightedFrom`, `Choice.iterFrom`, `WeightedChoice.iterFrom`,
 `AliasTable.sampleFrom`, and `WeightedChoice.sampleValueFrom` for weighted or
 collection sampling with a comptime-known engine source.
+`AliasTable.update` and `WeightedChoice.update` build the replacement table
+before swapping state, so length, weight, and initial allocation failures leave
+the previous valid table usable.
 For allocation-returning sequence helpers, initial allocation failures are
 reported before drawing from the stream; later one-pass failure paths may have
 already consumed randomness for earlier accepted candidates.

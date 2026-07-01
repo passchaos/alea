@@ -5975,6 +5975,25 @@ test "alias table samples valid indexes" {
     try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{ 0, 0 }));
 }
 
+test "alias table update allocation failure preserves table" {
+    const alea = @import("root.zig");
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    var table = try AliasTable(u32).init(failing.allocator(), &.{ 0, 0, 1 });
+    defer table.deinit();
+
+    var engine = alea.ScalarPrng.init(0x5150_a11a);
+    var control = alea.ScalarPrng.init(0x5150_a11a);
+    failing.fail_index = failing.alloc_index;
+    try std.testing.expectError(error.OutOfMemory, table.update(&.{ 1, 2, 3 }));
+    try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [8]usize = undefined;
+    table.fillFrom(&engine, &out);
+    for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+}
+
 test "weighted tree supports dynamic updates" {
     const alea = @import("root.zig");
     var engine = alea.Wyhash64.init(45);
