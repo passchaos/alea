@@ -3479,6 +3479,10 @@ pub fn Rayleigh(comptime T: type) type {
             return .{ .scale = scale };
         }
 
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -3550,6 +3554,10 @@ pub fn Maxwell(comptime T: type) type {
             comptime requireFloat(T);
             if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return .{ .scale = scale };
+        }
+
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -8079,6 +8087,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expectError(error.InvalidParameter, fillRayleighCheckedFrom(&direct_engine, f64, &direct_rayleigh_buf, 0));
     const rayleigh_sampler = try Rayleigh(f64).init(2);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), rayleigh_sampler.scaleValue(), 1e-12);
     rayleigh_sampler.fillFrom(&direct_engine, &direct_rayleigh_buf);
     for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try rayleighCheckedFrom(&direct_engine, f64, 2) >= 0);
@@ -8098,6 +8107,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_maxwell_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expectError(error.InvalidParameter, fillMaxwellCheckedFrom(&direct_engine, f64, &direct_maxwell_buf, 0));
     const maxwell_sampler = try Maxwell(f64).init(2);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), maxwell_sampler.scaleValue(), 1e-12);
     maxwell_sampler.fillFrom(&direct_engine, &direct_maxwell_buf);
     for (direct_maxwell_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try maxwellCheckedFrom(&direct_engine, f64, 2) >= 0);

@@ -486,12 +486,14 @@ Reusable samplers:
 - `PowerFunction(T).fillFrom`
 - `Rayleigh(T)`
 - `Rayleigh(T).init`
+- `Rayleigh(T).scaleValue`
 - `Rayleigh(T).sample`
 - `Rayleigh(T).sampleFrom`
 - `Rayleigh(T).fill`
 - `Rayleigh(T).fillFrom`
 - `Maxwell(T)`
 - `Maxwell(T).init`
+- `Maxwell(T).scaleValue`
 - `Maxwell(T).sample`
 - `Maxwell(T).sampleFrom`
 - `Maxwell(T).fill`
