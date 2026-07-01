@@ -6546,6 +6546,28 @@ test "invalid distribution facade continuous scalars do not consume random strea
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid distribution facade tail scalars do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1ff);
+    var control = alea.ScalarPrng.init(0x5150_d1ff);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, cauchyChecked(rng, f64, 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, paretoChecked(rng, f64, 0, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, weibullChecked(rng, f64, 0, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, inverseGaussianChecked(rng, f64, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, zipfChecked(rng, f64, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid distribution facade fill helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1fc);
