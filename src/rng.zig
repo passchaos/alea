@@ -3280,6 +3280,20 @@ test "zero-length checked fills do not validate or consume random stream" {
     try std.testing.expectError(error.EmptyRange, fillRangeCheckedFrom(&engine, u32, &one_int, 3, 3));
 }
 
+test "invalid facade choice helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba4);
+    var control = alea.ScalarPrng.init(0x5150_ba4);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.EmptyRange, rng.chooseChecked(u8, &.{}));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty: [0]u8 = .{};
+    try std.testing.expectError(error.EmptyRange, rng.choosePtrChecked(u8, &empty));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "collection helpers preserve direct stream shape" {
     const alea = @import("root.zig");
     const items = [_]u8{ 10, 20, 30, 40, 50 };
