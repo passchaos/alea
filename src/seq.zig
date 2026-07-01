@@ -359,6 +359,7 @@ pub fn sampleWeightedIndicesChecked(allocator: std.mem.Allocator, rng: Rng, comp
 pub fn sampleWeightedIndicesCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
     if (amount == 0) return allocator.alloc(usize, 0);
     if (amount > weights.len) return error.InvalidParameter;
+    try ensureEnoughPositiveWeights(Weight, weights, amount);
     return sampleWeightedIndicesFrom(allocator, source, Weight, weights, amount);
 }
 
@@ -412,6 +413,7 @@ pub fn sampleWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
     if (amount == 0) return allocator.alloc(T, 0);
     if (items.len != weights.len) return error.LengthMismatch;
     if (amount > items.len) return error.InvalidParameter;
+    try ensureEnoughPositiveWeights(Weight, weights, amount);
     return sampleWeightedFrom(allocator, source, T, Weight, items, weights, amount);
 }
 
@@ -838,6 +840,16 @@ fn weightAsF64(comptime Weight: type, weight: Weight) f64 {
     };
 }
 
+fn ensureEnoughPositiveWeights(comptime Weight: type, weights: []const Weight, amount: usize) Error!void {
+    var positive: usize = 0;
+    for (weights) |weight| {
+        const value = weightAsF64(Weight, weight);
+        if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+        if (value > 0) positive += 1;
+    }
+    if (positive < amount) return error.InvalidParameter;
+}
+
 fn weightedSelectionKeyFrom(source: anytype, weight: f64) f64 {
     std.debug.assert(weight > 0 and std.math.isFinite(weight));
     const key = @log(Rng.floatOpenFrom(source, f64)) / weight;
@@ -1092,6 +1104,12 @@ test "invalid checked weighted sample counts do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{ 1, 2 }, 3));
     try std.testing.expectEqual(@as(u64, 0x6b64b54880a566c3), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, u32, &.{ 0, 5, 0 }, 2));
+    try std.testing.expectEqual(@as(u64, 0xe0d9da7b539de67e), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2, 3 }, &.{ 0, 5, 0 }, 2));
+    try std.testing.expectEqual(@as(u64, 0x5862e0f61b2d9eea), engine.next());
 }
 
 test "empty checked weighted iterator choice does not consume random stream" {
