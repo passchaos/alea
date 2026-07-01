@@ -179,6 +179,8 @@ Exact-capacity Floyd-style index samplers return their owned buffers without a
 post-sampling shrink allocation.
 In-place index samplers prepare their returned output before drawing, so output
 allocation failures leave the stream untouched.
+Rejection index samplers also clean up staged set allocations before drawing if
+their internal set allocation fails.
 Use `Rng.weightedIndexFrom`, `Rng.sampleWithoutReplacementFrom`,
 `sampleWeightedFrom`, `Choice.iterFrom`, `WeightedChoice.iterFrom`,
 `AliasTable.sampleFrom`, and `WeightedChoice.sampleValueFrom` for weighted or
