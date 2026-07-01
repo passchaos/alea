@@ -3176,6 +3176,28 @@ test "sample without replacement allocation failures do not consume random strea
     try std.testing.expectEqual(second_control.next(), second_engine.next());
 }
 
+test "invalid facade range helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba5);
+    var control = alea.ScalarPrng.init(0x5150_ba5);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.EmptyRange, rng.uintLessThanChecked(u32, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.intRangeLessThanChecked(u32, 3, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.intRangeAtMostChecked(u32, 4, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.floatRangeChecked(f64, std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid facade scalar helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_ba6);
