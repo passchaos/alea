@@ -409,6 +409,20 @@ test "unicode utf8 output buffer validation does not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "unicode utf8 into has stable byte snapshot" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a5cb);
+
+    var buf: [6 * 4]u8 = undefined;
+    const text = try unicodeUtf8IntoFrom(&engine, &buf, 6);
+    try std.testing.expectEqualSlices(u8, &.{
+        0xf3, 0x8b, 0x84, 0xa3, 0xf1, 0xb7, 0x84, 0x94,
+        0xf0, 0xaf, 0xa0, 0xa0, 0xf0, 0xab, 0xa1, 0x9a,
+        0xf2, 0xb7, 0x93, 0xb6, 0xf1, 0xa6, 0x8f, 0x97,
+    }, text);
+    try std.testing.expectEqual(@as(u64, 0x63aca2a5212f8669), engine.next());
+}
+
 test "ascii helpers have stable snapshots" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x1234_5678_9abc_def0);
