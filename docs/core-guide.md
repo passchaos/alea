@@ -48,7 +48,8 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
   `durationRangeLessThanFrom`, `durationRangeAtMostFrom`
 - Unicode scalar values: `unicodeScalar`, `unicodeScalarFrom`
 - structured values: `value(T)` / `valueFrom(source, T)` for bools, ints,
-  floats, vectors, enums, arrays, and tuples
+  floats, vectors, enums, arrays, and tuples; use `enumValueCheckedFrom` when
+  an empty enum type should be reported as `EmptyRange`
 - bulk sampling: `fill` / `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,
   `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`,

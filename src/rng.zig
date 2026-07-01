@@ -1471,6 +1471,19 @@ pub fn enumValue(self: Rng, comptime EnumType: type) EnumType {
     return enumValueFrom(self, EnumType);
 }
 
+pub fn enumValueChecked(self: Rng, comptime EnumType: type) Error!EnumType {
+    return enumValueCheckedFrom(self, EnumType);
+}
+
+pub fn enumValueCheckedFrom(source: anytype, comptime EnumType: type) Error!EnumType {
+    comptime {
+        if (@typeInfo(EnumType) != .@"enum") @compileError("enumValue expects an enum type");
+    }
+    const values = comptime std.enums.values(EnumType);
+    if (comptime values.len == 0) return error.EmptyRange;
+    return enumValueFrom(source, EnumType);
+}
+
 pub fn enumValueFrom(source: anytype, comptime EnumType: type) EnumType {
     comptime {
         if (@typeInfo(EnumType) != .@"enum") @compileError("enumValue expects an enum type");
@@ -2709,6 +2722,8 @@ test "shuffle and sampling keep item set" {
     const Wyhash64 = @import("engines/wyhash64.zig");
     var engine = Wyhash64.init(9);
     const rng = Rng.init(&engine);
+    const SmallEnum = enum { a, b, c };
+    const EmptyEnum = enum {};
     var values = [_]u8{ 1, 2, 3, 4, 5 };
     rng.shuffle(u8, &values);
 
@@ -2731,6 +2746,14 @@ test "shuffle and sampling keep item set" {
     try std.testing.expect(chosen_ptr.* >= 1 and chosen_ptr.* <= 5);
     const checked_chosen_ptr = try Rng.choosePtrCheckedFrom(&engine, u8, &values);
     try std.testing.expect(checked_chosen_ptr.* >= 1 and checked_chosen_ptr.* <= 5);
+
+    const enum_value = try Rng.enumValueCheckedFrom(&engine, SmallEnum);
+    try std.testing.expect(enum_value == .a or enum_value == .b or enum_value == .c);
+    if (Rng.enumValueCheckedFrom(&engine, EmptyEnum)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
 
     const weighted = Rng.weightedIndexFrom(&engine, &.{ 0.0, 1.0, 3.0 }).?;
     try std.testing.expect(weighted == 1 or weighted == 2);

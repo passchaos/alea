@@ -71,7 +71,8 @@ expectations.
 - Distributions: `normal`, `normalChecked`, `normalCheckedFrom`, `exponential`,
   `exponentialChecked`, `exponentialCheckedFrom`, `standardNormalFastFrom`,
   `standardExponentialFastFrom`, `normalFastFrom`, `exponentialFastFrom`
-- Enums and collections: `enumValue`, `enumValueFrom`, `shuffle`, `shuffleFrom`, `choose`,
+- Enums and collections: `enumValue`, `enumValueFrom`, `enumValueChecked`,
+  `enumValueCheckedFrom`, `shuffle`, `shuffleFrom`, `choose`,
   `chooseFrom`, `chooseChecked`, `chooseCheckedFrom`, `choosePtr`,
   `choosePtrFrom`, `choosePtrChecked`, `choosePtrCheckedFrom`, `weightedIndex`,
   `weightedIndexFrom`, `weightedIndexChecked`, `weightedIndexCheckedFrom`,
