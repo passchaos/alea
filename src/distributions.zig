@@ -6443,6 +6443,26 @@ test "invalid checked distribution helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
 }
 
+test "invalid normal exponential wrapper helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1f5);
+    var control = alea.ScalarPrng.init(0x5150_d1f5);
+
+    try std.testing.expectError(error.InvalidParameter, normalCheckedFrom(&engine, f64, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var normal_buf: [4]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillNormalCheckedFrom(&engine, f64, &normal_buf, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, exponentialCheckedFrom(&engine, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var exponential_buf: [4]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillExponentialCheckedFrom(&engine, f64, &exponential_buf, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid discrete distribution helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1f4);
