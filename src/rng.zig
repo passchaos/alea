@@ -3087,6 +3087,25 @@ test "zero-count sample without replacement does not build pool or consume rando
     try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &items, items.len + 1));
 }
 
+test "sample without replacement allocation failures do not consume random stream" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 1, 2, 3, 4 };
+
+    var first_engine = alea.ScalarPrng.init(0x5150_bb0);
+    var first_control = alea.ScalarPrng.init(0x5150_bb0);
+    var first_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleWithoutReplacementCheckedFrom(&first_engine, u8, first_alloc.allocator(), &items, 2));
+    try std.testing.expect(first_alloc.has_induced_failure);
+    try std.testing.expectEqual(first_control.next(), first_engine.next());
+
+    var second_engine = alea.ScalarPrng.init(0x5150_bb1);
+    var second_control = alea.ScalarPrng.init(0x5150_bb1);
+    var second_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, sampleWithoutReplacementCheckedFrom(&second_engine, u8, second_alloc.allocator(), &items, 2));
+    try std.testing.expect(second_alloc.has_induced_failure);
+    try std.testing.expectEqual(second_control.next(), second_engine.next());
+}
+
 test "zero-length checked fills do not validate or consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_bae);

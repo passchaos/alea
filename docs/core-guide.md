@@ -181,6 +181,8 @@ collection sampling with a comptime-known engine source.
 Checked sample-without-replacement and iterator-sampling calls with count zero
 return an empty result before building temporary storage, reading the iterator,
 or drawing from the stream.
+Allocation failures while preparing the sample-without-replacement temporary
+pool/output also return before drawing.
 `AliasTable.update` and `WeightedChoice.update` build the replacement table
 before swapping state, so length, weight, and initial allocation failures leave
 the previous valid table usable.
