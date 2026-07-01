@@ -55,7 +55,9 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector4 exp", 0x1063, sample_count, stagedVector4ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector16 exp", 0x1063, sample_count, stagedVector16ExpF32);
-    try compareExpm1ErrorF32(io, stdout, sample_count);
+    try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=0.25", 0x1064, sample_count, 0.25);
+    try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=1.0", 0x1064, sample_count, 1.0);
+    try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=2.0", 0x1064, sample_count, 2.0);
     try stdout.flush();
 }
 
@@ -280,8 +282,15 @@ fn expm1PlusOneF32(dest: []f32) void {
     for (dest) |*item| item.* = std.math.expm1(item.*) + 1.0;
 }
 
-fn compareExpm1ErrorF32(io: std.Io, stdout: *std.Io.Writer, sample_count: usize) !void {
-    var engine = alea.ScalarPrng.init(0x1064);
+fn compareExpm1ErrorF32(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    stddev: f32,
+) !void {
+    var engine = alea.ScalarPrng.init(seed);
     var max_abs: f32 = 0;
     var max_rel: f32 = 0;
     var max_ulp: u32 = 0;
@@ -290,7 +299,7 @@ fn compareExpm1ErrorF32(io: std.Io, stdout: *std.Io.Writer, sample_count: usize)
 
     const start = std.Io.Clock.awake.now(io).nanoseconds;
     while (i < sample_count) : (i += 1) {
-        const x = 0.25 * alea.Rng.standardNormalFastFrom(&engine, f32);
+        const x = stddev * alea.Rng.standardNormalFastFrom(&engine, f32);
         const direct = @exp(x);
         const candidate = std.math.expm1(x) + 1.0;
         if (direct != candidate) {
@@ -308,8 +317,8 @@ fn compareExpm1ErrorF32(io: std.Io, stdout: *std.Io.Writer, sample_count: usize)
         (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     try stdout.print(
-        "f32 expm1+1 diff: {d:.1} M samples/s changed={} max_abs={d:.9} max_rel={d:.9} max_ulp={}\n",
-        .{ million_per_s, changed, max_abs, max_rel, max_ulp },
+        "{s}: {d:.1} M samples/s changed={} max_abs={d:.9} max_rel={d:.9} max_ulp={}\n",
+        .{ name, million_per_s, changed, max_abs, max_rel, max_ulp },
     );
 }
 
