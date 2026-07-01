@@ -1661,7 +1661,7 @@ pub fn sampleWithoutReplacementCheckedFrom(source: anytype, comptime T: type, al
         try out.append(allocator, pool.swapRemove(index));
     }
 
-    return out.toOwnedSlice(allocator);
+    return out.toOwnedSliceAssert();
 }
 
 pub fn ValueIterator(comptime T: type) type {
@@ -3085,6 +3085,21 @@ test "zero-count sample without replacement does not build pool or consume rando
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &items, items.len + 1));
+}
+
+test "sample without replacement avoids post-sampling ownership allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_bb2);
+    const items = [_]u8{ 1, 2, 3, 4 };
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{
+        .fail_index = 2,
+        .resize_fail_index = 0,
+    });
+    const sample = try sampleWithoutReplacementCheckedFrom(&engine, u8, failing.allocator(), &items, 3);
+    defer failing.allocator().free(sample);
+    try std.testing.expectEqual(@as(usize, 3), sample.len);
+    try std.testing.expect(!failing.has_induced_failure);
 }
 
 test "sample without replacement allocation failures do not consume random stream" {

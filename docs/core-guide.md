@@ -193,6 +193,8 @@ Checked index-vector, choose-multiple, and reservoir helpers follow the same
 zero-count no-draw policy.
 Allocation failures while preparing the sample-without-replacement temporary
 pool/output also return before drawing.
+Successful sample-without-replacement calls return their exact-capacity output
+without a post-sampling ownership allocation.
 `chooseMultipleFrom` prepares its output and index storage before drawing, so
 allocation failures leave the stream untouched.
 Checked weighted index and item sampling likewise prepare output and temporary
