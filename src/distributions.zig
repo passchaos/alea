@@ -6615,6 +6615,23 @@ test "invalid distribution facade fill helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid distribution facade tail fills do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1fc1);
+    var control = alea.ScalarPrng.init(0x5150_d1fc1);
+    const rng = Rng.init(&engine);
+
+    var out: [4]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillParetoChecked(rng, f64, &out, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillInverseGaussianChecked(rng, f64, &out, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillZetaChecked(rng, f64, &out, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid distribution facade scalar helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1fb);
