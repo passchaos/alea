@@ -6024,6 +6024,8 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expect(empty_tree.isEmpty());
     try std.testing.expect(!empty_tree.isValid());
     try std.testing.expectEqual(@as(?f64, null), empty_tree.pop());
+    try std.testing.expectError(error.InvalidParameter, empty_tree.update(0, 1));
+    try std.testing.expect(empty_tree.isEmpty());
     try empty_tree.push(6);
     try std.testing.expect(!empty_tree.isEmpty());
     try std.testing.expect(empty_tree.isValid());
@@ -6106,6 +6108,8 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expect(empty_tree.isEmpty());
     try std.testing.expect(!empty_tree.isValid());
     try std.testing.expectEqual(@as(?u64, null), empty_tree.pop());
+    try std.testing.expectError(error.InvalidParameter, empty_tree.update(0, 1));
+    try std.testing.expect(empty_tree.isEmpty());
     try empty_tree.push(6);
     try std.testing.expect(!empty_tree.isEmpty());
     try std.testing.expect(empty_tree.isValid());
