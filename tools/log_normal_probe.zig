@@ -55,6 +55,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector4 exp", 0x1063, sample_count, stagedVector4ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector16 exp", 0x1063, sample_count, stagedVector16ExpF32);
+    try compareExpm1ErrorF32(io, stdout, sample_count);
     try stdout.flush();
 }
 
@@ -277,6 +278,51 @@ fn expStdMathF32(dest: []f32) void {
 
 fn expm1PlusOneF32(dest: []f32) void {
     for (dest) |*item| item.* = std.math.expm1(item.*) + 1.0;
+}
+
+fn compareExpm1ErrorF32(io: std.Io, stdout: *std.Io.Writer, sample_count: usize) !void {
+    var engine = alea.ScalarPrng.init(0x1064);
+    var max_abs: f32 = 0;
+    var max_rel: f32 = 0;
+    var max_ulp: u32 = 0;
+    var changed: usize = 0;
+    var i: usize = 0;
+
+    const start = std.Io.Clock.awake.now(io).nanoseconds;
+    while (i < sample_count) : (i += 1) {
+        const x = 0.25 * alea.Rng.standardNormalFastFrom(&engine, f32);
+        const direct = @exp(x);
+        const candidate = std.math.expm1(x) + 1.0;
+        if (direct != candidate) {
+            changed += 1;
+            const abs_diff = @abs(candidate - direct);
+            const rel_diff = abs_diff / direct;
+            const ulp_diff = floatDistanceF32(direct, candidate);
+            max_abs = @max(max_abs, abs_diff);
+            max_rel = @max(max_rel, rel_diff);
+            max_ulp = @max(max_ulp, ulp_diff);
+        }
+    }
+    const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+    const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+        (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+
+    try stdout.print(
+        "f32 expm1+1 diff: {d:.1} M samples/s changed={} max_abs={d:.9} max_rel={d:.9} max_ulp={}\n",
+        .{ million_per_s, changed, max_abs, max_rel, max_ulp },
+    );
+}
+
+fn floatDistanceF32(a: f32, b: f32) u32 {
+    const ai = orderedFloatBitsF32(a);
+    const bi = orderedFloatBitsF32(b);
+    return if (ai >= bi) ai - bi else bi - ai;
+}
+
+fn orderedFloatBitsF32(value: f32) u32 {
+    const bits: u32 = @bitCast(value);
+    if ((bits & 0x8000_0000) != 0) return ~bits;
+    return bits | 0x8000_0000;
 }
 
 fn expVector4(dest: []f64) void {
