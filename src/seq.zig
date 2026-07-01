@@ -1472,6 +1472,14 @@ test "iterator sampling preserves direct stream shape" {
         );
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+        var checked_choose_iter = RangeIter{ .next_value = 0, .end = 100 };
+        var direct_checked_choose_iter = RangeIter{ .next_value = 0, .end = 100 };
+        try std.testing.expectEqual(
+            try chooseIteratorChecked(rng, u32, &checked_choose_iter),
+            try chooseIteratorCheckedFrom(&direct_engine, u32, &direct_checked_choose_iter),
+        );
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         var sample_iter = RangeIter{ .next_value = 0, .end = 100 };
         var direct_sample_iter = RangeIter{ .next_value = 0, .end = 100 };
         const sample = try sampleIterator(std.testing.allocator, rng, u32, &sample_iter, 8);
@@ -1486,6 +1494,14 @@ test "iterator sampling preserves direct stream shape" {
         try std.testing.expectEqual(
             try chooseIteratorWeighted(rng, u8, &weighted_iter),
             try chooseIteratorWeightedFrom(&direct_engine, u8, &direct_weighted_iter),
+        );
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_weighted_iter = WeightedIter{ .items = &entries };
+        var direct_checked_weighted_iter = WeightedIter{ .items = &entries };
+        try std.testing.expectEqual(
+            try chooseIteratorWeightedChecked(rng, u8, &checked_weighted_iter),
+            try chooseIteratorWeightedCheckedFrom(&direct_engine, u8, &direct_checked_weighted_iter),
         );
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
