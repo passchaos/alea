@@ -259,6 +259,14 @@ pub fn chooseIteratorWeighted(rng: Rng, comptime T: type, iterator: anytype) !?T
     return chooseIteratorWeightedFrom(rng, T, iterator);
 }
 
+pub fn chooseIteratorWeightedChecked(rng: Rng, comptime T: type, iterator: anytype) !T {
+    return chooseIteratorWeightedCheckedFrom(rng, T, iterator);
+}
+
+pub fn chooseIteratorWeightedCheckedFrom(source: anytype, comptime T: type, iterator: anytype) !T {
+    return (try chooseIteratorWeightedFrom(source, T, iterator)) orelse error.EmptyInput;
+}
+
 pub fn chooseIteratorWeightedFrom(source: anytype, comptime T: type, iterator: anytype) !?T {
     var total: f64 = 0;
     var result: ?T = null;
@@ -1389,8 +1397,14 @@ test "weighted iterator choice works without collecting first" {
     const direct_picked = (try chooseIteratorWeightedFrom(&engine, u8, &direct_iter)).?;
     try std.testing.expect(direct_picked == 2 or direct_picked == 3);
 
+    var checked_iter = WeightedIter{ .items = &entries };
+    const checked_picked = try chooseIteratorWeightedCheckedFrom(&engine, u8, &checked_iter);
+    try std.testing.expect(checked_picked == 2 or checked_picked == 3);
+
     var empty_iter = WeightedIter{ .items = &.{} };
     try std.testing.expect((try chooseIteratorWeighted(rng, u8, &empty_iter)) == null);
+    var empty_checked_iter = WeightedIter{ .items = &.{} };
+    try std.testing.expectError(error.EmptyInput, chooseIteratorWeightedCheckedFrom(&engine, u8, &empty_checked_iter));
 
     const bad_entries = [_]Entry{.{ .item = 1, .weight = std.math.nan(f64) }};
     var bad_iter = WeightedIter{ .items = &bad_entries };

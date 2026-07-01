@@ -641,7 +641,8 @@ Dynamic weighted helpers:
   `reservoirSampleCheckedFrom`
 - Iterators: `chooseIterator`, `chooseIteratorFrom`, `chooseIteratorChecked`,
   `chooseIteratorCheckedFrom`, `sampleIterator`, `sampleIteratorFrom`, `chooseIteratorWeighted`,
-  `chooseIteratorWeightedFrom`, `sampleIteratorWeighted`,
+  `chooseIteratorWeightedFrom`, `chooseIteratorWeightedChecked`,
+  `chooseIteratorWeightedCheckedFrom`, `sampleIteratorWeighted`,
   `sampleIteratorWeightedFrom`
 - Reusable samplers: `Choice(T)`, `chooseIter`, `chooseIterFrom`,
   `chooseIterChecked`, `chooseIterCheckedFrom`,
