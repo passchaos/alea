@@ -181,6 +181,8 @@ collection sampling with a comptime-known engine source.
 Checked sample-without-replacement and iterator-sampling calls with count zero
 return an empty result before building temporary storage, reading the iterator,
 or drawing from the stream.
+Exact-count checked iterator sampling prepares output (and weighted heap storage
+when applicable) before reading the iterator or drawing.
 Checked index-vector, choose-multiple, and reservoir helpers follow the same
 zero-count no-draw policy.
 Allocation failures while preparing the sample-without-replacement temporary

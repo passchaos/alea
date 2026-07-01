@@ -242,9 +242,23 @@ pub fn sampleIteratorChecked(allocator: std.mem.Allocator, rng: Rng, comptime T:
 }
 
 pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
-    const out = try sampleIteratorFrom(allocator, source, T, iterator, amount);
+    if (amount == 0) return allocator.alloc(T, 0);
+
+    const out = try allocator.alloc(T, amount);
     errdefer allocator.free(out);
-    if (out.len != amount) return error.InvalidParameter;
+
+    var filled: usize = 0;
+    while (filled < amount) : (filled += 1) {
+        out[filled] = iterator.next() orelse return error.InvalidParameter;
+    }
+
+    var seen = amount;
+    while (iterator.next()) |item| {
+        seen += 1;
+        const index = Rng.uintLessThanFrom(source, usize, seen);
+        if (index < amount) out[index] = item;
+    }
+
     return out;
 }
 
@@ -309,9 +323,40 @@ pub fn sampleIteratorWeightedChecked(allocator: std.mem.Allocator, rng: Rng, com
 }
 
 pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
-    const out = try sampleIteratorWeightedFrom(allocator, source, T, iterator, amount);
+    if (amount == 0) return allocator.alloc(T, 0);
+
+    const out = try allocator.alloc(T, amount);
     errdefer allocator.free(out);
-    if (out.len != amount) return error.InvalidParameter;
+
+    var heap = WeightedIteratorQueue(T).initContext({});
+    defer heap.deinit(allocator);
+    try heap.ensureTotalCapacityPrecise(allocator, amount);
+
+    while (iterator.next()) |entry| {
+        const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        if (weight == 0) continue;
+
+        const candidate = WeightedIteratorCandidate(T){
+            .item = entry.item,
+            .key = weightedSelectionKeyFrom(source, weight),
+        };
+
+        if (heap.count() < amount) {
+            try heap.push(allocator, candidate);
+        } else if (heap.peek()) |min_candidate| {
+            if (candidate.key > min_candidate.key) {
+                _ = heap.pop();
+                try heap.push(allocator, candidate);
+            }
+        }
+    }
+
+    if (heap.count() != amount) return error.InvalidParameter;
+    var i: usize = 0;
+    while (heap.pop()) |candidate| : (i += 1) {
+        out[i] = candidate.item;
+    }
     return out;
 }
 
@@ -1211,6 +1256,15 @@ test "initial sequence allocation failures do not consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), iterator.index);
     try std.testing.expectEqual(iterator_control.next(), iterator_engine.next());
 
+    var checked_iterator_engine = alea.ScalarPrng.init(0x5150_5f1);
+    var checked_iterator_control = alea.ScalarPrng.init(0x5150_5f1);
+    var checked_iterator_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var checked_iterator = ItemIter{ .items = &items };
+    try std.testing.expectError(error.OutOfMemory, sampleIteratorCheckedFrom(checked_iterator_alloc.allocator(), &checked_iterator_engine, u8, &checked_iterator, 3));
+    try std.testing.expect(checked_iterator_alloc.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 0), checked_iterator.index);
+    try std.testing.expectEqual(checked_iterator_control.next(), checked_iterator_engine.next());
+
     const Entry = struct { item: u8, weight: f64 };
     const WeightedIter = struct {
         entries: []const Entry,
@@ -1237,6 +1291,24 @@ test "initial sequence allocation failures do not consume random stream" {
     try std.testing.expect(weighted_iter_alloc.has_induced_failure);
     try std.testing.expectEqual(@as(usize, 0), weighted_iter.index);
     try std.testing.expectEqual(weighted_iter_control.next(), weighted_iter_engine.next());
+
+    var checked_weighted_iter_engine = alea.ScalarPrng.init(0x5150_5f2);
+    var checked_weighted_iter_control = alea.ScalarPrng.init(0x5150_5f2);
+    var checked_weighted_iter_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var checked_weighted_iter = WeightedIter{ .entries = &entries };
+    try std.testing.expectError(error.OutOfMemory, sampleIteratorWeightedCheckedFrom(checked_weighted_iter_alloc.allocator(), &checked_weighted_iter_engine, u8, &checked_weighted_iter, 2));
+    try std.testing.expect(checked_weighted_iter_alloc.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 0), checked_weighted_iter.index);
+    try std.testing.expectEqual(checked_weighted_iter_control.next(), checked_weighted_iter_engine.next());
+
+    var checked_weighted_iter_heap_engine = alea.ScalarPrng.init(0x5150_5f3);
+    var checked_weighted_iter_heap_control = alea.ScalarPrng.init(0x5150_5f3);
+    var checked_weighted_iter_heap_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    var checked_weighted_iter_heap = WeightedIter{ .entries = &entries };
+    try std.testing.expectError(error.OutOfMemory, sampleIteratorWeightedCheckedFrom(checked_weighted_iter_heap_alloc.allocator(), &checked_weighted_iter_heap_engine, u8, &checked_weighted_iter_heap, 2));
+    try std.testing.expect(checked_weighted_iter_heap_alloc.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 0), checked_weighted_iter_heap.index);
+    try std.testing.expectEqual(checked_weighted_iter_heap_control.next(), checked_weighted_iter_heap_engine.next());
 
     const weights = [_]u32{ 1, 2, 3, 4, 5, 6 };
     var weighted_indices_engine = alea.ScalarPrng.init(0x5150_5e9);
