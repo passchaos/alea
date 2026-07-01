@@ -24,6 +24,15 @@ pub const Charset = struct {
         return self.sampleFrom(rng);
     }
 
+    pub fn sampleChecked(self: Charset, rng: Rng) error{EmptyCharset}!u8 {
+        return self.sampleCheckedFrom(rng);
+    }
+
+    pub fn sampleCheckedFrom(self: Charset, source: anytype) error{EmptyCharset}!u8 {
+        if (self.bytes.len == 0) return error.EmptyCharset;
+        return self.sampleFrom(source);
+    }
+
     pub fn sampleFrom(self: Charset, source: anytype) u8 {
         return self.bytes[Rng.uintLessThanFrom(source, usize, self.bytes.len)];
     }
@@ -32,12 +41,32 @@ pub const Charset = struct {
         self.fillFrom(rng, out);
     }
 
+    pub fn fillChecked(self: Charset, rng: Rng, out: []u8) error{EmptyCharset}!void {
+        try self.fillCheckedFrom(rng, out);
+    }
+
+    pub fn fillCheckedFrom(self: Charset, source: anytype, out: []u8) error{EmptyCharset}!void {
+        if (out.len == 0) return;
+        if (self.bytes.len == 0) return error.EmptyCharset;
+        self.fillFrom(source, out);
+    }
+
     pub fn fillFrom(self: Charset, source: anytype, out: []u8) void {
         for (out) |*byte| byte.* = self.sampleFrom(source);
     }
 
     pub fn alloc(self: Charset, allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
         return self.allocFrom(allocator, rng, len);
+    }
+
+    pub fn allocChecked(self: Charset, allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
+        return self.allocCheckedFrom(allocator, rng, len);
+    }
+
+    pub fn allocCheckedFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
+        if (len == 0) return allocator.alloc(u8, 0);
+        if (self.bytes.len == 0) return error.EmptyCharset;
+        return self.allocFrom(allocator, source, len);
     }
 
     pub fn allocFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
@@ -122,6 +151,15 @@ test "ascii charset fills requested length" {
     defer std.testing.allocator.free(direct_string);
     for (direct_string) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
 
+    const checked_char = try Alphanumeric.sampleCheckedFrom(&engine);
+    try std.testing.expect(std.ascii.isAlphanumeric(checked_char));
+    var checked_buf: [8]u8 = undefined;
+    try Alphanumeric.fillCheckedFrom(&engine, &checked_buf);
+    for (checked_buf) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
+    const checked_alloc = try Alphanumeric.allocCheckedFrom(std.testing.allocator, &engine, 8);
+    defer std.testing.allocator.free(checked_alloc);
+    for (checked_alloc) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
+
     try std.testing.expectError(error.EmptyCharset, Charset.initChecked(""));
 }
 
@@ -203,6 +241,23 @@ test "invalid charset init does not consume random stream" {
 
     try std.testing.expectError(error.EmptyCharset, Charset.initChecked(""));
     try std.testing.expectEqual(@as(u64, 0x96ac5eed591f009a), engine.next());
+
+    const empty = Charset{ .bytes = "" };
+    try std.testing.expectError(error.EmptyCharset, empty.sampleCheckedFrom(&engine));
+    try std.testing.expectEqual(@as(u64, 0xb0fd2136eb6f389a), engine.next());
+    var buf: [4]u8 = undefined;
+    try std.testing.expectError(error.EmptyCharset, empty.fillCheckedFrom(&engine, &buf));
+    try std.testing.expectEqual(@as(u64, 0xf4e0fac4c36143dd), engine.next());
+    try std.testing.expectError(error.EmptyCharset, empty.allocCheckedFrom(std.testing.allocator, &engine, 4));
+    try std.testing.expectEqual(@as(u64, 0xaacd156f0aacb592), engine.next());
+
+    var zero_buf: [0]u8 = .{};
+    try empty.fillCheckedFrom(&engine, &zero_buf);
+    try std.testing.expectEqual(@as(u64, 0xdca041c18ee841a9), engine.next());
+    const zero_alloc = try empty.allocCheckedFrom(std.testing.allocator, &engine, 0);
+    defer std.testing.allocator.free(zero_alloc);
+    try std.testing.expectEqual(@as(usize, 0), zero_alloc.len);
+    try std.testing.expectEqual(@as(u64, 0xf4008d0537611435), engine.next());
 }
 
 test "zero-length string helpers do not consume random stream" {

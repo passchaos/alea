@@ -674,8 +674,10 @@ Dynamic weighted helpers:
 - Raw charset byte sets: `alphanumeric`, `alphabetic`, `lowercase`,
   `uppercase`, `digits`
 - Charset type: `Charset.init`, `Charset.initChecked`, `Charset.sample`,
-  `Charset.sampleFrom`, `Charset.fill`, `Charset.fillFrom`, `Charset.alloc`,
-  `Charset.allocFrom`
+  `Charset.sampleChecked`, `Charset.sampleFrom`, `Charset.sampleCheckedFrom`,
+  `Charset.fill`, `Charset.fillChecked`, `Charset.fillFrom`,
+  `Charset.fillCheckedFrom`, `Charset.alloc`, `Charset.allocChecked`,
+  `Charset.allocFrom`, `Charset.allocCheckedFrom`
 - Helpers: `char`, `charFrom`, `string`, `stringFrom`, `unicodeScalar`,
   `unicodeScalarFrom`, `unicodeUtf8Alloc`, `unicodeUtf8AllocFrom`
 
