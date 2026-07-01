@@ -3176,6 +3176,25 @@ test "sample without replacement allocation failures do not consume random strea
     try std.testing.expectEqual(second_control.next(), second_engine.next());
 }
 
+test "invalid facade scalar helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba6);
+    var control = alea.ScalarPrng.init(0x5150_ba6);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidProbability, rng.chanceChecked(1.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, rng.ratioChecked(2, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, rng.normalChecked(f64, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, rng.exponentialChecked(f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid facade checked fills do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_ba7);
