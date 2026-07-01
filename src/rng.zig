@@ -3081,6 +3081,16 @@ test "value iterator fill delegates stream-compatible bulk fills" {
     try std.testing.expectEqualSlices(f64, &f64_direct_fill, &f64_iter_fill);
     try std.testing.expectEqual(f64_direct_engine.next(), f64_iter_engine.next());
 
+    var f64_from_engine = alea.ScalarPrng.init(0x17e9);
+    var f64_from_direct_engine = alea.ScalarPrng.init(0x17e9);
+    var f64_from_iter = valueIterFrom(&f64_from_engine, f64);
+    var f64_from_iter_fill: [8]f64 = undefined;
+    var f64_from_direct_fill: [8]f64 = undefined;
+    f64_from_iter.fill(&f64_from_iter_fill);
+    fillFrom(&f64_from_direct_engine, f64, &f64_from_direct_fill);
+    try std.testing.expectEqualSlices(f64, &f64_from_direct_fill, &f64_from_iter_fill);
+    try std.testing.expectEqual(f64_from_direct_engine.next(), f64_from_engine.next());
+
     var u64_iter_engine = alea.ScalarPrng.init(0x17e9);
     const u64_rng = Rng.init(&u64_iter_engine);
     var u64_direct_engine = alea.ScalarPrng.init(0x17e9);
@@ -3092,6 +3102,16 @@ test "value iterator fill delegates stream-compatible bulk fills" {
     try std.testing.expectEqualSlices(u64, &u64_direct_fill, &u64_iter_fill);
     try std.testing.expectEqual(u64_direct_engine.next(), u64_iter_engine.next());
 
+    var u64_from_engine = alea.ScalarPrng.init(0x17e9);
+    var u64_from_direct_engine = alea.ScalarPrng.init(0x17e9);
+    var u64_from_iter = valueIterFrom(&u64_from_engine, u64);
+    var u64_from_iter_fill: [8]u64 = undefined;
+    var u64_from_direct_fill: [8]u64 = undefined;
+    u64_from_iter.fill(&u64_from_iter_fill);
+    fillFrom(&u64_from_direct_engine, u64, &u64_from_direct_fill);
+    try std.testing.expectEqualSlices(u64, &u64_from_direct_fill, &u64_from_iter_fill);
+    try std.testing.expectEqual(u64_from_direct_engine.next(), u64_from_engine.next());
+
     var vec_iter_engine = alea.ScalarPrng.init(0x17e9);
     const vec_rng = Rng.init(&vec_iter_engine);
     var vec_direct_engine = alea.ScalarPrng.init(0x17e9);
@@ -3102,4 +3122,14 @@ test "value iterator fill delegates stream-compatible bulk fills" {
     fillFrom(&vec_direct_engine, @Vector(4, f64), &vec_direct_fill);
     try std.testing.expectEqualSlices(@Vector(4, f64), &vec_direct_fill, &vec_iter_fill);
     try std.testing.expectEqual(vec_direct_engine.next(), vec_iter_engine.next());
+
+    var vec_from_engine = alea.ScalarPrng.init(0x17e9);
+    var vec_from_direct_engine = alea.ScalarPrng.init(0x17e9);
+    var vec_from_iter = valueIterFrom(&vec_from_engine, @Vector(4, f64));
+    var vec_from_iter_fill: [4]@Vector(4, f64) = undefined;
+    var vec_from_direct_fill: [4]@Vector(4, f64) = undefined;
+    vec_from_iter.fill(&vec_from_iter_fill);
+    fillFrom(&vec_from_direct_engine, @Vector(4, f64), &vec_from_direct_fill);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vec_from_direct_fill, &vec_from_iter_fill);
+    try std.testing.expectEqual(vec_from_direct_engine.next(), vec_from_engine.next());
 }
