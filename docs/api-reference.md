@@ -342,6 +342,7 @@ Reusable samplers:
 - `LogNormal(T).fillFrom`
 - `HalfNormal(T)`
 - `HalfNormal(T).init`
+- `HalfNormal(T).scaleValue`
 - `HalfNormal(T).sample`
 - `HalfNormal(T).sampleFrom`
 - `HalfNormal(T).fill`
