@@ -35,6 +35,14 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged scalar exp", 0x1062, sample_count, stagedScalarExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged vector4 exp", 0x1062, sample_count, stagedVector4Exp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged vector8 exp", 0x1062, sample_count, stagedVector8Exp);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 current fill", 0x1063, sample_count, currentFillF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 current fill", 0x1063, sample_count, currentFillF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
     try stdout.flush();
 }
 
@@ -112,12 +120,60 @@ fn benchFill(
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillF32(
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime fillFn: anytype,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024]f32 = undefined;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var remaining = sample_count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn currentFill(source: anytype, dest: []f64) void {
     alea.distributions.fillLogNormalFrom(source, f64, dest, 0, 0.25);
 }
 
 fn normalOnlyFill(source: anytype, dest: []f64) void {
     alea.Rng.fillNormalFrom(source, f64, dest, 0, 0.25);
+}
+
+fn currentFillF32(source: anytype, dest: []f32) void {
+    alea.distributions.fillLogNormalFrom(source, f32, dest, 0, 0.25);
+}
+
+fn normalOnlyFillF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
 }
 
 fn sampleCurrent(source: anytype) f64 {
@@ -147,7 +203,21 @@ fn stagedVector8Exp(source: anytype, dest: []f64) void {
     expVector8(dest);
 }
 
+fn stagedScalarExpF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    expScalarF32(dest);
+}
+
+fn stagedVector8ExpF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    expVector8F32(dest);
+}
+
 fn expScalar(dest: []f64) void {
+    for (dest) |*item| item.* = @exp(item.*);
+}
+
+fn expScalarF32(dest: []f32) void {
     for (dest) |*item| item.* = @exp(item.*);
 }
 
@@ -164,6 +234,26 @@ fn expVector4(dest: []f64) void {
 
 fn expVector8(dest: []f64) void {
     const VectorType = @Vector(8, f64);
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        var vec: VectorType = .{
+            dest[i],
+            dest[i + 1],
+            dest[i + 2],
+            dest[i + 3],
+            dest[i + 4],
+            dest[i + 5],
+            dest[i + 6],
+            dest[i + 7],
+        };
+        vec = @exp(vec);
+        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
+}
+
+fn expVector8F32(dest: []f32) void {
+    const VectorType = @Vector(8, f32);
     var i: usize = 0;
     while (i + 8 <= dest.len) : (i += 8) {
         var vec: VectorType = .{
