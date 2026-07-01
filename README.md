@@ -27,7 +27,8 @@ The current Linux-first roadmap is intentionally broad:
   replacement, reservoir sampling, adaptive index sampling, and checked
   variants for fallible user-supplied counts or empty inputs
 - reusable uniform, Bernoulli, non-uniform distribution, and alias-table samplers
-- dynamic weighted trees for frequent update/push/pop weighted sampling
+- dynamic weighted trees for frequent update/push/pop/sample/fill weighted
+  workloads
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, direct-source charset
   helpers, and Unicode scalar string generation
 - distributions: uniform, bernoulli, binomial, negative-binomial,
