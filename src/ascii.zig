@@ -291,6 +291,14 @@ test "zero-length string helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0x19457be7e6aa9412), engine.next());
 }
 
+test "unicode utf8 allocation length overflow does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a5c4);
+
+    try std.testing.expectError(error.OutOfMemory, unicodeUtf8AllocFrom(std.testing.allocator, &engine, std.math.maxInt(usize)));
+    try std.testing.expectEqual(@as(u64, 0x5472254f9f2945e9), engine.next());
+}
+
 test "ascii helpers have stable snapshots" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x1234_5678_9abc_def0);
