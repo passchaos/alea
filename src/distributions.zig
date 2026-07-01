@@ -6505,6 +6505,22 @@ test "invalid probability distribution fills do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid distribution facade scalar helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1fb);
+    var control = alea.ScalarPrng.init(0x5150_d1fb);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, normalChecked(rng, f64, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, exponentialChecked(rng, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, logisticChecked(rng, f64, 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid uniform distribution helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1f2);
