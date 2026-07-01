@@ -1498,6 +1498,14 @@ pub fn choose(self: Rng, comptime T: type, items: []const T) ?T {
     return chooseFrom(self, T, items);
 }
 
+pub fn chooseChecked(self: Rng, comptime T: type, items: []const T) Error!T {
+    return chooseCheckedFrom(self, T, items);
+}
+
+pub fn chooseCheckedFrom(source: anytype, comptime T: type, items: []const T) Error!T {
+    return chooseFrom(source, T, items) orelse error.EmptyRange;
+}
+
 pub fn chooseFrom(source: anytype, comptime T: type, items: []const T) ?T {
     if (items.len == 0) return null;
     return items[uintLessThanFrom(source, usize, items.len)];
@@ -2708,6 +2716,8 @@ test "shuffle and sampling keep item set" {
 
     const chosen = Rng.chooseFrom(&engine, u8, &values).?;
     try std.testing.expect(chosen >= 1 and chosen <= 5);
+    const checked_chosen = try Rng.chooseCheckedFrom(&engine, u8, &values);
+    try std.testing.expect(checked_chosen >= 1 and checked_chosen <= 5);
 
     const chosen_ptr = Rng.choosePtrFrom(&engine, u8, &values).?;
     try std.testing.expect(chosen_ptr.* >= 1 and chosen_ptr.* <= 5);
@@ -2871,14 +2881,17 @@ test "invalid checked helpers do not consume random stream" {
     try std.testing.expectError(error.EmptyRange, fillVectorRangeCheckedFrom(&engine, @Vector(4, f64), &vec_buf, std.math.inf(f64), 1));
     try std.testing.expectEqual(@as(u64, 0xa360fbcd83acd8d7), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
+    try std.testing.expectError(error.EmptyRange, chooseCheckedFrom(&engine, u8, &.{}));
     try std.testing.expectEqual(@as(u64, 0x8a685176c49005b1), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectEqual(@as(u64, 0xf6aed2fe799c54ee), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
     try std.testing.expectEqual(@as(u64, 0xd3ab62c69321f758), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(u64, 0x1832e3ae643b1913), engine.next());
 }
 
 test "collection helpers preserve direct stream shape" {
@@ -2891,6 +2904,8 @@ test "collection helpers preserve direct stream shape" {
         const rng = Rng.init(&facade_engine);
 
         try std.testing.expectEqual(rng.choose(u8, &items), Rng.chooseFrom(&direct_engine, u8, &items));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        try std.testing.expectEqual(try rng.chooseChecked(u8, &items), try Rng.chooseCheckedFrom(&direct_engine, u8, &items));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         var facade_items = items;
