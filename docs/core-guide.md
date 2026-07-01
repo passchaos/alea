@@ -205,7 +205,8 @@ no-ops and do not draw.
 Empty `chooseIter` / `chooseIterChecked` convenience calls return null/errors
 before drawing.
 Empty optional `chooseIterator` / `chooseIteratorWeighted` streaming calls
-return null before drawing, and all-zero weighted iterator choices do not draw.
+return null before drawing; invalid or all-zero weighted iterator choices do
+not draw.
 Empty streaming `chooseIteratorChecked` / `chooseIteratorWeightedChecked`
 facade calls also fail before drawing.
 Allocation failures while preparing the sample-without-replacement temporary
