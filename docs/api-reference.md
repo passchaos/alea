@@ -679,7 +679,8 @@ Dynamic weighted helpers:
   `Charset.fillCheckedFrom`, `Charset.alloc`, `Charset.allocChecked`,
   `Charset.allocFrom`, `Charset.allocCheckedFrom`
 - Helpers: `char`, `charFrom`, `string`, `stringFrom`, `unicodeScalar`,
-  `unicodeScalarFrom`, `unicodeUtf8Alloc`, `unicodeUtf8AllocFrom`
+  `unicodeScalarFrom`, `unicodeUtf8Alloc`, `unicodeUtf8AllocFrom`,
+  `unicodeUtf8Into`, `unicodeUtf8IntoFrom`
 
 ## Validation And Tooling
 

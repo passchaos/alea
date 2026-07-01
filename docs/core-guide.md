@@ -224,14 +224,16 @@ already consumed randomness for earlier accepted candidates.
 `ascii.zig` includes ASCII `Alphanumeric`, `Alphabetic`, `Lowercase`,
 `Uppercase`, `Digits`, custom `Charset`, and Unicode scalar UTF-8 string
 generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
-`Charset.allocFrom`, `charFrom`, `stringFrom`, `unicodeScalarFrom`, and
-`unicodeUtf8AllocFrom` when the engine type is comptime-known. Use
+`Charset.allocFrom`, `charFrom`, `stringFrom`, `unicodeScalarFrom`,
+`unicodeUtf8AllocFrom`, and `unicodeUtf8IntoFrom` when the engine type is
+comptime-known. Use
 `Charset.sampleCheckedFrom`, `Charset.fillCheckedFrom`, and
 `Charset.allocCheckedFrom` when a manually constructed charset may be empty;
 zero-length fills and allocations return empty results before validating charset
-contents. Allocation failures in ASCII and Unicode string helpers are reported
-before any scalar is drawn, so retry/error paths do not silently advance a
-deterministic stream.
+contents. Initial allocation failures in ASCII and Unicode string helpers are
+reported before any scalar is drawn, so retry/error paths do not silently
+advance a deterministic stream. `unicodeUtf8Into` / `unicodeUtf8IntoFrom` let
+callers use a caller-owned buffer; too-small buffers fail before drawing.
 
 ## Validation
 

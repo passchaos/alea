@@ -110,6 +110,26 @@ pub fn unicodeUtf8Alloc(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u
     return unicodeUtf8AllocFrom(allocator, rng, len);
 }
 
+pub fn unicodeUtf8Into(rng: Rng, out: []u8, len: usize) ![]u8 {
+    return unicodeUtf8IntoFrom(rng, out, len);
+}
+
+pub fn unicodeUtf8IntoFrom(source: anytype, out: []u8, len: usize) ![]u8 {
+    const capacity = std.math.mul(usize, len, 4) catch return error.OutOfMemory;
+    if (out.len < capacity) return error.NoSpaceLeft;
+
+    var written: usize = 0;
+    var i: usize = 0;
+    while (i < len) : (i += 1) {
+        var buf: [4]u8 = undefined;
+        const n = std.unicode.utf8Encode(unicodeScalarFrom(source), &buf) catch unreachable;
+        @memcpy(out[written..][0..n], buf[0..n]);
+        written += n;
+    }
+
+    return out[0..written];
+}
+
 pub fn unicodeUtf8AllocFrom(allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
     const capacity = std.math.mul(usize, len, 4) catch return error.OutOfMemory;
     var out = try std.ArrayList(u8).initCapacity(allocator, capacity);
@@ -248,6 +268,13 @@ test "ascii helpers preserve direct stream shape" {
         defer std.testing.allocator.free(direct_text);
         try std.testing.expectEqualSlices(u8, facade_text, direct_text);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_text_buf: [16 * 4]u8 = undefined;
+        var direct_text_buf: [16 * 4]u8 = undefined;
+        const facade_text_into = try unicodeUtf8Into(rng, &facade_text_buf, 16);
+        const direct_text_into = try unicodeUtf8IntoFrom(&direct_engine, &direct_text_buf, 16);
+        try std.testing.expectEqualSlices(u8, facade_text_into, direct_text_into);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 }
 
@@ -343,6 +370,21 @@ test "unicode utf8 allocation length overflow does not consume random stream" {
 
     try std.testing.expectError(error.OutOfMemory, unicodeUtf8AllocFrom(std.testing.allocator, &engine, std.math.maxInt(usize)));
     try std.testing.expectEqual(@as(u64, 0x5472254f9f2945e9), engine.next());
+}
+
+test "unicode utf8 output buffer validation does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a5c9);
+    var control = alea.ScalarPrng.init(0x5150_a5c9);
+
+    var short: [7]u8 = undefined;
+    try std.testing.expectError(error.NoSpaceLeft, unicodeUtf8IntoFrom(&engine, &short, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty: [0]u8 = .{};
+    const text = try unicodeUtf8IntoFrom(&engine, &empty, 0);
+    try std.testing.expectEqual(@as(usize, 0), text.len);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "ascii helpers have stable snapshots" {
