@@ -2942,6 +2942,7 @@ pub fn fillLogisticChecked(rng: Rng, comptime T: type, dest: []T, location: T, s
 }
 
 pub fn fillLogisticCheckedFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Logistic(T).init(location, scale);
     sampler.fillFrom(source, dest);
 }
@@ -3021,6 +3022,7 @@ pub fn fillLogLogisticChecked(rng: Rng, comptime T: type, dest: []T, scale: T, s
 }
 
 pub fn fillLogLogisticCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try LogLogistic(T).init(scale, shape);
     sampler.fillFrom(source, dest);
 }
@@ -3125,6 +3127,7 @@ pub fn fillKumaraswamyChecked(rng: Rng, comptime T: type, dest: []T, alpha: T, b
 }
 
 pub fn fillKumaraswamyCheckedFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Kumaraswamy(T).init(alpha, beta_param);
     sampler.fillFrom(source, dest);
 }
@@ -3252,6 +3255,7 @@ pub fn fillPowerFunctionChecked(rng: Rng, comptime T: type, dest: []T, min: T, m
 }
 
 pub fn fillPowerFunctionCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T, shape: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try PowerFunction(T).init(min, max, shape);
     sampler.fillFrom(source, dest);
 }
@@ -3350,6 +3354,7 @@ pub fn fillRayleighChecked(rng: Rng, comptime T: type, dest: []T, scale: T) Erro
 }
 
 pub fn fillRayleighCheckedFrom(source: anytype, comptime T: type, dest: []T, scale: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Rayleigh(T).init(scale);
     sampler.fillFrom(source, dest);
 }
@@ -6377,6 +6382,36 @@ test "invalid checked distribution helpers do not consume random stream" {
     defer int_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &u64_buf));
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
+}
+
+test "zero-length tail distribution fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1ca);
+    var control = alea.ScalarPrng.init(0x5150_d1ca);
+    const rng = Rng.init(&engine);
+
+    var out: [0]f64 = .{};
+
+    try fillLogisticCheckedFrom(&engine, f64, &out, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillLogLogisticCheckedFrom(&engine, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillKumaraswamyCheckedFrom(&engine, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillPowerFunctionCheckedFrom(&engine, f64, &out, 1, 1, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillRayleighCheckedFrom(&engine, f64, &out, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillLogisticChecked(rng, f64, &out, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillKumaraswamyChecked(rng, f64, &out, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillRayleighChecked(rng, f64, &out, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one: [1]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillLogisticCheckedFrom(&engine, f64, &one, 0, 0));
 }
 
 test "zero-length derived distribution fills do not validate or consume random stream" {
