@@ -247,7 +247,8 @@ new concrete hypothesis is available:
   `lognormal-transform-notes.md`.
 - OpenClosed f64: buffer sizes, int-add expression shape, bitcast, in-place,
   vector, and invalid raw-byte variants are exhausted; future work needs a new
-  exact `(0, 1]` endpoint-grid construction.
+  exact `(0, 1]` endpoint-grid construction. See
+  `openclosed-endpoint-notes.md`.
 - SIMD distributions: f32x8 repair is useful evidence, but both standard and
   parameterized vectorbench slice-fill rows failed to beat current scalar
   lane-fill defaults; future work needs a genuinely dense SIMD candidate that

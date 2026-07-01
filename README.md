@@ -130,4 +130,6 @@ the public API reference, and
 `compare/results/core-rand-coverage.md` for the roadmap and validation matrix.
 Current hard performance gaps and rejected optimization attempts are tracked in
 `compare/results/performance-triage.md`; LogNormal transform tradeoffs are
-summarized in `compare/results/lognormal-transform-notes.md`.
+summarized in `compare/results/lognormal-transform-notes.md`, and exact
+`(0, 1]` f64 endpoint-grid constraints are summarized in
+`compare/results/openclosed-endpoint-notes.md`.
