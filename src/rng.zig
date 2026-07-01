@@ -2945,6 +2945,10 @@ test "collection helpers preserve direct stream shape" {
         try std.testing.expectEqual(try rng.chooseChecked(u8, &items), try Rng.chooseCheckedFrom(&direct_engine, u8, &items));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+        const Enum = enum { a, b, c };
+        try std.testing.expectEqual(try rng.enumValueChecked(Enum), try Rng.enumValueCheckedFrom(&direct_engine, Enum));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         var facade_items = items;
         var direct_items = items;
         const facade_ptr = rng.choosePtr(u8, &facade_items).?;
