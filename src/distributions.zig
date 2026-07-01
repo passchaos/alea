@@ -6443,6 +6443,20 @@ test "invalid checked distribution helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
 }
 
+test "invalid probability distribution fills do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1f3);
+    var control = alea.ScalarPrng.init(0x5150_d1f3);
+
+    var bools: [4]bool = undefined;
+    try std.testing.expectError(error.InvalidProbability, fillBernoulliCheckedFrom(&engine, &bools, -0.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var ints: [4]u64 = undefined;
+    try std.testing.expectError(error.InvalidProbability, fillBinomialCheckedFrom(&engine, &ints, 10, 1.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid uniform distribution helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1f2);
