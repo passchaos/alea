@@ -211,4 +211,6 @@ SIMD distribution kernel are tracked in
 Use focused probes such as `ziggurat-probe`, `open-closed-probe`, and the
 distribution-specific probes under `tools/` to isolate hot-path expression
 shape before changing production algorithms. Keep accepted and rejected probe
-outcomes in `compare/results/performance-triage.md`.
+outcomes in `compare/results/performance-triage.md`. LogNormal transform
+experiments have additional accuracy/reproducibility notes in
+`compare/results/lognormal-transform-notes.md`.
