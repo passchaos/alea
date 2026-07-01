@@ -6019,6 +6019,12 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectEqual(@as(usize, 2), tree.sample(rng));
     try std.testing.expectError(error.InvalidParameter, tree.update(9, 1));
 
+    var empty_tree = try WeightedTree(u32).init(std.testing.allocator, &.{});
+    defer empty_tree.deinit();
+    try std.testing.expect(empty_tree.isEmpty());
+    try std.testing.expect(!empty_tree.isValid());
+    try std.testing.expectEqual(@as(?f64, null), empty_tree.pop());
+
     var float_tree = try WeightedTree(f64).init(std.testing.allocator, &.{1.0});
     defer float_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, float_tree.push(std.math.nan(f64)));
