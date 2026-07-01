@@ -1786,6 +1786,25 @@ test "collection sequence helpers preserve direct stream shape" {
     }
 }
 
+test "empty choice iterator helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_c0df);
+    var control = alea.ScalarPrng.init(0x5150_c0df);
+    const rng = alea.Rng.init(&engine);
+
+    try std.testing.expect(chooseIter(rng, u8, &.{}) == null);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expect(chooseIterFrom(&engine, u8, &.{}) == null);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyInput, chooseIterChecked(rng, u8, &.{}));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyInput, chooseIterCheckedFrom(&engine, u8, &.{}));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "choice sampler repeatedly samples slice references" {
     const alea = @import("root.zig");
     var engine = alea.DefaultPrng.init(445);
