@@ -79,6 +79,8 @@ Laplace, logistic, log-logistic, Kumaraswamy, power-function, Rayleigh,
 Maxwell, Pareto, Weibull, Gumbel, Frechet, skew-normal, PERT, and
 inverse-Gaussian-family sampling. Top-level Zipf/Zeta fills mirror their
 reusable sampler fills with checked variants for fallible bulk workflows.
+Zero-length checked fills in the core distribution wrapper and discrete
+families return before validating user parameters.
 The distributions module also mirrors `Rng.fillNormal*` and
 `Rng.fillExponential*` as top-level helpers for callers who prefer the
 distribution namespace; `fillUniform*` and `fillUniformInclusive*` do the same

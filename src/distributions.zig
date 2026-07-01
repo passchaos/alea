@@ -170,6 +170,7 @@ pub fn fillBernoulliChecked(rng: Rng, dest: []bool, p: f64) Error!void {
 }
 
 pub fn fillBernoulliCheckedFrom(source: anytype, dest: []bool, p: f64) Error!void {
+    if (dest.len == 0) return;
     const dist = try Bernoulli.init(p);
     dist.fillFrom(source, dest);
 }
@@ -285,6 +286,7 @@ pub fn fillBinomialChecked(rng: Rng, dest: []u64, trials: u64, p: f64) Error!voi
 }
 
 pub fn fillBinomialCheckedFrom(source: anytype, dest: []u64, trials: u64, p: f64) Error!void {
+    if (dest.len == 0) return;
     const dist = try Binomial.init(trials, p);
     dist.fillFrom(source, dest);
 }
@@ -462,6 +464,7 @@ pub fn fillNegativeBinomialChecked(rng: Rng, dest: []u64, successes: u64, p: f64
 }
 
 pub fn fillNegativeBinomialCheckedFrom(source: anytype, dest: []u64, successes: u64, p: f64) Error!void {
+    if (dest.len == 0) return;
     const dist = try NegativeBinomial.init(successes, p);
     dist.fillFrom(source, dest);
 }
@@ -552,6 +555,7 @@ pub fn fillHypergeometricChecked(rng: Rng, dest: []u64, population: u64, success
 }
 
 pub fn fillHypergeometricCheckedFrom(source: anytype, dest: []u64, population: u64, successes: u64, draws: u64) Error!void {
+    if (dest.len == 0) return;
     const dist = try Hypergeometric.init(population, successes, draws);
     dist.fillFrom(source, dest);
 }
@@ -1515,6 +1519,7 @@ pub fn fillPoissonChecked(rng: Rng, dest: []u64, lambda: f64) Error!void {
 }
 
 pub fn fillPoissonCheckedFrom(source: anytype, dest: []u64, lambda: f64) Error!void {
+    if (dest.len == 0) return;
     const dist = try Poisson.init(lambda);
     dist.fillFrom(source, dest);
 }
@@ -1807,6 +1812,7 @@ pub fn fillGeometricFailuresChecked(rng: Rng, dest: []u64, p: f64) Error!void {
 }
 
 pub fn fillGeometricFailuresCheckedFrom(source: anytype, dest: []u64, p: f64) Error!void {
+    if (dest.len == 0) return;
     const dist = try GeometricFailures.init(p);
     dist.fillFrom(source, dest);
 }
@@ -1846,6 +1852,7 @@ pub fn fillGeometricChecked(rng: Rng, dest: []u64, p: f64) Error!void {
 }
 
 pub fn fillGeometricCheckedFrom(source: anytype, dest: []u64, p: f64) Error!void {
+    if (dest.len == 0) return;
     const dist = try Geometric.init(p);
     dist.fillFrom(source, dest);
 }
@@ -6357,6 +6364,41 @@ test "invalid checked distribution helpers do not consume random stream" {
     defer int_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &u64_buf));
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
+}
+
+test "zero-length discrete distribution fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d19a);
+    var control = alea.ScalarPrng.init(0x5150_d19a);
+    const rng = Rng.init(&engine);
+
+    var bools: [0]bool = .{};
+    var ints: [0]u64 = .{};
+
+    try fillBernoulliCheckedFrom(&engine, &bools, -0.1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillBinomialCheckedFrom(&engine, &ints, 10, 1.1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillNegativeBinomialCheckedFrom(&engine, &ints, 0, 0.5);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillHypergeometricCheckedFrom(&engine, &ints, 10, 11, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillPoissonCheckedFrom(&engine, &ints, std.math.inf(f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillGeometricFailuresCheckedFrom(&engine, &ints, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillGeometricCheckedFrom(&engine, &ints, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillBernoulliChecked(rng, &bools, -0.1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillPoissonChecked(rng, &ints, std.math.inf(f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillGeometricChecked(rng, &ints, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one_bool: [1]bool = undefined;
+    try std.testing.expectError(error.InvalidProbability, fillBernoulliCheckedFrom(&engine, &one_bool, -0.1));
 }
 
 test "zero-length base distribution fills do not validate or consume random stream" {
