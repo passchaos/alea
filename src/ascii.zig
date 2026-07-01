@@ -197,6 +197,14 @@ test "ascii helpers preserve direct stream shape" {
     }
 }
 
+test "invalid charset init does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a5c2);
+
+    try std.testing.expectError(error.EmptyCharset, Charset.initChecked(""));
+    try std.testing.expectEqual(@as(u64, 0x96ac5eed591f009a), engine.next());
+}
+
 test "ascii helpers have stable snapshots" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x1234_5678_9abc_def0);
