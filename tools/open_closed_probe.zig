@@ -21,6 +21,8 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("open-closed f64 probe count={}\n", .{sample_count});
     try benchFill(io, stdout, "facade fillOpenClosed", sample_count, facadeFill);
     try benchFill(io, stdout, "facade fillSample OpenClosed01", sample_count, facadeFillSample);
+    try benchFill(io, stdout, "facade raw words 64", sample_count, facadeRawFill64);
+    try benchFill(io, stdout, "facade raw words 96", sample_count, facadeRawFill96);
     try benchFill(io, stdout, "facade raw words 128", sample_count, facadeRawFill128);
     try benchFill(io, stdout, "facade raw words 160", sample_count, facadeRawFill160);
     try benchFill(io, stdout, "facade raw words 192", sample_count, facadeRawFill192);
@@ -28,6 +30,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(io, stdout, "facade raw words 256", sample_count, facadeRawFill256);
     try benchFill(io, stdout, "direct fillOpenClosedFrom", sample_count, directFill);
     try benchFill(io, stdout, "scalar next conversion", sample_count, scalarNextFill);
+    try benchFill(io, stdout, "raw fill words 64", sample_count, rawFill64);
+    try benchFill(io, stdout, "raw fill words 96", sample_count, rawFill96);
     try benchFill(io, stdout, "raw fill words 128", sample_count, rawFill128);
     try benchFill(io, stdout, "raw fill words 512", sample_count, rawFill512);
     try benchFill(io, stdout, "raw fill words 2048", sample_count, rawFill2048);
@@ -82,6 +86,14 @@ fn facadeFillSample(engine: *alea.FastPrng, dest: []f64) void {
     rng.fillSample(f64, dest, alea.distributions.OpenClosed01{});
 }
 
+fn facadeRawFill64(engine: *alea.FastPrng, dest: []f64) void {
+    facadeRawFill(engine, dest, 64);
+}
+
+fn facadeRawFill96(engine: *alea.FastPrng, dest: []f64) void {
+    facadeRawFill(engine, dest, 96);
+}
+
 fn facadeRawFill128(engine: *alea.FastPrng, dest: []f64) void {
     facadeRawFill(engine, dest, 128);
 }
@@ -108,6 +120,14 @@ fn directFill(engine: *alea.FastPrng, dest: []f64) void {
 
 fn scalarNextFill(engine: *alea.FastPrng, dest: []f64) void {
     for (dest) |*item| item.* = alea.Rng.floatOpenClosedFrom(engine, f64);
+}
+
+fn rawFill64(engine: *alea.FastPrng, dest: []f64) void {
+    rawFill(engine, dest, 64);
+}
+
+fn rawFill96(engine: *alea.FastPrng, dest: []f64) void {
+    rawFill(engine, dest, 96);
 }
 
 fn rawFill128(engine: *alea.FastPrng, dest: []f64) void {
