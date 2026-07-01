@@ -4079,6 +4079,7 @@ pub fn unitBall(rng: Rng, comptime T: type) [3]T {
 
 pub fn unitBallFrom(source: anytype, comptime T: type) [3]T {
     comptime requireFloat(T);
+    if (T == f64) return unitBallF64PointFrom(source);
     while (true) {
         const x1 = signedUnitFloatFrom(source, T);
         const x2 = signedUnitFloatFrom(source, T);
@@ -4146,6 +4147,16 @@ fn unitSphereF64PointFrom(source: anytype) [3]f64 {
         if (sum >= 1) continue;
         const factor = 2 * @sqrt(1 - sum);
         return .{ x * factor, y * factor, 1 - 2 * sum };
+    }
+}
+
+fn unitBallF64PointFrom(source: anytype) [3]f64 {
+    while (true) {
+        const x = signedUnitF64PointFrom(source);
+        const y = signedUnitF64PointFrom(source);
+        const z = signedUnitF64PointFrom(source);
+        const xy = @mulAdd(f64, y, y, x * x);
+        if (@mulAdd(f64, z, z, xy) <= 1) return .{ x, y, z };
     }
 }
 

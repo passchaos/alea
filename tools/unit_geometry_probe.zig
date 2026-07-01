@@ -52,6 +52,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast unit disc batched candidates", 0xd15c, sample_count, batchedUnitDisc);
     try benchFill3(alea.FastPrng, io, stdout, "fast unit sphere current fill", 0x59e7e, sample_count, currentUnitSphere);
     try benchFill3(alea.FastPrng, io, stdout, "fast unit sphere batched candidates", 0x59e7e, sample_count, batchedUnitSphere);
+    try benchSample3(alea.FastPrng, io, stdout, "fast unit ball point current", 0xba11, sample_count, sampleUnitBallCurrent);
+    try benchSample3(alea.FastPrng, io, stdout, "fast unit ball point fma", 0xba11, sample_count, sampleUnitBallFma);
     try benchFill3(alea.FastPrng, io, stdout, "fast unit ball current fill", 0xba11, sample_count, currentUnitBall);
     try benchFill3(alea.FastPrng, io, stdout, "fast unit ball batched x2", 0xba11, sample_count, batchedUnitBall2);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
@@ -60,6 +62,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.ScalarPrng, io, stdout, "scalar unit disc batched candidates", 0xd15c, sample_count, batchedUnitDisc);
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit sphere current fill", 0x59e7e, sample_count, currentUnitSphere);
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit sphere batched candidates", 0x59e7e, sample_count, batchedUnitSphere);
+    try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit ball point current", 0xba11, sample_count, sampleUnitBallCurrent);
+    try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit ball point fma", 0xba11, sample_count, sampleUnitBallFma);
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball current fill", 0xba11, sample_count, currentUnitBall);
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball batched x2", 0xba11, sample_count, batchedUnitBall2);
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit ball batched x3", 0xba11, sample_count, batchedUnitBall3);
@@ -309,6 +313,10 @@ fn sampleUnitSphereCurrent(source: anytype) [3]f64 {
     return alea.distributions.unitSphereFrom(source, f64);
 }
 
+fn sampleUnitBallCurrent(source: anytype) [3]f64 {
+    return alea.distributions.unitBallFrom(source, f64);
+}
+
 fn signedUnitFloat(source: anytype) f64 {
     const repr = (@as(u64, 0x400) << 52) | (alea.Rng.nextFrom(source) >> 12);
     return @as(f64, @bitCast(repr)) - 3.0;
@@ -342,6 +350,16 @@ fn sampleUnitSphereFma(source: anytype) [3]f64 {
         if (sum >= 1) continue;
         const factor = 2 * @sqrt(1 - sum);
         return .{ x * factor, y * factor, 1 - 2 * sum };
+    }
+}
+
+fn sampleUnitBallFma(source: anytype) [3]f64 {
+    while (true) {
+        const x = signedUnitFloat(source);
+        const y = signedUnitFloat(source);
+        const z = signedUnitFloat(source);
+        const xy = @mulAdd(f64, y, y, x * x);
+        if (@mulAdd(f64, z, z, xy) <= 1) return .{ x, y, z };
     }
 }
 
