@@ -34,6 +34,9 @@ pub fn main(init: std.process.Init) !void {
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point fma", 0x59e7e, sample_count, sampleUnitSphereFma);
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point pair", 0x59e7e, sample_count, sampleUnitSpherePair);
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point range", 0x59e7e, sample_count, sampleUnitSphereRange);
+    try benchFill(alea.FastPrng, io, stdout, "fast unit circle point-loop fill", 0xc11c1e, sample_count, pointLoopUnitCircle);
+    try benchFill(alea.FastPrng, io, stdout, "fast unit disc point-loop fill", 0xd15c, sample_count, pointLoopUnitDisc);
+    try benchFill3(alea.FastPrng, io, stdout, "fast unit sphere point-loop fill", 0x59e7e, sample_count, pointLoopUnitSphere);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point fma", 0xc11c1e, sample_count, sampleUnitCircleFma);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point pair", 0xc11c1e, sample_count, sampleUnitCirclePair);
@@ -46,6 +49,9 @@ pub fn main(init: std.process.Init) !void {
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point fma", 0x59e7e, sample_count, sampleUnitSphereFma);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point pair", 0x59e7e, sample_count, sampleUnitSpherePair);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point range", 0x59e7e, sample_count, sampleUnitSphereRange);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar unit circle point-loop fill", 0xc11c1e, sample_count, pointLoopUnitCircle);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar unit disc point-loop fill", 0xd15c, sample_count, pointLoopUnitDisc);
+    try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit sphere point-loop fill", 0x59e7e, sample_count, pointLoopUnitSphere);
     try benchFill(alea.FastPrng, io, stdout, "fast unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
     try benchFill(alea.FastPrng, io, stdout, "fast unit circle batched candidates", 0xc11c1e, sample_count, batchedUnitCircle);
     try benchFill(alea.FastPrng, io, stdout, "fast unit disc current fill", 0xd15c, sample_count, currentUnitDisc);
@@ -299,6 +305,18 @@ fn currentUnitSphere(source: anytype, dest: [][3]f64) void {
 
 fn currentUnitBall(source: anytype, dest: [][3]f64) void {
     alea.distributions.fillUnitBallFrom(source, f64, dest);
+}
+
+fn pointLoopUnitCircle(source: anytype, dest: [][2]f64) void {
+    for (dest) |*item| item.* = sampleUnitCircleFma(source);
+}
+
+fn pointLoopUnitDisc(source: anytype, dest: [][2]f64) void {
+    for (dest) |*item| item.* = sampleUnitDiscFma(source);
+}
+
+fn pointLoopUnitSphere(source: anytype, dest: [][3]f64) void {
+    for (dest) |*item| item.* = sampleUnitSphereFma(source);
 }
 
 fn sampleUnitCircleCurrent(source: anytype) [2]f64 {
