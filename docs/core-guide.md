@@ -179,7 +179,9 @@ generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
 `Charset.sampleCheckedFrom`, `Charset.fillCheckedFrom`, and
 `Charset.allocCheckedFrom` when a manually constructed charset may be empty;
 zero-length fills and allocations return empty results before validating charset
-contents.
+contents. Allocation failures in ASCII and Unicode string helpers are reported
+before any scalar is drawn, so retry/error paths do not silently advance a
+deterministic stream.
 
 ## Validation
 

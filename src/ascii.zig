@@ -305,6 +305,38 @@ test "zero-length string helpers do not consume random stream" {
     try std.testing.expectEqual(control_engine.next(), facade_engine.next());
 }
 
+test "initial string allocation failures do not consume random stream" {
+    const alea = @import("root.zig");
+
+    var ascii_engine = alea.ScalarPrng.init(0x5150_a5c6);
+    var ascii_control = alea.ScalarPrng.init(0x5150_a5c6);
+    var ascii_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, stringFrom(ascii_alloc.allocator(), &ascii_engine, 8));
+    try std.testing.expect(ascii_alloc.has_induced_failure);
+    try std.testing.expectEqual(ascii_control.next(), ascii_engine.next());
+
+    var unicode_engine = alea.ScalarPrng.init(0x5150_a5c7);
+    var unicode_control = alea.ScalarPrng.init(0x5150_a5c7);
+    var unicode_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, unicodeUtf8AllocFrom(unicode_alloc.allocator(), &unicode_engine, 8));
+    try std.testing.expect(unicode_alloc.has_induced_failure);
+    try std.testing.expectEqual(unicode_control.next(), unicode_engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_a5c8);
+    var facade_control = alea.ScalarPrng.init(0x5150_a5c8);
+    const rng = alea.Rng.init(&facade_engine);
+
+    var facade_ascii_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, string(facade_ascii_alloc.allocator(), rng, 8));
+    try std.testing.expect(facade_ascii_alloc.has_induced_failure);
+    try std.testing.expectEqual(facade_control.next(), facade_engine.next());
+
+    var facade_unicode_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, unicodeUtf8Alloc(facade_unicode_alloc.allocator(), rng, 8));
+    try std.testing.expect(facade_unicode_alloc.has_induced_failure);
+    try std.testing.expectEqual(facade_control.next(), facade_engine.next());
+}
+
 test "unicode utf8 allocation length overflow does not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_a5c4);
