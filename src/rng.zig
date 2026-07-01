@@ -106,8 +106,26 @@ pub fn valueChecked(self: Rng, comptime T: type) Error!T {
 }
 
 pub fn valueCheckedFrom(source: anytype, comptime T: type) Error!T {
-    if (comptime isEmptyEnum(T)) return error.EmptyRange;
-    return valueFrom(source, T);
+    return switch (@typeInfo(T)) {
+        .bool, .int, .float, .vector => valueFrom(source, T),
+        .@"enum" => enumValueCheckedFrom(source, T),
+        .array => |array_info| blk: {
+            var out: T = undefined;
+            for (&out) |*item| item.* = try valueCheckedFrom(source, array_info.child);
+            break :blk out;
+        },
+        .@"struct" => |struct_info| blk: {
+            if (struct_info.is_tuple) {
+                var out: T = undefined;
+                inline for (struct_info.fields) |field| {
+                    @field(out, field.name) = try valueCheckedFrom(source, field.type);
+                }
+                break :blk out;
+            }
+            @compileError("alea.Rng.valueChecked only auto-samples tuples, arrays, bools, ints, floats, and enums");
+        },
+        else => @compileError("alea.Rng.valueChecked does not support " ++ @typeName(T)),
+    };
 }
 
 pub fn valueFrom(source: anytype, comptime T: type) T {
@@ -134,10 +152,6 @@ pub fn valueFrom(source: anytype, comptime T: type) T {
         },
         else => @compileError("alea.Rng.value does not support " ++ @typeName(T)),
     };
-}
-
-fn isEmptyEnum(comptime T: type) bool {
-    return @typeInfo(T) == .@"enum" and std.enums.values(T).len == 0;
 }
 
 pub fn valueIter(self: Rng, comptime T: type) ValueIterator(T) {
@@ -2896,6 +2910,7 @@ test "invalid checked helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_bad);
     const EmptyEnum = enum {};
+    const NestedEmptyEnum = struct { EmptyEnum };
 
     try std.testing.expectError(error.InvalidProbability, chanceCheckedFrom(&engine, -0.1));
     try std.testing.expectEqual(@as(u64, 0x9ccf0caa836c3975), engine.next());
@@ -2954,20 +2969,34 @@ test "invalid checked helpers do not consume random stream" {
     }
     try std.testing.expectEqual(@as(u64, 0x1832e3ae643b1913), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
+    if (valueCheckedFrom(&engine, [2]EmptyEnum)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     try std.testing.expectEqual(@as(u64, 0x1e449ba06e4ee306), engine.next());
 
-    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{}));
+    if (valueCheckedFrom(&engine, NestedEmptyEnum)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     try std.testing.expectEqual(@as(u64, 0xa05fd0d145ac28f5), engine.next());
 
-    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{ 0.0, 0.0 }));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectEqual(@as(u64, 0x709790abbb828191), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{}));
     try std.testing.expectEqual(@as(u64, 0x3956218e7dd11342), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{ 0.0, 0.0 }));
     try std.testing.expectEqual(@as(u64, 0xdbf744335ced8b7d), engine.next());
+
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
+    try std.testing.expectEqual(@as(u64, 0x4a25e952d381d57c), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(u64, 0xb6ab229c8fe7505b), engine.next());
 }
 
 test "collection helpers preserve direct stream shape" {
