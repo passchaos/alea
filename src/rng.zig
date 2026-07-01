@@ -1647,6 +1647,7 @@ pub fn sampleWithoutReplacementChecked(self: Rng, comptime T: type, allocator: s
 }
 
 pub fn sampleWithoutReplacementCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
     if (count > items.len) return error.InvalidParameter;
     var pool = try std.ArrayList(T).initCapacity(allocator, items.len);
     defer pool.deinit(allocator);
@@ -3063,6 +3064,27 @@ test "invalid checked helpers do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
     try std.testing.expectEqual(@as(u64, 0x1f96d05125db1460), engine.next());
+}
+
+test "zero-count sample without replacement does not build pool or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_baf);
+    var control = alea.ScalarPrng.init(0x5150_baf);
+
+    const items = [_]u8{ 1, 2, 3, 4 };
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const sample = try sampleWithoutReplacementCheckedFrom(&engine, u8, failing.allocator(), &items, 0);
+    defer failing.allocator().free(sample);
+    try std.testing.expectEqual(@as(usize, 0), sample.len);
+    try std.testing.expect(!failing.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const empty_sample = try sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{}, 0);
+    defer std.testing.allocator.free(empty_sample);
+    try std.testing.expectEqual(@as(usize, 0), empty_sample.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &items, items.len + 1));
 }
 
 test "zero-length checked fills do not validate or consume random stream" {
