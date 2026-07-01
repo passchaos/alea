@@ -1490,6 +1490,51 @@ test "invalid checked weighted sample counts do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0x2fe6d69480ac1690), engine.next());
 }
 
+test "empty optional iterator choices do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_771c);
+    var control = alea.ScalarPrng.init(0x5150_771c);
+    const rng = alea.Rng.init(&engine);
+
+    const EmptyIter = struct {
+        fn next(_: *@This()) ?u8 {
+            return null;
+        }
+    };
+    var iter = EmptyIter{};
+    try std.testing.expectEqual(@as(?u8, null), chooseIterator(rng, u8, &iter));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const Entry = struct { item: u8, weight: f64 };
+    const EmptyWeightedIter = struct {
+        fn next(_: *@This()) ?Entry {
+            return null;
+        }
+    };
+    var weighted_iter = EmptyWeightedIter{};
+    try std.testing.expectEqual(@as(?u8, null), try chooseIteratorWeighted(rng, u8, &weighted_iter));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const ZeroWeightedIter = struct {
+        index: usize = 0,
+        entries: []const Entry,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.entries.len) return null;
+            const entry = self.entries[self.index];
+            self.index += 1;
+            return entry;
+        }
+    };
+    const zero_entries = [_]Entry{
+        .{ .item = 1, .weight = 0 },
+        .{ .item = 2, .weight = 0 },
+    };
+    var zero_iter = ZeroWeightedIter{ .entries = &zero_entries };
+    try std.testing.expectEqual(@as(?u8, null), try chooseIteratorWeighted(rng, u8, &zero_iter));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "empty facade iterator choices do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_771b);
