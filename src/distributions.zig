@@ -6603,6 +6603,10 @@ test "invalid distribution facade fill helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, fillBernoulliChecked(rng, &bools, -0.1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var int_counts: [4]u64 = undefined;
+    try std.testing.expectError(error.InvalidProbability, fillBinomialChecked(rng, &int_counts, 10, 1.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var ints: [4]u32 = undefined;
     try std.testing.expectError(error.EmptyRange, fillUniformChecked(rng, u32, &ints, 9, 5));
     try std.testing.expectEqual(control.next(), engine.next());
