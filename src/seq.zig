@@ -1002,19 +1002,28 @@ test "invalid sequence helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, reservoirSampleCheckedFrom(std.testing.allocator, &engine, u8, &.{ 1, 2 }, 3));
     try std.testing.expectEqual(@as(u64, 0x3a629804e3b708f), engine.next());
 
-    try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesFrom(std.testing.allocator, &engine, u32, &.{}, 1));
+    const EmptyIter = struct {
+        fn next(_: *@This()) ?u8 {
+            return null;
+        }
+    };
+    var empty_iter = EmptyIter{};
+    try std.testing.expectError(error.EmptyInput, chooseIteratorCheckedFrom(&engine, u8, &empty_iter));
     try std.testing.expectEqual(@as(u64, 0x0e732e04fa4e0680), engine.next());
 
-    try std.testing.expectError(error.EmptyInput, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{}, &.{}, 1));
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesFrom(std.testing.allocator, &engine, u32, &.{}, 1));
     try std.testing.expectEqual(@as(u64, 0x3a0e704844a1b5ea), engine.next());
+
+    try std.testing.expectError(error.EmptyInput, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{}, &.{}, 1));
+    try std.testing.expectEqual(@as(u64, 0xbdd1a3355d5f73fa), engine.next());
 
     const empty_weighted = try sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{}, &.{1}, 0);
     defer std.testing.allocator.free(empty_weighted);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted.len);
-    try std.testing.expectEqual(@as(u64, 0xbdd1a3355d5f73fa), engine.next());
+    try std.testing.expectEqual(@as(u64, 0x12f96538e2946977), engine.next());
 
     try std.testing.expectError(error.LengthMismatch, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 1));
-    try std.testing.expectEqual(@as(u64, 0x12f96538e2946977), engine.next());
+    try std.testing.expectEqual(@as(u64, 0x27e8be3f8d5b1983), engine.next());
 
     const Entry = struct { item: u8, weight: f64 };
     const BadIter = struct {
@@ -1031,11 +1040,11 @@ test "invalid sequence helpers do not consume random stream" {
     const bad_entries = [_]Entry{.{ .item = 1, .weight = std.math.nan(f64) }};
     var bad_choose_iter = BadIter{ .items = &bad_entries };
     try std.testing.expectError(error.InvalidWeight, chooseIteratorWeightedFrom(&engine, u8, &bad_choose_iter));
-    try std.testing.expectEqual(@as(u64, 0x27e8be3f8d5b1983), engine.next());
+    try std.testing.expectEqual(@as(u64, 0xf151595c48f020fd), engine.next());
 
     var bad_sample_iter = BadIter{ .items = &bad_entries };
     try std.testing.expectError(error.InvalidWeight, sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &bad_sample_iter, 1));
-    try std.testing.expectEqual(@as(u64, 0xf151595c48f020fd), engine.next());
+    try std.testing.expectEqual(@as(u64, 0x979291c5b220befd), engine.next());
 
     const huge_entries = [_]Entry{
         .{ .item = 1, .weight = std.math.floatMax(f64) },
@@ -1043,13 +1052,13 @@ test "invalid sequence helpers do not consume random stream" {
     };
     var huge_choose_iter = BadIter{ .items = &huge_entries };
     try std.testing.expectError(error.InvalidWeight, chooseIteratorWeightedFrom(&engine, u8, &huge_choose_iter));
-    try std.testing.expectEqual(@as(u64, 0x512d47407374b100), engine.next());
+    try std.testing.expectEqual(@as(u64, 0x7dcd2fece6ccdcbf), engine.next());
 
     var huge_sample_iter = BadIter{ .items = &huge_entries };
     const huge_sample = try sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &huge_sample_iter, 2);
     defer std.testing.allocator.free(huge_sample);
     try std.testing.expectEqual(@as(usize, 2), huge_sample.len);
-    try std.testing.expectEqual(@as(u64, 0x57cce33f9288b3f7), engine.next());
+    try std.testing.expectEqual(@as(u64, 0xa06192b916815789), engine.next());
 }
 
 test "invalid checked weighted sample counts do not consume random stream" {
