@@ -3066,6 +3066,16 @@ test "invalid checked helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0x1f96d05125db1460), engine.next());
 }
 
+test "invalid duration at-most range does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_bac);
+    var control = alea.ScalarPrng.init(0x5150_bac);
+
+    try std.testing.expectError(error.EmptyRange, durationRangeAtMostCheckedFrom(&engine, .fromSeconds(2), .fromSeconds(1)));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+
 test "zero-count sample without replacement does not build pool or consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_baf);
