@@ -394,6 +394,8 @@ Reusable samplers:
 - `Chi(T).fillFrom`
 - `Erlang(T)`
 - `Erlang(T).init`
+- `Erlang(T).shapeValue`
+- `Erlang(T).scaleValue`
 - `Erlang(T).sample`
 - `Erlang(T).sampleFrom`
 - `Erlang(T).fill`
