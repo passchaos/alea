@@ -289,6 +289,20 @@ test "zero-length string helpers do not consume random stream" {
     defer std.testing.allocator.free(unicode);
     try std.testing.expectEqual(@as(usize, 0), unicode.len);
     try std.testing.expectEqual(@as(u64, 0x19457be7e6aa9412), engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_a5c5);
+    var control_engine = alea.ScalarPrng.init(0x5150_a5c5);
+    const rng = alea.Rng.init(&facade_engine);
+
+    const facade_ascii = try string(std.testing.allocator, rng, 0);
+    defer std.testing.allocator.free(facade_ascii);
+    try std.testing.expectEqual(@as(usize, 0), facade_ascii.len);
+    try std.testing.expectEqual(control_engine.next(), facade_engine.next());
+
+    const facade_unicode = try unicodeUtf8Alloc(std.testing.allocator, rng, 0);
+    defer std.testing.allocator.free(facade_unicode);
+    try std.testing.expectEqual(@as(usize, 0), facade_unicode.len);
+    try std.testing.expectEqual(control_engine.next(), facade_engine.next());
 }
 
 test "unicode utf8 allocation length overflow does not consume random stream" {
