@@ -1618,7 +1618,18 @@ pub fn ValueIteratorFrom(comptime Source: type, comptime T: type) type {
 
 fn valueIteratorCanFill(comptime T: type) bool {
     return switch (@typeInfo(T)) {
-        .bool, .int, .float, .vector => true,
+        .int => @typeInfo(T).int.bits == 64,
+        .float => T == f64,
+        .vector => vectorValueIteratorCanFill(T),
+        else => false,
+    };
+}
+
+fn vectorValueIteratorCanFill(comptime T: type) bool {
+    const info = vectorInfo(T);
+    return switch (@typeInfo(info.child)) {
+        .int => @typeInfo(info.child).int.bits == 64,
+        .float => info.child == f64,
         else => false,
     };
 }
@@ -2997,4 +3008,47 @@ test "value and sampler iterators produce unbounded samples" {
     var direct_open_iter = Rng.sampleIterFrom(&engine, f64, alea.distributions.Open01{});
     const direct_open_value = direct_open_iter.nextValue();
     try std.testing.expect(direct_open_value > 0 and direct_open_value < 1);
+}
+
+test "value iterator fill preserves scalar fallback where bulk fill packs draws" {
+    const alea = @import("root.zig");
+
+    var bool_iter_engine = alea.ScalarPrng.init(0x17e8);
+    const bool_rng = Rng.init(&bool_iter_engine);
+    var bool_loop_engine = alea.ScalarPrng.init(0x17e8);
+    const bool_loop_rng = Rng.init(&bool_loop_engine);
+    var bool_iter = bool_rng.valueIter(bool);
+    var bool_fill: [8]bool = undefined;
+    var bool_loop: [8]bool = undefined;
+    bool_iter.fill(&bool_fill);
+    var i: usize = 0;
+    while (i < bool_loop.len) : (i += 1) bool_loop[i] = bool_loop_rng.value(bool);
+    try std.testing.expectEqualSlices(bool, &bool_loop, &bool_fill);
+    try std.testing.expectEqual(bool_loop_engine.next(), bool_iter_engine.next());
+
+    var f32_iter_engine = alea.ScalarPrng.init(0x17e8);
+    const f32_rng = Rng.init(&f32_iter_engine);
+    var f32_loop_engine = alea.ScalarPrng.init(0x17e8);
+    const f32_loop_rng = Rng.init(&f32_loop_engine);
+    var f32_iter = f32_rng.valueIter(f32);
+    var f32_fill: [8]f32 = undefined;
+    var f32_loop: [8]f32 = undefined;
+    f32_iter.fill(&f32_fill);
+    i = 0;
+    while (i < f32_loop.len) : (i += 1) f32_loop[i] = f32_loop_rng.value(f32);
+    try std.testing.expectEqualSlices(f32, &f32_loop, &f32_fill);
+    try std.testing.expectEqual(f32_loop_engine.next(), f32_iter_engine.next());
+
+    var u32_iter_engine = alea.ScalarPrng.init(0x17e8);
+    const u32_rng = Rng.init(&u32_iter_engine);
+    var u32_loop_engine = alea.ScalarPrng.init(0x17e8);
+    const u32_loop_rng = Rng.init(&u32_loop_engine);
+    var u32_iter = u32_rng.valueIter(u32);
+    var u32_fill: [8]u32 = undefined;
+    var u32_loop: [8]u32 = undefined;
+    u32_iter.fill(&u32_fill);
+    i = 0;
+    while (i < u32_loop.len) : (i += 1) u32_loop[i] = u32_loop_rng.value(u32);
+    try std.testing.expectEqualSlices(u32, &u32_loop, &u32_fill);
+    try std.testing.expectEqual(u32_loop_engine.next(), u32_iter_engine.next());
 }

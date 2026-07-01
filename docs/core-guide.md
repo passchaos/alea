@@ -102,7 +102,9 @@ used with `rng.sampleIter(T, sampler)` or
 `Rng.sampleIterFrom(source, T, sampler)` when the sample type is scalar, and
 their iterator `fill` methods inherit sampler-specific bulk fills where
 available. `valueIter(T)` / `valueIterFrom(source, T)` likewise delegate
-iterator fills to `Rng.fill` / `fillFrom` for scalar and vector slice types.
+iterator fills to `Rng.fill` / `fillFrom` for stream-compatible `f64`,
+64-bit integer, and matching vector slice types; packed `bool`, `f32`, `u8`,
+and sub-64-bit integer fills keep repeated-`nextValue` stream shape.
 `Dirichlet` and `Multinomial` support allocation-returning `sample(allocator, rng)` /
 `sampleFrom(allocator, source)` and allocation-free `sampleInto(rng, out)` /
 `sampleIntoFrom(source, out)` and flat `sampleManyInto` / `sampleManyIntoFrom`
