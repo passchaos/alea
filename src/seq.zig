@@ -243,6 +243,7 @@ pub fn chooseIteratorWeightedFrom(source: anytype, comptime T: type, iterator: a
         if (weight == 0) continue;
 
         total += weight;
+        if (!std.math.isFinite(total)) return error.InvalidWeight;
         if (Rng.floatFrom(source, f64) * total < weight) {
             result = entry.item;
         }
@@ -922,6 +923,14 @@ test "invalid sequence helpers do not consume random stream" {
     var bad_sample_iter = BadIter{ .items = &bad_entries };
     try std.testing.expectError(error.InvalidWeight, sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &bad_sample_iter, 1));
     try std.testing.expectEqual(@as(u64, 0x3a0e704844a1b5ea), engine.next());
+
+    const huge_entries = [_]Entry{
+        .{ .item = 1, .weight = std.math.floatMax(f64) },
+        .{ .item = 2, .weight = std.math.floatMax(f64) },
+    };
+    var huge_choose_iter = BadIter{ .items = &huge_entries };
+    try std.testing.expectError(error.InvalidWeight, chooseIteratorWeightedFrom(&engine, u8, &huge_choose_iter));
+    try std.testing.expectEqual(@as(u64, 0x12f96538e2946977), engine.next());
 }
 
 test "partial shuffle and reservoir sample respect counts" {
