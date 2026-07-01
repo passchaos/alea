@@ -6527,6 +6527,24 @@ test "invalid poisson ahrens-dieter helper does not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid inverse and rank scalar helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1f9);
+    var control = alea.ScalarPrng.init(0x5150_d1f9);
+
+    try std.testing.expectError(error.InvalidParameter, inverseGaussianCheckedFrom(&engine, f64, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, normalInverseGaussianCheckedFrom(&engine, f64, 1, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, zipfCheckedFrom(&engine, f64, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, zetaCheckedFrom(&engine, f64, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid tail scalar helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1f8);
