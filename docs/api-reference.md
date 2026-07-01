@@ -680,7 +680,7 @@ Dynamic weighted helpers:
   `Charset.allocFrom`, `Charset.allocCheckedFrom`
 - Helpers: `char`, `charFrom`, `string`, `stringFrom`, `unicodeScalar`,
   `unicodeScalarFrom`, `unicodeUtf8Alloc`, `unicodeUtf8AllocFrom`,
-  `unicodeUtf8Into`, `unicodeUtf8IntoFrom`
+  `unicodeUtf8Capacity`, `unicodeUtf8Into`, `unicodeUtf8IntoFrom`
 
 ## Validation And Tooling
 

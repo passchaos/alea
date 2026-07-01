@@ -110,12 +110,16 @@ pub fn unicodeUtf8Alloc(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u
     return unicodeUtf8AllocFrom(allocator, rng, len);
 }
 
+pub fn unicodeUtf8Capacity(len: usize) error{OutOfMemory}!usize {
+    return std.math.mul(usize, len, 4) catch return error.OutOfMemory;
+}
+
 pub fn unicodeUtf8Into(rng: Rng, out: []u8, len: usize) ![]u8 {
     return unicodeUtf8IntoFrom(rng, out, len);
 }
 
 pub fn unicodeUtf8IntoFrom(source: anytype, out: []u8, len: usize) ![]u8 {
-    const capacity = std.math.mul(usize, len, 4) catch return error.OutOfMemory;
+    const capacity = try unicodeUtf8Capacity(len);
     if (out.len < capacity) return error.NoSpaceLeft;
 
     var written: usize = 0;
@@ -131,7 +135,7 @@ pub fn unicodeUtf8IntoFrom(source: anytype, out: []u8, len: usize) ![]u8 {
 }
 
 pub fn unicodeUtf8AllocFrom(allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
-    const capacity = std.math.mul(usize, len, 4) catch return error.OutOfMemory;
+    const capacity = try unicodeUtf8Capacity(len);
     var out = try std.ArrayList(u8).initCapacity(allocator, capacity);
     errdefer out.deinit(allocator);
 
@@ -380,6 +384,10 @@ test "unicode utf8 output buffer validation does not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_a5c9);
     var control = alea.ScalarPrng.init(0x5150_a5c9);
+
+    try std.testing.expectEqual(@as(usize, 0), try unicodeUtf8Capacity(0));
+    try std.testing.expectEqual(@as(usize, 8), try unicodeUtf8Capacity(2));
+    try std.testing.expectError(error.OutOfMemory, unicodeUtf8Capacity(std.math.maxInt(usize)));
 
     var tiny: [0]u8 = .{};
     try std.testing.expectError(error.OutOfMemory, unicodeUtf8IntoFrom(&engine, &tiny, std.math.maxInt(usize)));
