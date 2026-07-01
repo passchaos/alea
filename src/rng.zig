@@ -2827,6 +2827,14 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqual(value_unchecked, value_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        const EmptyEnum = enum {};
+        const ZeroEmptyArrayTuple = struct { u8, [0]EmptyEnum };
+        const zero_unchecked = valueFrom(&unchecked, ZeroEmptyArrayTuple);
+        const zero_checked = try valueCheckedFrom(&checked, ZeroEmptyArrayTuple);
+        try std.testing.expectEqual(zero_unchecked[0], zero_checked[0]);
+        try std.testing.expectEqual(@as(usize, 0), zero_checked[1].len);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var range_unchecked: [8]u32 = undefined;
         var range_checked: [8]u32 = undefined;
         fillRangeFrom(&unchecked, u32, &range_unchecked, 5, 9);
