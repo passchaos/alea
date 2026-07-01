@@ -335,6 +335,7 @@ pub fn sampleWeightedIndicesChecked(allocator: std.mem.Allocator, rng: Rng, comp
 }
 
 pub fn sampleWeightedIndicesCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
+    if (amount == 0) return allocator.alloc(usize, 0);
     if (amount > weights.len) return error.InvalidParameter;
     return sampleWeightedIndicesFrom(allocator, source, Weight, weights, amount);
 }
@@ -386,6 +387,7 @@ pub fn sampleWeightedChecked(allocator: std.mem.Allocator, rng: Rng, comptime T:
 }
 
 pub fn sampleWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
     if (items.len != weights.len) return error.LengthMismatch;
     if (amount > items.len) return error.InvalidParameter;
     return sampleWeightedFrom(allocator, source, T, Weight, items, weights, amount);
@@ -1277,6 +1279,13 @@ test "weighted sampling without replacement returns distinct positive-weight ite
     defer std.testing.allocator.free(checked_sample);
     try std.testing.expectEqual(@as(usize, 2), checked_sample.len);
     for (checked_sample) |item| try std.testing.expect(item == 20 or item == 30 or item == 50);
+
+    const empty_checked_indices = try sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, u32, &.{}, 0);
+    defer std.testing.allocator.free(empty_checked_indices);
+    try std.testing.expectEqual(@as(usize, 0), empty_checked_indices.len);
+    const empty_checked_sample = try sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{}, &.{1}, 0);
+    defer std.testing.allocator.free(empty_checked_sample);
+    try std.testing.expectEqual(@as(usize, 0), empty_checked_sample.len);
 
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndices(std.testing.allocator, rng, u32, &.{}, 1));
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesFrom(std.testing.allocator, &engine, u32, &.{}, 1));
