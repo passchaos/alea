@@ -635,7 +635,8 @@ Dynamic weighted helpers:
 - Collections: `chooseMultiple`, `chooseMultipleFrom`,
   `chooseMultipleChecked`, `chooseMultipleCheckedFrom`, `partialShuffle`,
   `partialShuffleFrom`, `partialShuffleChecked`, `partialShuffleCheckedFrom`,
-  `reservoirSample`, `reservoirSampleFrom`
+  `reservoirSample`, `reservoirSampleFrom`, `reservoirSampleChecked`,
+  `reservoirSampleCheckedFrom`
 - Iterators: `chooseIterator`, `chooseIteratorFrom`, `sampleIterator`,
   `sampleIteratorFrom`, `chooseIteratorWeighted`,
   `chooseIteratorWeightedFrom`, `sampleIteratorWeighted`,
