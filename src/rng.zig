@@ -3066,3 +3066,40 @@ test "value iterator fill preserves scalar fallback where bulk fill packs draws"
     try std.testing.expectEqualSlices(u32, &u32_loop, &u32_fill);
     try std.testing.expectEqual(u32_loop_engine.next(), u32_iter_engine.next());
 }
+
+test "value iterator fill delegates stream-compatible bulk fills" {
+    const alea = @import("root.zig");
+
+    var f64_iter_engine = alea.ScalarPrng.init(0x17e9);
+    const f64_rng = Rng.init(&f64_iter_engine);
+    var f64_direct_engine = alea.ScalarPrng.init(0x17e9);
+    var f64_iter = f64_rng.valueIter(f64);
+    var f64_iter_fill: [8]f64 = undefined;
+    var f64_direct_fill: [8]f64 = undefined;
+    f64_iter.fill(&f64_iter_fill);
+    fillFrom(&f64_direct_engine, f64, &f64_direct_fill);
+    try std.testing.expectEqualSlices(f64, &f64_direct_fill, &f64_iter_fill);
+    try std.testing.expectEqual(f64_direct_engine.next(), f64_iter_engine.next());
+
+    var u64_iter_engine = alea.ScalarPrng.init(0x17e9);
+    const u64_rng = Rng.init(&u64_iter_engine);
+    var u64_direct_engine = alea.ScalarPrng.init(0x17e9);
+    var u64_iter = u64_rng.valueIter(u64);
+    var u64_iter_fill: [8]u64 = undefined;
+    var u64_direct_fill: [8]u64 = undefined;
+    u64_iter.fill(&u64_iter_fill);
+    fillFrom(&u64_direct_engine, u64, &u64_direct_fill);
+    try std.testing.expectEqualSlices(u64, &u64_direct_fill, &u64_iter_fill);
+    try std.testing.expectEqual(u64_direct_engine.next(), u64_iter_engine.next());
+
+    var vec_iter_engine = alea.ScalarPrng.init(0x17e9);
+    const vec_rng = Rng.init(&vec_iter_engine);
+    var vec_direct_engine = alea.ScalarPrng.init(0x17e9);
+    var vec_iter = vec_rng.valueIter(@Vector(4, f64));
+    var vec_iter_fill: [4]@Vector(4, f64) = undefined;
+    var vec_direct_fill: [4]@Vector(4, f64) = undefined;
+    vec_iter.fill(&vec_iter_fill);
+    fillFrom(&vec_direct_engine, @Vector(4, f64), &vec_direct_fill);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vec_direct_fill, &vec_iter_fill);
+    try std.testing.expectEqual(vec_direct_engine.next(), vec_iter_engine.next());
+}
