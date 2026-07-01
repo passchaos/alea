@@ -6527,6 +6527,25 @@ test "invalid distribution facade discrete scalars do not consume random stream"
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid distribution facade continuous scalars do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1fe);
+    var control = alea.ScalarPrng.init(0x5150_d1fe);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, logNormalChecked(rng, f64, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, halfNormalChecked(rng, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, gammaChecked(rng, f64, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, studentTChecked(rng, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid distribution facade fill helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1fc);
