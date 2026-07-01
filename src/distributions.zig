@@ -6411,6 +6411,27 @@ test "invalid checked distribution helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
 }
 
+test "invalid scalar distribution helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1f0);
+    var control = alea.ScalarPrng.init(0x5150_d1f0);
+
+    try std.testing.expectError(error.EmptyRange, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, logNormalCheckedFrom(&engine, f64, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, halfNormalCheckedFrom(&engine, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, betaCheckedFrom(&engine, f64, 1, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, zetaCheckedFrom(&engine, f64, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "zero-length skew and pert fills do not validate or consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1ea);
