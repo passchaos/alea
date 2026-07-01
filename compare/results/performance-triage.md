@@ -240,6 +240,6 @@ Continue performance triage on the remaining focused watch items:
 - exact `(0, 1]` `fillOpenClosed(f64)` remains precision-sensitive and near
   but not past the latest Rust row; future work needs a faster exact-endpoint
   construction rather than more buffer-size or equivalent-expression tuning,
-- SIMD/vector distribution kernels need stronger default-path wins before they
-  can replace scalar ziggurat paths; f32x8 repair remains promising in probes
-  but has not beaten current defaults in the real vector-slice fill harness.
+- SIMD/vector distribution kernels still need a genuinely dense SIMD candidate:
+  f32x8 repair is useful evidence, but both standard and parameterized
+  vectorbench slice-fill rows failed to beat current scalar lane-fill defaults.
