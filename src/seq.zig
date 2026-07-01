@@ -1533,6 +1533,11 @@ test "empty optional iterator choices do not consume random stream" {
     var zero_iter = ZeroWeightedIter{ .entries = &zero_entries };
     try std.testing.expectEqual(@as(?u8, null), try chooseIteratorWeighted(rng, u8, &zero_iter));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    const bad_entries = [_]Entry{.{ .item = 1, .weight = std.math.nan(f64) }};
+    var bad_iter = ZeroWeightedIter{ .entries = &bad_entries };
+    try std.testing.expectError(error.InvalidWeight, chooseIteratorWeighted(rng, u8, &bad_iter));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "empty facade iterator choices do not consume random stream" {
