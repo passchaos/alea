@@ -505,12 +505,16 @@ Reusable samplers:
 - `Maxwell(T).fillFrom`
 - `Pareto(T)`
 - `Pareto(T).init`
+- `Pareto(T).scaleValue`
+- `Pareto(T).shapeValue`
 - `Pareto(T).sample`
 - `Pareto(T).sampleFrom`
 - `Pareto(T).fill`
 - `Pareto(T).fillFrom`
 - `Weibull(T)`
 - `Weibull(T).init`
+- `Weibull(T).scaleValue`
+- `Weibull(T).shapeValue`
 - `Weibull(T).sample`
 - `Weibull(T).sampleFrom`
 - `Weibull(T).fill`

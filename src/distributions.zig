@@ -3658,6 +3658,14 @@ pub fn Pareto(comptime T: type) type {
             return .{ .scale = scale, .shape = shape };
         }
 
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
+        }
+
+        pub fn shapeValue(self: Self) T {
+            return self.shape;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -3734,6 +3742,14 @@ pub fn Weibull(comptime T: type) type {
             if (!(scale > 0) or !(shape > 0)) return error.InvalidParameter;
             if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
             return .{ .scale = scale, .shape = shape };
+        }
+
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
+        }
+
+        pub fn shapeValue(self: Self) T {
+            return self.shape;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -8153,6 +8169,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_pareto_buf) |value| try std.testing.expect(value >= 2);
     try std.testing.expectError(error.InvalidParameter, fillParetoCheckedFrom(&direct_engine, f64, &direct_pareto_buf, 0, 3));
     const pareto_sampler = try Pareto(f64).init(2, 3);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), pareto_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), pareto_sampler.shapeValue(), 1e-12);
     pareto_sampler.fillFrom(&direct_engine, &direct_pareto_buf);
     for (direct_pareto_buf) |value| try std.testing.expect(value >= 2);
     try std.testing.expect(try paretoCheckedFrom(&direct_engine, f64, 2, 3) >= 2);
@@ -8176,6 +8194,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expectError(error.InvalidParameter, fillWeibullCheckedFrom(&direct_engine, f64, &direct_weibull_buf, 0, 1.5));
     const weibull_sampler = try Weibull(f64).init(2, 1.5);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), weibull_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.5), weibull_sampler.shapeValue(), 1e-12);
     weibull_sampler.fillFrom(&direct_engine, &direct_weibull_buf);
     for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try weibullCheckedFrom(&direct_engine, f64, 2, 1.5) >= 0);
