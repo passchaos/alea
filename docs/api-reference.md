@@ -77,11 +77,12 @@ expectations.
   `sampleWithoutReplacement`, `sampleWithoutReplacementFrom`,
   `sampleWithoutReplacementChecked`, `sampleWithoutReplacementCheckedFrom`
 - Iterator types: `ValueIterator(T)`, `ValueIteratorFrom(Source, T)`,
-  `ValueIterator.nextValue`, `ValueIterator.fill`,
-  `ValueIteratorFrom.nextValue`, `ValueIteratorFrom.fill`,
-  `SampleIterator(Sampler, T)`, `SampleIterator.nextValue`, `SampleIterator.fill`,
-  `SampleIteratorFrom(Source, Sampler, T)`, `SampleIteratorFrom.nextValue`,
-  `SampleIteratorFrom.fill`
+  `ValueIterator.next`, `ValueIterator.nextValue`, `ValueIterator.fill`,
+  `ValueIteratorFrom.next`, `ValueIteratorFrom.nextValue`,
+  `ValueIteratorFrom.fill`, `SampleIterator(Sampler, T)`,
+  `SampleIterator.next`, `SampleIterator.nextValue`, `SampleIterator.fill`,
+  `SampleIteratorFrom(Source, Sampler, T)`, `SampleIteratorFrom.next`,
+  `SampleIteratorFrom.nextValue`, `SampleIteratorFrom.fill`
 
 ## Seed
 
@@ -244,16 +245,22 @@ Single-shot helpers:
 Reusable samplers:
 
 - `Bernoulli`
+- `Bernoulli.init`
 - `Bernoulli.initRatio`
 - `Bernoulli.probability`
+- `Bernoulli.sample`
 - `Bernoulli.sampleFrom`
 - `Bernoulli.fill`
 - `Bernoulli.fillFrom`
 - `Binomial`
+- `Binomial.init`
+- `Binomial.sample`
 - `Binomial.sampleFrom`
 - `Binomial.fill`
 - `Binomial.fillFrom`
 - `Multinomial`
+- `Multinomial.init`
+- `Multinomial.sample`
 - `Multinomial.sampleFrom`
 - `Multinomial.sampleInto`
 - `Multinomial.sampleIntoFrom`
@@ -264,15 +271,21 @@ Reusable samplers:
 - `Multinomial.sampleManyIntoChecked`
 - `Multinomial.sampleManyIntoCheckedFrom`
 - `NegativeBinomial`
+- `NegativeBinomial.init`
+- `NegativeBinomial.sample`
 - `NegativeBinomial.sampleFrom`
 - `NegativeBinomial.fill`
 - `NegativeBinomial.fillFrom`
 - `Hypergeometric`
+- `Hypergeometric.init`
+- `Hypergeometric.sample`
 - `Hypergeometric.sampleFrom`
 - `Hypergeometric.fill`
 - `Hypergeometric.fillFrom`
 - `Uniform(T)`
+- `Uniform(T).init`
 - `Uniform(T).initInclusive`
+- `Uniform(T).sample`
 - `Uniform(T).sampleFrom`
 - `Uniform(T).fill`
 - `Uniform(T).fillFrom`
@@ -292,10 +305,12 @@ Reusable samplers:
 - `StandardNormal(T).fill`
 - `StandardNormal(T).fillFrom`
 - `Normal(T)`
+- `Normal(T).init`
 - `Normal(T).initMeanCv`
 - `Normal(T).fromZScore`
 - `Normal(T).meanValue`
 - `Normal(T).stddevValue`
+- `Normal(T).sample`
 - `Normal(T).sampleFrom`
 - `Normal(T).fill`
 - `Normal(T).fillFrom`
@@ -305,30 +320,42 @@ Reusable samplers:
 - `StandardExponential(T).fill`
 - `StandardExponential(T).fillFrom`
 - `Exponential(T)`
+- `Exponential(T).init`
+- `Exponential(T).sample`
 - `Exponential(T).sampleFrom`
 - `Exponential(T).fill`
 - `Exponential(T).fillFrom`
 - `LogNormal(T)`
+- `LogNormal(T).init`
 - `LogNormal(T).initMeanCv`
 - `LogNormal(T).fromZScore`
 - `LogNormal(T).logMean`
 - `LogNormal(T).logStddev`
+- `LogNormal(T).sample`
 - `LogNormal(T).sampleFrom`
 - `LogNormal(T).fill`
 - `LogNormal(T).fillFrom`
 - `HalfNormal(T)`
+- `HalfNormal(T).init`
+- `HalfNormal(T).sample`
 - `HalfNormal(T).sampleFrom`
 - `HalfNormal(T).fill`
 - `HalfNormal(T).fillFrom`
 - `Poisson`
+- `Poisson.init`
+- `Poisson.sample`
 - `Poisson.sampleFrom`
 - `Poisson.fill`
 - `Poisson.fillFrom`
 - `Geometric`
+- `Geometric.init`
+- `Geometric.sample`
 - `Geometric.sampleFrom`
 - `Geometric.fill`
 - `Geometric.fillFrom`
 - `GeometricFailures`
+- `GeometricFailures.init`
+- `GeometricFailures.sample`
 - `GeometricFailures.sampleFrom`
 - `GeometricFailures.fill`
 - `GeometricFailures.fillFrom`
@@ -338,119 +365,173 @@ Reusable samplers:
 - `StandardGeometric.fill`
 - `StandardGeometric.fillFrom`
 - `Gamma(T)`
+- `Gamma(T).init`
+- `Gamma(T).sample`
 - `Gamma(T).sampleFrom`
 - `Gamma(T).fill`
 - `Gamma(T).fillFrom`
 - `ChiSquared(T)`
+- `ChiSquared(T).init`
+- `ChiSquared(T).sample`
 - `ChiSquared(T).sampleFrom`
 - `ChiSquared(T).fill`
 - `ChiSquared(T).fillFrom`
 - `Chi(T)`
+- `Chi(T).init`
+- `Chi(T).sample`
 - `Chi(T).sampleFrom`
 - `Chi(T).fill`
 - `Chi(T).fillFrom`
 - `Erlang(T)`
+- `Erlang(T).init`
+- `Erlang(T).sample`
 - `Erlang(T).sampleFrom`
 - `Erlang(T).fill`
 - `Erlang(T).fillFrom`
 - `Beta(T)`
+- `Beta(T).init`
+- `Beta(T).sample`
 - `Beta(T).sampleFrom`
 - `Beta(T).fill`
 - `Beta(T).fillFrom`
 - `FisherF(T)`
+- `FisherF(T).init`
+- `FisherF(T).sample`
 - `FisherF(T).sampleFrom`
 - `FisherF(T).fill`
 - `FisherF(T).fillFrom`
 - `StudentT(T)`
+- `StudentT(T).init`
+- `StudentT(T).sample`
 - `StudentT(T).sampleFrom`
 - `StudentT(T).fill`
 - `StudentT(T).fillFrom`
 - `Triangular(T)`
+- `Triangular(T).init`
+- `Triangular(T).sample`
 - `Triangular(T).sampleFrom`
 - `Triangular(T).fill`
 - `Triangular(T).fillFrom`
 - `Arcsine(T)`
+- `Arcsine(T).init`
+- `Arcsine(T).sample`
 - `Arcsine(T).sampleFrom`
 - `Arcsine(T).fill`
 - `Arcsine(T).fillFrom`
 - `Cauchy(T)`
+- `Cauchy(T).init`
+- `Cauchy(T).sample`
 - `Cauchy(T).sampleFrom`
 - `Cauchy(T).fill`
 - `Cauchy(T).fillFrom`
 - `Laplace(T)`
+- `Laplace(T).init`
+- `Laplace(T).sample`
 - `Laplace(T).sampleFrom`
 - `Laplace(T).fill`
 - `Laplace(T).fillFrom`
 - `Logistic(T)`
+- `Logistic(T).init`
+- `Logistic(T).sample`
 - `Logistic(T).sampleFrom`
 - `Logistic(T).fill`
 - `Logistic(T).fillFrom`
 - `LogLogistic(T)`
+- `LogLogistic(T).init`
+- `LogLogistic(T).sample`
 - `LogLogistic(T).sampleFrom`
 - `LogLogistic(T).fill`
 - `LogLogistic(T).fillFrom`
 - `Kumaraswamy(T)`
+- `Kumaraswamy(T).init`
+- `Kumaraswamy(T).sample`
 - `Kumaraswamy(T).sampleFrom`
 - `Kumaraswamy(T).fill`
 - `Kumaraswamy(T).fillFrom`
 - `PowerFunction(T)`
+- `PowerFunction(T).init`
+- `PowerFunction(T).sample`
 - `PowerFunction(T).sampleFrom`
 - `PowerFunction(T).fill`
 - `PowerFunction(T).fillFrom`
 - `Rayleigh(T)`
+- `Rayleigh(T).init`
+- `Rayleigh(T).sample`
 - `Rayleigh(T).sampleFrom`
 - `Rayleigh(T).fill`
 - `Rayleigh(T).fillFrom`
 - `Maxwell(T)`
+- `Maxwell(T).init`
+- `Maxwell(T).sample`
 - `Maxwell(T).sampleFrom`
 - `Maxwell(T).fill`
 - `Maxwell(T).fillFrom`
 - `Pareto(T)`
+- `Pareto(T).init`
+- `Pareto(T).sample`
 - `Pareto(T).sampleFrom`
 - `Pareto(T).fill`
 - `Pareto(T).fillFrom`
 - `Weibull(T)`
+- `Weibull(T).init`
+- `Weibull(T).sample`
 - `Weibull(T).sampleFrom`
 - `Weibull(T).fill`
 - `Weibull(T).fillFrom`
 - `Gumbel(T)`
+- `Gumbel(T).init`
+- `Gumbel(T).sample`
 - `Gumbel(T).sampleFrom`
 - `Gumbel(T).fill`
 - `Gumbel(T).fillFrom`
 - `Frechet(T)`
+- `Frechet(T).init`
+- `Frechet(T).sample`
 - `Frechet(T).sampleFrom`
 - `Frechet(T).fill`
 - `Frechet(T).fillFrom`
 - `SkewNormal(T)`
+- `SkewNormal(T).init`
 - `SkewNormal(T).locationValue`
 - `SkewNormal(T).scaleValue`
 - `SkewNormal(T).shapeValue`
+- `SkewNormal(T).sample`
 - `SkewNormal(T).sampleFrom`
 - `SkewNormal(T).fill`
 - `SkewNormal(T).fillFrom`
 - `Pert(T)`
+- `Pert(T).init`
 - `Pert(T).initDefault`
 - `Pert(T).initRange`
 - `Pert(T).initMean`
 - `PertBuilder(T).withShape`
 - `PertBuilder(T).withMode`
 - `PertBuilder(T).withMean`
+- `Pert(T).sample`
 - `Pert(T).sampleFrom`
 - `Pert(T).fill`
 - `Pert(T).fillFrom`
 - `InverseGaussian(T)`
+- `InverseGaussian(T).init`
+- `InverseGaussian(T).sample`
 - `InverseGaussian(T).sampleFrom`
 - `InverseGaussian(T).fill`
 - `InverseGaussian(T).fillFrom`
 - `NormalInverseGaussian(T)`
+- `NormalInverseGaussian(T).init`
+- `NormalInverseGaussian(T).sample`
 - `NormalInverseGaussian(T).sampleFrom`
 - `NormalInverseGaussian(T).fill`
 - `NormalInverseGaussian(T).fillFrom`
 - `Zipf(T)`
+- `Zipf(T).init`
+- `Zipf(T).sample`
 - `Zipf(T).sampleFrom`
 - `Zipf(T).fill`
 - `Zipf(T).fillFrom`
 - `Zeta(T)`
+- `Zeta(T).init`
+- `Zeta(T).sample`
 - `Zeta(T).sampleFrom`
 - `Zeta(T).fill`
 - `Zeta(T).fillFrom`
@@ -475,6 +556,8 @@ Reusable samplers:
 - `UnitBall(T).fill`
 - `UnitBall(T).fillFrom`
 - `Dirichlet(T)`
+- `Dirichlet(T).init`
+- `Dirichlet(T).sample`
 - `Dirichlet(T).sampleFrom`
 - `Dirichlet(T).sampleInto`
 - `Dirichlet(T).sampleIntoFrom`
@@ -552,11 +635,12 @@ Dynamic weighted helpers:
   `sampleIteratorWeightedFrom`
 - Reusable samplers: `Choice(T)`, `chooseIter`, `chooseIterFrom`,
   `WeightedChoice(T, Weight)`,
-  `Choice.len`, `Choice.sample`, `Choice.sampleFrom`, `Choice.sampleValue`,
+  `Choice.init`, `Choice.len`, `Choice.sample`, `Choice.sampleFrom`, `Choice.sampleValue`,
   `Choice.sampleValueFrom`, `Choice.fill`, `Choice.fillFrom`,
   `Choice.fillValues`, `Choice.fillValuesFrom`, `Choice.iter`,
   `Choice.iterFrom`,
-  `WeightedChoice.deinit`, `WeightedChoice.len`, `WeightedChoice.sample`,
+  `WeightedChoice.init`, `WeightedChoice.deinit`, `WeightedChoice.len`,
+  `WeightedChoice.sample`,
   `WeightedChoice.sampleFrom`,
   `WeightedChoice.sampleValue`, `WeightedChoice.sampleValueFrom`,
   `WeightedChoice.fill`, `WeightedChoice.fillFrom`,

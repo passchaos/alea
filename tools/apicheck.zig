@@ -61,6 +61,7 @@ fn checkFile(io: std.Io, allocator: std.mem.Allocator, stderr: *std.Io.Writer, a
     var lines = std.mem.splitScalar(u8, source, '\n');
     while (lines.next()) |line| {
         const indent = lineIndent(line);
+        if (std.mem.trim(u8, line, " \t\r").len == 0) continue;
         while (public_type_count > 0 and indent <= public_type_stack[public_type_count - 1].indent) {
             public_type_count -= 1;
         }
