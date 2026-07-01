@@ -112,6 +112,7 @@ pub fn fillUniformInclusiveChecked(rng: Rng, comptime T: type, dest: []T, min: T
 }
 
 pub fn fillUniformInclusiveCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    if (dest.len == 0) return;
     switch (@typeInfo(T)) {
         .int => {
             if (min > max) return error.EmptyRange;
@@ -6356,6 +6357,40 @@ test "invalid checked distribution helpers do not consume random stream" {
     defer int_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &u64_buf));
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
+}
+
+test "zero-length base distribution fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d18a);
+    var control = alea.ScalarPrng.init(0x5150_d18a);
+    const rng = Rng.init(&engine);
+
+    var ints: [0]u32 = .{};
+    var floats: [0]f64 = .{};
+
+    try fillUniformCheckedFrom(&engine, u32, &ints, 3, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillUniformCheckedFrom(&engine, f64, &floats, std.math.inf(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillUniformInclusiveCheckedFrom(&engine, u32, &ints, 4, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillUniformInclusiveCheckedFrom(&engine, f64, &floats, std.math.inf(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillNormalCheckedFrom(&engine, f64, &floats, std.math.inf(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillExponentialCheckedFrom(&engine, f64, &floats, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillUniformChecked(rng, u32, &ints, 3, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillUniformInclusiveChecked(rng, u32, &ints, 4, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillNormalChecked(rng, f64, &floats, 0, -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillExponentialChecked(rng, f64, &floats, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one_int: [1]u32 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillUniformInclusiveCheckedFrom(&engine, u32, &one_int, 4, 3));
 }
 
 test "initial multivariate allocation failures do not consume random stream" {

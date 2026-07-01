@@ -67,7 +67,8 @@ fills, including duration ranges. The same checked/error-returning style is
 available for vector ranges, vector probabilities, and parameterized vector
 normal/exponential sampling, including direct-source `From` helpers for ranges,
 probability vectors, and parameterized normal/exponential vectors/fills when
-the engine type is comptime-known. Zero-length checked scalar and vector fills
+the engine type is comptime-known. Zero-length checked scalar and vector fills,
+including the distribution-namespace uniform/normal/exponential wrappers,
 return before validating user-supplied range, probability, normal, or
 exponential parameters.
 Distribution-level bulk fills that cache a reusable sampler also keep
