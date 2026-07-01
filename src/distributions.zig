@@ -2806,6 +2806,14 @@ pub fn Arcsine(comptime T: type) type {
             return .{ .min = min, .max = max };
         }
 
+        pub fn minValue(self: Self) T {
+            return self.min;
+        }
+
+        pub fn maxValue(self: Self) T {
+            return self.max;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -7883,6 +7891,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
     try std.testing.expectError(error.InvalidParameter, fillArcsineCheckedFrom(&direct_engine, f64, &direct_arcsine_buf, 1, 1));
     const arcsine_sampler = try Arcsine(f64).init(-1, 3);
+    try std.testing.expectApproxEqAbs(@as(f64, -1), arcsine_sampler.minValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), arcsine_sampler.maxValue(), 1e-12);
     arcsine_sampler.fillFrom(&direct_engine, &direct_arcsine_buf);
     for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
     const direct_checked_arcsine = try arcsineCheckedFrom(&direct_engine, f64, -1, 3);

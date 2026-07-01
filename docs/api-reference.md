@@ -434,6 +434,8 @@ Reusable samplers:
 - `Triangular(T).fillFrom`
 - `Arcsine(T)`
 - `Arcsine(T).init`
+- `Arcsine(T).minValue`
+- `Arcsine(T).maxValue`
 - `Arcsine(T).sample`
 - `Arcsine(T).sampleFrom`
 - `Arcsine(T).fill`
