@@ -6611,13 +6611,28 @@ test "invalid distribution facade fill helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillGammaChecked(rng, f64, &floats, 0, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, fillLogNormalChecked(rng, f64, &floats, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillHalfNormalChecked(rng, f64, &floats, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, fillChiSquaredChecked(rng, f64, &floats, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillChiChecked(rng, f64, &floats, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillErlangChecked(rng, f64, &floats, 0, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, fillBetaChecked(rng, f64, &floats, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, fillFisherFChecked(rng, f64, &floats, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillStudentTChecked(rng, f64, &floats, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillLogisticChecked(rng, f64, &floats, 0, 0));
