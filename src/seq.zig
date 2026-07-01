@@ -1384,6 +1384,9 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expect(std.mem.eql(u8, choice.sampleFrom(&engine).*, "often"));
     try std.testing.expectError(error.LengthMismatch, choice.update(&.{ 1, 2 }));
     try std.testing.expectError(error.InvalidWeight, choice.update(&.{ 0, 0, 0 }));
+    var after_failed_update: [4][]const u8 = undefined;
+    choice.fillValuesFrom(&engine, &after_failed_update);
+    for (after_failed_update) |value| try std.testing.expect(std.mem.eql(u8, value, "often"));
 
     try std.testing.expectError(error.EmptyInput, WeightedChoice(u8, u32).init(std.testing.allocator, &.{}, &.{}));
     try std.testing.expectError(error.LengthMismatch, WeightedChoice(u8, u32).init(std.testing.allocator, &.{1}, &.{ 1, 2 }));
