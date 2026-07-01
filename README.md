@@ -3,7 +3,7 @@
 `alea` is a Zig 0.16 random toolkit for simulations, games, tests, procedural
 generation, and reproducible experiments.
 
-The first milestone is intentionally broad:
+The current Linux-first roadmap is intentionally broad:
 
 - multiple deterministic engines: `Wyhash64`, `Xoshiro256`, `Pcg64`
 - a `ChaCha12` secure-style stream for secret-seeded randomness
@@ -12,7 +12,8 @@ The first milestone is intentionally broad:
   normal, exponential, and Poisson, alongside `FastPrng = Alea4x64` for
   bulk-fill throughput
 - `Rng.value(T)` for scalar, enum, tuple, and array sampling
-- `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling
+- `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling,
+  including bulk `fill` methods where stream policy permits
 - bulk `fillSample`, `fillRange`, strict-interval scalar and vector float
   fill, standard/parameterized vector normal and exponential fills, `fillNormal`,
   `fillExponential`, and unit geometry fill APIs for high-volume sampling
@@ -37,6 +38,12 @@ The first milestone is intentionally broad:
   normal-inverse Gaussian, Zipf, Zeta, unit geometry samplers, dirichlet,
   multinomial
 - O(1) repeated weighted sampling through alias tables
+
+The local Linux roadmap has progressed beyond basic feature bring-up into
+Stage 4 evidence and performance triage. See
+`compare/results/core-rand-coverage.md` for the living roadmap and
+`compare/results/performance-triage.md` for current hard gaps and rejected
+optimization attempts.
 
 ## Quick Start
 
