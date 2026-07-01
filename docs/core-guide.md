@@ -162,7 +162,8 @@ Use:
   `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`
   (`*Checked*` variants require enough positive-weight entries for the
   requested amount; requesting zero samples returns an empty result before
-  validating weights)
+  validating weights; facade and direct-source checked calls validate before
+  drawing)
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `WeightedChoice.update`,
   and `WeightedChoice.iterFrom`
