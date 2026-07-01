@@ -6513,8 +6513,14 @@ test "invalid uniform distribution helpers do not consume random stream" {
     try std.testing.expectError(error.EmptyRange, uniformCheckedFrom(&engine, u32, 9, 5));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.EmptyRange, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var ints: [4]u32 = undefined;
     try std.testing.expectError(error.EmptyRange, fillUniformCheckedFrom(&engine, u32, &ints, 9, 5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, fillUniformInclusiveCheckedFrom(&engine, u32, &ints, 9, 5));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
