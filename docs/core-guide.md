@@ -168,6 +168,9 @@ Use `Rng.weightedIndexFrom`, `Rng.sampleWithoutReplacementFrom`,
 `sampleWeightedFrom`, `Choice.iterFrom`, `WeightedChoice.iterFrom`,
 `AliasTable.sampleFrom`, and `WeightedChoice.sampleValueFrom` for weighted or
 collection sampling with a comptime-known engine source.
+For allocation-returning sequence helpers, initial allocation failures are
+reported before drawing from the stream; later one-pass failure paths may have
+already consumed randomness for earlier accepted candidates.
 
 ## Strings
 

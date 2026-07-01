@@ -1095,6 +1095,109 @@ test "invalid sequence helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0xa06192b916815789), engine.next());
 }
 
+test "initial sequence allocation failures do not consume random stream" {
+    const alea = @import("root.zig");
+
+    var indices_engine = alea.ScalarPrng.init(0x5150_5e2);
+    var indices_control = alea.ScalarPrng.init(0x5150_5e2);
+    var indices_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleIndicesFrom(indices_alloc.allocator(), &indices_engine, 1_000, 16));
+    try std.testing.expect(indices_alloc.has_induced_failure);
+    try std.testing.expectEqual(indices_control.next(), indices_engine.next());
+
+    var indices_u32_engine = alea.ScalarPrng.init(0x5150_5e3);
+    var indices_u32_control = alea.ScalarPrng.init(0x5150_5e3);
+    var indices_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleIndicesU32From(indices_u32_alloc.allocator(), &indices_u32_engine, 1_000, 16));
+    try std.testing.expect(indices_u32_alloc.has_induced_failure);
+    try std.testing.expectEqual(indices_u32_control.next(), indices_u32_engine.next());
+
+    var index_vec_engine = alea.ScalarPrng.init(0x5150_5e4);
+    var index_vec_control = alea.ScalarPrng.init(0x5150_5e4);
+    var index_vec_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleIndexVecFrom(index_vec_alloc.allocator(), &index_vec_engine, 1_000, 16));
+    try std.testing.expect(index_vec_alloc.has_induced_failure);
+    try std.testing.expectEqual(index_vec_control.next(), index_vec_engine.next());
+
+    const items = [_]u8{ 1, 2, 3, 4, 5, 6 };
+    var choose_engine = alea.ScalarPrng.init(0x5150_5e5);
+    var choose_control = alea.ScalarPrng.init(0x5150_5e5);
+    var choose_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, chooseMultipleFrom(choose_alloc.allocator(), &choose_engine, u8, &items, 3));
+    try std.testing.expect(choose_alloc.has_induced_failure);
+    try std.testing.expectEqual(choose_control.next(), choose_engine.next());
+
+    var reservoir_engine = alea.ScalarPrng.init(0x5150_5e6);
+    var reservoir_control = alea.ScalarPrng.init(0x5150_5e6);
+    var reservoir_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, reservoirSampleFrom(reservoir_alloc.allocator(), &reservoir_engine, u8, &items, 3));
+    try std.testing.expect(reservoir_alloc.has_induced_failure);
+    try std.testing.expectEqual(reservoir_control.next(), reservoir_engine.next());
+
+    const ItemIter = struct {
+        items: []const u8,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+    };
+
+    var iterator_engine = alea.ScalarPrng.init(0x5150_5e7);
+    var iterator_control = alea.ScalarPrng.init(0x5150_5e7);
+    var iterator_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var iterator = ItemIter{ .items = &items };
+    try std.testing.expectError(error.OutOfMemory, sampleIteratorFrom(iterator_alloc.allocator(), &iterator_engine, u8, &iterator, 3));
+    try std.testing.expect(iterator_alloc.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 0), iterator.index);
+    try std.testing.expectEqual(iterator_control.next(), iterator_engine.next());
+
+    const Entry = struct { item: u8, weight: f64 };
+    const WeightedIter = struct {
+        entries: []const Entry,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.entries.len) return null;
+            const entry = self.entries[self.index];
+            self.index += 1;
+            return entry;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .item = 1, .weight = 1.0 },
+        .{ .item = 2, .weight = 2.0 },
+        .{ .item = 3, .weight = 3.0 },
+    };
+
+    var weighted_iter_engine = alea.ScalarPrng.init(0x5150_5e8);
+    var weighted_iter_control = alea.ScalarPrng.init(0x5150_5e8);
+    var weighted_iter_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var weighted_iter = WeightedIter{ .entries = &entries };
+    try std.testing.expectError(error.OutOfMemory, sampleIteratorWeightedFrom(weighted_iter_alloc.allocator(), &weighted_iter_engine, u8, &weighted_iter, 2));
+    try std.testing.expect(weighted_iter_alloc.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 0), weighted_iter.index);
+    try std.testing.expectEqual(weighted_iter_control.next(), weighted_iter_engine.next());
+
+    const weights = [_]u32{ 1, 2, 3, 4, 5, 6 };
+    var weighted_indices_engine = alea.ScalarPrng.init(0x5150_5e9);
+    var weighted_indices_control = alea.ScalarPrng.init(0x5150_5e9);
+    var weighted_indices_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleWeightedIndicesFrom(weighted_indices_alloc.allocator(), &weighted_indices_engine, u32, &weights, 3));
+    try std.testing.expect(weighted_indices_alloc.has_induced_failure);
+    try std.testing.expectEqual(weighted_indices_control.next(), weighted_indices_engine.next());
+
+    var weighted_engine = alea.ScalarPrng.init(0x5150_5ea);
+    var weighted_control = alea.ScalarPrng.init(0x5150_5ea);
+    var weighted_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleWeightedFrom(weighted_alloc.allocator(), &weighted_engine, u8, u32, &items, &weights, 3));
+    try std.testing.expect(weighted_alloc.has_induced_failure);
+    try std.testing.expectEqual(weighted_control.next(), weighted_engine.next());
+}
+
 test "invalid checked weighted sample counts do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_7711);
