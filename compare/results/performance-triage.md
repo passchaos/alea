@@ -233,9 +233,8 @@ Continue performance triage on the remaining focused watch items:
 - log-normal raw direct rows confirm reusable wrappers are not the scalar
   bottleneck; it remains a small filtered scalar/bulk boundary item, while
   inverse-Gaussian and NIG bulk fills now exceed the local Rust rows,
-- unit geometry f64 point samplers now use checksum-stable FMA forms and the
-  focused point rows are at or above local Rust evidence except the circle
-  noise boundary; remaining geometry work is broader bulk-fill tuning and any
-  future no-regression staged-candidate improvement,
+- exact `(0, 1]` `fillOpenClosed(f64)` remains precision-sensitive and near
+  but not past the latest Rust row; future work needs a faster exact-endpoint
+  construction rather than more buffer-size tuning,
 - SIMD/vector distribution kernels need stronger default-path wins before they
   can replace scalar ziggurat paths.
