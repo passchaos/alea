@@ -79,6 +79,8 @@ Laplace, logistic, log-logistic, Kumaraswamy, power-function, Rayleigh,
 Maxwell, Pareto, Weibull, Gumbel, Frechet, skew-normal, PERT, and
 inverse-Gaussian-family sampling. Top-level Zipf/Zeta fills mirror their
 reusable sampler fills with checked variants for fallible bulk workflows.
+Checked distribution facade and direct-source helpers validate parameters
+before drawing.
 Zero-length checked fills in the core distribution wrapper, discrete families,
 core continuous families, derived/tail continuous families, inverse-Gaussian
 family, and Zipf/Zeta fills return before validating user parameters.
