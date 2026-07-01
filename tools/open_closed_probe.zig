@@ -22,7 +22,9 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(io, stdout, "facade fillOpenClosed", sample_count, facadeFill);
     try benchFill(io, stdout, "facade fillSample OpenClosed01", sample_count, facadeFillSample);
     try benchFill(io, stdout, "facade raw words 128", sample_count, facadeRawFill128);
+    try benchFill(io, stdout, "facade raw words 160", sample_count, facadeRawFill160);
     try benchFill(io, stdout, "facade raw words 192", sample_count, facadeRawFill192);
+    try benchFill(io, stdout, "facade raw words 224", sample_count, facadeRawFill224);
     try benchFill(io, stdout, "facade raw words 256", sample_count, facadeRawFill256);
     try benchFill(io, stdout, "direct fillOpenClosedFrom", sample_count, directFill);
     try benchFill(io, stdout, "scalar next conversion", sample_count, scalarNextFill);
@@ -84,8 +86,16 @@ fn facadeRawFill128(engine: *alea.FastPrng, dest: []f64) void {
     facadeRawFill(engine, dest, 128);
 }
 
+fn facadeRawFill160(engine: *alea.FastPrng, dest: []f64) void {
+    facadeRawFill(engine, dest, 160);
+}
+
 fn facadeRawFill192(engine: *alea.FastPrng, dest: []f64) void {
     facadeRawFill(engine, dest, 192);
+}
+
+fn facadeRawFill224(engine: *alea.FastPrng, dest: []f64) void {
+    facadeRawFill(engine, dest, 224);
 }
 
 fn facadeRawFill256(engine: *alea.FastPrng, dest: []f64) void {
