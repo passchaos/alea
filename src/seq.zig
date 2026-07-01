@@ -363,7 +363,7 @@ pub fn sampleWeightedIndicesCheckedFrom(allocator: std.mem.Allocator, source: an
     if (amount == 0) return allocator.alloc(usize, 0);
     if (amount > weights.len) return error.InvalidParameter;
     try ensureEnoughPositiveWeights(Weight, weights, amount);
-    return sampleWeightedIndicesFrom(allocator, source, Weight, weights, amount);
+    return sampleWeightedIndicesExactFrom(allocator, source, Weight, weights, amount);
 }
 
 pub fn sampleWeightedIndicesFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
@@ -404,6 +404,45 @@ pub fn sampleWeightedIndicesFrom(allocator: std.mem.Allocator, source: anytype, 
     return out;
 }
 
+fn sampleWeightedIndicesExactFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
+    std.debug.assert(amount > 0);
+    std.debug.assert(amount <= weights.len);
+
+    const out = try allocator.alloc(usize, amount);
+    errdefer allocator.free(out);
+
+    var heap = WeightedCandidateQueue.initContext({});
+    defer heap.deinit(allocator);
+    try heap.ensureTotalCapacityPrecise(allocator, amount);
+
+    for (weights, 0..) |weight, index| {
+        const value = weightAsF64(Weight, weight);
+        if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+        if (value == 0) continue;
+
+        const candidate = WeightedCandidate{
+            .index = index,
+            .key = weightedSelectionKeyFrom(source, value),
+        };
+
+        if (heap.count() < amount) {
+            try heap.push(allocator, candidate);
+        } else if (heap.peek()) |min_candidate| {
+            if (candidate.key > min_candidate.key) {
+                _ = heap.pop();
+                try heap.push(allocator, candidate);
+            }
+        }
+    }
+
+    std.debug.assert(heap.count() == amount);
+    var i: usize = 0;
+    while (heap.pop()) |candidate| : (i += 1) {
+        out[i] = candidate.index;
+    }
+    return out;
+}
+
 pub fn sampleWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
     return sampleWeightedFrom(allocator, rng, T, Weight, items, weights, amount);
 }
@@ -420,9 +459,8 @@ pub fn sampleWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
 
     const out = try allocator.alloc(T, amount);
     errdefer allocator.free(out);
-    const indices = try sampleWeightedIndicesFrom(allocator, source, Weight, weights, amount);
+    const indices = try sampleWeightedIndicesExactFrom(allocator, source, Weight, weights, amount);
     defer allocator.free(indices);
-    std.debug.assert(indices.len == amount);
 
     for (indices, out) |index, *slot| slot.* = items[index];
     return out;
@@ -1208,6 +1246,20 @@ test "initial sequence allocation failures do not consume random stream" {
     try std.testing.expect(weighted_indices_alloc.has_induced_failure);
     try std.testing.expectEqual(weighted_indices_control.next(), weighted_indices_engine.next());
 
+    var checked_indices_engine = alea.ScalarPrng.init(0x5150_5ee);
+    var checked_indices_control = alea.ScalarPrng.init(0x5150_5ee);
+    var checked_indices_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleWeightedIndicesCheckedFrom(checked_indices_alloc.allocator(), &checked_indices_engine, u32, &weights, 3));
+    try std.testing.expect(checked_indices_alloc.has_induced_failure);
+    try std.testing.expectEqual(checked_indices_control.next(), checked_indices_engine.next());
+
+    var checked_indices_heap_engine = alea.ScalarPrng.init(0x5150_5ef);
+    var checked_indices_heap_control = alea.ScalarPrng.init(0x5150_5ef);
+    var checked_indices_heap_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, sampleWeightedIndicesCheckedFrom(checked_indices_heap_alloc.allocator(), &checked_indices_heap_engine, u32, &weights, 3));
+    try std.testing.expect(checked_indices_heap_alloc.has_induced_failure);
+    try std.testing.expectEqual(checked_indices_heap_control.next(), checked_indices_heap_engine.next());
+
     var weighted_engine = alea.ScalarPrng.init(0x5150_5ea);
     var weighted_control = alea.ScalarPrng.init(0x5150_5ea);
     var weighted_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
@@ -1228,6 +1280,13 @@ test "initial sequence allocation failures do not consume random stream" {
     try std.testing.expectError(error.OutOfMemory, sampleWeightedCheckedFrom(checked_weighted_indices_alloc.allocator(), &checked_weighted_indices_engine, u8, u32, &items, &weights, 3));
     try std.testing.expect(checked_weighted_indices_alloc.has_induced_failure);
     try std.testing.expectEqual(checked_weighted_indices_control.next(), checked_weighted_indices_engine.next());
+
+    var checked_weighted_heap_engine = alea.ScalarPrng.init(0x5150_5f0);
+    var checked_weighted_heap_control = alea.ScalarPrng.init(0x5150_5f0);
+    var checked_weighted_heap_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 2 });
+    try std.testing.expectError(error.OutOfMemory, sampleWeightedCheckedFrom(checked_weighted_heap_alloc.allocator(), &checked_weighted_heap_engine, u8, u32, &items, &weights, 3));
+    try std.testing.expect(checked_weighted_heap_alloc.has_induced_failure);
+    try std.testing.expectEqual(checked_weighted_heap_control.next(), checked_weighted_heap_engine.next());
 }
 
 test "invalid checked weighted sample counts do not consume random stream" {
