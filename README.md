@@ -30,7 +30,8 @@ The current Linux-first roadmap is intentionally broad:
 - dynamic weighted trees for frequent update/push/pop/sample/fill weighted
   workloads
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, direct-source charset
-  helpers, and Unicode scalar string generation
+  helpers, checked charset methods for fallible custom charsets, and Unicode
+  scalar string generation
 - distributions: uniform, bernoulli, binomial, negative-binomial,
   hypergeometric, standard normal, normal, log-normal, half-normal, standard exponential,
   exponential, poisson, gamma,
