@@ -4792,7 +4792,7 @@ pub fn AliasTable(comptime Weight: type) type {
         allocator: std.mem.Allocator,
 
         pub fn init(allocator: std.mem.Allocator, weights: []const Weight) !Self {
-            std.debug.assert(weights.len > 0);
+            if (weights.len == 0) return error.InvalidWeight;
 
             const prob = try allocator.alloc(f64, weights.len);
             errdefer allocator.free(prob);
@@ -5960,6 +5960,11 @@ test "alias table samples valid indexes" {
     }
 
     try std.testing.expectError(error.InvalidParameter, table.update(&.{ 1, 2 }));
+    try std.testing.expectError(error.InvalidWeight, table.update(&.{ 0, 0, 0, 0 }));
+    try std.testing.expectEqual(@as(usize, 1), table.sampleFrom(&engine));
+
+    try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{}));
+    try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{ 0, 0 }));
 }
 
 test "weighted tree supports dynamic updates" {
