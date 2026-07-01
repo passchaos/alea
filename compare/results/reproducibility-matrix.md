@@ -46,7 +46,7 @@ tests so accidental compatibility drift is caught by `zig build test`.
 | `src/ascii.zig`: `ascii helpers have stable snapshots` | ASCII charset/string and Unicode scalar UTF-8 generation for a fixed stream |
 | `src/seq.zig`: `portable index sampling has stable snapshots` | `sampleIndicesU32` and compact `.u32` `sampleIndexVec` output |
 | `src/rng.zig`, `src/seq.zig`, `src/distributions.zig`, `src/ascii.zig`: `preserve direct stream shape` tests | Facade/direct-source helpers preserve stream shape for valid inputs |
-| `src/rng.zig`, `src/seq.zig`, `src/distributions.zig`, `src/ascii.zig`: invalid checked/no-consume and zero-length tests | Invalid checked/error paths that can validate before drawing return before consuming randomness, including nested empty-enum `valueCheckedFrom` cases, empty/all-zero weighted iterator choices, length-mismatched `WeightedChoice.update` calls, invalid charset construction, and zero-length ASCII/Unicode string allocation. Single-pass streaming helpers may already have consumed randomness for earlier valid entries before a later invalid entry is discovered. |
+| `src/rng.zig`, `src/seq.zig`, `src/distributions.zig`, `src/ascii.zig`: invalid checked/no-consume and zero-length tests | Invalid checked/error paths that can validate before drawing return before consuming randomness, including nested empty-enum `valueCheckedFrom` cases, empty/all-zero weighted iterator choices, length-mismatched `WeightedChoice.update` calls, invalid charset construction, zero-length ASCII/Unicode string allocation, and Unicode UTF-8 allocation length overflow. Single-pass streaming helpers may already have consumed randomness for earlier valid entries before a later invalid entry is discovered. |
 
 ## Versioned Stable Outputs
 
