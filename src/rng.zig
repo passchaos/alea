@@ -532,12 +532,133 @@ pub fn fillExponentialCheckedFrom(source: anytype, comptime T: type, dest: []T, 
 
 pub fn fillSample(self: Rng, comptime T: type, dest: []T, sampler: anytype) void {
     var local_sampler = sampler;
-    for (dest) |*item| item.* = local_sampler.sample(self);
+    if (comptime samplerCanFill(@TypeOf(sampler), T)) {
+        if (comptime samplerFillTakesType(@TypeOf(local_sampler))) {
+            local_sampler.fill(self, T, dest);
+        } else {
+            local_sampler.fill(self, dest);
+        }
+        return;
+    }
+    for (dest) |*item| {
+        item.* = if (comptime samplerSampleTakesType(@TypeOf(local_sampler)))
+            local_sampler.sample(self, T)
+        else
+            local_sampler.sample(self);
+    }
 }
 
 pub fn fillSampleFrom(source: anytype, comptime T: type, dest: []T, sampler: anytype) void {
     var local_sampler = sampler;
-    for (dest) |*item| item.* = local_sampler.sampleFrom(source);
+    if (comptime samplerCanFillFrom(@TypeOf(sampler), @TypeOf(source), T)) {
+        if (comptime samplerFillFromTakesType(@TypeOf(local_sampler))) {
+            local_sampler.fillFrom(source, T, dest);
+        } else {
+            local_sampler.fillFrom(source, dest);
+        }
+        return;
+    }
+    for (dest) |*item| {
+        item.* = if (comptime samplerSampleFromTakesType(@TypeOf(local_sampler)))
+            local_sampler.sampleFrom(source, T)
+        else
+            local_sampler.sampleFrom(source);
+    }
+}
+
+fn samplerCanFill(comptime Sampler: type, comptime T: type) bool {
+    const Base = samplerBaseType(Sampler);
+    if (!@hasDecl(Base, "fill")) return false;
+    const info = @typeInfo(@TypeOf(@field(Base, "fill"))).@"fn";
+    if (!samplerFirstParamCompatible(Sampler, info) or
+        info.params[1].type == null or info.params[1].type.? != Rng)
+    {
+        return false;
+    }
+    if (samplerFillTakesType(Sampler)) return true;
+    if (info.is_generic or info.params.len != 3) return false;
+    return sliceParamChild(info.params[2].type) == T;
+}
+
+fn samplerCanFillFrom(comptime Sampler: type, comptime Source: type, comptime T: type) bool {
+    const Base = samplerBaseType(Sampler);
+    if (!@hasDecl(Base, "fillFrom")) return false;
+    const info = @typeInfo(@TypeOf(@field(Base, "fillFrom"))).@"fn";
+    if (!samplerFirstParamCompatible(Sampler, info)) return false;
+    const source_type = info.params[1].type;
+    if (source_type != null and source_type.? != Source) return false;
+    if (samplerFillFromTakesType(Sampler)) return true;
+    if (info.params.len != 3) return false;
+    return sliceParamChild(info.params[2].type) == T;
+}
+
+fn samplerSampleTakesType(comptime Sampler: type) bool {
+    const Base = samplerBaseType(Sampler);
+    if (!@hasDecl(Base, "sample")) return false;
+    const info = @typeInfo(@TypeOf(@field(Base, "sample"))).@"fn";
+    return samplerFirstParamCompatible(Sampler, info) and
+        info.params.len == 3 and info.params[1].type != null and info.params[1].type.? == Rng and
+        info.params[2].type != null and info.params[2].type.? == type;
+}
+
+fn samplerSampleFromTakesType(comptime Sampler: type) bool {
+    const Base = samplerBaseType(Sampler);
+    if (!@hasDecl(Base, "sampleFrom")) return false;
+    const info = @typeInfo(@TypeOf(@field(Base, "sampleFrom"))).@"fn";
+    return samplerFirstParamCompatible(Sampler, info) and
+        info.params.len == 3 and info.params[2].type != null and info.params[2].type.? == type;
+}
+
+fn samplerFillTakesType(comptime Sampler: type) bool {
+    const Base = samplerBaseType(Sampler);
+    if (!@hasDecl(Base, "fill")) return false;
+    const info = @typeInfo(@TypeOf(@field(Base, "fill"))).@"fn";
+    return samplerFirstParamCompatible(Sampler, info) and
+        info.params.len == 4 and info.params[1].type != null and info.params[1].type.? == Rng and
+        info.params[2].type != null and info.params[2].type.? == type;
+}
+
+fn samplerFillFromTakesType(comptime Sampler: type) bool {
+    const Base = samplerBaseType(Sampler);
+    if (!@hasDecl(Base, "fillFrom")) return false;
+    const info = @typeInfo(@TypeOf(@field(Base, "fillFrom"))).@"fn";
+    return samplerFirstParamCompatible(Sampler, info) and
+        info.params.len == 4 and info.params[2].type != null and info.params[2].type.? == type;
+}
+
+fn samplerFirstParamCompatible(comptime Sampler: type, comptime info: std.builtin.Type.Fn) bool {
+    if (info.params.len == 0 or info.params[0].type == null) return false;
+    const First = info.params[0].type.?;
+    if (First == Sampler) return true;
+    const sampler_info = @typeInfo(Sampler);
+    if (sampler_info != .pointer and @typeInfo(First) == .pointer) {
+        const FirstPointer = @typeInfo(First).pointer;
+        return FirstPointer.size == .one and FirstPointer.child == Sampler;
+    }
+    if (sampler_info == .pointer) {
+        const Pointer = sampler_info.pointer;
+        if (First == Pointer.child) return true;
+        if (@typeInfo(First) == .pointer) {
+            const FirstPointer = @typeInfo(First).pointer;
+            return FirstPointer.size == .one and FirstPointer.child == Pointer.child and
+                (FirstPointer.is_const or !Pointer.is_const);
+        }
+    }
+    return false;
+}
+
+fn samplerBaseType(comptime Sampler: type) type {
+    return switch (@typeInfo(Sampler)) {
+        .pointer => |pointer| pointer.child,
+        else => Sampler,
+    };
+}
+
+fn sliceParamChild(comptime ParamType: ?type) ?type {
+    const Slice = ParamType orelse return null;
+    const info = @typeInfo(Slice);
+    if (info != .pointer or info.pointer.size != .slice) return null;
+    return info.pointer.child;
 }
 
 fn fillBools(self: Rng, dest: []bool) void {

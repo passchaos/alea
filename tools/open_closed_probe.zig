@@ -20,6 +20,7 @@ pub fn main(init: std.process.Init) !void {
 
     try stdout.print("open-closed f64 probe count={}\n", .{sample_count});
     try benchFill(io, stdout, "facade fillOpenClosed", sample_count, facadeFill);
+    try benchFill(io, stdout, "facade fillSample OpenClosed01", sample_count, facadeFillSample);
     try benchFill(io, stdout, "facade raw words 128", sample_count, facadeRawFill128);
     try benchFill(io, stdout, "facade raw words 192", sample_count, facadeRawFill192);
     try benchFill(io, stdout, "facade raw words 256", sample_count, facadeRawFill256);
@@ -72,6 +73,11 @@ fn benchFill(
 fn facadeFill(engine: *alea.FastPrng, dest: []f64) void {
     const rng = alea.Rng.init(engine);
     rng.fillOpenClosed(f64, dest);
+}
+
+fn facadeFillSample(engine: *alea.FastPrng, dest: []f64) void {
+    const rng = alea.Rng.init(engine);
+    rng.fillSample(f64, dest, alea.distributions.OpenClosed01{});
 }
 
 fn facadeRawFill128(engine: *alea.FastPrng, dest: []f64) void {
