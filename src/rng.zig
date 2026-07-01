@@ -107,19 +107,23 @@ pub fn valueChecked(self: Rng, comptime T: type) Error!T {
 
 pub fn valueCheckedFrom(source: anytype, comptime T: type) Error!T {
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+    return valueCheckedFromPrevalidated(source, T);
+}
+
+fn valueCheckedFromPrevalidated(source: anytype, comptime T: type) T {
     return switch (@typeInfo(T)) {
         .bool, .int, .float, .vector => valueFrom(source, T),
         .@"enum" => valueFrom(source, T),
         .array => |array_info| blk: {
             var out: T = undefined;
-            for (&out) |*item| item.* = try valueCheckedFrom(source, array_info.child);
+            for (&out) |*item| item.* = valueCheckedFromPrevalidated(source, array_info.child);
             break :blk out;
         },
         .@"struct" => |struct_info| blk: {
             if (struct_info.is_tuple) {
                 var out: T = undefined;
                 inline for (struct_info.fields) |field| {
-                    @field(out, field.name) = try valueCheckedFrom(source, field.type);
+                    @field(out, field.name) = valueCheckedFromPrevalidated(source, field.type);
                 }
                 break :blk out;
             }
