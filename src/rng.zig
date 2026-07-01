@@ -566,38 +566,20 @@ pub fn fillSampleFrom(source: anytype, comptime T: type, dest: []T, sampler: any
     }
 }
 
-fn sampleWith(sampler: anytype, rng: Rng) samplerSampleType(@TypeOf(sampler)) {
+fn sampleWith(comptime T: type, sampler: anytype, rng: Rng) T {
     var local_sampler = sampler;
     return if (comptime samplerSampleTakesType(@TypeOf(local_sampler)))
-        local_sampler.sample(rng, samplerSampleType(@TypeOf(local_sampler)))
+        local_sampler.sample(rng, T)
     else
         local_sampler.sample(rng);
 }
 
-fn sampleFromWith(sampler: anytype, source: anytype) samplerSampleFromType(@TypeOf(sampler), @TypeOf(source)) {
+fn sampleFromWith(comptime T: type, sampler: anytype, source: anytype) T {
     var local_sampler = sampler;
     return if (comptime samplerSampleFromTakesType(@TypeOf(local_sampler)))
-        local_sampler.sampleFrom(source, samplerSampleFromType(@TypeOf(local_sampler), @TypeOf(source)))
+        local_sampler.sampleFrom(source, T)
     else
         local_sampler.sampleFrom(source);
-}
-
-fn samplerSampleType(comptime Sampler: type) type {
-    const Base = samplerBaseType(Sampler);
-    const info = @typeInfo(@TypeOf(@field(Base, "sample"))).@"fn";
-    return info.return_type.?;
-}
-
-fn samplerSampleFromType(comptime Sampler: type, comptime Source: type) type {
-    const Base = samplerBaseType(Sampler);
-    const info = @typeInfo(@TypeOf(@field(Base, "sampleFrom"))).@"fn";
-    if (info.return_type) |Return| return Return;
-    if (samplerSampleFromTakesType(Sampler)) {
-        const sample_info = @typeInfo(@TypeOf(@field(Base, "sample"))).@"fn";
-        return sample_info.return_type.?;
-    }
-    _ = Source;
-    @compileError(@typeName(Base) ++ ".sampleFrom return type could not be inferred");
 }
 
 fn samplerCanFill(comptime Sampler: type, comptime T: type) bool {
@@ -1638,7 +1620,7 @@ pub fn SampleIterator(comptime Sampler: type, comptime T: type) type {
         }
 
         pub fn nextValue(self: *Self) T {
-            return sampleWith(self.sampler, self.rng);
+            return sampleWith(T, self.sampler, self.rng);
         }
 
         pub fn fill(self: *Self, dest: []T) void {
@@ -1659,7 +1641,7 @@ pub fn SampleIteratorFrom(comptime Source: type, comptime Sampler: type, comptim
         }
 
         pub fn nextValue(self: *Self) T {
-            return sampleFromWith(self.sampler, self.source);
+            return sampleFromWith(T, self.sampler, self.source);
         }
 
         pub fn fill(self: *Self, dest: []T) void {
@@ -2992,4 +2974,12 @@ test "value and sampler iterators produce unbounded samples" {
     var direct_roll_buf: [16]u8 = undefined;
     direct_rolls.fill(&direct_roll_buf);
     for (direct_roll_buf) |roll| try std.testing.expect(roll >= 1 and roll <= 6);
+
+    var open_iter = rng.sampleIter(f64, alea.distributions.Open01{});
+    const open_value = open_iter.nextValue();
+    try std.testing.expect(open_value > 0 and open_value < 1);
+
+    var direct_open_iter = Rng.sampleIterFrom(&engine, f64, alea.distributions.Open01{});
+    const direct_open_value = direct_open_iter.nextValue();
+    try std.testing.expect(direct_open_value > 0 and direct_open_value < 1);
 }
