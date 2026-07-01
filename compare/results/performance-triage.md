@@ -243,7 +243,8 @@ new concrete hypothesis is available:
   `std.math.exp`, optimized float mode, `exp2`, f32 vector width,
   general-purpose `expm1 + 1`, and branchy hybrid `expm1` have all been ruled
   out as defaults; future work needs a sound exact-`exp` transform/codegen
-  improvement or an explicitly parameter-limited opt-in.
+  improvement or an explicitly parameter-limited opt-in. See
+  `lognormal-transform-notes.md`.
 - OpenClosed f64: buffer sizes, int-add expression shape, bitcast, in-place,
   vector, and invalid raw-byte variants are exhausted; future work needs a new
   exact `(0, 1]` endpoint-grid construction.

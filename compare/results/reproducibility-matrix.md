@@ -56,7 +56,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Area | Reason |
 | --- | --- |
 | Non-uniform distributions and reusable distribution samplers | Algorithms may be improved for statistical quality, endpoint semantics, or speed, as happened with Poisson, binomial, and floating-point inclusive uniform samplers. |
-| LogNormal transform mapping | Alternative exact-transform shapes such as f32 `expm1(x) + 1` may improve a narrow parameter range but change rounding/output mapping; any adoption must be documented as a deliberate versioned distribution change or exposed as an explicit opt-in. |
+| LogNormal transform mapping | Alternative exact-transform shapes such as f32 `expm1(x) + 1` may improve a narrow parameter range but change rounding/output mapping; any adoption must be documented as a deliberate versioned distribution change or exposed as an explicit opt-in. Current evidence and requirements are in `compare/results/lognormal-transform-notes.md`. |
 | `Rng.fill` for non-`u8` integer, `f32`, and bool slices; `Rng.fillOpen` / `fillOpenClosed` float slices | Bulk packing and slice conversion policy may change to improve throughput; use scalar `valueIter`, `floatOpen`, or `floatOpenClosed` if per-element draw compatibility is required. |
 | `seq.sampleIndices` returning `[]usize` | `usize` width and compact conversion policy can vary by target. |
 | `seq.sampleWeightedIndices` and weighted no-replacement helpers | Heap ordering ties and floating-point keys are deterministic for a target, but algorithm changes may alter output. |
