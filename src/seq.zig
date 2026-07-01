@@ -160,6 +160,7 @@ pub fn sampleArrayCheckedFrom(source: anytype, comptime N: usize, length: usize)
 pub fn sampleArrayFrom(source: anytype, comptime N: usize, length: usize) ?[N]usize {
     if (N > length) return null;
     var indices: [N]usize = undefined;
+    if (comptime N == 0) return indices;
 
     var i: usize = 0;
     var j = length - N;
@@ -1518,6 +1519,26 @@ test "zero-count partial shuffle does not mutate or consume random stream" {
     const head = try partialShuffleCheckedFrom(&engine, u8, &items, 0);
     try std.testing.expectEqual(@as(usize, 0), head.len);
     try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, &items);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "zero-count checked index helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_771a);
+    var control = alea.ScalarPrng.init(0x5150_771a);
+
+    const indices = try sampleIndicesCheckedFrom(std.testing.allocator, &engine, 0, 0);
+    defer std.testing.allocator.free(indices);
+    try std.testing.expectEqual(@as(usize, 0), indices.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const indices_u32 = try sampleIndicesU32CheckedFrom(std.testing.allocator, &engine, 0, 0);
+    defer std.testing.allocator.free(indices_u32);
+    try std.testing.expectEqual(@as(usize, 0), indices_u32.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const fixed = try sampleArrayCheckedFrom(&engine, 0, 0);
+    try std.testing.expectEqual(@as(usize, 0), fixed.len);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
