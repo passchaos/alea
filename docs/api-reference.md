@@ -372,6 +372,8 @@ Reusable samplers:
 - `StandardGeometric.fillFrom`
 - `Gamma(T)`
 - `Gamma(T).init`
+- `Gamma(T).shapeValue`
+- `Gamma(T).scaleValue`
 - `Gamma(T).sample`
 - `Gamma(T).sampleFrom`
 - `Gamma(T).fill`
