@@ -3176,6 +3176,30 @@ test "sample without replacement allocation failures do not consume random strea
     try std.testing.expectEqual(second_control.next(), second_engine.next());
 }
 
+test "invalid facade checked fills do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba7);
+    var control = alea.ScalarPrng.init(0x5150_ba7);
+    const rng = Rng.init(&engine);
+
+    var floats: [4]f64 = undefined;
+    try std.testing.expectError(error.EmptyRange, rng.fillRangeChecked(f64, &floats, std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var bools: [8]bool = undefined;
+    try std.testing.expectError(error.InvalidProbability, rng.fillChanceChecked(&bools, -0.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, rng.fillRatioChecked(&bools, 2, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, rng.fillNormalChecked(f64, &floats, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, rng.fillExponentialChecked(f64, &floats, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "zero-length checked fills do not validate or consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_bae);
