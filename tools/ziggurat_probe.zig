@@ -78,6 +78,8 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64(io, stdout, "vector-repair exponential f64x4 candidate", sample_count, 0xe15a, vectorRepairExponential);
     try benchVectorF32(io, stdout, "vector-repair normal f32x8 candidate", sample_count, 0xd15a, vectorRepairNormalF32);
     try benchVectorF32(io, stdout, "vector-repair exponential f32x8 candidate", sample_count, 0xe15a, vectorRepairExponentialF32);
+    try benchVectorF32(io, stdout, "vector-repair normal f32x8 correct", sample_count, 0xd15a, vectorRepairNormalF32Correct);
+    try benchVectorF32(io, stdout, "vector-repair exponential f32x8 correct", sample_count, 0xe15a, vectorRepairExponentialF32Correct);
     try stdout.flush();
 }
 
@@ -442,5 +444,21 @@ fn vectorRepairExponentialF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
             out[lane] = @floatCast(thresholdExponential(engine));
         }
     }
+    return out;
+}
+
+fn vectorRepairNormalF32Correct(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    const VecF32 = @Vector(8, f32);
+    var out: VecF32 = undefined;
+
+    inline for (0..8) |lane| out[lane] = @floatCast(ratioNormal(engine));
+    return out;
+}
+
+fn vectorRepairExponentialF32Correct(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    const VecF32 = @Vector(8, f32);
+    var out: VecF32 = undefined;
+
+    inline for (0..8) |lane| out[lane] = @floatCast(thresholdExponential(engine));
     return out;
 }
