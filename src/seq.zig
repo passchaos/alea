@@ -1831,6 +1831,13 @@ test "zero-length choice fills do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "weighted choice init allocation failure cleans up" {
+    const items = [_]u8{ 1, 2, 3 };
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, WeightedChoice(u8, u32).init(failing.allocator(), &items, &.{ 1, 2, 3 }));
+    try std.testing.expect(failing.has_induced_failure);
+}
+
 test "weighted choice sampler maps alias indexes to items" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(446);
