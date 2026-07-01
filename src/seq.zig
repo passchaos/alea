@@ -314,6 +314,15 @@ pub fn sampleWeightedIndices(allocator: std.mem.Allocator, rng: Rng, comptime We
     return sampleWeightedIndicesFrom(allocator, rng, Weight, weights, amount);
 }
 
+pub fn sampleWeightedIndicesChecked(allocator: std.mem.Allocator, rng: Rng, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
+    return sampleWeightedIndicesCheckedFrom(allocator, rng, Weight, weights, amount);
+}
+
+pub fn sampleWeightedIndicesCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
+    if (amount > weights.len) return error.InvalidParameter;
+    return sampleWeightedIndicesFrom(allocator, source, Weight, weights, amount);
+}
+
 pub fn sampleWeightedIndicesFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
     if (amount == 0) return allocator.alloc(usize, 0);
     if (weights.len == 0) return error.EmptyInput;
@@ -354,6 +363,15 @@ pub fn sampleWeightedIndicesFrom(allocator: std.mem.Allocator, source: anytype, 
 
 pub fn sampleWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
     return sampleWeightedFrom(allocator, rng, T, Weight, items, weights, amount);
+}
+
+pub fn sampleWeightedChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
+    return sampleWeightedCheckedFrom(allocator, rng, T, Weight, items, weights, amount);
+}
+
+pub fn sampleWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
+    if (amount > items.len) return error.InvalidParameter;
+    return sampleWeightedFrom(allocator, source, T, Weight, items, weights, amount);
 }
 
 pub fn sampleWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
@@ -1015,6 +1033,17 @@ test "invalid sequence helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0x57cce33f9288b3f7), engine.next());
 }
 
+test "invalid checked weighted sample counts do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7711);
+
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, u32, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(u64, 0x2b5cdf1348cc04e8), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(u64, 0x6b64b54880a566c3), engine.next());
+}
+
 test "partial shuffle and reservoir sample respect counts" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(444);
@@ -1218,16 +1247,29 @@ test "weighted sampling without replacement returns distinct positive-weight ite
         try std.testing.expect(weights[index] > 0);
     }
 
+    const checked_indices = try sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, f64, &weights, 3);
+    defer std.testing.allocator.free(checked_indices);
+    try std.testing.expectEqual(@as(usize, 3), checked_indices.len);
+
     const direct_sample = try sampleWeightedFrom(std.testing.allocator, &engine, u8, f64, &items, &weights, 2);
     defer std.testing.allocator.free(direct_sample);
     try std.testing.expectEqual(@as(usize, 2), direct_sample.len);
     for (direct_sample) |item| try std.testing.expect(item == 20 or item == 30 or item == 50);
 
+    const checked_sample = try sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, f64, &items, &weights, 2);
+    defer std.testing.allocator.free(checked_sample);
+    try std.testing.expectEqual(@as(usize, 2), checked_sample.len);
+    for (checked_sample) |item| try std.testing.expect(item == 20 or item == 30 or item == 50);
+
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndices(std.testing.allocator, rng, u32, &.{}, 1));
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesFrom(std.testing.allocator, &engine, u32, &.{}, 1));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesChecked(std.testing.allocator, rng, u32, &.{ 1, 2 }, 3));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, u32, &.{ 1, 2 }, 3));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndices(std.testing.allocator, rng, f64, &.{ 1.0, std.math.nan(f64) }, 1));
     try std.testing.expectError(error.LengthMismatch, sampleWeighted(std.testing.allocator, rng, u8, u32, &.{ 1, 2 }, &.{1}, 1));
     try std.testing.expectError(error.LengthMismatch, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 1));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedChecked(std.testing.allocator, rng, u8, u32, &.{ 1, 2 }, &.{ 1, 2 }, 3));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{ 1, 2 }, 3));
 }
 
 test "weighted sampling without replacement preserves direct stream shape" {
