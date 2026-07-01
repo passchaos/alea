@@ -6455,6 +6455,15 @@ test "invalid probability distribution fills do not consume random stream" {
     var ints: [4]u64 = undefined;
     try std.testing.expectError(error.InvalidProbability, fillBinomialCheckedFrom(&engine, &ints, 10, 1.1));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, fillNegativeBinomialCheckedFrom(&engine, &ints, 5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, fillGeometricFailuresCheckedFrom(&engine, &ints, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, fillGeometricCheckedFrom(&engine, &ints, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "invalid uniform distribution helpers do not consume random stream" {
