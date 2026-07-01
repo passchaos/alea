@@ -247,9 +247,10 @@ pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
 }
 
 pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
+
     var reservoir = try std.ArrayList(T).initCapacity(allocator, amount);
     errdefer reservoir.deinit(allocator);
-    if (amount == 0) return reservoir.toOwnedSlice(allocator);
 
     while (reservoir.items.len < amount) {
         const item = iterator.next() orelse return reservoir.toOwnedSlice(allocator);
@@ -1288,6 +1289,30 @@ test "short checked iterator samples do not consume past source" {
     defer std.testing.allocator.free(empty);
     try std.testing.expectEqual(@as(usize, 0), empty.len);
     try std.testing.expectEqual(@as(u64, 0x176d099d72bcd05c), engine.next());
+}
+
+test "zero-count iterator samples do not read iterator or build reservoir" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7715);
+    var control = alea.ScalarPrng.init(0x5150_7715);
+
+    const CountingIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            return 42;
+        }
+    };
+
+    var iter = CountingIter{};
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const sample = try sampleIteratorCheckedFrom(failing.allocator(), &engine, u8, &iter, 0);
+    defer failing.allocator().free(sample);
+    try std.testing.expectEqual(@as(usize, 0), sample.len);
+    try std.testing.expectEqual(@as(usize, 0), iter.calls);
+    try std.testing.expect(!failing.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "short checked weighted iterator samples do not consume past source" {

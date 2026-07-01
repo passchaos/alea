@@ -178,8 +178,9 @@ Use `Rng.weightedIndexFrom`, `Rng.sampleWithoutReplacementFrom`,
 `sampleWeightedFrom`, `Choice.iterFrom`, `WeightedChoice.iterFrom`,
 `AliasTable.sampleFrom`, and `WeightedChoice.sampleValueFrom` for weighted or
 collection sampling with a comptime-known engine source.
-Checked sample-without-replacement calls with count zero return an empty result
-before building the temporary pool or drawing from the stream.
+Checked sample-without-replacement and iterator-sampling calls with count zero
+return an empty result before building temporary storage, reading the iterator,
+or drawing from the stream.
 `AliasTable.update` and `WeightedChoice.update` build the replacement table
 before swapping state, so length, weight, and initial allocation failures leave
 the previous valid table usable.
