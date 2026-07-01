@@ -637,7 +637,8 @@ Dynamic weighted helpers:
 ## Sequence Sampling
 
 - Error type: `Error`
-- Index vectors: `IndexVec.len`, `IndexVec.at`, `IndexVec.deinit`
+- Index vectors: `IndexVec.len`, `IndexVec.isEmpty`, `IndexVec.at`,
+  `IndexVec.iter`, `IndexVec.Iterator.next`, `IndexVec.deinit`
 - Indices: `sampleIndexVec`, `sampleIndexVecFrom`, `sampleIndices`,
   `sampleIndexVecCheckedFrom`, `sampleIndicesFrom`, `sampleIndicesCheckedFrom`,
   `sampleIndicesU32`, `sampleIndicesU32From`, `sampleIndicesU32CheckedFrom`,

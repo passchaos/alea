@@ -6,6 +6,18 @@ pub const IndexVec = union(enum) {
     u32: []u32,
     usize: []usize,
 
+    pub const Iterator = struct {
+        index_vec: IndexVec,
+        index: usize = 0,
+
+        pub fn next(self: *Iterator) ?usize {
+            if (self.index >= self.index_vec.len()) return null;
+            const value = self.index_vec.at(self.index);
+            self.index += 1;
+            return value;
+        }
+    };
+
     pub fn len(self: IndexVec) usize {
         return switch (self) {
             .u32 => |items| items.len,
@@ -13,11 +25,19 @@ pub const IndexVec = union(enum) {
         };
     }
 
+    pub fn isEmpty(self: IndexVec) bool {
+        return self.len() == 0;
+    }
+
     pub fn at(self: IndexVec, index: usize) usize {
         return switch (self) {
             .u32 => |items| items[index],
             .usize => |items| items[index],
         };
+    }
+
+    pub fn iter(self: IndexVec) Iterator {
+        return .{ .index_vec = self };
     }
 
     pub fn deinit(self: IndexVec, allocator: std.mem.Allocator) void {
@@ -1064,8 +1084,12 @@ test "portable index sampling has stable snapshots" {
     const index_vec = try sampleIndexVec(std.testing.allocator, rng, 100, 8);
     defer index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 8), index_vec.len());
+    try std.testing.expect(!index_vec.isEmpty());
     const expected = [_]usize{ 70, 11, 8, 89, 0, 1, 18, 74 };
     for (expected, 0..) |value, i| try std.testing.expectEqual(value, index_vec.at(i));
+    var iter = index_vec.iter();
+    for (expected) |value| try std.testing.expectEqual(value, iter.next().?);
+    try std.testing.expectEqual(@as(?usize, null), iter.next());
     try std.testing.expectEqual(@as(u64, 0xe2fc197c64f3dd72), engine.next());
 }
 
@@ -1730,6 +1754,9 @@ test "zero-count checked sequence helpers do not consume random stream" {
     const index_vec = try sampleIndexVecCheckedFrom(index_alloc.allocator(), &engine, 0, 0);
     defer index_vec.deinit(index_alloc.allocator());
     try std.testing.expectEqual(@as(usize, 0), index_vec.len());
+    try std.testing.expect(index_vec.isEmpty());
+    var index_iter = index_vec.iter();
+    try std.testing.expectEqual(@as(?usize, null), index_iter.next());
     try std.testing.expect(!index_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
