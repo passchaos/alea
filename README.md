@@ -23,7 +23,8 @@ The current Linux-first roadmap is intentionally broad:
 - collection helpers for `choose`, `shuffle`, partial shuffle, weighted indexes,
   repeated choice iterators, weighted choice samplers, weighted sampling without
   replacement, iterator and weighted iterator sampling with and without
-  replacement, reservoir sampling, and adaptive index sampling
+  replacement, reservoir sampling, adaptive index sampling, and checked
+  variants for fallible user-supplied counts or empty inputs
 - reusable uniform, Bernoulli, non-uniform distribution, and alias-table samplers
 - dynamic weighted trees for frequent update/push/pop weighted sampling
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, direct-source charset
