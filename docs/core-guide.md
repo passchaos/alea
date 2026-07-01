@@ -231,7 +231,8 @@ generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
 `Charset.allocFrom`, `charFrom`, `stringFrom`, `unicodeScalarFrom`,
 `unicodeUtf8AllocFrom`, `unicodeUtf8Capacity`, and `unicodeUtf8IntoFrom` when
 the engine type is comptime-known. Use
-`Charset.sampleCheckedFrom`, `Charset.fillCheckedFrom`, and
+`Charset.sampleChecked`, `Charset.sampleCheckedFrom`, `Charset.fillChecked`,
+`Charset.fillCheckedFrom`, `Charset.allocChecked`, and
 `Charset.allocCheckedFrom` when a manually constructed charset may be empty;
 zero-length fills and allocations return empty results before validating charset
 contents. Initial allocation failures in ASCII and Unicode string helpers are
