@@ -3067,6 +3067,17 @@ test "value iterator fill preserves scalar fallback where bulk fill packs draws"
     try std.testing.expectEqualSlices(bool, &bool_loop, &bool_fill);
     try std.testing.expectEqual(bool_loop_engine.next(), bool_iter_engine.next());
 
+    var direct_bool_iter_engine = alea.ScalarPrng.init(0x17e8);
+    var direct_bool_loop_engine = alea.ScalarPrng.init(0x17e8);
+    var direct_bool_iter = valueIterFrom(&direct_bool_iter_engine, bool);
+    var direct_bool_fill: [8]bool = undefined;
+    var direct_bool_loop: [8]bool = undefined;
+    direct_bool_iter.fill(&direct_bool_fill);
+    i = 0;
+    while (i < direct_bool_loop.len) : (i += 1) direct_bool_loop[i] = valueFrom(&direct_bool_loop_engine, bool);
+    try std.testing.expectEqualSlices(bool, &direct_bool_loop, &direct_bool_fill);
+    try std.testing.expectEqual(direct_bool_loop_engine.next(), direct_bool_iter_engine.next());
+
     var f32_iter_engine = alea.ScalarPrng.init(0x17e8);
     const f32_rng = Rng.init(&f32_iter_engine);
     var f32_loop_engine = alea.ScalarPrng.init(0x17e8);
@@ -3080,6 +3091,17 @@ test "value iterator fill preserves scalar fallback where bulk fill packs draws"
     try std.testing.expectEqualSlices(f32, &f32_loop, &f32_fill);
     try std.testing.expectEqual(f32_loop_engine.next(), f32_iter_engine.next());
 
+    var direct_f32_iter_engine = alea.ScalarPrng.init(0x17e8);
+    var direct_f32_loop_engine = alea.ScalarPrng.init(0x17e8);
+    var direct_f32_iter = valueIterFrom(&direct_f32_iter_engine, f32);
+    var direct_f32_fill: [8]f32 = undefined;
+    var direct_f32_loop: [8]f32 = undefined;
+    direct_f32_iter.fill(&direct_f32_fill);
+    i = 0;
+    while (i < direct_f32_loop.len) : (i += 1) direct_f32_loop[i] = valueFrom(&direct_f32_loop_engine, f32);
+    try std.testing.expectEqualSlices(f32, &direct_f32_loop, &direct_f32_fill);
+    try std.testing.expectEqual(direct_f32_loop_engine.next(), direct_f32_iter_engine.next());
+
     var u32_iter_engine = alea.ScalarPrng.init(0x17e8);
     const u32_rng = Rng.init(&u32_iter_engine);
     var u32_loop_engine = alea.ScalarPrng.init(0x17e8);
@@ -3092,6 +3114,17 @@ test "value iterator fill preserves scalar fallback where bulk fill packs draws"
     while (i < u32_loop.len) : (i += 1) u32_loop[i] = u32_loop_rng.value(u32);
     try std.testing.expectEqualSlices(u32, &u32_loop, &u32_fill);
     try std.testing.expectEqual(u32_loop_engine.next(), u32_iter_engine.next());
+
+    var direct_u32_iter_engine = alea.ScalarPrng.init(0x17e8);
+    var direct_u32_loop_engine = alea.ScalarPrng.init(0x17e8);
+    var direct_u32_iter = valueIterFrom(&direct_u32_iter_engine, u32);
+    var direct_u32_fill: [8]u32 = undefined;
+    var direct_u32_loop: [8]u32 = undefined;
+    direct_u32_iter.fill(&direct_u32_fill);
+    i = 0;
+    while (i < direct_u32_loop.len) : (i += 1) direct_u32_loop[i] = valueFrom(&direct_u32_loop_engine, u32);
+    try std.testing.expectEqualSlices(u32, &direct_u32_loop, &direct_u32_fill);
+    try std.testing.expectEqual(direct_u32_loop_engine.next(), direct_u32_iter_engine.next());
 }
 
 test "value iterator fill delegates stream-compatible bulk fills" {
