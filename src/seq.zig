@@ -1165,6 +1165,23 @@ test "invalid facade index helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid facade collection helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_5df);
+    var control = alea.ScalarPrng.init(0x5150_5df);
+    const rng = alea.Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, chooseMultipleChecked(std.testing.allocator, rng, u8, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var tiny_items = [_]u8{ 1, 2 };
+    try std.testing.expectError(error.InvalidParameter, partialShuffleChecked(rng, u8, &tiny_items, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, reservoirSampleChecked(std.testing.allocator, rng, u8, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid sequence helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_5e1);
