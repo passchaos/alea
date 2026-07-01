@@ -142,8 +142,8 @@ Use:
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeighted`, `seq.sampleWeightedFrom`
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
-  `seq.WeightedChoice`, including `Choice.iterFrom` and
-  `WeightedChoice.iterFrom`
+  `seq.WeightedChoice`, including `Choice.iterFrom`, `WeightedChoice.update`,
+  and `WeightedChoice.iterFrom`
 - `distributions.AliasTable` for O(1) repeated weighted index sampling
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
   and sampling workloads

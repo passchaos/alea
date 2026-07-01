@@ -476,6 +476,11 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return self.items.len;
         }
 
+        pub fn update(self: *Self, weights: []const Weight) !void {
+            if (weights.len != self.items.len) return error.LengthMismatch;
+            try self.table.update(weights);
+        }
+
         pub fn sample(self: Self, rng: Rng) *const T {
             return self.sampleFrom(rng);
         }
@@ -1170,6 +1175,11 @@ test "weighted choice sampler maps alias indexes to items" {
     var direct_iter = choice.iterFrom(&engine);
     const direct_picked = direct_iter.next().?.*;
     try std.testing.expect(std.mem.eql(u8, direct_picked, "rare") or std.mem.eql(u8, direct_picked, "often"));
+
+    try choice.update(&.{ 0, 0, 5 });
+    try std.testing.expect(std.mem.eql(u8, choice.sampleFrom(&engine).*, "often"));
+    try std.testing.expectError(error.LengthMismatch, choice.update(&.{ 1, 2 }));
+    try std.testing.expectError(error.InvalidWeight, choice.update(&.{ 0, 0, 0 }));
 
     try std.testing.expectError(error.EmptyInput, WeightedChoice(u8, u32).init(std.testing.allocator, &.{}, &.{}));
     try std.testing.expectError(error.LengthMismatch, WeightedChoice(u8, u32).init(std.testing.allocator, &.{1}, &.{ 1, 2 }));
