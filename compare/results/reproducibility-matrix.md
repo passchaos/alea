@@ -23,6 +23,7 @@ is explicitly documented.
 | `Rng.float`, `floatOpen`, `floatOpenClosed` | Same output for fixed engine stream and float type. |
 | `Rng.value` for bools, ints, floats, enums, tuples, arrays | Same output when all nested sampled types are stable. |
 | `Rng.valueIter` / `valueIterFrom` | `nextValue` is scalar `value` sampling; `fill` preserves repeated-`nextValue` stream shape for packed-fill-sensitive types (`bool`, `f32`, `u8`, sub-64-bit integers, and structured values) and may use stream-equivalent bulk fill only for `f64`, 64-bit integers, and matching vectors. |
+| `Rng.sampleIter` / `sampleIterFrom` | `nextValue` follows the sampler's scalar `sample` / `sampleFrom` method; `fill` follows the sampler's bulk `fill` / `fillFrom` method when one exists, so high-volume iterator fills inherit each sampler's documented bulk stream policy. |
 | `Rng.fill(u8, ...)` / `Rng.bytes` | Same byte stream for fixed engine stream. |
 | `ascii.Charset` sampling | Same bytes for fixed engine stream and charset bytes. |
 | `seq.sampleIndicesU32`, `sampleIndexVec` with `.u32` backing | Same sampled index sequence for fixed engine stream, length, and amount. |
