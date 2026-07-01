@@ -1486,12 +1486,26 @@ test "empty checked weighted iterator choice does not consume random stream" {
 test "rejection index set allocation failures do not consume random stream" {
     const alea = @import("root.zig");
 
+    var u32_first_engine = alea.ScalarPrng.init(0x5150_5f6);
+    var u32_first_control = alea.ScalarPrng.init(0x5150_5f6);
+    var u32_first_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleIndicesU32From(u32_first_alloc.allocator(), &u32_first_engine, 100_000, 200));
+    try std.testing.expect(u32_first_alloc.has_induced_failure);
+    try std.testing.expectEqual(u32_first_control.next(), u32_first_engine.next());
+
     var u32_engine = alea.ScalarPrng.init(0x5150_5f4);
     var u32_control = alea.ScalarPrng.init(0x5150_5f4);
     var u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
     try std.testing.expectError(error.OutOfMemory, sampleIndicesU32From(u32_alloc.allocator(), &u32_engine, 100_000, 200));
     try std.testing.expect(u32_alloc.has_induced_failure);
     try std.testing.expectEqual(u32_control.next(), u32_engine.next());
+
+    var usize_first_engine = alea.ScalarPrng.init(0x5150_5f7);
+    var usize_first_control = alea.ScalarPrng.init(0x5150_5f7);
+    var usize_first_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleIndicesFrom(usize_first_alloc.allocator(), &usize_first_engine, 100_000, 200));
+    try std.testing.expect(usize_first_alloc.has_induced_failure);
+    try std.testing.expectEqual(usize_first_control.next(), usize_first_engine.next());
 
     var usize_engine = alea.ScalarPrng.init(0x5150_5f5);
     var usize_control = alea.ScalarPrng.init(0x5150_5f5);
