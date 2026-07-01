@@ -419,7 +419,7 @@ pub fn fillVectorStandardNormal(self: Rng, comptime VectorType: type, dest: []Ve
 pub fn fillVectorStandardNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    fillVectorNormalScalarFrom(source, VectorType, dest, 0, 1);
+    for (dest) |*item| item.* = vectorStandardNormalFrom(source, VectorType);
 }
 
 pub fn fillVectorNormal(self: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
@@ -481,7 +481,7 @@ pub fn fillVectorStandardExponential(self: Rng, comptime VectorType: type, dest:
 pub fn fillVectorStandardExponentialFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    fillVectorExponentialScalarFrom(source, VectorType, dest, 1);
+    for (dest) |*item| item.* = vectorStandardExponentialFrom(source, VectorType);
 }
 
 pub fn fillNormal(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
@@ -1293,7 +1293,9 @@ pub fn vectorStandardNormal(self: Rng, comptime VectorType: type) VectorType {
 pub fn vectorStandardNormalFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    return vectorNormalScalarFrom(source, VectorType, 0, 1);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = standardNormalFastFrom(source, info.child);
+    return out;
 }
 
 pub fn vectorNormal(self: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
@@ -1355,7 +1357,9 @@ pub fn vectorStandardExponential(self: Rng, comptime VectorType: type) VectorTyp
 pub fn vectorStandardExponentialFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    return vectorExponentialScalarFrom(source, VectorType, 1);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = standardExponentialFastFrom(source, info.child);
+    return out;
 }
 
 pub fn durationRangeLessThan(self: Rng, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
