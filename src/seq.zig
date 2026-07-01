@@ -746,7 +746,7 @@ fn sampleFloyd(allocator: std.mem.Allocator, source: anytype, length: usize, amo
         try indices.append(allocator, t);
     }
 
-    return indices.toOwnedSlice(allocator);
+    return indices.toOwnedSliceAssert();
 }
 
 fn sampleInPlace(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
@@ -803,7 +803,7 @@ fn sampleFloydU32(allocator: std.mem.Allocator, source: anytype, length: u32, am
         try indices.append(allocator, t);
     }
 
-    return indices.toOwnedSlice(allocator);
+    return indices.toOwnedSliceAssert();
 }
 
 fn sampleFloydU32AsUsize(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]usize {
@@ -825,7 +825,7 @@ fn sampleFloydU32AsUsize(allocator: std.mem.Allocator, source: anytype, length: 
         try indices.append(allocator, t_usize);
     }
 
-    return indices.toOwnedSlice(allocator);
+    return indices.toOwnedSliceAssert();
 }
 
 fn sampleInPlaceU32(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]u32 {
@@ -1102,6 +1102,30 @@ test "checked index sampling preserves valid-parameter stream shape" {
         }
         try std.testing.expectEqual(unchecked.next(), checked.next());
     }
+}
+
+test "exact-capacity index samplers avoid post-sampling ownership allocation" {
+    const alea = @import("root.zig");
+
+    var u32_engine = alea.ScalarPrng.init(0x5150_1d01);
+    var u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{
+        .fail_index = 1,
+        .resize_fail_index = 0,
+    });
+    const indices_u32 = try sampleIndicesU32From(u32_alloc.allocator(), &u32_engine, 1_000, 16);
+    defer u32_alloc.allocator().free(indices_u32);
+    try std.testing.expectEqual(@as(usize, 16), indices_u32.len);
+    try std.testing.expect(!u32_alloc.has_induced_failure);
+
+    var usize_engine = alea.ScalarPrng.init(0x5150_1d02);
+    var usize_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{
+        .fail_index = 1,
+        .resize_fail_index = 0,
+    });
+    const indices = try sampleIndicesFrom(usize_alloc.allocator(), &usize_engine, 1_000, 16);
+    defer usize_alloc.allocator().free(indices);
+    try std.testing.expectEqual(@as(usize, 16), indices.len);
+    try std.testing.expect(!usize_alloc.has_induced_failure);
 }
 
 test "invalid sequence helpers do not consume random stream" {
