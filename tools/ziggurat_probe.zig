@@ -69,11 +69,15 @@ pub fn main(init: std.process.Init) !void {
     try benchF64(io, stdout, "mantissa-threshold normal candidate", sample_count, 0xd15a, thresholdNormal);
     try benchF64(io, stdout, "mantissa-range normal candidate", sample_count, 0xd15a, thresholdRangeNormal);
     try benchF64(io, stdout, "table-bound normal candidate", sample_count, 0xd15a, tableBoundNormal);
+    try benchF32(io, stdout, "standard normal f32 raw", sample_count, 0xd15a, standardNormalF32);
+    try benchF32(io, stdout, "ratio normal f32 cast candidate", sample_count, 0xd15a, ratioNormalF32);
     try benchF64(io, stdout, "generic exponentialFastFrom", sample_count, 0xe15a, genericExponential);
     try benchF64(io, stdout, "standard exponential raw", sample_count, 0xe15a, standardExponential);
     try benchF64(io, stdout, "ratio exponential inline candidate", sample_count, 0xe15a, ratioExponential);
     try benchF64(io, stdout, "mantissa-threshold exponential candidate", sample_count, 0xe15a, thresholdExponential);
     try benchF64(io, stdout, "table-bound exponential candidate", sample_count, 0xe15a, tableBoundExponential);
+    try benchF32(io, stdout, "standard exponential f32 raw", sample_count, 0xe15a, standardExponentialF32);
+    try benchF32(io, stdout, "threshold exponential f32 cast candidate", sample_count, 0xe15a, thresholdExponentialF32);
     try benchVectorF64(io, stdout, "vector-repair normal f64x4 candidate", sample_count, 0xd15a, vectorRepairNormal);
     try benchVectorF64(io, stdout, "vector-repair exponential f64x4 candidate", sample_count, 0xe15a, vectorRepairExponential);
     try benchVectorF32(io, stdout, "vector-repair normal f32x8 candidate", sample_count, 0xd15a, vectorRepairNormalF32);
@@ -98,6 +102,36 @@ fn benchF64(
         var engine = alea.ScalarPrng.init(seed);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += sampleFn(&engine);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchF32(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    sample_count: usize,
+    seed: u64,
+    comptime sampleFn: anytype,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var checksum: f32 = 0;
         var i: usize = 0;
         while (i < sample_count) : (i += 1) checksum += sampleFn(&engine);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
@@ -191,12 +225,28 @@ fn standardNormal(engine: *alea.ScalarPrng) f64 {
     return alea.Rng.standardNormalFastFrom(engine, f64);
 }
 
+fn standardNormalF32(engine: *alea.ScalarPrng) f32 {
+    return alea.Rng.standardNormalFastFrom(engine, f32);
+}
+
+fn ratioNormalF32(engine: *alea.ScalarPrng) f32 {
+    return @floatCast(ratioNormal(engine));
+}
+
 fn genericExponential(engine: *alea.ScalarPrng) f64 {
     return alea.Rng.exponentialFastFrom(engine, f64, 1);
 }
 
 fn standardExponential(engine: *alea.ScalarPrng) f64 {
     return alea.Rng.standardExponentialFastFrom(engine, f64);
+}
+
+fn standardExponentialF32(engine: *alea.ScalarPrng) f32 {
+    return alea.Rng.standardExponentialFastFrom(engine, f32);
+}
+
+fn thresholdExponentialF32(engine: *alea.ScalarPrng) f32 {
+    return @floatCast(thresholdExponential(engine));
 }
 
 fn ratioNormal(engine: *alea.ScalarPrng) f64 {
