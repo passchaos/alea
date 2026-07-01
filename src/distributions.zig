@@ -3965,7 +3965,7 @@ pub fn Pert(comptime T: type) type {
     };
 }
 
-fn PertBuilder(comptime T: type) type {
+pub fn PertBuilder(comptime T: type) type {
     return struct {
         const Self = @This();
 
