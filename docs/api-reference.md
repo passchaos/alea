@@ -642,9 +642,11 @@ Dynamic weighted helpers:
   `chooseIteratorWeightedFrom`, `sampleIteratorWeighted`,
   `sampleIteratorWeightedFrom`
 - Reusable samplers: `Choice(T)`, `chooseIter`, `chooseIterFrom`,
+  `chooseIterChecked`, `chooseIterCheckedFrom`,
   `WeightedChoice(T, Weight)`,
-  `Choice.init`, `Choice.len`, `Choice.sample`, `Choice.sampleFrom`, `Choice.sampleValue`,
-  `Choice.sampleValueFrom`, `Choice.fill`, `Choice.fillFrom`,
+  `Choice.init`, `Choice.initChecked`, `Choice.len`, `Choice.sample`,
+  `Choice.sampleFrom`, `Choice.sampleValue`, `Choice.sampleValueFrom`,
+  `Choice.fill`, `Choice.fillFrom`,
   `Choice.fillValues`, `Choice.fillValuesFrom`, `Choice.iter`,
   `Choice.iterFrom`,
   `WeightedChoice.init`, `WeightedChoice.deinit`, `WeightedChoice.len`,

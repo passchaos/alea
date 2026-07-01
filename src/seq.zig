@@ -380,6 +380,10 @@ pub fn Choice(comptime T: type) type {
             return .{ .items = items };
         }
 
+        pub fn initChecked(items: []const T) Error!Self {
+            return init(items) orelse error.EmptyInput;
+        }
+
         pub fn len(self: Self) usize {
             return self.items.len;
         }
@@ -431,8 +435,18 @@ pub fn chooseIter(rng: Rng, comptime T: type, items: []const T) ?Rng.SampleItera
     return choice.iter(rng);
 }
 
+pub fn chooseIterChecked(rng: Rng, comptime T: type, items: []const T) Error!Rng.SampleIterator(Choice(T), *const T) {
+    const choice = try Choice(T).initChecked(items);
+    return choice.iter(rng);
+}
+
 pub fn chooseIterFrom(source: anytype, comptime T: type, items: []const T) ?Rng.SampleIteratorFrom(@TypeOf(source), Choice(T), *const T) {
     const choice = Choice(T).init(items) orelse return null;
+    return choice.iterFrom(source);
+}
+
+pub fn chooseIterCheckedFrom(source: anytype, comptime T: type, items: []const T) Error!Rng.SampleIteratorFrom(@TypeOf(source), Choice(T), *const T) {
+    const choice = try Choice(T).initChecked(items);
     return choice.iterFrom(source);
 }
 
@@ -1074,8 +1088,11 @@ test "choice sampler repeatedly samples slice references" {
 
     const values = [_]u8{ 2, 4, 6, 8 };
     const choice = Choice(u8).init(&values).?;
+    const checked_choice = try Choice(u8).initChecked(&values);
     try std.testing.expectEqual(@as(usize, 4), choice.len());
+    try std.testing.expectEqual(@as(usize, 4), checked_choice.len());
     try std.testing.expect(Choice(u8).init(&.{}) == null);
+    try std.testing.expectError(error.EmptyInput, Choice(u8).initChecked(&.{}));
 
     var iter = choice.iter(rng);
     var i: usize = 0;
@@ -1094,6 +1111,12 @@ test "choice sampler repeatedly samples slice references" {
     var direct_convenience_iter = chooseIterFrom(&engine, u8, &values).?;
     const direct_picked = direct_convenience_iter.next().?.*;
     try std.testing.expect(direct_picked == 2 or direct_picked == 4 or direct_picked == 6 or direct_picked == 8);
+    var checked_iter = try chooseIterChecked(rng, u8, &values);
+    const checked_picked = checked_iter.next().?.*;
+    try std.testing.expect(checked_picked == 2 or checked_picked == 4 or checked_picked == 6 or checked_picked == 8);
+    var checked_direct_iter = try chooseIterCheckedFrom(&engine, u8, &values);
+    const checked_direct_picked = checked_direct_iter.next().?.*;
+    try std.testing.expect(checked_direct_picked == 2 or checked_direct_picked == 4 or checked_direct_picked == 6 or checked_direct_picked == 8);
     var pointer_buf: [8]*const u8 = undefined;
     choice.fill(rng, &pointer_buf);
     for (pointer_buf) |item| try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
@@ -1106,6 +1129,8 @@ test "choice sampler repeatedly samples slice references" {
     for (value_buf) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
     try std.testing.expect(chooseIter(rng, u8, &.{}) == null);
     try std.testing.expect(chooseIterFrom(&engine, u8, &.{}) == null);
+    try std.testing.expectError(error.EmptyInput, chooseIterChecked(rng, u8, &.{}));
+    try std.testing.expectError(error.EmptyInput, chooseIterCheckedFrom(&engine, u8, &.{}));
 }
 
 test "weighted choice sampler maps alias indexes to items" {
