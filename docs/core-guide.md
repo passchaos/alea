@@ -50,8 +50,9 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - structured values: `value(T)` / `valueFrom(source, T)` for bools, ints,
   floats, vectors, enums, arrays, and tuples; use `valueCheckedFrom` or
   `enumValueCheckedFrom` when an empty enum type should be reported as
-  `EmptyRange` (`[0]EmptyEnum` is still a valid empty array, while non-empty
-  arrays or tuples containing an empty enum fail before consuming randomness)
+  `EmptyRange` (zero-length arrays are valid even when their child type is not
+  sampled, while non-empty arrays or tuples containing an empty enum fail before
+  consuming randomness)
 - bulk sampling: `fill` / `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,
   `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`,
