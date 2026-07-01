@@ -175,7 +175,11 @@ collection sampling with a comptime-known engine source.
 `Uppercase`, `Digits`, custom `Charset`, and Unicode scalar UTF-8 string
 generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
 `Charset.allocFrom`, `charFrom`, `stringFrom`, `unicodeScalarFrom`, and
-`unicodeUtf8AllocFrom` when the engine type is comptime-known.
+`unicodeUtf8AllocFrom` when the engine type is comptime-known. Use
+`Charset.sampleCheckedFrom`, `Charset.fillCheckedFrom`, and
+`Charset.allocCheckedFrom` when a manually constructed charset may be empty;
+zero-length fills and allocations return empty results before validating charset
+contents.
 
 ## Validation
 
