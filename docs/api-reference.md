@@ -290,6 +290,9 @@ Reusable samplers:
 - `StandardNormal(T).fillFrom`
 - `Normal(T)`
 - `Normal(T).initMeanCv`
+- `Normal(T).fromZScore`
+- `Normal(T).meanValue`
+- `Normal(T).stddevValue`
 - `Normal(T).sampleFrom`
 - `Normal(T).fill`
 - `Normal(T).fillFrom`
@@ -304,6 +307,9 @@ Reusable samplers:
 - `Exponential(T).fillFrom`
 - `LogNormal(T)`
 - `LogNormal(T).initMeanCv`
+- `LogNormal(T).fromZScore`
+- `LogNormal(T).logMean`
+- `LogNormal(T).logStddev`
 - `LogNormal(T).sampleFrom`
 - `LogNormal(T).fill`
 - `LogNormal(T).fillFrom`

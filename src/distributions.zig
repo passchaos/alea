@@ -1224,6 +1224,18 @@ pub fn Normal(comptime T: type) type {
             return Self.init(mean, @abs(mean) * coefficient_of_variation);
         }
 
+        pub fn fromZScore(self: Self, z_score: T) T {
+            return self.mean + self.stddev * z_score;
+        }
+
+        pub fn meanValue(self: Self) T {
+            return self.mean;
+        }
+
+        pub fn stddevValue(self: Self) T {
+            return self.stddev;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return rng.normal(T, self.mean, self.stddev);
         }
@@ -1365,6 +1377,18 @@ pub fn LogNormal(comptime T: type) type {
 
         pub fn sampleFrom(self: *Self, source: anytype) T {
             return logNormalFrom(source, T, self.normal_sampler.mean, self.normal_sampler.stddev);
+        }
+
+        pub fn fromZScore(self: Self, z_score: T) T {
+            return @exp(self.normal_sampler.fromZScore(z_score));
+        }
+
+        pub fn logMean(self: Self) T {
+            return self.normal_sampler.meanValue();
+        }
+
+        pub fn logStddev(self: Self) T {
+            return self.normal_sampler.stddevValue();
         }
 
         pub fn fill(self: *Self, rng: Rng, dest: []T) void {
@@ -6076,6 +6100,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const normal_cv_sampler = try Normal(f64).initMeanCv(-10, 0.2);
     try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.mean, 0);
     try std.testing.expectApproxEqAbs(@as(f64, 2), normal_cv_sampler.stddev, 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, -7), normal_cv_sampler.fromZScore(1.5), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.meanValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), normal_cv_sampler.stddevValue(), 1e-15);
 
     var exponentials = rng.sampleIter(f64, try Exponential(f64).init(2));
     try std.testing.expect(exponentials.next().? >= 0);
@@ -6128,6 +6155,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const log_normal_zero_cv_sampler = try LogNormal(f64).initMeanCv(0, 0);
     try std.testing.expect(std.math.isNegativeInf(log_normal_zero_cv_sampler.normal_sampler.mean));
     var log_normal_mean_cv_sampler = try LogNormal(f64).initMeanCv(2, 0.5);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_mean_cv_sampler.fromZScore(0) * @exp(0.5 * log_normal_mean_cv_sampler.logStddev() * log_normal_mean_cv_sampler.logStddev()), 1e-14);
+    try std.testing.expect(std.math.isFinite(log_normal_mean_cv_sampler.logMean()));
+    try std.testing.expect(log_normal_mean_cv_sampler.logStddev() > 0);
     log_normal_mean_cv_sampler.fillFrom(&direct_engine, &direct_log_normal_buf);
     for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try logNormalCheckedFrom(&direct_engine, f64, 0, 0.25) > 0);
