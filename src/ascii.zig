@@ -111,7 +111,8 @@ pub fn unicodeUtf8Alloc(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u
 }
 
 pub fn unicodeUtf8AllocFrom(allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
-    var out = try std.ArrayList(u8).initCapacity(allocator, len);
+    const capacity = std.math.mul(usize, len, 4) catch return error.OutOfMemory;
+    var out = try std.ArrayList(u8).initCapacity(allocator, capacity);
     errdefer out.deinit(allocator);
 
     var i: usize = 0;
