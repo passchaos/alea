@@ -68,8 +68,10 @@ pub fn main() !void {
     const next_roll = rolls.next().?;
     const token = try alea.ascii.Alphanumeric.alloc(std.heap.smp_allocator, rng, 16);
     defer std.heap.smp_allocator.free(token);
-    var utf8_buf: [4 * 8]u8 = undefined;
-    const text = try alea.ascii.unicodeUtf8Into(rng, &utf8_buf, 8);
+    const utf8_capacity = try alea.ascii.unicodeUtf8Capacity(8);
+    const utf8_buf = try std.heap.smp_allocator.alloc(u8, utf8_capacity);
+    defer std.heap.smp_allocator.free(utf8_buf);
+    const text = try alea.ascii.unicodeUtf8Into(rng, utf8_buf, 8);
 
     var items = [_]u32{ 10, 20, 30, 40 };
     const hand = alea.seq.partialShuffle(rng, u32, &items, 2);
@@ -80,6 +82,7 @@ pub fn main() !void {
     _ = tuple;
     _ = next_roll;
     _ = token;
+    _ = utf8_capacity;
     _ = text;
     _ = hand;
 }
