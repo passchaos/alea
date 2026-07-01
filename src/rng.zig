@@ -257,6 +257,7 @@ pub fn fillRangeChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) 
 }
 
 pub fn fillRangeCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    if (dest.len == 0) return;
     switch (@typeInfo(T)) {
         .int => {
             if (min >= max) return error.EmptyRange;
@@ -327,6 +328,7 @@ pub fn fillChanceChecked(self: Rng, dest: []bool, p: f64) Error!void {
 }
 
 pub fn fillChanceCheckedFrom(source: anytype, dest: []bool, p: f64) Error!void {
+    if (dest.len == 0) return;
     if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
     fillChanceFrom(source, dest, p);
 }
@@ -365,6 +367,7 @@ pub fn fillRatioChecked(self: Rng, dest: []bool, numerator: u32, denominator: u3
 }
 
 pub fn fillRatioCheckedFrom(source: anytype, dest: []bool, numerator: u32, denominator: u32) Error!void {
+    if (dest.len == 0) return;
     if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     fillRatioFrom(source, dest, numerator, denominator);
 }
@@ -407,6 +410,7 @@ pub fn fillVectorRangeChecked(self: Rng, comptime VectorType: type, dest: []Vect
 
 pub fn fillVectorRangeCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
     const info = vectorInfo(VectorType);
+    if (dest.len == 0) return;
     switch (@typeInfo(info.child)) {
         .int => {
             if (min >= max) return error.EmptyRange;
@@ -435,6 +439,9 @@ pub fn fillVectorChanceChecked(self: Rng, comptime VectorType: type, dest: []Vec
 }
 
 pub fn fillVectorChanceCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("Rng.fillVectorChanceChecked expects a bool vector");
+    if (dest.len == 0) return;
     if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
     fillVectorChanceFrom(source, VectorType, dest, p);
 }
@@ -455,6 +462,9 @@ pub fn fillVectorRatioChecked(self: Rng, comptime VectorType: type, dest: []Vect
 }
 
 pub fn fillVectorRatioCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("Rng.fillVectorRatioChecked expects a bool vector");
+    if (dest.len == 0) return;
     if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     fillVectorRatioFrom(source, VectorType, dest, numerator, denominator);
 }
@@ -491,6 +501,7 @@ pub fn fillVectorNormalChecked(self: Rng, comptime VectorType: type, dest: []Vec
 pub fn fillVectorNormalCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
+    if (dest.len == 0) return;
     if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     fillVectorNormalFrom(source, VectorType, dest, mean, stddev);
 }
@@ -517,6 +528,7 @@ pub fn fillVectorExponentialChecked(self: Rng, comptime VectorType: type, dest: 
 pub fn fillVectorExponentialCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) Error!void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
+    if (dest.len == 0) return;
     if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
     fillVectorExponentialFrom(source, VectorType, dest, rate);
 }
@@ -553,6 +565,7 @@ pub fn fillNormalChecked(self: Rng, comptime T: type, dest: []T, mean: T, stddev
 
 pub fn fillNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
     comptime requireFloat(T);
+    if (dest.len == 0) return;
     if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     fillNormalFrom(source, T, dest, mean, stddev);
 }
@@ -573,6 +586,7 @@ pub fn fillExponentialChecked(self: Rng, comptime T: type, dest: []T, rate: T) E
 
 pub fn fillExponentialCheckedFrom(source: anytype, comptime T: type, dest: []T, rate: T) Error!void {
     comptime requireFloat(T);
+    if (dest.len == 0) return;
     if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
     fillExponentialFrom(source, T, dest, rate);
 }
@@ -2189,8 +2203,8 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.InvalidProbability, rng.chanceChecked(1.1));
     try std.testing.expectError(error.InvalidProbability, Rng.chanceCheckedFrom(&engine, 1.1));
     var empty_bool_buf: [0]bool = .{};
-    try std.testing.expectError(error.InvalidProbability, rng.fillChanceChecked(&empty_bool_buf, 1.1));
-    try std.testing.expectError(error.InvalidProbability, rng.fillRatioChecked(&empty_bool_buf, 2, 1));
+    try rng.fillChanceChecked(&empty_bool_buf, 1.1);
+    try rng.fillRatioChecked(&empty_bool_buf, 2, 1);
     try std.testing.expectError(error.InvalidProbability, rng.vectorChanceChecked(@Vector(4, bool), -0.1));
     try std.testing.expectError(error.InvalidProbability, rng.vectorRatioChecked(@Vector(4, bool), 2, 1));
     try std.testing.expectError(error.InvalidProbability, rng.ratioChecked(2, 1));
@@ -2660,10 +2674,10 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), std.math.inf(f64)));
     try std.testing.expectError(error.InvalidParameter, Rng.vectorNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1));
     try std.testing.expectError(error.InvalidParameter, Rng.vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
-    try std.testing.expectError(error.EmptyRange, rng.fillRangeChecked(u32, &.{}, 3, 3));
-    try std.testing.expectError(error.EmptyRange, Rng.fillRangeCheckedFrom(&engine, u32, &.{}, 3, 3));
-    try std.testing.expectError(error.InvalidProbability, Rng.fillChanceCheckedFrom(&engine, &.{}, -0.1));
-    try std.testing.expectError(error.InvalidProbability, Rng.fillRatioCheckedFrom(&engine, &.{}, 2, 1));
+    try rng.fillRangeChecked(u32, &.{}, 3, 3);
+    try Rng.fillRangeCheckedFrom(&engine, u32, &.{}, 3, 3);
+    try Rng.fillChanceCheckedFrom(&engine, &.{}, -0.1);
+    try Rng.fillRatioCheckedFrom(&engine, &.{}, 2, 1);
     try std.testing.expectError(error.InvalidParameter, rng.fillNormalChecked(f64, &normal_buf, 0, -1));
     try std.testing.expectError(error.InvalidParameter, rng.fillExponentialChecked(f64, &exp_buf, 0));
     try std.testing.expectError(error.InvalidParameter, Rng.fillNormalCheckedFrom(&engine, f64, &normal_buf, 0, -1));
@@ -3049,6 +3063,45 @@ test "invalid checked helpers do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
     try std.testing.expectEqual(@as(u64, 0x1f96d05125db1460), engine.next());
+}
+
+test "zero-length checked fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_bae);
+    var control = alea.ScalarPrng.init(0x5150_bae);
+    const rng = Rng.init(&engine);
+
+    var scalar_int: [0]u32 = .{};
+    var scalar_float: [0]f64 = .{};
+    var bools: [0]bool = .{};
+    var vec_f32: [0]@Vector(8, f32) = .{};
+    var vec_bool: [0]@Vector(8, bool) = .{};
+
+    try rng.fillRangeChecked(u32, &scalar_int, 3, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillRangeCheckedFrom(&engine, f64, &scalar_float, std.math.inf(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillChanceCheckedFrom(&engine, &bools, -0.1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillRatioCheckedFrom(&engine, &bools, 2, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try rng.fillNormalChecked(f64, &scalar_float, std.math.inf(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillExponentialCheckedFrom(&engine, f64, &scalar_float, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try rng.fillVectorRangeChecked(@Vector(8, f32), &vec_f32, 2, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorChanceCheckedFrom(&engine, @Vector(8, bool), &vec_bool, -0.1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorRatioCheckedFrom(&engine, @Vector(8, bool), &vec_bool, 2, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try rng.fillVectorNormalChecked(@Vector(8, f32), &vec_f32, 0, -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorExponentialCheckedFrom(&engine, @Vector(8, f32), &vec_f32, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one_int: [1]u32 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillRangeCheckedFrom(&engine, u32, &one_int, 3, 3));
 }
 
 test "collection helpers preserve direct stream shape" {
