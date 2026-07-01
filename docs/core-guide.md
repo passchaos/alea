@@ -148,7 +148,8 @@ Use:
 - `seq.sampleIndices`, `seq.sampleIndicesCheckedFrom`, `seq.sampleIndexVec`,
   `seq.sampleIndexVecCheckedFrom`, `seq.sampleIndicesU32`,
   `seq.sampleIndicesU32CheckedFrom`; compact `IndexVec` results expose
-  `len`, `isEmpty`, `at`, `copyInto`, `toOwnedSlice`, and `iter`
+  `len`, `isEmpty`, `at`, `copyInto`, `toOwnedSlice`, and an exact-size
+  `iter` with `remaining`
 - `seq.sampleArray`, `seq.sampleArrayFrom`, `seq.sampleArrayCheckedFrom`
 - `seq.chooseMultiple`, `seq.chooseMultipleFrom`,
   `seq.chooseMultipleCheckedFrom`

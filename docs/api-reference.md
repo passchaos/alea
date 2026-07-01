@@ -640,7 +640,7 @@ Dynamic weighted helpers:
 - Error type: `Error`
 - Index vectors: `IndexVec.len`, `IndexVec.isEmpty`, `IndexVec.at`,
   `IndexVec.copyInto`, `IndexVec.toOwnedSlice`, `IndexVec.iter`,
-  `IndexVec.Iterator.next`, `IndexVec.deinit`
+  `IndexVec.Iterator.next`, `IndexVec.Iterator.remaining`, `IndexVec.deinit`
 - Indices: `sampleIndexVec`, `sampleIndexVecFrom`, `sampleIndices`,
   `sampleIndexVecCheckedFrom`, `sampleIndicesFrom`, `sampleIndicesCheckedFrom`,
   `sampleIndicesU32`, `sampleIndicesU32From`, `sampleIndicesU32CheckedFrom`,

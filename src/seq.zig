@@ -16,6 +16,10 @@ pub const IndexVec = union(enum) {
             self.index += 1;
             return value;
         }
+
+        pub fn remaining(self: Iterator) usize {
+            return self.index_vec.len() - self.index;
+        }
     };
 
     pub fn len(self: IndexVec) usize {
@@ -1110,7 +1114,11 @@ test "portable index sampling has stable snapshots" {
     const expected = [_]usize{ 70, 11, 8, 89, 0, 1, 18, 74 };
     for (expected, 0..) |value, i| try std.testing.expectEqual(value, index_vec.at(i));
     var iter = index_vec.iter();
-    for (expected) |value| try std.testing.expectEqual(value, iter.next().?);
+    try std.testing.expectEqual(@as(usize, expected.len), iter.remaining());
+    for (expected, 0..) |value, i| {
+        try std.testing.expectEqual(value, iter.next().?);
+        try std.testing.expectEqual(expected.len - i - 1, iter.remaining());
+    }
     try std.testing.expectEqual(@as(?usize, null), iter.next());
     var copied: [8]usize = undefined;
     try index_vec.copyInto(&copied);
@@ -1133,9 +1141,13 @@ test "index vec conversion supports native backing" {
     try std.testing.expect(!index_vec.isEmpty());
 
     var iter = index_vec.iter();
+    try std.testing.expectEqual(@as(usize, 3), iter.remaining());
     try std.testing.expectEqual(@as(?usize, 5), iter.next());
+    try std.testing.expectEqual(@as(usize, 2), iter.remaining());
     try std.testing.expectEqual(@as(?usize, 8), iter.next());
+    try std.testing.expectEqual(@as(usize, 1), iter.remaining());
     try std.testing.expectEqual(@as(?usize, 13), iter.next());
+    try std.testing.expectEqual(@as(usize, 0), iter.remaining());
     try std.testing.expectEqual(@as(?usize, null), iter.next());
 
     var copied: [3]usize = undefined;
@@ -1810,6 +1822,7 @@ test "zero-count checked sequence helpers do not consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), index_vec.len());
     try std.testing.expect(index_vec.isEmpty());
     var index_iter = index_vec.iter();
+    try std.testing.expectEqual(@as(usize, 0), index_iter.remaining());
     try std.testing.expectEqual(@as(?usize, null), index_iter.next());
     const empty_owned = try index_vec.toOwnedSlice(std.testing.allocator);
     defer std.testing.allocator.free(empty_owned);
