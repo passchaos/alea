@@ -3143,6 +3143,25 @@ test "invalid integer at-most range does not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid facade vector helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba0);
+    var control = alea.ScalarPrng.init(0x5150_ba0);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidProbability, rng.vectorChanceChecked(@Vector(8, bool), -0.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, rng.vectorRatioChecked(@Vector(8, bool), 2, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid facade duration ranges do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_ba1);
