@@ -31,7 +31,7 @@ Zig-native way.
 | --- | --- |
 | Normal / StandardNormal | Covered: `standardNormal`, `StandardNormal(T)`, `normal`, `Normal(T)`, including coefficient-of-variation construction and z-score conversion |
 | LogNormal | Covered: `logNormal`, `LogNormal(T)`, including linear-space mean/coefficient-of-variation construction, z-score conversion, and f32/f64 benchmark rows |
-| Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)` |
+| Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)`, including reusable-sampler rate accessors |
 | Gamma | Covered: `gamma`, `Gamma(T)` |
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)` |
 | FisherF | Covered: `fisherF`, `FisherF(T)` |

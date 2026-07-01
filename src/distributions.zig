@@ -1291,6 +1291,14 @@ pub fn Exponential(comptime T: type) type {
             return .{ .inverse_rate = 1 / rate };
         }
 
+        pub fn rateValue(self: Self) T {
+            return 1 / self.inverse_rate;
+        }
+
+        pub fn inverseRateValue(self: Self) T {
+            return self.inverse_rate;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return Rng.exponentialFastFrom(rng, T, 1) * self.inverse_rate;
         }
@@ -7452,6 +7460,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     var exponentials = rng.sampleIter(f64, try Exponential(f64).init(2));
     try std.testing.expect(exponentials.next().? >= 0);
     const exponential_sampler = try Exponential(f64).init(2);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), exponential_sampler.rateValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), exponential_sampler.inverseRateValue(), 1e-12);
     var exponential_buf: [8]f64 = undefined;
     exponential_sampler.fill(rng, &exponential_buf);
     for (exponential_buf) |value| try std.testing.expect(value >= 0);
