@@ -2935,11 +2935,14 @@ test "invalid checked helpers do not consume random stream" {
     try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{}));
     try std.testing.expectEqual(@as(u64, 0x1e449ba06e4ee306), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{ 0.0, 0.0 }));
     try std.testing.expectEqual(@as(u64, 0xa05fd0d145ac28f5), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
     try std.testing.expectEqual(@as(u64, 0x709790abbb828191), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(u64, 0x3956218e7dd11342), engine.next());
 }
 
 test "collection helpers preserve direct stream shape" {
