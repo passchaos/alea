@@ -205,6 +205,11 @@ heap/index storage before drawing after validating lengths and positive-weight
 availability.
 Slice weighted sampling validates all weights before drawing, so invalid
 weights leave the stream untouched.
+The remaining allocation-returning streaming helpers whose result length is not
+known until the stream is inspected are explicitly different: short
+`sampleIteratorFrom` results and partial weighted-iterator samples may need to
+finalize storage after reading/drawing, so prefer the checked exact-count forms
+when no-consume allocation-failure behavior matters.
 `AliasTable.update` and `WeightedChoice.update` build the replacement table
 before swapping state, so length, weight, and initial allocation failures leave
 the previous valid table usable.
