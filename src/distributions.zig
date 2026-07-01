@@ -3847,6 +3847,7 @@ pub fn fillSkewNormalChecked(rng: Rng, comptime T: type, dest: []T, location: T,
 }
 
 pub fn fillSkewNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try SkewNormal(T).init(location, scale, shape);
     sampler.fillFrom(source, dest);
 }
@@ -3935,6 +3936,7 @@ pub fn fillPertChecked(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, m
 }
 
 pub fn fillPertCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: T, max: T, shape: T) Error!void {
+    if (dest.len == 0) return;
     const sampler = try Pert(T).init(min, mode, max, shape);
     sampler.fillFrom(source, dest);
 }
@@ -6391,6 +6393,27 @@ test "invalid checked distribution helpers do not consume random stream" {
     defer int_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &u64_buf));
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
+}
+
+test "zero-length skew and pert fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1ea);
+    var control = alea.ScalarPrng.init(0x5150_d1ea);
+    const rng = Rng.init(&engine);
+
+    var out: [0]f64 = .{};
+
+    try fillSkewNormalCheckedFrom(&engine, f64, &out, 0, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillPertCheckedFrom(&engine, f64, &out, 1, 0, 2, 4);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillSkewNormalChecked(rng, f64, &out, 0, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillPertChecked(rng, f64, &out, 1, 0, 2, 4);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one: [1]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillSkewNormalCheckedFrom(&engine, f64, &one, 0, 0, 1));
 }
 
 test "zero-length inverse and zeta distribution fills do not validate or consume random stream" {
