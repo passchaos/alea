@@ -5014,6 +5014,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
+            if (dest.len == 0) return;
             const total = self.totalWeight();
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
             for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
@@ -5198,6 +5199,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
+            if (dest.len == 0) return;
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
             for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
@@ -6099,6 +6101,26 @@ test "weighted tree push allocation failure preserves tree" {
     for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
 }
 
+test "zero-length weighted tree fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7ee3);
+    var control = alea.ScalarPrng.init(0x5150_7ee3);
+
+    var empty_tree = try WeightedTree(u32).init(std.testing.allocator, &.{});
+    defer empty_tree.deinit();
+    var empty_buf: [0]usize = .{};
+    try empty_tree.fillCheckedFrom(&engine, &empty_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 0, 0 });
+    defer invalid_tree.deinit();
+    try invalid_tree.fillCheckedFrom(&engine, &empty_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one_buf: [1]usize = undefined;
+    try std.testing.expectError(error.InvalidWeight, invalid_tree.fillCheckedFrom(&engine, &one_buf));
+}
+
 test "weighted int tree supports dynamic updates" {
     const alea = @import("root.zig");
     var engine = alea.Wyhash64.init(46);
@@ -6206,6 +6228,26 @@ test "weighted int tree push allocation failure preserves tree" {
     var out: [8]usize = undefined;
     try tree.fillCheckedFrom(&engine, &out);
     for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+}
+
+test "zero-length weighted int tree fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7ee4);
+    var control = alea.ScalarPrng.init(0x5150_7ee4);
+
+    var empty_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{});
+    defer empty_tree.deinit();
+    var empty_buf: [0]usize = .{};
+    try empty_tree.fillCheckedFrom(&engine, &empty_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0 });
+    defer invalid_tree.deinit();
+    try invalid_tree.fillCheckedFrom(&engine, &empty_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one_buf: [1]usize = undefined;
+    try std.testing.expectError(error.InvalidWeight, invalid_tree.fillCheckedFrom(&engine, &one_buf));
 }
 
 test "weighted reusable samplers preserve direct stream shape" {
