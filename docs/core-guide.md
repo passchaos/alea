@@ -148,6 +148,8 @@ Use:
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeighted`,
   `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`
+  (`*Checked*` variants require enough positive-weight entries for the
+  requested amount)
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `WeightedChoice.update`,
   and `WeightedChoice.iterFrom`
