@@ -3066,6 +3066,19 @@ test "invalid checked helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0x1f96d05125db1460), engine.next());
 }
 
+test "invalid scalar exponential helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba8);
+    var control = alea.ScalarPrng.init(0x5150_ba8);
+
+    try std.testing.expectError(error.InvalidParameter, exponentialCheckedFrom(&engine, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var buf: [4]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillExponentialCheckedFrom(&engine, f64, &buf, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid vector probability helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_bab);
