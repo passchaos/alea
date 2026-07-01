@@ -46,7 +46,7 @@ tests so accidental compatibility drift is caught by `zig build test`.
 | `src/ascii.zig`: `ascii helpers have stable snapshots` | ASCII charset/string and Unicode scalar UTF-8 generation for a fixed stream |
 | `src/seq.zig`: `portable index sampling has stable snapshots` | `sampleIndicesU32` and compact `.u32` `sampleIndexVec` output |
 | `src/rng.zig`, `src/seq.zig`, `src/distributions.zig`, `src/ascii.zig`: `preserve direct stream shape` tests | Facade/direct-source helpers preserve stream shape for valid inputs |
-| `src/rng.zig`, `src/seq.zig`, `src/distributions.zig`: invalid checked/no-consume tests | Invalid checked/error paths return before consuming randomness |
+| `src/rng.zig`, `src/seq.zig`, `src/distributions.zig`: invalid checked/no-consume tests | Invalid checked/error paths return before consuming randomness, including nested empty-enum `valueCheckedFrom` cases |
 
 ## Versioned Stable Outputs
 
