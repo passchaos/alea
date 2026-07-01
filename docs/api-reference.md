@@ -482,6 +482,9 @@ Reusable samplers:
 - `Kumaraswamy(T).fillFrom`
 - `PowerFunction(T)`
 - `PowerFunction(T).init`
+- `PowerFunction(T).minValue`
+- `PowerFunction(T).maxValue`
+- `PowerFunction(T).shapeValue`
 - `PowerFunction(T).sample`
 - `PowerFunction(T).sampleFrom`
 - `PowerFunction(T).fill`
