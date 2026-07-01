@@ -203,6 +203,8 @@ Zero-length reusable `Choice` / `WeightedChoice` / `AliasTable` fills are
 no-ops and do not draw.
 Empty `chooseIter` / `chooseIterChecked` convenience calls return null/errors
 before drawing.
+Empty streaming `chooseIteratorChecked` / `chooseIteratorWeightedChecked`
+facade calls also fail before drawing.
 Allocation failures while preparing the sample-without-replacement temporary
 pool/output also return before drawing.
 Successful sample-without-replacement calls return their exact-capacity output
