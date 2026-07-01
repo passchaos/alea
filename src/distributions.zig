@@ -4826,25 +4826,26 @@ pub fn AliasTable(comptime Weight: type) type {
 
         prob: []f64,
         alias: []usize,
+        total: f64,
         allocator: std.mem.Allocator,
 
-        pub fn init(allocator: std.mem.Allocator, weights: []const Weight) !Self {
-            if (weights.len == 0) return error.InvalidWeight;
+        pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
+            if (input_weights.len == 0) return error.InvalidWeight;
 
-            const prob = try allocator.alloc(f64, weights.len);
+            const prob = try allocator.alloc(f64, input_weights.len);
             errdefer allocator.free(prob);
-            const alias = try allocator.alloc(usize, weights.len);
+            const alias = try allocator.alloc(usize, input_weights.len);
             errdefer allocator.free(alias);
 
-            var scaled = try allocator.alloc(f64, weights.len);
+            var scaled = try allocator.alloc(f64, input_weights.len);
             defer allocator.free(scaled);
-            var small = try std.ArrayList(usize).initCapacity(allocator, weights.len);
+            var small = try std.ArrayList(usize).initCapacity(allocator, input_weights.len);
             defer small.deinit(allocator);
-            var large = try std.ArrayList(usize).initCapacity(allocator, weights.len);
+            var large = try std.ArrayList(usize).initCapacity(allocator, input_weights.len);
             defer large.deinit(allocator);
 
             var total: f64 = 0;
-            for (weights) |weight| {
+            for (input_weights) |weight| {
                 const value: f64 = switch (@typeInfo(Weight)) {
                     .int => @floatFromInt(weight),
                     .float => @floatCast(weight),
@@ -4855,13 +4856,13 @@ pub fn AliasTable(comptime Weight: type) type {
             }
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
 
-            for (weights, 0..) |weight, i| {
+            for (input_weights, 0..) |weight, i| {
                 const value: f64 = switch (@typeInfo(Weight)) {
                     .int => @floatFromInt(weight),
                     .float => @floatCast(weight),
                     else => unreachable,
                 };
-                scaled[i] = value * @as(f64, @floatFromInt(weights.len)) / total;
+                scaled[i] = value * @as(f64, @floatFromInt(input_weights.len)) / total;
                 if (scaled[i] < 1) {
                     try small.append(allocator, i);
                 } else {
@@ -4893,6 +4894,7 @@ pub fn AliasTable(comptime Weight: type) type {
             return .{
                 .prob = prob,
                 .alias = alias,
+                .total = total,
                 .allocator = allocator,
             };
         }
@@ -4903,14 +4905,41 @@ pub fn AliasTable(comptime Weight: type) type {
             self.* = undefined;
         }
 
-        pub fn update(self: *Self, weights: []const Weight) !void {
-            if (weights.len != self.prob.len) return error.InvalidParameter;
+        pub fn update(self: *Self, input_weights: []const Weight) !void {
+            if (input_weights.len != self.prob.len) return error.InvalidParameter;
 
-            const next = try Self.init(self.allocator, weights);
+            const next = try Self.init(self.allocator, input_weights);
             self.allocator.free(self.prob);
             self.allocator.free(self.alias);
             self.prob = next.prob;
             self.alias = next.alias;
+            self.total = next.total;
+        }
+
+        pub fn len(self: Self) usize {
+            return self.prob.len;
+        }
+
+        pub fn totalWeight(self: Self) f64 {
+            return self.total;
+        }
+
+        pub fn weights(self: Self, allocator: std.mem.Allocator) ![]f64 {
+            const out = try allocator.alloc(f64, self.prob.len);
+            errdefer allocator.free(out);
+            try self.weightsInto(out);
+            return out;
+        }
+
+        pub fn weightsInto(self: Self, out: []f64) Error!void {
+            if (out.len != self.prob.len) return error.InvalidLength;
+            @memset(out, 0);
+
+            const column_scale = self.total / @as(f64, @floatFromInt(self.prob.len));
+            for (self.prob, self.alias, 0..) |probability, alias_index, index| {
+                out[index] += probability * column_scale;
+                out[alias_index] += (1 - probability) * column_scale;
+            }
         }
 
         pub fn sample(self: Self, rng: Rng) usize {
@@ -6020,6 +6049,41 @@ test "alias table samples valid indexes" {
 
     try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{}));
     try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{ 0, 0 }));
+}
+
+test "alias table exposes totals and reconstructs weights" {
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    try std.testing.expectEqual(@as(usize, 4), table.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 9), table.totalWeight(), 1e-12);
+
+    var stack_weights: [4]f64 = undefined;
+    try table.weightsInto(&stack_weights);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), stack_weights[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), stack_weights[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), stack_weights[2], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), stack_weights[3], 1e-12);
+
+    var wrong_len: [3]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, table.weightsInto(&wrong_len));
+
+    const owned_weights = try table.weights(std.testing.allocator);
+    defer std.testing.allocator.free(owned_weights);
+    try std.testing.expectEqualSlices(f64, &stack_weights, owned_weights);
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, table.weights(failing.allocator()));
+    try std.testing.expect(failing.has_induced_failure);
+
+    try table.update(&.{ 0, 10, 0, 0 });
+    try std.testing.expectEqual(@as(usize, 4), table.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 10), table.totalWeight(), 1e-12);
+    try table.weightsInto(&stack_weights);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), stack_weights[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), stack_weights[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), stack_weights[2], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), stack_weights[3], 1e-12);
 }
 
 test "zero-length alias table fills do not consume random stream" {

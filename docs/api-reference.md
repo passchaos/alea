@@ -579,6 +579,10 @@ Alias helpers:
 - `aliasTable(T)`
 - `AliasTable.init`
 - `AliasTable.update`
+- `AliasTable.len`
+- `AliasTable.totalWeight`
+- `AliasTable.weights`
+- `AliasTable.weightsInto`
 - `AliasTable.sample`
 - `AliasTable.sampleFrom`
 - `AliasTable.fill`
