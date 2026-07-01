@@ -168,10 +168,10 @@ Use:
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `WeightedChoice.update`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
-  `WeightedChoice.weightsInto`
+  `WeightedChoice.weightAt` / `weightsInto`
 - `distributions.AliasTable` for O(1) repeated weighted index sampling,
   including `len`, `totalWeight`, and allocation-returning or caller-buffer
-  `weights` reconstruction for diagnostics and parity with Rust weighted
+  `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
   sampler introspection
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
   and sampling workloads with weights accumulated as `f64`, including bulk

@@ -4942,6 +4942,16 @@ pub fn AliasTable(comptime Weight: type) type {
             }
         }
 
+        pub fn weightAt(self: Self, index: usize) Error!f64 {
+            if (index >= self.prob.len) return error.InvalidParameter;
+            const column_scale = self.total / @as(f64, @floatFromInt(self.prob.len));
+            var value = self.prob[index] * column_scale;
+            for (self.prob, self.alias) |probability, alias_index| {
+                if (alias_index == index) value += (1 - probability) * column_scale;
+            }
+            return value;
+        }
+
         pub fn sample(self: Self, rng: Rng) usize {
             return self.sampleFrom(rng);
         }
@@ -6088,6 +6098,11 @@ test "alias table exposes totals and reconstructs weights" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), stack_weights[1], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5), stack_weights[2], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), stack_weights[3], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try table.weightAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try table.weightAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), try table.weightAt(2), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), try table.weightAt(3), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, table.weightAt(4));
 
     var wrong_len: [3]f64 = undefined;
     try std.testing.expectError(error.InvalidLength, table.weightsInto(&wrong_len));
@@ -6108,6 +6123,7 @@ test "alias table exposes totals and reconstructs weights" {
     try std.testing.expectApproxEqAbs(@as(f64, 10), stack_weights[1], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), stack_weights[2], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), stack_weights[3], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), try table.weightAt(1), 1e-12);
 }
 
 test "zero-length alias table fills do not consume random stream" {

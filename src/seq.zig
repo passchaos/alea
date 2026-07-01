@@ -659,6 +659,11 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             self.table.weightsInto(out) catch unreachable;
         }
 
+        pub fn weightAt(self: Self, index: usize) Error!f64 {
+            if (index >= self.items.len) return error.InvalidParameter;
+            return self.table.weightAt(index) catch unreachable;
+        }
+
         pub fn update(self: *Self, input_weights: []const Weight) !void {
             if (input_weights.len != self.items.len) return error.LengthMismatch;
             try self.table.update(input_weights);
@@ -2125,6 +2130,10 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), reconstructed_weights[0], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), reconstructed_weights[1], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 7), reconstructed_weights[2], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try choice.weightAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try choice.weightAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7), try choice.weightAt(2), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, choice.weightAt(3));
     var wrong_weight_len: [2]f64 = undefined;
     try std.testing.expectError(error.LengthMismatch, choice.weightsInto(&wrong_weight_len));
     const owned_weights = try choice.weights(std.testing.allocator);
@@ -2164,6 +2173,7 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), reconstructed_weights[0], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), reconstructed_weights[1], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5), reconstructed_weights[2], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), try choice.weightAt(2), 1e-12);
     try std.testing.expect(std.mem.eql(u8, choice.sampleFrom(&engine).*, "often"));
     try std.testing.expectError(error.LengthMismatch, choice.update(&.{ 1, 2 }));
     try std.testing.expectError(error.InvalidWeight, choice.update(&.{ 0, 0, 0 }));

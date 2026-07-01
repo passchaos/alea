@@ -46,8 +46,8 @@ Zig-native way.
 | Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper |
 | Geometric / StandardGeometric | Covered: one-based `Geometric`, rand-style failure-count `GeometricFailures`, and p=0.5 `StandardGeometric` fast path |
 | Hypergeometric | Covered: `Hypergeometric`, including HIN inverse-transform fast path for small-mode regimes; large-parameter H2PE-equivalent performance remains tracked in `performance-triage.md` |
-| WeightedChoice | Covered: `WeightedChoice`, including weight updates, weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
-| WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `totalWeight`, and allocation-returning or caller-buffer weight reconstruction |
+| WeightedChoice | Covered: `WeightedChoice`, including weight updates, single/bulk weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
+| WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `totalWeight`, `weightAt`, and allocation-returning or caller-buffer weight reconstruction |
 | WeightedTreeIndex | Covered: `WeightedTree(Weight)` for generic weights and `WeightedIntTree(Weight)` for faster unsigned integer sample/update/push/pop workloads; both expose `weights` / `weightsInto` export for diagnostics; `WeightedIntTree` stores subtotals in `u64` and rejects wider integer values that do not fit |
 | InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)` |
 | NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)` |

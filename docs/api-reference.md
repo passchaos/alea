@@ -583,6 +583,7 @@ Alias helpers:
 - `AliasTable.totalWeight`
 - `AliasTable.weights`
 - `AliasTable.weightsInto`
+- `AliasTable.weightAt`
 - `AliasTable.sample`
 - `AliasTable.sampleFrom`
 - `AliasTable.fill`
@@ -667,7 +668,7 @@ Dynamic weighted helpers:
   `Choice.iterFrom`,
   `WeightedChoice.init`, `WeightedChoice.deinit`, `WeightedChoice.len`,
   `WeightedChoice.totalWeight`, `WeightedChoice.weights`,
-  `WeightedChoice.weightsInto`,
+  `WeightedChoice.weightsInto`, `WeightedChoice.weightAt`,
   `WeightedChoice.update`, `WeightedChoice.sample`,
   `WeightedChoice.sampleFrom`,
   `WeightedChoice.sampleValue`, `WeightedChoice.sampleValueFrom`,
