@@ -229,10 +229,12 @@ project does not repeat unproductive work.
 Continue performance triage on the remaining focused watch items:
 
 - log-normal raw direct rows confirm reusable wrappers are not the scalar
-  bottleneck; it remains a small filtered scalar/bulk boundary item, while
-  inverse-Gaussian and NIG bulk fills now exceed the local Rust rows,
+  bottleneck; normal-only probes show the remaining scalar/bulk gap is the
+  exact `exp` transform, so future work needs a sound transform improvement
+  rather than wrapper, normal-generation, or vector-width churn,
 - exact `(0, 1]` `fillOpenClosed(f64)` remains precision-sensitive and near
   but not past the latest Rust row; future work needs a faster exact-endpoint
-  construction rather than more buffer-size tuning,
+  construction rather than more buffer-size or equivalent-expression tuning,
 - SIMD/vector distribution kernels need stronger default-path wins before they
-  can replace scalar ziggurat paths.
+  can replace scalar ziggurat paths; f32x8 repair remains promising in probes
+  but has not beaten current defaults in the real vector-slice fill harness.
