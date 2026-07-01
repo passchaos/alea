@@ -106,9 +106,10 @@ pub fn valueChecked(self: Rng, comptime T: type) Error!T {
 }
 
 pub fn valueCheckedFrom(source: anytype, comptime T: type) Error!T {
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return switch (@typeInfo(T)) {
         .bool, .int, .float, .vector => valueFrom(source, T),
-        .@"enum" => enumValueCheckedFrom(source, T),
+        .@"enum" => valueFrom(source, T),
         .array => |array_info| blk: {
             var out: T = undefined;
             for (&out) |*item| item.* = try valueCheckedFrom(source, array_info.child);
@@ -125,6 +126,21 @@ pub fn valueCheckedFrom(source: anytype, comptime T: type) Error!T {
             @compileError("alea.Rng.valueChecked only auto-samples tuples, arrays, bools, ints, floats, and enums");
         },
         else => @compileError("alea.Rng.valueChecked does not support " ++ @typeName(T)),
+    };
+}
+
+fn valueTypeHasEmptyEnum(comptime T: type) bool {
+    return switch (@typeInfo(T)) {
+        .@"enum" => std.enums.values(T).len == 0,
+        .array => |array_info| valueTypeHasEmptyEnum(array_info.child),
+        .@"struct" => |struct_info| blk: {
+            if (!struct_info.is_tuple) break :blk false;
+            inline for (struct_info.fields) |field| {
+                if (valueTypeHasEmptyEnum(field.type)) break :blk true;
+            }
+            break :blk false;
+        },
+        else => false,
     };
 }
 
@@ -2911,6 +2927,7 @@ test "invalid checked helpers do not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_bad);
     const EmptyEnum = enum {};
     const NestedEmptyEnum = struct { EmptyEnum };
+    const LateNestedEmptyEnum = struct { u64, EmptyEnum };
 
     try std.testing.expectError(error.InvalidProbability, chanceCheckedFrom(&engine, -0.1));
     try std.testing.expectEqual(@as(u64, 0x9ccf0caa836c3975), engine.next());
@@ -2983,20 +3000,27 @@ test "invalid checked helpers do not consume random stream" {
     }
     try std.testing.expectEqual(@as(u64, 0xa05fd0d145ac28f5), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
+    if (valueCheckedFrom(&engine, LateNestedEmptyEnum)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     try std.testing.expectEqual(@as(u64, 0x709790abbb828191), engine.next());
 
-    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{}));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectEqual(@as(u64, 0x3956218e7dd11342), engine.next());
 
-    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{ 0.0, 0.0 }));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{}));
     try std.testing.expectEqual(@as(u64, 0xdbf744335ced8b7d), engine.next());
 
-    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&engine, &.{ 0.0, 0.0 }));
     try std.testing.expectEqual(@as(u64, 0x4a25e952d381d57c), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
     try std.testing.expectEqual(@as(u64, 0xb6ab229c8fe7505b), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(@as(u64, 0x9ed0fe54839ae4f3), engine.next());
 }
 
 test "collection helpers preserve direct stream shape" {
