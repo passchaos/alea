@@ -3302,6 +3302,17 @@ test "invalid facade checked fills do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, rng.fillExponentialChecked(f64, &floats, 0));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    var vec_bools: [2]@Vector(8, bool) = undefined;
+    try std.testing.expectError(error.InvalidProbability, rng.fillVectorChanceChecked(@Vector(8, bool), &vec_bools, -0.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, rng.fillVectorRatioChecked(@Vector(8, bool), &vec_bools, 2, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vec_floats: [2]@Vector(8, f32) = undefined;
+    try std.testing.expectError(error.InvalidParameter, rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_floats, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "zero-length checked fills do not validate or consume random stream" {
