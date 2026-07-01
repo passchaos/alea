@@ -5089,7 +5089,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             var subtotals = try std.ArrayList(u64).initCapacity(allocator, weights.len);
             errdefer subtotals.deinit(allocator);
 
-            for (weights) |weight| try subtotals.append(allocator, @intCast(weight));
+            for (weights) |weight| try subtotals.append(allocator, try weightToU64(weight));
             try buildSubtotals(subtotals.items);
 
             return .{ .subtotals = subtotals, .allocator = allocator };
@@ -5122,7 +5122,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn push(self: *Self, weight: Weight) !void {
-            const value: u64 = @intCast(weight);
+            const value = try weightToU64(weight);
             const next_total = std.math.add(u64, self.totalWeight(), value) catch return error.InvalidWeight;
 
             try self.subtotals.append(self.allocator, value);
@@ -5151,7 +5151,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn update(self: *Self, index: usize, weight: Weight) !void {
             if (index >= self.subtotals.items.len) return error.InvalidParameter;
-            const value: u64 = @intCast(weight);
+            const value = try weightToU64(weight);
             const old = try self.get(index);
             if (value >= old) {
                 const delta = value - old;
@@ -5246,6 +5246,11 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 const parent = (i - 1) / 2;
                 subtotals[parent] = std.math.add(u64, subtotals[parent], subtotals[i]) catch return error.InvalidWeight;
             }
+        }
+
+        fn weightToU64(weight: Weight) Error!u64 {
+            if (@typeInfo(Weight).int.bits > 64 and weight > std.math.maxInt(u64)) return error.InvalidWeight;
+            return @intCast(weight);
         }
     };
 }
@@ -6092,6 +6097,15 @@ test "weighted int tree supports dynamic updates" {
         std.math.maxInt(u64),
         1,
     }));
+
+    const too_large_u128 = @as(u128, std.math.maxInt(u64)) + 1;
+    try std.testing.expectError(error.InvalidWeight, WeightedIntTree(u128).init(std.testing.allocator, &.{too_large_u128}));
+
+    var wide_tree = try WeightedIntTree(u128).init(std.testing.allocator, &.{1});
+    defer wide_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, wide_tree.push(too_large_u128));
+    try std.testing.expectError(error.InvalidWeight, wide_tree.update(0, too_large_u128));
+    try std.testing.expectEqual(@as(u64, 1), wide_tree.totalWeight());
 }
 
 test "weighted reusable samplers preserve direct stream shape" {
