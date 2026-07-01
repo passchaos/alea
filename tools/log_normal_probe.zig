@@ -44,6 +44,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged std.math.exp", 0x1063, sample_count, stagedStdMathExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged expm1+1", 0x1063, sample_count, stagedExpm1ExpF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged hybrid expm1 0.25", 0x1063, sample_count, stagedHybridExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged vector4 exp", 0x1063, sample_count, stagedVector4ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged vector16 exp", 0x1063, sample_count, stagedVector16ExpF32);
@@ -52,12 +53,15 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged std.math.exp", 0x1063, sample_count, stagedStdMathExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged expm1+1", 0x1063, sample_count, stagedExpm1ExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged hybrid expm1 0.25", 0x1063, sample_count, stagedHybridExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector4 exp", 0x1063, sample_count, stagedVector4ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector16 exp", 0x1063, sample_count, stagedVector16ExpF32);
     try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=0.25", 0x1064, sample_count, 0.25);
     try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=1.0", 0x1064, sample_count, 1.0);
     try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=2.0", 0x1064, sample_count, 2.0);
+    try compareHybridExpm1ErrorF32(io, stdout, "f32 hybrid expm1 diff stddev=1.0 threshold=0.25", 0x1065, sample_count, 1.0, 0.25);
+    try compareHybridExpm1ErrorF32(io, stdout, "f32 hybrid expm1 diff stddev=2.0 threshold=0.25", 0x1065, sample_count, 2.0, 0.25);
     try stdout.flush();
 }
 
@@ -243,6 +247,11 @@ fn stagedExpm1ExpF32(source: anytype, dest: []f32) void {
     expm1PlusOneF32(dest);
 }
 
+fn stagedHybridExpF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    expHybridF32(dest, 0.25);
+}
+
 fn stagedVector4ExpF32(source: anytype, dest: []f32) void {
     alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
     expVector4F32(dest);
@@ -282,6 +291,15 @@ fn expm1PlusOneF32(dest: []f32) void {
     for (dest) |*item| item.* = std.math.expm1(item.*) + 1.0;
 }
 
+fn expHybridF32(dest: []f32, threshold: f32) void {
+    for (dest) |*item| {
+        item.* = if (@abs(item.*) <= threshold)
+            std.math.expm1(item.*) + 1.0
+        else
+            @exp(item.*);
+    }
+}
+
 fn compareExpm1ErrorF32(
     io: std.Io,
     stdout: *std.Io.Writer,
@@ -319,6 +337,51 @@ fn compareExpm1ErrorF32(
     try stdout.print(
         "{s}: {d:.1} M samples/s changed={} max_abs={d:.9} max_rel={d:.9} max_ulp={}\n",
         .{ name, million_per_s, changed, max_abs, max_rel, max_ulp },
+    );
+}
+
+fn compareHybridExpm1ErrorF32(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    stddev: f32,
+    threshold: f32,
+) !void {
+    var engine = alea.ScalarPrng.init(seed);
+    var max_abs: f32 = 0;
+    var max_rel: f32 = 0;
+    var max_ulp: u32 = 0;
+    var changed: usize = 0;
+    var hybrid_used: usize = 0;
+    var i: usize = 0;
+
+    const start = std.Io.Clock.awake.now(io).nanoseconds;
+    while (i < sample_count) : (i += 1) {
+        const x = stddev * alea.Rng.standardNormalFastFrom(&engine, f32);
+        const direct = @exp(x);
+        const candidate = if (@abs(x) <= threshold) blk: {
+            hybrid_used += 1;
+            break :blk std.math.expm1(x) + 1.0;
+        } else @exp(x);
+        if (direct != candidate) {
+            changed += 1;
+            const abs_diff = @abs(candidate - direct);
+            const rel_diff = abs_diff / direct;
+            const ulp_diff = floatDistanceF32(direct, candidate);
+            max_abs = @max(max_abs, abs_diff);
+            max_rel = @max(max_rel, rel_diff);
+            max_ulp = @max(max_ulp, ulp_diff);
+        }
+    }
+    const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+    const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+        (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+
+    try stdout.print(
+        "{s}: {d:.1} M samples/s used={} changed={} max_abs={d:.9} max_rel={d:.9} max_ulp={}\n",
+        .{ name, million_per_s, hybrid_used, changed, max_abs, max_rel, max_ulp },
     );
 }
 
