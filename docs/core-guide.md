@@ -200,6 +200,8 @@ allocation failures leave the stream untouched.
 Checked weighted index and item sampling likewise prepare output and temporary
 heap/index storage before drawing after validating lengths and positive-weight
 availability.
+Slice weighted sampling validates all weights before drawing, so invalid
+weights leave the stream untouched.
 `AliasTable.update` and `WeightedChoice.update` build the replacement table
 before swapping state, so length, weight, and initial allocation failures leave
 the previous valid table usable.
