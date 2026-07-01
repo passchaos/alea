@@ -338,8 +338,9 @@ pub fn sampleWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
 }
 
 pub fn sampleWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
     if (items.len != weights.len) return error.LengthMismatch;
-    if (amount != 0 and items.len == 0) return error.EmptyInput;
+    if (items.len == 0) return error.EmptyInput;
     const count = @min(amount, items.len);
     const indices = try sampleWeightedIndicesFrom(allocator, source, Weight, weights, count);
     defer allocator.free(indices);
@@ -893,8 +894,13 @@ test "invalid sequence helpers do not consume random stream" {
     try std.testing.expectError(error.EmptyInput, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{}, &.{}, 1));
     try std.testing.expectEqual(@as(u64, 0x8ac4bc884c0ac5fc), engine.next());
 
-    try std.testing.expectError(error.LengthMismatch, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 1));
+    const empty_weighted = try sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{}, &.{1}, 0);
+    defer std.testing.allocator.free(empty_weighted);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted.len);
     try std.testing.expectEqual(@as(u64, 0x54bf90173d0a647f), engine.next());
+
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 1));
+    try std.testing.expectEqual(@as(u64, 0x3a629804e3b708f), engine.next());
 
     const Entry = struct { item: u8, weight: f64 };
     const BadIter = struct {
@@ -911,11 +917,11 @@ test "invalid sequence helpers do not consume random stream" {
     const bad_entries = [_]Entry{.{ .item = 1, .weight = std.math.nan(f64) }};
     var bad_choose_iter = BadIter{ .items = &bad_entries };
     try std.testing.expectError(error.InvalidWeight, chooseIteratorWeightedFrom(&engine, u8, &bad_choose_iter));
-    try std.testing.expectEqual(@as(u64, 0x3a629804e3b708f), engine.next());
+    try std.testing.expectEqual(@as(u64, 0x0e732e04fa4e0680), engine.next());
 
     var bad_sample_iter = BadIter{ .items = &bad_entries };
     try std.testing.expectError(error.InvalidWeight, sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &bad_sample_iter, 1));
-    try std.testing.expectEqual(@as(u64, 0x0e732e04fa4e0680), engine.next());
+    try std.testing.expectEqual(@as(u64, 0x3a0e704844a1b5ea), engine.next());
 }
 
 test "partial shuffle and reservoir sample respect counts" {
