@@ -6022,6 +6022,7 @@ test "weighted tree supports dynamic updates" {
     var float_tree = try WeightedTree(f64).init(std.testing.allocator, &.{1.0});
     defer float_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, float_tree.push(std.math.nan(f64)));
+    try std.testing.expectApproxEqAbs(@as(f64, 1), float_tree.totalWeight(), 1e-12);
 
     try std.testing.expectError(error.InvalidWeight, WeightedTree(f64).init(std.testing.allocator, &.{
         std.math.floatMax(f64),
@@ -6031,8 +6032,10 @@ test "weighted tree supports dynamic updates" {
     var invalid_total_tree = try WeightedTree(f64).init(std.testing.allocator, &.{std.math.floatMax(f64)});
     defer invalid_total_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, invalid_total_tree.push(std.math.floatMax(f64)));
+    try std.testing.expectApproxEqAbs(std.math.floatMax(f64), invalid_total_tree.totalWeight(), std.math.floatMax(f64) * 1e-12);
     try invalid_total_tree.update(0, 0);
     try std.testing.expectError(error.InvalidWeight, invalid_total_tree.update(0, std.math.inf(f64)));
+    try std.testing.expectApproxEqAbs(@as(f64, 0), invalid_total_tree.totalWeight(), 1e-12);
 }
 
 test "weighted int tree supports dynamic updates" {
