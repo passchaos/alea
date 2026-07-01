@@ -1133,6 +1133,32 @@ test "short checked iterator samples do not consume past source" {
     try std.testing.expectEqual(@as(u64, 0x85840e4ff30d6d3b), engine.next());
 }
 
+test "short checked weighted iterator samples do not consume past source" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7714);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const WeightedIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 1, .weight = 0 },
+        .{ .item = 2, .weight = 1 },
+    };
+    var iter = WeightedIter{ .items = &entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &iter, 2));
+    try std.testing.expectEqual(@as(u64, 0xe35b82cee21c224a), engine.next());
+}
+
 test "partial shuffle and reservoir sample respect counts" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(444);
