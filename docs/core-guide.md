@@ -121,7 +121,8 @@ and sub-64-bit integer fills keep repeated-`nextValue` stream shape.
 batch APIs; both also expose checked `sampleInto*` / `sampleManyInto*` variants
 for user-supplied output buffers. Invalid checked output lengths and initial
 allocation failures in allocation-returning multivariate samples are reported
-before any component draws. `Normal(T).initMeanCv` and
+before any component draws; zero-length checked batch outputs are no-ops.
+`Normal(T).initMeanCv` and
 `LogNormal(T).initMeanCv` cover coefficient-of-variation parameterization
 without requiring users to hand-convert to log-space parameters; both samplers
 also expose z-score conversion helpers for correlated draws. `Pert(T).initRange`

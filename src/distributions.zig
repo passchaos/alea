@@ -6697,6 +6697,34 @@ test "invalid multivariate output lengths do not consume random stream" {
     try std.testing.expectEqual(dirichlet_facade_control.next(), dirichlet_facade_engine.next());
 }
 
+test "zero-length multivariate batch outputs do not consume random stream" {
+    const alea = @import("root.zig");
+
+    const multinomial = try Multinomial.init(20, &.{ 1.0, 2.0, 3.0 });
+    var multinomial_engine = alea.ScalarPrng.init(0x5150_d18b);
+    var multinomial_control = alea.ScalarPrng.init(0x5150_d18b);
+    var empty_counts: [0]u64 = .{};
+    try multinomial.sampleManyIntoCheckedFrom(&multinomial_engine, &empty_counts);
+    try std.testing.expectEqual(multinomial_control.next(), multinomial_engine.next());
+
+    var multinomial_facade_engine = alea.ScalarPrng.init(0x5150_d18c);
+    var multinomial_facade_control = alea.ScalarPrng.init(0x5150_d18c);
+    try multinomial.sampleManyIntoChecked(Rng.init(&multinomial_facade_engine), &empty_counts);
+    try std.testing.expectEqual(multinomial_facade_control.next(), multinomial_facade_engine.next());
+
+    const dirichlet = try Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
+    var dirichlet_engine = alea.ScalarPrng.init(0x5150_d18d);
+    var dirichlet_control = alea.ScalarPrng.init(0x5150_d18d);
+    var empty_simplex: [0]f64 = .{};
+    try dirichlet.sampleManyIntoCheckedFrom(&dirichlet_engine, &empty_simplex);
+    try std.testing.expectEqual(dirichlet_control.next(), dirichlet_engine.next());
+
+    var dirichlet_facade_engine = alea.ScalarPrng.init(0x5150_d18e);
+    var dirichlet_facade_control = alea.ScalarPrng.init(0x5150_d18e);
+    try dirichlet.sampleManyIntoChecked(Rng.init(&dirichlet_facade_engine), &empty_simplex);
+    try std.testing.expectEqual(dirichlet_facade_control.next(), dirichlet_facade_engine.next());
+}
+
 test "poisson large lambda has plausible moments" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(55);
