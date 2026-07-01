@@ -48,7 +48,7 @@ Zig-native way.
 | Hypergeometric | Covered: `Hypergeometric`, including HIN inverse-transform fast path for small-mode regimes; large-parameter H2PE-equivalent performance remains tracked in `performance-triage.md` |
 | WeightedChoice | Covered: `WeightedChoice`, including weight updates, weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
 | WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `totalWeight`, and allocation-returning or caller-buffer weight reconstruction |
-| WeightedTreeIndex | Covered: `WeightedTree(Weight)` for generic weights and `WeightedIntTree(Weight)` for faster unsigned integer sample/update/push/pop workloads; `WeightedIntTree` stores subtotals in `u64` and rejects wider integer values that do not fit |
+| WeightedTreeIndex | Covered: `WeightedTree(Weight)` for generic weights and `WeightedIntTree(Weight)` for faster unsigned integer sample/update/push/pop workloads; both expose `weights` / `weightsInto` export for diagnostics; `WeightedIntTree` stores subtotals in `u64` and rejects wider integer values that do not fit |
 | InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)` |
 | NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)` |
 | Zipf | Covered: `zipf`, `Zipf(T)` |

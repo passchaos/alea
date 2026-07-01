@@ -4968,11 +4968,11 @@ pub fn WeightedTree(comptime Weight: type) type {
         subtotals: std.ArrayList(f64),
         allocator: std.mem.Allocator,
 
-        pub fn init(allocator: std.mem.Allocator, weights: []const Weight) !Self {
-            var subtotals = try std.ArrayList(f64).initCapacity(allocator, weights.len);
+        pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
+            var subtotals = try std.ArrayList(f64).initCapacity(allocator, input_weights.len);
             errdefer subtotals.deinit(allocator);
 
-            for (weights) |weight| {
+            for (input_weights) |weight| {
                 try subtotals.append(allocator, try weightToF64(weight));
             }
             try buildSubtotals(subtotals.items);
@@ -5008,6 +5008,18 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn get(self: Self, index: usize) Error!f64 {
             if (index >= self.subtotals.items.len) return error.InvalidParameter;
             return self.subtotals.items[index] - self.subtotal(2 * index + 1) - self.subtotal(2 * index + 2);
+        }
+
+        pub fn weights(self: Self, allocator: std.mem.Allocator) ![]f64 {
+            const out = try allocator.alloc(f64, self.len());
+            errdefer allocator.free(out);
+            try self.weightsInto(out);
+            return out;
+        }
+
+        pub fn weightsInto(self: Self, out: []f64) Error!void {
+            if (out.len != self.len()) return error.InvalidLength;
+            for (out, 0..) |*slot, index| slot.* = try self.get(index);
         }
 
         pub fn push(self: *Self, weight: Weight) !void {
@@ -5151,12 +5163,12 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         subtotals: std.ArrayList(u64),
         allocator: std.mem.Allocator,
 
-        pub fn init(allocator: std.mem.Allocator, weights: []const Weight) !Self {
+        pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
             comptime requireUnsignedWeight(Weight);
-            var subtotals = try std.ArrayList(u64).initCapacity(allocator, weights.len);
+            var subtotals = try std.ArrayList(u64).initCapacity(allocator, input_weights.len);
             errdefer subtotals.deinit(allocator);
 
-            for (weights) |weight| try subtotals.append(allocator, try weightToU64(weight));
+            for (input_weights) |weight| try subtotals.append(allocator, try weightToU64(weight));
             try buildSubtotals(subtotals.items);
 
             return .{ .subtotals = subtotals, .allocator = allocator };
@@ -5186,6 +5198,18 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn get(self: Self, index: usize) Error!u64 {
             if (index >= self.subtotals.items.len) return error.InvalidParameter;
             return self.subtotals.items[index] - self.subtotal(2 * index + 1) - self.subtotal(2 * index + 2);
+        }
+
+        pub fn weights(self: Self, allocator: std.mem.Allocator) ![]u64 {
+            const out = try allocator.alloc(u64, self.len());
+            errdefer allocator.free(out);
+            try self.weightsInto(out);
+            return out;
+        }
+
+        pub fn weightsInto(self: Self, out: []u64) Error!void {
+            if (out.len != self.len()) return error.InvalidLength;
+            for (out, 0..) |*slot, index| slot.* = try self.get(index);
         }
 
         pub fn push(self: *Self, weight: Weight) !void {
@@ -6159,6 +6183,19 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 9), try tree.get(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), try tree.get(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), try tree.get(2), 1e-12);
+    var weights_buf: [3]f64 = undefined;
+    try tree.weightsInto(&weights_buf);
+    try std.testing.expectApproxEqAbs(@as(f64, 9), weights_buf[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), weights_buf[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), weights_buf[2], 1e-12);
+    var wrong_weights_len: [2]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, tree.weightsInto(&wrong_weights_len));
+    const owned_weights = try tree.weights(std.testing.allocator);
+    defer std.testing.allocator.free(owned_weights);
+    try std.testing.expectEqualSlices(f64, &weights_buf, owned_weights);
+    var weights_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, tree.weights(weights_alloc.allocator()));
+    try std.testing.expect(weights_alloc.has_induced_failure);
 
     try tree.update(0, 0);
     try tree.update(1, 0);
@@ -6187,6 +6224,10 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 7), tree.pop().?, 1e-12);
     try std.testing.expectEqual(@as(usize, 3), tree.len());
     try std.testing.expectEqual(@as(usize, 2), tree.sample(rng));
+    try tree.weightsInto(&weights_buf);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), weights_buf[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), weights_buf[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), weights_buf[2], 1e-12);
     try std.testing.expectError(error.InvalidParameter, tree.update(9, 1));
 
     var empty_tree = try WeightedTree(u32).init(std.testing.allocator, &.{});
@@ -6285,6 +6326,17 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectEqual(@as(u64, 9), try tree.get(0));
     try std.testing.expectEqual(@as(u64, 1), try tree.get(1));
     try std.testing.expectEqual(@as(u64, 0), try tree.get(2));
+    var weights_buf: [3]u64 = undefined;
+    try tree.weightsInto(&weights_buf);
+    try std.testing.expectEqualSlices(u64, &.{ 9, 1, 0 }, &weights_buf);
+    var wrong_weights_len: [2]u64 = undefined;
+    try std.testing.expectError(error.InvalidLength, tree.weightsInto(&wrong_weights_len));
+    const owned_weights = try tree.weights(std.testing.allocator);
+    defer std.testing.allocator.free(owned_weights);
+    try std.testing.expectEqualSlices(u64, &weights_buf, owned_weights);
+    var weights_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, tree.weights(weights_alloc.allocator()));
+    try std.testing.expect(weights_alloc.has_induced_failure);
 
     try tree.update(0, 0);
     try tree.update(1, 0);
@@ -6309,6 +6361,8 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectEqual(@as(usize, 3), tree.len());
     try std.testing.expectEqual(@as(u64, 5), tree.totalWeight());
     try std.testing.expectEqual(@as(usize, 2), tree.sample(rng));
+    try tree.weightsInto(&weights_buf);
+    try std.testing.expectEqualSlices(u64, &.{ 0, 0, 5 }, &weights_buf);
 
     try std.testing.expectError(error.InvalidParameter, tree.update(9, 1));
 

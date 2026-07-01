@@ -607,6 +607,8 @@ Dynamic weighted helpers:
 - `WeightedTree.fillFrom`
 - `WeightedTree.fillCheckedFrom`
 - `WeightedTree.totalWeight`
+- `WeightedTree.weights`
+- `WeightedTree.weightsInto`
 - `WeightedTree.isValid`
 - `WeightedTree.deinit`
 - Prefer `WeightedIntTree` when weights are unsigned integers and frequent
@@ -627,6 +629,8 @@ Dynamic weighted helpers:
 - `WeightedIntTree.fillFrom`
 - `WeightedIntTree.fillCheckedFrom`
 - `WeightedIntTree.totalWeight`
+- `WeightedIntTree.weights`
+- `WeightedIntTree.weightsInto`
 - `WeightedIntTree.isValid`
 - `WeightedIntTree.deinit`
 
