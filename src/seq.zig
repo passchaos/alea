@@ -197,10 +197,12 @@ pub fn chooseMultipleCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
 
 pub fn chooseMultipleFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
     const count = @min(amount, items.len);
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+
     const indices = try sampleIndicesFrom(allocator, source, items.len, count);
     defer allocator.free(indices);
 
-    const out = try allocator.alloc(T, count);
     for (indices, out) |index, *slot| slot.* = items[index];
     return out;
 }
@@ -1127,6 +1129,13 @@ test "initial sequence allocation failures do not consume random stream" {
     try std.testing.expectError(error.OutOfMemory, chooseMultipleFrom(choose_alloc.allocator(), &choose_engine, u8, &items, 3));
     try std.testing.expect(choose_alloc.has_induced_failure);
     try std.testing.expectEqual(choose_control.next(), choose_engine.next());
+
+    var choose_indices_engine = alea.ScalarPrng.init(0x5150_5eb);
+    var choose_indices_control = alea.ScalarPrng.init(0x5150_5eb);
+    var choose_indices_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, chooseMultipleFrom(choose_indices_alloc.allocator(), &choose_indices_engine, u8, &items, 3));
+    try std.testing.expect(choose_indices_alloc.has_induced_failure);
+    try std.testing.expectEqual(choose_indices_control.next(), choose_indices_engine.next());
 
     var reservoir_engine = alea.ScalarPrng.init(0x5150_5e6);
     var reservoir_control = alea.ScalarPrng.init(0x5150_5e6);
