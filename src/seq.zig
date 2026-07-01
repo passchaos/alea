@@ -1540,6 +1540,10 @@ test "zero-count checked index helpers do not consume random stream" {
     const fixed = try sampleArrayCheckedFrom(&engine, 0, 0);
     try std.testing.expectEqual(@as(usize, 0), fixed.len);
     try std.testing.expectEqual(control.next(), engine.next());
+
+    const fixed_nonempty_range = try sampleArrayCheckedFrom(&engine, 0, 10);
+    try std.testing.expectEqual(@as(usize, 0), fixed_nonempty_range.len);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "zero-count checked sequence helpers do not consume random stream" {
