@@ -157,7 +157,7 @@ Use:
   and `WeightedChoice.iterFrom`
 - `distributions.AliasTable` for O(1) repeated weighted index sampling
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
-  and sampling workloads
+  and sampling workloads with weights accumulated as `f64`
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
   update/push/pop/sample throughput matters; weights wider than `u64` are
   accepted only when each value fits the `u64` accumulator
