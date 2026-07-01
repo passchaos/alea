@@ -231,15 +231,15 @@ project does not repeat unproductive work.
 
 ## Next Candidate
 
-Continue performance triage on the remaining focused watch items:
+Continue performance triage on the remaining focused watch items only when a
+new concrete hypothesis is available:
 
-- log-normal raw direct rows confirm reusable wrappers are not the scalar
-  bottleneck; normal-only probes show the remaining scalar/bulk gap is the
-  exact `exp` transform, so future work needs a sound transform improvement
-  rather than wrapper, normal-generation, or vector-width churn,
-- exact `(0, 1]` `fillOpenClosed(f64)` remains precision-sensitive and near
-  but not past the latest Rust row; future work needs a faster exact-endpoint
-  construction rather than more buffer-size or equivalent-expression tuning,
-- SIMD/vector distribution kernels still need a genuinely dense SIMD candidate:
-  f32x8 repair is useful evidence, but both standard and parameterized
-  vectorbench slice-fill rows failed to beat current scalar lane-fill defaults.
+- LogNormal: wrapper dispatch, normal generation, Rust algorithm shape,
+  `std.math.exp`, `exp2`, and f32 vector width have all been ruled out; future
+  work needs a sound exact-`exp` transform/codegen improvement.
+- OpenClosed f64: buffer sizes, int-add expression shape, bitcast, in-place,
+  vector, and invalid raw-byte variants are exhausted; future work needs a new
+  exact `(0, 1]` endpoint-grid construction.
+- SIMD distributions: f32x8 repair is useful evidence, but both standard and
+  parameterized vectorbench slice-fill rows failed to beat current scalar
+  lane-fill defaults; future work needs a genuinely dense SIMD candidate.
