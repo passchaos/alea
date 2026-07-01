@@ -6081,6 +6081,24 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), invalid_total_tree.totalWeight(), 1e-12);
 }
 
+test "weighted tree push allocation failure preserves tree" {
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    var tree = try WeightedTree(u32).init(failing.allocator(), &.{ 0, 0, 5 });
+    defer tree.deinit();
+
+    failing.fail_index = failing.alloc_index;
+    try std.testing.expectError(error.OutOfMemory, tree.push(7));
+    try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 3), tree.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 5), tree.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), try tree.get(2), 1e-12);
+
+    var engine = @import("root.zig").ScalarPrng.init(0x5150_7ee1);
+    var out: [8]usize = undefined;
+    try tree.fillCheckedFrom(&engine, &out);
+    for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+}
+
 test "weighted int tree supports dynamic updates" {
     const alea = @import("root.zig");
     var engine = alea.Wyhash64.init(46);
@@ -6170,6 +6188,24 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectError(error.InvalidWeight, wide_tree.push(too_large_u128));
     try std.testing.expectError(error.InvalidWeight, wide_tree.update(0, too_large_u128));
     try std.testing.expectEqual(@as(u64, 1), wide_tree.totalWeight());
+}
+
+test "weighted int tree push allocation failure preserves tree" {
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    var tree = try WeightedIntTree(u32).init(failing.allocator(), &.{ 0, 0, 5 });
+    defer tree.deinit();
+
+    failing.fail_index = failing.alloc_index;
+    try std.testing.expectError(error.OutOfMemory, tree.push(7));
+    try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 3), tree.len());
+    try std.testing.expectEqual(@as(u64, 5), tree.totalWeight());
+    try std.testing.expectEqual(@as(u64, 5), try tree.get(2));
+
+    var engine = @import("root.zig").ScalarPrng.init(0x5150_7ee2);
+    var out: [8]usize = undefined;
+    try tree.fillCheckedFrom(&engine, &out);
+    for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
 }
 
 test "weighted reusable samplers preserve direct stream shape" {

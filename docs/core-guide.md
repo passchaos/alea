@@ -163,6 +163,7 @@ Use:
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
   update/push/pop/sample throughput matters; weights wider than `u64` are
   accepted only when each value fits the `u64` accumulator
+  (failed push/update operations preserve the previous tree totals)
 
 Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput index
 sampling. Use `sampleIndices` when a `[]usize` result is more convenient.
