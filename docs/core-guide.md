@@ -203,9 +203,10 @@ full throughput suite. The current local rows cover packed bool chance/ratio,
 strict-open/open-closed/range vector float fills, and scalar-lane
 normal/exponential vector fills; representative rows are about 1.01B lanes/s
 for `fillVectorRange(f32x8)`, about 694M lanes/s for
-`fillVectorRange(f64x4)`, about 391M lanes/s for normal `f32x8`, about 383-385M
-lanes/s for normal `f64x4`, and about 361-370M lanes/s for exponential vector
-fills.
+`fillVectorRange(f64x4)`, about 498-502M lanes/s for normal vectors, and about
+468-473M lanes/s for exponential vectors. Requirements for a future true dense
+SIMD distribution kernel are tracked in
+`compare/results/simd-distribution-kernel-notes.md`.
 
 Use focused probes such as `ziggurat-probe`, `open-closed-probe`, and the
 distribution-specific probes under `tools/` to isolate hot-path expression
