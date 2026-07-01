@@ -2957,6 +2957,37 @@ test "checked weighted sampling preserves valid-parameter stream shape" {
     }
 }
 
+test "invalid facade value helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    const EmptyEnum = enum {};
+    const NestedEmptyEnum = struct { u64, EmptyEnum };
+
+    var engine = alea.ScalarPrng.init(0x5150_ba2);
+    var control = alea.ScalarPrng.init(0x5150_ba2);
+    const rng = Rng.init(&engine);
+
+    if (rng.enumValueChecked(EmptyEnum)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (rng.valueChecked(EmptyEnum)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (rng.valueChecked(NestedEmptyEnum)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid checked helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_bad);
