@@ -6057,6 +6057,30 @@ test "alias table update allocation failure preserves table" {
     for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
 }
 
+test "weighted tree init failures clean up" {
+    var generic_alloc_fail = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, WeightedTree(u32).init(generic_alloc_fail.allocator(), &.{ 1, 2, 3 }));
+    try std.testing.expect(generic_alloc_fail.has_induced_failure);
+
+    var generic_invalid = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    try std.testing.expectError(error.InvalidWeight, WeightedTree(f64).init(generic_invalid.allocator(), &.{
+        std.math.floatMax(f64),
+        std.math.floatMax(f64),
+    }));
+    try std.testing.expect(!generic_invalid.has_induced_failure);
+
+    var int_alloc_fail = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, WeightedIntTree(u32).init(int_alloc_fail.allocator(), &.{ 1, 2, 3 }));
+    try std.testing.expect(int_alloc_fail.has_induced_failure);
+
+    var int_invalid = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    try std.testing.expectError(error.InvalidWeight, WeightedIntTree(u64).init(int_invalid.allocator(), &.{
+        std.math.maxInt(u64),
+        1,
+    }));
+    try std.testing.expect(!int_invalid.has_induced_failure);
+}
+
 test "weighted tree supports dynamic updates" {
     const alea = @import("root.zig");
     var engine = alea.Wyhash64.init(45);
