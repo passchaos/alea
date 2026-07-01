@@ -43,6 +43,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorStandardNormalF64Direct(io, stdout, "alea fillVectorStandardNormal f64x4 direct", lanes / 8);
     try benchFillVectorNormalF32(io, stdout, "alea fillVectorNormal f32x8", lanes / 4);
     try benchFillVectorNormalF32Direct(io, stdout, "alea fillVectorNormal f32x8 direct", lanes / 4);
+    try benchFillVectorNormalF32Repair(io, stdout, "alea fillVectorNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorNormalF64(io, stdout, "alea fillVectorNormal f64x4", lanes / 8);
     try benchFillVectorNormalF64Direct(io, stdout, "alea fillVectorNormal f64x4 direct", lanes / 8);
     try benchFillVectorStandardExponentialF32(io, stdout, "alea fillVectorStandardExponential f32x8", lanes);
@@ -52,6 +53,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorStandardExponentialF64Direct(io, stdout, "alea fillVectorStandardExponential f64x4 direct", lanes / 2);
     try benchFillVectorExponentialF32(io, stdout, "alea fillVectorExponential f32x8", lanes);
     try benchFillVectorExponentialF32Direct(io, stdout, "alea fillVectorExponential f32x8 direct", lanes);
+    try benchFillVectorExponentialF32Repair(io, stdout, "alea fillVectorExponential f32x8 repair candidate", lanes);
     try benchFillVectorExponentialF64(io, stdout, "alea fillVectorExponential f64x4", lanes / 2);
     try benchFillVectorExponentialF64Direct(io, stdout, "alea fillVectorExponential f64x4 direct", lanes / 2);
     try stdout.flush();
@@ -561,6 +563,37 @@ fn benchFillVectorNormalF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []co
     try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillVectorNormalF32Repair(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [256]@Vector(8, f32) = undefined;
+    const vector_count = lanes / 8;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xd188);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = vector_count;
+        var checksum: f32 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillNormalF32Repair(&engine, out[0..n], 0, 1);
+            checksum += checksumVectors(&out, n);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(vector_count * 8)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchFillVectorNormalF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
@@ -844,6 +877,37 @@ fn benchFillVectorExponentialF32Direct(io: std.Io, stdout: *std.Io.Writer, name:
     try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillVectorExponentialF32Repair(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [256]@Vector(8, f32) = undefined;
+    const vector_count = lanes / 8;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xe188);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = vector_count;
+        var checksum: f32 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillExponentialF32Repair(&engine, out[0..n], 2);
+            checksum += checksumVectors(&out, n);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(vector_count * 8)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchFillVectorExponentialF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
@@ -935,8 +999,19 @@ fn fillStandardNormalF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)
     for (dest) |*item| item.* = vectorRepairNormalF32Correct(engine);
 }
 
+fn fillNormalF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32), mean: f32, stddev: f32) void {
+    const mean_vec: @Vector(8, f32) = @splat(mean);
+    const stddev_vec: @Vector(8, f32) = @splat(stddev);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRepairNormalF32Correct(engine);
+}
+
 fn fillStandardExponentialF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairExponentialF32Correct(engine);
+}
+
+fn fillExponentialF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32), rate: f32) void {
+    const inverse_rate: @Vector(8, f32) = @splat(1 / rate);
+    for (dest) |*item| item.* = vectorRepairExponentialF32Correct(engine) * inverse_rate;
 }
 
 fn vectorRepairNormalF32Correct(engine: *alea.ScalarPrng) @Vector(8, f32) {
