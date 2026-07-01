@@ -21,23 +21,29 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("unit geometry probe count={}\n", .{sample_count});
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
     try benchAlea4x64Sample2(io, stdout, "fast unit circle point lane-pair", 0xc11c1e, sample_count, sampleUnitCircleLanePair);
+    try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point fma", 0xc11c1e, sample_count, sampleUnitCircleFma);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point pair", 0xc11c1e, sample_count, sampleUnitCirclePair);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point range", 0xc11c1e, sample_count, sampleUnitCircleRange);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point current", 0xd15c, sample_count, sampleUnitDiscCurrent);
     try benchAlea4x64Sample2(io, stdout, "fast unit disc point lane-pair", 0xd15c, sample_count, sampleUnitDiscLanePair);
+    try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point fma", 0xd15c, sample_count, sampleUnitDiscFma);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point pair", 0xd15c, sample_count, sampleUnitDiscPair);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point range", 0xd15c, sample_count, sampleUnitDiscRange);
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point current", 0x59e7e, sample_count, sampleUnitSphereCurrent);
     try benchAlea4x64Sample3(io, stdout, "fast unit sphere point lane-pair", 0x59e7e, sample_count, sampleUnitSphereLanePair);
+    try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point fma", 0x59e7e, sample_count, sampleUnitSphereFma);
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point pair", 0x59e7e, sample_count, sampleUnitSpherePair);
     try benchSample3(alea.FastPrng, io, stdout, "fast unit sphere point range", 0x59e7e, sample_count, sampleUnitSphereRange);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
+    try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point fma", 0xc11c1e, sample_count, sampleUnitCircleFma);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point pair", 0xc11c1e, sample_count, sampleUnitCirclePair);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point range", 0xc11c1e, sample_count, sampleUnitCircleRange);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit disc point current", 0xd15c, sample_count, sampleUnitDiscCurrent);
+    try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit disc point fma", 0xd15c, sample_count, sampleUnitDiscFma);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit disc point pair", 0xd15c, sample_count, sampleUnitDiscPair);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit disc point range", 0xd15c, sample_count, sampleUnitDiscRange);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point current", 0x59e7e, sample_count, sampleUnitSphereCurrent);
+    try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point fma", 0x59e7e, sample_count, sampleUnitSphereFma);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point pair", 0x59e7e, sample_count, sampleUnitSpherePair);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit sphere point range", 0x59e7e, sample_count, sampleUnitSphereRange);
     try benchFill(alea.FastPrng, io, stdout, "fast unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
@@ -301,6 +307,42 @@ fn sampleUnitDiscCurrent(source: anytype) [2]f64 {
 
 fn sampleUnitSphereCurrent(source: anytype) [3]f64 {
     return alea.distributions.unitSphereFrom(source, f64);
+}
+
+fn signedUnitFloat(source: anytype) f64 {
+    const repr = (@as(u64, 0x400) << 52) | (alea.Rng.nextFrom(source) >> 12);
+    return @as(f64, @bitCast(repr)) - 3.0;
+}
+
+fn sampleUnitCircleFma(source: anytype) [2]f64 {
+    while (true) {
+        const x = signedUnitFloat(source);
+        const y = signedUnitFloat(source);
+        const x2 = x * x;
+        const y2 = y * y;
+        const sum = @mulAdd(f64, y, y, x2);
+        if (!(sum > 0 and sum < 1)) continue;
+        return .{ (x2 - y2) / sum, 2 * x * y / sum };
+    }
+}
+
+fn sampleUnitDiscFma(source: anytype) [2]f64 {
+    while (true) {
+        const x = signedUnitFloat(source);
+        const y = signedUnitFloat(source);
+        if (@mulAdd(f64, y, y, x * x) <= 1) return .{ x, y };
+    }
+}
+
+fn sampleUnitSphereFma(source: anytype) [3]f64 {
+    while (true) {
+        const x = signedUnitFloat(source);
+        const y = signedUnitFloat(source);
+        const sum = @mulAdd(f64, y, y, x * x);
+        if (sum >= 1) continue;
+        const factor = 2 * @sqrt(1 - sum);
+        return .{ x * factor, y * factor, 1 - 2 * sum };
+    }
 }
 
 const LaneAlea4x64 = struct {

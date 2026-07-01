@@ -3993,6 +3993,7 @@ pub fn unitCircle(rng: Rng, comptime T: type) [2]T {
 
 pub fn unitCircleFrom(source: anytype, comptime T: type) [2]T {
     comptime requireFloat(T);
+    if (T == f64) return unitCircleF64PointFrom(source);
     while (true) {
         const x1 = signedUnitFloatFrom(source, T);
         const x2 = signedUnitFloatFrom(source, T);
@@ -4022,6 +4023,7 @@ pub fn unitDisc(rng: Rng, comptime T: type) [2]T {
 
 pub fn unitDiscFrom(source: anytype, comptime T: type) [2]T {
     comptime requireFloat(T);
+    if (T == f64) return unitDiscF64PointFrom(source);
     while (true) {
         const x1 = signedUnitFloatFrom(source, T);
         const x2 = signedUnitFloatFrom(source, T);
@@ -4047,6 +4049,7 @@ pub fn unitSphere(rng: Rng, comptime T: type) [3]T {
 
 pub fn unitSphereFrom(source: anytype, comptime T: type) [3]T {
     comptime requireFloat(T);
+    if (T == f64) return unitSphereF64PointFrom(source);
     while (true) {
         const x1 = signedUnitFloatFrom(source, T);
         const x2 = signedUnitFloatFrom(source, T);
@@ -4108,6 +4111,42 @@ inline fn signedUnitFloatFrom(source: anytype, comptime T: type) T {
         },
         else => @compileError("alea supports f32 and f64 unit geometry"),
     };
+}
+
+fn signedUnitF64PointFrom(source: anytype) f64 {
+    const repr = (@as(u64, 0x400) << 52) | (Rng.nextFrom(source) >> 12);
+    return @as(f64, @bitCast(repr)) - 3.0;
+}
+
+fn unitCircleF64PointFrom(source: anytype) [2]f64 {
+    while (true) {
+        const x = signedUnitF64PointFrom(source);
+        const y = signedUnitF64PointFrom(source);
+        const x2 = x * x;
+        const y2 = y * y;
+        const sum = @mulAdd(f64, y, y, x2);
+        if (!(sum > 0 and sum < 1)) continue;
+        return .{ (x2 - y2) / sum, 2 * x * y / sum };
+    }
+}
+
+fn unitDiscF64PointFrom(source: anytype) [2]f64 {
+    while (true) {
+        const x = signedUnitF64PointFrom(source);
+        const y = signedUnitF64PointFrom(source);
+        if (@mulAdd(f64, y, y, x * x) <= 1) return .{ x, y };
+    }
+}
+
+fn unitSphereF64PointFrom(source: anytype) [3]f64 {
+    while (true) {
+        const x = signedUnitF64PointFrom(source);
+        const y = signedUnitF64PointFrom(source);
+        const sum = @mulAdd(f64, y, y, x * x);
+        if (sum >= 1) continue;
+        const factor = 2 * @sqrt(1 - sum);
+        return .{ x * factor, y * factor, 1 - 2 * sum };
+    }
 }
 
 fn fillUnitDiscF64From(source: anytype, dest: [][2]f64) void {
