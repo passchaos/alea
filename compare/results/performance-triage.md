@@ -245,4 +245,5 @@ new concrete hypothesis is available:
   exact `(0, 1]` endpoint-grid construction.
 - SIMD distributions: f32x8 repair is useful evidence, but both standard and
   parameterized vectorbench slice-fill rows failed to beat current scalar
-  lane-fill defaults; future work needs a genuinely dense SIMD candidate.
+  lane-fill defaults; future work needs a genuinely dense SIMD candidate that
+  meets `simd-distribution-kernel-notes.md`.
