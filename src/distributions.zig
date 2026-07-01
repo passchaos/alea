@@ -5974,9 +5974,11 @@ test "basic distributions stay in expected ranges" {
 }
 
 test "alias table init allocation failure cleans up" {
-    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
-    try std.testing.expectError(error.OutOfMemory, AliasTable(u32).init(failing.allocator(), &.{ 1, 2, 3 }));
-    try std.testing.expect(failing.has_induced_failure);
+    for (0..5) |fail_index| {
+        var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = fail_index });
+        try std.testing.expectError(error.OutOfMemory, AliasTable(u32).init(failing.allocator(), &.{ 1, 2, 3 }));
+        try std.testing.expect(failing.has_induced_failure);
+    }
 }
 
 test "alias table samples valid indexes" {
