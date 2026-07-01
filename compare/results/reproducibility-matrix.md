@@ -22,6 +22,7 @@ is explicitly documented.
 | `Rng.uint`, `uintLessThan`, `uintAtMost`, integer ranges | Same output for fixed engine stream, integer type, and bounds on the same integer width. |
 | `Rng.float`, `floatOpen`, `floatOpenClosed` | Same output for fixed engine stream and float type. |
 | `Rng.value` for bools, ints, floats, enums, tuples, arrays | Same output when all nested sampled types are stable. |
+| `Rng.valueIter` / `valueIterFrom` | `nextValue` is scalar `value` sampling; `fill` preserves repeated-`nextValue` stream shape for packed-fill-sensitive types (`bool`, `f32`, `u8`, sub-64-bit integers, and structured values) and may use stream-equivalent bulk fill only for `f64`, 64-bit integers, and matching vectors. |
 | `Rng.fill(u8, ...)` / `Rng.bytes` | Same byte stream for fixed engine stream. |
 | `ascii.Charset` sampling | Same bytes for fixed engine stream and charset bytes. |
 | `seq.sampleIndicesU32`, `sampleIndexVec` with `.u32` backing | Same sampled index sequence for fixed engine stream, length, and amount. |
@@ -40,6 +41,7 @@ tests so accidental compatibility drift is caught by `zig build test`.
 | `src/engines/xoshiro256.zig`: `xoshiro256 transitions have stable snapshots`; `src/engines/xoshiro256plusplus.zig`: `xoshiro256++ jump has stable snapshots`; `src/engines/pcg64.zig`: `pcg64 initTwo has stable snapshots` | Stable stream transitions for `split`, `jump`, `longJump`, and `initTwo` |
 | `src/engines/chacha.zig`: `chacha addEntropy has stable byte snapshot` | `ChaCha.addEntropy` operation-order stability |
 | `src/rng.zig`: `scalar sampling has stable snapshots`, `byte fill has stable snapshots`, `value and vector sampling have stable snapshots`, `duration range sampling has stable snapshots` | Scalar, byte, structured-value, vector, and duration sampling contracts |
+| `src/rng.zig`: `value iterator fill preserves scalar fallback where bulk fill packs draws` | Iterator fill keeps repeated-`nextValue` stream shape for packed-fill-sensitive value types |
 | `src/ascii.zig`: `ascii helpers have stable snapshots` | ASCII charset/string and Unicode scalar UTF-8 generation for a fixed stream |
 | `src/seq.zig`: `portable index sampling has stable snapshots` | `sampleIndicesU32` and compact `.u32` `sampleIndexVec` output |
 | `src/rng.zig`, `src/seq.zig`, `src/distributions.zig`, `src/ascii.zig`: `preserve direct stream shape` tests | Facade/direct-source helpers preserve stream shape for valid inputs |
