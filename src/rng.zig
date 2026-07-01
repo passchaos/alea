@@ -3066,6 +3066,18 @@ test "invalid checked helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0x1f96d05125db1460), engine.next());
 }
 
+test "invalid vector probability helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_bab);
+    var control = alea.ScalarPrng.init(0x5150_bab);
+
+    try std.testing.expectError(error.InvalidProbability, vectorChanceCheckedFrom(&engine, @Vector(8, bool), -0.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, vectorRatioCheckedFrom(&engine, @Vector(8, bool), 2, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid duration at-most range does not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_bac);
@@ -3074,7 +3086,6 @@ test "invalid duration at-most range does not consume random stream" {
     try std.testing.expectError(error.EmptyRange, durationRangeAtMostCheckedFrom(&engine, .fromSeconds(2), .fromSeconds(1)));
     try std.testing.expectEqual(control.next(), engine.next());
 }
-
 
 test "zero-count sample without replacement does not build pool or consume random stream" {
     const alea = @import("root.zig");
