@@ -3090,6 +3090,15 @@ test "invalid vector distribution helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid integer at-most range does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba9);
+    var control = alea.ScalarPrng.init(0x5150_ba9);
+
+    try std.testing.expectError(error.EmptyRange, intRangeAtMostCheckedFrom(&engine, u32, 4, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid duration at-most range does not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_bac);
