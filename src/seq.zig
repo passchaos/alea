@@ -1182,6 +1182,22 @@ test "invalid facade collection helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid facade weighted sequence helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_5de);
+    var control = alea.ScalarPrng.init(0x5150_5de);
+    const rng = alea.Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesChecked(std.testing.allocator, rng, u32, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedChecked(std.testing.allocator, rng, u8, u32, &.{ 1, 2 }, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesChecked(std.testing.allocator, rng, u32, &.{ 0, 5, 0 }, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid sequence helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_5e1);
