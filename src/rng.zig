@@ -3008,6 +3008,16 @@ test "value and sampler iterators produce unbounded samples" {
     var direct_open_iter = Rng.sampleIterFrom(&engine, f64, alea.distributions.Open01{});
     const direct_open_value = direct_open_iter.nextValue();
     try std.testing.expect(direct_open_value > 0 and direct_open_value < 1);
+
+    var open_fill_iter = rng.sampleIter(f64, alea.distributions.Open01{});
+    var open_fill_buf: [8]f64 = undefined;
+    open_fill_iter.fill(&open_fill_buf);
+    for (open_fill_buf) |item| try std.testing.expect(item > 0 and item < 1);
+
+    var direct_open_closed_fill_iter = Rng.sampleIterFrom(&engine, f64, alea.distributions.OpenClosed01{});
+    var direct_open_closed_fill_buf: [8]f64 = undefined;
+    direct_open_closed_fill_iter.fill(&direct_open_closed_fill_buf);
+    for (direct_open_closed_fill_buf) |item| try std.testing.expect(item > 0 and item <= 1);
 }
 
 test "value iterator fill preserves scalar fallback where bulk fill packs draws" {
