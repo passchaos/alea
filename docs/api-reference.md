@@ -450,12 +450,16 @@ Reusable samplers:
 - `Cauchy(T).fillFrom`
 - `Laplace(T)`
 - `Laplace(T).init`
+- `Laplace(T).locationValue`
+- `Laplace(T).scaleValue`
 - `Laplace(T).sample`
 - `Laplace(T).sampleFrom`
 - `Laplace(T).fill`
 - `Laplace(T).fillFrom`
 - `Logistic(T)`
 - `Logistic(T).init`
+- `Logistic(T).locationValue`
+- `Logistic(T).scaleValue`
 - `Logistic(T).sample`
 - `Logistic(T).sampleFrom`
 - `Logistic(T).fill`

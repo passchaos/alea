@@ -2971,6 +2971,14 @@ pub fn Laplace(comptime T: type) type {
             return .{ .location = location, .scale = scale };
         }
 
+        pub fn locationValue(self: Self) T {
+            return self.location;
+        }
+
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -3043,6 +3051,14 @@ pub fn Logistic(comptime T: type) type {
             if (!std.math.isFinite(location)) return error.InvalidParameter;
             if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale };
+        }
+
+        pub fn locationValue(self: Self) T {
+            return self.location;
+        }
+
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -7935,6 +7951,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expectError(error.InvalidParameter, fillLaplaceCheckedFrom(&direct_engine, f64, &direct_laplace_buf, 0, 0));
     const laplace_sampler = try Laplace(f64).init(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), laplace_sampler.locationValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), laplace_sampler.scaleValue(), 1e-12);
     laplace_sampler.fillFrom(&direct_engine, &direct_laplace_buf);
     for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try laplaceCheckedFrom(&direct_engine, f64, 0, 1)));
@@ -7954,6 +7972,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expectError(error.InvalidParameter, fillLogisticCheckedFrom(&direct_engine, f64, &direct_logistic_buf, 0, 0));
     const logistic_sampler = try Logistic(f64).init(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), logistic_sampler.locationValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), logistic_sampler.scaleValue(), 1e-12);
     logistic_sampler.fillFrom(&direct_engine, &direct_logistic_buf);
     for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try logisticCheckedFrom(&direct_engine, f64, 0, 1)));
