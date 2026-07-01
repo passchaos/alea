@@ -1583,6 +1583,10 @@ pub fn ValueIterator(comptime T: type) type {
         }
 
         pub fn fill(self: *Self, dest: []T) void {
+            if (comptime valueIteratorCanFill(T)) {
+                self.rng.fill(T, dest);
+                return;
+            }
             for (dest) |*item| item.* = self.nextValue();
         }
     };
@@ -1603,8 +1607,19 @@ pub fn ValueIteratorFrom(comptime Source: type, comptime T: type) type {
         }
 
         pub fn fill(self: *Self, dest: []T) void {
+            if (comptime valueIteratorCanFill(T)) {
+                fillFrom(self.source, T, dest);
+                return;
+            }
             for (dest) |*item| item.* = self.nextValue();
         }
+    };
+}
+
+fn valueIteratorCanFill(comptime T: type) bool {
+    return switch (@typeInfo(T)) {
+        .bool, .int, .float, .vector => true,
+        else => false,
     };
 }
 
