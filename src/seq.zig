@@ -1392,6 +1392,20 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectError(error.LengthMismatch, WeightedChoice(u8, u32).init(std.testing.allocator, &.{1}, &.{ 1, 2 }));
 }
 
+test "weighted choice update rejects invalid float weights without replacing table" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_0446);
+
+    const items = [_]u8{ 1, 2, 3 };
+    var choice = try WeightedChoice(u8, f64).init(std.testing.allocator, &items, &.{ 0, 0, 1 });
+    defer choice.deinit();
+
+    try std.testing.expectError(error.InvalidWeight, choice.update(&.{ 0, std.math.nan(f64), 1 }));
+    var out: [4]u8 = undefined;
+    choice.fillValuesFrom(&engine, &out);
+    for (out) |value| try std.testing.expectEqual(@as(u8, 3), value);
+}
+
 test "weighted sampling without replacement returns distinct positive-weight items" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(447);
