@@ -1291,6 +1291,35 @@ test "short checked iterator samples do not consume past source" {
     try std.testing.expectEqual(@as(u64, 0x176d099d72bcd05c), engine.next());
 }
 
+test "zero-count checked sequence helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7717);
+    var control = alea.ScalarPrng.init(0x5150_7717);
+
+    const items = [_]u8{ 1, 2, 3, 4 };
+
+    var index_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const index_vec = try sampleIndexVecCheckedFrom(index_alloc.allocator(), &engine, 0, 0);
+    defer index_vec.deinit(index_alloc.allocator());
+    try std.testing.expectEqual(@as(usize, 0), index_vec.len());
+    try std.testing.expect(!index_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var choose_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const chosen = try chooseMultipleCheckedFrom(choose_alloc.allocator(), &engine, u8, &items, 0);
+    defer choose_alloc.allocator().free(chosen);
+    try std.testing.expectEqual(@as(usize, 0), chosen.len);
+    try std.testing.expect(!choose_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var reservoir_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const sampled = try reservoirSampleCheckedFrom(reservoir_alloc.allocator(), &engine, u8, &items, 0);
+    defer reservoir_alloc.allocator().free(sampled);
+    try std.testing.expectEqual(@as(usize, 0), sampled.len);
+    try std.testing.expect(!reservoir_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "zero-count iterator samples do not read iterator or build reservoir" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_7715);
