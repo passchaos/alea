@@ -2786,10 +2786,16 @@ test "shuffle and sampling keep item set" {
 
 test "checked fill helpers preserve valid-parameter stream shape" {
     const alea = @import("root.zig");
+    const ValueType = struct { u16, bool, f64 };
 
     inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
         var unchecked = Engine.init(0x5eed_5150);
         var checked = Engine.init(0x5eed_5150);
+
+        const value_unchecked = valueFrom(&unchecked, ValueType);
+        const value_checked = try valueCheckedFrom(&checked, ValueType);
+        try std.testing.expectEqual(value_unchecked, value_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var range_unchecked: [8]u32 = undefined;
         var range_checked: [8]u32 = undefined;
