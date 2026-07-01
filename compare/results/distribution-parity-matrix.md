@@ -39,7 +39,7 @@ Zig-native way.
 | Gumbel | Covered: `gumbel`, `Gumbel(T)` |
 | Frechet | Covered: `frechet`, `Frechet(T)` |
 | SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter accessors |
-| Pert | Covered: `pert`, `Pert(T)`, including default-shape and mean constructors |
+| Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, and range-builder constructors |
 | UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)` |
 | UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)` |
 | Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path |

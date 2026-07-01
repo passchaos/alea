@@ -427,7 +427,11 @@ Reusable samplers:
 - `SkewNormal(T).fillFrom`
 - `Pert(T)`
 - `Pert(T).initDefault`
+- `Pert(T).initRange`
 - `Pert(T).initMean`
+- `PertBuilder(T).withShape`
+- `PertBuilder(T).withMode`
+- `PertBuilder(T).withMean`
 - `Pert(T).sampleFrom`
 - `Pert(T).fill`
 - `Pert(T).fillFrom`

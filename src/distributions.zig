@@ -3935,6 +3935,11 @@ pub fn Pert(comptime T: type) type {
             return Self.init(min, mode, max, 4);
         }
 
+        pub fn initRange(min: T, max: T) PertBuilder(T) {
+            comptime requireFloat(T);
+            return .{ .min = min, .max = max, .shape = 4 };
+        }
+
         pub fn initMean(min: T, mean: T, max: T, shape: T) Error!Self {
             comptime requireFloat(T);
             if (!(shape > 0) or !std.math.isFinite(shape)) return error.InvalidParameter;
@@ -3956,6 +3961,28 @@ pub fn Pert(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+fn PertBuilder(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        min: T,
+        max: T,
+        shape: T,
+
+        pub fn withShape(self: Self, shape: T) Self {
+            return .{ .min = self.min, .max = self.max, .shape = shape };
+        }
+
+        pub fn withMode(self: Self, mode: T) Error!Pert(T) {
+            return Pert(T).init(self.min, mode, self.max, self.shape);
+        }
+
+        pub fn withMean(self: Self, mean: T) Error!Pert(T) {
+            return Pert(T).initMean(self.min, mean, self.max, self.shape);
         }
     };
 }
@@ -6763,6 +6790,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const pert_sampler = try Pert(f64).init(-1, 0.5, 2, 4);
     pert_sampler.fillFrom(&direct_engine, &direct_pert_buf);
     for (direct_pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    const pert_builder_mode = try Pert(f64).initRange(-1, 2).withShape(4).withMode(0.5);
+    try std.testing.expectApproxEqAbs(pert_sampler.alpha, pert_builder_mode.alpha, 1e-12);
+    try std.testing.expectApproxEqAbs(pert_sampler.beta_param, pert_builder_mode.beta_param, 1e-12);
 
     var inverse_gaussians = rng.sampleIter(f64, try InverseGaussian(f64).init(1, 2));
     try std.testing.expect(inverse_gaussians.next().? > 0);
@@ -7122,8 +7152,11 @@ test "extreme-value and shape samplers have plausible means" {
 
     const by_mean = try Pert(f64).initMean(-1, 0.5, 2, 4);
     const by_mode = try Pert(f64).init(-1, 0.5, 2, 4);
+    const by_builder_mean = try Pert(f64).initRange(-1, 2).withShape(4).withMean(0.5);
     try std.testing.expectApproxEqAbs(by_mode.alpha, by_mean.alpha, 1e-12);
     try std.testing.expectApproxEqAbs(by_mode.beta_param, by_mean.beta_param, 1e-12);
+    try std.testing.expectApproxEqAbs(by_mode.alpha, by_builder_mean.alpha, 1e-12);
+    try std.testing.expectApproxEqAbs(by_mode.beta_param, by_builder_mean.beta_param, 1e-12);
 }
 
 test "inverse-gaussian and rank samplers have plausible behavior" {
