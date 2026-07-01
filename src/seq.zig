@@ -1163,6 +1163,9 @@ test "invalid facade index helpers do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, sampleIndexVec(std.testing.allocator, rng, 3, 4));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleArrayChecked(rng, 4, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "invalid facade collection helpers do not consume random stream" {
