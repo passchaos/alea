@@ -4909,7 +4909,7 @@ pub fn WeightedTree(comptime Weight: type) type {
             for (weights) |weight| {
                 try subtotals.append(allocator, try weightToF64(weight));
             }
-            buildSubtotals(subtotals.items);
+            try buildSubtotals(subtotals.items);
 
             return .{
                 .subtotals = subtotals,
@@ -4935,7 +4935,8 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn isValid(self: Self) bool {
-            return self.totalWeight() > 0;
+            const total = self.totalWeight();
+            return total > 0 and std.math.isFinite(total);
         }
 
         pub fn get(self: Self, index: usize) Error!f64 {
@@ -5014,13 +5015,13 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
             const total = self.totalWeight();
-            if (!(total > 0)) return error.InvalidWeight;
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
             for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
         }
 
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
-            if (!(total > 0)) return error.InvalidWeight;
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
 
             return self.sampleWithTotalFrom(source, total);
         }
@@ -5064,11 +5065,13 @@ pub fn WeightedTree(comptime Weight: type) type {
             return value;
         }
 
-        fn buildSubtotals(subtotals: []f64) void {
+        fn buildSubtotals(subtotals: []f64) Error!void {
             var i = subtotals.len;
             while (i > 1) {
                 i -= 1;
-                subtotals[(i - 1) / 2] += subtotals[i];
+                const parent = (i - 1) / 2;
+                subtotals[parent] += subtotals[i];
+                if (!std.math.isFinite(subtotals[parent])) return error.InvalidWeight;
             }
         }
     };
@@ -6014,6 +6017,17 @@ test "weighted tree supports dynamic updates" {
     var float_tree = try WeightedTree(f64).init(std.testing.allocator, &.{1.0});
     defer float_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, float_tree.push(std.math.nan(f64)));
+
+    try std.testing.expectError(error.InvalidWeight, WeightedTree(f64).init(std.testing.allocator, &.{
+        std.math.floatMax(f64),
+        std.math.floatMax(f64),
+    }));
+
+    var invalid_total_tree = try WeightedTree(f64).init(std.testing.allocator, &.{std.math.floatMax(f64)});
+    defer invalid_total_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, invalid_total_tree.push(std.math.floatMax(f64)));
+    try invalid_total_tree.update(0, 0);
+    try std.testing.expectError(error.InvalidWeight, invalid_total_tree.update(0, std.math.inf(f64)));
 }
 
 test "weighted int tree supports dynamic updates" {
