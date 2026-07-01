@@ -1173,6 +1173,12 @@ test "short checked iterator samples do not consume past source" {
     var iter = RangeIter{};
     try std.testing.expectError(error.InvalidParameter, sampleIteratorCheckedFrom(std.testing.allocator, &engine, u8, &iter, 3));
     try std.testing.expectEqual(@as(u64, 0x85840e4ff30d6d3b), engine.next());
+
+    var empty_iter = RangeIter{ .end = 0 };
+    const empty = try sampleIteratorCheckedFrom(std.testing.allocator, &engine, u8, &empty_iter, 0);
+    defer std.testing.allocator.free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(@as(u64, 0x176d099d72bcd05c), engine.next());
 }
 
 test "short checked weighted iterator samples do not consume past source" {
@@ -1199,6 +1205,12 @@ test "short checked weighted iterator samples do not consume past source" {
     var iter = WeightedIter{ .items = &entries };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &iter, 2));
     try std.testing.expectEqual(@as(u64, 0xe35b82cee21c224a), engine.next());
+
+    var empty_iter = WeightedIter{ .items = &.{} };
+    const empty = try sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &empty_iter, 0);
+    defer std.testing.allocator.free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(@as(u64, 0x54caff4d9e76e3d7), engine.next());
 }
 
 test "partial shuffle and reservoir sample respect counts" {
