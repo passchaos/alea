@@ -6630,6 +6630,27 @@ test "invalid distribution facade tail fills do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, fillZetaChecked(rng, f64, &out, 1));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillLogLogisticChecked(rng, f64, &out, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillPowerFunctionChecked(rng, f64, &out, 1, 1, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillWeibullChecked(rng, f64, &out, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillGumbelChecked(rng, f64, &out, 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillFrechetChecked(rng, f64, &out, 0, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillSkewNormalChecked(rng, f64, &out, 0, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillPertChecked(rng, f64, &out, 1, 0, 2, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "invalid distribution facade scalar helpers do not consume random stream" {
