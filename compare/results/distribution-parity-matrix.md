@@ -72,7 +72,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Maxwell | Covered: `maxwell`, `Maxwell(T)` |
 | Chi | Covered: `chi`, `Chi(T)`, including dof accessor |
 | Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale accessors |
-| LogLogistic | Covered: `logLogistic`, `LogLogistic(T)` |
+| LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape accessors |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)` |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)` |
 | Pareto | Covered: `pareto`, `Pareto(T)` |

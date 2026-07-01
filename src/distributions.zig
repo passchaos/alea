@@ -3143,6 +3143,14 @@ pub fn LogLogistic(comptime T: type) type {
             return .{ .scale = scale, .inverse_shape = 1 / shape, .method = if (shape == 1) .ratio else .generic };
         }
 
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
+        }
+
+        pub fn shapeValue(self: Self) T {
+            return 1 / self.inverse_shape;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -7993,6 +8001,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_log_logistic_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expectError(error.InvalidParameter, fillLogLogisticCheckedFrom(&direct_engine, f64, &direct_log_logistic_buf, 0, 3));
     const log_logistic_sampler = try LogLogistic(f64).init(2, 3);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), log_logistic_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), log_logistic_sampler.shapeValue(), 1e-12);
     log_logistic_sampler.fillFrom(&direct_engine, &direct_log_logistic_buf);
     for (direct_log_logistic_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try logLogisticCheckedFrom(&direct_engine, f64, 2, 3) > 0);
