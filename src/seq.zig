@@ -1149,6 +1149,22 @@ test "exact-capacity index samplers avoid post-sampling ownership allocation" {
     try std.testing.expect(!usize_alloc.has_induced_failure);
 }
 
+test "invalid facade index helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_5e0);
+    var control = alea.ScalarPrng.init(0x5150_5e0);
+    const rng = alea.Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, sampleIndices(std.testing.allocator, rng, 3, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesU32(std.testing.allocator, rng, 3, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleIndexVec(std.testing.allocator, rng, 3, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid sequence helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_5e1);
