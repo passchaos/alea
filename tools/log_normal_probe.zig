@@ -38,11 +38,15 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 current fill", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged vector4 exp", 0x1063, sample_count, stagedVector4ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged vector16 exp", 0x1063, sample_count, stagedVector16ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 current fill", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector4 exp", 0x1063, sample_count, stagedVector4ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector16 exp", 0x1063, sample_count, stagedVector16ExpF32);
     try stdout.flush();
 }
 
@@ -208,9 +212,19 @@ fn stagedScalarExpF32(source: anytype, dest: []f32) void {
     expScalarF32(dest);
 }
 
+fn stagedVector4ExpF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    expVector4F32(dest);
+}
+
 fn stagedVector8ExpF32(source: anytype, dest: []f32) void {
     alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
     expVector8F32(dest);
+}
+
+fn stagedVector16ExpF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    expVector16F32(dest);
 }
 
 fn expScalar(dest: []f64) void {
@@ -252,6 +266,17 @@ fn expVector8(dest: []f64) void {
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
 }
 
+fn expVector4F32(dest: []f32) void {
+    const VectorType = @Vector(4, f32);
+    var i: usize = 0;
+    while (i + 4 <= dest.len) : (i += 4) {
+        var vec: VectorType = .{ dest[i], dest[i + 1], dest[i + 2], dest[i + 3] };
+        vec = @exp(vec);
+        inline for (0..4) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
+}
+
 fn expVector8F32(dest: []f32) void {
     const VectorType = @Vector(8, f32);
     var i: usize = 0;
@@ -268,6 +293,34 @@ fn expVector8F32(dest: []f32) void {
         };
         vec = @exp(vec);
         inline for (0..8) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
+}
+
+fn expVector16F32(dest: []f32) void {
+    const VectorType = @Vector(16, f32);
+    var i: usize = 0;
+    while (i + 16 <= dest.len) : (i += 16) {
+        var vec: VectorType = .{
+            dest[i],
+            dest[i + 1],
+            dest[i + 2],
+            dest[i + 3],
+            dest[i + 4],
+            dest[i + 5],
+            dest[i + 6],
+            dest[i + 7],
+            dest[i + 8],
+            dest[i + 9],
+            dest[i + 10],
+            dest[i + 11],
+            dest[i + 12],
+            dest[i + 13],
+            dest[i + 14],
+            dest[i + 15],
+        };
+        vec = @exp(vec);
+        inline for (0..16) |lane| dest[i + lane] = vec[lane];
     }
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
 }
