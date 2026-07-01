@@ -25,7 +25,9 @@ Latest `vectorbench` evidence is tracked in `performance-triage.md` and
 - Vector-log exponential kernels are too slow for default use.
 - f64x4 ziggurat fast-path plus scalar repair loses to scalar lane-fill.
 - f32x8 repair probes are promising in isolated `ziggurat-probe` rows, but
-  the advantage does not survive the real vector-slice fill harness.
+  the advantage does not survive the real vector-slice fill harness:
+  standard repair rows match but do not beat the current direct rows, and
+  parameterized repair rows trail the current parameterized defaults.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
   rejected lanes: prefetching candidates changes how repair consumes randomness.
 
@@ -39,6 +41,8 @@ replace scalar lane-fill:
    rejected lanes.
 3. Handle rejected lanes without resampling a different candidate under the
    same output lane unless that stream mapping is intentionally versioned.
+   Prefetching raw candidates across lanes is not sufficient by itself because
+   rejected lanes need a deterministic repair-consumption policy.
 4. Beat current direct `vectorbench` rows for both standard and parameterized
    workflows, or be narrowly scoped to a clearly named opt-in API.
 5. Pass the existing vector checked-fill stream-shape tests and normal
