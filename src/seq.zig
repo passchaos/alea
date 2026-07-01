@@ -417,7 +417,15 @@ pub fn sampleWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
     if (items.len != weights.len) return error.LengthMismatch;
     if (amount > items.len) return error.InvalidParameter;
     try ensureEnoughPositiveWeights(Weight, weights, amount);
-    return sampleWeightedFrom(allocator, source, T, Weight, items, weights, amount);
+
+    const out = try allocator.alloc(T, amount);
+    errdefer allocator.free(out);
+    const indices = try sampleWeightedIndicesFrom(allocator, source, Weight, weights, amount);
+    defer allocator.free(indices);
+    std.debug.assert(indices.len == amount);
+
+    for (indices, out) |index, *slot| slot.* = items[index];
+    return out;
 }
 
 pub fn sampleWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
@@ -1206,6 +1214,20 @@ test "initial sequence allocation failures do not consume random stream" {
     try std.testing.expectError(error.OutOfMemory, sampleWeightedFrom(weighted_alloc.allocator(), &weighted_engine, u8, u32, &items, &weights, 3));
     try std.testing.expect(weighted_alloc.has_induced_failure);
     try std.testing.expectEqual(weighted_control.next(), weighted_engine.next());
+
+    var checked_weighted_engine = alea.ScalarPrng.init(0x5150_5ec);
+    var checked_weighted_control = alea.ScalarPrng.init(0x5150_5ec);
+    var checked_weighted_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleWeightedCheckedFrom(checked_weighted_alloc.allocator(), &checked_weighted_engine, u8, u32, &items, &weights, 3));
+    try std.testing.expect(checked_weighted_alloc.has_induced_failure);
+    try std.testing.expectEqual(checked_weighted_control.next(), checked_weighted_engine.next());
+
+    var checked_weighted_indices_engine = alea.ScalarPrng.init(0x5150_5ed);
+    var checked_weighted_indices_control = alea.ScalarPrng.init(0x5150_5ed);
+    var checked_weighted_indices_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, sampleWeightedCheckedFrom(checked_weighted_indices_alloc.allocator(), &checked_weighted_indices_engine, u8, u32, &items, &weights, 3));
+    try std.testing.expect(checked_weighted_indices_alloc.has_induced_failure);
+    try std.testing.expectEqual(checked_weighted_indices_control.next(), checked_weighted_indices_engine.next());
 }
 
 test "invalid checked weighted sample counts do not consume random stream" {

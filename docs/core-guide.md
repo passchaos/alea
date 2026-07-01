@@ -187,6 +187,8 @@ Allocation failures while preparing the sample-without-replacement temporary
 pool/output also return before drawing.
 `chooseMultipleFrom` prepares its output and index storage before drawing, so
 allocation failures leave the stream untouched.
+Checked weighted item sampling likewise prepares output and index storage before
+drawing after validating lengths and positive-weight availability.
 `AliasTable.update` and `WeightedChoice.update` build the replacement table
 before swapping state, so length, weight, and initial allocation failures leave
 the previous valid table usable.
