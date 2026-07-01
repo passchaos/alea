@@ -591,12 +591,12 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         items: []const T,
         table: Table,
 
-        pub fn init(allocator: std.mem.Allocator, items: []const T, weights: []const Weight) !Self {
+        pub fn init(allocator: std.mem.Allocator, items: []const T, input_weights: []const Weight) !Self {
             if (items.len == 0) return error.EmptyInput;
-            if (items.len != weights.len) return error.LengthMismatch;
+            if (items.len != input_weights.len) return error.LengthMismatch;
             return .{
                 .items = items,
-                .table = try Table.init(allocator, weights),
+                .table = try Table.init(allocator, input_weights),
             };
         }
 
@@ -609,9 +609,22 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return self.items.len;
         }
 
-        pub fn update(self: *Self, weights: []const Weight) !void {
-            if (weights.len != self.items.len) return error.LengthMismatch;
-            try self.table.update(weights);
+        pub fn totalWeight(self: Self) f64 {
+            return self.table.totalWeight();
+        }
+
+        pub fn weights(self: Self, allocator: std.mem.Allocator) ![]f64 {
+            return self.table.weights(allocator);
+        }
+
+        pub fn weightsInto(self: Self, out: []f64) Error!void {
+            if (out.len != self.items.len) return error.LengthMismatch;
+            self.table.weightsInto(out) catch unreachable;
+        }
+
+        pub fn update(self: *Self, input_weights: []const Weight) !void {
+            if (input_weights.len != self.items.len) return error.LengthMismatch;
+            try self.table.update(input_weights);
         }
 
         pub fn sample(self: Self, rng: Rng) *const T {
@@ -2027,6 +2040,17 @@ test "weighted choice sampler maps alias indexes to items" {
     defer choice.deinit();
 
     try std.testing.expectEqual(@as(usize, 3), choice.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 8), choice.totalWeight(), 1e-12);
+    var reconstructed_weights: [3]f64 = undefined;
+    try choice.weightsInto(&reconstructed_weights);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), reconstructed_weights[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), reconstructed_weights[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7), reconstructed_weights[2], 1e-12);
+    var wrong_weight_len: [2]f64 = undefined;
+    try std.testing.expectError(error.LengthMismatch, choice.weightsInto(&wrong_weight_len));
+    const owned_weights = try choice.weights(std.testing.allocator);
+    defer std.testing.allocator.free(owned_weights);
+    try std.testing.expectEqualSlices(f64, &reconstructed_weights, owned_weights);
 
     var i: usize = 0;
     var saw_often = false;
@@ -2056,6 +2080,11 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expect(std.mem.eql(u8, direct_picked, "rare") or std.mem.eql(u8, direct_picked, "often"));
 
     try choice.update(&.{ 0, 0, 5 });
+    try std.testing.expectApproxEqAbs(@as(f64, 5), choice.totalWeight(), 1e-12);
+    try choice.weightsInto(&reconstructed_weights);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), reconstructed_weights[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), reconstructed_weights[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), reconstructed_weights[2], 1e-12);
     try std.testing.expect(std.mem.eql(u8, choice.sampleFrom(&engine).*, "often"));
     try std.testing.expectError(error.LengthMismatch, choice.update(&.{ 1, 2 }));
     try std.testing.expectError(error.InvalidWeight, choice.update(&.{ 0, 0, 0 }));
@@ -2065,6 +2094,10 @@ test "weighted choice sampler maps alias indexes to items" {
 
     try std.testing.expectError(error.EmptyInput, WeightedChoice(u8, u32).init(std.testing.allocator, &.{}, &.{}));
     try std.testing.expectError(error.LengthMismatch, WeightedChoice(u8, u32).init(std.testing.allocator, &.{1}, &.{ 1, 2 }));
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, choice.weights(failing.allocator()));
+    try std.testing.expect(failing.has_induced_failure);
 }
 
 test "weighted choice update rejects invalid float weights without replacing table" {

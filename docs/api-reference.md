@@ -660,6 +660,8 @@ Dynamic weighted helpers:
   `Choice.fillValues`, `Choice.fillValuesFrom`, `Choice.iter`,
   `Choice.iterFrom`,
   `WeightedChoice.init`, `WeightedChoice.deinit`, `WeightedChoice.len`,
+  `WeightedChoice.totalWeight`, `WeightedChoice.weights`,
+  `WeightedChoice.weightsInto`,
   `WeightedChoice.update`, `WeightedChoice.sample`,
   `WeightedChoice.sampleFrom`,
   `WeightedChoice.sampleValue`, `WeightedChoice.sampleValueFrom`,

@@ -166,7 +166,8 @@ Use:
   drawing)
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `WeightedChoice.update`,
-  and `WeightedChoice.iterFrom`
+  `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
+  `WeightedChoice.weightsInto`
 - `distributions.AliasTable` for O(1) repeated weighted index sampling,
   including `len`, `totalWeight`, and allocation-returning or caller-buffer
   `weights` reconstruction for diagnostics and parity with Rust weighted
