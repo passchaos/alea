@@ -6505,6 +6505,28 @@ test "invalid probability distribution fills do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "invalid distribution facade discrete scalars do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1fd);
+    var control = alea.ScalarPrng.init(0x5150_d1fd);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidProbability, bernoulliChecked(rng, -0.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, binomialChecked(rng, 10, 1.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, negativeBinomialChecked(rng, 5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, hypergeometricChecked(rng, 10, 11, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, geometricChecked(rng, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid distribution facade fill helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1fc);
