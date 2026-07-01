@@ -72,7 +72,8 @@ expectations.
   `exponentialChecked`, `exponentialCheckedFrom`, `standardNormalFastFrom`,
   `standardExponentialFastFrom`, `normalFastFrom`, `exponentialFastFrom`
 - Enums and collections: `enumValue`, `enumValueFrom`, `shuffle`, `shuffleFrom`, `choose`,
-  `chooseFrom`, `chooseChecked`, `chooseCheckedFrom`, `choosePtr`, `choosePtrFrom`, `weightedIndex`,
+  `chooseFrom`, `chooseChecked`, `chooseCheckedFrom`, `choosePtr`,
+  `choosePtrFrom`, `choosePtrChecked`, `choosePtrCheckedFrom`, `weightedIndex`,
   `weightedIndexFrom`, `weightedIndexChecked`, `weightedIndexCheckedFrom`,
   `sampleWithoutReplacement`, `sampleWithoutReplacementFrom`,
   `sampleWithoutReplacementChecked`, `sampleWithoutReplacementCheckedFrom`

@@ -124,7 +124,7 @@ fixed-size point arrays.
 Use:
 
 - `rng.choose`, `Rng.chooseFrom`, `Rng.chooseCheckedFrom`,
-  `rng.choosePtr`, `Rng.choosePtrFrom`
+  `rng.choosePtr`, `Rng.choosePtrFrom`, `Rng.choosePtrCheckedFrom`
 - `rng.shuffle`, `Rng.shuffleFrom`
 - `seq.partialShuffle`, `seq.partialShuffleFrom`,
   `seq.partialShuffleCheckedFrom`
