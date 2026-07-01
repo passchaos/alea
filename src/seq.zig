@@ -1439,9 +1439,15 @@ test "weighted sampling without replacement returns distinct positive-weight ite
     const empty_checked_indices = try sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, u32, &.{}, 0);
     defer std.testing.allocator.free(empty_checked_indices);
     try std.testing.expectEqual(@as(usize, 0), empty_checked_indices.len);
+    const invalid_empty_checked_indices = try sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, f64, &.{std.math.nan(f64)}, 0);
+    defer std.testing.allocator.free(invalid_empty_checked_indices);
+    try std.testing.expectEqual(@as(usize, 0), invalid_empty_checked_indices.len);
     const empty_checked_sample = try sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{}, &.{1}, 0);
     defer std.testing.allocator.free(empty_checked_sample);
     try std.testing.expectEqual(@as(usize, 0), empty_checked_sample.len);
+    const invalid_empty_checked_sample = try sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, f64, &.{1}, &.{std.math.nan(f64)}, 0);
+    defer std.testing.allocator.free(invalid_empty_checked_sample);
+    try std.testing.expectEqual(@as(usize, 0), invalid_empty_checked_sample.len);
 
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndices(std.testing.allocator, rng, u32, &.{}, 1));
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesFrom(std.testing.allocator, &engine, u32, &.{}, 1));
