@@ -176,6 +176,8 @@ Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput index
 sampling. Use `sampleIndices` when a `[]usize` result is more convenient.
 Exact-capacity Floyd-style index samplers return their owned buffers without a
 post-sampling shrink allocation.
+In-place index samplers prepare their returned output before drawing, so output
+allocation failures leave the stream untouched.
 Use `Rng.weightedIndexFrom`, `Rng.sampleWithoutReplacementFrom`,
 `sampleWeightedFrom`, `Choice.iterFrom`, `WeightedChoice.iterFrom`,
 `AliasTable.sampleFrom`, and `WeightedChoice.sampleValueFrom` for weighted or

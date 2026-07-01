@@ -751,17 +751,23 @@ fn sampleFloyd(allocator: std.mem.Allocator, source: anytype, length: usize, amo
 
 fn sampleInPlace(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
     var indices = try std.ArrayList(usize).initCapacity(allocator, length);
-    errdefer indices.deinit(allocator);
+    defer indices.deinit(allocator);
     var i: usize = 0;
     while (i < length) : (i += 1) try indices.append(allocator, i);
+
+    const out: ?[]usize = if (amount == length) null else try allocator.alloc(usize, amount);
+    errdefer if (out) |items| allocator.free(items);
 
     i = 0;
     while (i < amount) : (i += 1) {
         const j = Rng.intRangeLessThanFrom(source, usize, i, length);
         std.mem.swap(usize, &indices.items[i], &indices.items[j]);
     }
-    indices.items.len = amount;
-    return indices.toOwnedSlice(allocator);
+    if (out) |items| {
+        @memcpy(items, indices.items[0..amount]);
+        return items;
+    }
+    return indices.toOwnedSliceAssert();
 }
 
 fn sampleRejection(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
@@ -830,32 +836,46 @@ fn sampleFloydU32AsUsize(allocator: std.mem.Allocator, source: anytype, length: 
 
 fn sampleInPlaceU32(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]u32 {
     var indices = try std.ArrayList(u32).initCapacity(allocator, length);
-    errdefer indices.deinit(allocator);
+    defer indices.deinit(allocator);
     var i: u32 = 0;
     while (i < length) : (i += 1) try indices.append(allocator, i);
+
+    const out_len: usize = @intCast(amount);
+    const out: ?[]u32 = if (amount == length) null else try allocator.alloc(u32, out_len);
+    errdefer if (out) |items| allocator.free(items);
 
     i = 0;
     while (i < amount) : (i += 1) {
         const j = Rng.intRangeLessThanFrom(source, u32, i, length);
         std.mem.swap(u32, &indices.items[i], &indices.items[j]);
     }
-    indices.items.len = amount;
-    return indices.toOwnedSlice(allocator);
+    if (out) |items| {
+        @memcpy(items, indices.items[0..out_len]);
+        return items;
+    }
+    return indices.toOwnedSliceAssert();
 }
 
 fn sampleInPlaceU32AsUsize(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]usize {
     var indices = try std.ArrayList(usize).initCapacity(allocator, length);
-    errdefer indices.deinit(allocator);
+    defer indices.deinit(allocator);
     var i: u32 = 0;
     while (i < length) : (i += 1) try indices.append(allocator, i);
+
+    const out_len: usize = @intCast(amount);
+    const out: ?[]usize = if (amount == length) null else try allocator.alloc(usize, out_len);
+    errdefer if (out) |items| allocator.free(items);
 
     i = 0;
     while (i < amount) : (i += 1) {
         const j = Rng.intRangeLessThanFrom(source, u32, i, length);
         std.mem.swap(usize, &indices.items[i], &indices.items[j]);
     }
-    indices.items.len = amount;
-    return indices.toOwnedSlice(allocator);
+    if (out) |items| {
+        @memcpy(items, indices.items[0..out_len]);
+        return items;
+    }
+    return indices.toOwnedSliceAssert();
 }
 
 fn sampleRejectionU32(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]u32 {
@@ -1102,6 +1122,24 @@ test "checked index sampling preserves valid-parameter stream shape" {
         }
         try std.testing.expectEqual(unchecked.next(), checked.next());
     }
+}
+
+test "in-place index output allocation failures do not consume random stream" {
+    const alea = @import("root.zig");
+
+    var usize_engine = alea.ScalarPrng.init(0x5150_1d03);
+    var usize_control = alea.ScalarPrng.init(0x5150_1d03);
+    var usize_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, sampleIndicesFrom(usize_alloc.allocator(), &usize_engine, 20, 12));
+    try std.testing.expect(usize_alloc.has_induced_failure);
+    try std.testing.expectEqual(usize_control.next(), usize_engine.next());
+
+    var u32_engine = alea.ScalarPrng.init(0x5150_1d04);
+    var u32_control = alea.ScalarPrng.init(0x5150_1d04);
+    var u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, sampleIndicesU32From(u32_alloc.allocator(), &u32_engine, 20, 12));
+    try std.testing.expect(u32_alloc.has_induced_failure);
+    try std.testing.expectEqual(u32_control.next(), u32_engine.next());
 }
 
 test "exact-capacity index samplers avoid post-sampling ownership allocation" {
