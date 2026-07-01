@@ -419,6 +419,9 @@ Reusable samplers:
 - `Frechet(T).fill`
 - `Frechet(T).fillFrom`
 - `SkewNormal(T)`
+- `SkewNormal(T).locationValue`
+- `SkewNormal(T).scaleValue`
+- `SkewNormal(T).shapeValue`
 - `SkewNormal(T).sampleFrom`
 - `SkewNormal(T).fill`
 - `SkewNormal(T).fillFrom`

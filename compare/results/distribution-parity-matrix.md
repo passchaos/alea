@@ -38,7 +38,7 @@ Zig-native way.
 | StudentT | Covered: `studentT`, `StudentT(T)` |
 | Gumbel | Covered: `gumbel`, `Gumbel(T)` |
 | Frechet | Covered: `frechet`, `Frechet(T)` |
-| SkewNormal | Covered: `skewNormal`, `SkewNormal(T)` |
+| SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter accessors |
 | Pert | Covered: `pert`, `Pert(T)`, including default-shape and mean constructors |
 | UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)` |
 | UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)` |

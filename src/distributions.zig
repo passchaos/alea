@@ -3836,6 +3836,18 @@ pub fn SkewNormal(comptime T: type) type {
             return .{ .location = location, .scale = scale, .shape = shape };
         }
 
+        pub fn locationValue(self: Self) T {
+            return self.location;
+        }
+
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
+        }
+
+        pub fn shapeValue(self: Self) T {
+            return self.shape;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -6726,6 +6738,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expectError(error.InvalidParameter, fillSkewNormalCheckedFrom(&direct_engine, f64, &direct_skew_normal_buf, 0, 0, 1));
     const skew_normal_sampler = try SkewNormal(f64).init(0, 1, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), skew_normal_sampler.locationValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), skew_normal_sampler.scaleValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), skew_normal_sampler.shapeValue(), 0);
     skew_normal_sampler.fillFrom(&direct_engine, &direct_skew_normal_buf);
     for (direct_skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
