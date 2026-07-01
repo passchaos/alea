@@ -26,6 +26,7 @@ is explicitly documented.
 | `Rng.sampleIter` / `sampleIterFrom` | `nextValue` follows the sampler's scalar `sample` / `sampleFrom` method; `fill` follows the sampler's bulk `fill` / `fillFrom` method when one exists, so high-volume iterator fills inherit each sampler's documented bulk stream policy. |
 | `Rng.fill(u8, ...)` / `Rng.bytes` | Same byte stream for fixed engine stream. |
 | `ascii.Charset` sampling | Same bytes for fixed engine stream and charset bytes. |
+| `ascii.unicodeScalarFrom`, `unicodeUtf8AllocFrom`, `unicodeUtf8IntoFrom` | Same Unicode scalars and UTF-8 bytes for fixed engine stream and requested scalar count. |
 | `seq.sampleIndicesU32`, `sampleIndexVec` with `.u32` backing | Same sampled index sequence for fixed engine stream, length, and amount. |
 
 ## Checked-in Snapshot Evidence
