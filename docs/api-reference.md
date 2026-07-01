@@ -425,6 +425,9 @@ Reusable samplers:
 - `StudentT(T).fillFrom`
 - `Triangular(T)`
 - `Triangular(T).init`
+- `Triangular(T).minValue`
+- `Triangular(T).modeValue`
+- `Triangular(T).maxValue`
 - `Triangular(T).sample`
 - `Triangular(T).sampleFrom`
 - `Triangular(T).fill`

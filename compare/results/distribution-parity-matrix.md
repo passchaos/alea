@@ -62,7 +62,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Alea distribution | Status |
 | --- | --- |
 | Beta | Covered: `beta`, `Beta(T)`, including alpha/beta accessors |
-| Triangular | Covered: `triangular`, `Triangular(T)` |
+| Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max accessors |
 | Arcsine | Covered: `arcsine`, `Arcsine(T)` |
 | Cauchy | Covered: `cauchy`, `Cauchy(T)` |
 | Laplace | Covered: `laplace`, `Laplace(T)` |
