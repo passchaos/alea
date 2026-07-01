@@ -1806,6 +1806,31 @@ test "choice sampler repeatedly samples slice references" {
     try std.testing.expectError(error.EmptyInput, chooseIterCheckedFrom(&engine, u8, &.{}));
 }
 
+test "zero-length choice fills do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_c0de);
+    var control = alea.ScalarPrng.init(0x5150_c0de);
+
+    const values = [_]u8{ 2, 4, 6, 8 };
+    const choice = Choice(u8).init(&values).?;
+    var pointer_buf: [0]*const u8 = .{};
+    choice.fillFrom(&engine, &pointer_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+    var value_buf: [0]u8 = .{};
+    choice.fillValuesFrom(&engine, &value_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const labels = [_][]const u8{ "never", "rare", "often" };
+    var weighted = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &labels, &.{ 0, 1, 7 });
+    defer weighted.deinit();
+    var weighted_pointer_buf: [0]*const []const u8 = .{};
+    weighted.fillFrom(&engine, &weighted_pointer_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+    var weighted_value_buf: [0][]const u8 = .{};
+    weighted.fillValuesFrom(&engine, &weighted_value_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "weighted choice sampler maps alias indexes to items" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(446);
