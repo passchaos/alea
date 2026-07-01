@@ -1315,6 +1315,31 @@ test "zero-count iterator samples do not read iterator or build reservoir" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "zero-count weighted iterator samples do not read iterator or build heap" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7716);
+    var control = alea.ScalarPrng.init(0x5150_7716);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const BadCountingIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            return .{ .item = 42, .weight = std.math.nan(f64) };
+        }
+    };
+
+    var iter = BadCountingIter{};
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const sample = try sampleIteratorWeightedCheckedFrom(failing.allocator(), &engine, u8, &iter, 0);
+    defer failing.allocator().free(sample);
+    try std.testing.expectEqual(@as(usize, 0), sample.len);
+    try std.testing.expectEqual(@as(usize, 0), iter.calls);
+    try std.testing.expect(!failing.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "short checked weighted iterator samples do not consume past source" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_7714);
