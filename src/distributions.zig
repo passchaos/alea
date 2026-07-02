@@ -3073,6 +3073,15 @@ pub fn Triangular(comptime T: type) type {
             return self.max;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return (self.min + self.mode + self.max) / 3;
+        }
+
+        pub fn varianceValue(self: Self) T {
+            return (self.min * self.min + self.mode * self.mode + self.max * self.max -
+                self.min * self.mode - self.min * self.max - self.mode * self.max) / 18;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8573,6 +8582,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, -1), triangular_sampler.minValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), triangular_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), triangular_sampler.maxValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), triangular_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7.0 / 18.0), triangular_sampler.varianceValue(), 1e-12);
     triangular_sampler.fillFrom(&direct_engine, &direct_triangular_buf);
     for (direct_triangular_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
     const direct_checked_triangular = try triangularCheckedFrom(&direct_engine, f64, -1, 0, 2);

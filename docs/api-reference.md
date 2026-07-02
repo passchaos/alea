@@ -503,6 +503,8 @@ Reusable samplers:
 - `Triangular(T).minValue`
 - `Triangular(T).modeValue`
 - `Triangular(T).maxValue`
+- `Triangular(T).expectedValue`
+- `Triangular(T).varianceValue`
 - `Triangular(T).sample`
 - `Triangular(T).sampleFrom`
 - `Triangular(T).fill`
