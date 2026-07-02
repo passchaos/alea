@@ -677,6 +677,7 @@ Reusable samplers:
 - `PowerFunction(T).shapeValue`
 - `PowerFunction(T).expectedValue`
 - `PowerFunction(T).varianceValue`
+- `PowerFunction(T).medianValue`
 - `PowerFunction(T).sample`
 - `PowerFunction(T).sampleFrom`
 - `PowerFunction(T).fill`
