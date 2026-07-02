@@ -265,6 +265,9 @@ Reusable samplers:
 - `Binomial.fillFrom`
 - `Multinomial`
 - `Multinomial.init`
+- `Multinomial.trialsValue`
+- `Multinomial.probabilitiesValue`
+- `Multinomial.totalProbabilityValue`
 - `Multinomial.sample`
 - `Multinomial.sampleFrom`
 - `Multinomial.sampleInto`

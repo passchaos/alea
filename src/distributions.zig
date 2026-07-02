@@ -354,6 +354,18 @@ pub const Multinomial = struct {
         };
     }
 
+    pub fn trialsValue(self: Multinomial) u64 {
+        return self.trials;
+    }
+
+    pub fn probabilitiesValue(self: Multinomial) []const f64 {
+        return self.probabilities;
+    }
+
+    pub fn totalProbabilityValue(self: Multinomial) f64 {
+        return self.total_probability;
+    }
+
     pub fn sample(self: Multinomial, allocator: std.mem.Allocator, rng: Rng) ![]u64 {
         return self.sampleFrom(allocator, rng);
     }
@@ -8545,6 +8557,9 @@ test "multinomial sampler returns category counts" {
     const rng = Rng.init(&engine);
 
     const dist = try Multinomial.init(100, &.{ 1.0, 2.0, 3.0 });
+    try std.testing.expectEqual(@as(u64, 100), dist.trialsValue());
+    try std.testing.expectEqualSlices(f64, &.{ 1.0, 2.0, 3.0 }, dist.probabilitiesValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 6), dist.totalProbabilityValue(), 1e-12);
     const counts = try dist.sample(std.testing.allocator, rng);
     defer std.testing.allocator.free(counts);
 
