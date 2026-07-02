@@ -29,7 +29,9 @@ Latest `vectorbench` evidence is tracked in `performance-triage.md` and
 - f32x8 repair probes are useful evidence in isolated `ziggurat-probe` rows,
   but the advantage does not survive the real vector-slice fill harness:
   standard repair rows match but do not beat the current direct rows, and
-  parameterized repair rows trail the current parameterized defaults.
+  parameterized repair rows trail the current parameterized defaults. FastPrng
+  repair probe rows likewise trail or only match current production rows once
+  correct stream-shape repair is required.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
   rejected lanes: prefetching candidates changes how repair consumes randomness.
 
