@@ -285,6 +285,9 @@ Reusable samplers:
 - `NegativeBinomial.fillFrom`
 - `Hypergeometric`
 - `Hypergeometric.init`
+- `Hypergeometric.populationValue`
+- `Hypergeometric.successesValue`
+- `Hypergeometric.drawsValue`
 - `Hypergeometric.sample`
 - `Hypergeometric.sampleFrom`
 - `Hypergeometric.fill`
@@ -353,6 +356,7 @@ Reusable samplers:
 - `HalfNormal(T).fillFrom`
 - `Poisson`
 - `Poisson.init`
+- `Poisson.lambdaValue`
 - `Poisson.sample`
 - `Poisson.sampleFrom`
 - `Poisson.fill`

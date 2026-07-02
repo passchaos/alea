@@ -523,6 +523,18 @@ pub const Hypergeometric = struct {
         return self;
     }
 
+    pub fn populationValue(self: Hypergeometric) u64 {
+        return self.population;
+    }
+
+    pub fn successesValue(self: Hypergeometric) u64 {
+        return self.successes;
+    }
+
+    pub fn drawsValue(self: Hypergeometric) u64 {
+        return self.draws;
+    }
+
     pub fn sample(self: *const Hypergeometric, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -1562,6 +1574,14 @@ pub const Poisson = struct {
         if (lambda == 0) return .{ .method = .zero };
         if (lambda < 12) return .{ .method = .{ .product = @exp(-lambda) } };
         return .{ .method = .{ .ahrens_dieter = PoissonAhrensDieter.init(lambda) } };
+    }
+
+    pub fn lambdaValue(self: Poisson) f64 {
+        return switch (self.method) {
+            .zero => 0,
+            .product => |threshold| -@log(threshold),
+            .ahrens_dieter => |method| method.lambda,
+        };
     }
 
     pub fn sample(self: Poisson, rng: Rng) u64 {
@@ -7751,6 +7771,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_poisson_buf) |value| try std.testing.expect(value < 64);
     try std.testing.expectError(error.InvalidParameter, fillPoissonCheckedFrom(&direct_engine, &direct_poisson_buf, std.math.inf(f64)));
     const poisson_sampler = try Poisson.init(12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), poisson_sampler.lambdaValue(), 1e-12);
     poisson_sampler.fillFrom(&direct_engine, &direct_poisson_buf);
     for (direct_poisson_buf) |value| try std.testing.expect(value < 64);
 
@@ -8605,6 +8626,9 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     try std.testing.expectEqual(@as(u64, 5), nb.successesValue());
     try std.testing.expectApproxEqAbs(@as(f64, 0.4), nb.probabilityValue(), 1e-12);
     const hg = try Hypergeometric.init(100, 30, 10);
+    try std.testing.expectEqual(@as(u64, 100), hg.populationValue());
+    try std.testing.expectEqual(@as(u64, 30), hg.successesValue());
+    try std.testing.expectEqual(@as(u64, 10), hg.drawsValue());
     const samples = 20_000;
     var nb_sum: f64 = 0;
     var hg_sum: f64 = 0;
