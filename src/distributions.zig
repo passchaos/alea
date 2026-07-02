@@ -3761,7 +3761,7 @@ pub fn VectorPoisson(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.sampler.lambdaValue() == 0) return @splat(0);
+            if (self.sampler.method == .zero) return @splat(0);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = @intCast(self.sampler.sampleFrom(source));
             return out;
@@ -3772,7 +3772,7 @@ pub fn VectorPoisson(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.lambdaValue() == 0) {
+            if (self.sampler.method == .zero) {
                 @memset(dest, @as(VectorType, @splat(0)));
                 return;
             }
