@@ -264,6 +264,8 @@ Reusable samplers:
 - `Binomial.probabilityValue`
 - `Binomial.expectedValue`
 - `Binomial.varianceValue`
+- `Binomial.minValue`
+- `Binomial.maxValue`
 - `Binomial.sample`
 - `Binomial.sampleFrom`
 - `Binomial.fill`
@@ -303,6 +305,8 @@ Reusable samplers:
 - `NegativeBinomial.probabilityValue`
 - `NegativeBinomial.expectedValue`
 - `NegativeBinomial.varianceValue`
+- `NegativeBinomial.minValue`
+- `NegativeBinomial.maxValue`
 - `NegativeBinomial.sample`
 - `NegativeBinomial.sampleFrom`
 - `NegativeBinomial.fill`
@@ -314,6 +318,8 @@ Reusable samplers:
 - `Hypergeometric.drawsValue`
 - `Hypergeometric.expectedValue`
 - `Hypergeometric.varianceValue`
+- `Hypergeometric.minValue`
+- `Hypergeometric.maxValue`
 - `Hypergeometric.sample`
 - `Hypergeometric.sampleFrom`
 - `Hypergeometric.fill`
@@ -435,6 +441,8 @@ Reusable samplers:
 - `Poisson.lambdaValue`
 - `Poisson.expectedValue`
 - `Poisson.varianceValue`
+- `Poisson.minValue`
+- `Poisson.maxValue`
 - `Poisson.sample`
 - `Poisson.sampleFrom`
 - `Poisson.fill`

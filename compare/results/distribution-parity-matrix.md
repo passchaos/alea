@@ -42,10 +42,10 @@ Zig-native way.
 | Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, range-builder constructors, builder diagnostics, and parameter/moment accessors |
 | UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)`, including geometry, coordinate-moment, and radial-moment accessors |
 | UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)`, including geometry, coordinate-moment, and radial-moment accessors |
-| Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path, and lambda/moment accessors |
-| Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper, and trials/probability/moment accessors |
+| Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path, and lambda/moment/support accessors |
+| Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper, and trials/probability/moment/support accessors |
 | Geometric / StandardGeometric | Covered: one-based `Geometric`, rand-style failure-count `GeometricFailures`, probability/moment/support accessors, and p=0.5 `StandardGeometric` fast path/accessor |
-| Hypergeometric | Covered: `Hypergeometric`, including parameter/moment accessors and HIN inverse-transform fast path for small-mode regimes; large-parameter H2PE-equivalent performance remains tracked in `performance-triage.md` |
+| Hypergeometric | Covered: `Hypergeometric`, including parameter/moment/support accessors and HIN inverse-transform fast path for small-mode regimes; large-parameter H2PE-equivalent performance remains tracked in `performance-triage.md` |
 | WeightedChoice | Covered: `WeightedChoice`, including item diagnostics, weight/probability diagnostics and exports, weight updates, single/bulk weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
 | WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `totalWeight`, `weightAt`, `probabilityAt`, and allocation-returning or caller-buffer weight/probability reconstruction |
 | WeightedTreeIndex | Covered: `WeightedTree(Weight)` for generic weights and `WeightedIntTree(Weight)` for faster unsigned integer sample/update/push/pop workloads; both expose single-weight/probability lookup plus `weights` / `weightsInto` and `probabilities` / `probabilitiesInto` export for diagnostics; `WeightedIntTree` stores subtotals in `u64` and rejects wider integer values that do not fit |
@@ -79,7 +79,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/support accessors |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance export and dimension/total-alpha accessors |
 | Multinomial | Covered: `Multinomial`, including trials/category/probability lookup/export and count moment lookup/export accessors |
-| NegativeBinomial | Covered: `NegativeBinomial`, including successes/probability/moment accessors |
+| NegativeBinomial | Covered: `NegativeBinomial`, including successes/probability/moment/support accessors |
 
 ## Explicit Out Of Scope
 

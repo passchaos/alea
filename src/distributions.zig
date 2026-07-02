@@ -271,6 +271,15 @@ pub const Binomial = struct {
         return @as(f64, @floatFromInt(self.trials)) * self.p * (1 - self.p);
     }
 
+    pub fn minValue(self: Binomial) u64 {
+        _ = self;
+        return 0;
+    }
+
+    pub fn maxValue(self: Binomial) u64 {
+        return self.trials;
+    }
+
     pub fn sample(self: Binomial, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -576,6 +585,16 @@ pub const NegativeBinomial = struct {
         return @as(f64, @floatFromInt(self.successes)) * (1 - self.p) / (self.p * self.p);
     }
 
+    pub fn minValue(self: NegativeBinomial) u64 {
+        _ = self;
+        return 0;
+    }
+
+    pub fn maxValue(self: NegativeBinomial) ?u64 {
+        _ = self;
+        return null;
+    }
+
     pub fn sample(self: NegativeBinomial, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -689,6 +708,15 @@ pub const Hypergeometric = struct {
         const draws: f64 = @floatFromInt(self.draws);
         const p = successes / population;
         return draws * p * (1 - p) * (population - draws) / (population - 1);
+    }
+
+    pub fn minValue(self: Hypergeometric) u64 {
+        const failures = self.population - self.successes;
+        return if (self.draws > failures) self.draws - failures else 0;
+    }
+
+    pub fn maxValue(self: Hypergeometric) u64 {
+        return @min(self.successes, self.draws);
     }
 
     pub fn sample(self: *const Hypergeometric, rng: Rng) u64 {
@@ -2000,6 +2028,15 @@ pub const Poisson = struct {
 
     pub fn varianceValue(self: Poisson) f64 {
         return self.lambdaValue();
+    }
+
+    pub fn minValue(self: Poisson) u64 {
+        _ = self;
+        return 0;
+    }
+
+    pub fn maxValue(self: Poisson) ?u64 {
+        return if (self.lambdaValue() == 0) 0 else null;
     }
 
     pub fn sample(self: Poisson, rng: Rng) u64 {
@@ -7534,6 +7571,8 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), binomial_sampler.probabilityValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5), binomial_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2.5), binomial_sampler.varianceValue(), 1e-12);
+    try std.testing.expectEqual(@as(u64, 0), binomial_sampler.minValue());
+    try std.testing.expectEqual(@as(u64, 10), binomial_sampler.maxValue());
     binomial_sampler.fillFrom(&direct_bernoulli_engine, &binomial_buf);
     for (binomial_buf) |value| try std.testing.expect(value <= 10);
     try std.testing.expect(exponential(rng, f64, 2) >= 0);
@@ -9202,6 +9241,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 12), poisson_sampler.lambdaValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 12), poisson_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 12), poisson_sampler.varianceValue(), 1e-12);
+    try std.testing.expectEqual(@as(u64, 0), poisson_sampler.minValue());
+    try std.testing.expect(poisson_sampler.maxValue() == null);
+    try std.testing.expectEqual(@as(u64, 0), (try Poisson.init(0)).maxValue().?);
     poisson_sampler.fillFrom(&direct_engine, &direct_poisson_buf);
     for (direct_poisson_buf) |value| try std.testing.expect(value < 64);
 
@@ -10261,12 +10303,19 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.4), nb.probabilityValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 7.5), nb.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 18.75), nb.varianceValue(), 1e-12);
+    try std.testing.expectEqual(@as(u64, 0), nb.minValue());
+    try std.testing.expect(nb.maxValue() == null);
     const hg = try Hypergeometric.init(100, 30, 10);
     try std.testing.expectEqual(@as(u64, 100), hg.populationValue());
     try std.testing.expectEqual(@as(u64, 30), hg.successesValue());
     try std.testing.expectEqual(@as(u64, 10), hg.drawsValue());
     try std.testing.expectApproxEqAbs(@as(f64, 3), hg.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 21.0 / 11.0), hg.varianceValue(), 1e-12);
+    try std.testing.expectEqual(@as(u64, 0), hg.minValue());
+    try std.testing.expectEqual(@as(u64, 10), hg.maxValue());
+    const constrained_hg = try Hypergeometric.init(10, 7, 6);
+    try std.testing.expectEqual(@as(u64, 3), constrained_hg.minValue());
+    try std.testing.expectEqual(@as(u64, 6), constrained_hg.maxValue());
     const samples = 20_000;
     var nb_sum: f64 = 0;
     var hg_sum: f64 = 0;
