@@ -119,6 +119,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorPowerFunction f64x4", lanes / 2, 0xd384, fillDistPowerFunctionF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorPowerFunction f64x4 direct", lanes / 2, 0xd384, fillDistPowerFunctionF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorPowerFunction.fill f64x4", lanes / 2, 0xd384, fillDistPowerFunctionSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorRayleigh f64x4", lanes / 2, 0xd394, fillDistRayleighF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorRayleigh f64x4 direct", lanes / 2, 0xd394, fillDistRayleighF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorRayleigh.fill f64x4", lanes / 2, 0xd394, fillDistRayleighSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -940,6 +943,19 @@ fn fillDistPowerFunctionF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: [
 
 fn fillDistPowerFunctionSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorPowerFunction(@Vector(4, f64)).init(-1, 2, 3) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistRayleighF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorRayleigh(rng, @Vector(4, f64), dest, 2);
+}
+
+fn fillDistRayleighF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorRayleighFrom(engine, @Vector(4, f64), dest, 2);
+}
+
+fn fillDistRayleighSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorRayleigh(@Vector(4, f64)).init(2) catch unreachable;
     sampler.fill(rng, dest);
 }
 

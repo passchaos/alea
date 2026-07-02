@@ -320,6 +320,10 @@ Single-shot helpers:
   `fillVectorPowerFunctionCheckedFrom`, `rayleigh`, `rayleighFrom`, `rayleighChecked`,
   `rayleighCheckedFrom`, `fillRayleigh`,
   `fillRayleighFrom`, `fillRayleighChecked`, `fillRayleighCheckedFrom`,
+  `vectorRayleigh`, `vectorRayleighFrom`, `vectorRayleighChecked`,
+  `vectorRayleighCheckedFrom`, `fillVectorRayleigh`,
+  `fillVectorRayleighFrom`, `fillVectorRayleighChecked`,
+  `fillVectorRayleighCheckedFrom`,
   `maxwell`, `maxwellFrom`, `maxwellChecked`,
   `maxwellCheckedFrom`, `fillMaxwell`,
   `fillMaxwellFrom`, `fillMaxwellChecked`, `fillMaxwellCheckedFrom`,
@@ -1197,6 +1201,19 @@ Reusable samplers:
 - `Rayleigh(T).sampleFrom`
 - `Rayleigh(T).fill`
 - `Rayleigh(T).fillFrom`
+- `VectorRayleigh(VectorType)`
+- `VectorRayleigh(VectorType).init`
+- `VectorRayleigh(VectorType).scaleValue`
+- `VectorRayleigh(VectorType).expectedValue`
+- `VectorRayleigh(VectorType).varianceValue`
+- `VectorRayleigh(VectorType).medianValue`
+- `VectorRayleigh(VectorType).modeValue`
+- `VectorRayleigh(VectorType).minValue`
+- `VectorRayleigh(VectorType).maxValue`
+- `VectorRayleigh(VectorType).sample`
+- `VectorRayleigh(VectorType).sampleFrom`
+- `VectorRayleigh(VectorType).fill`
+- `VectorRayleigh(VectorType).fillFrom`
 - `Maxwell(T)`
 - `Maxwell(T).init`
 - `Maxwell(T).scaleValue`

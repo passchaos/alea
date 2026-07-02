@@ -7649,6 +7649,109 @@ pub fn fillRayleighCheckedFrom(source: anytype, comptime T: type, dest: []T, sca
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorRayleigh(rng: Rng, comptime VectorType: type, scale: vectorChild(VectorType)) VectorType {
+    return vectorRayleighFrom(rng, VectorType, scale);
+}
+
+pub fn vectorRayleighFrom(source: anytype, comptime VectorType: type, scale: vectorChild(VectorType)) VectorType {
+    const sampler = VectorRayleigh(VectorType).init(scale) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorRayleighChecked(rng: Rng, comptime VectorType: type, scale: vectorChild(VectorType)) Error!VectorType {
+    return vectorRayleighCheckedFrom(rng, VectorType, scale);
+}
+
+pub fn vectorRayleighCheckedFrom(source: anytype, comptime VectorType: type, scale: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorRayleigh(VectorType).init(scale);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorRayleigh(rng: Rng, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) void {
+    fillVectorRayleighFrom(rng, VectorType, dest, scale);
+}
+
+pub fn fillVectorRayleighFrom(source: anytype, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) void {
+    const sampler = VectorRayleigh(VectorType).init(scale) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorRayleighChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) Error!void {
+    return fillVectorRayleighCheckedFrom(rng, VectorType, dest, scale);
+}
+
+pub fn fillVectorRayleighCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorRayleigh(VectorType).init(scale);
+    sampler.fillFrom(source, dest);
+}
+
+fn rayleighFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, scale: vectorChild(VectorType)) VectorType {
+    const scale_vec: VectorType = @splat(scale);
+    const neg_two_vec: VectorType = @splat(-2.0);
+    return scale_vec * @sqrt(neg_two_vec * @log(uniform_vec));
+}
+
+pub fn VectorRayleigh(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Rayleigh(Child),
+
+        pub fn init(scale: Child) Error!Self {
+            return .{ .sampler = try Rayleigh(Child).init(scale) };
+        }
+
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+            return rayleighFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Rayleigh(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -12826,6 +12929,39 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(power_function_sqrt_vec[lane] >= -1 and power_function_sqrt_vec[lane] <= 2);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const rayleigh_vec = try vectorRayleighChecked(rng, @Vector(4, f64), 2);
+    const direct_rayleigh_vec = try vectorRayleighCheckedFrom(&direct_engine, @Vector(4, f64), 2);
+    try std.testing.expectEqual(rayleigh_vec, direct_rayleigh_vec);
+    inline for (0..4) |lane| try std.testing.expect(rayleigh_vec[lane] >= 0 and std.math.isFinite(rayleigh_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_rayleigh_sampler = try VectorRayleigh(@Vector(4, f64)).init(2);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_rayleigh_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(@as(f64, @floatCast(std.math.pi)) / 2), vector_rayleigh_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4) * (4 - @as(f64, @floatCast(std.math.pi))) / 2, vector_rayleigh_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(2 * @log(@as(f64, 2))), vector_rayleigh_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_rayleigh_sampler.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_rayleigh_sampler.minValue(), 0);
+    try std.testing.expect(vector_rayleigh_sampler.maxValue() == null);
+    const sampled_rayleigh_vec = vector_rayleigh_sampler.sample(rng);
+    const direct_sampled_rayleigh_vec = vector_rayleigh_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_rayleigh_vec, direct_sampled_rayleigh_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_rayleigh_vec[lane] >= 0 and std.math.isFinite(sampled_rayleigh_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var rayleigh_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_rayleigh_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorRayleighChecked(rng, @Vector(4, f64), &rayleigh_buf_vec, 2);
+    try fillVectorRayleighCheckedFrom(&direct_engine, @Vector(4, f64), &direct_rayleigh_buf_vec, 2);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &rayleigh_buf_vec, &direct_rayleigh_buf_vec);
+    for (rayleigh_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_rayleigh_sampler.fill(rng, &rayleigh_buf_vec);
+    vector_rayleigh_sampler.fillFrom(&direct_engine, &direct_rayleigh_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &rayleigh_buf_vec, &direct_rayleigh_buf_vec);
+    for (rayleigh_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -12965,6 +13101,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorPowerFunctionCheckedFrom(&engine, @Vector(4, f64), -1, 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorRayleighCheckedFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -13027,6 +13166,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorPowerFunctionCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, -1, 2, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorRayleighCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -13120,6 +13262,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorPowerFunctionCheckedFrom(&engine, @Vector(4, f64), &empty, -1, 2, 0);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorRayleighCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -13161,6 +13305,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorKumaraswamyChecked(rng, @Vector(4, f64), &empty, 0, 5);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorPowerFunctionChecked(rng, @Vector(4, f64), &empty, -1, 2, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorRayleighChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16000,6 +16146,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorPowerFunctionFrom(&unchecked, @Vector(4, f64), &vector_power_function_unchecked, -1, 2, 3);
         try fillVectorPowerFunctionCheckedFrom(&checked, @Vector(4, f64), &vector_power_function_checked, -1, 2, 3);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_power_function_unchecked, &vector_power_function_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_rayleigh_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_rayleigh_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorRayleighFrom(&unchecked, @Vector(4, f64), &vector_rayleigh_unchecked, 2);
+        try fillVectorRayleighCheckedFrom(&checked, @Vector(4, f64), &vector_rayleigh_checked, 2);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_rayleigh_unchecked, &vector_rayleigh_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;
