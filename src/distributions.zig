@@ -4908,6 +4908,104 @@ pub fn fillErlangCheckedFrom(source: anytype, comptime T: type, dest: []T, shape
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorErlang(rng: Rng, comptime VectorType: type, shape: u64, scale: vectorChild(VectorType)) VectorType {
+    return vectorErlangFrom(rng, VectorType, shape, scale);
+}
+
+pub fn vectorErlangFrom(source: anytype, comptime VectorType: type, shape: u64, scale: vectorChild(VectorType)) VectorType {
+    const sampler = VectorErlang(VectorType).init(shape, scale) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorErlangChecked(rng: Rng, comptime VectorType: type, shape: u64, scale: vectorChild(VectorType)) Error!VectorType {
+    return vectorErlangCheckedFrom(rng, VectorType, shape, scale);
+}
+
+pub fn vectorErlangCheckedFrom(source: anytype, comptime VectorType: type, shape: u64, scale: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorErlang(VectorType).init(shape, scale);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorErlang(rng: Rng, comptime VectorType: type, dest: []VectorType, shape: u64, scale: vectorChild(VectorType)) void {
+    fillVectorErlangFrom(rng, VectorType, dest, shape, scale);
+}
+
+pub fn fillVectorErlangFrom(source: anytype, comptime VectorType: type, dest: []VectorType, shape: u64, scale: vectorChild(VectorType)) void {
+    const sampler = VectorErlang(VectorType).init(shape, scale) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorErlangChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, shape: u64, scale: vectorChild(VectorType)) Error!void {
+    return fillVectorErlangCheckedFrom(rng, VectorType, dest, shape, scale);
+}
+
+pub fn fillVectorErlangCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, shape: u64, scale: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorErlang(VectorType).init(shape, scale);
+    sampler.fillFrom(source, dest);
+}
+
+pub fn VectorErlang(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Erlang(Child),
+
+        pub fn init(shape: u64, scale: Child) Error!Self {
+            return .{ .sampler = try Erlang(Child).init(shape, scale) };
+        }
+
+        pub fn shapeValue(self: Self) u64 {
+            return self.sampler.shapeValue();
+        }
+
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Erlang(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -11135,6 +11233,39 @@ test "distribution vector helpers preserve support and stream shape" {
     for (chi_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const erlang_vec = try vectorErlangChecked(rng, @Vector(4, f64), 3, 2);
+    const direct_erlang_vec = try vectorErlangCheckedFrom(&direct_engine, @Vector(4, f64), 3, 2);
+    try std.testing.expectEqual(erlang_vec, direct_erlang_vec);
+    inline for (0..4) |lane| try std.testing.expect(erlang_vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_erlang_sampler = try VectorErlang(@Vector(4, f64)).init(3, 2);
+    try std.testing.expectEqual(@as(u64, 3), vector_erlang_sampler.shapeValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_erlang_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 6), vector_erlang_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), vector_erlang_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), vector_erlang_sampler.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_erlang_sampler.minValue(), 0);
+    try std.testing.expect(vector_erlang_sampler.maxValue() == null);
+    const sampled_erlang_vec = vector_erlang_sampler.sample(rng);
+    const direct_sampled_erlang_vec = vector_erlang_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_erlang_vec, direct_sampled_erlang_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_erlang_vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var erlang_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_erlang_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorErlangChecked(rng, @Vector(4, f64), &erlang_buf_vec, 3, 2);
+    try fillVectorErlangCheckedFrom(&direct_engine, @Vector(4, f64), &direct_erlang_buf_vec, 3, 2);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &erlang_buf_vec, &direct_erlang_buf_vec);
+    for (erlang_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_erlang_sampler.fill(rng, &erlang_buf_vec);
+    vector_erlang_sampler.fillFrom(&direct_engine, &direct_erlang_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &erlang_buf_vec, &direct_erlang_buf_vec);
+    for (erlang_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -11238,6 +11369,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorChiCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorErlangCheckedFrom(&engine, @Vector(4, f64), 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -11264,6 +11398,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorChiCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorErlangCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -11333,6 +11470,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorChiCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorErlangCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -11350,6 +11489,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorChiSquaredChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorChiChecked(rng, @Vector(4, f64), &empty, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorErlangChecked(rng, @Vector(4, f64), &empty, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -12613,6 +12754,35 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(try chiCheckedFrom(&direct_engine, f64, 4) > 0);
     try std.testing.expectError(error.InvalidParameter, chiCheckedFrom(&direct_engine, f64, 0));
     for (direct_chi_buf) |value| try std.testing.expect(value > 0);
+
+    const erlang_vec = try vectorErlangChecked(rng, @Vector(4, f64), 3, 2);
+    const direct_erlang_vec = try vectorErlangCheckedFrom(&direct_engine, @Vector(4, f64), 3, 2);
+    inline for (0..4) |lane| try std.testing.expect(erlang_vec[lane] > 0);
+    inline for (0..4) |lane| try std.testing.expect(direct_erlang_vec[lane] > 0);
+
+    const vector_erlang_sampler = try VectorErlang(@Vector(4, f64)).init(3, 2);
+    try std.testing.expectEqual(@as(u64, 3), vector_erlang_sampler.shapeValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_erlang_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 6), vector_erlang_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), vector_erlang_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), vector_erlang_sampler.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_erlang_sampler.minValue(), 0);
+    try std.testing.expect(vector_erlang_sampler.maxValue() == null);
+    const sampled_erlang_vec = vector_erlang_sampler.sample(rng);
+    const direct_sampled_erlang_vec = vector_erlang_sampler.sampleFrom(&direct_engine);
+    inline for (0..4) |lane| try std.testing.expect(sampled_erlang_vec[lane] > 0);
+    inline for (0..4) |lane| try std.testing.expect(direct_sampled_erlang_vec[lane] > 0);
+
+    var erlang_vec_buf: [3]@Vector(4, f64) = undefined;
+    var direct_erlang_vec_buf: [3]@Vector(4, f64) = undefined;
+    try fillVectorErlangChecked(rng, @Vector(4, f64), &erlang_vec_buf, 3, 2);
+    try fillVectorErlangCheckedFrom(&direct_engine, @Vector(4, f64), &direct_erlang_vec_buf, 3, 2);
+    for (erlang_vec_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
+    for (direct_erlang_vec_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
+    vector_erlang_sampler.fill(rng, &erlang_vec_buf);
+    vector_erlang_sampler.fillFrom(&direct_engine, &direct_erlang_vec_buf);
+    for (erlang_vec_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
+    for (direct_erlang_vec_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
 
     var erlangs = rng.sampleIter(f64, try Erlang(f64).init(3, 2));
     try std.testing.expect(erlangs.next().? > 0);
@@ -14076,6 +14246,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorChiFrom(&unchecked, @Vector(4, f64), &vector_chi_unchecked, 4);
         try fillVectorChiCheckedFrom(&checked, @Vector(4, f64), &vector_chi_checked, 4);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_chi_unchecked, &vector_chi_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_erlang_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_erlang_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorErlangFrom(&unchecked, @Vector(4, f64), &vector_erlang_unchecked, 3, 2);
+        try fillVectorErlangCheckedFrom(&checked, @Vector(4, f64), &vector_erlang_checked, 3, 2);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_erlang_unchecked, &vector_erlang_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

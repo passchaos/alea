@@ -83,6 +83,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorChi f64x4", lanes / 16, 0xd2c4, fillDistChiF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorChi f64x4 direct", lanes / 16, 0xd2c4, fillDistChiF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorChi.fill f64x4", lanes / 16, 0xd2c4, fillDistChiSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorErlang f64x4", lanes / 16, 0xd2d4, fillDistErlangF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorErlang f64x4 direct", lanes / 16, 0xd2d4, fillDistErlangF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorErlang.fill f64x4", lanes / 16, 0xd2d4, fillDistErlangSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -748,6 +751,19 @@ fn fillDistChiF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4
 
 fn fillDistChiSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorChi(@Vector(4, f64)).init(4) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistErlangF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorErlang(rng, @Vector(4, f64), dest, 3, 2);
+}
+
+fn fillDistErlangF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorErlangFrom(engine, @Vector(4, f64), dest, 3, 2);
+}
+
+fn fillDistErlangSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorErlang(@Vector(4, f64)).init(3, 2) catch unreachable;
     sampler.fill(rng, dest);
 }
 

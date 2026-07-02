@@ -243,7 +243,10 @@ Single-shot helpers:
   `fillVectorChiChecked`, `fillVectorChiCheckedFrom`,
   `erlang`, `erlangFrom`, `erlangChecked`,
   `erlangCheckedFrom`, `fillErlang`, `fillErlangFrom`,
-  `fillErlangChecked`, `fillErlangCheckedFrom`, `beta`, `betaFrom`,
+  `fillErlangChecked`, `fillErlangCheckedFrom`, `vectorErlang`,
+  `vectorErlangFrom`, `vectorErlangChecked`, `vectorErlangCheckedFrom`,
+  `fillVectorErlang`, `fillVectorErlangFrom`, `fillVectorErlangChecked`,
+  `fillVectorErlangCheckedFrom`, `beta`, `betaFrom`,
   `betaChecked`, `betaCheckedFrom`, `fillBeta`, `fillBetaFrom`,
   `fillBetaChecked`, `fillBetaCheckedFrom`, `fisherF`, `fisherFFrom`,
   `fisherFChecked`, `fisherFCheckedFrom`, `fillFisherF`,
@@ -849,6 +852,19 @@ Reusable samplers:
 - `Erlang(T).sampleFrom`
 - `Erlang(T).fill`
 - `Erlang(T).fillFrom`
+- `VectorErlang(VectorType)`
+- `VectorErlang(VectorType).init`
+- `VectorErlang(VectorType).shapeValue`
+- `VectorErlang(VectorType).scaleValue`
+- `VectorErlang(VectorType).expectedValue`
+- `VectorErlang(VectorType).varianceValue`
+- `VectorErlang(VectorType).modeValue`
+- `VectorErlang(VectorType).minValue`
+- `VectorErlang(VectorType).maxValue`
+- `VectorErlang(VectorType).sample`
+- `VectorErlang(VectorType).sampleFrom`
+- `VectorErlang(VectorType).fill`
+- `VectorErlang(VectorType).fillFrom`
 - `Beta(T)`
 - `Beta(T).init`
 - `Beta(T).alphaValue`
