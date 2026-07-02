@@ -45,6 +45,10 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   136-141M. Keep the scalar f64 transform loop as the default.
 - Indexing through the destination slice in a `while` loop is mixed and
   regresses the FastPrng f64 profile, so pointer iteration remains the default.
+- Out-of-place exact transforms using a temporary normal buffer are mixed in the
+  isolated probe and only produce small wins in some ScalarPrng rows while tying
+  or trailing current rows elsewhere; the added copy/buffer shape is not a
+  durable production default.
 - Prefetching ahead in the exact `@exp` transform loop is mixed in the isolated
   probe and does not survive a production `fillLogNormal` retry as a durable
   no-regression win, so no prefetching is used in the default transform loops.
@@ -96,7 +100,12 @@ Fresh local evidence:
   ScalarPrng; older focused rows showed approx peaks around 143M/150M. A later
   exact widened f64-`@exp` probe row was slower than exact f32 `@exp`: about
   124M versus 138M FastPrng and about 130M versus 144M ScalarPrng in the same
-  run, despite max 1 ULP difference at `stddev=0.25`, `1.0`, and `2.0`.
+  run, despite max 1 ULP difference at `stddev=0.25`, `1.0`, and `2.0`. The
+  same 1Mi probe's out-of-place temporary-buffer exact transform was mixed:
+  f64 FastPrng tied staged scalar around 134M, f64 ScalarPrng moved about
+  140M to 142M, f32 FastPrng moved about 138M to 139M, and f32 ScalarPrng moved
+  about 145M to 146M; this is not enough to justify replacing the simpler
+  in-place production transform without a real-harness no-regression result.
 - The same probe reports max 1 ULP at `stddev=0.25`, but max 51 ULP at
   `stddev=1.0` and 8028 ULP at `stddev=2.0`, which is why the public
   approximation is parameter-bounded.
