@@ -11644,6 +11644,7 @@ pub fn AliasTable(comptime Weight: type) type {
         prob: []f64,
         alias: []usize,
         total: f64,
+        constant_index: ?usize = null,
         allocator: std.mem.Allocator,
 
         pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
@@ -11662,7 +11663,9 @@ pub fn AliasTable(comptime Weight: type) type {
             defer large.deinit(allocator);
 
             var total: f64 = 0;
-            for (input_weights) |weight| {
+            var positive_index: ?usize = null;
+            var positive_count: usize = 0;
+            for (input_weights, 0..) |weight, index| {
                 const value: f64 = switch (@typeInfo(Weight)) {
                     .int => @floatFromInt(weight),
                     .float => @floatCast(weight),
@@ -11670,6 +11673,10 @@ pub fn AliasTable(comptime Weight: type) type {
                 };
                 if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
                 total += value;
+                if (value > 0) {
+                    positive_index = index;
+                    positive_count += 1;
+                }
             }
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
 
@@ -11712,6 +11719,7 @@ pub fn AliasTable(comptime Weight: type) type {
                 .prob = prob,
                 .alias = alias,
                 .total = total,
+                .constant_index = if (positive_count == 1) positive_index else null,
                 .allocator = allocator,
             };
         }
@@ -11731,6 +11739,7 @@ pub fn AliasTable(comptime Weight: type) type {
             self.prob = next.prob;
             self.alias = next.alias;
             self.total = next.total;
+            self.constant_index = next.constant_index;
         }
 
         pub fn len(self: Self) usize {
@@ -11794,6 +11803,7 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) usize {
+            if (self.constant_index) |index| return index;
             const column = Rng.uintLessThanFrom(source, usize, self.prob.len);
             return if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column];
         }
@@ -11803,6 +11813,10 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
+            if (self.constant_index) |index| {
+                @memset(dest, index);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -13202,6 +13216,35 @@ test "zero-length alias table fills do not consume random stream" {
     table.fill(rng, &empty);
     try std.testing.expectEqual(control.next(), engine.next());
     table.fillFrom(&engine, &empty);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "single-positive alias table does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a11c);
+    var control = alea.ScalarPrng.init(0x5150_a11c);
+    const rng = Rng.init(&engine);
+
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 0, 0, 5, 0 });
+    defer table.deinit();
+
+    try std.testing.expectEqual(@as(usize, 2), table.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(usize, 2), table.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [5]usize = undefined;
+    table.fillFrom(&engine, &out);
+    for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    table.fill(rng, &out);
+    for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try table.update(&.{ 0, 7, 0, 0 });
+    try std.testing.expectEqual(@as(usize, 1), table.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

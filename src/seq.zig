@@ -2310,6 +2310,36 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expect(failing.has_induced_failure);
 }
 
+test "single-positive weighted choice does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_0445);
+    var control = alea.ScalarPrng.init(0x5150_0445);
+
+    const items = [_]u8{ 10, 20, 30 };
+    var choice = try WeightedChoice(u8, u32).init(std.testing.allocator, &items, &.{ 0, 5, 0 });
+    defer choice.deinit();
+
+    try std.testing.expectEqual(@as(u8, 20), choice.sampleFrom(&engine).*);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u8, 20), choice.sampleValueFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var pointer_buf: [4]*const u8 = undefined;
+    choice.fillFrom(&engine, &pointer_buf);
+    for (pointer_buf) |item| try std.testing.expectEqual(@as(u8, 20), item.*);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var value_buf: [4]u8 = undefined;
+    choice.fillValuesFrom(&engine, &value_buf);
+    for (value_buf) |item| try std.testing.expectEqual(@as(u8, 20), item);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try choice.update(&.{ 0, 0, 7 });
+    try std.testing.expectEqual(@as(u8, 30), choice.sampleValueFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "weighted choice update rejects invalid float weights without replacing table" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_0446);
