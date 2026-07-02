@@ -5234,6 +5234,14 @@ pub fn Dirichlet(comptime T: type) type {
             return alpha_i * (alpha_0 - alpha_i) / (alpha_0 * alpha_0 * (alpha_0 + 1));
         }
 
+        pub fn covarianceAt(self: Self, i: usize, j: usize) Error!T {
+            if (i == j) return self.varianceAt(i);
+            const alpha_i = try self.alphaAt(i);
+            const alpha_j = try self.alphaAt(j);
+            const alpha_0 = self.totalAlphaValue();
+            return -(alpha_i * alpha_j) / (alpha_0 * alpha_0 * (alpha_0 + 1));
+        }
+
         pub fn dimensionValue(self: Self) usize {
             return self.alpha.len;
         }
@@ -9202,9 +9210,12 @@ test "dirichlet sampler returns simplex vectors" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), try dist.alphaAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 6.0), try dist.meanAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 63.0), try dist.varianceAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.0 / 126.0), try dist.covarianceAt(0, 1), 1e-12);
+    try std.testing.expectApproxEqAbs(try dist.varianceAt(1), try dist.covarianceAt(1, 1), 1e-12);
     try std.testing.expectError(error.InvalidParameter, dist.alphaAt(3));
     try std.testing.expectError(error.InvalidParameter, dist.meanAt(3));
     try std.testing.expectError(error.InvalidParameter, dist.varianceAt(3));
+    try std.testing.expectError(error.InvalidParameter, dist.covarianceAt(0, 3));
     try std.testing.expectEqual(@as(usize, 3), dist.dimensionValue());
     try std.testing.expectApproxEqAbs(@as(f64, 6), dist.totalAlphaValue(), 1e-12);
     const sample = try dist.sample(std.testing.allocator, rng);
