@@ -4888,6 +4888,16 @@ pub fn Zipf(comptime T: type) type {
             return .{ .exponent = exponent, .t = t, .q = q };
         }
 
+        pub fn nValue(self: Self) ?T {
+            if (std.math.isInf(self.exponent)) return null;
+            if (self.exponent == 1) return @exp(self.t - 1);
+            return std.math.pow(T, self.t * (1 - self.exponent) + self.exponent, self.q);
+        }
+
+        pub fn exponentValue(self: Self) T {
+            return self.exponent;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -4977,6 +4987,10 @@ pub fn Zeta(comptime T: type) type {
                 .exponent_minus_one = exponent_minus_one,
                 .b = std.math.pow(T, 2, exponent_minus_one),
             };
+        }
+
+        pub fn exponentValue(self: Self) T {
+            return self.exponent_minus_one + 1;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -8844,7 +8858,17 @@ test "inverse-gaussian and rank samplers have plausible behavior" {
     try std.testing.expect(try zetaCheckedFrom(&direct_engine, f64, 3) >= 1);
     try std.testing.expectError(error.InvalidParameter, zetaCheckedFrom(&direct_engine, f64, 1));
 
+    const zipf_sampler = try Zipf(f64).init(10, 1.5);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), zipf_sampler.nValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.5), zipf_sampler.exponentValue(), 1e-12);
+    const harmonic_zipf = try Zipf(f64).init(12, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), harmonic_zipf.nValue().?, 1e-12);
+    const zeta_sampler = try Zeta(f64).init(3);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), zeta_sampler.exponentValue(), 1e-12);
+
     const high_exponent = try Zipf(f64).init(10, std.math.inf(f64));
+    try std.testing.expect(high_exponent.nValue() == null);
+    try std.testing.expect(std.math.isInf(high_exponent.exponentValue()));
     try std.testing.expectEqual(@as(f64, 1), high_exponent.sample(rng));
 }
 

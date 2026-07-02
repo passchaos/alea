@@ -592,12 +592,15 @@ Reusable samplers:
 - `NormalInverseGaussian(T).fillFrom`
 - `Zipf(T)`
 - `Zipf(T).init`
+- `Zipf(T).nValue`
+- `Zipf(T).exponentValue`
 - `Zipf(T).sample`
 - `Zipf(T).sampleFrom`
 - `Zipf(T).fill`
 - `Zipf(T).fillFrom`
 - `Zeta(T)`
 - `Zeta(T).init`
+- `Zeta(T).exponentValue`
 - `Zeta(T).sample`
 - `Zeta(T).sampleFrom`
 - `Zeta(T).fill`
