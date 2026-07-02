@@ -523,6 +523,8 @@ Reusable samplers:
 - `Cauchy(T).init`
 - `Cauchy(T).medianValue`
 - `Cauchy(T).scaleValue`
+- `Cauchy(T).expectedValue`
+- `Cauchy(T).varianceValue`
 - `Cauchy(T).sample`
 - `Cauchy(T).sampleFrom`
 - `Cauchy(T).fill`
