@@ -733,6 +733,8 @@ Reusable samplers:
 - `UnitCircle(T).isSurface`
 - `UnitCircle(T).coordinateExpectedValue`
 - `UnitCircle(T).coordinateVarianceValue`
+- `UnitCircle(T).radialExpectedValue`
+- `UnitCircle(T).radialVarianceValue`
 - `UnitCircle(T).sample`
 - `UnitCircle(T).sampleFrom`
 - `UnitCircle(T).fill`
@@ -743,6 +745,8 @@ Reusable samplers:
 - `UnitDisc(T).isSurface`
 - `UnitDisc(T).coordinateExpectedValue`
 - `UnitDisc(T).coordinateVarianceValue`
+- `UnitDisc(T).radialExpectedValue`
+- `UnitDisc(T).radialVarianceValue`
 - `UnitDisc(T).sample`
 - `UnitDisc(T).sampleFrom`
 - `UnitDisc(T).fill`
@@ -753,6 +757,8 @@ Reusable samplers:
 - `UnitSphere(T).isSurface`
 - `UnitSphere(T).coordinateExpectedValue`
 - `UnitSphere(T).coordinateVarianceValue`
+- `UnitSphere(T).radialExpectedValue`
+- `UnitSphere(T).radialVarianceValue`
 - `UnitSphere(T).sample`
 - `UnitSphere(T).sampleFrom`
 - `UnitSphere(T).fill`
@@ -763,6 +769,8 @@ Reusable samplers:
 - `UnitBall(T).isSurface`
 - `UnitBall(T).coordinateExpectedValue`
 - `UnitBall(T).coordinateVarianceValue`
+- `UnitBall(T).radialExpectedValue`
+- `UnitBall(T).radialVarianceValue`
 - `UnitBall(T).sample`
 - `UnitBall(T).sampleFrom`
 - `UnitBall(T).fill`
