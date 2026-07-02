@@ -6625,6 +6625,114 @@ pub fn fillLogisticCheckedFrom(source: anytype, comptime T: type, dest: []T, loc
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorLogistic(rng: Rng, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    return vectorLogisticFrom(rng, VectorType, location, scale);
+}
+
+pub fn vectorLogisticFrom(source: anytype, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    const sampler = VectorLogistic(VectorType).init(location, scale) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorLogisticChecked(rng: Rng, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!VectorType {
+    return vectorLogisticCheckedFrom(rng, VectorType, location, scale);
+}
+
+pub fn vectorLogisticCheckedFrom(source: anytype, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorLogistic(VectorType).init(location, scale);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorLogistic(rng: Rng, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
+    fillVectorLogisticFrom(rng, VectorType, dest, location, scale);
+}
+
+pub fn fillVectorLogisticFrom(source: anytype, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
+    const sampler = VectorLogistic(VectorType).init(location, scale) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorLogisticChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!void {
+    return fillVectorLogisticCheckedFrom(rng, VectorType, dest, location, scale);
+}
+
+pub fn fillVectorLogisticCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorLogistic(VectorType).init(location, scale);
+    sampler.fillFrom(source, dest);
+}
+
+fn logisticFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    const location_vec: VectorType = @splat(location);
+    const scale_vec: VectorType = @splat(scale);
+    const one_vec: VectorType = @splat(1);
+    return location_vec + scale_vec * @log(uniform_vec / (one_vec - uniform_vec));
+}
+
+pub fn VectorLogistic(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Logistic(Child),
+
+        pub fn init(location: Child, scale: Child) Error!Self {
+            return .{ .sampler = try Logistic(Child).init(location, scale) };
+        }
+
+        pub fn locationValue(self: Self) Child {
+            return self.sampler.locationValue();
+        }
+
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn minValue(self: Self) ?Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+            return logisticFromOpenUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Logistic(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -12203,6 +12311,40 @@ test "distribution vector helpers preserve support and stream shape" {
     for (laplace_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const logistic_vec = try vectorLogisticChecked(rng, @Vector(4, f64), 0, 1);
+    const direct_logistic_vec = try vectorLogisticCheckedFrom(&direct_engine, @Vector(4, f64), 0, 1);
+    try std.testing.expectEqual(logistic_vec, direct_logistic_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(logistic_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_logistic_sampler = try VectorLogistic(@Vector(4, f64)).init(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_logistic_sampler.locationValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_logistic_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_logistic_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_logistic_sampler.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_logistic_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(std.math.pi * std.math.pi / 3.0, vector_logistic_sampler.varianceValue(), 1e-12);
+    try std.testing.expect(vector_logistic_sampler.minValue() == null);
+    try std.testing.expect(vector_logistic_sampler.maxValue() == null);
+    const sampled_logistic_vec = vector_logistic_sampler.sample(rng);
+    const direct_sampled_logistic_vec = vector_logistic_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_logistic_vec, direct_sampled_logistic_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(sampled_logistic_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var logistic_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_logistic_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorLogisticChecked(rng, @Vector(4, f64), &logistic_buf_vec, 0, 1);
+    try fillVectorLogisticCheckedFrom(&direct_engine, @Vector(4, f64), &direct_logistic_buf_vec, 0, 1);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &logistic_buf_vec, &direct_logistic_buf_vec);
+    for (logistic_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_logistic_sampler.fill(rng, &logistic_buf_vec);
+    vector_logistic_sampler.fillFrom(&direct_engine, &direct_logistic_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &logistic_buf_vec, &direct_logistic_buf_vec);
+    for (logistic_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -12330,6 +12472,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorLaplaceCheckedFrom(&engine, @Vector(4, f64), 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorLogisticCheckedFrom(&engine, @Vector(4, f64), 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -12380,6 +12525,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorLaplaceCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorLogisticCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -12465,6 +12613,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLaplaceCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorLogisticCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -12498,6 +12648,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorCauchyChecked(rng, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLaplaceChecked(rng, @Vector(4, f64), &empty, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorLogisticChecked(rng, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -15309,6 +15461,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorLaplaceFrom(&unchecked, @Vector(4, f64), &vector_laplace_unchecked, 0, 1);
         try fillVectorLaplaceCheckedFrom(&checked, @Vector(4, f64), &vector_laplace_checked, 0, 1);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_laplace_unchecked, &vector_laplace_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_logistic_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_logistic_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorLogisticFrom(&unchecked, @Vector(4, f64), &vector_logistic_unchecked, 0, 1);
+        try fillVectorLogisticCheckedFrom(&checked, @Vector(4, f64), &vector_logistic_checked, 0, 1);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_logistic_unchecked, &vector_logistic_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;
