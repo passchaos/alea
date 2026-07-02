@@ -36,7 +36,7 @@ Zig-native way.
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment/mode/support accessors |
 | FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2, finite-moment, and support accessors |
 | StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment and support accessors |
-| Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment/median/mode/support accessors |
+| Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment/median/mode/support accessors and collapsed `scale == 0` point masses |
 | Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape, finite-moment, median/mode, and support accessors |
 | SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter/moment/support accessors |
 | Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, range-builder constructors, builder diagnostics, and parameter/moment accessors |
@@ -64,7 +64,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Beta | Covered: `beta`, `Beta(T)`, including alpha/beta/moment/mode/support accessors |
 | Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max/moment/median accessors and collapsed `min == mode == max` point masses |
 | Arcsine | Covered: `arcsine`, `Arcsine(T)`, including min/max/moment/median accessors and collapsed `min == max` point masses |
-| Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/mode/scale, undefined-moment, and support accessors |
+| Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/mode/scale, undefined-moment, support accessors, and collapsed `scale == 0` point masses |
 | Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/median/mode/moment/support accessors and collapsed `scale == 0` point masses |
 | Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/median/mode/moment/support accessors and collapsed `scale == 0` point masses |
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment/median/mode/support accessors and collapsed `scale == 0` point masses |

@@ -6633,7 +6633,8 @@ pub fn cauchyCheckedFrom(source: anytype, comptime T: type, median: T, scale: T)
 
 pub fn cauchyFrom(source: anytype, comptime T: type, median: T, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(scale > 0);
+    std.debug.assert(std.math.isFinite(median) and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) return median;
     const angle = @as(T, @floatCast(std.math.pi)) * Rng.floatOpenFrom(source, T);
     return median - scale * @cos(angle) / @sin(angle);
 }
@@ -6644,7 +6645,11 @@ pub fn fillCauchy(rng: Rng, comptime T: type, dest: []T, median: T, scale: T) vo
 
 pub fn fillCauchyFrom(source: anytype, comptime T: type, dest: []T, median: T, scale: T) void {
     comptime requireFloat(T);
-    std.debug.assert(scale > 0);
+    std.debug.assert(std.math.isFinite(median) and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, median);
+        return;
+    }
     Rng.fillOpenFrom(source, T, dest);
     cauchyFromOpenUniforms(T, dest, median, scale);
 }
@@ -6698,6 +6703,7 @@ pub fn fillVectorCauchyCheckedFrom(source: anytype, comptime VectorType: type, d
 
 fn cauchyFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, median: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
     const Child = vectorChild(VectorType);
+    if (scale == 0) return @splat(median);
     const pi_vec: VectorType = @splat(@as(Child, @floatCast(std.math.pi)));
     const half_vec: VectorType = @splat(0.5);
     const median_vec: VectorType = @splat(median);
@@ -6751,6 +6757,7 @@ pub fn VectorCauchy(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.medianValue());
             const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
             return cauchyFromOpenUniformVector(VectorType, uniform_vec, self.medianValue(), self.scaleValue());
         }
@@ -6760,6 +6767,10 @@ pub fn VectorCauchy(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.medianValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -6774,7 +6785,7 @@ pub fn Cauchy(comptime T: type) type {
 
         pub fn init(median: T, scale: T) Error!Self {
             comptime requireFloat(T);
-            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             if (!std.math.isFinite(median)) return error.InvalidParameter;
             return .{ .median = median, .scale = scale };
         }
@@ -6792,23 +6803,19 @@ pub fn Cauchy(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.median else null;
         }
 
         pub fn varianceValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) 0 else null;
         }
 
         pub fn minValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.median else null;
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.median else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -6825,6 +6832,10 @@ pub fn Cauchy(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             fillCauchyFrom(source, T, dest, self.median, self.scale);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
     };
 }
@@ -9017,7 +9028,8 @@ pub fn gumbelCheckedFrom(source: anytype, comptime T: type, location: T, scale: 
 
 pub fn gumbelFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) return location;
     const u = Rng.floatOpenClosedFrom(source, T);
     return location - scale * @log(-@log(u));
 }
@@ -9028,7 +9040,11 @@ pub fn fillGumbel(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) 
 
 pub fn fillGumbelFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) void {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, location);
+        return;
+    }
     Rng.fillOpenClosedFrom(source, T, dest);
     gumbelFromOpenClosedUniforms(T, dest, location, scale);
 }
@@ -9081,6 +9097,7 @@ pub fn fillVectorGumbelCheckedFrom(source: anytype, comptime VectorType: type, d
 }
 
 fn gumbelFromOpenClosedUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    if (scale == 0) return @splat(location);
     const location_vec: VectorType = @splat(location);
     const scale_vec: VectorType = @splat(scale);
     return location_vec - scale_vec * @log(-@log(uniform_vec));
@@ -9136,6 +9153,7 @@ pub fn VectorGumbel(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
             const uniform_vec = Rng.vectorOpenClosedFrom(source, VectorType);
             return gumbelFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
         }
@@ -9145,6 +9163,10 @@ pub fn VectorGumbel(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.locationValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -9160,7 +9182,7 @@ pub fn Gumbel(comptime T: type) type {
         pub fn init(location: T, scale: T) Error!Self {
             comptime requireFloat(T);
             if (!std.math.isFinite(location)) return error.InvalidParameter;
-            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale };
         }
 
@@ -9191,13 +9213,11 @@ pub fn Gumbel(comptime T: type) type {
         }
 
         pub fn minValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.location else null;
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.location else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9214,6 +9234,10 @@ pub fn Gumbel(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             fillGumbelFrom(source, T, dest, self.location, self.scale);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
     };
 }
@@ -14090,7 +14114,7 @@ test "invalid checked distribution helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, triangularCheckedFrom(&engine, f64, 1, 0, 2));
     try std.testing.expectEqual(@as(u64, 0x55399c665cffeced), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&engine, f64, &f64_buf, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&engine, f64, &f64_buf, 0, -1));
     try std.testing.expectEqual(@as(u64, 0xffc62ac12a0f359b), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, inverseGaussianCheckedFrom(&engine, f64, 0, 1));
@@ -14449,6 +14473,128 @@ test "degenerate laplace and logistic helpers do not consume random stream" {
 
     vector_logistic_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(logistic_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate cauchy and gumbel helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1c6);
+    var control = alea.ScalarPrng.init(0x5150_d1c6);
+    const rng = Rng.init(&engine);
+
+    const cauchy_point: f64 = -5.5;
+    try std.testing.expectEqual(cauchy_point, cauchyFrom(&engine, f64, cauchy_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(cauchy_point, try cauchyChecked(rng, f64, cauchy_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillCauchyFrom(&engine, f64, &scalar_buf, cauchy_point, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(cauchy_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillCauchyChecked(rng, f64, &scalar_buf, cauchy_point, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(cauchy_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const cauchy_sampler = try Cauchy(f64).init(cauchy_point, 0);
+    try std.testing.expectEqual(cauchy_point, cauchy_sampler.medianValue());
+    try std.testing.expectEqual(cauchy_point, cauchy_sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), cauchy_sampler.scaleValue());
+    try std.testing.expectEqual(cauchy_point, cauchy_sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 0), cauchy_sampler.varianceValue().?);
+    try std.testing.expectEqual(cauchy_point, cauchy_sampler.minValue().?);
+    try std.testing.expectEqual(cauchy_point, cauchy_sampler.maxValue().?);
+    try std.testing.expectEqual(cauchy_point, cauchy_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    cauchy_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(cauchy_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(cauchy_point)), vectorCauchyFrom(&engine, @Vector(4, f64), cauchy_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(cauchy_point)), try vectorCauchyChecked(rng, @Vector(4, f64), cauchy_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorCauchyFrom(&engine, @Vector(4, f64), &vector_buf, cauchy_point, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(cauchy_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorCauchyChecked(rng, @Vector(4, f64), &vector_buf, cauchy_point, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(cauchy_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_cauchy_sampler = try VectorCauchy(@Vector(4, f64)).init(cauchy_point, 0);
+    try std.testing.expectEqual(cauchy_point, vector_cauchy_sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_cauchy_sampler.scaleValue());
+    try std.testing.expectEqual(cauchy_point, vector_cauchy_sampler.minValue().?);
+    try std.testing.expectEqual(cauchy_point, vector_cauchy_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(cauchy_point)), vector_cauchy_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_cauchy_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(cauchy_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const gumbel_point: f64 = 7.25;
+    try std.testing.expectEqual(gumbel_point, gumbelFrom(&engine, f64, gumbel_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(gumbel_point, try gumbelChecked(rng, f64, gumbel_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillGumbelFrom(&engine, f64, &scalar_buf, gumbel_point, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(gumbel_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillGumbelChecked(rng, f64, &scalar_buf, gumbel_point, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(gumbel_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const gumbel_sampler = try Gumbel(f64).init(gumbel_point, 0);
+    try std.testing.expectEqual(gumbel_point, gumbel_sampler.locationValue());
+    try std.testing.expectEqual(@as(f64, 0), gumbel_sampler.scaleValue());
+    try std.testing.expectEqual(gumbel_point, gumbel_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), gumbel_sampler.varianceValue());
+    try std.testing.expectEqual(gumbel_point, gumbel_sampler.medianValue());
+    try std.testing.expectEqual(gumbel_point, gumbel_sampler.modeValue());
+    try std.testing.expectEqual(gumbel_point, gumbel_sampler.minValue().?);
+    try std.testing.expectEqual(gumbel_point, gumbel_sampler.maxValue().?);
+    try std.testing.expectEqual(gumbel_point, gumbel_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    gumbel_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(gumbel_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(gumbel_point)), vectorGumbelFrom(&engine, @Vector(4, f64), gumbel_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(gumbel_point)), try vectorGumbelChecked(rng, @Vector(4, f64), gumbel_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorGumbelFrom(&engine, @Vector(4, f64), &vector_buf, gumbel_point, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(gumbel_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorGumbelChecked(rng, @Vector(4, f64), &vector_buf, gumbel_point, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(gumbel_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_gumbel_sampler = try VectorGumbel(@Vector(4, f64)).init(gumbel_point, 0);
+    try std.testing.expectEqual(gumbel_point, vector_gumbel_sampler.locationValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_gumbel_sampler.scaleValue());
+    try std.testing.expectEqual(gumbel_point, vector_gumbel_sampler.minValue().?);
+    try std.testing.expectEqual(gumbel_point, vector_gumbel_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(gumbel_point)), vector_gumbel_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_gumbel_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(gumbel_point)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -16717,7 +16863,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorArcsineCheckedFrom(&engine, @Vector(4, f64), 2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, vectorCauchyCheckedFrom(&engine, @Vector(4, f64), 0, 0));
+    try std.testing.expectError(error.InvalidParameter, vectorCauchyCheckedFrom(&engine, @Vector(4, f64), 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, vectorLaplaceCheckedFrom(&engine, @Vector(4, f64), 0, -1));
@@ -16747,7 +16893,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorWeibullCheckedFrom(&engine, @Vector(4, f64), 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, vectorGumbelCheckedFrom(&engine, @Vector(4, f64), 0, 0));
+    try std.testing.expectError(error.InvalidParameter, vectorGumbelCheckedFrom(&engine, @Vector(4, f64), 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, vectorFrechetCheckedFrom(&engine, @Vector(4, f64), 0, 2, 0));
@@ -16821,7 +16967,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorArcsineCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorLaplaceCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
@@ -16851,7 +16997,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorWeibullCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 1.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0, 3));
@@ -16965,7 +17111,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorArcsineCheckedFrom(&engine, @Vector(4, f64), &empty, 2, 1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
+    try fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLaplaceCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16985,7 +17131,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorWeibullCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1.5);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
+    try fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17033,7 +17179,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorArcsineChecked(rng, @Vector(4, f64), &empty, 2, 1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorCauchyChecked(rng, @Vector(4, f64), &empty, 0, 0);
+    try fillVectorCauchyChecked(rng, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLaplaceChecked(rng, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17053,7 +17199,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorWeibullChecked(rng, @Vector(4, f64), &empty, 0, 1.5);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorGumbelChecked(rng, @Vector(4, f64), &empty, 0, 0);
+    try fillVectorGumbelChecked(rng, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorFrechetChecked(rng, @Vector(4, f64), &empty, 0, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17183,7 +17329,7 @@ test "invalid distribution facade tail scalars do not consume random stream" {
     var control = alea.ScalarPrng.init(0x5150_d1ff);
     const rng = Rng.init(&engine);
 
-    try std.testing.expectError(error.InvalidParameter, cauchyChecked(rng, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, cauchyChecked(rng, f64, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, triangularChecked(rng, f64, 1, 0, 2));
@@ -17216,7 +17362,7 @@ test "invalid distribution facade tail scalars do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, weibullChecked(rng, f64, 0, 1.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, gumbelChecked(rng, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, gumbelChecked(rng, f64, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, frechetChecked(rng, f64, 0, 1, 0));
@@ -17317,7 +17463,7 @@ test "invalid distribution facade tail fills do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillWeibullChecked(rng, f64, &out, 0, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillGumbelChecked(rng, f64, &out, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillGumbelChecked(rng, f64, &out, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillFrechetChecked(rng, f64, &out, 0, 0, 1));
@@ -17664,7 +17810,7 @@ test "invalid remaining tail scalar helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, weibullCheckedFrom(&engine, f64, 0, 1.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, gumbelCheckedFrom(&engine, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, gumbelCheckedFrom(&engine, f64, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, frechetCheckedFrom(&engine, f64, 0, 1, 0));
@@ -17727,7 +17873,7 @@ test "invalid bounded scalar helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, arcsineCheckedFrom(&engine, f64, 2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, cauchyCheckedFrom(&engine, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, cauchyCheckedFrom(&engine, f64, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, laplaceCheckedFrom(&engine, f64, 0, -1));
@@ -17814,7 +17960,7 @@ test "zero-length inverse and zeta distribution fills do not validate or consume
     try std.testing.expectEqual(control.next(), engine.next());
     try fillWeibullCheckedFrom(&engine, f64, &out, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillGumbelCheckedFrom(&engine, f64, &out, 0, 0);
+    try fillGumbelCheckedFrom(&engine, f64, &out, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillFrechetCheckedFrom(&engine, f64, &out, 0, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17887,7 +18033,7 @@ test "zero-length derived distribution fills do not validate or consume random s
     try std.testing.expectEqual(control.next(), engine.next());
     try fillArcsineCheckedFrom(&engine, f64, &out, 2, 1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillCauchyCheckedFrom(&engine, f64, &out, 0, 0);
+    try fillCauchyCheckedFrom(&engine, f64, &out, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillLaplaceCheckedFrom(&engine, f64, &out, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17898,11 +18044,11 @@ test "zero-length derived distribution fills do not validate or consume random s
     try std.testing.expectEqual(control.next(), engine.next());
     try fillTriangularChecked(rng, f64, &out, 1, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillCauchyChecked(rng, f64, &out, 0, 0);
+    try fillCauchyChecked(rng, f64, &out, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var one: [1]f64 = undefined;
-    try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&engine, f64, &one, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&engine, f64, &one, 0, -1));
 }
 
 test "zero-length core continuous distribution fills do not validate or consume random stream" {
@@ -18903,7 +19049,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try fillCauchyCheckedFrom(&direct_engine, f64, &direct_cauchy_buf, 0, 1);
     for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
-    try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&direct_engine, f64, &direct_cauchy_buf, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&direct_engine, f64, &direct_cauchy_buf, 0, -1));
     const cauchy_sampler = try Cauchy(f64).init(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), cauchy_sampler.medianValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), cauchy_sampler.modeValue(), 1e-12);
@@ -18915,7 +19061,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     cauchy_sampler.fillFrom(&direct_engine, &direct_cauchy_buf);
     for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try cauchyCheckedFrom(&direct_engine, f64, 0, 1)));
-    try std.testing.expectError(error.InvalidParameter, cauchyCheckedFrom(&direct_engine, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, cauchyCheckedFrom(&direct_engine, f64, 0, -1));
 
     var laplaces = rng.sampleIter(f64, try Laplace(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(laplaces.next().?));
@@ -19208,7 +19354,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try fillGumbelCheckedFrom(&direct_engine, f64, &direct_gumbel_buf, 0, 1);
     for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
-    try std.testing.expectError(error.InvalidParameter, fillGumbelCheckedFrom(&direct_engine, f64, &direct_gumbel_buf, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillGumbelCheckedFrom(&direct_engine, f64, &direct_gumbel_buf, 0, -1));
     const gumbel_sampler = try Gumbel(f64).init(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), gumbel_sampler.locationValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), gumbel_sampler.scaleValue(), 1e-12);
@@ -19221,7 +19367,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     gumbel_sampler.fillFrom(&direct_engine, &direct_gumbel_buf);
     for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try gumbelCheckedFrom(&direct_engine, f64, 0, 1)));
-    try std.testing.expectError(error.InvalidParameter, gumbelCheckedFrom(&direct_engine, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, gumbelCheckedFrom(&direct_engine, f64, 0, -1));
 
     var frechets = rng.sampleIter(f64, try Frechet(f64).init(0, 1, 2));
     try std.testing.expect(frechets.next().? >= 0);
@@ -19442,7 +19588,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, StudentT(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Triangular(f64).init(1, 0, 2));
     try std.testing.expectError(error.InvalidParameter, Arcsine(f64).init(2, 1));
-    try std.testing.expectError(error.InvalidParameter, Cauchy(f64).init(0, 0));
+    try std.testing.expectError(error.InvalidParameter, Cauchy(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Laplace(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Logistic(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, LogLogistic(f64).init(0, 1));
@@ -19452,7 +19598,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Maxwell(f64).init(-1));
     try std.testing.expectError(error.InvalidParameter, Pareto(f64).init(1, 0));
     try std.testing.expectError(error.InvalidParameter, Weibull(f64).init(0, 1));
-    try std.testing.expectError(error.InvalidParameter, Gumbel(f64).init(0, 0));
+    try std.testing.expectError(error.InvalidParameter, Gumbel(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Frechet(f64).init(0, 1, 0));
     try std.testing.expectError(error.InvalidParameter, SkewNormal(f64).init(0, 0, 1));
     try std.testing.expectError(error.InvalidParameter, Pert(f64).init(0, 2, 1, 4));
