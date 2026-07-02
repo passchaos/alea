@@ -325,6 +325,8 @@ Reusable samplers:
 - `OpenClosed01.fill`
 - `OpenClosed01.fillFrom`
 - `StandardNormal(T)`
+- `StandardNormal(T).meanValue`
+- `StandardNormal(T).stddevValue`
 - `StandardNormal(T).sample`
 - `StandardNormal(T).sampleFrom`
 - `StandardNormal(T).fill`
@@ -340,6 +342,8 @@ Reusable samplers:
 - `Normal(T).fill`
 - `Normal(T).fillFrom`
 - `StandardExponential(T)`
+- `StandardExponential(T).rateValue`
+- `StandardExponential(T).inverseRateValue`
 - `StandardExponential(T).sample`
 - `StandardExponential(T).sampleFrom`
 - `StandardExponential(T).fill`

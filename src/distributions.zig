@@ -1236,6 +1236,14 @@ pub fn fillNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mean:
 
 pub fn StandardNormal(comptime T: type) type {
     return struct {
+        pub fn meanValue(_: @This()) T {
+            return 0;
+        }
+
+        pub fn stddevValue(_: @This()) T {
+            return 1;
+        }
+
         pub fn sample(_: @This(), rng: Rng) T {
             return standardNormal(rng, T);
         }
@@ -1357,6 +1365,14 @@ pub fn Normal(comptime T: type) type {
 
 pub fn StandardExponential(comptime T: type) type {
     return struct {
+        pub fn rateValue(_: @This()) T {
+            return 1;
+        }
+
+        pub fn inverseRateValue(_: @This()) T {
+            return 1;
+        }
+
         pub fn sample(_: @This(), rng: Rng) T {
             return standardExponential(rng, T);
         }
@@ -7845,6 +7861,8 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var standard_normals = rng.sampleIter(f64, StandardNormal(f64){});
     try std.testing.expect(std.math.isFinite(standard_normals.next().?));
+    try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).meanValue());
+    try std.testing.expectEqual(@as(f64, 1), (StandardNormal(f64){}).stddevValue());
     var standard_normal_buf: [8]f64 = undefined;
     fillStandardNormal(rng, f64, &standard_normal_buf);
     for (standard_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
@@ -7856,6 +7874,8 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     var standard_exponentials = rng.sampleIter(f64, StandardExponential(f64){});
     try std.testing.expect(standard_exponentials.next().? >= 0);
+    try std.testing.expectEqual(@as(f64, 1), (StandardExponential(f64){}).rateValue());
+    try std.testing.expectEqual(@as(f64, 1), (StandardExponential(f64){}).inverseRateValue());
     var standard_exponential_buf: [8]f64 = undefined;
     fillStandardExponential(rng, f64, &standard_exponential_buf);
     for (standard_exponential_buf) |value| try std.testing.expect(value >= 0);
