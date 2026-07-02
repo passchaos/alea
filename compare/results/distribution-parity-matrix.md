@@ -72,11 +72,11 @@ toolkit functionality and reduce reliance on companion crates:
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment/support accessors |
 | Chi | Covered: `chi`, `Chi(T)`, including dof/moment/support accessors |
 | Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment/support accessors |
-| LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape and finite-moment accessors |
+| LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape, finite-moment, and support accessors |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment accessors |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment accessors |
-| Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape and finite-moment accessors |
-| Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment accessors |
+| Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, and support accessors |
+| Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/support accessors |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance export and dimension/total-alpha accessors |
 | Multinomial | Covered: `Multinomial`, including trials/category/probability lookup/export and count moment lookup/export accessors |
 | NegativeBinomial | Covered: `NegativeBinomial`, including successes/probability/moment accessors |

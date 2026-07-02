@@ -3903,6 +3903,16 @@ pub fn LogLogistic(comptime T: type) type {
             return second_moment - mean * mean;
         }
 
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -4492,6 +4502,15 @@ pub fn Pareto(comptime T: type) type {
             return self.scale * self.scale * self.shape / (shape_minus_one * shape_minus_one * (self.shape - 2));
         }
 
+        pub fn minValue(self: Self) T {
+            return self.scale;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -4587,6 +4606,16 @@ pub fn Weibull(comptime T: type) type {
             const second_moment_scale_factor = std.math.gamma(T, 1 + 2 / self.shape);
             const scale_squared = self.scale * self.scale;
             return scale_squared * (second_moment_scale_factor - mean_scale_factor * mean_scale_factor);
+        }
+
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9532,6 +9561,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const log_logistic_mean = @as(f64, 4) * std.math.pi / (3 * @sqrt(@as(f64, 3)));
     try std.testing.expectApproxEqAbs(log_logistic_mean, log_logistic_sampler.expectedValue().?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 16) * std.math.pi / (3 * @sqrt(@as(f64, 3))) - log_logistic_mean * log_logistic_mean, log_logistic_sampler.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), log_logistic_sampler.minValue(), 0);
+    try std.testing.expect(log_logistic_sampler.maxValue() == null);
     try std.testing.expect((try LogLogistic(f64).init(2, 1)).expectedValue() == null);
     try std.testing.expect((try LogLogistic(f64).init(2, 2)).varianceValue() == null);
     log_logistic_sampler.fillFrom(&direct_engine, &direct_log_logistic_buf);
@@ -9674,6 +9705,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 3), pareto_sampler.shapeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), pareto_sampler.expectedValue().?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), pareto_sampler.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), pareto_sampler.minValue(), 0);
+    try std.testing.expect(pareto_sampler.maxValue() == null);
     try std.testing.expect((try Pareto(f64).init(2, 1)).expectedValue() == null);
     try std.testing.expect((try Pareto(f64).init(2, 2)).varianceValue() == null);
     pareto_sampler.fillFrom(&direct_engine, &direct_pareto_buf);
@@ -9705,6 +9738,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const weibull_second_moment_factor = std.math.gamma(f64, 1.0 + 2.0 / 1.5);
     try std.testing.expectApproxEqAbs(2.0 * weibull_mean_factor, weibull_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(4.0 * (weibull_second_moment_factor - weibull_mean_factor * weibull_mean_factor), weibull_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), weibull_sampler.minValue(), 0);
+    try std.testing.expect(weibull_sampler.maxValue() == null);
     weibull_sampler.fillFrom(&direct_engine, &direct_weibull_buf);
     for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try weibullCheckedFrom(&direct_engine, f64, 2, 1.5) >= 0);

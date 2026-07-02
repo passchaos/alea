@@ -615,6 +615,8 @@ Reusable samplers:
 - `LogLogistic(T).shapeValue`
 - `LogLogistic(T).expectedValue`
 - `LogLogistic(T).varianceValue`
+- `LogLogistic(T).minValue`
+- `LogLogistic(T).maxValue`
 - `LogLogistic(T).sample`
 - `LogLogistic(T).sampleFrom`
 - `LogLogistic(T).fill`
@@ -668,6 +670,8 @@ Reusable samplers:
 - `Pareto(T).shapeValue`
 - `Pareto(T).expectedValue`
 - `Pareto(T).varianceValue`
+- `Pareto(T).minValue`
+- `Pareto(T).maxValue`
 - `Pareto(T).sample`
 - `Pareto(T).sampleFrom`
 - `Pareto(T).fill`
@@ -678,6 +682,8 @@ Reusable samplers:
 - `Weibull(T).shapeValue`
 - `Weibull(T).expectedValue`
 - `Weibull(T).varianceValue`
+- `Weibull(T).minValue`
+- `Weibull(T).maxValue`
 - `Weibull(T).sample`
 - `Weibull(T).sampleFrom`
 - `Weibull(T).fill`
