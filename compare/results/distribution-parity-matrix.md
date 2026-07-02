@@ -44,7 +44,7 @@ Zig-native way.
 | UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)`, including geometry, coordinate-moment, and radial-moment accessors |
 | Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path, and lambda/moment accessors |
 | Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper, and trials/probability/moment accessors |
-| Geometric / StandardGeometric | Covered: one-based `Geometric`, rand-style failure-count `GeometricFailures`, probability/moment accessors, and p=0.5 `StandardGeometric` fast path/accessor |
+| Geometric / StandardGeometric | Covered: one-based `Geometric`, rand-style failure-count `GeometricFailures`, probability/moment/support accessors, and p=0.5 `StandardGeometric` fast path/accessor |
 | Hypergeometric | Covered: `Hypergeometric`, including parameter/moment accessors and HIN inverse-transform fast path for small-mode regimes; large-parameter H2PE-equivalent performance remains tracked in `performance-triage.md` |
 | WeightedChoice | Covered: `WeightedChoice`, including item diagnostics, weight/probability diagnostics and exports, weight updates, single/bulk weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
 | WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `totalWeight`, `weightAt`, `probabilityAt`, and allocation-returning or caller-buffer weight/probability reconstruction |
