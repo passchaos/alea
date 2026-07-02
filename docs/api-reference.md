@@ -588,6 +588,7 @@ Reusable samplers:
 - `Triangular(T).maxValue`
 - `Triangular(T).expectedValue`
 - `Triangular(T).varianceValue`
+- `Triangular(T).medianValue`
 - `Triangular(T).sample`
 - `Triangular(T).sampleFrom`
 - `Triangular(T).fill`
@@ -598,6 +599,7 @@ Reusable samplers:
 - `Arcsine(T).maxValue`
 - `Arcsine(T).expectedValue`
 - `Arcsine(T).varianceValue`
+- `Arcsine(T).medianValue`
 - `Arcsine(T).sample`
 - `Arcsine(T).sampleFrom`
 - `Arcsine(T).fill`
@@ -664,6 +666,7 @@ Reusable samplers:
 - `Kumaraswamy(T).expectedValue`
 - `Kumaraswamy(T).varianceValue`
 - `Kumaraswamy(T).modeValue`
+- `Kumaraswamy(T).medianValue`
 - `Kumaraswamy(T).minValue`
 - `Kumaraswamy(T).maxValue`
 - `Kumaraswamy(T).sample`

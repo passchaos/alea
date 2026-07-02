@@ -3541,6 +3541,14 @@ pub fn Triangular(comptime T: type) type {
                 self.min * self.mode - self.min * self.max - self.mode * self.max) / 18;
         }
 
+        pub fn medianValue(self: Self) T {
+            const midpoint = (self.min + self.max) / 2;
+            if (self.mode >= midpoint) {
+                return self.min + @sqrt((self.max - self.min) * (self.mode - self.min) / 2);
+            }
+            return self.max - @sqrt((self.max - self.min) * (self.max - self.mode) / 2);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -3630,6 +3638,10 @@ pub fn Arcsine(comptime T: type) type {
         pub fn varianceValue(self: Self) T {
             const range = self.max - self.min;
             return range * range / 8;
+        }
+
+        pub fn medianValue(self: Self) T {
+            return (self.min + self.max) / 2;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -4227,6 +4239,10 @@ pub fn Kumaraswamy(comptime T: type) type {
             if (alpha == 1 and beta_param == 1) return null;
             if (beta_param <= 1) return 1;
             return 0;
+        }
+
+        pub fn medianValue(self: Self) T {
+            return std.math.pow(T, 1 - std.math.pow(T, 0.5, self.inverse_beta), self.inverse_alpha);
         }
 
         pub fn minValue(self: Self) T {
@@ -9766,6 +9782,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), triangular_sampler.maxValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), triangular_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 7.0 / 18.0), triangular_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(2.0 - @sqrt(@as(f64, 3)), triangular_sampler.medianValue(), 1e-12);
     triangular_sampler.fillFrom(&direct_engine, &direct_triangular_buf);
     for (direct_triangular_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
     const direct_checked_triangular = try triangularCheckedFrom(&direct_engine, f64, -1, 0, 2);
@@ -9791,6 +9808,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 3), arcsine_sampler.maxValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), arcsine_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), arcsine_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), arcsine_sampler.medianValue(), 1e-12);
     arcsine_sampler.fillFrom(&direct_engine, &direct_arcsine_buf);
     for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
     const direct_checked_arcsine = try arcsineCheckedFrom(&direct_engine, f64, -1, 3);
@@ -9937,6 +9955,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect((try Kumaraswamy(f64).init(0.5, 0.5)).modeValue() == null);
     try std.testing.expectApproxEqAbs(@as(f64, 0), (try Kumaraswamy(f64).init(1, 5)).modeValue().?, 0);
     try std.testing.expectApproxEqAbs(@as(f64, 1), (try Kumaraswamy(f64).init(2, 1)).modeValue().?, 0);
+    try std.testing.expectApproxEqAbs(@sqrt(1.0 - std.math.pow(f64, 0.5, 1.0 / 5.0)), kumaraswamy_sampler.medianValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), kumaraswamy_sampler.minValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 1), kumaraswamy_sampler.maxValue(), 0);
     kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf);

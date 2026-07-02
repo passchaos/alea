@@ -62,8 +62,8 @@ toolkit functionality and reduce reliance on companion crates:
 | Alea distribution | Status |
 | --- | --- |
 | Beta | Covered: `beta`, `Beta(T)`, including alpha/beta/moment/mode/support accessors |
-| Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max/moment accessors |
-| Arcsine | Covered: `arcsine`, `Arcsine(T)`, including min/max/moment accessors |
+| Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max/moment/median accessors |
+| Arcsine | Covered: `arcsine`, `Arcsine(T)`, including min/max/moment/median accessors |
 | Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/mode/scale, undefined-moment, and support accessors |
 | Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/median/mode/moment/support accessors |
 | Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/median/mode/moment/support accessors |
@@ -73,7 +73,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Chi | Covered: `chi`, `Chi(T)`, including dof/moment/mode/support accessors |
 | Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment/mode/support accessors |
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape, finite-moment, median/mode, and support accessors |
-| Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment/mode/support accessors |
+| Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment/median/mode/support accessors |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment/median accessors |
 | Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, median/mode, and support accessors |
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/median/mode/support accessors |
