@@ -35,6 +35,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorBinomial u64x4 n=10 p=0.5", lanes / 4, 0xb150, fillDistBinomialU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorBinomial u64x4 direct n=10 p=0.5", lanes / 4, 0xb150, fillDistBinomialU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorBinomial.fill u64x4 n=10 p=0.5", lanes / 4, 0xb150, fillDistBinomialSamplerU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorNegativeBinomial u64x4 r=5 p=0.25", lanes / 16, 0xb180, fillDistNegativeBinomialU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorNegativeBinomial u64x4 direct r=5 p=0.25", lanes / 16, 0xb180, fillDistNegativeBinomialU64Direct);
+    try benchVectorU64x4(io, stdout, "alea distributions.VectorNegativeBinomial.fill u64x4 r=5 p=0.25", lanes / 16, 0xb180, fillDistNegativeBinomialSamplerU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorGeometric u64x4 p=0.25", lanes / 8, 0xb250, fillDistGeometricU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorGeometric u64x4 direct p=0.25", lanes / 8, 0xb250, fillDistGeometricU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorGeometric.fill u64x4 p=0.25", lanes / 8, 0xb250, fillDistGeometricSamplerU64);
@@ -254,6 +257,19 @@ fn fillDistBinomialU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vec
 
 fn fillDistBinomialSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
     const sampler = alea.distributions.VectorBinomial(@Vector(4, u64)).init(10, 0.5) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistNegativeBinomialU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorNegativeBinomial(rng, @Vector(4, u64), dest, 5, 0.25);
+}
+
+fn fillDistNegativeBinomialU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorNegativeBinomialFrom(engine, @Vector(4, u64), dest, 5, 0.25);
+}
+
+fn fillDistNegativeBinomialSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    const sampler = alea.distributions.VectorNegativeBinomial(@Vector(4, u64)).init(5, 0.25) catch unreachable;
     sampler.fill(rng, dest);
 }
 

@@ -150,7 +150,11 @@ Single-shot helpers:
 - `negativeBinomial`, `negativeBinomialFrom`, `negativeBinomialChecked`,
   `negativeBinomialCheckedFrom`, `fillNegativeBinomial`,
   `fillNegativeBinomialFrom`, `fillNegativeBinomialChecked`,
-  `fillNegativeBinomialCheckedFrom`, `hypergeometric`, `hypergeometricFrom`,
+  `fillNegativeBinomialCheckedFrom`, `vectorNegativeBinomial`,
+  `vectorNegativeBinomialFrom`, `vectorNegativeBinomialChecked`,
+  `vectorNegativeBinomialCheckedFrom`, `fillVectorNegativeBinomial`,
+  `fillVectorNegativeBinomialFrom`, `fillVectorNegativeBinomialChecked`,
+  `fillVectorNegativeBinomialCheckedFrom`, `hypergeometric`, `hypergeometricFrom`,
   `hypergeometricChecked`, `hypergeometricCheckedFrom`,
   `fillHypergeometric`, `fillHypergeometricFrom`,
   `fillHypergeometricChecked`, `fillHypergeometricCheckedFrom`
@@ -382,6 +386,18 @@ Reusable samplers:
 - `NegativeBinomial.sampleFrom`
 - `NegativeBinomial.fill`
 - `NegativeBinomial.fillFrom`
+- `VectorNegativeBinomial(VectorType)`
+- `VectorNegativeBinomial(VectorType).init`
+- `VectorNegativeBinomial(VectorType).successesValue`
+- `VectorNegativeBinomial(VectorType).probabilityValue`
+- `VectorNegativeBinomial(VectorType).expectedValue`
+- `VectorNegativeBinomial(VectorType).varianceValue`
+- `VectorNegativeBinomial(VectorType).minValue`
+- `VectorNegativeBinomial(VectorType).maxValue`
+- `VectorNegativeBinomial(VectorType).sample`
+- `VectorNegativeBinomial(VectorType).sampleFrom`
+- `VectorNegativeBinomial(VectorType).fill`
+- `VectorNegativeBinomial(VectorType).fillFrom`
 - `Hypergeometric`
 - `Hypergeometric.init`
 - `Hypergeometric.populationValue`

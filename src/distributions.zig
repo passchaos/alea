@@ -1003,6 +1003,104 @@ pub fn fillNegativeBinomialCheckedFrom(source: anytype, dest: []u64, successes: 
     dist.fillFrom(source, dest);
 }
 
+pub fn vectorNegativeBinomial(rng: Rng, comptime VectorType: type, successes: u64, p: f64) VectorType {
+    return vectorNegativeBinomialFrom(rng, VectorType, successes, p);
+}
+
+pub fn vectorNegativeBinomialFrom(source: anytype, comptime VectorType: type, successes: u64, p: f64) VectorType {
+    const dist = VectorNegativeBinomial(VectorType).init(successes, p) catch unreachable;
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorNegativeBinomialChecked(rng: Rng, comptime VectorType: type, successes: u64, p: f64) Error!VectorType {
+    return vectorNegativeBinomialCheckedFrom(rng, VectorType, successes, p);
+}
+
+pub fn vectorNegativeBinomialCheckedFrom(source: anytype, comptime VectorType: type, successes: u64, p: f64) Error!VectorType {
+    const dist = try VectorNegativeBinomial(VectorType).init(successes, p);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorNegativeBinomial(rng: Rng, comptime VectorType: type, dest: []VectorType, successes: u64, p: f64) void {
+    fillVectorNegativeBinomialFrom(rng, VectorType, dest, successes, p);
+}
+
+pub fn fillVectorNegativeBinomialFrom(source: anytype, comptime VectorType: type, dest: []VectorType, successes: u64, p: f64) void {
+    const dist = VectorNegativeBinomial(VectorType).init(successes, p) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorNegativeBinomialChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, successes: u64, p: f64) Error!void {
+    return fillVectorNegativeBinomialCheckedFrom(rng, VectorType, dest, successes, p);
+}
+
+pub fn fillVectorNegativeBinomialCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, successes: u64, p: f64) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorNegativeBinomial(VectorType).init(successes, p);
+    dist.fillFrom(source, dest);
+}
+
+pub fn VectorNegativeBinomial(comptime VectorType: type) type {
+    const info = vectorInfo(VectorType);
+    if (info.child != u64) @compileError("VectorNegativeBinomial expects a u64 vector");
+
+    return struct {
+        const Self = @This();
+
+        sampler: NegativeBinomial,
+
+        pub fn init(successes: u64, p: f64) Error!Self {
+            return .{ .sampler = try NegativeBinomial.init(successes, p) };
+        }
+
+        pub fn successesValue(self: Self) u64 {
+            return self.sampler.successesValue();
+        }
+
+        pub fn probabilityValue(self: Self) f64 {
+            return self.sampler.probabilityValue();
+        }
+
+        pub fn expectedValue(self: Self) f64 {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) f64 {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn minValue(self: Self) u64 {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?u64 {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.p == 1) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn negativeBinomialFrom(source: anytype, successes: u64, p: f64) u64 {
     std.debug.assert(successes > 0 and p > 0 and p <= 1);
     if (p == 1) return 0;
@@ -9897,6 +9995,48 @@ test "distribution vector helpers preserve support and stream shape" {
     for (binomial_buf) |vec| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(10)), vec);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const negative_binomial_vec = vectorNegativeBinomial(rng, @Vector(4, u64), 5, 0.25);
+    const direct_negative_binomial_vec = vectorNegativeBinomialFrom(&direct_engine, @Vector(4, u64), 5, 0.25);
+    try std.testing.expectEqual(negative_binomial_vec, direct_negative_binomial_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const checked_negative_binomial_vec = try vectorNegativeBinomialChecked(rng, @Vector(4, u64), 5, 0.25);
+    const direct_checked_negative_binomial_vec = try vectorNegativeBinomialCheckedFrom(&direct_engine, @Vector(4, u64), 5, 0.25);
+    try std.testing.expectEqual(checked_negative_binomial_vec, direct_checked_negative_binomial_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_negative_binomial_sampler = try VectorNegativeBinomial(@Vector(4, u64)).init(5, 0.25);
+    try std.testing.expectEqual(@as(u64, 5), vector_negative_binomial_sampler.successesValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), vector_negative_binomial_sampler.probabilityValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 15), vector_negative_binomial_sampler.expectedValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 60), vector_negative_binomial_sampler.varianceValue(), 1e-15);
+    try std.testing.expectEqual(@as(u64, 0), vector_negative_binomial_sampler.minValue());
+    try std.testing.expect(vector_negative_binomial_sampler.maxValue() == null);
+    const sampled_negative_binomial_vec = vector_negative_binomial_sampler.sample(rng);
+    const direct_sampled_negative_binomial_vec = vector_negative_binomial_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_negative_binomial_vec, direct_sampled_negative_binomial_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var negative_binomial_buf: [3]@Vector(4, u64) = undefined;
+    var direct_negative_binomial_buf: [3]@Vector(4, u64) = undefined;
+    try fillVectorNegativeBinomialChecked(rng, @Vector(4, u64), &negative_binomial_buf, 5, 0.25);
+    try fillVectorNegativeBinomialCheckedFrom(&direct_engine, @Vector(4, u64), &direct_negative_binomial_buf, 5, 0.25);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &negative_binomial_buf, &direct_negative_binomial_buf);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    vector_negative_binomial_sampler.fill(rng, &negative_binomial_buf);
+    vector_negative_binomial_sampler.fillFrom(&direct_engine, &direct_negative_binomial_buf);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &negative_binomial_buf, &direct_negative_binomial_buf);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const always_success_negative_binomial = try VectorNegativeBinomial(@Vector(4, u64)).init(5, 1);
+    const always_success_negative_vec = always_success_negative_binomial.sample(rng);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), always_success_negative_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    always_success_negative_binomial.fill(rng, &negative_binomial_buf);
+    for (negative_binomial_buf) |vec| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const geometric_vec = vectorGeometric(rng, @Vector(4, u64), 0.25);
     const direct_geometric_vec = vectorGeometricFrom(&direct_engine, @Vector(4, u64), 0.25);
     try std.testing.expectEqual(geometric_vec, direct_geometric_vec);
@@ -10261,6 +10401,16 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, fillVectorBinomialCheckedFrom(&engine, @Vector(4, u64), &binomial_buf, 10, 1.1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorNegativeBinomialCheckedFrom(&engine, @Vector(4, u64), 0, 0.25));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, vectorNegativeBinomialCheckedFrom(&engine, @Vector(4, u64), 5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var negative_binomial_buf: [4]@Vector(4, u64) = undefined;
+    try std.testing.expectError(error.InvalidProbability, fillVectorNegativeBinomialCheckedFrom(&engine, @Vector(4, u64), &negative_binomial_buf, 5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidProbability, vectorGeometricCheckedFrom(&engine, @Vector(4, u64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -10318,6 +10468,12 @@ test "zero-length distribution vector fills do not validate or consume random st
     var empty_poisson: [0]@Vector(4, u64) = .{};
     var empty_binomial: [0]@Vector(4, u64) = .{};
     var empty_geometric: [0]@Vector(4, u64) = .{};
+    var empty_negative_binomial: [0]@Vector(4, u64) = .{};
+
+    try fillVectorNegativeBinomialCheckedFrom(&engine, @Vector(4, u64), &empty_negative_binomial, 0, 0.25);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorNegativeBinomialChecked(rng, @Vector(4, u64), &empty_negative_binomial, 5, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
 
     try fillVectorGeometricCheckedFrom(&engine, @Vector(4, u64), &empty_geometric, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -13067,6 +13223,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorBinomialFrom(&unchecked, @Vector(4, u64), &vector_binomial_unchecked, 10, 0.5);
         try fillVectorBinomialCheckedFrom(&checked, @Vector(4, u64), &vector_binomial_checked, 10, 0.5);
         try std.testing.expectEqualSlices(@Vector(4, u64), &vector_binomial_unchecked, &vector_binomial_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_negative_binomial_unchecked: [4]@Vector(4, u64) = undefined;
+        var vector_negative_binomial_checked: [4]@Vector(4, u64) = undefined;
+        fillVectorNegativeBinomialFrom(&unchecked, @Vector(4, u64), &vector_negative_binomial_unchecked, 5, 0.25);
+        try fillVectorNegativeBinomialCheckedFrom(&checked, @Vector(4, u64), &vector_negative_binomial_checked, 5, 0.25);
+        try std.testing.expectEqualSlices(@Vector(4, u64), &vector_negative_binomial_unchecked, &vector_negative_binomial_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var vector_geometric_unchecked: [4]@Vector(4, u64) = undefined;
