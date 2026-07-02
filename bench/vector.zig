@@ -41,6 +41,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorGeometricFailures u64x4 p=0.25", lanes / 8, 0xb251, fillDistGeometricFailuresU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorGeometricFailures u64x4 direct p=0.25", lanes / 8, 0xb251, fillDistGeometricFailuresU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorGeometricFailures.fill u64x4 p=0.25", lanes / 8, 0xb251, fillDistGeometricFailuresSamplerU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorStandardGeometric u64x4", lanes / 4, 0xb252, fillDistStandardGeometricU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorStandardGeometric u64x4 direct", lanes / 4, 0xb252, fillDistStandardGeometricU64Direct);
+    try benchVectorU64x4(io, stdout, "alea distributions.VectorStandardGeometric.fill u64x4", lanes / 4, 0xb252, fillDistStandardGeometricSamplerU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoisson u64x4 lambda=12", lanes / 4, 0xb012, fillDistPoissonU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoisson u64x4 direct lambda=12", lanes / 4, 0xb012, fillDistPoissonU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorPoisson.fill u64x4 lambda=12", lanes / 4, 0xb012, fillDistPoissonSamplerU64);
@@ -277,6 +280,19 @@ fn fillDistGeometricFailuresU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, des
 
 fn fillDistGeometricFailuresSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
     const sampler = alea.distributions.VectorGeometricFailures(@Vector(4, u64)).init(0.25) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistStandardGeometricU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorStandardGeometric(rng, @Vector(4, u64), dest);
+}
+
+fn fillDistStandardGeometricU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorStandardGeometricFrom(engine, @Vector(4, u64), dest);
+}
+
+fn fillDistStandardGeometricSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    const sampler = alea.distributions.VectorStandardGeometric(@Vector(4, u64)){};
     sampler.fill(rng, dest);
 }
 

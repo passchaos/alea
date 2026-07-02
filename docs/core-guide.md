@@ -67,7 +67,7 @@ including facade and direct-source `From` helpers for single scalar draws and
 scalar fills, including duration ranges. The same checked/error-returning style
 is available for vector ranges, vector probabilities, and parameterized vector
 normal/exponential sampling, including facade and direct-source `From` helpers
-for ranges, probability vectors, Bernoulli/binomial/geometric/Poisson vectors,
+for ranges, probability vectors, Bernoulli/binomial/geometric/standard-geometric/Poisson vectors,
 and parameterized normal/exponential vectors/fills when the engine type is
 comptime-known.
 Zero-length checked scalar and vector fills, including the distribution-namespace
@@ -93,7 +93,8 @@ for exclusive and inclusive uniform ranges. Vector callers can stay in the
 same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
 `vectorBinomial*`, `fillVectorBinomial*`, `vectorGeometric*`,
 `fillVectorGeometric*`, `vectorGeometricFailures*`,
-`fillVectorGeometricFailures*`, `vectorPoisson*`, `fillVectorPoisson*`,
+`fillVectorGeometricFailures*`, `vectorStandardGeometric*`,
+`fillVectorStandardGeometric*`, `vectorPoisson*`, `fillVectorPoisson*`,
 `vectorUniform*`,
 `fillVectorUniform*`, `vectorUniformInclusive*`,
 `fillVectorUniformInclusive*`, `vectorStandardNormal*`,
@@ -101,7 +102,7 @@ same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
 `fillVectorNormal*`, `vectorStandardExponential*`,
 `fillVectorStandardExponential*`, `vectorExponential*`, and
 `fillVectorExponential*`; reusable vector samplers `VectorBernoulli`,
-`VectorBinomial`, `VectorGeometric`, `VectorGeometricFailures`,
+`VectorBinomial`, `VectorGeometric`, `VectorGeometricFailures`, `VectorStandardGeometric`,
 `VectorPoisson`, `VectorUniform`, `VectorStandardNormal`, `VectorNormal`,
 `VectorStandardExponential`, and `VectorExponential`; strict interval samplers
 `Open01` and `OpenClosed01` also sample/fill float vector slices.
@@ -325,7 +326,7 @@ benchmark shape.
 Use `vectorbench` for focused SIMD/vector-slice evidence without slowing the
 full throughput suite. The current local rows cover packed bool chance/ratio,
 strict-open/open-closed/range vector float fills, distribution-namespace vector
-Bernoulli/binomial/geometric/Poisson/uniform/normal/exponential wrappers over those kernels, and
+Bernoulli/binomial/geometric/standard-geometric/Poisson/uniform/normal/exponential wrappers over those kernels, and
 scalar-lane normal/exponential vector fills;
 representative rows are about 1.01B lanes/s
 for `fillVectorRange(f32x8)`, about 694M lanes/s for

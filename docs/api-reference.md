@@ -204,7 +204,9 @@ Single-shot helpers:
   `fillVectorGeometricFailuresFrom`, `fillVectorGeometricFailuresChecked`,
   `fillVectorGeometricFailuresCheckedFrom`, `standardGeometric`,
   `standardGeometricFrom`, `fillStandardGeometric`,
-  `fillStandardGeometricFrom`, `poissonAhrensDieter`,
+  `fillStandardGeometricFrom`, `vectorStandardGeometric`,
+  `vectorStandardGeometricFrom`, `fillVectorStandardGeometric`,
+  `fillVectorStandardGeometricFrom`, `poissonAhrensDieter`,
   `poissonAhrensDieterFrom`, `poissonAhrensDieterChecked`,
   `poissonAhrensDieterCheckedFrom`
 - `gamma`, `gammaFrom`, `gammaChecked`, `gammaCheckedFrom`, `fillGamma`,
@@ -679,6 +681,17 @@ Reusable samplers:
 - `StandardGeometric.sampleFrom`
 - `StandardGeometric.fill`
 - `StandardGeometric.fillFrom`
+- `VectorStandardGeometric(VectorType)`
+- `VectorStandardGeometric(VectorType).probabilityValue`
+- `VectorStandardGeometric(VectorType).expectedValue`
+- `VectorStandardGeometric(VectorType).varianceValue`
+- `VectorStandardGeometric(VectorType).modeValue`
+- `VectorStandardGeometric(VectorType).minValue`
+- `VectorStandardGeometric(VectorType).maxValue`
+- `VectorStandardGeometric(VectorType).sample`
+- `VectorStandardGeometric(VectorType).sampleFrom`
+- `VectorStandardGeometric(VectorType).fill`
+- `VectorStandardGeometric(VectorType).fillFrom`
 - `Gamma(T)`
 - `Gamma(T).init`
 - `Gamma(T).shapeValue`
