@@ -36,9 +36,9 @@ Zig-native way.
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment/support accessors |
 | FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2, finite-moment, and support accessors |
 | StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment and support accessors |
-| Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment accessors |
-| Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape and finite-moment accessors |
-| SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter/moment accessors |
+| Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment/support accessors |
+| Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape, finite-moment, and support accessors |
+| SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter/moment/support accessors |
 | Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, range-builder constructors, builder diagnostics, and parameter/moment accessors |
 | UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)`, including geometry, coordinate-moment, and radial-moment accessors |
 | UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)`, including geometry, coordinate-moment, and radial-moment accessors |
@@ -49,8 +49,8 @@ Zig-native way.
 | WeightedChoice | Covered: `WeightedChoice`, including item diagnostics, weight/probability diagnostics and exports, weight updates, single/bulk weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
 | WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `totalWeight`, `weightAt`, `probabilityAt`, and allocation-returning or caller-buffer weight/probability reconstruction |
 | WeightedTreeIndex | Covered: `WeightedTree(Weight)` for generic weights and `WeightedIntTree(Weight)` for faster unsigned integer sample/update/push/pop workloads; both expose single-weight/probability lookup plus `weights` / `weightsInto` and `probabilities` / `probabilitiesInto` export for diagnostics; `WeightedIntTree` stores subtotals in `u64` and rejects wider integer values that do not fit |
-| InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)`, including mean/shape/moment accessors |
-| NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)`, including alpha/beta/gamma and moment accessors |
+| InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)`, including mean/shape/moment/support accessors |
+| NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)`, including alpha/beta/gamma and moment/support accessors |
 | Zipf | Covered: `zipf`, `Zipf(T)`, including n/exponent and support-bound accessors |
 | Zeta | Covered: `zeta`, `Zeta(T)`, including exponent and support-bound accessors |
 
@@ -73,7 +73,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Chi | Covered: `chi`, `Chi(T)`, including dof/moment/support accessors |
 | Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment/support accessors |
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape, finite-moment, and support accessors |
-| Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment accessors |
+| Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment/support accessors |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment accessors |
 | Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, and support accessors |
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/support accessors |

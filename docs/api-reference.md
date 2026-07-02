@@ -627,6 +627,8 @@ Reusable samplers:
 - `Kumaraswamy(T).betaValue`
 - `Kumaraswamy(T).expectedValue`
 - `Kumaraswamy(T).varianceValue`
+- `Kumaraswamy(T).minValue`
+- `Kumaraswamy(T).maxValue`
 - `Kumaraswamy(T).sample`
 - `Kumaraswamy(T).sampleFrom`
 - `Kumaraswamy(T).fill`
@@ -694,6 +696,8 @@ Reusable samplers:
 - `Gumbel(T).scaleValue`
 - `Gumbel(T).expectedValue`
 - `Gumbel(T).varianceValue`
+- `Gumbel(T).minValue`
+- `Gumbel(T).maxValue`
 - `Gumbel(T).sample`
 - `Gumbel(T).sampleFrom`
 - `Gumbel(T).fill`
@@ -705,6 +709,8 @@ Reusable samplers:
 - `Frechet(T).shapeValue`
 - `Frechet(T).expectedValue`
 - `Frechet(T).varianceValue`
+- `Frechet(T).minValue`
+- `Frechet(T).maxValue`
 - `Frechet(T).sample`
 - `Frechet(T).sampleFrom`
 - `Frechet(T).fill`
@@ -716,6 +722,8 @@ Reusable samplers:
 - `SkewNormal(T).shapeValue`
 - `SkewNormal(T).expectedValue`
 - `SkewNormal(T).varianceValue`
+- `SkewNormal(T).minValue`
+- `SkewNormal(T).maxValue`
 - `SkewNormal(T).sample`
 - `SkewNormal(T).sampleFrom`
 - `SkewNormal(T).fill`
@@ -749,6 +757,8 @@ Reusable samplers:
 - `InverseGaussian(T).shapeValue`
 - `InverseGaussian(T).expectedValue`
 - `InverseGaussian(T).varianceValue`
+- `InverseGaussian(T).minValue`
+- `InverseGaussian(T).maxValue`
 - `InverseGaussian(T).sample`
 - `InverseGaussian(T).sampleFrom`
 - `InverseGaussian(T).fill`
@@ -760,6 +770,8 @@ Reusable samplers:
 - `NormalInverseGaussian(T).gammaValue`
 - `NormalInverseGaussian(T).expectedValue`
 - `NormalInverseGaussian(T).varianceValue`
+- `NormalInverseGaussian(T).minValue`
+- `NormalInverseGaussian(T).maxValue`
 - `NormalInverseGaussian(T).sample`
 - `NormalInverseGaussian(T).sampleFrom`
 - `NormalInverseGaussian(T).fill`

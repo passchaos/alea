@@ -4047,6 +4047,16 @@ pub fn Kumaraswamy(comptime T: type) type {
             return second_moment - first_moment * first_moment;
         }
 
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) T {
+            _ = self;
+            return 1;
+        }
+
         fn momentValue(self: Self, order: T) T {
             const beta_param = self.betaValue();
             const beta_arg = 1 + order * self.inverse_alpha;
@@ -4709,6 +4719,16 @@ pub fn Gumbel(comptime T: type) type {
             return std.math.pi * std.math.pi * scale * scale / 6;
         }
 
+        pub fn minValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -4812,6 +4832,15 @@ pub fn Frechet(comptime T: type) type {
             const second_moment_factor = std.math.gamma(T, 1 - 2 / self.shape);
             const scale_squared = self.scale * self.scale;
             return scale_squared * (second_moment_factor - mean_factor * mean_factor);
+        }
+
+        pub fn minValue(self: Self) T {
+            return self.location;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -4950,6 +4979,16 @@ pub fn SkewNormal(comptime T: type) type {
             const delta = self.shape / @sqrt(1 + self.shape * self.shape);
             const scale_squared = self.scale * self.scale;
             return scale_squared * (1 - 2.0 * delta * delta / std.math.pi);
+        }
+
+        pub fn minValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -5696,6 +5735,16 @@ pub fn InverseGaussian(comptime T: type) type {
             return self.mean_squared * self.mean / self.shape;
         }
 
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -5805,6 +5854,16 @@ pub fn NormalInverseGaussian(comptime T: type) type {
             const gamma_param = self.gammaValue();
             const alpha = self.alphaValue();
             return alpha * alpha / (gamma_param * gamma_param * gamma_param);
+        }
+
+        pub fn minValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9594,6 +9653,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const kumaraswamy_second_moment = 5.0 * @exp(std.math.lgamma(f64, 1.0 + 2.0 / 2.0) + std.math.lgamma(f64, 5.0) - std.math.lgamma(f64, 1.0 + 2.0 / 2.0 + 5.0));
     try std.testing.expectApproxEqAbs(kumaraswamy_first_moment, kumaraswamy_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(kumaraswamy_second_moment - kumaraswamy_first_moment * kumaraswamy_first_moment, kumaraswamy_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), kumaraswamy_sampler.minValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), kumaraswamy_sampler.maxValue(), 0);
     kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf);
     for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
     const direct_checked_kumaraswamy = try kumaraswamyCheckedFrom(&direct_engine, f64, 2, 5);
@@ -9767,6 +9828,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), gumbel_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5772156649015329), gumbel_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(std.math.pi * std.math.pi / 6.0, gumbel_sampler.varianceValue(), 1e-12);
+    try std.testing.expect(gumbel_sampler.minValue() == null);
+    try std.testing.expect(gumbel_sampler.maxValue() == null);
     gumbel_sampler.fillFrom(&direct_engine, &direct_gumbel_buf);
     for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try gumbelCheckedFrom(&direct_engine, f64, 0, 1)));
@@ -9792,6 +9855,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), frechet_sampler.shapeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@sqrt(std.math.pi), frechet_sampler.expectedValue().?, 1e-12);
     try std.testing.expect(frechet_sampler.varianceValue() == null);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), frechet_sampler.minValue(), 0);
+    try std.testing.expect(frechet_sampler.maxValue() == null);
     const frechet_finite_moments = try Frechet(f64).init(0, 1, 3);
     const frechet_mean_factor = std.math.gamma(f64, 1.0 - 1.0 / 3.0);
     const frechet_second_moment_factor = std.math.gamma(f64, 1.0 - 2.0 / 3.0);
@@ -9826,6 +9891,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const skew_normal_delta = 1.0 / @sqrt(2.0);
     try std.testing.expectApproxEqAbs(skew_normal_delta * @sqrt(2.0 / std.math.pi), skew_normal_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(1.0 - 2.0 * skew_normal_delta * skew_normal_delta / std.math.pi, skew_normal_sampler.varianceValue(), 1e-12);
+    try std.testing.expect(skew_normal_sampler.minValue() == null);
+    try std.testing.expect(skew_normal_sampler.maxValue() == null);
     skew_normal_sampler.fillFrom(&direct_engine, &direct_skew_normal_buf);
     for (direct_skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
@@ -9882,6 +9949,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), inverse_gaussian_sampler.shapeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), inverse_gaussian_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), inverse_gaussian_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), inverse_gaussian_sampler.minValue(), 0);
+    try std.testing.expect(inverse_gaussian_sampler.maxValue() == null);
     inverse_gaussian_sampler.fillFrom(&direct_engine, &direct_inverse_gaussian_buf);
     for (direct_inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
 
@@ -9904,6 +9973,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@sqrt(@as(f64, 3)), nig_sampler.gammaValue(), 1e-12);
     try std.testing.expectApproxEqAbs(1.0 / @sqrt(@as(f64, 3)), nig_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(4.0 / (3.0 * @sqrt(@as(f64, 3))), nig_sampler.varianceValue(), 1e-12);
+    try std.testing.expect(nig_sampler.minValue() == null);
+    try std.testing.expect(nig_sampler.maxValue() == null);
     nig_sampler.fillFrom(&direct_engine, &direct_nig_buf);
     for (direct_nig_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
