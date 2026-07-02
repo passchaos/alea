@@ -341,6 +341,8 @@ Reusable samplers:
 - `StandardNormal(T)`
 - `StandardNormal(T).meanValue`
 - `StandardNormal(T).stddevValue`
+- `StandardNormal(T).expectedValue`
+- `StandardNormal(T).varianceValue`
 - `StandardNormal(T).sample`
 - `StandardNormal(T).sampleFrom`
 - `StandardNormal(T).fill`
@@ -351,6 +353,8 @@ Reusable samplers:
 - `Normal(T).fromZScore`
 - `Normal(T).meanValue`
 - `Normal(T).stddevValue`
+- `Normal(T).expectedValue`
+- `Normal(T).varianceValue`
 - `Normal(T).coefficientOfVariationValue`
 - `Normal(T).sample`
 - `Normal(T).sampleFrom`

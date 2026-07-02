@@ -1315,6 +1315,14 @@ pub fn StandardNormal(comptime T: type) type {
             return 1;
         }
 
+        pub fn expectedValue(_: @This()) T {
+            return 0;
+        }
+
+        pub fn varianceValue(_: @This()) T {
+            return 1;
+        }
+
         pub fn sample(_: @This(), rng: Rng) T {
             return standardNormal(rng, T);
         }
@@ -1414,6 +1422,14 @@ pub fn Normal(comptime T: type) type {
 
         pub fn stddevValue(self: Self) T {
             return self.stddev;
+        }
+
+        pub fn expectedValue(self: Self) T {
+            return self.mean;
+        }
+
+        pub fn varianceValue(self: Self) T {
+            return self.stddev * self.stddev;
         }
 
         pub fn coefficientOfVariationValue(self: Self) ?T {
@@ -8354,6 +8370,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, -7), normal_cv_sampler.fromZScore(1.5), 1e-15);
     try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.meanValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 2), normal_cv_sampler.stddevValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.expectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), normal_cv_sampler.varianceValue(), 1e-15);
     try std.testing.expectApproxEqAbs(@as(f64, 0.2), normal_cv_sampler.coefficientOfVariationValue().?, 1e-15);
     try std.testing.expect((try Normal(f64).init(0, 0)).coefficientOfVariationValue() == null);
 
@@ -8375,6 +8393,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(std.math.isFinite(standard_normals.next().?));
     try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).meanValue());
     try std.testing.expectEqual(@as(f64, 1), (StandardNormal(f64){}).stddevValue());
+    try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).expectedValue());
+    try std.testing.expectEqual(@as(f64, 1), (StandardNormal(f64){}).varianceValue());
     var standard_normal_buf: [8]f64 = undefined;
     fillStandardNormal(rng, f64, &standard_normal_buf);
     for (standard_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
