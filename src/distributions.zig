@@ -212,6 +212,12 @@ pub const Bernoulli = struct {
         return p * (1 - p);
     }
 
+    pub fn modeValue(self: Bernoulli) ?bool {
+        const p = self.probability();
+        if (p == 0.5) return null;
+        return p > 0.5;
+    }
+
     pub fn minValue(self: Bernoulli) bool {
         _ = self;
         return false;
@@ -7661,6 +7667,9 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), fair_bernoulli.probabilityValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), fair_bernoulli.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), fair_bernoulli.varianceValue(), 1e-12);
+    try std.testing.expect(fair_bernoulli.modeValue() == null);
+    try std.testing.expectEqual(false, (try Bernoulli.init(0.25)).modeValue().?);
+    try std.testing.expectEqual(true, (try Bernoulli.init(0.75)).modeValue().?);
     try std.testing.expectEqual(false, fair_bernoulli.minValue());
     try std.testing.expectEqual(true, fair_bernoulli.maxValue());
     try std.testing.expect((try Bernoulli.init(1.0 - std.math.floatEps(f64) / 2.0)).sample(rng));

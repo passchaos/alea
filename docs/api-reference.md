@@ -254,6 +254,7 @@ Reusable samplers:
 - `Bernoulli.probabilityValue`
 - `Bernoulli.expectedValue`
 - `Bernoulli.varianceValue`
+- `Bernoulli.modeValue`
 - `Bernoulli.minValue`
 - `Bernoulli.maxValue`
 - `Bernoulli.sample`
