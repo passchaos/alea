@@ -16,10 +16,10 @@ the scalar draw/repair policy simple.
 Latest `vectorbench` evidence is tracked in `performance-triage.md` and
 `core-rand-coverage.md`. Representative rows are roughly:
 
-- normal f32x8 / f64x4 direct: about 478M / 443M lanes/s,
-- standard normal f32x8 / f64x4 direct: about 453M / 456M lanes/s,
-- exponential f32x8 / f64x4 direct: about 412M / 422M lanes/s,
-- standard exponential f32x8 / f64x4 direct: about 397M / 381M lanes/s.
+- normal f32x8 / f64x4 direct: about 497M / 413M lanes/s,
+- standard normal f32x8 / f64x4 direct: about 499M / 456M lanes/s,
+- exponential f32x8 / f64x4 direct: about 471M / 469M lanes/s,
+- standard exponential f32x8 / f64x4 direct: about 473M / 471M lanes/s.
 
 These rows are host/load sensitive, so production decisions should compare
 candidates in the same `vectorbench` run rather than against stale absolute
@@ -34,9 +34,9 @@ numbers.
   but the advantage does not survive the real vector-slice fill harness:
   standard repair rows can be close to current direct rows in a given run, but
   do not provide a durable standard/parameterized no-regression win. Recent
-  vectorbench rows show f32x8 repair about 472M standard-normal, 476M normal,
-  389M standard-exponential, and 378M exponential lanes/s versus matching
-  direct rows around 453M, 478M, 397M, and 412M. FastPrng repair probe rows
+  vectorbench rows show f32x8 repair about 473M standard-normal, 477M normal,
+  451M standard-exponential, and 450M exponential lanes/s versus matching
+  direct rows around 499M, 497M, 473M, and 471M. FastPrng repair probe rows
   likewise trail or only match current production rows once correct stream-shape
   repair is required.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
