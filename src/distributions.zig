@@ -2896,6 +2896,12 @@ pub fn fillLogNormal(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) 
 pub fn fillLogNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
+    if (mean == 0 and stddev != 1) {
+        Rng.fillNormalFrom(source, T, dest, 0, 1);
+        scaleInPlace(T, dest, stddev);
+        expInPlace(T, dest);
+        return;
+    }
     Rng.fillNormalFrom(source, T, dest, mean, stddev);
     expInPlace(T, dest);
 }
@@ -12271,6 +12277,30 @@ fn expInPlace(comptime T: type, dest: []T) void {
         f64 => expInPlaceScalar(T, dest),
         else => @compileError("alea supports f32 and f64 floats"),
     }
+}
+
+fn scaleInPlace(comptime T: type, dest: []T, scale: T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => scaleInPlaceVector(T, @Vector(8, f32), dest, scale),
+        f64 => scaleInPlaceVector(T, @Vector(4, f64), dest, scale),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn scaleInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T) void {
+    const len = @typeInfo(VectorType).vector.len;
+    const scale_vec: VectorType = @splat(scale);
+
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var vec: VectorType = undefined;
+        inline for (0..len) |lane| vec[lane] = dest[i + lane];
+        vec *= scale_vec;
+        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+    }
+
+    while (i < dest.len) : (i += 1) dest[i] *= scale;
 }
 
 fn expInPlaceScalar(comptime T: type, dest: []T) void {

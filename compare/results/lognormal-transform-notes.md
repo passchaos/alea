@@ -14,10 +14,12 @@ Production LogNormal sampling uses the exact conceptual shape:
 Bulk fills stage normal samples into the destination slice and apply the
 transform in place. Current evidence shows:
 
-- fresh 1GiB focused f64 fill is around 112M samples/s for facade/FastPrng
-  direct and around 118M for ScalarPrng direct, versus local Rust around 118M,
-- fresh 1GiB focused f32 fill is around 116M for facade/FastPrng direct and
-  around 127M for ScalarPrng direct, versus local Rust around 128M,
+- fresh 1GiB focused f64 fill after the mean-zero standard-normal staging
+  specialization is around 132M samples/s for facade/FastPrng direct and
+  around 139M for ScalarPrng direct, versus local Rust around 146M,
+- fresh 1GiB focused f32 fill after the same specialization is around 136-137M
+  for facade/FastPrng direct and around 143M for ScalarPrng direct, versus
+  local Rust around 155M,
 - normal-only fill is much faster, so the bottleneck is the transform.
 
 Local `rand_distr 0.6.0` uses the same high-level algorithm:
@@ -40,10 +42,11 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   `|mean| <= 0.25` and `stddev <= 0.25`, not as the exact default.
 - A branchy f32 hybrid can keep wider-parameter error near 1 ULP, but the
   branch cost is too high for the measured fill workload.
-- Filling standard normal samples and then applying scale before exact `@exp`,
-  or fusing the affine transform with exact `@exp` / `std.math.exp` in one
-  pass, regresses or is mixed versus the current parameterized-normal staging
-  plus exact transform.
+- Filling standard normal samples and then applying scale before exact `@exp`
+  wins in the real production fill path for the common `mean == 0` case, so
+  `fillLogNormalFrom` now specializes that shape. Fusing the affine transform
+  directly with exact `@exp` / `std.math.exp` in one pass still regresses or is
+  mixed versus the staged transform.
 
 ## Adopted Opt-In Approximation
 
@@ -57,8 +60,9 @@ The exact `LogNormal(f32)` and `fillLogNormal` paths remain unchanged and keep
 Fresh local evidence:
 
 - `bench -- 1073741824 fillLogNormal`: exact f64 facade/FastPrng-direct/
-  ScalarPrng-direct about 112M/112M/118M versus local Rust log-normal about
-  118M; exact f32 about 116M/116M/127M versus local Rust f32 about 128M.
+  ScalarPrng-direct about 132M/133M/139M versus local Rust log-normal about
+  146M; exact f32 about 137M/136M/143M versus local Rust f32 about 155M after
+  the mean-zero standard-normal staging specialization.
 - `log-normal-probe -- 1048576`: f32 current/approx fill remains sensitive to
   probe shape, with recent rows around 134M/139M FastPrng and 140M/130M
   ScalarPrng; older focused rows showed approx peaks around 143M/150M.
