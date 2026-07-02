@@ -77,7 +77,7 @@ toolkit functionality and reduce reliance on companion crates:
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment accessors |
 | Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape and finite-moment accessors |
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment accessors |
-| Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs, including alpha/mean/variance export, covariance lookup, and dimension/total-alpha accessors |
+| Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance export and dimension/total-alpha accessors |
 | Multinomial | Covered: `Multinomial`, including trials/category/probability lookup/export and count moment accessors |
 | NegativeBinomial | Covered: `NegativeBinomial`, including successes/probability/moment accessors |
 

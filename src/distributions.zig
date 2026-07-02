@@ -5822,6 +5822,33 @@ pub fn Dirichlet(comptime T: type) type {
             return -(alpha_i * alpha_j) / (alpha_0 * alpha_0 * (alpha_0 + 1));
         }
 
+        pub fn covariances(self: Self, allocator: std.mem.Allocator) ![]T {
+            const count = std.math.mul(usize, self.alpha.len, self.alpha.len) catch return error.OutOfMemory;
+            const out = try allocator.alloc(T, count);
+            errdefer allocator.free(out);
+            try self.covariancesInto(out);
+            return out;
+        }
+
+        pub fn covariancesInto(self: Self, out: []T) Error!void {
+            const count = std.math.mul(usize, self.alpha.len, self.alpha.len) catch return error.InvalidLength;
+            if (out.len != count) return error.InvalidLength;
+            const alpha_0 = self.totalAlphaValue();
+            const denominator = alpha_0 * alpha_0 * (alpha_0 + 1);
+            var row: usize = 0;
+            while (row < self.alpha.len) : (row += 1) {
+                var col: usize = 0;
+                while (col < self.alpha.len) : (col += 1) {
+                    const alpha_i = self.alpha[row];
+                    const alpha_j = self.alpha[col];
+                    out[row * self.alpha.len + col] = if (row == col)
+                        alpha_i * (alpha_0 - alpha_i) / denominator
+                    else
+                        -(alpha_i * alpha_j) / denominator;
+                }
+            }
+        }
+
         pub fn dimensionValue(self: Self) usize {
             return self.alpha.len;
         }
@@ -10073,6 +10100,22 @@ test "dirichlet sampler returns simplex vectors" {
     try std.testing.expectEqualSlices(f64, &dirichlet_variances, owned_variances);
     try std.testing.expectApproxEqAbs(@as(f64, -1.0 / 126.0), try dist.covarianceAt(0, 1), 1e-12);
     try std.testing.expectApproxEqAbs(try dist.varianceAt(1), try dist.covarianceAt(1, 1), 1e-12);
+    var dirichlet_covariances: [9]f64 = undefined;
+    try dist.covariancesInto(&dirichlet_covariances);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 252.0), dirichlet_covariances[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.0 / 126.0), dirichlet_covariances[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.0 / 84.0), dirichlet_covariances[2], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.0 / 126.0), dirichlet_covariances[3], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 63.0), dirichlet_covariances[4], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.0 / 42.0), dirichlet_covariances[5], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.0 / 84.0), dirichlet_covariances[6], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.0 / 42.0), dirichlet_covariances[7], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 28.0), dirichlet_covariances[8], 1e-12);
+    var wrong_covariances_len: [8]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.covariancesInto(&wrong_covariances_len));
+    const owned_covariances = try dist.covariances(std.testing.allocator);
+    defer std.testing.allocator.free(owned_covariances);
+    try std.testing.expectEqualSlices(f64, &dirichlet_covariances, owned_covariances);
     try std.testing.expectError(error.InvalidParameter, dist.alphaAt(3));
     try std.testing.expectError(error.InvalidParameter, dist.meanAt(3));
     try std.testing.expectError(error.InvalidParameter, dist.varianceAt(3));
