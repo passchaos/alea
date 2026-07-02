@@ -47,6 +47,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged optimized exp", 0x1063, sample_count, stagedOptimizedExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged std.math.exp", 0x1063, sample_count, stagedStdMathExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged expm1+1", 0x1063, sample_count, stagedExpm1ExpF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 public approx", 0x1063, sample_count, publicApproxFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged hybrid expm1 0.25", 0x1063, sample_count, stagedHybridExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged vector4 exp", 0x1063, sample_count, stagedVector4ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
@@ -57,6 +58,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged optimized exp", 0x1063, sample_count, stagedOptimizedExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged std.math.exp", 0x1063, sample_count, stagedStdMathExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged expm1+1", 0x1063, sample_count, stagedExpm1ExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 public approx", 0x1063, sample_count, publicApproxFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged hybrid expm1 0.25", 0x1063, sample_count, stagedHybridExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector4 exp", 0x1063, sample_count, stagedVector4ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
@@ -259,6 +261,10 @@ fn stagedStdMathExpF32(source: anytype, dest: []f32) void {
 fn stagedExpm1ExpF32(source: anytype, dest: []f32) void {
     alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
     expm1PlusOneF32(dest);
+}
+
+fn publicApproxFillF32(source: anytype, dest: []f32) void {
+    alea.distributions.fillLogNormalApproxF32From(source, dest, 0, 0.25);
 }
 
 fn stagedHybridExpF32(source: anytype, dest: []f32) void {

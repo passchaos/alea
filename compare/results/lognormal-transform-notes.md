@@ -35,18 +35,40 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
 - f32 vector width changes do not produce a durable win.
 - f32 `expm1(x) + 1` can be faster for narrow `stddev = 0.25`, but changes
   output rounding; max error is 1 ULP for the narrow benchmark and grows
-  substantially for wider spreads.
+  substantially for wider spreads. It is therefore exposed only through the
+  opt-in `LogNormalApproxF32` / `logNormalApproxF32*` APIs with bounded
+  `|mean| <= 0.25` and `stddev <= 0.25`, not as the exact default.
 - A branchy f32 hybrid can keep wider-parameter error near 1 ULP, but the
   branch cost is too high for the measured fill workload.
 
-## Requirements For A Future Change
+## Adopted Opt-In Approximation
+
+`LogNormalApproxF32` and the matching `logNormalApproxF32*` /
+`fillLogNormalApproxF32*` helpers intentionally use `expm1(x) + 1` for the
+final transform. They are limited to `|mean| <= 0.25` and `stddev <= 0.25` so
+callers must explicitly choose the narrow f32 profile measured in the probe.
+The exact `LogNormal(f32)` and `fillLogNormal` paths remain unchanged and keep
+`@exp` output semantics.
+
+Fresh local evidence:
+
+- `log-normal-probe -- 1048576`: f32 current/approx fill about 138.6M/142.8M
+  FastPrng and 143.3M/149.6M ScalarPrng.
+- The same probe reports max 1 ULP at `stddev=0.25`, but max 51 ULP at
+  `stddev=1.0` and 8028 ULP at `stddev=2.0`, which is why the public
+  approximation is parameter-bounded.
+- Focused throughput rows show approximate f32 fill around 131.2M facade,
+  138.0M FastPrng direct, and 151.3M ScalarPrng direct.
+
+## Requirements For A Future Default Change
 
 A future LogNormal transform change should satisfy at least one of:
 
 1. It is bit-identical or demonstrably distribution-equivalent with an explicit
    versioned-output note.
 2. It is exposed as an opt-in sampler/fill variant with clearly documented
-   accuracy and reproducibility tradeoffs.
+   accuracy and reproducibility tradeoffs. This is the current status for the
+   bounded f32 approximation.
 3. It improves both f32 and f64, or is narrowly scoped to f32 with parameter
    bounds that prevent the wider-`stddev` error growth observed in probes.
 

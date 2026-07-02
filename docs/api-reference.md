@@ -161,6 +161,10 @@ Single-shot helpers:
   `fillVectorNormalCheckedFrom`, `logNormal`, `logNormalFrom`,
   `logNormalChecked`, `logNormalCheckedFrom`, `fillLogNormal`,
   `fillLogNormalFrom`, `fillLogNormalChecked`, `fillLogNormalCheckedFrom`,
+  `logNormalApproxF32`, `logNormalApproxF32From`,
+  `logNormalApproxF32Checked`, `logNormalApproxF32CheckedFrom`,
+  `fillLogNormalApproxF32`, `fillLogNormalApproxF32From`,
+  `fillLogNormalApproxF32Checked`, `fillLogNormalApproxF32CheckedFrom`,
   `halfNormal`, `halfNormalFrom`, `halfNormalChecked`,
   `halfNormalCheckedFrom`, `fillHalfNormal`, `fillHalfNormalFrom`,
   `fillHalfNormalChecked`, `fillHalfNormalCheckedFrom`, `chi`, `chiFrom`,
@@ -545,6 +549,18 @@ Reusable samplers:
 - `LogNormal(T).sampleFrom`
 - `LogNormal(T).fill`
 - `LogNormal(T).fillFrom`
+- `LogNormalApproxF32`
+- `LogNormalApproxF32.max_abs_mean`
+- `LogNormalApproxF32.max_stddev`
+- `LogNormalApproxF32.init`
+- `LogNormalApproxF32.meanValue`
+- `LogNormalApproxF32.stddevValue`
+- `LogNormalApproxF32.maxAbsMeanValue`
+- `LogNormalApproxF32.maxStddevValue`
+- `LogNormalApproxF32.sample`
+- `LogNormalApproxF32.sampleFrom`
+- `LogNormalApproxF32.fill`
+- `LogNormalApproxF32.fillFrom`
 - `HalfNormal(T)`
 - `HalfNormal(T).init`
 - `HalfNormal(T).scaleValue`

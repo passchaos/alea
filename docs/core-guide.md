@@ -104,12 +104,22 @@ Use `standardNormalFastFrom`, `normalFastFrom`,
 engine pointer is available and the workload is dominated by scalar
 distribution sampling.
 
+
+`LogNormalApproxF32` and the `logNormalApproxF32*` /
+`fillLogNormalApproxF32*` helpers are explicitly opt-in: they use
+`expm1(x) + 1` for the final transform to target narrow f32 throughput. They
+are checked to `|mean| <= LogNormalApproxF32.max_abs_mean` and
+`stddev <= LogNormalApproxF32.max_stddev`; use exact `LogNormal(f32)` /
+`fillLogNormal` whenever bit-identical `@exp` output or wider parameters are
+required.
+
 ## Distributions
 
 Single-shot helpers and reusable samplers cover:
 
 - uniform, Bernoulli, binomial
-- standard normal, normal, log-normal, half-normal, standard exponential, exponential
+- standard normal, normal, exact log-normal plus opt-in bounded f32 approximate
+  log-normal, half-normal, standard exponential, exponential
 - poisson, geometric
 - gamma, chi-squared, chi, erlang, beta, Fisher F, Student t
 - triangular, arcsine, cauchy, laplace, logistic, log-logistic, kumaraswamy,

@@ -26,7 +26,8 @@ The current Linux-first roadmap is intentionally broad:
   replacement, iterator and weighted iterator sampling with and without
   replacement, reservoir sampling, adaptive index sampling, and checked
   variants for fallible user-supplied counts or empty inputs
-- reusable uniform, Bernoulli, non-uniform distribution, and alias-table samplers
+- reusable uniform, Bernoulli, non-uniform distribution, opt-in bounded f32
+  LogNormal approximation, and alias-table samplers
 - dynamic weighted trees for frequent update/push/pop/sample/fill weighted
   workloads
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, direct-source charset
@@ -142,7 +143,8 @@ See `docs/core-guide.md` for the core API guide, `docs/api-reference.md` for
 the public API reference, and
 `compare/results/core-rand-coverage.md` for the roadmap and validation matrix.
 Current hard performance gaps and rejected optimization attempts are tracked in
-`compare/results/performance-triage.md`; LogNormal transform tradeoffs are
-summarized in `compare/results/lognormal-transform-notes.md`, and exact
+`compare/results/performance-triage.md`; LogNormal transform tradeoffs,
+including the opt-in bounded f32 approximation, are summarized in
+`compare/results/lognormal-transform-notes.md`, and exact
 `(0, 1]` f64 endpoint-grid constraints are summarized in
 `compare/results/openclosed-endpoint-notes.md`.
