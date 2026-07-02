@@ -490,6 +490,14 @@ pub const NegativeBinomial = struct {
         return self.p;
     }
 
+    pub fn expectedValue(self: NegativeBinomial) f64 {
+        return @as(f64, @floatFromInt(self.successes)) * (1 - self.p) / self.p;
+    }
+
+    pub fn varianceValue(self: NegativeBinomial) f64 {
+        return @as(f64, @floatFromInt(self.successes)) * (1 - self.p) / (self.p * self.p);
+    }
+
     pub fn sample(self: NegativeBinomial, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -9034,6 +9042,8 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     const nb = try NegativeBinomial.init(5, 0.4);
     try std.testing.expectEqual(@as(u64, 5), nb.successesValue());
     try std.testing.expectApproxEqAbs(@as(f64, 0.4), nb.probabilityValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7.5), nb.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 18.75), nb.varianceValue(), 1e-12);
     const hg = try Hypergeometric.init(100, 30, 10);
     try std.testing.expectEqual(@as(u64, 100), hg.populationValue());
     try std.testing.expectEqual(@as(u64, 30), hg.successesValue());

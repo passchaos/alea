@@ -291,6 +291,8 @@ Reusable samplers:
 - `NegativeBinomial.init`
 - `NegativeBinomial.successesValue`
 - `NegativeBinomial.probabilityValue`
+- `NegativeBinomial.expectedValue`
+- `NegativeBinomial.varianceValue`
 - `NegativeBinomial.sample`
 - `NegativeBinomial.sampleFrom`
 - `NegativeBinomial.fill`
