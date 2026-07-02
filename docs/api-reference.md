@@ -412,6 +412,8 @@ Reusable samplers:
 - `LogNormal(T).linearMeanValue`
 - `LogNormal(T).expectedValue`
 - `LogNormal(T).varianceValue`
+- `LogNormal(T).minValue`
+- `LogNormal(T).maxValue`
 - `LogNormal(T).coefficientOfVariationValue`
 - `LogNormal(T).sample`
 - `LogNormal(T).sampleFrom`
