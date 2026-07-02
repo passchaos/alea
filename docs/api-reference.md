@@ -140,7 +140,11 @@ Single-shot helpers:
   `fillVectorBernoulliFrom`, `fillVectorBernoulliChecked`,
   `fillVectorBernoulliCheckedFrom`, `binomial`,
   `binomialFrom`, `binomialChecked`, `binomialCheckedFrom`, `fillBinomial`, `fillBinomialFrom`,
-  `fillBinomialChecked`, `fillBinomialCheckedFrom`,
+  `fillBinomialChecked`, `fillBinomialCheckedFrom`, `vectorBinomial`,
+  `vectorBinomialFrom`, `vectorBinomialChecked`,
+  `vectorBinomialCheckedFrom`, `fillVectorBinomial`,
+  `fillVectorBinomialFrom`, `fillVectorBinomialChecked`,
+  `fillVectorBinomialCheckedFrom`,
   `binomialPoissonApprox`, `binomialPoissonApproxFrom`,
   `binomialPoissonApproxChecked`, `binomialPoissonApproxCheckedFrom`
 - `negativeBinomial`, `negativeBinomialFrom`, `negativeBinomialChecked`,
@@ -316,6 +320,18 @@ Reusable samplers:
 - `Binomial.sampleFrom`
 - `Binomial.fill`
 - `Binomial.fillFrom`
+- `VectorBinomial(VectorType)`
+- `VectorBinomial(VectorType).init`
+- `VectorBinomial(VectorType).trialsValue`
+- `VectorBinomial(VectorType).probabilityValue`
+- `VectorBinomial(VectorType).expectedValue`
+- `VectorBinomial(VectorType).varianceValue`
+- `VectorBinomial(VectorType).minValue`
+- `VectorBinomial(VectorType).maxValue`
+- `VectorBinomial(VectorType).sample`
+- `VectorBinomial(VectorType).sampleFrom`
+- `VectorBinomial(VectorType).fill`
+- `VectorBinomial(VectorType).fillFrom`
 - `Multinomial`
 - `Multinomial.init`
 - `Multinomial.trialsValue`

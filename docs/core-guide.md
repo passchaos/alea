@@ -67,8 +67,9 @@ including facade and direct-source `From` helpers for single scalar draws and
 scalar fills, including duration ranges. The same checked/error-returning style
 is available for vector ranges, vector probabilities, and parameterized vector
 normal/exponential sampling, including facade and direct-source `From` helpers
-for ranges, probability vectors, Bernoulli/Poisson vectors, and parameterized
-normal/exponential vectors/fills when the engine type is comptime-known.
+for ranges, probability vectors, Bernoulli/binomial/Poisson vectors, and
+parameterized normal/exponential vectors/fills when the engine type is
+comptime-known.
 Zero-length checked scalar and vector fills, including the distribution-namespace
 Bernoulli/uniform/normal/exponential wrappers, return before validating
 user-supplied range, probability, normal, or exponential parameters.
@@ -90,14 +91,15 @@ The distributions module also mirrors `Rng.fillNormal*` and
 distribution namespace; `fillUniform*` and `fillUniformInclusive*` do the same
 for exclusive and inclusive uniform ranges. Vector callers can stay in the
 same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
-`vectorPoisson*`, `fillVectorPoisson*`, `vectorUniform*`,
+`vectorBinomial*`, `fillVectorBinomial*`, `vectorPoisson*`,
+`fillVectorPoisson*`, `vectorUniform*`,
 `fillVectorUniform*`, `vectorUniformInclusive*`,
 `fillVectorUniformInclusive*`, `vectorStandardNormal*`,
 `fillVectorStandardNormal*`, `vectorNormal*`,
 `fillVectorNormal*`, `vectorStandardExponential*`,
 `fillVectorStandardExponential*`, `vectorExponential*`, and
 `fillVectorExponential*`; reusable vector samplers `VectorBernoulli`,
-`VectorPoisson`, `VectorUniform`, `VectorStandardNormal`, `VectorNormal`,
+`VectorBinomial`, `VectorPoisson`, `VectorUniform`, `VectorStandardNormal`, `VectorNormal`,
 `VectorStandardExponential`, and `VectorExponential`; strict interval samplers
 `Open01` and `OpenClosed01` also sample/fill float vector slices.
 Use `standardNormalFastFrom`, `normalFastFrom`,
@@ -118,7 +120,7 @@ required.
 
 Single-shot helpers and reusable samplers cover:
 
-- uniform, Bernoulli, binomial
+- uniform, Bernoulli, binomial, vector Bernoulli/binomial
 - standard normal, normal, exact log-normal plus opt-in bounded f32 approximate
   log-normal, half-normal, standard exponential, exponential
 - poisson, vector poisson, geometric
@@ -320,7 +322,7 @@ benchmark shape.
 Use `vectorbench` for focused SIMD/vector-slice evidence without slowing the
 full throughput suite. The current local rows cover packed bool chance/ratio,
 strict-open/open-closed/range vector float fills, distribution-namespace vector
-Bernoulli/Poisson/uniform/normal/exponential wrappers over those kernels, and
+Bernoulli/binomial/Poisson/uniform/normal/exponential wrappers over those kernels, and
 scalar-lane normal/exponential vector fills;
 representative rows are about 1.01B lanes/s
 for `fillVectorRange(f32x8)`, about 694M lanes/s for
