@@ -6402,7 +6402,8 @@ pub fn arcsineCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Err
 
 pub fn arcsineFrom(source: anytype, comptime T: type, min: T, max: T) T {
     comptime requireFloat(T);
-    std.debug.assert(min < max and std.math.isFinite(min) and std.math.isFinite(max));
+    std.debug.assert(min <= max and std.math.isFinite(min) and std.math.isFinite(max));
+    if (min == max) return min;
 
     const u = Rng.floatOpenFrom(source, T);
     const s = @sin(@as(T, @floatCast(std.math.pi)) * u / 2);
@@ -6415,7 +6416,11 @@ pub fn fillArcsine(rng: Rng, comptime T: type, dest: []T, min: T, max: T) void {
 
 pub fn fillArcsineFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
     comptime requireFloat(T);
-    std.debug.assert(min < max and std.math.isFinite(min) and std.math.isFinite(max));
+    std.debug.assert(min <= max and std.math.isFinite(min) and std.math.isFinite(max));
+    if (min == max) {
+        @memset(dest, min);
+        return;
+    }
     Rng.fillOpenFrom(source, T, dest);
     arcsineFromOpenUniforms(T, dest, min, max - min);
 }
@@ -6469,6 +6474,7 @@ pub fn fillVectorArcsineCheckedFrom(source: anytype, comptime VectorType: type, 
 
 fn arcsineFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
     const Child = vectorChild(VectorType);
+    if (min == max) return @splat(min);
     const min_vec: VectorType = @splat(min);
     const width_vec: VectorType = @splat(max - min);
     const angle_scale_vec: VectorType = @splat(@as(Child, @floatCast(std.math.pi)) / 2);
@@ -6514,6 +6520,7 @@ pub fn VectorArcsine(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.minValue());
             const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
             return arcsineFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), self.maxValue());
         }
@@ -6523,6 +6530,10 @@ pub fn VectorArcsine(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.minValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -6537,7 +6548,7 @@ pub fn Arcsine(comptime T: type) type {
 
         pub fn init(min: T, max: T) Error!Self {
             comptime requireFloat(T);
-            if (!(min < max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.InvalidParameter;
+            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.InvalidParameter;
             return .{ .min = min, .max = max };
         }
 
@@ -6576,6 +6587,10 @@ pub fn Arcsine(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             fillArcsineFrom(source, T, dest, self.min, self.max);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.min == self.max;
         }
     };
 }
@@ -14222,6 +14237,71 @@ test "degenerate triangular helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "degenerate arcsine helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1e7);
+    var control = alea.ScalarPrng.init(0x5150_d1e7);
+    const rng = Rng.init(&engine);
+
+    const point: f64 = -1.25;
+    try std.testing.expectEqual(point, arcsineFrom(&engine, f64, point, point));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, try arcsineChecked(rng, f64, point, point));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillArcsineFrom(&engine, f64, &scalar_buf, point, point);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillArcsineChecked(rng, f64, &scalar_buf, point, point);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try Arcsine(f64).init(point, point);
+    try std.testing.expectEqual(point, sampler.minValue());
+    try std.testing.expectEqual(point, sampler.maxValue());
+    try std.testing.expectEqual(point, sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(point, sampler.medianValue());
+    try std.testing.expectEqual(point, sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_point: f32 = 4.5;
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vectorArcsineFrom(&engine, @Vector(4, f32), vector_point, vector_point));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), try vectorArcsineChecked(rng, @Vector(4, f32), vector_point, vector_point));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f32) = undefined;
+    fillVectorArcsineFrom(&engine, @Vector(4, f32), &vector_buf, vector_point, vector_point);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorArcsineChecked(rng, @Vector(4, f32), &vector_buf, vector_point, vector_point);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorArcsine(@Vector(4, f32)).init(vector_point, vector_point);
+    try std.testing.expectEqual(vector_point, vector_sampler.minValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.maxValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f32, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.medianValue());
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid discrete distribution helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1f4);
@@ -16144,7 +16224,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorTriangularCheckedFrom(&engine, @Vector(4, f64), 1, 0, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, vectorArcsineCheckedFrom(&engine, @Vector(4, f64), 1, 1));
+    try std.testing.expectError(error.InvalidParameter, vectorArcsineCheckedFrom(&engine, @Vector(4, f64), 2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, vectorCauchyCheckedFrom(&engine, @Vector(4, f64), 0, 0));
@@ -16248,7 +16328,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorTriangularCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 1, 0, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorArcsineCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 1, 1));
+    try std.testing.expectError(error.InvalidParameter, fillVectorArcsineCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
@@ -16393,7 +16473,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorTriangularCheckedFrom(&engine, @Vector(4, f64), &empty, 1, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorArcsineCheckedFrom(&engine, @Vector(4, f64), &empty, 1, 1);
+    try fillVectorArcsineCheckedFrom(&engine, @Vector(4, f64), &empty, 2, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16461,7 +16541,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorTriangularChecked(rng, @Vector(4, f64), &empty, 1, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorArcsineChecked(rng, @Vector(4, f64), &empty, 1, 1);
+    try fillVectorArcsineChecked(rng, @Vector(4, f64), &empty, 2, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorCauchyChecked(rng, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16619,7 +16699,7 @@ test "invalid distribution facade tail scalars do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, triangularChecked(rng, f64, 1, 0, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, arcsineChecked(rng, f64, 1, 1));
+    try std.testing.expectError(error.InvalidParameter, arcsineChecked(rng, f64, 2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, laplaceChecked(rng, f64, 0, 0));
@@ -17154,7 +17234,7 @@ test "invalid bounded scalar helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, triangularCheckedFrom(&engine, f64, 1, 0, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, arcsineCheckedFrom(&engine, f64, 1, 1));
+    try std.testing.expectError(error.InvalidParameter, arcsineCheckedFrom(&engine, f64, 2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, cauchyCheckedFrom(&engine, f64, 0, 0));
@@ -17315,7 +17395,7 @@ test "zero-length derived distribution fills do not validate or consume random s
     try std.testing.expectEqual(control.next(), engine.next());
     try fillTriangularCheckedFrom(&engine, f64, &out, 1, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillArcsineCheckedFrom(&engine, f64, &out, 1, 1);
+    try fillArcsineCheckedFrom(&engine, f64, &out, 2, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillCauchyCheckedFrom(&engine, f64, &out, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -18307,7 +18387,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
     try fillArcsineCheckedFrom(&direct_engine, f64, &direct_arcsine_buf, -1, 3);
     for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
-    try std.testing.expectError(error.InvalidParameter, fillArcsineCheckedFrom(&direct_engine, f64, &direct_arcsine_buf, 1, 1));
+    try std.testing.expectError(error.InvalidParameter, fillArcsineCheckedFrom(&direct_engine, f64, &direct_arcsine_buf, 2, 1));
     const arcsine_sampler = try Arcsine(f64).init(-1, 3);
     try std.testing.expectApproxEqAbs(@as(f64, -1), arcsine_sampler.minValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), arcsine_sampler.maxValue(), 1e-12);
@@ -18318,7 +18398,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_arcsine_buf) |value| try std.testing.expect(value >= -1 and value <= 3);
     const direct_checked_arcsine = try arcsineCheckedFrom(&direct_engine, f64, -1, 3);
     try std.testing.expect(direct_checked_arcsine >= -1 and direct_checked_arcsine <= 3);
-    try std.testing.expectError(error.InvalidParameter, arcsineCheckedFrom(&direct_engine, f64, 1, 1));
+    try std.testing.expectError(error.InvalidParameter, arcsineCheckedFrom(&direct_engine, f64, 2, 1));
 
     var cauchys = rng.sampleIter(f64, try Cauchy(f64).init(0, 1));
     _ = cauchys.next().?;
@@ -18871,7 +18951,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, FisherF(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, StudentT(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Triangular(f64).init(1, 0, 2));
-    try std.testing.expectError(error.InvalidParameter, Arcsine(f64).init(1, 1));
+    try std.testing.expectError(error.InvalidParameter, Arcsine(f64).init(2, 1));
     try std.testing.expectError(error.InvalidParameter, Cauchy(f64).init(0, 0));
     try std.testing.expectError(error.InvalidParameter, Laplace(f64).init(0, 0));
     try std.testing.expectError(error.InvalidParameter, Logistic(f64).init(0, 0));
