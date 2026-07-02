@@ -260,7 +260,10 @@ Single-shot helpers:
   `fillVectorFisherFCheckedFrom`,
   `studentT`, `studentTFrom`, `studentTChecked`, `studentTCheckedFrom`,
   `fillStudentT`, `fillStudentTFrom`, `fillStudentTChecked`,
-  `fillStudentTCheckedFrom`
+  `fillStudentTCheckedFrom`, `vectorStudentT`, `vectorStudentTFrom`,
+  `vectorStudentTChecked`, `vectorStudentTCheckedFrom`,
+  `fillVectorStudentT`, `fillVectorStudentTFrom`,
+  `fillVectorStudentTChecked`, `fillVectorStudentTCheckedFrom`
 - `triangular`, `triangularFrom`, `triangularChecked`,
   `triangularCheckedFrom`, `fillTriangular`, `fillTriangularFrom`,
   `fillTriangularChecked`, `fillTriangularCheckedFrom`, `arcsine`,
@@ -933,6 +936,17 @@ Reusable samplers:
 - `StudentT(T).sampleFrom`
 - `StudentT(T).fill`
 - `StudentT(T).fillFrom`
+- `VectorStudentT(VectorType)`
+- `VectorStudentT(VectorType).init`
+- `VectorStudentT(VectorType).dofValue`
+- `VectorStudentT(VectorType).expectedValue`
+- `VectorStudentT(VectorType).varianceValue`
+- `VectorStudentT(VectorType).minValue`
+- `VectorStudentT(VectorType).maxValue`
+- `VectorStudentT(VectorType).sample`
+- `VectorStudentT(VectorType).sampleFrom`
+- `VectorStudentT(VectorType).fill`
+- `VectorStudentT(VectorType).fillFrom`
 - `Triangular(T)`
 - `Triangular(T).init`
 - `Triangular(T).minValue`

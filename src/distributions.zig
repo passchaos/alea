@@ -5589,6 +5589,96 @@ pub fn fillStudentTCheckedFrom(source: anytype, comptime T: type, dest: []T, dof
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorStudentT(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType)) VectorType {
+    return vectorStudentTFrom(rng, VectorType, dof);
+}
+
+pub fn vectorStudentTFrom(source: anytype, comptime VectorType: type, dof: vectorChild(VectorType)) VectorType {
+    const sampler = VectorStudentT(VectorType).init(dof) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorStudentTChecked(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType)) Error!VectorType {
+    return vectorStudentTCheckedFrom(rng, VectorType, dof);
+}
+
+pub fn vectorStudentTCheckedFrom(source: anytype, comptime VectorType: type, dof: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorStudentT(VectorType).init(dof);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorStudentT(rng: Rng, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) void {
+    fillVectorStudentTFrom(rng, VectorType, dest, dof);
+}
+
+pub fn fillVectorStudentTFrom(source: anytype, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) void {
+    const sampler = VectorStudentT(VectorType).init(dof) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorStudentTChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) Error!void {
+    return fillVectorStudentTCheckedFrom(rng, VectorType, dest, dof);
+}
+
+pub fn fillVectorStudentTCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorStudentT(VectorType).init(dof);
+    sampler.fillFrom(source, dest);
+}
+
+pub fn VectorStudentT(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: StudentT(Child),
+
+        pub fn init(dof: Child) Error!Self {
+            return .{ .sampler = try StudentT(Child).init(dof) };
+        }
+
+        pub fn dofValue(self: Self) Child {
+            return self.sampler.dofValue();
+        }
+
+        pub fn expectedValue(self: Self) ?Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) ?Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn minValue(self: Self) ?Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn StudentT(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -11523,6 +11613,37 @@ test "distribution vector helpers preserve support and stream shape" {
     for (fisher_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const student_vec = try vectorStudentTChecked(rng, @Vector(4, f64), 10);
+    const direct_student_vec = try vectorStudentTCheckedFrom(&direct_engine, @Vector(4, f64), 10);
+    try std.testing.expectEqual(student_vec, direct_student_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(student_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_student_sampler = try VectorStudentT(@Vector(4, f64)).init(10);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), vector_student_sampler.dofValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_student_sampler.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25), vector_student_sampler.varianceValue().?, 1e-12);
+    try std.testing.expect(vector_student_sampler.minValue() == null);
+    try std.testing.expect(vector_student_sampler.maxValue() == null);
+    const sampled_student_vec = vector_student_sampler.sample(rng);
+    const direct_sampled_student_vec = vector_student_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_student_vec, direct_sampled_student_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(sampled_student_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var student_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_student_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorStudentTChecked(rng, @Vector(4, f64), &student_buf_vec, 10);
+    try fillVectorStudentTCheckedFrom(&direct_engine, @Vector(4, f64), &direct_student_buf_vec, 10);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &student_buf_vec, &direct_student_buf_vec);
+    for (student_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_student_sampler.fill(rng, &student_buf_vec);
+    vector_student_sampler.fillFrom(&direct_engine, &direct_student_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &student_buf_vec, &direct_student_buf_vec);
+    for (student_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -11635,6 +11756,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorFisherFCheckedFrom(&engine, @Vector(4, f64), 0, 20));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorStudentTCheckedFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -11670,6 +11794,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorFisherFCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 20));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorStudentTCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -11745,6 +11872,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorFisherFCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 20);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorStudentTCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -11768,6 +11897,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorBetaChecked(rng, @Vector(4, f64), &empty, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorFisherFChecked(rng, @Vector(4, f64), &empty, 0, 20);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorStudentTChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -14544,6 +14675,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorFisherFFrom(&unchecked, @Vector(4, f64), &vector_fisher_unchecked, 5, 20);
         try fillVectorFisherFCheckedFrom(&checked, @Vector(4, f64), &vector_fisher_checked, 5, 20);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_fisher_unchecked, &vector_fisher_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_student_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_student_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorStudentTFrom(&unchecked, @Vector(4, f64), &vector_student_unchecked, 10);
+        try fillVectorStudentTCheckedFrom(&checked, @Vector(4, f64), &vector_student_checked, 10);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_student_unchecked, &vector_student_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;
