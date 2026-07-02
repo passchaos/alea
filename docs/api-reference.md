@@ -579,6 +579,8 @@ Reusable samplers:
 - `Cauchy(T).scaleValue`
 - `Cauchy(T).expectedValue`
 - `Cauchy(T).varianceValue`
+- `Cauchy(T).minValue`
+- `Cauchy(T).maxValue`
 - `Cauchy(T).sample`
 - `Cauchy(T).sampleFrom`
 - `Cauchy(T).fill`
@@ -589,6 +591,8 @@ Reusable samplers:
 - `Laplace(T).scaleValue`
 - `Laplace(T).expectedValue`
 - `Laplace(T).varianceValue`
+- `Laplace(T).minValue`
+- `Laplace(T).maxValue`
 - `Laplace(T).sample`
 - `Laplace(T).sampleFrom`
 - `Laplace(T).fill`
@@ -599,6 +603,8 @@ Reusable samplers:
 - `Logistic(T).scaleValue`
 - `Logistic(T).expectedValue`
 - `Logistic(T).varianceValue`
+- `Logistic(T).minValue`
+- `Logistic(T).maxValue`
 - `Logistic(T).sample`
 - `Logistic(T).sampleFrom`
 - `Logistic(T).fill`

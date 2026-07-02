@@ -3583,6 +3583,16 @@ pub fn Cauchy(comptime T: type) type {
             return null;
         }
 
+        pub fn minValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -3675,6 +3685,16 @@ pub fn Laplace(comptime T: type) type {
             return 2 * self.scale * self.scale;
         }
 
+        pub fn minValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -3764,6 +3784,16 @@ pub fn Logistic(comptime T: type) type {
         pub fn varianceValue(self: Self) T {
             const pi: T = @floatCast(std.math.pi);
             return pi * pi * self.scale * self.scale / 3;
+        }
+
+        pub fn minValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9426,6 +9456,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), cauchy_sampler.scaleValue(), 1e-12);
     try std.testing.expect(cauchy_sampler.expectedValue() == null);
     try std.testing.expect(cauchy_sampler.varianceValue() == null);
+    try std.testing.expect(cauchy_sampler.minValue() == null);
+    try std.testing.expect(cauchy_sampler.maxValue() == null);
     cauchy_sampler.fillFrom(&direct_engine, &direct_cauchy_buf);
     for (direct_cauchy_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try cauchyCheckedFrom(&direct_engine, f64, 0, 1)));
@@ -9449,6 +9481,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), laplace_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), laplace_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), laplace_sampler.varianceValue(), 1e-12);
+    try std.testing.expect(laplace_sampler.minValue() == null);
+    try std.testing.expect(laplace_sampler.maxValue() == null);
     laplace_sampler.fillFrom(&direct_engine, &direct_laplace_buf);
     for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try laplaceCheckedFrom(&direct_engine, f64, 0, 1)));
@@ -9472,6 +9506,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), logistic_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), logistic_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(std.math.pi * std.math.pi / 3.0, logistic_sampler.varianceValue(), 1e-12);
+    try std.testing.expect(logistic_sampler.minValue() == null);
+    try std.testing.expect(logistic_sampler.maxValue() == null);
     logistic_sampler.fillFrom(&direct_engine, &direct_logistic_buf);
     for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try logisticCheckedFrom(&direct_engine, f64, 0, 1)));
