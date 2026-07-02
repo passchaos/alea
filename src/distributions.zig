@@ -2029,7 +2029,7 @@ pub fn Uniform(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             if (self.inclusive) {
-                for (dest) |*item| item.* = uniformInclusiveFrom(source, T, self.low, self.high);
+                fillUniformInclusiveFrom(source, T, dest, self.low, self.high);
             } else {
                 Rng.fillRangeFrom(source, T, dest, self.low, self.high);
             }
@@ -16685,6 +16685,11 @@ test "degenerate uniform distribution helpers do not consume random stream" {
     for (ints) |sample| try std.testing.expectEqual(@as(u32, 18), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const inclusive_int_uniform = try Uniform(u32).initInclusive(21, 21);
+    inclusive_int_uniform.fillFrom(&engine, &ints);
+    for (ints) |sample| try std.testing.expectEqual(@as(u32, 21), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var floats: [5]f64 = undefined;
     fillUniformFrom(&engine, f64, &floats, 4.5, 4.5);
     for (floats) |sample| try std.testing.expectEqual(@as(f64, 4.5), sample);
@@ -16700,6 +16705,11 @@ test "degenerate uniform distribution helpers do not consume random stream" {
 
     try fillUniformInclusiveChecked(rng, f64, &floats, -7.5, -7.5);
     for (floats) |sample| try std.testing.expectEqual(@as(f64, -7.5), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const inclusive_float_uniform = try Uniform(f64).initInclusive(22.5, 22.5);
+    inclusive_float_uniform.fillFrom(&engine, &floats);
+    for (floats) |sample| try std.testing.expectEqual(@as(f64, 22.5), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(8.5)), vectorUniformFrom(&engine, @Vector(4, f64), 8.5, 8.5));
