@@ -212,6 +212,16 @@ pub const Bernoulli = struct {
         return p * (1 - p);
     }
 
+    pub fn minValue(self: Bernoulli) bool {
+        _ = self;
+        return false;
+    }
+
+    pub fn maxValue(self: Bernoulli) bool {
+        _ = self;
+        return true;
+    }
+
     pub fn sample(self: Bernoulli, rng: Rng) bool {
         return self.sampleFrom(rng);
     }
@@ -7508,6 +7518,8 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), fair_bernoulli.probabilityValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), fair_bernoulli.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), fair_bernoulli.varianceValue(), 1e-12);
+    try std.testing.expectEqual(false, fair_bernoulli.minValue());
+    try std.testing.expectEqual(true, fair_bernoulli.maxValue());
     try std.testing.expect((try Bernoulli.init(1.0 - std.math.floatEps(f64) / 2.0)).sample(rng));
     try std.testing.expect(try bernoulliChecked(rng, 1.0));
     var direct_bernoulli_engine = alea.ScalarPrng.init(64);
