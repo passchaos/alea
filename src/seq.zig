@@ -681,6 +681,7 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) *const T {
+            if (self.items.len == 1) return &self.items[0];
             return &self.items[Rng.uintLessThanFrom(source, usize, self.items.len)];
         }
 

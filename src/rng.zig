@@ -1641,6 +1641,7 @@ pub fn chooseCheckedFrom(source: anytype, comptime T: type, items: []const T) Er
 
 pub fn chooseFrom(source: anytype, comptime T: type, items: []const T) ?T {
     if (items.len == 0) return null;
+    if (items.len == 1) return items[0];
     return items[uintLessThanFrom(source, usize, items.len)];
 }
 
@@ -1658,6 +1659,7 @@ pub fn choosePtrCheckedFrom(source: anytype, comptime T: type, items: []T) Error
 
 pub fn choosePtrFrom(source: anytype, comptime T: type, items: []T) ?*T {
     if (items.len == 0) return null;
+    if (items.len == 1) return &items[0];
     return &items[uintLessThanFrom(source, usize, items.len)];
 }
 
