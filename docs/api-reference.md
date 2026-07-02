@@ -481,6 +481,8 @@ Reusable samplers:
 - `FisherF(T).init`
 - `FisherF(T).d1Value`
 - `FisherF(T).d2Value`
+- `FisherF(T).expectedValue`
+- `FisherF(T).varianceValue`
 - `FisherF(T).sample`
 - `FisherF(T).sampleFrom`
 - `FisherF(T).fill`

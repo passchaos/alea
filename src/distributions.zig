@@ -2876,6 +2876,18 @@ pub fn FisherF(comptime T: type) type {
             return self.d2;
         }
 
+        pub fn expectedValue(self: Self) ?T {
+            if (self.d2 <= 2) return null;
+            return self.d2 / (self.d2 - 2);
+        }
+
+        pub fn varianceValue(self: Self) ?T {
+            if (self.d2 <= 4) return null;
+            const numerator = 2 * self.d2 * self.d2 * (self.d1 + self.d2 - 2);
+            const denominator = self.d1 * (self.d2 - 2) * (self.d2 - 2) * (self.d2 - 4);
+            return numerator / denominator;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8459,6 +8471,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     const fisher_sampler = try FisherF(f64).init(5, 20);
     try std.testing.expectApproxEqAbs(@as(f64, 5), fisher_sampler.d1Value(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 20), fisher_sampler.d2Value(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 10.0 / 9.0), fisher_sampler.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 115.0 / 162.0), fisher_sampler.varianceValue().?, 1e-12);
+    try std.testing.expect((try FisherF(f64).init(5, 2)).expectedValue() == null);
+    try std.testing.expect((try FisherF(f64).init(5, 4)).varianceValue() == null);
     fisher_sampler.fillFrom(&direct_engine, &direct_fisher_buf);
     for (direct_fisher_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try fisherFCheckedFrom(&direct_engine, f64, 5, 20) > 0);
