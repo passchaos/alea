@@ -1108,6 +1108,26 @@ pub fn Uniform(comptime T: type) type {
 }
 
 pub const Open01 = struct {
+    pub fn lowValue(self: Open01, comptime T: type) T {
+        _ = self;
+        return 0;
+    }
+
+    pub fn highValue(self: Open01, comptime T: type) T {
+        _ = self;
+        return 1;
+    }
+
+    pub fn includesLow(self: Open01) bool {
+        _ = self;
+        return false;
+    }
+
+    pub fn includesHigh(self: Open01) bool {
+        _ = self;
+        return false;
+    }
+
     pub fn sample(_: Open01, rng: Rng, comptime T: type) T {
         return Rng.floatOpenFrom(rng, T);
     }
@@ -1126,6 +1146,26 @@ pub const Open01 = struct {
 };
 
 pub const OpenClosed01 = struct {
+    pub fn lowValue(self: OpenClosed01, comptime T: type) T {
+        _ = self;
+        return 0;
+    }
+
+    pub fn highValue(self: OpenClosed01, comptime T: type) T {
+        _ = self;
+        return 1;
+    }
+
+    pub fn includesLow(self: OpenClosed01) bool {
+        _ = self;
+        return false;
+    }
+
+    pub fn includesHigh(self: OpenClosed01) bool {
+        _ = self;
+        return true;
+    }
+
     pub fn sample(_: OpenClosed01, rng: Rng, comptime T: type) T {
         return Rng.floatOpenClosedFrom(rng, T);
     }
@@ -7754,6 +7794,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     const direct_open = (Open01{}).sampleFrom(&direct_engine, f64);
     try std.testing.expect(direct_open > 0 and direct_open < 1);
     var open01_buf: [8]f64 = undefined;
+    try std.testing.expectEqual(@as(f64, 0), (Open01{}).lowValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), (Open01{}).highValue(f64));
+    try std.testing.expect(!(Open01{}).includesLow());
+    try std.testing.expect(!(Open01{}).includesHigh());
     (Open01{}).fill(rng, f64, &open01_buf);
     for (open01_buf) |value| try std.testing.expect(value > 0 and value < 1);
     (Open01{}).fillFrom(&direct_engine, f64, &open01_buf);
@@ -7762,6 +7806,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     const direct_open_closed = (OpenClosed01{}).sampleFrom(&direct_engine, f64);
     try std.testing.expect(direct_open_closed > 0 and direct_open_closed <= 1);
     var open_closed01_buf: [8]f64 = undefined;
+    try std.testing.expectEqual(@as(f64, 0), (OpenClosed01{}).lowValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), (OpenClosed01{}).highValue(f64));
+    try std.testing.expect(!(OpenClosed01{}).includesLow());
+    try std.testing.expect((OpenClosed01{}).includesHigh());
     (OpenClosed01{}).fill(rng, f64, &open_closed01_buf);
     for (open_closed01_buf) |value| try std.testing.expect(value > 0 and value <= 1);
     (OpenClosed01{}).fillFrom(&direct_engine, f64, &open_closed01_buf);
