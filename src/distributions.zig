@@ -1525,6 +1525,16 @@ pub fn LogNormal(comptime T: type) type {
             return self.logStddev();
         }
 
+        pub fn linearMeanValue(self: Self) T {
+            const sigma = self.logStddev();
+            return @exp(self.logMean() + 0.5 * sigma * sigma);
+        }
+
+        pub fn coefficientOfVariationValue(self: Self) T {
+            const sigma = self.logStddev();
+            return @sqrt(@exp(sigma * sigma) - 1);
+        }
+
         pub fn fill(self: *Self, rng: Rng, dest: []T) void {
             self.fillFrom(rng, dest);
         }
@@ -7981,6 +7991,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(log_normal_mean_cv_sampler.logMean(), log_normal_mean_cv_sampler.logMeanValue(), 1e-15);
     try std.testing.expect(log_normal_mean_cv_sampler.logStddev() > 0);
     try std.testing.expectApproxEqAbs(log_normal_mean_cv_sampler.logStddev(), log_normal_mean_cv_sampler.logStddevValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_mean_cv_sampler.linearMeanValue(), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), log_normal_mean_cv_sampler.coefficientOfVariationValue(), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_zero_cv_sampler.linearMeanValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_zero_cv_sampler.coefficientOfVariationValue(), 0);
     log_normal_mean_cv_sampler.fillFrom(&direct_engine, &direct_log_normal_buf);
     for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try logNormalCheckedFrom(&direct_engine, f64, 0, 0.25) > 0);
