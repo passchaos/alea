@@ -346,7 +346,10 @@ Single-shot helpers:
   `fillVectorWeibullCheckedFrom`
 - `gumbel`, `gumbelFrom`, `fillGumbel`, `fillGumbelFrom`,
   `fillGumbelChecked`, `fillGumbelCheckedFrom`,
-  `gumbelChecked`, `gumbelCheckedFrom`,
+  `gumbelChecked`, `gumbelCheckedFrom`, `vectorGumbel`,
+  `vectorGumbelFrom`, `vectorGumbelChecked`, `vectorGumbelCheckedFrom`,
+  `fillVectorGumbel`, `fillVectorGumbelFrom`,
+  `fillVectorGumbelChecked`, `fillVectorGumbelCheckedFrom`,
   `frechet`, `frechetFrom`, `frechetChecked`, `frechetCheckedFrom`,
   `fillFrechet`, `fillFrechetFrom`, `fillFrechetChecked`,
   `fillFrechetCheckedFrom`,
@@ -1320,6 +1323,20 @@ Reusable samplers:
 - `Gumbel(T).sampleFrom`
 - `Gumbel(T).fill`
 - `Gumbel(T).fillFrom`
+- `VectorGumbel(VectorType)`
+- `VectorGumbel(VectorType).init`
+- `VectorGumbel(VectorType).locationValue`
+- `VectorGumbel(VectorType).scaleValue`
+- `VectorGumbel(VectorType).expectedValue`
+- `VectorGumbel(VectorType).varianceValue`
+- `VectorGumbel(VectorType).medianValue`
+- `VectorGumbel(VectorType).modeValue`
+- `VectorGumbel(VectorType).minValue`
+- `VectorGumbel(VectorType).maxValue`
+- `VectorGumbel(VectorType).sample`
+- `VectorGumbel(VectorType).sampleFrom`
+- `VectorGumbel(VectorType).fill`
+- `VectorGumbel(VectorType).fillFrom`
 - `Frechet(T)`
 - `Frechet(T).init`
 - `Frechet(T).locationValue`

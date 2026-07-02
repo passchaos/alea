@@ -8499,6 +8499,113 @@ pub fn fillGumbelCheckedFrom(source: anytype, comptime T: type, dest: []T, locat
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorGumbel(rng: Rng, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    return vectorGumbelFrom(rng, VectorType, location, scale);
+}
+
+pub fn vectorGumbelFrom(source: anytype, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    const sampler = VectorGumbel(VectorType).init(location, scale) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorGumbelChecked(rng: Rng, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!VectorType {
+    return vectorGumbelCheckedFrom(rng, VectorType, location, scale);
+}
+
+pub fn vectorGumbelCheckedFrom(source: anytype, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorGumbel(VectorType).init(location, scale);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorGumbel(rng: Rng, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
+    fillVectorGumbelFrom(rng, VectorType, dest, location, scale);
+}
+
+pub fn fillVectorGumbelFrom(source: anytype, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
+    const sampler = VectorGumbel(VectorType).init(location, scale) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorGumbelChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!void {
+    return fillVectorGumbelCheckedFrom(rng, VectorType, dest, location, scale);
+}
+
+pub fn fillVectorGumbelCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorGumbel(VectorType).init(location, scale);
+    sampler.fillFrom(source, dest);
+}
+
+fn gumbelFromOpenClosedUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    const location_vec: VectorType = @splat(location);
+    const scale_vec: VectorType = @splat(scale);
+    return location_vec - scale_vec * @log(-@log(uniform_vec));
+}
+
+pub fn VectorGumbel(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Gumbel(Child),
+
+        pub fn init(location: Child, scale: Child) Error!Self {
+            return .{ .sampler = try Gumbel(Child).init(location, scale) };
+        }
+
+        pub fn locationValue(self: Self) Child {
+            return self.sampler.locationValue();
+        }
+
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn minValue(self: Self) ?Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const uniform_vec = Rng.vectorOpenClosedFrom(source, VectorType);
+            return gumbelFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Gumbel(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -13398,6 +13505,40 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(weibull_shape_one_vec[lane] >= 0 and std.math.isFinite(weibull_shape_one_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const gumbel_vec = try vectorGumbelChecked(rng, @Vector(4, f64), 0, 1);
+    const direct_gumbel_vec = try vectorGumbelCheckedFrom(&direct_engine, @Vector(4, f64), 0, 1);
+    try std.testing.expectEqual(gumbel_vec, direct_gumbel_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(gumbel_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_gumbel_sampler = try VectorGumbel(@Vector(4, f64)).init(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_gumbel_sampler.locationValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_gumbel_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5772156649015329), vector_gumbel_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(std.math.pi * std.math.pi / 6.0, vector_gumbel_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(-@log(@log(@as(f64, 2))), vector_gumbel_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_gumbel_sampler.modeValue(), 1e-12);
+    try std.testing.expect(vector_gumbel_sampler.minValue() == null);
+    try std.testing.expect(vector_gumbel_sampler.maxValue() == null);
+    const sampled_gumbel_vec = vector_gumbel_sampler.sample(rng);
+    const direct_sampled_gumbel_vec = vector_gumbel_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_gumbel_vec, direct_sampled_gumbel_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(sampled_gumbel_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var gumbel_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_gumbel_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorGumbelChecked(rng, @Vector(4, f64), &gumbel_buf_vec, 0, 1);
+    try fillVectorGumbelCheckedFrom(&direct_engine, @Vector(4, f64), &direct_gumbel_buf_vec, 0, 1);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &gumbel_buf_vec, &direct_gumbel_buf_vec);
+    for (gumbel_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_gumbel_sampler.fill(rng, &gumbel_buf_vec);
+    vector_gumbel_sampler.fillFrom(&direct_engine, &direct_gumbel_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &gumbel_buf_vec, &direct_gumbel_buf_vec);
+    for (gumbel_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -13549,6 +13690,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorWeibullCheckedFrom(&engine, @Vector(4, f64), 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorGumbelCheckedFrom(&engine, @Vector(4, f64), 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -13623,6 +13767,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorWeibullCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -13724,6 +13871,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorWeibullCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1.5);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -13773,6 +13922,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorParetoChecked(rng, @Vector(4, f64), &empty, 2, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorWeibullChecked(rng, @Vector(4, f64), &empty, 0, 1.5);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorGumbelChecked(rng, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16640,6 +16791,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorWeibullFrom(&unchecked, @Vector(4, f64), &vector_weibull_unchecked, 2, 1.5);
         try fillVectorWeibullCheckedFrom(&checked, @Vector(4, f64), &vector_weibull_checked, 2, 1.5);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_weibull_unchecked, &vector_weibull_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_gumbel_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_gumbel_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorGumbelFrom(&unchecked, @Vector(4, f64), &vector_gumbel_unchecked, 0, 1);
+        try fillVectorGumbelCheckedFrom(&checked, @Vector(4, f64), &vector_gumbel_checked, 0, 1);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_gumbel_unchecked, &vector_gumbel_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

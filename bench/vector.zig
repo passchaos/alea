@@ -131,6 +131,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorWeibull f64x4", lanes / 2, 0xd3c4, fillDistWeibullF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorWeibull f64x4 direct", lanes / 2, 0xd3c4, fillDistWeibullF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorWeibull.fill f64x4", lanes / 2, 0xd3c4, fillDistWeibullSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorGumbel f64x4", lanes / 2, 0xd3d4, fillDistGumbelF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorGumbel f64x4 direct", lanes / 2, 0xd3d4, fillDistGumbelF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorGumbel.fill f64x4", lanes / 2, 0xd3d4, fillDistGumbelSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -1004,6 +1007,19 @@ fn fillDistWeibullF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vect
 
 fn fillDistWeibullSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorWeibull(@Vector(4, f64)).init(2, 1.5) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistGumbelF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorGumbel(rng, @Vector(4, f64), dest, 0, 1);
+}
+
+fn fillDistGumbelF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorGumbelFrom(engine, @Vector(4, f64), dest, 0, 1);
+}
+
+fn fillDistGumbelSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorGumbel(@Vector(4, f64)).init(0, 1) catch unreachable;
     sampler.fill(rng, dest);
 }
 
