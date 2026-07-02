@@ -567,6 +567,8 @@ Reusable samplers:
 - `Rayleigh(T)`
 - `Rayleigh(T).init`
 - `Rayleigh(T).scaleValue`
+- `Rayleigh(T).expectedValue`
+- `Rayleigh(T).varianceValue`
 - `Rayleigh(T).sample`
 - `Rayleigh(T).sampleFrom`
 - `Rayleigh(T).fill`

@@ -3844,6 +3844,14 @@ pub fn Rayleigh(comptime T: type) type {
             return self.scale;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.scale * @sqrt(@as(T, @floatCast(std.math.pi)) / 2);
+        }
+
+        pub fn varianceValue(self: Self) T {
+            return self.scale * self.scale * (4 - @as(T, @floatCast(std.math.pi))) / 2;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8726,6 +8734,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, fillRayleighCheckedFrom(&direct_engine, f64, &direct_rayleigh_buf, 0));
     const rayleigh_sampler = try Rayleigh(f64).init(2);
     try std.testing.expectApproxEqAbs(@as(f64, 2), rayleigh_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(std.math.pi / 2.0), rayleigh_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * (4 - std.math.pi), rayleigh_sampler.varianceValue(), 1e-12);
     rayleigh_sampler.fillFrom(&direct_engine, &direct_rayleigh_buf);
     for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try rayleighCheckedFrom(&direct_engine, f64, 2) >= 0);
