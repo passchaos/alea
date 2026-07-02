@@ -149,6 +149,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("tools/log_normal_probe.zig"),
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
     });
     log_normal_probe_mod.addImport("alea", module);
 

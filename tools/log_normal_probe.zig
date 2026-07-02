@@ -1,6 +1,9 @@
 const std = @import("std");
 const alea = @import("alea");
 
+extern "c" fn exp(f64) f64;
+extern "c" fn expf(f32) f32;
+
 const trials = 3;
 const default_count = 8 * 1024 * 1024;
 
@@ -28,6 +31,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast normal-only fill", 0x1062, sample_count, normalOnlyFill);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x1062, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar exp", 0x1062, sample_count, stagedScalarExp);
+    try benchFill(alea.FastPrng, io, stdout, "fast staged libc exp", 0x1062, sample_count, stagedLibcExp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged unroll4 exp", 0x1062, sample_count, stagedUnroll4Exp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged unroll8 exp", 0x1062, sample_count, stagedUnroll8Exp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged optimized exp", 0x1062, sample_count, stagedOptimizedExp);
@@ -41,6 +45,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.ScalarPrng, io, stdout, "scalar normal-only fill", 0x1062, sample_count, normalOnlyFill);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar current fill", 0x1062, sample_count, currentFill);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged scalar exp", 0x1062, sample_count, stagedScalarExp);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar staged libc exp", 0x1062, sample_count, stagedLibcExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged unroll4 exp", 0x1062, sample_count, stagedUnroll4Exp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged unroll8 exp", 0x1062, sample_count, stagedUnroll8Exp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged optimized exp", 0x1062, sample_count, stagedOptimizedExp);
@@ -54,6 +59,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 current fill", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged libc expf", 0x1063, sample_count, stagedLibcExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged unroll4 exp", 0x1063, sample_count, stagedUnroll4ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged unroll8 exp", 0x1063, sample_count, stagedUnroll8ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged optimized exp", 0x1063, sample_count, stagedOptimizedExpF32);
@@ -70,6 +76,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 current fill", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged libc expf", 0x1063, sample_count, stagedLibcExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged unroll4 exp", 0x1063, sample_count, stagedUnroll4ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged unroll8 exp", 0x1063, sample_count, stagedUnroll8ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged optimized exp", 0x1063, sample_count, stagedOptimizedExpF32);
@@ -238,6 +245,11 @@ fn stagedScalarExp(source: anytype, dest: []f64) void {
     expScalar(dest);
 }
 
+fn stagedLibcExp(source: anytype, dest: []f64) void {
+    alea.Rng.fillNormalFrom(source, f64, dest, 0, 0.25);
+    expLibc(dest);
+}
+
 fn stagedUnroll4Exp(source: anytype, dest: []f64) void {
     alea.Rng.fillNormalFrom(source, f64, dest, 0, 0.25);
     expUnroll4(dest);
@@ -292,6 +304,11 @@ fn stagedVector8Exp(source: anytype, dest: []f64) void {
 fn stagedScalarExpF32(source: anytype, dest: []f32) void {
     alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
     expScalarF32(dest);
+}
+
+fn stagedLibcExpF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    expLibcF32(dest);
 }
 
 fn stagedUnroll4ExpF32(source: anytype, dest: []f32) void {
@@ -363,6 +380,10 @@ fn expScalar(dest: []f64) void {
     for (dest) |*item| item.* = @exp(item.*);
 }
 
+fn expLibc(dest: []f64) void {
+    for (dest) |*item| item.* = exp(item.*);
+}
+
 fn expUnroll4(dest: []f64) void {
     var i: usize = 0;
     while (i + 4 <= dest.len) : (i += 4) {
@@ -416,6 +437,10 @@ fn fusedAffineStdMathExp(dest: []f64, mean: f64, stddev: f64) void {
 
 fn expScalarF32(dest: []f32) void {
     for (dest) |*item| item.* = @exp(item.*);
+}
+
+fn expLibcF32(dest: []f32) void {
+    for (dest) |*item| item.* = expf(item.*);
 }
 
 fn expUnroll4F32(dest: []f32) void {

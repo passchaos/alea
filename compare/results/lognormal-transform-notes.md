@@ -33,6 +33,8 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
 - `@mulAdd` in the single-sample expression does not win.
 - `exp2(x * log2e)` regresses.
 - `std.math.exp` is tied with `@exp`.
+- libc `exp` / `expf` can help one engine/type profile in the probe but
+  regresses another and requires linking libc, so it is not a generic default.
 - Manual unrolling of the exact `@exp` transform loop is mixed: it can provide
   small isolated wins in one profile while regressing or tying others.
 - `@setFloatMode(.optimized)` is tied/mixed and not a no-regression win.
