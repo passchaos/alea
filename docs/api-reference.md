@@ -663,6 +663,8 @@ Reusable samplers:
 - `Pert(T).modeValue`
 - `Pert(T).alphaValue`
 - `Pert(T).betaValue`
+- `Pert(T).expectedValue`
+- `Pert(T).varianceValue`
 - `PertBuilder(T).minValue`
 - `PertBuilder(T).maxValue`
 - `PertBuilder(T).shapeValue`

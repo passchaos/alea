@@ -4691,6 +4691,15 @@ pub fn Pert(comptime T: type) type {
             return self.beta_param;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.min + self.range * self.alpha / (self.alpha + self.beta_param);
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const sum = self.alpha + self.beta_param;
+            return self.range * self.range * self.alpha * self.beta_param / (sum * sum * (sum + 1));
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -9113,6 +9122,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), pert_sampler.modeValue().?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), pert_sampler.alphaValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), pert_sampler.betaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), pert_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 9.0 / 28.0), pert_sampler.varianceValue(), 1e-12);
     pert_sampler.fillFrom(&direct_engine, &direct_pert_buf);
     for (direct_pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
     const pert_builder = Pert(f64).initRange(-1, 2).withShape(4);
