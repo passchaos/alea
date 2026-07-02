@@ -350,13 +350,30 @@ pub fn chooseIteratorWeightedCheckedFrom(source: anytype, comptime T: type, iter
 }
 
 pub fn chooseIteratorWeightedFrom(source: anytype, comptime T: type, iterator: anytype) !?T {
+    const Pending = struct {
+        item: T,
+        weight: f64,
+    };
     var total: f64 = 0;
     var result: ?T = null;
+    var pending: ?Pending = null;
 
     while (iterator.next()) |entry| {
         const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         if (weight == 0) continue;
+
+        if (pending == null and result == null) {
+            pending = .{ .item = entry.item, .weight = weight };
+            total = weight;
+            continue;
+        }
+
+        if (pending) |first| {
+            _ = Rng.floatFrom(source, f64);
+            result = first.item;
+            pending = null;
+        }
 
         total += weight;
         if (!std.math.isFinite(total)) return error.InvalidWeight;
@@ -365,6 +382,7 @@ pub fn chooseIteratorWeightedFrom(source: anytype, comptime T: type, iterator: a
         }
     }
 
+    if (pending) |only| return only.item;
     return result;
 }
 
@@ -378,6 +396,10 @@ pub fn sampleIteratorWeightedChecked(allocator: std.mem.Allocator, rng: Rng, com
 
 pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
+    const Pending = struct {
+        item: T,
+        weight: f64,
+    };
 
     const out = try allocator.alloc(T, amount);
     errdefer allocator.free(out);
@@ -385,11 +407,25 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
     var heap = WeightedIteratorQueue(T).initContext({});
     defer heap.deinit(allocator);
     try heap.ensureTotalCapacityPrecise(allocator, amount);
+    var pending: ?Pending = null;
 
     while (iterator.next()) |entry| {
         const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         if (weight == 0) continue;
+
+        if (pending == null and heap.count() == 0) {
+            pending = .{ .item = entry.item, .weight = weight };
+            continue;
+        }
+
+        if (pending) |first| {
+            try heap.push(allocator, .{
+                .item = first.item,
+                .key = weightedSelectionKeyFrom(source, first.weight),
+            });
+            pending = null;
+        }
 
         const candidate = WeightedIteratorCandidate(T){
             .item = entry.item,
@@ -404,6 +440,12 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
                 try heap.push(allocator, candidate);
             }
         }
+    }
+
+    if (pending) |only| {
+        if (amount != 1) return error.InvalidParameter;
+        out[0] = only.item;
+        return out;
     }
 
     if (heap.count() != amount) return error.InvalidParameter;
@@ -416,15 +458,33 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
 
 pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
+    const Pending = struct {
+        item: T,
+        weight: f64,
+    };
 
     var heap = WeightedIteratorQueue(T).initContext({});
     defer heap.deinit(allocator);
     try heap.ensureTotalCapacityPrecise(allocator, amount);
+    var pending: ?Pending = null;
 
     while (iterator.next()) |entry| {
         const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         if (weight == 0) continue;
+
+        if (pending == null and heap.count() == 0) {
+            pending = .{ .item = entry.item, .weight = weight };
+            continue;
+        }
+
+        if (pending) |first| {
+            try heap.push(allocator, .{
+                .item = first.item,
+                .key = weightedSelectionKeyFrom(source, first.weight),
+            });
+            pending = null;
+        }
 
         const candidate = WeightedIteratorCandidate(T){
             .item = entry.item,
@@ -439,6 +499,12 @@ pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype,
                 try heap.push(allocator, candidate);
             }
         }
+    }
+
+    if (pending) |only| {
+        const out = try allocator.alloc(T, 1);
+        out[0] = only.item;
+        return out;
     }
 
     const out = try allocator.alloc(T, heap.count());
@@ -1857,6 +1923,54 @@ test "empty checked weighted iterator choice does not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0x9c8af023645fd559), engine.next());
 }
 
+test "single-positive weighted iterator helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_771e);
+    var control = alea.ScalarPrng.init(0x5150_771e);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const WeightedIter = struct {
+        index: usize = 0,
+        entries: []const Entry,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.entries.len) return null;
+            const entry = self.entries[self.index];
+            self.index += 1;
+            return entry;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .item = 10, .weight = 0 },
+        .{ .item = 20, .weight = 5 },
+        .{ .item = 30, .weight = 0 },
+    };
+
+    var choose_iter = WeightedIter{ .entries = &entries };
+    try std.testing.expectEqual(@as(?u8, 20), try chooseIteratorWeightedFrom(&engine, u8, &choose_iter));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_choose_iter = WeightedIter{ .entries = &entries };
+    try std.testing.expectEqual(@as(u8, 20), try chooseIteratorWeightedCheckedFrom(&engine, u8, &checked_choose_iter));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var sample_iter = WeightedIter{ .entries = &entries };
+    const sample = try sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &sample_iter, 3);
+    defer std.testing.allocator.free(sample);
+    try std.testing.expectEqualSlices(u8, &.{20}, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_sample_iter = WeightedIter{ .entries = &entries };
+    const checked_sample = try sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &checked_sample_iter, 1);
+    defer std.testing.allocator.free(checked_sample);
+    try std.testing.expectEqualSlices(u8, &.{20}, checked_sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var short_checked_sample_iter = WeightedIter{ .entries = &entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &short_checked_sample_iter, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "rejection index set allocation failures do not consume random stream" {
     const alea = @import("root.zig");
 
@@ -2067,6 +2181,7 @@ test "zero-count weighted iterator samples do not read iterator or build heap" {
 test "short checked weighted iterator samples do not consume past source" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_7714);
+    var control = alea.ScalarPrng.init(0x5150_7714);
 
     const Entry = struct { item: u8, weight: f64 };
     const WeightedIter = struct {
@@ -2087,13 +2202,13 @@ test "short checked weighted iterator samples do not consume past source" {
     };
     var iter = WeightedIter{ .items = &entries };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &iter, 2));
-    try std.testing.expectEqual(@as(u64, 0xe35b82cee21c224a), engine.next());
+    try std.testing.expectEqual(control.next(), engine.next());
 
     var empty_iter = WeightedIter{ .items = &.{} };
     const empty = try sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &empty_iter, 0);
     defer std.testing.allocator.free(empty);
     try std.testing.expectEqual(@as(usize, 0), empty.len);
-    try std.testing.expectEqual(@as(u64, 0x54caff4d9e76e3d7), engine.next());
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "partial shuffle and reservoir sample respect counts" {
