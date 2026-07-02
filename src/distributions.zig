@@ -375,6 +375,23 @@ pub const Multinomial = struct {
         return try self.probabilityAt(index) / self.total_probability;
     }
 
+    pub fn expectedCountAt(self: Multinomial, index: usize) Error!f64 {
+        const p = try self.normalizedProbabilityAt(index);
+        return @as(f64, @floatFromInt(self.trials)) * p;
+    }
+
+    pub fn varianceAt(self: Multinomial, index: usize) Error!f64 {
+        const p = try self.normalizedProbabilityAt(index);
+        return @as(f64, @floatFromInt(self.trials)) * p * (1 - p);
+    }
+
+    pub fn covarianceAt(self: Multinomial, i: usize, j: usize) Error!f64 {
+        if (i == j) return self.varianceAt(i);
+        const p_i = try self.normalizedProbabilityAt(i);
+        const p_j = try self.normalizedProbabilityAt(j);
+        return -@as(f64, @floatFromInt(self.trials)) * p_i * p_j;
+    }
+
     pub fn categoryCountValue(self: Multinomial) usize {
         return self.probabilities.len;
     }
@@ -8874,8 +8891,15 @@ test "multinomial sampler returns category counts" {
     try std.testing.expectEqualSlices(f64, &.{ 1.0, 2.0, 3.0 }, dist.probabilitiesValue());
     try std.testing.expectApproxEqAbs(@as(f64, 2), try dist.probabilityAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 6.0), try dist.normalizedProbabilityAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 100.0 / 3.0), try dist.expectedCountAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 200.0 / 9.0), try dist.varianceAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -100.0 / 18.0), try dist.covarianceAt(0, 1), 1e-12);
+    try std.testing.expectApproxEqAbs(try dist.varianceAt(1), try dist.covarianceAt(1, 1), 1e-12);
     try std.testing.expectError(error.InvalidParameter, dist.probabilityAt(3));
     try std.testing.expectError(error.InvalidParameter, dist.normalizedProbabilityAt(3));
+    try std.testing.expectError(error.InvalidParameter, dist.expectedCountAt(3));
+    try std.testing.expectError(error.InvalidParameter, dist.varianceAt(3));
+    try std.testing.expectError(error.InvalidParameter, dist.covarianceAt(0, 3));
     try std.testing.expectEqual(@as(usize, 3), dist.categoryCountValue());
     try std.testing.expectApproxEqAbs(@as(f64, 6), dist.totalProbabilityValue(), 1e-12);
     const counts = try dist.sample(std.testing.allocator, rng);

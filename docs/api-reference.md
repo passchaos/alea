@@ -270,6 +270,9 @@ Reusable samplers:
 - `Multinomial.probabilitiesValue`
 - `Multinomial.probabilityAt`
 - `Multinomial.normalizedProbabilityAt`
+- `Multinomial.expectedCountAt`
+- `Multinomial.varianceAt`
+- `Multinomial.covarianceAt`
 - `Multinomial.categoryCountValue`
 - `Multinomial.totalProbabilityValue`
 - `Multinomial.sample`
