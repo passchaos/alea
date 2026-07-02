@@ -373,10 +373,10 @@ Continue performance triage on the remaining focused watch items only when a
 new concrete hypothesis is available:
 
 - LogNormal: wrapper dispatch, normal generation, Rust algorithm shape,
-  `std.math.exp`, optimized float mode, `exp2`, f32 vector width,
-  general-purpose `expm1 + 1`, and branchy hybrid `expm1` have all been ruled
-  out as defaults; future work needs a sound exact-`exp` transform/codegen
-  improvement or an explicitly parameter-limited opt-in. See
+  `std.math.exp`, optimized float mode, `exp2`, f32 vector width, widened f64
+  `exp` for f32, general-purpose `expm1 + 1`, and branchy hybrid `expm1` have
+  all been ruled out as defaults; future work needs a sound exact-`exp`
+  transform/codegen improvement or an explicitly parameter-limited opt-in. See
   `lognormal-transform-notes.md`.
 - OpenClosed f64: exact endpoint-grid bulk fill now exceeds local Rust evidence
   after the `@mulAdd` raw-word conversion; keep `openclosed-endpoint-notes.md`
