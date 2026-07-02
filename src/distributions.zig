@@ -3023,6 +3023,16 @@ pub fn Beta(comptime T: type) type {
             return self.alpha * self.beta_param / (total * total * (total + 1));
         }
 
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) T {
+            _ = self;
+            return 1;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -3149,6 +3159,16 @@ pub fn FisherF(comptime T: type) type {
             return numerator / denominator;
         }
 
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -3233,6 +3253,16 @@ pub fn StudentT(comptime T: type) type {
         pub fn varianceValue(self: Self) ?T {
             if (self.dof <= 2) return null;
             return self.dof / (self.dof - 2);
+        }
+
+        pub fn minValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9183,6 +9213,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 5), beta_sampler.betaValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 7.0), beta_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 196.0), beta_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), beta_sampler.minValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), beta_sampler.maxValue(), 0);
     beta_sampler.fillFrom(&direct_engine, &direct_beta_buf);
     for (direct_beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
     var beta_unit_buf: [8]f64 = undefined;
@@ -9214,6 +9246,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 20), fisher_sampler.d2Value(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 10.0 / 9.0), fisher_sampler.expectedValue().?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 115.0 / 162.0), fisher_sampler.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), fisher_sampler.minValue(), 0);
+    try std.testing.expect(fisher_sampler.maxValue() == null);
     try std.testing.expect((try FisherF(f64).init(5, 2)).expectedValue() == null);
     try std.testing.expect((try FisherF(f64).init(5, 4)).varianceValue() == null);
     fisher_sampler.fillFrom(&direct_engine, &direct_fisher_buf);
@@ -9241,6 +9275,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 10), student_sampler.dofValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), student_sampler.expectedValue().?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.25), student_sampler.varianceValue().?, 1e-12);
+    try std.testing.expect(student_sampler.minValue() == null);
+    try std.testing.expect(student_sampler.maxValue() == null);
     try std.testing.expect((try StudentT(f64).init(1)).expectedValue() == null);
     try std.testing.expect((try StudentT(f64).init(2)).varianceValue() == null);
     student_sampler.fillFrom(&direct_engine, &direct_student_buf);

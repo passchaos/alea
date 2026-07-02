@@ -34,8 +34,8 @@ Zig-native way.
 | Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)`, including reusable-sampler and standard rate/moment/support accessors |
 | Gamma | Covered: `gamma`, `Gamma(T)`, including shape/scale/moment/support accessors |
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment/support accessors |
-| FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2 and finite-moment accessors |
-| StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment accessors |
+| FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2, finite-moment, and support accessors |
+| StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment and support accessors |
 | Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment accessors |
 | Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape and finite-moment accessors |
 | SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter/moment accessors |
@@ -61,7 +61,7 @@ toolkit functionality and reduce reliance on companion crates:
 
 | Alea distribution | Status |
 | --- | --- |
-| Beta | Covered: `beta`, `Beta(T)`, including alpha/beta/moment accessors |
+| Beta | Covered: `beta`, `Beta(T)`, including alpha/beta/moment/support accessors |
 | Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max/moment accessors |
 | Arcsine | Covered: `arcsine`, `Arcsine(T)`, including min/max/moment accessors |
 | Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/scale and undefined-moment accessors |

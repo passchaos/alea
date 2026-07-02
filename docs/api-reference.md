@@ -515,6 +515,8 @@ Reusable samplers:
 - `Beta(T).betaValue`
 - `Beta(T).expectedValue`
 - `Beta(T).varianceValue`
+- `Beta(T).minValue`
+- `Beta(T).maxValue`
 - `Beta(T).sample`
 - `Beta(T).sampleFrom`
 - `Beta(T).fill`
@@ -525,6 +527,8 @@ Reusable samplers:
 - `FisherF(T).d2Value`
 - `FisherF(T).expectedValue`
 - `FisherF(T).varianceValue`
+- `FisherF(T).minValue`
+- `FisherF(T).maxValue`
 - `FisherF(T).sample`
 - `FisherF(T).sampleFrom`
 - `FisherF(T).fill`
@@ -534,6 +538,8 @@ Reusable samplers:
 - `StudentT(T).dofValue`
 - `StudentT(T).expectedValue`
 - `StudentT(T).varianceValue`
+- `StudentT(T).minValue`
+- `StudentT(T).maxValue`
 - `StudentT(T).sample`
 - `StudentT(T).sampleFrom`
 - `StudentT(T).fill`
