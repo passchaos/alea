@@ -1189,6 +1189,7 @@ pub fn intRangeAtMostCheckedFrom(source: anytype, comptime T: type, at_least: T,
 pub fn intRangeLessThanFrom(source: anytype, comptime T: type, at_least: T, less_than: T) T {
     comptime requireInt(T);
     std.debug.assert(at_least < less_than);
+    if (exclusiveIntRangeHasSingleValue(T, at_least, less_than)) return at_least;
 
     const info = @typeInfo(T).int;
     if (info.signedness == .signed) {
