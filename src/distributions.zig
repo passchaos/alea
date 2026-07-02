@@ -8720,6 +8720,125 @@ pub fn fillFrechetCheckedFrom(source: anytype, comptime T: type, dest: []T, loca
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorFrechet(rng: Rng, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) VectorType {
+    return vectorFrechetFrom(rng, VectorType, location, scale, shape);
+}
+
+pub fn vectorFrechetFrom(source: anytype, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) VectorType {
+    const sampler = VectorFrechet(VectorType).init(location, scale, shape) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorFrechetChecked(rng: Rng, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!VectorType {
+    return vectorFrechetCheckedFrom(rng, VectorType, location, scale, shape);
+}
+
+pub fn vectorFrechetCheckedFrom(source: anytype, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorFrechet(VectorType).init(location, scale, shape);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorFrechet(rng: Rng, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) void {
+    fillVectorFrechetFrom(rng, VectorType, dest, location, scale, shape);
+}
+
+pub fn fillVectorFrechetFrom(source: anytype, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) void {
+    const sampler = VectorFrechet(VectorType).init(location, scale, shape) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorFrechetChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!void {
+    return fillVectorFrechetCheckedFrom(rng, VectorType, dest, location, scale, shape);
+}
+
+pub fn fillVectorFrechetCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorFrechet(VectorType).init(location, scale, shape);
+    sampler.fillFrom(source, dest);
+}
+
+fn frechetFromOpenClosedUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), negative_inverse_shape: vectorChild(VectorType)) VectorType {
+    const location_vec: VectorType = @splat(location);
+    const scale_vec: VectorType = @splat(scale);
+    const negative_inverse_shape_vec: VectorType = @splat(negative_inverse_shape);
+    return location_vec + scale_vec * @exp(@log(-@log(uniform_vec)) * negative_inverse_shape_vec);
+}
+
+fn frechetShapeOneFromOpenClosedUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    const location_vec: VectorType = @splat(location);
+    const negative_scale_vec: VectorType = @splat(-scale);
+    return location_vec + negative_scale_vec / @log(uniform_vec);
+}
+
+pub fn VectorFrechet(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Frechet(Child),
+
+        pub fn init(location: Child, scale: Child, shape: Child) Error!Self {
+            return .{ .sampler = try Frechet(Child).init(location, scale, shape) };
+        }
+
+        pub fn locationValue(self: Self) Child {
+            return self.sampler.locationValue();
+        }
+
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+
+        pub fn shapeValue(self: Self) Child {
+            return self.sampler.shapeValue();
+        }
+
+        pub fn expectedValue(self: Self) ?Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) ?Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const uniform_vec = Rng.vectorOpenClosedFrom(source, VectorType);
+            if (self.shapeValue() == 1) return frechetShapeOneFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+            return frechetFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue(), -1 / self.shapeValue());
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Frechet(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -13539,6 +13658,52 @@ test "distribution vector helpers preserve support and stream shape" {
     for (gumbel_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const frechet_vec = try vectorFrechetChecked(rng, @Vector(4, f64), 0, 2, 3);
+    const direct_frechet_vec = try vectorFrechetCheckedFrom(&direct_engine, @Vector(4, f64), 0, 2, 3);
+    try std.testing.expectEqual(frechet_vec, direct_frechet_vec);
+    inline for (0..4) |lane| try std.testing.expect(frechet_vec[lane] >= 0 and std.math.isFinite(frechet_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_frechet_sampler = try VectorFrechet(@Vector(4, f64)).init(0, 2, 3);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_frechet_sampler.locationValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_frechet_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), vector_frechet_sampler.shapeValue(), 1e-12);
+    const vector_frechet_mean_factor = std.math.gamma(f64, 1.0 - 1.0 / 3.0);
+    const vector_frechet_second_factor = std.math.gamma(f64, 1.0 - 2.0 / 3.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * vector_frechet_mean_factor, vector_frechet_sampler.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4) * (vector_frechet_second_factor - vector_frechet_mean_factor * vector_frechet_mean_factor), vector_frechet_sampler.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * std.math.pow(f64, @log(@as(f64, 2)), -1.0 / 3.0), vector_frechet_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * std.math.pow(f64, 3.0 / 4.0, 1.0 / 3.0), vector_frechet_sampler.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_frechet_sampler.minValue(), 0);
+    try std.testing.expect(vector_frechet_sampler.maxValue() == null);
+    const sampled_frechet_vec = vector_frechet_sampler.sample(rng);
+    const direct_sampled_frechet_vec = vector_frechet_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_frechet_vec, direct_sampled_frechet_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_frechet_vec[lane] >= 0 and std.math.isFinite(sampled_frechet_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var frechet_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_frechet_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorFrechetChecked(rng, @Vector(4, f64), &frechet_buf_vec, 0, 2, 3);
+    try fillVectorFrechetCheckedFrom(&direct_engine, @Vector(4, f64), &direct_frechet_buf_vec, 0, 2, 3);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &frechet_buf_vec, &direct_frechet_buf_vec);
+    for (frechet_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_frechet_sampler.fill(rng, &frechet_buf_vec);
+    vector_frechet_sampler.fillFrom(&direct_engine, &direct_frechet_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &frechet_buf_vec, &direct_frechet_buf_vec);
+    for (frechet_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_frechet_shape_one = try VectorFrechet(@Vector(4, f64)).init(0, 2, 1);
+    try std.testing.expect(vector_frechet_shape_one.expectedValue() == null);
+    try std.testing.expect(vector_frechet_shape_one.varianceValue() == null);
+    const frechet_shape_one_vec = vector_frechet_shape_one.sample(rng);
+    const direct_frechet_shape_one_vec = vector_frechet_shape_one.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(frechet_shape_one_vec, direct_frechet_shape_one_vec);
+    inline for (0..4) |lane| try std.testing.expect(frechet_shape_one_vec[lane] >= 0 and std.math.isFinite(frechet_shape_one_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -13693,6 +13858,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorGumbelCheckedFrom(&engine, @Vector(4, f64), 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorFrechetCheckedFrom(&engine, @Vector(4, f64), 0, 2, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -13770,6 +13938,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -13873,6 +14044,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -13924,6 +14097,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorWeibullChecked(rng, @Vector(4, f64), &empty, 0, 1.5);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorGumbelChecked(rng, @Vector(4, f64), &empty, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorFrechetChecked(rng, @Vector(4, f64), &empty, 0, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16798,6 +16973,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorGumbelFrom(&unchecked, @Vector(4, f64), &vector_gumbel_unchecked, 0, 1);
         try fillVectorGumbelCheckedFrom(&checked, @Vector(4, f64), &vector_gumbel_checked, 0, 1);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_gumbel_unchecked, &vector_gumbel_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_frechet_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_frechet_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorFrechetFrom(&unchecked, @Vector(4, f64), &vector_frechet_unchecked, 0, 2, 3);
+        try fillVectorFrechetCheckedFrom(&checked, @Vector(4, f64), &vector_frechet_checked, 0, 2, 3);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_frechet_unchecked, &vector_frechet_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

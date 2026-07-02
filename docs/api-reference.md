@@ -352,7 +352,10 @@ Single-shot helpers:
   `fillVectorGumbelChecked`, `fillVectorGumbelCheckedFrom`,
   `frechet`, `frechetFrom`, `frechetChecked`, `frechetCheckedFrom`,
   `fillFrechet`, `fillFrechetFrom`, `fillFrechetChecked`,
-  `fillFrechetCheckedFrom`,
+  `fillFrechetCheckedFrom`, `vectorFrechet`, `vectorFrechetFrom`,
+  `vectorFrechetChecked`, `vectorFrechetCheckedFrom`,
+  `fillVectorFrechet`, `fillVectorFrechetFrom`,
+  `fillVectorFrechetChecked`, `fillVectorFrechetCheckedFrom`,
   `skewNormal`, `skewNormalFrom`, `skewNormalChecked`,
   `skewNormalCheckedFrom`, `fillSkewNormal`, `fillSkewNormalFrom`,
   `fillSkewNormalChecked`, `fillSkewNormalCheckedFrom`,
@@ -1352,6 +1355,21 @@ Reusable samplers:
 - `Frechet(T).sampleFrom`
 - `Frechet(T).fill`
 - `Frechet(T).fillFrom`
+- `VectorFrechet(VectorType)`
+- `VectorFrechet(VectorType).init`
+- `VectorFrechet(VectorType).locationValue`
+- `VectorFrechet(VectorType).scaleValue`
+- `VectorFrechet(VectorType).shapeValue`
+- `VectorFrechet(VectorType).expectedValue`
+- `VectorFrechet(VectorType).varianceValue`
+- `VectorFrechet(VectorType).medianValue`
+- `VectorFrechet(VectorType).modeValue`
+- `VectorFrechet(VectorType).minValue`
+- `VectorFrechet(VectorType).maxValue`
+- `VectorFrechet(VectorType).sample`
+- `VectorFrechet(VectorType).sampleFrom`
+- `VectorFrechet(VectorType).fill`
+- `VectorFrechet(VectorType).fillFrom`
 - `SkewNormal(T)`
 - `SkewNormal(T).init`
 - `SkewNormal(T).locationValue`
