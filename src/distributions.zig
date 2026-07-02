@@ -3734,6 +3734,7 @@ pub fn VectorPoisson(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.lambdaValue() == 0) return @splat(0);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = @intCast(self.sampler.sampleFrom(source));
             return out;
@@ -16825,6 +16826,22 @@ test "degenerate discrete distribution helpers do not consume random stream" {
 
     const vector_binomial_approx_zero = try VectorBinomialPoissonApprox(@Vector(4, u64)).init(10_000, 0);
     try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), vector_binomial_approx_zero.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const poisson_zero = try Poisson.init(0);
+    try std.testing.expectEqual(@as(u64, 0), poisson_zero.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(u64, 0), try poissonChecked(rng, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+    poisson_zero.fillFrom(&engine, &u64_buf);
+    for (u64_buf) |sample| try std.testing.expectEqual(@as(u64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_poisson_zero = try VectorPoisson(@Vector(4, u64)).init(0);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), vector_poisson_zero.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_poisson_zero.fillFrom(&engine, &vector_u64_buf);
+    for (vector_u64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const negative_binomial = try NegativeBinomial.init(5, 1);
