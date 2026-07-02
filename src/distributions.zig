@@ -4398,6 +4398,19 @@ pub fn Frechet(comptime T: type) type {
             return self.shape;
         }
 
+        pub fn expectedValue(self: Self) ?T {
+            if (!(self.shape > 1)) return null;
+            return self.location + self.scale * std.math.gamma(T, 1 - 1 / self.shape);
+        }
+
+        pub fn varianceValue(self: Self) ?T {
+            if (!(self.shape > 2)) return null;
+            const mean_factor = std.math.gamma(T, 1 - 1 / self.shape);
+            const second_moment_factor = std.math.gamma(T, 1 - 2 / self.shape);
+            const scale_squared = self.scale * self.scale;
+            return scale_squared * (second_moment_factor - mean_factor * mean_factor);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -9007,6 +9020,14 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), frechet_sampler.locationValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), frechet_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), frechet_sampler.shapeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@sqrt(std.math.pi), frechet_sampler.expectedValue().?, 1e-12);
+    try std.testing.expect(frechet_sampler.varianceValue() == null);
+    const frechet_finite_moments = try Frechet(f64).init(0, 1, 3);
+    const frechet_mean_factor = std.math.gamma(f64, 1.0 - 1.0 / 3.0);
+    const frechet_second_moment_factor = std.math.gamma(f64, 1.0 - 2.0 / 3.0);
+    try std.testing.expectApproxEqAbs(frechet_mean_factor, frechet_finite_moments.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(frechet_second_moment_factor - frechet_mean_factor * frechet_mean_factor, frechet_finite_moments.varianceValue().?, 1e-12);
+    try std.testing.expect((try Frechet(f64).init(0, 1, 1)).expectedValue() == null);
     frechet_sampler.fillFrom(&direct_engine, &direct_frechet_buf);
     for (direct_frechet_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try frechetCheckedFrom(&direct_engine, f64, 0, 1, 2) >= 0);

@@ -633,6 +633,8 @@ Reusable samplers:
 - `Frechet(T).locationValue`
 - `Frechet(T).scaleValue`
 - `Frechet(T).shapeValue`
+- `Frechet(T).expectedValue`
+- `Frechet(T).varianceValue`
 - `Frechet(T).sample`
 - `Frechet(T).sampleFrom`
 - `Frechet(T).fill`

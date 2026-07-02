@@ -37,7 +37,7 @@ Zig-native way.
 | FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2 and finite-moment accessors |
 | StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment accessors |
 | Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment accessors |
-| Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape accessors |
+| Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape and finite-moment accessors |
 | SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter accessors |
 | Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, range-builder constructors, builder diagnostics, and parameter accessors |
 | UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)`, including geometry accessors |
