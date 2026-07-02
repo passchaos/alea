@@ -5137,6 +5137,104 @@ pub fn fillBetaCheckedFrom(source: anytype, comptime T: type, dest: []T, alpha: 
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorBeta(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
+    return vectorBetaFrom(rng, VectorType, alpha, beta_param);
+}
+
+pub fn vectorBetaFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
+    const sampler = VectorBeta(VectorType).init(alpha, beta_param) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorBetaChecked(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!VectorType {
+    return vectorBetaCheckedFrom(rng, VectorType, alpha, beta_param);
+}
+
+pub fn vectorBetaCheckedFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorBeta(VectorType).init(alpha, beta_param);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorBeta(rng: Rng, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) void {
+    fillVectorBetaFrom(rng, VectorType, dest, alpha, beta_param);
+}
+
+pub fn fillVectorBetaFrom(source: anytype, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) void {
+    const sampler = VectorBeta(VectorType).init(alpha, beta_param) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorBetaChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!void {
+    return fillVectorBetaCheckedFrom(rng, VectorType, dest, alpha, beta_param);
+}
+
+pub fn fillVectorBetaCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorBeta(VectorType).init(alpha, beta_param);
+    sampler.fillFrom(source, dest);
+}
+
+pub fn VectorBeta(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Beta(Child),
+
+        pub fn init(alpha: Child, beta_param: Child) Error!Self {
+            return .{ .sampler = try Beta(Child).init(alpha, beta_param) };
+        }
+
+        pub fn alphaValue(self: Self) Child {
+            return self.sampler.alphaValue();
+        }
+
+        pub fn betaValue(self: Self) Child {
+            return self.sampler.betaValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn modeValue(self: Self) ?Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Beta(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -11266,6 +11364,39 @@ test "distribution vector helpers preserve support and stream shape" {
     for (erlang_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const beta_vec = try vectorBetaChecked(rng, @Vector(4, f64), 2, 5);
+    const direct_beta_vec = try vectorBetaCheckedFrom(&direct_engine, @Vector(4, f64), 2, 5);
+    try std.testing.expectEqual(beta_vec, direct_beta_vec);
+    inline for (0..4) |lane| try std.testing.expect(beta_vec[lane] >= 0 and beta_vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_beta_sampler = try VectorBeta(@Vector(4, f64)).init(2, 5);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_beta_sampler.alphaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), vector_beta_sampler.betaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 7.0), vector_beta_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 196.0), vector_beta_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.2), vector_beta_sampler.modeValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_beta_sampler.minValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_beta_sampler.maxValue(), 0);
+    const sampled_beta_vec = vector_beta_sampler.sample(rng);
+    const direct_sampled_beta_vec = vector_beta_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_beta_vec, direct_sampled_beta_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_beta_vec[lane] >= 0 and sampled_beta_vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var beta_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_beta_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorBetaChecked(rng, @Vector(4, f64), &beta_buf_vec, 2, 5);
+    try fillVectorBetaCheckedFrom(&direct_engine, @Vector(4, f64), &direct_beta_buf_vec, 2, 5);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &beta_buf_vec, &direct_beta_buf_vec);
+    for (beta_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_beta_sampler.fill(rng, &beta_buf_vec);
+    vector_beta_sampler.fillFrom(&direct_engine, &direct_beta_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &beta_buf_vec, &direct_beta_buf_vec);
+    for (beta_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -11372,6 +11503,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorErlangCheckedFrom(&engine, @Vector(4, f64), 0, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorBetaCheckedFrom(&engine, @Vector(4, f64), 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -11401,6 +11535,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorErlangCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorBetaCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -11472,6 +11609,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorErlangCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorBetaCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -11491,6 +11630,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorChiChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorErlangChecked(rng, @Vector(4, f64), &empty, 0, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorBetaChecked(rng, @Vector(4, f64), &empty, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -14253,6 +14394,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorErlangFrom(&unchecked, @Vector(4, f64), &vector_erlang_unchecked, 3, 2);
         try fillVectorErlangCheckedFrom(&checked, @Vector(4, f64), &vector_erlang_checked, 3, 2);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_erlang_unchecked, &vector_erlang_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_beta_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_beta_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorBetaFrom(&unchecked, @Vector(4, f64), &vector_beta_unchecked, 2, 5);
+        try fillVectorBetaCheckedFrom(&checked, @Vector(4, f64), &vector_beta_checked, 2, 5);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_beta_unchecked, &vector_beta_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

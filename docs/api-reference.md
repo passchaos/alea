@@ -248,7 +248,10 @@ Single-shot helpers:
   `fillVectorErlang`, `fillVectorErlangFrom`, `fillVectorErlangChecked`,
   `fillVectorErlangCheckedFrom`, `beta`, `betaFrom`,
   `betaChecked`, `betaCheckedFrom`, `fillBeta`, `fillBetaFrom`,
-  `fillBetaChecked`, `fillBetaCheckedFrom`, `fisherF`, `fisherFFrom`,
+  `fillBetaChecked`, `fillBetaCheckedFrom`, `vectorBeta`,
+  `vectorBetaFrom`, `vectorBetaChecked`, `vectorBetaCheckedFrom`,
+  `fillVectorBeta`, `fillVectorBetaFrom`, `fillVectorBetaChecked`,
+  `fillVectorBetaCheckedFrom`, `fisherF`, `fisherFFrom`,
   `fisherFChecked`, `fisherFCheckedFrom`, `fillFisherF`,
   `fillFisherFFrom`, `fillFisherFChecked`, `fillFisherFCheckedFrom`,
   `studentT`, `studentTFrom`, `studentTChecked`, `studentTCheckedFrom`,
@@ -878,6 +881,19 @@ Reusable samplers:
 - `Beta(T).sampleFrom`
 - `Beta(T).fill`
 - `Beta(T).fillFrom`
+- `VectorBeta(VectorType)`
+- `VectorBeta(VectorType).init`
+- `VectorBeta(VectorType).alphaValue`
+- `VectorBeta(VectorType).betaValue`
+- `VectorBeta(VectorType).expectedValue`
+- `VectorBeta(VectorType).varianceValue`
+- `VectorBeta(VectorType).modeValue`
+- `VectorBeta(VectorType).minValue`
+- `VectorBeta(VectorType).maxValue`
+- `VectorBeta(VectorType).sample`
+- `VectorBeta(VectorType).sampleFrom`
+- `VectorBeta(VectorType).fill`
+- `VectorBeta(VectorType).fillFrom`
 - `FisherF(T)`
 - `FisherF(T).init`
 - `FisherF(T).d1Value`

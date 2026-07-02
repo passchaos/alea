@@ -103,12 +103,12 @@ same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
 `fillVectorNormal*`, `vectorLogNormal*`, `fillVectorLogNormal*`, `vectorHalfNormal*`, `fillVectorHalfNormal*`, `vectorGamma*`,
 `fillVectorGamma*`, `vectorChiSquared*`, `fillVectorChiSquared*`,
 `vectorChi*`, `fillVectorChi*`, `vectorErlang*`, `fillVectorErlang*`,
-`vectorStandardExponential*`,
+`vectorBeta*`, `fillVectorBeta*`, `vectorStandardExponential*`,
 `fillVectorStandardExponential*`, `vectorExponential*`, and
 `fillVectorExponential*`; reusable vector samplers `VectorBernoulli`,
 `VectorBinomial`, `VectorGeometric`, `VectorGeometricFailures`, `VectorStandardGeometric`,
 `VectorPoisson`, `VectorUniform`, `VectorStandardNormal`, `VectorNormal`, `VectorLogNormal`,
-`VectorHalfNormal`, `VectorGamma`, `VectorChiSquared`, `VectorChi`, `VectorErlang`,
+`VectorHalfNormal`, `VectorGamma`, `VectorChiSquared`, `VectorChi`, `VectorErlang`, `VectorBeta`,
 `VectorStandardExponential`, and `VectorExponential`; strict interval samplers
 `Open01` and `OpenClosed01` also sample/fill float vector slices.
 Use `standardNormalFastFrom`, `normalFastFrom`,
@@ -134,7 +134,7 @@ Single-shot helpers and reusable samplers cover:
   approximate log-normal, half-normal/vector half-normal, standard exponential,
   exponential
 - poisson, vector poisson, geometric, vector geometric/failures
-- gamma/vector gamma, chi-squared/vector chi-squared, chi/vector chi, erlang/vector erlang, beta,
+- gamma/vector gamma, chi-squared/vector chi-squared, chi/vector chi, erlang/vector erlang, beta/vector beta,
   Fisher F, Student t
 - triangular, arcsine, cauchy, laplace, logistic, log-logistic, kumaraswamy,
   power-function, rayleigh, maxwell, pareto, weibull
@@ -333,7 +333,7 @@ benchmark shape.
 Use `vectorbench` for focused SIMD/vector-slice evidence without slowing the
 full throughput suite. The current local rows cover packed bool chance/ratio,
 strict-open/open-closed/range vector float fills, distribution-namespace vector
-Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/log-normal/half-normal/gamma/chi-squared/chi/erlang/exponential wrappers over those kernels, and
+Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/exponential wrappers over those kernels, and
 scalar-lane normal/exponential vector fills;
 representative rows are about 1.01B lanes/s
 for `fillVectorRange(f32x8)`, about 694M lanes/s for
