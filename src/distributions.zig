@@ -1927,6 +1927,10 @@ pub const Geometric = struct {
         return .{ .p = p };
     }
 
+    pub fn probabilityValue(self: Geometric) f64 {
+        return self.p;
+    }
+
     pub fn sample(self: Geometric, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -1950,6 +1954,10 @@ pub const GeometricFailures = struct {
     pub fn init(p: f64) Error!GeometricFailures {
         if (!(p > 0 and p <= 1)) return error.InvalidProbability;
         return .{ .p = p };
+    }
+
+    pub fn probabilityValue(self: GeometricFailures) f64 {
+        return self.p;
     }
 
     pub fn sample(self: GeometricFailures, rng: Rng) u64 {
@@ -7850,6 +7858,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
     try std.testing.expectError(error.InvalidProbability, fillGeometricCheckedFrom(&direct_engine, &direct_geometric_buf, 0));
     const geometric_sampler = try Geometric.init(0.25);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), geometric_sampler.probabilityValue(), 1e-12);
     geometric_sampler.fillFrom(&direct_engine, &direct_geometric_buf);
     for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
     try std.testing.expect(try geometricCheckedFrom(&direct_engine, 0.25) >= 1);
@@ -7865,6 +7874,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (geometric_failures_buf) |value| try std.testing.expectEqual(@as(u64, 0), value);
     try std.testing.expectError(error.InvalidProbability, fillGeometricFailuresCheckedFrom(&direct_engine, &geometric_failures_buf, 0));
     const geometric_failures_sampler = try GeometricFailures.init(0.25);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), geometric_failures_sampler.probabilityValue(), 1e-12);
     geometric_failures_sampler.fillFrom(&direct_engine, &geometric_failures_buf);
     try std.testing.expectEqual(@as(u64, 0), geometricFailures(rng, 1));
     try std.testing.expect(try geometricFailuresCheckedFrom(&direct_engine, 0.25) < 64);

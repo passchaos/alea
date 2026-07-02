@@ -366,12 +366,14 @@ Reusable samplers:
 - `Poisson.fillFrom`
 - `Geometric`
 - `Geometric.init`
+- `Geometric.probabilityValue`
 - `Geometric.sample`
 - `Geometric.sampleFrom`
 - `Geometric.fill`
 - `Geometric.fillFrom`
 - `GeometricFailures`
 - `GeometricFailures.init`
+- `GeometricFailures.probabilityValue`
 - `GeometricFailures.sample`
 - `GeometricFailures.sampleFrom`
 - `GeometricFailures.fill`
