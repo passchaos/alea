@@ -2457,6 +2457,14 @@ pub fn ChiSquared(comptime T: type) type {
             return self.dof;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.dof;
+        }
+
+        pub fn varianceValue(self: Self) T {
+            return 2 * self.dof;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8314,6 +8322,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, fillChiSquaredCheckedFrom(&direct_engine, f64, &direct_chi_squared_buf, 0));
     const chi_squared_sampler = try ChiSquared(f64).init(4);
     try std.testing.expectApproxEqAbs(@as(f64, 4), chi_squared_sampler.dofValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), chi_squared_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 8), chi_squared_sampler.varianceValue(), 1e-12);
     chi_squared_sampler.fillFrom(&direct_engine, &direct_chi_squared_buf);
     for (direct_chi_squared_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try chiSquaredCheckedFrom(&direct_engine, f64, 4) > 0);

@@ -444,6 +444,8 @@ Reusable samplers:
 - `ChiSquared(T)`
 - `ChiSquared(T).init`
 - `ChiSquared(T).dofValue`
+- `ChiSquared(T).expectedValue`
+- `ChiSquared(T).varianceValue`
 - `ChiSquared(T).sample`
 - `ChiSquared(T).sampleFrom`
 - `ChiSquared(T).fill`
