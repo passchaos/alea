@@ -71,6 +71,7 @@ pub fn main(init: std.process.Init) !void {
     try benchF64(io, stdout, "table-bound normal candidate", sample_count, 0xd15a, tableBoundNormal);
     try benchF32(io, stdout, "standard normal f32 raw", sample_count, 0xd15a, standardNormalF32);
     try benchF32(io, stdout, "ratio normal f32 cast candidate", sample_count, 0xd15a, ratioNormalF32);
+    try benchF32(io, stdout, "table-bound normal f32 cast candidate", sample_count, 0xd15a, tableBoundNormalF32);
     try benchF64(io, stdout, "generic exponentialFastFrom", sample_count, 0xe15a, genericExponential);
     try benchF64(io, stdout, "standard exponential raw", sample_count, 0xe15a, standardExponential);
     try benchF64(io, stdout, "ratio exponential inline candidate", sample_count, 0xe15a, ratioExponential);
@@ -270,6 +271,10 @@ fn standardNormalF32(engine: *alea.ScalarPrng) f32 {
 
 fn ratioNormalF32(engine: *alea.ScalarPrng) f32 {
     return @floatCast(ratioNormal(engine));
+}
+
+fn tableBoundNormalF32(engine: *alea.ScalarPrng) f32 {
+    return @floatCast(tableBoundNormal(engine));
 }
 
 fn genericExponential(engine: *alea.ScalarPrng) f64 {
