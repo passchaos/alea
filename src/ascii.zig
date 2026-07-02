@@ -20,6 +20,19 @@ pub const Charset = struct {
         return .{ .bytes = bytes };
     }
 
+    pub fn bytesValue(self: Charset) []const u8 {
+        return self.bytes;
+    }
+
+    pub fn len(self: Charset) usize {
+        return self.bytes.len;
+    }
+
+    pub fn byteAt(self: Charset, index: usize) error{InvalidParameter}!u8 {
+        if (index >= self.bytes.len) return error.InvalidParameter;
+        return self.bytes[index];
+    }
+
     pub fn sample(self: Charset, rng: Rng) u8 {
         return self.sampleFrom(rng);
     }
@@ -55,22 +68,22 @@ pub const Charset = struct {
         for (out) |*byte| byte.* = self.sampleFrom(source);
     }
 
-    pub fn alloc(self: Charset, allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
-        return self.allocFrom(allocator, rng, len);
+    pub fn alloc(self: Charset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
+        return self.allocFrom(allocator, rng, length);
     }
 
-    pub fn allocChecked(self: Charset, allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
-        return self.allocCheckedFrom(allocator, rng, len);
+    pub fn allocChecked(self: Charset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
+        return self.allocCheckedFrom(allocator, rng, length);
     }
 
-    pub fn allocCheckedFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
-        if (len == 0) return allocator.alloc(u8, 0);
+    pub fn allocCheckedFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {
+        if (length == 0) return allocator.alloc(u8, 0);
         if (self.bytes.len == 0) return error.EmptyCharset;
-        return self.allocFrom(allocator, source, len);
+        return self.allocFrom(allocator, source, length);
     }
 
-    pub fn allocFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
-        const out = try allocator.alloc(u8, len);
+    pub fn allocFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {
+        const out = try allocator.alloc(u8, length);
         self.fillFrom(source, out);
         return out;
     }
@@ -157,6 +170,10 @@ test "ascii charset fills requested length" {
     const password = try Alphanumeric.alloc(std.testing.allocator, rng, 32);
     defer std.testing.allocator.free(password);
 
+    try std.testing.expectEqualSlices(u8, alphanumeric, Alphanumeric.bytesValue());
+    try std.testing.expectEqual(alphanumeric.len, Alphanumeric.len());
+    try std.testing.expectEqual(@as(u8, 'A'), try Alphanumeric.byteAt(0));
+    try std.testing.expectError(error.InvalidParameter, Alphanumeric.byteAt(alphanumeric.len));
     try std.testing.expectEqual(@as(usize, 32), password.len);
     for (password) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
 
