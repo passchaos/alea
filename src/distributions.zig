@@ -5133,6 +5133,14 @@ pub fn UnitCircle(comptime T: type) type {
             return true;
         }
 
+        pub fn coordinateExpectedValue(_: @This()) T {
+            return 0;
+        }
+
+        pub fn coordinateVarianceValue(_: @This()) T {
+            return 1.0 / 2.0;
+        }
+
         pub fn sample(_: @This(), rng: Rng) [2]T {
             return unitCircle(rng, T);
         }
@@ -5163,6 +5171,14 @@ pub fn UnitDisc(comptime T: type) type {
 
         pub fn isSurface(_: @This()) bool {
             return false;
+        }
+
+        pub fn coordinateExpectedValue(_: @This()) T {
+            return 0;
+        }
+
+        pub fn coordinateVarianceValue(_: @This()) T {
+            return 1.0 / 4.0;
         }
 
         pub fn sample(_: @This(), rng: Rng) [2]T {
@@ -5197,6 +5213,14 @@ pub fn UnitSphere(comptime T: type) type {
             return true;
         }
 
+        pub fn coordinateExpectedValue(_: @This()) T {
+            return 0;
+        }
+
+        pub fn coordinateVarianceValue(_: @This()) T {
+            return 1.0 / 3.0;
+        }
+
         pub fn sample(_: @This(), rng: Rng) [3]T {
             return unitSphere(rng, T);
         }
@@ -5227,6 +5251,14 @@ pub fn UnitBall(comptime T: type) type {
 
         pub fn isSurface(_: @This()) bool {
             return false;
+        }
+
+        pub fn coordinateExpectedValue(_: @This()) T {
+            return 0;
+        }
+
+        pub fn coordinateVarianceValue(_: @This()) T {
+            return 1.0 / 5.0;
         }
 
         pub fn sample(_: @This(), rng: Rng) [3]T {
@@ -9790,15 +9822,23 @@ test "unit geometric distributions stay on expected support" {
     try std.testing.expectEqual(@as(usize, 2), (UnitCircle(f64){}).dimensionValue());
     try std.testing.expectEqual(@as(f64, 1), (UnitCircle(f64){}).radiusValue());
     try std.testing.expect((UnitCircle(f64){}).isSurface());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), (UnitCircle(f64){}).coordinateExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), (UnitCircle(f64){}).coordinateVarianceValue(), 0);
     try std.testing.expectEqual(@as(usize, 2), (UnitDisc(f64){}).dimensionValue());
     try std.testing.expectEqual(@as(f64, 1), (UnitDisc(f64){}).radiusValue());
     try std.testing.expect(!(UnitDisc(f64){}).isSurface());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), (UnitDisc(f64){}).coordinateExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), (UnitDisc(f64){}).coordinateVarianceValue(), 0);
     try std.testing.expectEqual(@as(usize, 3), (UnitSphere(f64){}).dimensionValue());
     try std.testing.expectEqual(@as(f64, 1), (UnitSphere(f64){}).radiusValue());
     try std.testing.expect((UnitSphere(f64){}).isSurface());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), (UnitSphere(f64){}).coordinateExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), (UnitSphere(f64){}).coordinateVarianceValue(), 0);
     try std.testing.expectEqual(@as(usize, 3), (UnitBall(f64){}).dimensionValue());
     try std.testing.expectEqual(@as(f64, 1), (UnitBall(f64){}).radiusValue());
     try std.testing.expect(!(UnitBall(f64){}).isSurface());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), (UnitBall(f64){}).coordinateExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.2), (UnitBall(f64){}).coordinateVarianceValue(), 0);
 }
 
 test "dirichlet sampler returns simplex vectors" {
