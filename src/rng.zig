@@ -1638,12 +1638,19 @@ pub fn weightedIndexChecked(self: Rng, weights: []const f64) Error!?usize {
 
 pub fn weightedIndexCheckedFrom(source: anytype, weights: []const f64) Error!?usize {
     var total: f64 = 0;
-    for (weights) |weight| {
+    var positive_index: ?usize = null;
+    var positive_count: usize = 0;
+    for (weights, 0..) |weight, index| {
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         total += weight;
         if (!std.math.isFinite(total)) return error.InvalidWeight;
+        if (weight > 0) {
+            positive_index = index;
+            positive_count += 1;
+        }
     }
     if (weights.len == 0 or total == 0) return null;
+    if (positive_count == 1) return positive_index.?;
 
     const point = floatFrom(source, f64) * total;
     var acc: f64 = 0;
@@ -3475,6 +3482,19 @@ test "negative weighted index does not consume random stream" {
     var control = alea.ScalarPrng.init(0x5150_b9f);
 
     try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&engine, &.{ 1.0, -1.0 }));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "single-positive weighted index does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_b9e);
+    var control = alea.ScalarPrng.init(0x5150_b9e);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(?usize, 2), weightedIndexFrom(&engine, &.{ 0.0, 0.0, 3.0, 0.0 }));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(?usize, 1), try rng.weightedIndexChecked(&.{ 0.0, 5.0, 0.0 }));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
