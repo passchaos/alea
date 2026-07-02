@@ -2926,6 +2926,7 @@ pub fn vectorLogNormal(rng: Rng, comptime VectorType: type, mean: vectorChild(Ve
 }
 
 pub fn vectorLogNormalFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
+    if (stddev == 0) return @splat(@exp(mean));
     const normal_vec = vectorNormalFrom(source, VectorType, mean, stddev);
     return @exp(normal_vec);
 }
@@ -2944,6 +2945,10 @@ pub fn fillVectorLogNormal(rng: Rng, comptime VectorType: type, dest: []VectorTy
 }
 
 pub fn fillVectorLogNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    if (stddev == 0) {
+        @memset(dest, @as(VectorType, @splat(@exp(mean))));
+        return;
+    }
     fillVectorNormalFrom(source, VectorType, dest, mean, stddev);
     expVectorSliceInPlace(VectorType, dest);
 }
@@ -2967,6 +2972,7 @@ pub fn logNormalApproxF32(rng: Rng, mean: f32, stddev: f32) f32 {
 
 pub fn logNormalApproxF32From(source: anytype, mean: f32, stddev: f32) f32 {
     std.debug.assert(logNormalApproxF32ParametersValid(mean, stddev));
+    if (stddev == 0) return expm1ApproxPositiveF32(mean);
     const z = Rng.standardNormalFastFrom(source, f32);
     const log_space = if (mean == 0) stddev * z else mean + stddev * z;
     return expm1ApproxPositiveF32(log_space);
@@ -2987,6 +2993,10 @@ pub fn fillLogNormalApproxF32(rng: Rng, dest: []f32, mean: f32, stddev: f32) voi
 
 pub fn fillLogNormalApproxF32From(source: anytype, dest: []f32, mean: f32, stddev: f32) void {
     std.debug.assert(logNormalApproxF32ParametersValid(mean, stddev));
+    if (stddev == 0) {
+        @memset(dest, expm1ApproxPositiveF32(mean));
+        return;
+    }
     Rng.fillNormalFrom(source, f32, dest, mean, stddev);
     expm1ApproxPositiveInPlaceF32(dest);
 }
@@ -3010,6 +3020,7 @@ pub fn vectorLogNormalApproxF32From(source: anytype, comptime VectorType: type, 
     if (info.child != f32) @compileError("vectorLogNormalApproxF32 expects an f32 vector");
     std.debug.assert(logNormalApproxF32ParametersValid(mean, stddev));
 
+    if (stddev == 0) return @splat(expm1ApproxPositiveF32(mean));
     var out: VectorType = undefined;
     inline for (0..info.len) |lane| out[lane] = logNormalApproxF32From(source, mean, stddev);
     return out;
@@ -3034,6 +3045,10 @@ pub fn fillVectorLogNormalApproxF32From(source: anytype, comptime VectorType: ty
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorLogNormalApproxF32 expects an f32 vector");
     std.debug.assert(logNormalApproxF32ParametersValid(mean, stddev));
+    if (stddev == 0) {
+        @memset(dest, @as(VectorType, @splat(expm1ApproxPositiveF32(mean))));
+        return;
+    }
     for (dest) |*item| item.* = vectorLogNormalApproxF32From(source, VectorType, mean, stddev);
 }
 
@@ -13639,6 +13654,18 @@ test "degenerate normal and log-normal helpers do not consume random stream" {
     for (normal_buf) |value| try std.testing.expectEqual(@as(f64, -8.5), value);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(7.5)), vectorNormalFrom(&engine, @Vector(4, f64), 7.5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_normal_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorNormalFrom(&engine, @Vector(4, f64), &vector_normal_buf, -6.5, 0);
+    for (vector_normal_buf) |value| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(-6.5)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorNormalChecked(rng, @Vector(4, f64), &vector_normal_buf, 5.25, 0);
+    for (vector_normal_buf) |value| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(5.25)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(f64, 1), logNormalFrom(&engine, f64, 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -13656,6 +13683,42 @@ test "degenerate normal and log-normal helpers do not consume random stream" {
     for (log_normal_buf) |value| try std.testing.expectEqual(log_expected, value);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(log_expected)), vectorLogNormalFrom(&engine, @Vector(4, f64), log_mean, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_log_normal_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorLogNormalFrom(&engine, @Vector(4, f64), &vector_log_normal_buf, log_mean, 0);
+    for (vector_log_normal_buf) |value| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(log_expected)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorLogNormalChecked(rng, @Vector(4, f64), &vector_log_normal_buf, 0, 0);
+    for (vector_log_normal_buf) |value| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(log_expected)), try vectorLogNormalCheckedFrom(&engine, @Vector(4, f64), log_mean, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const approx_mean: f32 = 0.125;
+    const approx_expected = expm1ApproxPositiveF32(approx_mean);
+    try std.testing.expectEqual(approx_expected, logNormalApproxF32From(&engine, approx_mean, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var approx_buf: [5]f32 = undefined;
+    fillLogNormalApproxF32From(&engine, &approx_buf, approx_mean, 0);
+    for (approx_buf) |value| try std.testing.expectEqual(approx_expected, value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(8, f32), @splat(approx_expected)), vectorLogNormalApproxF32From(&engine, @Vector(8, f32), approx_mean, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(8, f32), @splat(approx_expected)), try vectorLogNormalApproxF32CheckedFrom(&engine, @Vector(8, f32), approx_mean, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_approx_buf: [3]@Vector(8, f32) = undefined;
+    fillVectorLogNormalApproxF32From(&engine, @Vector(8, f32), &vector_approx_buf, approx_mean, 0);
+    for (vector_approx_buf) |value| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(approx_expected)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var normal_sampler = try Normal(f64).init(1.25, 0);
     try std.testing.expectEqual(@as(f64, 1.25), normal_sampler.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
@@ -13663,11 +13726,39 @@ test "degenerate normal and log-normal helpers do not consume random stream" {
     for (normal_buf) |value| try std.testing.expectEqual(@as(f64, 1.25), value);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const vector_normal_sampler = try VectorNormal(@Vector(4, f64)).init(1.5, 0);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vector_normal_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_normal_sampler.fillFrom(&engine, &vector_normal_buf);
+    for (vector_normal_buf) |value| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var log_normal_sampler = try LogNormal(f64).init(log_mean, 0);
     try std.testing.expectEqual(log_expected, log_normal_sampler.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
     log_normal_sampler.fillFrom(&engine, &log_normal_buf);
     for (log_normal_buf) |value| try std.testing.expectEqual(log_expected, value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_log_normal_sampler = try VectorLogNormal(@Vector(4, f64)).init(log_mean, 0);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(log_expected)), vector_log_normal_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_log_normal_sampler.fillFrom(&engine, &vector_log_normal_buf);
+    for (vector_log_normal_buf) |value| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(log_expected)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const approx_sampler = try LogNormalApproxF32.init(approx_mean, 0);
+    try std.testing.expectEqual(approx_expected, approx_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    approx_sampler.fillFrom(&engine, &approx_buf);
+    for (approx_buf) |value| try std.testing.expectEqual(approx_expected, value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_approx_sampler = try VectorLogNormalApproxF32(@Vector(8, f32)).init(approx_mean, 0);
+    try std.testing.expectEqual(@as(@Vector(8, f32), @splat(approx_expected)), vector_approx_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_approx_sampler.fillFrom(&engine, &vector_approx_buf);
+    for (vector_approx_buf) |value| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(approx_expected)), value);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var zero_cv_log_normal_sampler = try LogNormal(f64).initMeanCv(0, 0);

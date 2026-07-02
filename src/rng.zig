@@ -487,6 +487,10 @@ pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
+    if (stddev == 0) {
+        @memset(dest, @as(VectorType, @splat(mean)));
+        return;
+    }
     if (info.child == f32 or info.child == f64) {
         fillVectorNormalScalarFrom(source, VectorType, dest, mean, stddev);
         return;
@@ -1382,6 +1386,7 @@ pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vector
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
+    if (stddev == 0) return @splat(mean);
     if (info.child == f32 or info.child == f64) return vectorNormalScalarFrom(source, VectorType, mean, stddev);
     var out: VectorType = undefined;
     var std_random = randomFrom(source);
@@ -3307,6 +3312,21 @@ test "degenerate normal helpers do not consume random stream" {
 
     try fillNormalCheckedFrom(&engine, f64, &out, 9.5, 0);
     for (out) |sample| try std.testing.expectEqual(@as(f64, 9.5), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(2.25)), rng.vectorNormal(@Vector(4, f64), 2.25, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(-3.5)), try vectorNormalCheckedFrom(&engine, @Vector(4, f64), -3.5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vec_out: [3]@Vector(8, f32) = undefined;
+    rng.fillVectorNormal(@Vector(8, f32), &vec_out, -1.5, 0);
+    for (vec_out) |vec_sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(-1.5)), vec_sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorNormalCheckedFrom(&engine, @Vector(8, f32), &vec_out, 4.5, 0);
+    for (vec_out) |vec_sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(4.5)), vec_sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
