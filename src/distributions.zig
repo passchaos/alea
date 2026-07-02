@@ -4621,6 +4621,14 @@ pub fn InverseGaussian(comptime T: type) type {
             };
         }
 
+        pub fn meanValue(self: Self) T {
+            return self.mean;
+        }
+
+        pub fn shapeValue(self: Self) T {
+            return self.shape;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -4707,6 +4715,15 @@ pub fn NormalInverseGaussian(comptime T: type) type {
                 .inverse_mean = inverse_mean,
                 .inverse_gaussian = try InverseGaussian(T).init(inverse_mean, 1),
             };
+        }
+
+        pub fn alphaValue(self: Self) T {
+            const gamma_param = 1 / self.inverse_mean;
+            return @sqrt(gamma_param * gamma_param + self.beta_param * self.beta_param);
+        }
+
+        pub fn betaValue(self: Self) T {
+            return self.beta_param;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -8329,6 +8346,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expectError(error.InvalidParameter, fillInverseGaussianCheckedFrom(&direct_engine, f64, &direct_inverse_gaussian_buf, 0, 2));
     const inverse_gaussian_sampler = try InverseGaussian(f64).init(1, 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), inverse_gaussian_sampler.meanValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), inverse_gaussian_sampler.shapeValue(), 1e-12);
     inverse_gaussian_sampler.fillFrom(&direct_engine, &direct_inverse_gaussian_buf);
     for (direct_inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
 
@@ -8346,6 +8365,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_nig_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expectError(error.InvalidParameter, fillNormalInverseGaussianCheckedFrom(&direct_engine, f64, &direct_nig_buf, 1, 1));
     const nig_sampler = try NormalInverseGaussian(f64).init(2, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), nig_sampler.alphaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), nig_sampler.betaValue(), 1e-12);
     nig_sampler.fillFrom(&direct_engine, &direct_nig_buf);
     for (direct_nig_buf) |value| try std.testing.expect(std.math.isFinite(value));
 

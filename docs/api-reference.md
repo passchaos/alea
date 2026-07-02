@@ -559,12 +559,16 @@ Reusable samplers:
 - `Pert(T).fillFrom`
 - `InverseGaussian(T)`
 - `InverseGaussian(T).init`
+- `InverseGaussian(T).meanValue`
+- `InverseGaussian(T).shapeValue`
 - `InverseGaussian(T).sample`
 - `InverseGaussian(T).sampleFrom`
 - `InverseGaussian(T).fill`
 - `InverseGaussian(T).fillFrom`
 - `NormalInverseGaussian(T)`
 - `NormalInverseGaussian(T).init`
+- `NormalInverseGaussian(T).alphaValue`
+- `NormalInverseGaussian(T).betaValue`
 - `NormalInverseGaussian(T).sample`
 - `NormalInverseGaussian(T).sampleFrom`
 - `NormalInverseGaussian(T).fill`

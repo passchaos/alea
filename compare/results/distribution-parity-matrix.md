@@ -49,8 +49,8 @@ Zig-native way.
 | WeightedChoice | Covered: `WeightedChoice`, including weight updates, single/bulk weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
 | WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `totalWeight`, `weightAt`, and allocation-returning or caller-buffer weight reconstruction |
 | WeightedTreeIndex | Covered: `WeightedTree(Weight)` for generic weights and `WeightedIntTree(Weight)` for faster unsigned integer sample/update/push/pop workloads; both expose `weights` / `weightsInto` export for diagnostics; `WeightedIntTree` stores subtotals in `u64` and rejects wider integer values that do not fit |
-| InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)` |
-| NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)` |
+| InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)`, including mean/shape accessors |
+| NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)`, including alpha/beta accessors |
 | Zipf | Covered: `zipf`, `Zipf(T)` |
 | Zeta | Covered: `zeta`, `Zeta(T)` |
 
