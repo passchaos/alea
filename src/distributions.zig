@@ -9492,6 +9492,33 @@ pub fn fillUnitCircleFrom(source: anytype, comptime T: type, dest: [][2]T) void 
     for (dest) |*item| item.* = unitCircleFrom(source, T);
 }
 
+pub fn vectorUnitCircle(rng: Rng, comptime VectorType: type) [2]VectorType {
+    return vectorUnitCircleFrom(rng, VectorType);
+}
+
+pub fn vectorUnitCircleFrom(source: anytype, comptime VectorType: type) [2]VectorType {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    const len = @typeInfo(VectorType).vector.len;
+    var x: VectorType = undefined;
+    var y: VectorType = undefined;
+    inline for (0..len) |lane| {
+        const point = unitCircleFrom(source, Child);
+        x[lane] = point[0];
+        y[lane] = point[1];
+    }
+    return .{ x, y };
+}
+
+pub fn fillVectorUnitCircle(rng: Rng, comptime VectorType: type, dest: [][2]VectorType) void {
+    fillVectorUnitCircleFrom(rng, VectorType, dest);
+}
+
+pub fn fillVectorUnitCircleFrom(source: anytype, comptime VectorType: type, dest: [][2]VectorType) void {
+    _ = vectorChild(VectorType);
+    for (dest) |*item| item.* = vectorUnitCircleFrom(source, VectorType);
+}
+
 pub fn unitDisc(rng: Rng, comptime T: type) [2]T {
     return unitDiscFrom(rng, T);
 }
@@ -9742,6 +9769,57 @@ fn fillSignedUnitF64(source: anytype, dest: []f64) void {
         const repr = (@as(u64, 0x400) << 52) | (Rng.nextFrom(source) >> 12);
         item.* = @as(f64, @bitCast(repr)) - 3.0;
     }
+}
+
+pub fn VectorUnitCircle(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        pub fn dimensionValue(_: @This()) usize {
+            return 2;
+        }
+
+        pub fn radiusValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn isSurface(_: @This()) bool {
+            return true;
+        }
+
+        pub fn coordinateExpectedValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn coordinateVarianceValue(_: @This()) Child {
+            return 1.0 / 2.0;
+        }
+
+        pub fn radialExpectedValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn radialVarianceValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn sample(_: @This(), rng: Rng) [2]VectorType {
+            return vectorUnitCircle(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) [2]VectorType {
+            return vectorUnitCircleFrom(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: [][2]VectorType) void {
+            fillVectorUnitCircle(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: [][2]VectorType) void {
+            fillVectorUnitCircleFrom(source, VectorType, dest);
+        }
+    };
 }
 
 pub fn UnitCircle(comptime T: type) type {
@@ -12989,6 +13067,7 @@ test "invalid discrete distribution helpers do not consume random stream" {
 }
 
 test "distribution vector helpers preserve support and stream shape" {
+    @setEvalBranchQuota(4000);
     const alea = @import("root.zig");
     var facade_engine = alea.ScalarPrng.init(0x5eed_51d4);
     var direct_engine = alea.ScalarPrng.init(0x5eed_51d4);
@@ -14527,6 +14606,39 @@ test "distribution vector helpers preserve support and stream shape" {
     vector_zeta_sampler.fillFrom(&direct_engine, &direct_zeta_buf_vec);
     try std.testing.expectEqualSlices(@Vector(4, f64), &zeta_buf_vec, &direct_zeta_buf_vec);
     for (zeta_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const unit_circle_vec = vectorUnitCircle(rng, @Vector(4, f64));
+    const direct_unit_circle_vec = vectorUnitCircleFrom(&direct_engine, @Vector(4, f64));
+    try std.testing.expectEqual(unit_circle_vec, direct_unit_circle_vec);
+    inline for (0..4) |lane| try std.testing.expectApproxEqAbs(@as(f64, 1), unit_circle_vec[0][lane] * unit_circle_vec[0][lane] + unit_circle_vec[1][lane] * unit_circle_vec[1][lane], 1e-12);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_unit_circle_sampler = VectorUnitCircle(@Vector(4, f64)){};
+    try std.testing.expectEqual(@as(usize, 2), vector_unit_circle_sampler.dimensionValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_unit_circle_sampler.radiusValue(), 0);
+    try std.testing.expect(vector_unit_circle_sampler.isSurface());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_unit_circle_sampler.coordinateExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), vector_unit_circle_sampler.coordinateVarianceValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_unit_circle_sampler.radialExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_unit_circle_sampler.radialVarianceValue(), 0);
+    const sampled_unit_circle_vec = vector_unit_circle_sampler.sample(rng);
+    const direct_sampled_unit_circle_vec = vector_unit_circle_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_unit_circle_vec, direct_sampled_unit_circle_vec);
+    inline for (0..4) |lane| try std.testing.expectApproxEqAbs(@as(f64, 1), sampled_unit_circle_vec[0][lane] * sampled_unit_circle_vec[0][lane] + sampled_unit_circle_vec[1][lane] * sampled_unit_circle_vec[1][lane], 1e-12);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var unit_circle_buf_vec: [3][2]@Vector(4, f64) = undefined;
+    var direct_unit_circle_buf_vec: [3][2]@Vector(4, f64) = undefined;
+    fillVectorUnitCircle(rng, @Vector(4, f64), &unit_circle_buf_vec);
+    fillVectorUnitCircleFrom(&direct_engine, @Vector(4, f64), &direct_unit_circle_buf_vec);
+    try std.testing.expectEqualSlices([2]@Vector(4, f64), &unit_circle_buf_vec, &direct_unit_circle_buf_vec);
+    for (unit_circle_buf_vec) |point| inline for (0..4) |lane| try std.testing.expectApproxEqAbs(@as(f64, 1), point[0][lane] * point[0][lane] + point[1][lane] * point[1][lane], 1e-12);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_unit_circle_sampler.fill(rng, &unit_circle_buf_vec);
+    vector_unit_circle_sampler.fillFrom(&direct_engine, &direct_unit_circle_buf_vec);
+    try std.testing.expectEqualSlices([2]@Vector(4, f64), &unit_circle_buf_vec, &direct_unit_circle_buf_vec);
+    for (unit_circle_buf_vec) |point| inline for (0..4) |lane| try std.testing.expectApproxEqAbs(@as(f64, 1), point[0][lane] * point[0][lane] + point[1][lane] * point[1][lane], 1e-12);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;

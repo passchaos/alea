@@ -155,6 +155,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZeta f64x4", lanes / 128, 0xd444, fillDistZetaF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZeta f64x4 direct", lanes / 128, 0xd444, fillDistZetaF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorZeta.fill f64x4", lanes / 128, 0xd444, fillDistZetaSamplerF64);
+    try benchUnitCircleF64x4(io, stdout, "alea distributions.fillVectorUnitCircle f64x4", lanes / 8, 0xd454, fillDistUnitCircleF64);
+    try benchUnitCircleF64x4(io, stdout, "alea distributions.fillVectorUnitCircle f64x4 direct", lanes / 8, 0xd454, fillDistUnitCircleF64Direct);
+    try benchUnitCircleF64x4(io, stdout, "alea distributions.VectorUnitCircle.fill f64x4", lanes / 8, 0xd454, fillDistUnitCircleSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -726,6 +729,45 @@ fn benchVectorF64x4(
     try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchUnitCircleF64x4(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    lanes: usize,
+    comptime seed: u64,
+    comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, [][2]@Vector(4, f64)) void,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [256][2]@Vector(4, f64) = undefined;
+    const vector_count = lanes / 4;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = vector_count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, rng, out[0..n]);
+            checksum += checksumUnitCircleF64x4(&out, n);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(vector_count * 4)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn fillDistUniformF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
     alea.distributions.fillVectorUniform(rng, @Vector(8, f32), dest, -1, 1);
 }
@@ -1132,6 +1174,19 @@ fn fillDistZetaF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(
 
 fn fillDistZetaSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorZeta(@Vector(4, f64)).init(3) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistUnitCircleF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][2]@Vector(4, f64)) void {
+    alea.distributions.fillVectorUnitCircle(rng, @Vector(4, f64), dest);
+}
+
+fn fillDistUnitCircleF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: [][2]@Vector(4, f64)) void {
+    alea.distributions.fillVectorUnitCircleFrom(engine, @Vector(4, f64), dest);
+}
+
+fn fillDistUnitCircleSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][2]@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorUnitCircle(@Vector(4, f64)){};
     sampler.fill(rng, dest);
 }
 
@@ -1807,6 +1862,14 @@ fn checksumVectorsF64(vectors: []const @Vector(4, f64), len: usize) f64 {
     var checksum: f64 = 0;
     for (vectors[0..len]) |vec| {
         inline for (0..4) |lane| checksum += vec[lane];
+    }
+    return checksum;
+}
+
+fn checksumUnitCircleF64x4(points: []const [2]@Vector(4, f64), len: usize) f64 {
+    var checksum: f64 = 0;
+    for (points[0..len]) |point| {
+        inline for (0..4) |lane| checksum += point[0][lane] + point[1][lane];
     }
     return checksum;
 }

@@ -394,6 +394,8 @@ Single-shot helpers:
   `fillVectorZeta`, `fillVectorZetaFrom`, `fillVectorZetaChecked`,
   `fillVectorZetaCheckedFrom`
 - `unitCircle`, `unitCircleFrom`, `fillUnitCircle`, `fillUnitCircleFrom`,
+  `vectorUnitCircle`, `vectorUnitCircleFrom`, `fillVectorUnitCircle`,
+  `fillVectorUnitCircleFrom`,
   `unitDisc`, `unitDiscFrom`, `fillUnitDisc`, `fillUnitDiscFrom`,
   `unitSphere`, `unitSphereFrom`, `fillUnitSphere`, `fillUnitSphereFrom`,
   `unitBall`, `unitBallFrom`, `fillUnitBall`, `fillUnitBallFrom`
@@ -1556,6 +1558,18 @@ Reusable samplers:
 - `UnitCircle(T).sampleFrom`
 - `UnitCircle(T).fill`
 - `UnitCircle(T).fillFrom`
+- `VectorUnitCircle(VectorType)`
+- `VectorUnitCircle(VectorType).dimensionValue`
+- `VectorUnitCircle(VectorType).radiusValue`
+- `VectorUnitCircle(VectorType).isSurface`
+- `VectorUnitCircle(VectorType).coordinateExpectedValue`
+- `VectorUnitCircle(VectorType).coordinateVarianceValue`
+- `VectorUnitCircle(VectorType).radialExpectedValue`
+- `VectorUnitCircle(VectorType).radialVarianceValue`
+- `VectorUnitCircle(VectorType).sample`
+- `VectorUnitCircle(VectorType).sampleFrom`
+- `VectorUnitCircle(VectorType).fill`
+- `VectorUnitCircle(VectorType).fillFrom`
 - `UnitDisc(T)`
 - `UnitDisc(T).dimensionValue`
 - `UnitDisc(T).radiusValue`
