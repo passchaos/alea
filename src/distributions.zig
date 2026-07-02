@@ -1655,6 +1655,14 @@ pub fn StandardExponential(comptime T: type) type {
             return 1;
         }
 
+        pub fn medianValue(_: @This()) T {
+            return @log(@as(T, 2));
+        }
+
+        pub fn modeValue(_: @This()) T {
+            return 0;
+        }
+
         pub fn minValue(_: @This()) T {
             return 0;
         }
@@ -1707,6 +1715,15 @@ pub fn Exponential(comptime T: type) type {
 
         pub fn varianceValue(self: Self) T {
             return self.inverse_rate * self.inverse_rate;
+        }
+
+        pub fn medianValue(self: Self) T {
+            return @log(@as(T, 2)) * self.inverse_rate;
+        }
+
+        pub fn modeValue(self: Self) T {
+            _ = self;
+            return 0;
         }
 
         pub fn minValue(self: Self) T {
@@ -9139,6 +9156,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), exponential_sampler.inverseRateValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), exponential_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), exponential_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@log(@as(f64, 2)) / 2.0, exponential_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), exponential_sampler.modeValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 0), exponential_sampler.minValue(), 0);
     try std.testing.expect(exponential_sampler.maxValue() == null);
     var exponential_buf: [8]f64 = undefined;
@@ -9171,6 +9190,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectEqual(@as(f64, 1), (StandardExponential(f64){}).inverseRateValue());
     try std.testing.expectEqual(@as(f64, 1), (StandardExponential(f64){}).expectedValue());
     try std.testing.expectEqual(@as(f64, 1), (StandardExponential(f64){}).varianceValue());
+    try std.testing.expectEqual(@log(@as(f64, 2)), (StandardExponential(f64){}).medianValue());
+    try std.testing.expectEqual(@as(f64, 0), (StandardExponential(f64){}).modeValue());
     try std.testing.expectEqual(@as(f64, 0), (StandardExponential(f64){}).minValue());
     try std.testing.expect((StandardExponential(f64){}).maxValue() == null);
     var standard_exponential_buf: [8]f64 = undefined;
