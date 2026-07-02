@@ -2835,6 +2835,43 @@ pub fn fillPoissonCheckedFrom(source: anytype, dest: []u64, lambda: f64) Error!v
     dist.fillFrom(source, dest);
 }
 
+pub fn vectorPoisson(rng: Rng, comptime VectorType: type, lambda: f64) VectorType {
+    return vectorPoissonFrom(rng, VectorType, lambda);
+}
+
+pub fn vectorPoissonFrom(source: anytype, comptime VectorType: type, lambda: f64) VectorType {
+    const dist = VectorPoisson(VectorType).init(lambda) catch unreachable;
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorPoissonChecked(rng: Rng, comptime VectorType: type, lambda: f64) Error!VectorType {
+    return vectorPoissonCheckedFrom(rng, VectorType, lambda);
+}
+
+pub fn vectorPoissonCheckedFrom(source: anytype, comptime VectorType: type, lambda: f64) Error!VectorType {
+    const dist = try VectorPoisson(VectorType).init(lambda);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorPoisson(rng: Rng, comptime VectorType: type, dest: []VectorType, lambda: f64) void {
+    fillVectorPoissonFrom(rng, VectorType, dest, lambda);
+}
+
+pub fn fillVectorPoissonFrom(source: anytype, comptime VectorType: type, dest: []VectorType, lambda: f64) void {
+    const dist = VectorPoisson(VectorType).init(lambda) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorPoissonChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, lambda: f64) Error!void {
+    return fillVectorPoissonCheckedFrom(rng, VectorType, dest, lambda);
+}
+
+pub fn fillVectorPoissonCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, lambda: f64) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorPoisson(VectorType).init(lambda);
+    dist.fillFrom(source, dest);
+}
+
 pub const Poisson = struct {
     method: PoissonMethod,
 
@@ -2898,6 +2935,64 @@ pub const Poisson = struct {
         }
     }
 };
+
+pub fn VectorPoisson(comptime VectorType: type) type {
+    const info = vectorInfo(VectorType);
+    if (info.child != u64) @compileError("VectorPoisson expects a u64 vector");
+
+    return struct {
+        const Self = @This();
+
+        sampler: Poisson,
+
+        pub fn init(lambda: f64) Error!Self {
+            return .{ .sampler = try Poisson.init(lambda) };
+        }
+
+        pub fn lambdaValue(self: Self) f64 {
+            return self.sampler.lambdaValue();
+        }
+
+        pub fn expectedValue(self: Self) f64 {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) f64 {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn minValue(self: Self) u64 {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?u64 {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = @intCast(self.sampler.sampleFrom(source));
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.lambdaValue() == 0) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
 
 const PoissonMethod = union(enum) {
     zero,
@@ -9379,6 +9474,54 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), always_true_vec);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const poisson_vec = vectorPoisson(rng, @Vector(4, u64), 12);
+    const direct_poisson_vec = vectorPoissonFrom(&direct_engine, @Vector(4, u64), 12);
+    try std.testing.expectEqual(poisson_vec, direct_poisson_vec);
+    inline for (0..4) |lane| try std.testing.expect(poisson_vec[lane] < 64);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const checked_poisson_vec = try vectorPoissonChecked(rng, @Vector(4, u64), 12);
+    const direct_checked_poisson_vec = try vectorPoissonCheckedFrom(&direct_engine, @Vector(4, u64), 12);
+    try std.testing.expectEqual(checked_poisson_vec, direct_checked_poisson_vec);
+    inline for (0..4) |lane| try std.testing.expect(checked_poisson_vec[lane] < 64);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_poisson_sampler = try VectorPoisson(@Vector(4, u64)).init(12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), vector_poisson_sampler.lambdaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), vector_poisson_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), vector_poisson_sampler.varianceValue(), 1e-12);
+    try std.testing.expectEqual(@as(u64, 0), vector_poisson_sampler.minValue());
+    try std.testing.expect(vector_poisson_sampler.maxValue() == null);
+    const sampled_poisson_vec = vector_poisson_sampler.sample(rng);
+    const direct_sampled_poisson_vec = vector_poisson_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_poisson_vec, direct_sampled_poisson_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_poisson_vec[lane] < 64);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const zero_poisson_sampler = try VectorPoisson(@Vector(4, u64)).init(0);
+    const before_zero_sample = facade_engine.next();
+    const zero_poisson_vec = zero_poisson_sampler.sample(rng);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), zero_poisson_vec);
+    try std.testing.expectEqual(before_zero_sample, direct_engine.next());
+
+    var poisson_buf: [3]@Vector(4, u64) = undefined;
+    var direct_poisson_buf: [3]@Vector(4, u64) = undefined;
+    try fillVectorPoissonChecked(rng, @Vector(4, u64), &poisson_buf, 12);
+    try fillVectorPoissonCheckedFrom(&direct_engine, @Vector(4, u64), &direct_poisson_buf, 12);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &poisson_buf, &direct_poisson_buf);
+    for (poisson_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] < 64);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    vector_poisson_sampler.fill(rng, &poisson_buf);
+    vector_poisson_sampler.fillFrom(&direct_engine, &direct_poisson_buf);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &poisson_buf, &direct_poisson_buf);
+    for (poisson_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] < 64);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    zero_poisson_sampler.fill(rng, &poisson_buf);
+    for (poisson_buf) |vec| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const uniform_vec = vectorUniform(rng, @Vector(4, f32), -1, 2);
     const direct_uniform_vec = vectorUniformFrom(&direct_engine, @Vector(4, f32), -1, 2);
     try std.testing.expectEqual(uniform_vec, direct_uniform_vec);
@@ -9587,6 +9730,13 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, fillVectorBernoulliCheckedFrom(&engine, @Vector(8, bool), &bool_buf, -0.1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorPoissonCheckedFrom(&engine, @Vector(4, u64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var poisson_buf: [4]@Vector(4, u64) = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillVectorPoissonCheckedFrom(&engine, @Vector(4, u64), &poisson_buf, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.EmptyRange, vectorUniformCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -9621,6 +9771,12 @@ test "zero-length distribution vector fills do not validate or consume random st
 
     var empty: [0]@Vector(4, f64) = .{};
     var empty_bool: [0]@Vector(8, bool) = .{};
+    var empty_poisson: [0]@Vector(4, u64) = .{};
+
+    try fillVectorPoissonCheckedFrom(&engine, @Vector(4, u64), &empty_poisson, std.math.inf(f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorPoissonChecked(rng, @Vector(4, u64), &empty_poisson, std.math.inf(f64));
+    try std.testing.expectEqual(control.next(), engine.next());
 
     try fillVectorBernoulliCheckedFrom(&engine, @Vector(8, bool), &empty_bool, -0.1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -12344,6 +12500,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillPoissonFrom(&unchecked, &poisson_unchecked, 12);
         try fillPoissonCheckedFrom(&checked, &poisson_checked, 12);
         try std.testing.expectEqualSlices(u64, &poisson_unchecked, &poisson_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_poisson_unchecked: [4]@Vector(4, u64) = undefined;
+        var vector_poisson_checked: [4]@Vector(4, u64) = undefined;
+        fillVectorPoissonFrom(&unchecked, @Vector(4, u64), &vector_poisson_unchecked, 12);
+        try fillVectorPoissonCheckedFrom(&checked, @Vector(4, u64), &vector_poisson_checked, 12);
+        try std.testing.expectEqualSlices(@Vector(4, u64), &vector_poisson_unchecked, &vector_poisson_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var triangular_unchecked: [8]f64 = undefined;

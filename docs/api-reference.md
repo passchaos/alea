@@ -181,7 +181,10 @@ Single-shot helpers:
   `fillVectorExponentialCheckedFrom`
 - `poisson`, `poissonFrom`, `poissonChecked`, `poissonCheckedFrom`,
   `fillPoisson`, `fillPoissonFrom`, `fillPoissonChecked`,
-  `fillPoissonCheckedFrom`, `geometric`,
+  `fillPoissonCheckedFrom`, `vectorPoisson`, `vectorPoissonFrom`,
+  `vectorPoissonChecked`, `vectorPoissonCheckedFrom`, `fillVectorPoisson`,
+  `fillVectorPoissonFrom`, `fillVectorPoissonChecked`,
+  `fillVectorPoissonCheckedFrom`, `geometric`,
   `geometricFrom`, `geometricChecked`, `geometricCheckedFrom`,
   `fillGeometric`, `fillGeometricFrom`, `fillGeometricChecked`,
   `fillGeometricCheckedFrom`,
@@ -583,6 +586,17 @@ Reusable samplers:
 - `Poisson.sampleFrom`
 - `Poisson.fill`
 - `Poisson.fillFrom`
+- `VectorPoisson(VectorType)`
+- `VectorPoisson(VectorType).init`
+- `VectorPoisson(VectorType).lambdaValue`
+- `VectorPoisson(VectorType).expectedValue`
+- `VectorPoisson(VectorType).varianceValue`
+- `VectorPoisson(VectorType).minValue`
+- `VectorPoisson(VectorType).maxValue`
+- `VectorPoisson(VectorType).sample`
+- `VectorPoisson(VectorType).sampleFrom`
+- `VectorPoisson(VectorType).fill`
+- `VectorPoisson(VectorType).fillFrom`
 - `Geometric`
 - `Geometric.init`
 - `Geometric.probabilityValue`
