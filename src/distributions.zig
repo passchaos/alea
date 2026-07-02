@@ -176,6 +176,7 @@ pub fn vectorUniformInclusiveFrom(source: anytype, comptime VectorType: type, mi
     switch (@typeInfo(info.child)) {
         .int => {
             std.debug.assert(min <= max);
+            if (min == max) return @splat(min);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = Rng.intRangeAtMostFrom(source, info.child, min, max);
             return out;
