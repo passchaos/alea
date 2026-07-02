@@ -384,6 +384,7 @@ pub const Bernoulli = struct {
     }
 
     pub fn sampleFrom(self: Bernoulli, source: anytype) bool {
+        if (self.p_int == 0) return false;
         if (self.p_int == always_true) return true;
         return Rng.nextFrom(source) < self.p_int;
     }
@@ -16723,6 +16724,37 @@ test "degenerate discrete distribution helpers do not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_d1f7);
     var control = alea.ScalarPrng.init(0x5150_d1f7);
     const rng = Rng.init(&engine);
+
+    const bernoulli_false = try Bernoulli.init(0);
+    try std.testing.expectEqual(false, bernoulliFrom(&engine, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(false, bernoulli_false.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(false, try bernoulliChecked(rng, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var bool_buf: [5]bool = undefined;
+    bernoulli_false.fillFrom(&engine, &bool_buf);
+    for (bool_buf) |sample| try std.testing.expectEqual(false, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const bernoulli_true = try Bernoulli.init(1);
+    try std.testing.expectEqual(true, bernoulli_true.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(true, try bernoulliCheckedFrom(&engine, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_bernoulli_false = try VectorBernoulli(@Vector(4, bool)).init(0);
+    try std.testing.expectEqual(@as(@Vector(4, bool), @splat(false)), vector_bernoulli_false.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    var vector_bool_buf: [3]@Vector(4, bool) = undefined;
+    vector_bernoulli_false.fillFrom(&engine, &vector_bool_buf);
+    for (vector_bool_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, bool), @splat(false)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_bernoulli_true = try VectorBernoulli(@Vector(4, bool)).init(1);
+    try std.testing.expectEqual(@as(@Vector(4, bool), @splat(true)), vector_bernoulli_true.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
 
     const binomial_zero = try Binomial.init(10, 0);
     try std.testing.expectEqual(@as(u64, 0), binomial_zero.sampleFrom(&engine));
