@@ -8996,6 +8996,126 @@ pub fn fillSkewNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, l
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorSkewNormal(rng: Rng, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) VectorType {
+    return vectorSkewNormalFrom(rng, VectorType, location, scale, shape);
+}
+
+pub fn vectorSkewNormalFrom(source: anytype, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) VectorType {
+    const sampler = VectorSkewNormal(VectorType).init(location, scale, shape) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorSkewNormalChecked(rng: Rng, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!VectorType {
+    return vectorSkewNormalCheckedFrom(rng, VectorType, location, scale, shape);
+}
+
+pub fn vectorSkewNormalCheckedFrom(source: anytype, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorSkewNormal(VectorType).init(location, scale, shape);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorSkewNormal(rng: Rng, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) void {
+    fillVectorSkewNormalFrom(rng, VectorType, dest, location, scale, shape);
+}
+
+pub fn fillVectorSkewNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) void {
+    const sampler = VectorSkewNormal(VectorType).init(location, scale, shape) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorSkewNormalChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!void {
+    return fillVectorSkewNormalCheckedFrom(rng, VectorType, dest, location, scale, shape);
+}
+
+pub fn fillVectorSkewNormalCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorSkewNormal(VectorType).init(location, scale, shape);
+    sampler.fillFrom(source, dest);
+}
+
+fn skewNormalFromStandardNormalVectors(comptime VectorType: type, z1: VectorType, z2: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), shape: vectorChild(VectorType)) VectorType {
+    const Child = vectorChild(VectorType);
+    const location_vec: VectorType = @splat(location);
+    const scale_vec: VectorType = @splat(scale);
+    const normalized = if (shape == -1)
+        @select(Child, z1 < z2, z1, z2)
+    else if (shape == 1)
+        @select(Child, z1 > z2, z1, z2)
+    else blk: {
+        const delta = shape / @sqrt(1 + shape * shape);
+        const delta_vec: VectorType = @splat(delta);
+        const orthogonal_vec: VectorType = @splat(@sqrt(1 - delta * delta));
+        break :blk delta_vec * @abs(z1) + orthogonal_vec * z2;
+    };
+    return location_vec + scale_vec * normalized;
+}
+
+pub fn VectorSkewNormal(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: SkewNormal(Child),
+
+        pub fn init(location: Child, scale: Child, shape: Child) Error!Self {
+            return .{ .sampler = try SkewNormal(Child).init(location, scale, shape) };
+        }
+
+        pub fn locationValue(self: Self) Child {
+            return self.sampler.locationValue();
+        }
+
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+
+        pub fn shapeValue(self: Self) Child {
+            return self.sampler.shapeValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn minValue(self: Self) ?Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const z1 = vectorStandardNormalFrom(source, VectorType);
+            if (self.shapeValue() == 0) {
+                const location_vec: VectorType = @splat(self.locationValue());
+                const scale_vec: VectorType = @splat(self.scaleValue());
+                return location_vec + scale_vec * z1;
+            }
+            const z2 = vectorStandardNormalFrom(source, VectorType);
+            return skewNormalFromStandardNormalVectors(VectorType, z1, z2, self.locationValue(), self.scaleValue(), self.shapeValue());
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn SkewNormal(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -13704,6 +13824,47 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(frechet_shape_one_vec[lane] >= 0 and std.math.isFinite(frechet_shape_one_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const skew_normal_vec = try vectorSkewNormalChecked(rng, @Vector(4, f64), 0, 1, 2);
+    const direct_skew_normal_vec = try vectorSkewNormalCheckedFrom(&direct_engine, @Vector(4, f64), 0, 1, 2);
+    try std.testing.expectEqual(skew_normal_vec, direct_skew_normal_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(skew_normal_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_skew_normal_sampler = try VectorSkewNormal(@Vector(4, f64)).init(0, 1, 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_skew_normal_sampler.locationValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_skew_normal_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_skew_normal_sampler.shapeValue(), 1e-12);
+    const vector_skew_delta = 2.0 / @sqrt(@as(f64, 5));
+    try std.testing.expectApproxEqAbs(vector_skew_delta * @sqrt(2.0 / std.math.pi), vector_skew_normal_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(1.0 - 2.0 * vector_skew_delta * vector_skew_delta / std.math.pi, vector_skew_normal_sampler.varianceValue(), 1e-12);
+    try std.testing.expect(vector_skew_normal_sampler.minValue() == null);
+    try std.testing.expect(vector_skew_normal_sampler.maxValue() == null);
+    const sampled_skew_normal_vec = vector_skew_normal_sampler.sample(rng);
+    const direct_sampled_skew_normal_vec = vector_skew_normal_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_skew_normal_vec, direct_sampled_skew_normal_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(sampled_skew_normal_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var skew_normal_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_skew_normal_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorSkewNormalChecked(rng, @Vector(4, f64), &skew_normal_buf_vec, 0, 1, 2);
+    try fillVectorSkewNormalCheckedFrom(&direct_engine, @Vector(4, f64), &direct_skew_normal_buf_vec, 0, 1, 2);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &skew_normal_buf_vec, &direct_skew_normal_buf_vec);
+    for (skew_normal_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_skew_normal_sampler.fill(rng, &skew_normal_buf_vec);
+    vector_skew_normal_sampler.fillFrom(&direct_engine, &direct_skew_normal_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &skew_normal_buf_vec, &direct_skew_normal_buf_vec);
+    for (skew_normal_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_skew_normal_symmetric = try VectorSkewNormal(@Vector(4, f64)).init(0, 1, 0);
+    const skew_normal_symmetric_vec = vector_skew_normal_symmetric.sample(rng);
+    const direct_skew_normal_symmetric_vec = vector_skew_normal_symmetric.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(skew_normal_symmetric_vec, direct_skew_normal_symmetric_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(skew_normal_symmetric_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -13861,6 +14022,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorFrechetCheckedFrom(&engine, @Vector(4, f64), 0, 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), 0, 0, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -13941,6 +14105,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -14046,6 +14213,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -14099,6 +14268,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorGumbelChecked(rng, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorFrechetChecked(rng, @Vector(4, f64), &empty, 0, 0, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorSkewNormalChecked(rng, @Vector(4, f64), &empty, 0, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16980,6 +17151,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorFrechetFrom(&unchecked, @Vector(4, f64), &vector_frechet_unchecked, 0, 2, 3);
         try fillVectorFrechetCheckedFrom(&checked, @Vector(4, f64), &vector_frechet_checked, 0, 2, 3);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_frechet_unchecked, &vector_frechet_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_skew_normal_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_skew_normal_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorSkewNormalFrom(&unchecked, @Vector(4, f64), &vector_skew_normal_unchecked, 0, 1, 2);
+        try fillVectorSkewNormalCheckedFrom(&checked, @Vector(4, f64), &vector_skew_normal_checked, 0, 1, 2);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_skew_normal_unchecked, &vector_skew_normal_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

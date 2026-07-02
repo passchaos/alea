@@ -359,6 +359,10 @@ Single-shot helpers:
   `skewNormal`, `skewNormalFrom`, `skewNormalChecked`,
   `skewNormalCheckedFrom`, `fillSkewNormal`, `fillSkewNormalFrom`,
   `fillSkewNormalChecked`, `fillSkewNormalCheckedFrom`,
+  `vectorSkewNormal`, `vectorSkewNormalFrom`, `vectorSkewNormalChecked`,
+  `vectorSkewNormalCheckedFrom`, `fillVectorSkewNormal`,
+  `fillVectorSkewNormalFrom`, `fillVectorSkewNormalChecked`,
+  `fillVectorSkewNormalCheckedFrom`,
   `pert`, `pertFrom`, `pertChecked`, `pertCheckedFrom`, `fillPert`,
   `fillPertFrom`, `fillPertChecked`, `fillPertCheckedFrom`
 - `inverseGaussian`, `inverseGaussianFrom`, `inverseGaussianChecked`,
@@ -1383,6 +1387,19 @@ Reusable samplers:
 - `SkewNormal(T).sampleFrom`
 - `SkewNormal(T).fill`
 - `SkewNormal(T).fillFrom`
+- `VectorSkewNormal(VectorType)`
+- `VectorSkewNormal(VectorType).init`
+- `VectorSkewNormal(VectorType).locationValue`
+- `VectorSkewNormal(VectorType).scaleValue`
+- `VectorSkewNormal(VectorType).shapeValue`
+- `VectorSkewNormal(VectorType).expectedValue`
+- `VectorSkewNormal(VectorType).varianceValue`
+- `VectorSkewNormal(VectorType).minValue`
+- `VectorSkewNormal(VectorType).maxValue`
+- `VectorSkewNormal(VectorType).sample`
+- `VectorSkewNormal(VectorType).sampleFrom`
+- `VectorSkewNormal(VectorType).fill`
+- `VectorSkewNormal(VectorType).fillFrom`
 - `Pert(T)`
 - `Pert(T).init`
 - `Pert(T).initDefault`

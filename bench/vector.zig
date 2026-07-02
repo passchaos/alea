@@ -137,6 +137,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorFrechet f64x4", lanes / 2, 0xd3e4, fillDistFrechetF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorFrechet f64x4 direct", lanes / 2, 0xd3e4, fillDistFrechetF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorFrechet.fill f64x4", lanes / 2, 0xd3e4, fillDistFrechetSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorSkewNormal f64x4", lanes / 8, 0xd3f4, fillDistSkewNormalF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorSkewNormal f64x4 direct", lanes / 8, 0xd3f4, fillDistSkewNormalF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorSkewNormal.fill f64x4", lanes / 8, 0xd3f4, fillDistSkewNormalSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -1036,6 +1039,19 @@ fn fillDistFrechetF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vect
 
 fn fillDistFrechetSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorFrechet(@Vector(4, f64)).init(0, 2, 3) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistSkewNormalF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorSkewNormal(rng, @Vector(4, f64), dest, 0, 1, 2);
+}
+
+fn fillDistSkewNormalF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorSkewNormalFrom(engine, @Vector(4, f64), dest, 0, 1, 2);
+}
+
+fn fillDistSkewNormalSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorSkewNormal(@Vector(4, f64)).init(0, 1, 2) catch unreachable;
     sampler.fill(rng, dest);
 }
 
