@@ -6188,6 +6188,112 @@ pub fn fillCauchyCheckedFrom(source: anytype, comptime T: type, dest: []T, media
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorCauchy(rng: Rng, comptime VectorType: type, median: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    return vectorCauchyFrom(rng, VectorType, median, scale);
+}
+
+pub fn vectorCauchyFrom(source: anytype, comptime VectorType: type, median: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    const sampler = VectorCauchy(VectorType).init(median, scale) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorCauchyChecked(rng: Rng, comptime VectorType: type, median: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!VectorType {
+    return vectorCauchyCheckedFrom(rng, VectorType, median, scale);
+}
+
+pub fn vectorCauchyCheckedFrom(source: anytype, comptime VectorType: type, median: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorCauchy(VectorType).init(median, scale);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorCauchy(rng: Rng, comptime VectorType: type, dest: []VectorType, median: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
+    fillVectorCauchyFrom(rng, VectorType, dest, median, scale);
+}
+
+pub fn fillVectorCauchyFrom(source: anytype, comptime VectorType: type, dest: []VectorType, median: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
+    const sampler = VectorCauchy(VectorType).init(median, scale) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorCauchyChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, median: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!void {
+    return fillVectorCauchyCheckedFrom(rng, VectorType, dest, median, scale);
+}
+
+pub fn fillVectorCauchyCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, median: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorCauchy(VectorType).init(median, scale);
+    sampler.fillFrom(source, dest);
+}
+
+fn cauchyFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, median: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    const Child = vectorChild(VectorType);
+    const pi_vec: VectorType = @splat(@as(Child, @floatCast(std.math.pi)));
+    const half_vec: VectorType = @splat(0.5);
+    const median_vec: VectorType = @splat(median);
+    const scale_vec: VectorType = @splat(scale);
+    return median_vec + scale_vec * @tan(pi_vec * (uniform_vec - half_vec));
+}
+
+pub fn VectorCauchy(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Cauchy(Child),
+
+        pub fn init(median: Child, scale: Child) Error!Self {
+            return .{ .sampler = try Cauchy(Child).init(median, scale) };
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+
+        pub fn expectedValue(self: Self) ?Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) ?Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn minValue(self: Self) ?Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+            return cauchyFromOpenUniformVector(VectorType, uniform_vec, self.medianValue(), self.scaleValue());
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Cauchy(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -9654,6 +9760,7 @@ fn vectorInfo(comptime VectorType: type) @TypeOf(@typeInfo(VectorType).vector) {
 }
 
 fn vectorChild(comptime VectorType: type) type {
+    @setEvalBranchQuota(2000);
     return vectorInfo(VectorType).child;
 }
 
@@ -11914,6 +12021,39 @@ test "distribution vector helpers preserve support and stream shape" {
     for (arcsine_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 3);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const cauchy_vec = try vectorCauchyChecked(rng, @Vector(4, f64), 0, 1);
+    const direct_cauchy_vec = try vectorCauchyCheckedFrom(&direct_engine, @Vector(4, f64), 0, 1);
+    try std.testing.expectEqual(cauchy_vec, direct_cauchy_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(cauchy_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_cauchy_sampler = try VectorCauchy(@Vector(4, f64)).init(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_cauchy_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_cauchy_sampler.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_cauchy_sampler.scaleValue(), 1e-12);
+    try std.testing.expect(vector_cauchy_sampler.expectedValue() == null);
+    try std.testing.expect(vector_cauchy_sampler.varianceValue() == null);
+    try std.testing.expect(vector_cauchy_sampler.minValue() == null);
+    try std.testing.expect(vector_cauchy_sampler.maxValue() == null);
+    const sampled_cauchy_vec = vector_cauchy_sampler.sample(rng);
+    const direct_sampled_cauchy_vec = vector_cauchy_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_cauchy_vec, direct_sampled_cauchy_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(sampled_cauchy_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var cauchy_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_cauchy_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorCauchyChecked(rng, @Vector(4, f64), &cauchy_buf_vec, 0, 1);
+    try fillVectorCauchyCheckedFrom(&direct_engine, @Vector(4, f64), &direct_cauchy_buf_vec, 0, 1);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &cauchy_buf_vec, &direct_cauchy_buf_vec);
+    for (cauchy_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_cauchy_sampler.fill(rng, &cauchy_buf_vec);
+    vector_cauchy_sampler.fillFrom(&direct_engine, &direct_cauchy_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &cauchy_buf_vec, &direct_cauchy_buf_vec);
+    for (cauchy_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -12035,6 +12175,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorArcsineCheckedFrom(&engine, @Vector(4, f64), 1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorCauchyCheckedFrom(&engine, @Vector(4, f64), 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -12079,6 +12222,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorArcsineCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 1, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -12160,6 +12306,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorArcsineCheckedFrom(&engine, @Vector(4, f64), &empty, 1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -12189,6 +12337,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorTriangularChecked(rng, @Vector(4, f64), &empty, 1, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorArcsineChecked(rng, @Vector(4, f64), &empty, 1, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorCauchyChecked(rng, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -14986,6 +15136,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorArcsineFrom(&unchecked, @Vector(4, f64), &vector_arcsine_unchecked, -1, 3);
         try fillVectorArcsineCheckedFrom(&checked, @Vector(4, f64), &vector_arcsine_checked, -1, 3);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_arcsine_unchecked, &vector_arcsine_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_cauchy_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_cauchy_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorCauchyFrom(&unchecked, @Vector(4, f64), &vector_cauchy_unchecked, 0, 1);
+        try fillVectorCauchyCheckedFrom(&checked, @Vector(4, f64), &vector_cauchy_checked, 0, 1);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_cauchy_unchecked, &vector_cauchy_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

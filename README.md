@@ -16,7 +16,7 @@ The current Linux-first roadmap is intentionally broad:
 - `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling,
   including bulk `fill` methods where stream policy permits
 - bulk `fillSample`, `fillRange`, strict-interval scalar and vector float
-  fill, distribution-namespace vector Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/strict-interval/normal/log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/exponential
+  fill, distribution-namespace vector Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/strict-interval/normal/log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/cauchy/exponential
   wrappers and reusable vector samplers, `fillNormal`, `fillExponential`, and unit geometry fill APIs for
   high-volume sampling without iterator ceremony
 - deterministic seed derivation with named streams and system-entropy helpers
@@ -112,7 +112,7 @@ The Rust command benchmarks against the local `rand` checkout in
 `~/Work/rand`. Latest comparison data is kept under
 `compare/results/`. Use `vectorbench` for focused vector-slice evidence such
 as packed bool chance/ratio, strict-interval vector float fills, vector ranges,
-distribution-namespace vector Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/exponential wrappers,
+distribution-namespace vector Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/cauchy/exponential wrappers,
 and scalar-lane normal/exponential
 vector fills without slowing the full throughput suite;
 `compare/results/simd-distribution-kernel-notes.md` records

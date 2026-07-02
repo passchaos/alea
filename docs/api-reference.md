@@ -279,7 +279,11 @@ Single-shot helpers:
   `fillVectorArcsineChecked`, `fillVectorArcsineCheckedFrom`,
   `cauchy`, `cauchyFrom`, `cauchyChecked`, `cauchyCheckedFrom`,
   `fillCauchy`, `fillCauchyFrom`, `fillCauchyChecked`,
-  `fillCauchyCheckedFrom`, `laplace`, `laplaceFrom`,
+  `fillCauchyCheckedFrom`, `vectorCauchy`, `vectorCauchyFrom`,
+  `vectorCauchyChecked`, `vectorCauchyCheckedFrom`,
+  `fillVectorCauchy`, `fillVectorCauchyFrom`,
+  `fillVectorCauchyChecked`, `fillVectorCauchyCheckedFrom`,
+  `laplace`, `laplaceFrom`,
   `laplaceChecked`, `laplaceCheckedFrom`, `fillLaplace`, `fillLaplaceFrom`,
   `fillLaplaceChecked`, `fillLaplaceCheckedFrom`,
   `logistic`, `logisticFrom`, `logisticChecked`,
@@ -1013,6 +1017,19 @@ Reusable samplers:
 - `Cauchy(T).sampleFrom`
 - `Cauchy(T).fill`
 - `Cauchy(T).fillFrom`
+- `VectorCauchy(VectorType)`
+- `VectorCauchy(VectorType).init`
+- `VectorCauchy(VectorType).medianValue`
+- `VectorCauchy(VectorType).modeValue`
+- `VectorCauchy(VectorType).scaleValue`
+- `VectorCauchy(VectorType).expectedValue`
+- `VectorCauchy(VectorType).varianceValue`
+- `VectorCauchy(VectorType).minValue`
+- `VectorCauchy(VectorType).maxValue`
+- `VectorCauchy(VectorType).sample`
+- `VectorCauchy(VectorType).sampleFrom`
+- `VectorCauchy(VectorType).fill`
+- `VectorCauchy(VectorType).fillFrom`
 - `Laplace(T)`
 - `Laplace(T).init`
 - `Laplace(T).locationValue`
