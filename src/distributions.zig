@@ -9226,6 +9226,116 @@ pub fn fillPertCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T,
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorPert(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), mode: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) VectorType {
+    return vectorPertFrom(rng, VectorType, min, mode, max, shape);
+}
+
+pub fn vectorPertFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), mode: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) VectorType {
+    const sampler = VectorPert(VectorType).init(min, mode, max, shape) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorPertChecked(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), mode: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!VectorType {
+    return vectorPertCheckedFrom(rng, VectorType, min, mode, max, shape);
+}
+
+pub fn vectorPertCheckedFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), mode: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorPert(VectorType).init(min, mode, max, shape);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorPert(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), mode: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) void {
+    fillVectorPertFrom(rng, VectorType, dest, min, mode, max, shape);
+}
+
+pub fn fillVectorPertFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), mode: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) void {
+    const sampler = VectorPert(VectorType).init(min, mode, max, shape) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorPertChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), mode: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!void {
+    return fillVectorPertCheckedFrom(rng, VectorType, dest, min, mode, max, shape);
+}
+
+pub fn fillVectorPertCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), mode: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorPert(VectorType).init(min, mode, max, shape);
+    sampler.fillFrom(source, dest);
+}
+
+pub fn VectorPert(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Pert(Child),
+
+        pub fn init(min: Child, mode: Child, max: Child, shape: Child) Error!Self {
+            return .{ .sampler = try Pert(Child).init(min, mode, max, shape) };
+        }
+
+        pub fn initDefault(min: Child, mode: Child, max: Child) Error!Self {
+            return Self.init(min, mode, max, 4);
+        }
+
+        pub fn initMean(min: Child, mean: Child, max: Child, shape: Child) Error!Self {
+            const scalar = try Pert(Child).initMean(min, mean, max, shape);
+            return .{ .sampler = scalar };
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn shapeValue(self: Self) Child {
+            return self.sampler.shapeValue();
+        }
+
+        pub fn modeValue(self: Self) ?Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn alphaValue(self: Self) Child {
+            return self.sampler.alphaValue();
+        }
+
+        pub fn betaValue(self: Self) Child {
+            return self.sampler.betaValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const beta_vec = vectorBetaFrom(source, VectorType, self.alphaValue(), self.betaValue());
+            return @as(VectorType, @splat(self.minValue())) + @as(VectorType, @splat(self.maxValue() - self.minValue())) * beta_vec;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Pert(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -13865,6 +13975,51 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(skew_normal_symmetric_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const pert_vec = try vectorPertChecked(rng, @Vector(4, f64), 0, 4, 10, 4);
+    const direct_pert_vec = try vectorPertCheckedFrom(&direct_engine, @Vector(4, f64), 0, 4, 10, 4);
+    try std.testing.expectEqual(pert_vec, direct_pert_vec);
+    inline for (0..4) |lane| try std.testing.expect(pert_vec[lane] >= 0 and pert_vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_pert_sampler = try VectorPert(@Vector(4, f64)).init(0, 4, 10, 4);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_pert_sampler.minValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), vector_pert_sampler.maxValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), vector_pert_sampler.shapeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), vector_pert_sampler.modeValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.6), vector_pert_sampler.alphaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.4), vector_pert_sampler.betaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 13.0 / 3.0), vector_pert_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 884.0 / 252.0), vector_pert_sampler.varianceValue(), 1e-12);
+    const sampled_pert_vec = vector_pert_sampler.sample(rng);
+    const direct_sampled_pert_vec = vector_pert_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_pert_vec, direct_sampled_pert_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_pert_vec[lane] >= 0 and sampled_pert_vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var pert_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_pert_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorPertChecked(rng, @Vector(4, f64), &pert_buf_vec, 0, 4, 10, 4);
+    try fillVectorPertCheckedFrom(&direct_engine, @Vector(4, f64), &direct_pert_buf_vec, 0, 4, 10, 4);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &pert_buf_vec, &direct_pert_buf_vec);
+    for (pert_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_pert_sampler.fill(rng, &pert_buf_vec);
+    vector_pert_sampler.fillFrom(&direct_engine, &direct_pert_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &pert_buf_vec, &direct_pert_buf_vec);
+    for (pert_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_pert_uniform = try VectorPert(@Vector(4, f64)).init(0, 4, 10, 0);
+    try std.testing.expect(vector_pert_uniform.modeValue() == null);
+    const pert_uniform_vec = vector_pert_uniform.sample(rng);
+    const direct_pert_uniform_vec = vector_pert_uniform.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(pert_uniform_vec, direct_pert_uniform_vec);
+    inline for (0..4) |lane| try std.testing.expect(pert_uniform_vec[lane] >= 0 and pert_uniform_vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_pert_mean = try VectorPert(@Vector(4, f64)).initMean(0, 5, 10, 4);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), vector_pert_mean.modeValue().?, 1e-12);
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -14025,6 +14180,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), 0, 0, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorPertCheckedFrom(&engine, @Vector(4, f64), 0, 11, 10, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -14108,6 +14266,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorPertCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 4, 10, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -14215,6 +14376,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorPertCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 11, 10, 4);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -14270,6 +14433,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorFrechetChecked(rng, @Vector(4, f64), &empty, 0, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorSkewNormalChecked(rng, @Vector(4, f64), &empty, 0, 0, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorPertChecked(rng, @Vector(4, f64), &empty, 0, 11, 10, 4);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17158,6 +17323,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorSkewNormalFrom(&unchecked, @Vector(4, f64), &vector_skew_normal_unchecked, 0, 1, 2);
         try fillVectorSkewNormalCheckedFrom(&checked, @Vector(4, f64), &vector_skew_normal_checked, 0, 1, 2);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_skew_normal_unchecked, &vector_skew_normal_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_pert_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_pert_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorPertFrom(&unchecked, @Vector(4, f64), &vector_pert_unchecked, 0, 4, 10, 4);
+        try fillVectorPertCheckedFrom(&checked, @Vector(4, f64), &vector_pert_checked, 0, 4, 10, 4);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_pert_unchecked, &vector_pert_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

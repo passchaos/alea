@@ -364,7 +364,10 @@ Single-shot helpers:
   `fillVectorSkewNormalFrom`, `fillVectorSkewNormalChecked`,
   `fillVectorSkewNormalCheckedFrom`,
   `pert`, `pertFrom`, `pertChecked`, `pertCheckedFrom`, `fillPert`,
-  `fillPertFrom`, `fillPertChecked`, `fillPertCheckedFrom`
+  `fillPertFrom`, `fillPertChecked`, `fillPertCheckedFrom`,
+  `vectorPert`, `vectorPertFrom`, `vectorPertChecked`,
+  `vectorPertCheckedFrom`, `fillVectorPert`, `fillVectorPertFrom`,
+  `fillVectorPertChecked`, `fillVectorPertCheckedFrom`
 - `inverseGaussian`, `inverseGaussianFrom`, `inverseGaussianChecked`,
   `inverseGaussianCheckedFrom`, `fillInverseGaussian`, `fillInverseGaussianFrom`,
   `fillInverseGaussianChecked`, `fillInverseGaussianCheckedFrom`,
@@ -1423,6 +1426,22 @@ Reusable samplers:
 - `Pert(T).sampleFrom`
 - `Pert(T).fill`
 - `Pert(T).fillFrom`
+- `VectorPert(VectorType)`
+- `VectorPert(VectorType).init`
+- `VectorPert(VectorType).initDefault`
+- `VectorPert(VectorType).initMean`
+- `VectorPert(VectorType).minValue`
+- `VectorPert(VectorType).maxValue`
+- `VectorPert(VectorType).shapeValue`
+- `VectorPert(VectorType).modeValue`
+- `VectorPert(VectorType).alphaValue`
+- `VectorPert(VectorType).betaValue`
+- `VectorPert(VectorType).expectedValue`
+- `VectorPert(VectorType).varianceValue`
+- `VectorPert(VectorType).sample`
+- `VectorPert(VectorType).sampleFrom`
+- `VectorPert(VectorType).fill`
+- `VectorPert(VectorType).fillFrom`
 - `InverseGaussian(T)`
 - `InverseGaussian(T).init`
 - `InverseGaussian(T).meanValue`
