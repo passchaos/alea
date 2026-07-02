@@ -285,7 +285,10 @@ Single-shot helpers:
   `fillVectorCauchyChecked`, `fillVectorCauchyCheckedFrom`,
   `laplace`, `laplaceFrom`,
   `laplaceChecked`, `laplaceCheckedFrom`, `fillLaplace`, `fillLaplaceFrom`,
-  `fillLaplaceChecked`, `fillLaplaceCheckedFrom`,
+  `fillLaplaceChecked`, `fillLaplaceCheckedFrom`, `vectorLaplace`,
+  `vectorLaplaceFrom`, `vectorLaplaceChecked`, `vectorLaplaceCheckedFrom`,
+  `fillVectorLaplace`, `fillVectorLaplaceFrom`,
+  `fillVectorLaplaceChecked`, `fillVectorLaplaceCheckedFrom`,
   `logistic`, `logisticFrom`, `logisticChecked`,
   `logisticCheckedFrom`, `fillLogistic`, `fillLogisticChecked`,
   `fillLogisticFrom`, `fillLogisticCheckedFrom`,
@@ -1044,6 +1047,20 @@ Reusable samplers:
 - `Laplace(T).sampleFrom`
 - `Laplace(T).fill`
 - `Laplace(T).fillFrom`
+- `VectorLaplace(VectorType)`
+- `VectorLaplace(VectorType).init`
+- `VectorLaplace(VectorType).locationValue`
+- `VectorLaplace(VectorType).scaleValue`
+- `VectorLaplace(VectorType).medianValue`
+- `VectorLaplace(VectorType).modeValue`
+- `VectorLaplace(VectorType).expectedValue`
+- `VectorLaplace(VectorType).varianceValue`
+- `VectorLaplace(VectorType).minValue`
+- `VectorLaplace(VectorType).maxValue`
+- `VectorLaplace(VectorType).sample`
+- `VectorLaplace(VectorType).sampleFrom`
+- `VectorLaplace(VectorType).fill`
+- `VectorLaplace(VectorType).fillFrom`
 - `Logistic(T)`
 - `Logistic(T).init`
 - `Logistic(T).locationValue`

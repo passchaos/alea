@@ -6402,6 +6402,121 @@ pub fn fillLaplaceCheckedFrom(source: anytype, comptime T: type, dest: []T, loca
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorLaplace(rng: Rng, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    return vectorLaplaceFrom(rng, VectorType, location, scale);
+}
+
+pub fn vectorLaplaceFrom(source: anytype, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    const sampler = VectorLaplace(VectorType).init(location, scale) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorLaplaceChecked(rng: Rng, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!VectorType {
+    return vectorLaplaceCheckedFrom(rng, VectorType, location, scale);
+}
+
+pub fn vectorLaplaceCheckedFrom(source: anytype, comptime VectorType: type, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorLaplace(VectorType).init(location, scale);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorLaplace(rng: Rng, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
+    fillVectorLaplaceFrom(rng, VectorType, dest, location, scale);
+}
+
+pub fn fillVectorLaplaceFrom(source: anytype, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
+    const sampler = VectorLaplace(VectorType).init(location, scale) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorLaplaceChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!void {
+    return fillVectorLaplaceCheckedFrom(rng, VectorType, dest, location, scale);
+}
+
+pub fn fillVectorLaplaceCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorLaplace(VectorType).init(location, scale);
+    sampler.fillFrom(source, dest);
+}
+
+fn laplaceFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    const Child = vectorChild(VectorType);
+    const location_vec: VectorType = @splat(location);
+    const scale_vec: VectorType = @splat(scale);
+    const half_vec: VectorType = @splat(0.5);
+    const one_vec: VectorType = @splat(1);
+    const two_vec: VectorType = @splat(2);
+    const positive: VectorType = @splat(1);
+    const negative: VectorType = @splat(-1);
+    const centered = uniform_vec - half_vec;
+    const sign = @select(Child, centered < @as(VectorType, @splat(0)), negative, positive);
+    return location_vec - scale_vec * sign * @log(one_vec - two_vec * @abs(centered));
+}
+
+pub fn VectorLaplace(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Laplace(Child),
+
+        pub fn init(location: Child, scale: Child) Error!Self {
+            return .{ .sampler = try Laplace(Child).init(location, scale) };
+        }
+
+        pub fn locationValue(self: Self) Child {
+            return self.sampler.locationValue();
+        }
+
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn minValue(self: Self) ?Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+            return laplaceFromOpenUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Laplace(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -12054,6 +12169,40 @@ test "distribution vector helpers preserve support and stream shape" {
     for (cauchy_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const laplace_vec = try vectorLaplaceChecked(rng, @Vector(4, f64), 0, 1);
+    const direct_laplace_vec = try vectorLaplaceCheckedFrom(&direct_engine, @Vector(4, f64), 0, 1);
+    try std.testing.expectEqual(laplace_vec, direct_laplace_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(laplace_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_laplace_sampler = try VectorLaplace(@Vector(4, f64)).init(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_laplace_sampler.locationValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_laplace_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_laplace_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_laplace_sampler.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_laplace_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_laplace_sampler.varianceValue(), 1e-12);
+    try std.testing.expect(vector_laplace_sampler.minValue() == null);
+    try std.testing.expect(vector_laplace_sampler.maxValue() == null);
+    const sampled_laplace_vec = vector_laplace_sampler.sample(rng);
+    const direct_sampled_laplace_vec = vector_laplace_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_laplace_vec, direct_sampled_laplace_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(sampled_laplace_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var laplace_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_laplace_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorLaplaceChecked(rng, @Vector(4, f64), &laplace_buf_vec, 0, 1);
+    try fillVectorLaplaceCheckedFrom(&direct_engine, @Vector(4, f64), &direct_laplace_buf_vec, 0, 1);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &laplace_buf_vec, &direct_laplace_buf_vec);
+    for (laplace_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_laplace_sampler.fill(rng, &laplace_buf_vec);
+    vector_laplace_sampler.fillFrom(&direct_engine, &direct_laplace_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &laplace_buf_vec, &direct_laplace_buf_vec);
+    for (laplace_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -12178,6 +12327,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorCauchyCheckedFrom(&engine, @Vector(4, f64), 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorLaplaceCheckedFrom(&engine, @Vector(4, f64), 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -12225,6 +12377,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorLaplaceCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -12308,6 +12463,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorLaplaceCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -12339,6 +12496,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorArcsineChecked(rng, @Vector(4, f64), &empty, 1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorCauchyChecked(rng, @Vector(4, f64), &empty, 0, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorLaplaceChecked(rng, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -15143,6 +15302,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorCauchyFrom(&unchecked, @Vector(4, f64), &vector_cauchy_unchecked, 0, 1);
         try fillVectorCauchyCheckedFrom(&checked, @Vector(4, f64), &vector_cauchy_checked, 0, 1);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_cauchy_unchecked, &vector_cauchy_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_laplace_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_laplace_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorLaplaceFrom(&unchecked, @Vector(4, f64), &vector_laplace_unchecked, 0, 1);
+        try fillVectorLaplaceCheckedFrom(&checked, @Vector(4, f64), &vector_laplace_checked, 0, 1);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_laplace_unchecked, &vector_laplace_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;
