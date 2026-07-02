@@ -839,6 +839,8 @@ Dynamic weighted helpers:
 - `WeightedTree.totalWeight`
 - `WeightedTree.weights`
 - `WeightedTree.weightsInto`
+- `WeightedTree.probabilities`
+- `WeightedTree.probabilitiesInto`
 - `WeightedTree.isValid`
 - `WeightedTree.deinit`
 - Prefer `WeightedIntTree` when weights are unsigned integers and frequent
@@ -863,6 +865,8 @@ Dynamic weighted helpers:
 - `WeightedIntTree.totalWeight`
 - `WeightedIntTree.weights`
 - `WeightedIntTree.weightsInto`
+- `WeightedIntTree.probabilities`
+- `WeightedIntTree.probabilitiesInto`
 - `WeightedIntTree.isValid`
 - `WeightedIntTree.deinit`
 
