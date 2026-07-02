@@ -74,6 +74,12 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorHalfNormal f64x4", lanes / 8, 0xd1a4, fillDistHalfNormalF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorHalfNormal f64x4 direct", lanes / 8, 0xd1a4, fillDistHalfNormalF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorHalfNormal.fill f64x4", lanes / 8, 0xd1a4, fillDistHalfNormalSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorGamma f64x4", lanes / 16, 0xd2a4, fillDistGammaF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorGamma f64x4 direct", lanes / 16, 0xd2a4, fillDistGammaF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorGamma.fill f64x4", lanes / 16, 0xd2a4, fillDistGammaSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorChiSquared f64x4", lanes / 16, 0xd2b4, fillDistChiSquaredF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorChiSquared f64x4 direct", lanes / 16, 0xd2b4, fillDistChiSquaredF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorChiSquared.fill f64x4", lanes / 16, 0xd2b4, fillDistChiSquaredSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -700,6 +706,32 @@ fn fillDistHalfNormalF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@V
 
 fn fillDistHalfNormalSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorHalfNormal(@Vector(4, f64)).init(2) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistGammaF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorGamma(rng, @Vector(4, f64), dest, 2, 3);
+}
+
+fn fillDistGammaF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorGammaFrom(engine, @Vector(4, f64), dest, 2, 3);
+}
+
+fn fillDistGammaSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorGamma(@Vector(4, f64)).init(2, 3) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistChiSquaredF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorChiSquared(rng, @Vector(4, f64), dest, 4);
+}
+
+fn fillDistChiSquaredF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorChiSquaredFrom(engine, @Vector(4, f64), dest, 4);
+}
+
+fn fillDistChiSquaredSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorChiSquared(@Vector(4, f64)).init(4) catch unreachable;
     sampler.fill(rng, dest);
 }
 

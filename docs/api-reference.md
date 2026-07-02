@@ -226,10 +226,17 @@ Single-shot helpers:
   `poissonAhrensDieterFrom`, `poissonAhrensDieterChecked`,
   `poissonAhrensDieterCheckedFrom`
 - `gamma`, `gammaFrom`, `gammaChecked`, `gammaCheckedFrom`, `fillGamma`,
-  `fillGammaFrom`, `fillGammaChecked`, `fillGammaCheckedFrom`, `chiSquared`,
+  `fillGammaFrom`, `fillGammaChecked`, `fillGammaCheckedFrom`,
+  `vectorGamma`, `vectorGammaFrom`, `vectorGammaChecked`,
+  `vectorGammaCheckedFrom`, `fillVectorGamma`, `fillVectorGammaFrom`,
+  `fillVectorGammaChecked`, `fillVectorGammaCheckedFrom`, `chiSquared`,
   `chiSquaredFrom`, `chiSquaredChecked`, `chiSquaredCheckedFrom`,
   `fillChiSquared`, `fillChiSquaredFrom`, `fillChiSquaredChecked`,
-  `fillChiSquaredCheckedFrom`, `chi`, `chiFrom`, `chiChecked`,
+  `fillChiSquaredCheckedFrom`, `vectorChiSquared`, `vectorChiSquaredFrom`,
+  `vectorChiSquaredChecked`, `vectorChiSquaredCheckedFrom`,
+  `fillVectorChiSquared`, `fillVectorChiSquaredFrom`,
+  `fillVectorChiSquaredChecked`, `fillVectorChiSquaredCheckedFrom`,
+  `chi`, `chiFrom`, `chiChecked`,
   `chiCheckedFrom`, `fillChi`, `fillChiFrom`, `fillChiChecked`,
   `fillChiCheckedFrom`, `erlang`, `erlangFrom`, `erlangChecked`,
   `erlangCheckedFrom`, `fillErlang`, `fillErlangFrom`,
@@ -765,6 +772,19 @@ Reusable samplers:
 - `Gamma(T).sampleFrom`
 - `Gamma(T).fill`
 - `Gamma(T).fillFrom`
+- `VectorGamma(VectorType)`
+- `VectorGamma(VectorType).init`
+- `VectorGamma(VectorType).shapeValue`
+- `VectorGamma(VectorType).scaleValue`
+- `VectorGamma(VectorType).expectedValue`
+- `VectorGamma(VectorType).varianceValue`
+- `VectorGamma(VectorType).modeValue`
+- `VectorGamma(VectorType).minValue`
+- `VectorGamma(VectorType).maxValue`
+- `VectorGamma(VectorType).sample`
+- `VectorGamma(VectorType).sampleFrom`
+- `VectorGamma(VectorType).fill`
+- `VectorGamma(VectorType).fillFrom`
 - `ChiSquared(T)`
 - `ChiSquared(T).init`
 - `ChiSquared(T).dofValue`
@@ -777,6 +797,18 @@ Reusable samplers:
 - `ChiSquared(T).sampleFrom`
 - `ChiSquared(T).fill`
 - `ChiSquared(T).fillFrom`
+- `VectorChiSquared(VectorType)`
+- `VectorChiSquared(VectorType).init`
+- `VectorChiSquared(VectorType).dofValue`
+- `VectorChiSquared(VectorType).expectedValue`
+- `VectorChiSquared(VectorType).varianceValue`
+- `VectorChiSquared(VectorType).modeValue`
+- `VectorChiSquared(VectorType).minValue`
+- `VectorChiSquared(VectorType).maxValue`
+- `VectorChiSquared(VectorType).sample`
+- `VectorChiSquared(VectorType).sampleFrom`
+- `VectorChiSquared(VectorType).fill`
+- `VectorChiSquared(VectorType).fillFrom`
 - `Chi(T)`
 - `Chi(T).init`
 - `Chi(T).dofValue`
