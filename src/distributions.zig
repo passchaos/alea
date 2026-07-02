@@ -5997,6 +5997,104 @@ pub fn fillArcsineCheckedFrom(source: anytype, comptime T: type, dest: []T, min:
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorArcsine(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    return vectorArcsineFrom(rng, VectorType, min, max);
+}
+
+pub fn vectorArcsineFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    const sampler = VectorArcsine(VectorType).init(min, max) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorArcsineChecked(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
+    return vectorArcsineCheckedFrom(rng, VectorType, min, max);
+}
+
+pub fn vectorArcsineCheckedFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorArcsine(VectorType).init(min, max);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorArcsine(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    fillVectorArcsineFrom(rng, VectorType, dest, min, max);
+}
+
+pub fn fillVectorArcsineFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    const sampler = VectorArcsine(VectorType).init(min, max) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorArcsineChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    return fillVectorArcsineCheckedFrom(rng, VectorType, dest, min, max);
+}
+
+pub fn fillVectorArcsineCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorArcsine(VectorType).init(min, max);
+    sampler.fillFrom(source, dest);
+}
+
+fn arcsineFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    const Child = vectorChild(VectorType);
+    const min_vec: VectorType = @splat(min);
+    const width_vec: VectorType = @splat(max - min);
+    const angle_scale_vec: VectorType = @splat(@as(Child, @floatCast(std.math.pi)) / 2);
+    const s = @sin(angle_scale_vec * uniform_vec);
+    return min_vec + width_vec * s * s;
+}
+
+pub fn VectorArcsine(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Arcsine(Child),
+
+        pub fn init(min: Child, max: Child) Error!Self {
+            return .{ .sampler = try Arcsine(Child).init(min, max) };
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+            return arcsineFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), self.maxValue());
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Arcsine(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -11785,6 +11883,37 @@ test "distribution vector helpers preserve support and stream shape" {
     for (triangular_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 2);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const arcsine_vec = try vectorArcsineChecked(rng, @Vector(4, f64), -1, 3);
+    const direct_arcsine_vec = try vectorArcsineCheckedFrom(&direct_engine, @Vector(4, f64), -1, 3);
+    try std.testing.expectEqual(arcsine_vec, direct_arcsine_vec);
+    inline for (0..4) |lane| try std.testing.expect(arcsine_vec[lane] >= -1 and arcsine_vec[lane] <= 3);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_arcsine_sampler = try VectorArcsine(@Vector(4, f64)).init(-1, 3);
+    try std.testing.expectApproxEqAbs(@as(f64, -1), vector_arcsine_sampler.minValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), vector_arcsine_sampler.maxValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_arcsine_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_arcsine_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_arcsine_sampler.medianValue(), 1e-12);
+    const sampled_arcsine_vec = vector_arcsine_sampler.sample(rng);
+    const direct_sampled_arcsine_vec = vector_arcsine_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_arcsine_vec, direct_sampled_arcsine_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_arcsine_vec[lane] >= -1 and sampled_arcsine_vec[lane] <= 3);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var arcsine_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_arcsine_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorArcsineChecked(rng, @Vector(4, f64), &arcsine_buf_vec, -1, 3);
+    try fillVectorArcsineCheckedFrom(&direct_engine, @Vector(4, f64), &direct_arcsine_buf_vec, -1, 3);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &arcsine_buf_vec, &direct_arcsine_buf_vec);
+    for (arcsine_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 3);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_arcsine_sampler.fill(rng, &arcsine_buf_vec);
+    vector_arcsine_sampler.fillFrom(&direct_engine, &direct_arcsine_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &arcsine_buf_vec, &direct_arcsine_buf_vec);
+    for (arcsine_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 3);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -11903,6 +12032,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorTriangularCheckedFrom(&engine, @Vector(4, f64), 1, 0, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorArcsineCheckedFrom(&engine, @Vector(4, f64), 1, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -11944,6 +12076,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorTriangularCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 1, 0, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorArcsineCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -12023,6 +12158,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorTriangularCheckedFrom(&engine, @Vector(4, f64), &empty, 1, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorArcsineCheckedFrom(&engine, @Vector(4, f64), &empty, 1, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -12050,6 +12187,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorStudentTChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorTriangularChecked(rng, @Vector(4, f64), &empty, 1, 0, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorArcsineChecked(rng, @Vector(4, f64), &empty, 1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -14840,6 +14979,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorTriangularFrom(&unchecked, @Vector(4, f64), &vector_triangular_unchecked, -1, 0, 2);
         try fillVectorTriangularCheckedFrom(&checked, @Vector(4, f64), &vector_triangular_checked, -1, 0, 2);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_triangular_unchecked, &vector_triangular_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_arcsine_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_arcsine_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorArcsineFrom(&unchecked, @Vector(4, f64), &vector_arcsine_unchecked, -1, 3);
+        try fillVectorArcsineCheckedFrom(&checked, @Vector(4, f64), &vector_arcsine_checked, -1, 3);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_arcsine_unchecked, &vector_arcsine_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

@@ -98,6 +98,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorTriangular f64x4", lanes, 0xd314, fillDistTriangularF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorTriangular f64x4 direct", lanes, 0xd314, fillDistTriangularF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorTriangular.fill f64x4", lanes, 0xd314, fillDistTriangularSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorArcsine f64x4", lanes / 2, 0xd324, fillDistArcsineF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorArcsine f64x4 direct", lanes / 2, 0xd324, fillDistArcsineF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorArcsine.fill f64x4", lanes / 2, 0xd324, fillDistArcsineSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -828,6 +831,19 @@ fn fillDistTriangularF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@V
 
 fn fillDistTriangularSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorTriangular(@Vector(4, f64)).init(-1, 0, 2) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistArcsineF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorArcsine(rng, @Vector(4, f64), dest, -1, 3);
+}
+
+fn fillDistArcsineF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorArcsineFrom(engine, @Vector(4, f64), dest, -1, 3);
+}
+
+fn fillDistArcsineSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorArcsine(@Vector(4, f64)).init(-1, 3) catch unreachable;
     sampler.fill(rng, dest);
 }
 

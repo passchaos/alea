@@ -273,7 +273,10 @@ Single-shot helpers:
   `fillVectorTriangularCheckedFrom`, `arcsine`,
   `arcsineFrom`, `arcsineChecked`, `arcsineCheckedFrom`,
   `fillArcsine`, `fillArcsineFrom`, `fillArcsineChecked`,
-  `fillArcsineCheckedFrom`,
+  `fillArcsineCheckedFrom`, `vectorArcsine`, `vectorArcsineFrom`,
+  `vectorArcsineChecked`, `vectorArcsineCheckedFrom`,
+  `fillVectorArcsine`, `fillVectorArcsineFrom`,
+  `fillVectorArcsineChecked`, `fillVectorArcsineCheckedFrom`,
   `cauchy`, `cauchyFrom`, `cauchyChecked`, `cauchyCheckedFrom`,
   `fillCauchy`, `fillCauchyFrom`, `fillCauchyChecked`,
   `fillCauchyCheckedFrom`, `laplace`, `laplaceFrom`,
@@ -986,6 +989,17 @@ Reusable samplers:
 - `Arcsine(T).sampleFrom`
 - `Arcsine(T).fill`
 - `Arcsine(T).fillFrom`
+- `VectorArcsine(VectorType)`
+- `VectorArcsine(VectorType).init`
+- `VectorArcsine(VectorType).minValue`
+- `VectorArcsine(VectorType).maxValue`
+- `VectorArcsine(VectorType).expectedValue`
+- `VectorArcsine(VectorType).varianceValue`
+- `VectorArcsine(VectorType).medianValue`
+- `VectorArcsine(VectorType).sample`
+- `VectorArcsine(VectorType).sampleFrom`
+- `VectorArcsine(VectorType).fill`
+- `VectorArcsine(VectorType).fillFrom`
 - `Cauchy(T)`
 - `Cauchy(T).init`
 - `Cauchy(T).medianValue`
