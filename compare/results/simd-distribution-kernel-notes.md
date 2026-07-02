@@ -2,7 +2,9 @@
 
 This note captures the current design constraints for future Zig-native
 SIMD/vector distribution kernels. It exists to prevent repeating probe shapes
-that have already failed to beat the scalar ziggurat lane-fill defaults.
+that have already failed to beat the scalar ziggurat lane-fill defaults. The
+S4-M3 vector API/prototype milestone is closed; this note now tracks the S4-M4
+performance watch item for genuinely dense SIMD distribution kernels.
 
 ## Current Baseline
 
