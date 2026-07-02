@@ -4345,6 +4345,18 @@ pub fn PertBuilder(comptime T: type) type {
         max: T,
         shape: T,
 
+        pub fn minValue(self: Self) T {
+            return self.min;
+        }
+
+        pub fn maxValue(self: Self) T {
+            return self.max;
+        }
+
+        pub fn shapeValue(self: Self) T {
+            return self.shape;
+        }
+
         pub fn withShape(self: Self, shape: T) Self {
             return .{ .min = self.min, .max = self.max, .shape = shape };
         }
@@ -8613,7 +8625,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 3), pert_sampler.betaValue(), 1e-12);
     pert_sampler.fillFrom(&direct_engine, &direct_pert_buf);
     for (direct_pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
-    const pert_builder_mode = try Pert(f64).initRange(-1, 2).withShape(4).withMode(0.5);
+    const pert_builder = Pert(f64).initRange(-1, 2).withShape(4);
+    try std.testing.expectApproxEqAbs(@as(f64, -1), pert_builder.minValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), pert_builder.maxValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), pert_builder.shapeValue(), 1e-12);
+    const pert_builder_mode = try pert_builder.withMode(0.5);
     try std.testing.expectApproxEqAbs(pert_sampler.alpha, pert_builder_mode.alpha, 1e-12);
     try std.testing.expectApproxEqAbs(pert_sampler.beta_param, pert_builder_mode.beta_param, 1e-12);
 
