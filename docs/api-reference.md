@@ -357,6 +357,8 @@ Reusable samplers:
 - `StandardNormal(T).stddevValue`
 - `StandardNormal(T).expectedValue`
 - `StandardNormal(T).varianceValue`
+- `StandardNormal(T).minValue`
+- `StandardNormal(T).maxValue`
 - `StandardNormal(T).sample`
 - `StandardNormal(T).sampleFrom`
 - `StandardNormal(T).fill`
@@ -369,6 +371,8 @@ Reusable samplers:
 - `Normal(T).stddevValue`
 - `Normal(T).expectedValue`
 - `Normal(T).varianceValue`
+- `Normal(T).minValue`
+- `Normal(T).maxValue`
 - `Normal(T).coefficientOfVariationValue`
 - `Normal(T).sample`
 - `Normal(T).sampleFrom`

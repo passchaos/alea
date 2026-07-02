@@ -1451,6 +1451,14 @@ pub fn StandardNormal(comptime T: type) type {
             return 1;
         }
 
+        pub fn minValue(_: @This()) ?T {
+            return null;
+        }
+
+        pub fn maxValue(_: @This()) ?T {
+            return null;
+        }
+
         pub fn sample(_: @This(), rng: Rng) T {
             return standardNormal(rng, T);
         }
@@ -1558,6 +1566,14 @@ pub fn Normal(comptime T: type) type {
 
         pub fn varianceValue(self: Self) T {
             return self.stddev * self.stddev;
+        }
+
+        pub fn minValue(self: Self) ?T {
+            return if (self.stddev == 0) self.mean else null;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            return if (self.stddev == 0) self.mean else null;
         }
 
         pub fn coefficientOfVariationValue(self: Self) ?T {
@@ -8915,6 +8931,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), normal_cv_sampler.stddevValue(), 1e-15);
     try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.expectedValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 4), normal_cv_sampler.varianceValue(), 1e-15);
+    try std.testing.expect(normal_cv_sampler.minValue() == null);
+    try std.testing.expect(normal_cv_sampler.maxValue() == null);
+    const degenerate_normal = try Normal(f64).init(3, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), degenerate_normal.minValue().?, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), degenerate_normal.maxValue().?, 0);
     try std.testing.expectApproxEqAbs(@as(f64, 0.2), normal_cv_sampler.coefficientOfVariationValue().?, 1e-15);
     try std.testing.expect((try Normal(f64).init(0, 0)).coefficientOfVariationValue() == null);
 
@@ -8940,6 +8961,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectEqual(@as(f64, 1), (StandardNormal(f64){}).stddevValue());
     try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).expectedValue());
     try std.testing.expectEqual(@as(f64, 1), (StandardNormal(f64){}).varianceValue());
+    try std.testing.expect((StandardNormal(f64){}).minValue() == null);
+    try std.testing.expect((StandardNormal(f64){}).maxValue() == null);
     var standard_normal_buf: [8]f64 = undefined;
     fillStandardNormal(rng, f64, &standard_normal_buf);
     for (standard_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
