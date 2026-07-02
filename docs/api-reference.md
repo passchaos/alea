@@ -782,6 +782,8 @@ Reusable samplers:
 - `Dirichlet(T).alphaValues`
 - `Dirichlet(T).alphaAt`
 - `Dirichlet(T).meanAt`
+- `Dirichlet(T).means`
+- `Dirichlet(T).meansInto`
 - `Dirichlet(T).varianceAt`
 - `Dirichlet(T).covarianceAt`
 - `Dirichlet(T).dimensionValue`
