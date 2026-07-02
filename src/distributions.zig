@@ -3144,8 +3144,7 @@ pub fn LogNormal(comptime T: type) type {
         }
 
         pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
-            self.normal_sampler.fillFrom(source, dest);
-            expInPlace(T, dest);
+            fillLogNormalFrom(source, T, dest, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
     };
 }

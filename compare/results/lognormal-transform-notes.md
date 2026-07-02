@@ -60,9 +60,11 @@ The exact `LogNormal(f32)` and `fillLogNormal` paths remain unchanged and keep
 Fresh local evidence:
 
 - `bench -- 1073741824 fillLogNormal`: exact f64 facade/FastPrng-direct/
-  ScalarPrng-direct about 132M/133M/139M versus local Rust log-normal about
-  146M; exact f32 about 137M/136M/143M versus local Rust f32 about 155M after
-  the mean-zero standard-normal staging specialization.
+  ScalarPrng-direct about 132M/131M/139M versus local Rust log-normal about
+  146M; exact f32 about 137M/137M/146M versus local Rust f32 about 155M after
+  the mean-zero standard-normal staging specialization. Reusable
+  `LogNormal.fillFrom` now routes through the same optimized helper and reaches
+  about 139M ScalarPrng direct.
 - `log-normal-probe -- 1048576`: f32 current/approx fill remains sensitive to
   probe shape, with recent rows around 134M/139M FastPrng and 140M/130M
   ScalarPrng; older focused rows showed approx peaks around 143M/150M.
