@@ -4042,6 +4042,16 @@ pub fn LogLogistic(comptime T: type) type {
             return second_moment - mean * mean;
         }
 
+        pub fn medianValue(self: Self) T {
+            return self.scale;
+        }
+
+        pub fn modeValue(self: Self) T {
+            const shape = self.shapeValue();
+            if (shape <= 1) return 0;
+            return self.scale * std.math.pow(T, (shape - 1) / (shape + 1), 1 / shape);
+        }
+
         pub fn minValue(self: Self) T {
             _ = self;
             return 0;
@@ -9824,6 +9834,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const log_logistic_mean = @as(f64, 4) * std.math.pi / (3 * @sqrt(@as(f64, 3)));
     try std.testing.expectApproxEqAbs(log_logistic_mean, log_logistic_sampler.expectedValue().?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 16) * std.math.pi / (3 * @sqrt(@as(f64, 3))) - log_logistic_mean * log_logistic_mean, log_logistic_sampler.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), log_logistic_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * std.math.pow(f64, 0.5, 1.0 / 3.0), log_logistic_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), log_logistic_sampler.minValue(), 0);
     try std.testing.expect(log_logistic_sampler.maxValue() == null);
     try std.testing.expect((try LogLogistic(f64).init(2, 1)).expectedValue() == null);

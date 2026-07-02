@@ -645,6 +645,8 @@ Reusable samplers:
 - `LogLogistic(T).shapeValue`
 - `LogLogistic(T).expectedValue`
 - `LogLogistic(T).varianceValue`
+- `LogLogistic(T).medianValue`
+- `LogLogistic(T).modeValue`
 - `LogLogistic(T).minValue`
 - `LogLogistic(T).maxValue`
 - `LogLogistic(T).sample`
