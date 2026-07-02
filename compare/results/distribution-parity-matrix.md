@@ -68,7 +68,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/median/mode/moment/support accessors |
 | Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/median/mode/moment/support accessors |
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment/median/mode/support accessors |
-| HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment/support accessors |
+| HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment/support accessors and collapsed `scale == 0` point masses |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment/mode/support accessors |
 | Chi | Covered: `chi`, `Chi(T)`, including dof/moment/mode/support accessors |
 | Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment/mode/support accessors |

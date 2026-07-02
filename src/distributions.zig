@@ -3405,7 +3405,8 @@ pub fn halfNormalCheckedFrom(source: anytype, comptime T: type, scale: T) Error!
 
 pub fn halfNormalFrom(source: anytype, comptime T: type, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) return 0;
 
     return @abs(Rng.normalFastFrom(source, T, 0, scale));
 }
@@ -3416,7 +3417,11 @@ pub fn fillHalfNormal(rng: Rng, comptime T: type, dest: []T, scale: T) void {
 
 pub fn fillHalfNormalFrom(source: anytype, comptime T: type, dest: []T, scale: T) void {
     comptime requireFloat(T);
-    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, 0);
+        return;
+    }
     if (comptime T == f64 and (@TypeOf(source) == Rng or @TypeOf(source) == *Alea4x64)) {
         Rng.fillNormalFrom(source, T, dest, 0, scale);
         absInPlace(T, dest);
@@ -3440,7 +3445,8 @@ pub fn vectorHalfNormal(rng: Rng, comptime VectorType: type, scale: vectorChild(
 }
 
 pub fn vectorHalfNormalFrom(source: anytype, comptime VectorType: type, scale: vectorChild(VectorType)) VectorType {
-    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) return @splat(0);
     return @abs(vectorNormalFrom(source, VectorType, 0, scale));
 }
 
@@ -3458,6 +3464,13 @@ pub fn fillVectorHalfNormal(rng: Rng, comptime VectorType: type, dest: []VectorT
 }
 
 pub fn fillVectorHalfNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) void {
+    const Child = vectorChild(VectorType);
+    comptime requireFloat(Child);
+    std.debug.assert(scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, @as(VectorType, @splat(0)));
+        return;
+    }
     fillVectorNormalFrom(source, VectorType, dest, 0, scale);
     absVectorSliceInPlace(VectorType, dest);
 }
@@ -3480,7 +3493,7 @@ pub fn HalfNormal(comptime T: type) type {
 
         pub fn init(scale: T) Error!Self {
             comptime requireFloat(T);
-            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return .{ .scale = scale };
         }
 
@@ -3502,8 +3515,7 @@ pub fn HalfNormal(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) 0 else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -3519,7 +3531,15 @@ pub fn HalfNormal(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
     };
 }
@@ -3534,7 +3554,7 @@ pub fn VectorHalfNormal(comptime VectorType: type) type {
         scale: Child,
 
         pub fn init(scale: Child) Error!Self {
-            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return .{ .scale = scale };
         }
 
@@ -3556,8 +3576,7 @@ pub fn VectorHalfNormal(comptime VectorType: type) type {
         }
 
         pub fn maxValue(self: Self) ?Child {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) 0 else null;
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
@@ -3574,6 +3593,10 @@ pub fn VectorHalfNormal(comptime VectorType: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             fillVectorHalfNormalFrom(source, VectorType, dest, self.scale);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
     };
 }
@@ -14190,6 +14213,69 @@ test "degenerate normal and log-normal helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "degenerate half-normal helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1e6);
+    var control = alea.ScalarPrng.init(0x5150_d1e6);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 0), halfNormalFrom(&engine, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 0), try halfNormalChecked(rng, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillHalfNormalFrom(&engine, f64, &scalar_buf, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillHalfNormalChecked(rng, f64, &scalar_buf, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try HalfNormal(f64).init(0);
+    try std.testing.expectEqual(@as(f64, 0), sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.maxValue().?);
+    try std.testing.expectEqual(@as(f64, 0), sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorHalfNormalFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), try vectorHalfNormalChecked(rng, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorHalfNormalFrom(&engine, @Vector(4, f64), &vector_buf, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorHalfNormalChecked(rng, @Vector(4, f64), &vector_buf, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorHalfNormal(@Vector(4, f64)).init(0);
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "degenerate triangular helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1f7);
@@ -16293,7 +16379,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorLogNormalApproxF32CheckedFrom(&engine, @Vector(8, f32), 0, 0.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, vectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectError(error.InvalidParameter, vectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, vectorGammaCheckedFrom(&engine, @Vector(4, f64), 0, 1));
@@ -16397,7 +16483,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorLogNormalApproxF32CheckedFrom(&engine, @Vector(8, f32), &approx_log_normal_buf, 0, 0.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, fillVectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorGammaCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 1));
@@ -16551,7 +16637,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     var empty_f32: [0]@Vector(8, f32) = .{};
     try fillVectorLogNormalApproxF32CheckedFrom(&engine, @Vector(8, f32), &empty_f32, 0, 0.5);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
+    try fillVectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), &empty, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorGammaCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16619,7 +16705,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLogNormalApproxF32Checked(rng, @Vector(8, f32), &empty_f32, 0, 0.5);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorHalfNormalChecked(rng, @Vector(4, f64), &empty, 0);
+    try fillVectorHalfNormalChecked(rng, @Vector(4, f64), &empty, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorGammaChecked(rng, @Vector(4, f64), &empty, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16758,7 +16844,7 @@ test "invalid distribution facade continuous scalars do not consume random strea
     try std.testing.expectError(error.InvalidParameter, logNormalChecked(rng, f64, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, halfNormalChecked(rng, f64, 0));
+    try std.testing.expectError(error.InvalidParameter, halfNormalChecked(rng, f64, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, gammaChecked(rng, f64, 0, 1));
@@ -16873,7 +16959,7 @@ test "invalid distribution facade fill helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillLogNormalApproxF32Checked(rng, &floats32, 0, 0.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillHalfNormalChecked(rng, f64, &floats, 0));
+    try std.testing.expectError(error.InvalidParameter, fillHalfNormalChecked(rng, f64, &floats, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillChiSquaredChecked(rng, f64, &floats, 0));
@@ -17375,7 +17461,7 @@ test "invalid scalar distribution helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, LogNormalApproxF32.init(0.5, 0.25));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, halfNormalCheckedFrom(&engine, f64, 0));
+    try std.testing.expectError(error.InvalidParameter, halfNormalCheckedFrom(&engine, f64, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, betaCheckedFrom(&engine, f64, 1, 0));
@@ -17487,7 +17573,7 @@ test "zero-length derived distribution fills do not validate or consume random s
     try std.testing.expectEqual(control.next(), engine.next());
     try fillLogNormalApproxF32CheckedFrom(&engine, &out32, 0, 0.5);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillHalfNormalCheckedFrom(&engine, f64, &out, 0);
+    try fillHalfNormalCheckedFrom(&engine, f64, &out, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillTriangularCheckedFrom(&engine, f64, &out, 1, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -18099,7 +18185,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (half_normal_buf) |value| try std.testing.expect(value >= 0);
     try fillHalfNormalCheckedFrom(&direct_engine, f64, &direct_half_normal_buf, 2);
     for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
-    try std.testing.expectError(error.InvalidParameter, fillHalfNormalCheckedFrom(&direct_engine, f64, &direct_half_normal_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, fillHalfNormalCheckedFrom(&direct_engine, f64, &direct_half_normal_buf, -1));
     const half_normal_sampler = try HalfNormal(f64).init(2);
     try std.testing.expectApproxEqAbs(@as(f64, 2), half_normal_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(2.0 / std.math.pi), half_normal_sampler.expectedValue(), 1e-12);
@@ -18109,7 +18195,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     half_normal_sampler.fillFrom(&direct_engine, &direct_half_normal_buf);
     for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try halfNormalCheckedFrom(&direct_engine, f64, 2) >= 0);
-    try std.testing.expectError(error.InvalidParameter, halfNormalCheckedFrom(&direct_engine, f64, 0));
+    try std.testing.expectError(error.InvalidParameter, halfNormalCheckedFrom(&direct_engine, f64, -1));
 
     var poissons = rng.sampleIter(u64, try Poisson.init(12));
     try std.testing.expect(poissons.next().? < 64);
@@ -19034,7 +19120,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).initMeanCv(-1, 0.5));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).initMeanCv(1, -0.5));
-    try std.testing.expectError(error.InvalidParameter, HalfNormal(f64).init(0));
+    try std.testing.expectError(error.InvalidParameter, HalfNormal(f64).init(-1));
     try std.testing.expectError(error.EmptyRange, Uniform(f64).init(std.math.inf(f64), 1));
     try std.testing.expectError(error.EmptyRange, Uniform(f64).initInclusive(0, std.math.inf(f64)));
     try std.testing.expectError(error.InvalidParameter, Poisson.init(std.math.inf(f64)));
