@@ -547,6 +547,7 @@ Reusable samplers:
 - `Beta(T).betaValue`
 - `Beta(T).expectedValue`
 - `Beta(T).varianceValue`
+- `Beta(T).modeValue`
 - `Beta(T).minValue`
 - `Beta(T).maxValue`
 - `Beta(T).sample`

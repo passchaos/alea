@@ -3168,6 +3168,16 @@ pub fn Beta(comptime T: type) type {
             return self.alpha * self.beta_param / (total * total * (total + 1));
         }
 
+        pub fn modeValue(self: Self) ?T {
+            if (self.alpha > 1 and self.beta_param > 1) {
+                return (self.alpha - 1) / (self.alpha + self.beta_param - 2);
+            }
+            if (self.alpha < 1 and self.beta_param < 1) return null;
+            if (self.alpha == 1 and self.beta_param == 1) return null;
+            if (self.alpha <= 1) return 0;
+            return 1;
+        }
+
         pub fn minValue(self: Self) T {
             _ = self;
             return 0;
@@ -9588,6 +9598,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 5), beta_sampler.betaValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 7.0), beta_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 196.0), beta_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.2), beta_sampler.modeValue().?, 1e-12);
+    try std.testing.expect((try Beta(f64).init(1, 1)).modeValue() == null);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), (try Beta(f64).init(1, 2)).modeValue().?, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), (try Beta(f64).init(2, 1)).modeValue().?, 0);
     try std.testing.expectApproxEqAbs(@as(f64, 0), beta_sampler.minValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 1), beta_sampler.maxValue(), 0);
     beta_sampler.fillFrom(&direct_engine, &direct_beta_buf);
