@@ -155,9 +155,12 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZeta f64x4", lanes / 128, 0xd444, fillDistZetaF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZeta f64x4 direct", lanes / 128, 0xd444, fillDistZetaF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorZeta.fill f64x4", lanes / 128, 0xd444, fillDistZetaSamplerF64);
-    try benchUnitCircleF64x4(io, stdout, "alea distributions.fillVectorUnitCircle f64x4", lanes / 8, 0xd454, fillDistUnitCircleF64);
-    try benchUnitCircleF64x4(io, stdout, "alea distributions.fillVectorUnitCircle f64x4 direct", lanes / 8, 0xd454, fillDistUnitCircleF64Direct);
-    try benchUnitCircleF64x4(io, stdout, "alea distributions.VectorUnitCircle.fill f64x4", lanes / 8, 0xd454, fillDistUnitCircleSamplerF64);
+    try benchUnit2F64x4(io, stdout, "alea distributions.fillVectorUnitCircle f64x4", lanes / 8, 0xd454, fillDistUnitCircleF64);
+    try benchUnit2F64x4(io, stdout, "alea distributions.fillVectorUnitCircle f64x4 direct", lanes / 8, 0xd454, fillDistUnitCircleF64Direct);
+    try benchUnit2F64x4(io, stdout, "alea distributions.VectorUnitCircle.fill f64x4", lanes / 8, 0xd454, fillDistUnitCircleSamplerF64);
+    try benchUnit2F64x4(io, stdout, "alea distributions.fillVectorUnitDisc f64x4", lanes / 8, 0xd464, fillDistUnitDiscF64);
+    try benchUnit2F64x4(io, stdout, "alea distributions.fillVectorUnitDisc f64x4 direct", lanes / 8, 0xd464, fillDistUnitDiscF64Direct);
+    try benchUnit2F64x4(io, stdout, "alea distributions.VectorUnitDisc.fill f64x4", lanes / 8, 0xd464, fillDistUnitDiscSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -729,7 +732,7 @@ fn benchVectorF64x4(
     try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
-fn benchUnitCircleF64x4(
+fn benchUnit2F64x4(
     io: std.Io,
     stdout: *std.Io.Writer,
     name: []const u8,
@@ -752,7 +755,7 @@ fn benchUnitCircleF64x4(
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             fillFn(&engine, rng, out[0..n]);
-            checksum += checksumUnitCircleF64x4(&out, n);
+            checksum += checksumUnit2F64x4(&out, n);
             remaining -= n;
         }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
@@ -1187,6 +1190,19 @@ fn fillDistUnitCircleF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: [][2
 
 fn fillDistUnitCircleSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][2]@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorUnitCircle(@Vector(4, f64)){};
+    sampler.fill(rng, dest);
+}
+
+fn fillDistUnitDiscF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][2]@Vector(4, f64)) void {
+    alea.distributions.fillVectorUnitDisc(rng, @Vector(4, f64), dest);
+}
+
+fn fillDistUnitDiscF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: [][2]@Vector(4, f64)) void {
+    alea.distributions.fillVectorUnitDiscFrom(engine, @Vector(4, f64), dest);
+}
+
+fn fillDistUnitDiscSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][2]@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorUnitDisc(@Vector(4, f64)){};
     sampler.fill(rng, dest);
 }
 
@@ -1866,7 +1882,7 @@ fn checksumVectorsF64(vectors: []const @Vector(4, f64), len: usize) f64 {
     return checksum;
 }
 
-fn checksumUnitCircleF64x4(points: []const [2]@Vector(4, f64), len: usize) f64 {
+fn checksumUnit2F64x4(points: []const [2]@Vector(4, f64), len: usize) f64 {
     var checksum: f64 = 0;
     for (points[0..len]) |point| {
         inline for (0..4) |lane| checksum += point[0][lane] + point[1][lane];

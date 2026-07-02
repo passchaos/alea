@@ -9545,6 +9545,33 @@ pub fn fillUnitDiscFrom(source: anytype, comptime T: type, dest: [][2]T) void {
     for (dest) |*item| item.* = unitDiscFrom(source, T);
 }
 
+pub fn vectorUnitDisc(rng: Rng, comptime VectorType: type) [2]VectorType {
+    return vectorUnitDiscFrom(rng, VectorType);
+}
+
+pub fn vectorUnitDiscFrom(source: anytype, comptime VectorType: type) [2]VectorType {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    const len = @typeInfo(VectorType).vector.len;
+    var x: VectorType = undefined;
+    var y: VectorType = undefined;
+    inline for (0..len) |lane| {
+        const point = unitDiscFrom(source, Child);
+        x[lane] = point[0];
+        y[lane] = point[1];
+    }
+    return .{ x, y };
+}
+
+pub fn fillVectorUnitDisc(rng: Rng, comptime VectorType: type, dest: [][2]VectorType) void {
+    fillVectorUnitDiscFrom(rng, VectorType, dest);
+}
+
+pub fn fillVectorUnitDiscFrom(source: anytype, comptime VectorType: type, dest: [][2]VectorType) void {
+    _ = vectorChild(VectorType);
+    for (dest) |*item| item.* = vectorUnitDiscFrom(source, VectorType);
+}
+
 pub fn unitSphere(rng: Rng, comptime T: type) [3]T {
     return unitSphereFrom(rng, T);
 }
@@ -9866,6 +9893,57 @@ pub fn UnitCircle(comptime T: type) type {
 
         pub fn fillFrom(_: @This(), source: anytype, dest: [][2]T) void {
             fillUnitCircleFrom(source, T, dest);
+        }
+    };
+}
+
+pub fn VectorUnitDisc(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        pub fn dimensionValue(_: @This()) usize {
+            return 2;
+        }
+
+        pub fn radiusValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn isSurface(_: @This()) bool {
+            return false;
+        }
+
+        pub fn coordinateExpectedValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn coordinateVarianceValue(_: @This()) Child {
+            return 1.0 / 4.0;
+        }
+
+        pub fn radialExpectedValue(_: @This()) Child {
+            return 2.0 / 3.0;
+        }
+
+        pub fn radialVarianceValue(_: @This()) Child {
+            return 1.0 / 18.0;
+        }
+
+        pub fn sample(_: @This(), rng: Rng) [2]VectorType {
+            return vectorUnitDisc(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) [2]VectorType {
+            return vectorUnitDiscFrom(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: [][2]VectorType) void {
+            fillVectorUnitDisc(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: [][2]VectorType) void {
+            fillVectorUnitDiscFrom(source, VectorType, dest);
         }
     };
 }
@@ -14639,6 +14717,39 @@ test "distribution vector helpers preserve support and stream shape" {
     vector_unit_circle_sampler.fillFrom(&direct_engine, &direct_unit_circle_buf_vec);
     try std.testing.expectEqualSlices([2]@Vector(4, f64), &unit_circle_buf_vec, &direct_unit_circle_buf_vec);
     for (unit_circle_buf_vec) |point| inline for (0..4) |lane| try std.testing.expectApproxEqAbs(@as(f64, 1), point[0][lane] * point[0][lane] + point[1][lane] * point[1][lane], 1e-12);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const unit_disc_vec = vectorUnitDisc(rng, @Vector(4, f64));
+    const direct_unit_disc_vec = vectorUnitDiscFrom(&direct_engine, @Vector(4, f64));
+    try std.testing.expectEqual(unit_disc_vec, direct_unit_disc_vec);
+    inline for (0..4) |lane| try std.testing.expect(unit_disc_vec[0][lane] * unit_disc_vec[0][lane] + unit_disc_vec[1][lane] * unit_disc_vec[1][lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_unit_disc_sampler = VectorUnitDisc(@Vector(4, f64)){};
+    try std.testing.expectEqual(@as(usize, 2), vector_unit_disc_sampler.dimensionValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_unit_disc_sampler.radiusValue(), 0);
+    try std.testing.expect(!vector_unit_disc_sampler.isSurface());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_unit_disc_sampler.coordinateExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), vector_unit_disc_sampler.coordinateVarianceValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 3.0), vector_unit_disc_sampler.radialExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 18.0), vector_unit_disc_sampler.radialVarianceValue(), 0);
+    const sampled_unit_disc_vec = vector_unit_disc_sampler.sample(rng);
+    const direct_sampled_unit_disc_vec = vector_unit_disc_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_unit_disc_vec, direct_sampled_unit_disc_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_unit_disc_vec[0][lane] * sampled_unit_disc_vec[0][lane] + sampled_unit_disc_vec[1][lane] * sampled_unit_disc_vec[1][lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var unit_disc_buf_vec: [3][2]@Vector(4, f64) = undefined;
+    var direct_unit_disc_buf_vec: [3][2]@Vector(4, f64) = undefined;
+    fillVectorUnitDisc(rng, @Vector(4, f64), &unit_disc_buf_vec);
+    fillVectorUnitDiscFrom(&direct_engine, @Vector(4, f64), &direct_unit_disc_buf_vec);
+    try std.testing.expectEqualSlices([2]@Vector(4, f64), &unit_disc_buf_vec, &direct_unit_disc_buf_vec);
+    for (unit_disc_buf_vec) |point| inline for (0..4) |lane| try std.testing.expect(point[0][lane] * point[0][lane] + point[1][lane] * point[1][lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_unit_disc_sampler.fill(rng, &unit_disc_buf_vec);
+    vector_unit_disc_sampler.fillFrom(&direct_engine, &direct_unit_disc_buf_vec);
+    try std.testing.expectEqualSlices([2]@Vector(4, f64), &unit_disc_buf_vec, &direct_unit_disc_buf_vec);
+    for (unit_disc_buf_vec) |point| inline for (0..4) |lane| try std.testing.expect(point[0][lane] * point[0][lane] + point[1][lane] * point[1][lane] <= 1);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
