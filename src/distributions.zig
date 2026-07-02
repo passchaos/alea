@@ -7855,6 +7855,105 @@ pub fn fillMaxwellCheckedFrom(source: anytype, comptime T: type, dest: []T, scal
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorMaxwell(rng: Rng, comptime VectorType: type, scale: vectorChild(VectorType)) VectorType {
+    return vectorMaxwellFrom(rng, VectorType, scale);
+}
+
+pub fn vectorMaxwellFrom(source: anytype, comptime VectorType: type, scale: vectorChild(VectorType)) VectorType {
+    const sampler = VectorMaxwell(VectorType).init(scale) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorMaxwellChecked(rng: Rng, comptime VectorType: type, scale: vectorChild(VectorType)) Error!VectorType {
+    return vectorMaxwellCheckedFrom(rng, VectorType, scale);
+}
+
+pub fn vectorMaxwellCheckedFrom(source: anytype, comptime VectorType: type, scale: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorMaxwell(VectorType).init(scale);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorMaxwell(rng: Rng, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) void {
+    fillVectorMaxwellFrom(rng, VectorType, dest, scale);
+}
+
+pub fn fillVectorMaxwellFrom(source: anytype, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) void {
+    const sampler = VectorMaxwell(VectorType).init(scale) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorMaxwellChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) Error!void {
+    return fillVectorMaxwellCheckedFrom(rng, VectorType, dest, scale);
+}
+
+pub fn fillVectorMaxwellCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorMaxwell(VectorType).init(scale);
+    sampler.fillFrom(source, dest);
+}
+
+fn maxwellFromNormalVectors(x: anytype, y: @TypeOf(x), z: @TypeOf(x)) @TypeOf(x) {
+    return @sqrt(x * x + y * y + z * z);
+}
+
+pub fn VectorMaxwell(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Maxwell(Child),
+
+        pub fn init(scale: Child) Error!Self {
+            return .{ .sampler = try Maxwell(Child).init(scale) };
+        }
+
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const x = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
+            const y = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
+            const z = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
+            return maxwellFromNormalVectors(x, y, z);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Maxwell(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -12962,6 +13061,38 @@ test "distribution vector helpers preserve support and stream shape" {
     for (rayleigh_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const maxwell_vec = try vectorMaxwellChecked(rng, @Vector(4, f64), 2);
+    const direct_maxwell_vec = try vectorMaxwellCheckedFrom(&direct_engine, @Vector(4, f64), 2);
+    try std.testing.expectEqual(maxwell_vec, direct_maxwell_vec);
+    inline for (0..4) |lane| try std.testing.expect(maxwell_vec[lane] >= 0 and std.math.isFinite(maxwell_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_maxwell_sampler = try VectorMaxwell(@Vector(4, f64)).init(2);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_maxwell_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4) * @sqrt(2 / @as(f64, @floatCast(std.math.pi))), vector_maxwell_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4) * (3 * @as(f64, @floatCast(std.math.pi)) - 8) / @as(f64, @floatCast(std.math.pi)), vector_maxwell_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(@as(f64, 2)), vector_maxwell_sampler.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_maxwell_sampler.minValue(), 0);
+    try std.testing.expect(vector_maxwell_sampler.maxValue() == null);
+    const sampled_maxwell_vec = vector_maxwell_sampler.sample(rng);
+    const direct_sampled_maxwell_vec = vector_maxwell_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_maxwell_vec, direct_sampled_maxwell_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_maxwell_vec[lane] >= 0 and std.math.isFinite(sampled_maxwell_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var maxwell_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_maxwell_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorMaxwellChecked(rng, @Vector(4, f64), &maxwell_buf_vec, 2);
+    try fillVectorMaxwellCheckedFrom(&direct_engine, @Vector(4, f64), &direct_maxwell_buf_vec, 2);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &maxwell_buf_vec, &direct_maxwell_buf_vec);
+    for (maxwell_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_maxwell_sampler.fill(rng, &maxwell_buf_vec);
+    vector_maxwell_sampler.fillFrom(&direct_engine, &direct_maxwell_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &maxwell_buf_vec, &direct_maxwell_buf_vec);
+    for (maxwell_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -13104,6 +13235,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorRayleighCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorMaxwellCheckedFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -13169,6 +13303,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorRayleighCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorMaxwellCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -13264,6 +13401,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorRayleighCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorMaxwellCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -13307,6 +13446,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorPowerFunctionChecked(rng, @Vector(4, f64), &empty, -1, 2, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorRayleighChecked(rng, @Vector(4, f64), &empty, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorMaxwellChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16153,6 +16294,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorRayleighFrom(&unchecked, @Vector(4, f64), &vector_rayleigh_unchecked, 2);
         try fillVectorRayleighCheckedFrom(&checked, @Vector(4, f64), &vector_rayleigh_checked, 2);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_rayleigh_unchecked, &vector_rayleigh_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_maxwell_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_maxwell_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorMaxwellFrom(&unchecked, @Vector(4, f64), &vector_maxwell_unchecked, 2);
+        try fillVectorMaxwellCheckedFrom(&checked, @Vector(4, f64), &vector_maxwell_checked, 2);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_maxwell_unchecked, &vector_maxwell_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

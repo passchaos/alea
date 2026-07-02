@@ -327,6 +327,10 @@ Single-shot helpers:
   `maxwell`, `maxwellFrom`, `maxwellChecked`,
   `maxwellCheckedFrom`, `fillMaxwell`,
   `fillMaxwellFrom`, `fillMaxwellChecked`, `fillMaxwellCheckedFrom`,
+  `vectorMaxwell`, `vectorMaxwellFrom`, `vectorMaxwellChecked`,
+  `vectorMaxwellCheckedFrom`, `fillVectorMaxwell`,
+  `fillVectorMaxwellFrom`, `fillVectorMaxwellChecked`,
+  `fillVectorMaxwellCheckedFrom`,
   `pareto`, `paretoFrom`, `paretoChecked`, `paretoCheckedFrom`,
   `fillPareto`, `fillParetoFrom`, `fillParetoChecked`,
   `fillParetoCheckedFrom`, `weibull`, `weibullFrom`,
@@ -1226,6 +1230,18 @@ Reusable samplers:
 - `Maxwell(T).sampleFrom`
 - `Maxwell(T).fill`
 - `Maxwell(T).fillFrom`
+- `VectorMaxwell(VectorType)`
+- `VectorMaxwell(VectorType).init`
+- `VectorMaxwell(VectorType).scaleValue`
+- `VectorMaxwell(VectorType).expectedValue`
+- `VectorMaxwell(VectorType).varianceValue`
+- `VectorMaxwell(VectorType).modeValue`
+- `VectorMaxwell(VectorType).minValue`
+- `VectorMaxwell(VectorType).maxValue`
+- `VectorMaxwell(VectorType).sample`
+- `VectorMaxwell(VectorType).sampleFrom`
+- `VectorMaxwell(VectorType).fill`
+- `VectorMaxwell(VectorType).fillFrom`
 - `Pareto(T)`
 - `Pareto(T).init`
 - `Pareto(T).scaleValue`

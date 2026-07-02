@@ -122,6 +122,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorRayleigh f64x4", lanes / 2, 0xd394, fillDistRayleighF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorRayleigh f64x4 direct", lanes / 2, 0xd394, fillDistRayleighF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorRayleigh.fill f64x4", lanes / 2, 0xd394, fillDistRayleighSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorMaxwell f64x4", lanes / 32, 0xd3a4, fillDistMaxwellF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorMaxwell f64x4 direct", lanes / 32, 0xd3a4, fillDistMaxwellF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorMaxwell.fill f64x4", lanes / 32, 0xd3a4, fillDistMaxwellSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -956,6 +959,19 @@ fn fillDistRayleighF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vec
 
 fn fillDistRayleighSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorRayleigh(@Vector(4, f64)).init(2) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistMaxwellF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorMaxwell(rng, @Vector(4, f64), dest, 2);
+}
+
+fn fillDistMaxwellF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorMaxwellFrom(engine, @Vector(4, f64), dest, 2);
+}
+
+fn fillDistMaxwellSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorMaxwell(@Vector(4, f64)).init(2) catch unreachable;
     sampler.fill(rng, dest);
 }
 
