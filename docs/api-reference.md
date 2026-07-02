@@ -521,12 +521,17 @@ Reusable samplers:
 - `Weibull(T).fillFrom`
 - `Gumbel(T)`
 - `Gumbel(T).init`
+- `Gumbel(T).locationValue`
+- `Gumbel(T).scaleValue`
 - `Gumbel(T).sample`
 - `Gumbel(T).sampleFrom`
 - `Gumbel(T).fill`
 - `Gumbel(T).fillFrom`
 - `Frechet(T)`
 - `Frechet(T).init`
+- `Frechet(T).locationValue`
+- `Frechet(T).scaleValue`
+- `Frechet(T).shapeValue`
 - `Frechet(T).sample`
 - `Frechet(T).sampleFrom`
 - `Frechet(T).fill`

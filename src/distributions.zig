@@ -3825,6 +3825,14 @@ pub fn Gumbel(comptime T: type) type {
             return .{ .location = location, .scale = scale };
         }
 
+        pub fn locationValue(self: Self) T {
+            return self.location;
+        }
+
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -3903,6 +3911,18 @@ pub fn Frechet(comptime T: type) type {
             if (!(scale > 0) or !(shape > 0)) return error.InvalidParameter;
             if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale, .shape = shape };
+        }
+
+        pub fn locationValue(self: Self) T {
+            return self.location;
+        }
+
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
+        }
+
+        pub fn shapeValue(self: Self) T {
+            return self.shape;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -8219,6 +8239,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expectError(error.InvalidParameter, fillGumbelCheckedFrom(&direct_engine, f64, &direct_gumbel_buf, 0, 0));
     const gumbel_sampler = try Gumbel(f64).init(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), gumbel_sampler.locationValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), gumbel_sampler.scaleValue(), 1e-12);
     gumbel_sampler.fillFrom(&direct_engine, &direct_gumbel_buf);
     for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try gumbelCheckedFrom(&direct_engine, f64, 0, 1)));
@@ -8239,6 +8261,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (direct_frechet_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expectError(error.InvalidParameter, fillFrechetCheckedFrom(&direct_engine, f64, &direct_frechet_buf, 0, 1, 0));
     const frechet_sampler = try Frechet(f64).init(0, 1, 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), frechet_sampler.locationValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), frechet_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), frechet_sampler.shapeValue(), 1e-12);
     frechet_sampler.fillFrom(&direct_engine, &direct_frechet_buf);
     for (direct_frechet_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try frechetCheckedFrom(&direct_engine, f64, 0, 1, 2) >= 0);

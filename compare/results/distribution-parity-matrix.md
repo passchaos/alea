@@ -36,8 +36,8 @@ Zig-native way.
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof accessor |
 | FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2 accessors |
 | StudentT | Covered: `studentT`, `StudentT(T)`, including dof accessor |
-| Gumbel | Covered: `gumbel`, `Gumbel(T)` |
-| Frechet | Covered: `frechet`, `Frechet(T)` |
+| Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale accessors |
+| Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape accessors |
 | SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter accessors |
 | Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, and range-builder constructors |
 | UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)` |
