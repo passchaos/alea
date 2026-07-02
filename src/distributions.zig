@@ -2885,6 +2885,7 @@ pub fn logNormalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: 
 
 pub fn logNormalFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
+    if (stddev == 0) return @exp(mean);
     if (mean == 0) return @exp(stddev * Rng.standardNormalFastFrom(source, T));
     return @exp(mean + stddev * Rng.standardNormalFastFrom(source, T));
 }
@@ -2896,6 +2897,10 @@ pub fn fillLogNormal(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) 
 pub fn fillLogNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
+    if (stddev == 0) {
+        @memset(dest, @exp(mean));
+        return;
+    }
     if (mean == 0 and stddev != 1) {
         Rng.fillNormalFrom(source, T, dest, 0, 1);
         scaleInPlace(T, dest, stddev);
@@ -13610,6 +13615,66 @@ test "invalid normal exponential wrapper helpers do not consume random stream" {
 
     var exponential_buf: [4]f64 = undefined;
     try std.testing.expectError(error.InvalidParameter, fillExponentialCheckedFrom(&engine, f64, &exponential_buf, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate normal and log-normal helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1f6);
+    var control = alea.ScalarPrng.init(0x5150_d1f6);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 2.5), normalFrom(&engine, f64, 2.5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, -3.75), try normalChecked(rng, f64, -3.75, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var normal_buf: [5]f64 = undefined;
+    fillNormalFrom(&engine, f64, &normal_buf, 6.25, 0);
+    for (normal_buf) |value| try std.testing.expectEqual(@as(f64, 6.25), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillNormalChecked(rng, f64, &normal_buf, -8.5, 0);
+    for (normal_buf) |value| try std.testing.expectEqual(@as(f64, -8.5), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 1), logNormalFrom(&engine, f64, 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const log_mean: f64 = 0.75;
+    const log_expected = @exp(log_mean);
+    try std.testing.expectEqual(log_expected, try logNormalCheckedFrom(&engine, f64, log_mean, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var log_normal_buf: [5]f64 = undefined;
+    fillLogNormalFrom(&engine, f64, &log_normal_buf, 0, 0);
+    for (log_normal_buf) |value| try std.testing.expectEqual(@as(f64, 1), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillLogNormalChecked(rng, f64, &log_normal_buf, log_mean, 0);
+    for (log_normal_buf) |value| try std.testing.expectEqual(log_expected, value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var normal_sampler = try Normal(f64).init(1.25, 0);
+    try std.testing.expectEqual(@as(f64, 1.25), normal_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    normal_sampler.fillFrom(&engine, &normal_buf);
+    for (normal_buf) |value| try std.testing.expectEqual(@as(f64, 1.25), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var log_normal_sampler = try LogNormal(f64).init(log_mean, 0);
+    try std.testing.expectEqual(log_expected, log_normal_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    log_normal_sampler.fillFrom(&engine, &log_normal_buf);
+    for (log_normal_buf) |value| try std.testing.expectEqual(log_expected, value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var zero_cv_log_normal_sampler = try LogNormal(f64).initMeanCv(0, 0);
+    try std.testing.expectEqual(@as(f64, 0), zero_cv_log_normal_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    zero_cv_log_normal_sampler.fillFrom(&engine, &log_normal_buf);
+    for (log_normal_buf) |value| try std.testing.expectEqual(@as(f64, 0), value);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

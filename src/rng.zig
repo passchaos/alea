@@ -550,6 +550,10 @@ pub fn fillNormal(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) vo
 pub fn fillNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
+    if (stddev == 0) {
+        @memset(dest, mean);
+        return;
+    }
     if (mean == 0 and stddev == 1) {
         for (dest) |*item| item.* = standardNormalFastFrom(source, T);
         return;
@@ -1496,6 +1500,7 @@ pub inline fn standardNormalFastFrom(source: anytype, comptime T: type) T {
 pub inline fn normalFastFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
+    if (stddev == 0) return mean;
     return mean + stddev * standardNormalFastFrom(source, T);
 }
 
@@ -3277,6 +3282,31 @@ test "invalid facade scalar helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, rng.exponentialChecked(f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate normal helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba8);
+    var control = alea.ScalarPrng.init(0x5150_ba8);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 3.5), rng.normal(f64, 3.5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, -2.25), normalFastFrom(&engine, f64, -2.25, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 4.75), try rng.normalChecked(f64, 4.75, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [5]f64 = undefined;
+    rng.fillNormal(f64, &out, -7.125, 0);
+    for (out) |sample| try std.testing.expectEqual(@as(f64, -7.125), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillNormalCheckedFrom(&engine, f64, &out, 9.5, 0);
+    for (out) |sample| try std.testing.expectEqual(@as(f64, 9.5), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
