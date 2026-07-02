@@ -384,7 +384,10 @@ Single-shot helpers:
   `fillVectorNormalInverseGaussian`, `fillVectorNormalInverseGaussianFrom`,
   `fillVectorNormalInverseGaussianChecked`, `fillVectorNormalInverseGaussianCheckedFrom`,
   `zipf`, `zipfFrom`, `zipfChecked`, `zipfCheckedFrom`, `fillZipf`,
-  `fillZipfFrom`, `fillZipfChecked`, `fillZipfCheckedFrom`, `zeta`,
+  `fillZipfFrom`, `fillZipfChecked`, `fillZipfCheckedFrom`,
+  `vectorZipf`, `vectorZipfFrom`, `vectorZipfChecked`,
+  `vectorZipfCheckedFrom`, `fillVectorZipf`, `fillVectorZipfFrom`,
+  `fillVectorZipfChecked`, `fillVectorZipfCheckedFrom`, `zeta`,
   `zetaFrom`, `zetaChecked`, `zetaCheckedFrom`, `fillZeta`, `fillZetaFrom`,
   `fillZetaChecked`, `fillZetaCheckedFrom`
 - `unitCircle`, `unitCircleFrom`, `fillUnitCircle`, `fillUnitCircleFrom`,
@@ -1510,6 +1513,16 @@ Reusable samplers:
 - `Zipf(T).sampleFrom`
 - `Zipf(T).fill`
 - `Zipf(T).fillFrom`
+- `VectorZipf(VectorType)`
+- `VectorZipf(VectorType).init`
+- `VectorZipf(VectorType).nValue`
+- `VectorZipf(VectorType).minValue`
+- `VectorZipf(VectorType).maxValue`
+- `VectorZipf(VectorType).exponentValue`
+- `VectorZipf(VectorType).sample`
+- `VectorZipf(VectorType).sampleFrom`
+- `VectorZipf(VectorType).fill`
+- `VectorZipf(VectorType).fillFrom`
 - `Zeta(T)`
 - `Zeta(T).init`
 - `Zeta(T).exponentValue`

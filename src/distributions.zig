@@ -10420,6 +10420,92 @@ pub fn fillZipfCheckedFrom(source: anytype, comptime T: type, dest: []T, n: T, e
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorZipf(rng: Rng, comptime VectorType: type, n: vectorChild(VectorType), exponent: vectorChild(VectorType)) VectorType {
+    return vectorZipfFrom(rng, VectorType, n, exponent);
+}
+
+pub fn vectorZipfFrom(source: anytype, comptime VectorType: type, n: vectorChild(VectorType), exponent: vectorChild(VectorType)) VectorType {
+    const sampler = VectorZipf(VectorType).init(n, exponent) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorZipfChecked(rng: Rng, comptime VectorType: type, n: vectorChild(VectorType), exponent: vectorChild(VectorType)) Error!VectorType {
+    return vectorZipfCheckedFrom(rng, VectorType, n, exponent);
+}
+
+pub fn vectorZipfCheckedFrom(source: anytype, comptime VectorType: type, n: vectorChild(VectorType), exponent: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorZipf(VectorType).init(n, exponent);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorZipf(rng: Rng, comptime VectorType: type, dest: []VectorType, n: vectorChild(VectorType), exponent: vectorChild(VectorType)) void {
+    fillVectorZipfFrom(rng, VectorType, dest, n, exponent);
+}
+
+pub fn fillVectorZipfFrom(source: anytype, comptime VectorType: type, dest: []VectorType, n: vectorChild(VectorType), exponent: vectorChild(VectorType)) void {
+    const sampler = VectorZipf(VectorType).init(n, exponent) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorZipfChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, n: vectorChild(VectorType), exponent: vectorChild(VectorType)) Error!void {
+    return fillVectorZipfCheckedFrom(rng, VectorType, dest, n, exponent);
+}
+
+pub fn fillVectorZipfCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, n: vectorChild(VectorType), exponent: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorZipf(VectorType).init(n, exponent);
+    sampler.fillFrom(source, dest);
+}
+
+pub fn VectorZipf(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Zipf(Child),
+
+        pub fn init(n: Child, exponent: Child) Error!Self {
+            return .{ .sampler = try Zipf(Child).init(n, exponent) };
+        }
+
+        pub fn nValue(self: Self) ?Child {
+            return self.sampler.nValue();
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn exponentValue(self: Self) Child {
+            return self.sampler.exponentValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Zipf(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -14293,6 +14379,45 @@ test "distribution vector helpers preserve support and stream shape" {
     for (nig_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const zipf_vec = try vectorZipfChecked(rng, @Vector(4, f64), 10, 1.5);
+    const direct_zipf_vec = try vectorZipfCheckedFrom(&direct_engine, @Vector(4, f64), 10, 1.5);
+    try std.testing.expectEqual(zipf_vec, direct_zipf_vec);
+    inline for (0..4) |lane| try std.testing.expect(zipf_vec[lane] >= 1 and zipf_vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_zipf_sampler = try VectorZipf(@Vector(4, f64)).init(10, 1.5);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), vector_zipf_sampler.nValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_zipf_sampler.minValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), vector_zipf_sampler.maxValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.5), vector_zipf_sampler.exponentValue(), 1e-12);
+    const sampled_zipf_vec = vector_zipf_sampler.sample(rng);
+    const direct_sampled_zipf_vec = vector_zipf_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_zipf_vec, direct_sampled_zipf_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_zipf_vec[lane] >= 1 and sampled_zipf_vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var zipf_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_zipf_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorZipfChecked(rng, @Vector(4, f64), &zipf_buf_vec, 10, 1.5);
+    try fillVectorZipfCheckedFrom(&direct_engine, @Vector(4, f64), &direct_zipf_buf_vec, 10, 1.5);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &zipf_buf_vec, &direct_zipf_buf_vec);
+    for (zipf_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 1 and vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_zipf_sampler.fill(rng, &zipf_buf_vec);
+    vector_zipf_sampler.fillFrom(&direct_engine, &direct_zipf_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &zipf_buf_vec, &direct_zipf_buf_vec);
+    for (zipf_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 1 and vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_zipf_degenerate = try VectorZipf(@Vector(4, f64)).init(10, std.math.inf(f64));
+    try std.testing.expect(vector_zipf_degenerate.nValue() == null);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_zipf_degenerate.maxValue(), 0);
+    const zipf_degenerate_vec = vector_zipf_degenerate.sample(rng);
+    const direct_zipf_degenerate_vec = vector_zipf_degenerate.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(zipf_degenerate_vec, direct_zipf_degenerate_vec);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), zipf_degenerate_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -14462,6 +14587,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorNormalInverseGaussianCheckedFrom(&engine, @Vector(4, f64), 1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorZipfCheckedFrom(&engine, @Vector(4, f64), 0, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -14554,6 +14682,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorNormalInverseGaussianCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 1, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorZipfCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 1.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -14667,6 +14798,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorNormalInverseGaussianCheckedFrom(&engine, @Vector(4, f64), &empty, 1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorZipfCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1.5);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -14728,6 +14861,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorInverseGaussianChecked(rng, @Vector(4, f64), &empty, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorNormalInverseGaussianChecked(rng, @Vector(4, f64), &empty, 1, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorZipfChecked(rng, @Vector(4, f64), &empty, 0, 1.5);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17637,6 +17772,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorNormalInverseGaussianFrom(&unchecked, @Vector(4, f64), &vector_nig_unchecked, 2, 1);
         try fillVectorNormalInverseGaussianCheckedFrom(&checked, @Vector(4, f64), &vector_nig_checked, 2, 1);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_nig_unchecked, &vector_nig_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_zipf_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_zipf_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorZipfFrom(&unchecked, @Vector(4, f64), &vector_zipf_unchecked, 10, 1.5);
+        try fillVectorZipfCheckedFrom(&checked, @Vector(4, f64), &vector_zipf_checked, 10, 1.5);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_zipf_unchecked, &vector_zipf_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

@@ -104,14 +104,14 @@ same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
 `fillVectorGamma*`, `vectorChiSquared*`, `fillVectorChiSquared*`,
 `vectorChi*`, `fillVectorChi*`, `vectorErlang*`, `fillVectorErlang*`,
 `vectorBeta*`, `fillVectorBeta*`, `vectorFisherF*`, `fillVectorFisherF*`, `vectorStudentT*`,
-`fillVectorStudentT*`, `vectorTriangular*`, `fillVectorTriangular*`, `vectorArcsine*`, `fillVectorArcsine*`, `vectorCauchy*`, `fillVectorCauchy*`, `vectorLaplace*`, `fillVectorLaplace*`, `vectorLogistic*`, `fillVectorLogistic*`, `vectorLogLogistic*`, `fillVectorLogLogistic*`, `vectorKumaraswamy*`, `fillVectorKumaraswamy*`, `vectorPowerFunction*`, `fillVectorPowerFunction*`, `vectorRayleigh*`, `fillVectorRayleigh*`, `vectorMaxwell*`, `fillVectorMaxwell*`, `vectorPareto*`, `fillVectorPareto*`, `vectorWeibull*`, `fillVectorWeibull*`, `vectorGumbel*`, `fillVectorGumbel*`, `vectorFrechet*`, `fillVectorFrechet*`, `vectorSkewNormal*`, `fillVectorSkewNormal*`, `vectorPert*`, `fillVectorPert*`, `vectorInverseGaussian*`, `fillVectorInverseGaussian*`, `vectorNormalInverseGaussian*`, `fillVectorNormalInverseGaussian*`,
+`fillVectorStudentT*`, `vectorTriangular*`, `fillVectorTriangular*`, `vectorArcsine*`, `fillVectorArcsine*`, `vectorCauchy*`, `fillVectorCauchy*`, `vectorLaplace*`, `fillVectorLaplace*`, `vectorLogistic*`, `fillVectorLogistic*`, `vectorLogLogistic*`, `fillVectorLogLogistic*`, `vectorKumaraswamy*`, `fillVectorKumaraswamy*`, `vectorPowerFunction*`, `fillVectorPowerFunction*`, `vectorRayleigh*`, `fillVectorRayleigh*`, `vectorMaxwell*`, `fillVectorMaxwell*`, `vectorPareto*`, `fillVectorPareto*`, `vectorWeibull*`, `fillVectorWeibull*`, `vectorGumbel*`, `fillVectorGumbel*`, `vectorFrechet*`, `fillVectorFrechet*`, `vectorSkewNormal*`, `fillVectorSkewNormal*`, `vectorPert*`, `fillVectorPert*`, `vectorInverseGaussian*`, `fillVectorInverseGaussian*`, `vectorNormalInverseGaussian*`, `fillVectorNormalInverseGaussian*`, `vectorZipf*`, `fillVectorZipf*`,
 `vectorStandardExponential*`,
 `fillVectorStandardExponential*`, `vectorExponential*`, and
 `fillVectorExponential*`; reusable vector samplers `VectorBernoulli`,
 `VectorBinomial`, `VectorGeometric`, `VectorGeometricFailures`, `VectorStandardGeometric`,
 `VectorPoisson`, `VectorUniform`, `VectorStandardNormal`, `VectorNormal`, `VectorLogNormal`,
 `VectorHalfNormal`, `VectorGamma`, `VectorChiSquared`, `VectorChi`, `VectorErlang`, `VectorBeta`,
-`VectorFisherF`, `VectorStudentT`, `VectorTriangular`, `VectorArcsine`, `VectorCauchy`, `VectorLaplace`, `VectorLogistic`, `VectorLogLogistic`, `VectorKumaraswamy`, `VectorPowerFunction`, `VectorRayleigh`, `VectorMaxwell`, `VectorPareto`, `VectorWeibull`, `VectorGumbel`, `VectorFrechet`, `VectorSkewNormal`, `VectorPert`, `VectorInverseGaussian`, `VectorNormalInverseGaussian`, `VectorStandardExponential`, and `VectorExponential`; strict interval samplers
+`VectorFisherF`, `VectorStudentT`, `VectorTriangular`, `VectorArcsine`, `VectorCauchy`, `VectorLaplace`, `VectorLogistic`, `VectorLogLogistic`, `VectorKumaraswamy`, `VectorPowerFunction`, `VectorRayleigh`, `VectorMaxwell`, `VectorPareto`, `VectorWeibull`, `VectorGumbel`, `VectorFrechet`, `VectorSkewNormal`, `VectorPert`, `VectorInverseGaussian`, `VectorNormalInverseGaussian`, `VectorZipf`, `VectorStandardExponential`, and `VectorExponential`; strict interval samplers
 `Open01` and `OpenClosed01` also sample/fill float vector slices.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
@@ -141,7 +141,7 @@ Single-shot helpers and reusable samplers cover:
 - triangular/vector triangular, arcsine/vector arcsine, cauchy/vector cauchy, laplace/vector laplace, logistic/vector logistic, log-logistic/vector log-logistic, kumaraswamy/vector kumaraswamy,
   power-function/vector power-function, rayleigh/vector rayleigh, maxwell/vector maxwell, pareto/vector pareto, weibull/vector weibull
 - gumbel/vector gumbel, frechet/vector frechet, skew-normal/vector skew-normal, PERT/vector PERT
-- inverse Gaussian/vector inverse Gaussian, normal-inverse Gaussian/vector normal-inverse Gaussian, Zipf, Zeta
+- inverse Gaussian/vector inverse Gaussian, normal-inverse Gaussian/vector normal-inverse Gaussian, Zipf/vector Zipf, Zeta
 - unit circle/disc and unit sphere/ball geometry samplers
 - dirichlet
 
@@ -335,7 +335,7 @@ benchmark shape.
 Use `vectorbench` for focused SIMD/vector-slice evidence without slowing the
 full throughput suite. The current local rows cover packed bool chance/ratio,
 strict-open/open-closed/range vector float fills, distribution-namespace vector
-Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/cauchy/laplace/logistic/log-logistic/kumaraswamy/power-function/rayleigh/maxwell/pareto/weibull/gumbel/frechet/skew-normal/PERT/inverse-Gaussian/normal-inverse-Gaussian/exponential wrappers over those kernels, and
+Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/cauchy/laplace/logistic/log-logistic/kumaraswamy/power-function/rayleigh/maxwell/pareto/weibull/gumbel/frechet/skew-normal/PERT/inverse-Gaussian/normal-inverse-Gaussian/Zipf/exponential wrappers over those kernels, and
 scalar-lane normal/exponential vector fills;
 representative rows are about 1.01B lanes/s
 for `fillVectorRange(f32x8)`, about 694M lanes/s for
