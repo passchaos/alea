@@ -232,7 +232,11 @@ Single-shot helpers:
   `vectorStandardGeometricFrom`, `fillVectorStandardGeometric`,
   `fillVectorStandardGeometricFrom`, `poissonAhrensDieter`,
   `poissonAhrensDieterFrom`, `poissonAhrensDieterChecked`,
-  `poissonAhrensDieterCheckedFrom`
+  `poissonAhrensDieterCheckedFrom`,
+  `vectorPoissonAhrensDieter`, `vectorPoissonAhrensDieterFrom`,
+  `vectorPoissonAhrensDieterChecked`, `vectorPoissonAhrensDieterCheckedFrom`,
+  `fillVectorPoissonAhrensDieter`, `fillVectorPoissonAhrensDieterFrom`,
+  `fillVectorPoissonAhrensDieterChecked`, `fillVectorPoissonAhrensDieterCheckedFrom`
 - `gamma`, `gammaFrom`, `gammaChecked`, `gammaCheckedFrom`, `fillGamma`,
   `fillGammaFrom`, `fillGammaChecked`, `fillGammaCheckedFrom`,
   `vectorGamma`, `vectorGammaFrom`, `vectorGammaChecked`,
@@ -571,6 +575,17 @@ Reusable samplers:
 - `Uniform(T).sampleFrom`
 - `Uniform(T).fill`
 - `Uniform(T).fillFrom`
+- `VectorPoissonAhrensDieter(VectorType)`
+- `VectorPoissonAhrensDieter(VectorType).init`
+- `VectorPoissonAhrensDieter(VectorType).lambdaValue`
+- `VectorPoissonAhrensDieter(VectorType).expectedValue`
+- `VectorPoissonAhrensDieter(VectorType).varianceValue`
+- `VectorPoissonAhrensDieter(VectorType).minValue`
+- `VectorPoissonAhrensDieter(VectorType).maxValue`
+- `VectorPoissonAhrensDieter(VectorType).sample`
+- `VectorPoissonAhrensDieter(VectorType).sampleFrom`
+- `VectorPoissonAhrensDieter(VectorType).fill`
+- `VectorPoissonAhrensDieter(VectorType).fillFrom`
 - `VectorUniform(VectorType)`
 - `VectorUniform(VectorType).init`
 - `VectorUniform(VectorType).initInclusive`

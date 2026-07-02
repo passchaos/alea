@@ -3766,6 +3766,99 @@ pub fn poissonAhrensDieterCheckedFrom(source: anytype, lambda: f64) Error!u64 {
     return poissonAhrensDieterFrom(source, lambda);
 }
 
+pub fn vectorPoissonAhrensDieter(rng: Rng, comptime VectorType: type, lambda: f64) VectorType {
+    return vectorPoissonAhrensDieterFrom(rng, VectorType, lambda);
+}
+
+pub fn vectorPoissonAhrensDieterFrom(source: anytype, comptime VectorType: type, lambda: f64) VectorType {
+    const dist = VectorPoissonAhrensDieter(VectorType).init(lambda) catch unreachable;
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorPoissonAhrensDieterChecked(rng: Rng, comptime VectorType: type, lambda: f64) Error!VectorType {
+    return vectorPoissonAhrensDieterCheckedFrom(rng, VectorType, lambda);
+}
+
+pub fn vectorPoissonAhrensDieterCheckedFrom(source: anytype, comptime VectorType: type, lambda: f64) Error!VectorType {
+    const dist = try VectorPoissonAhrensDieter(VectorType).init(lambda);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorPoissonAhrensDieter(rng: Rng, comptime VectorType: type, dest: []VectorType, lambda: f64) void {
+    fillVectorPoissonAhrensDieterFrom(rng, VectorType, dest, lambda);
+}
+
+pub fn fillVectorPoissonAhrensDieterFrom(source: anytype, comptime VectorType: type, dest: []VectorType, lambda: f64) void {
+    const dist = VectorPoissonAhrensDieter(VectorType).init(lambda) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorPoissonAhrensDieterChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, lambda: f64) Error!void {
+    return fillVectorPoissonAhrensDieterCheckedFrom(rng, VectorType, dest, lambda);
+}
+
+pub fn fillVectorPoissonAhrensDieterCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, lambda: f64) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorPoissonAhrensDieter(VectorType).init(lambda);
+    dist.fillFrom(source, dest);
+}
+
+pub fn VectorPoissonAhrensDieter(comptime VectorType: type) type {
+    const info = vectorInfo(VectorType);
+    if (info.child != u64) @compileError("VectorPoissonAhrensDieter expects a u64 vector");
+
+    return struct {
+        const Self = @This();
+
+        method: PoissonAhrensDieter,
+
+        pub fn init(lambda: f64) Error!Self {
+            if (!(lambda >= 12) or !std.math.isFinite(lambda)) return error.InvalidParameter;
+            return .{ .method = PoissonAhrensDieter.init(lambda) };
+        }
+
+        pub fn lambdaValue(self: Self) f64 {
+            return self.method.lambda;
+        }
+
+        pub fn expectedValue(self: Self) f64 {
+            return self.lambdaValue();
+        }
+
+        pub fn varianceValue(self: Self) f64 {
+            return self.lambdaValue();
+        }
+
+        pub fn minValue(self: Self) u64 {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?u64 {
+            _ = self;
+            return null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = self.method.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 fn poissonProduct(rng: Rng, threshold: f64) u64 {
     return poissonProductFrom(rng, threshold);
 }
@@ -13845,6 +13938,12 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(checked_poisson_vec[lane] < 64);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const poisson_ad_vec = try vectorPoissonAhrensDieterChecked(rng, @Vector(4, u64), 20);
+    const direct_poisson_ad_vec = try vectorPoissonAhrensDieterCheckedFrom(&direct_engine, @Vector(4, u64), 20);
+    try std.testing.expectEqual(poisson_ad_vec, direct_poisson_ad_vec);
+    inline for (0..4) |lane| try std.testing.expect(poisson_ad_vec[lane] < 128);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const vector_poisson_sampler = try VectorPoisson(@Vector(4, u64)).init(12);
     try std.testing.expectApproxEqAbs(@as(f64, 12), vector_poisson_sampler.lambdaValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 12), vector_poisson_sampler.expectedValue(), 1e-12);
@@ -13855,6 +13954,18 @@ test "distribution vector helpers preserve support and stream shape" {
     const direct_sampled_poisson_vec = vector_poisson_sampler.sampleFrom(&direct_engine);
     try std.testing.expectEqual(sampled_poisson_vec, direct_sampled_poisson_vec);
     inline for (0..4) |lane| try std.testing.expect(sampled_poisson_vec[lane] < 64);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_poisson_ad_sampler = try VectorPoissonAhrensDieter(@Vector(4, u64)).init(20);
+    try std.testing.expectApproxEqAbs(@as(f64, 20), vector_poisson_ad_sampler.lambdaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 20), vector_poisson_ad_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 20), vector_poisson_ad_sampler.varianceValue(), 1e-12);
+    try std.testing.expectEqual(@as(u64, 0), vector_poisson_ad_sampler.minValue());
+    try std.testing.expect(vector_poisson_ad_sampler.maxValue() == null);
+    const sampled_poisson_ad_vec = vector_poisson_ad_sampler.sample(rng);
+    const direct_sampled_poisson_ad_vec = vector_poisson_ad_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_poisson_ad_vec, direct_sampled_poisson_ad_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_poisson_ad_vec[lane] < 128);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     const zero_poisson_sampler = try VectorPoisson(@Vector(4, u64)).init(0);
@@ -13875,6 +13986,18 @@ test "distribution vector helpers preserve support and stream shape" {
     vector_poisson_sampler.fillFrom(&direct_engine, &direct_poisson_buf);
     try std.testing.expectEqualSlices(@Vector(4, u64), &poisson_buf, &direct_poisson_buf);
     for (poisson_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] < 64);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    try fillVectorPoissonAhrensDieterChecked(rng, @Vector(4, u64), &poisson_buf, 20);
+    try fillVectorPoissonAhrensDieterCheckedFrom(&direct_engine, @Vector(4, u64), &direct_poisson_buf, 20);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &poisson_buf, &direct_poisson_buf);
+    for (poisson_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] < 128);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    vector_poisson_ad_sampler.fill(rng, &poisson_buf);
+    vector_poisson_ad_sampler.fillFrom(&direct_engine, &direct_poisson_buf);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &poisson_buf, &direct_poisson_buf);
+    for (poisson_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] < 128);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     zero_poisson_sampler.fill(rng, &poisson_buf);
@@ -15331,8 +15454,14 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorPoissonCheckedFrom(&engine, @Vector(4, u64), std.math.inf(f64)));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorPoissonAhrensDieterCheckedFrom(&engine, @Vector(4, u64), 11));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var poisson_buf: [4]@Vector(4, u64) = undefined;
     try std.testing.expectError(error.InvalidParameter, fillVectorPoissonCheckedFrom(&engine, @Vector(4, u64), &poisson_buf, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorPoissonAhrensDieterCheckedFrom(&engine, @Vector(4, u64), &poisson_buf, 11));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.EmptyRange, vectorUniformCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
@@ -15587,6 +15716,10 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorPoissonCheckedFrom(&engine, @Vector(4, u64), &empty_poisson, std.math.inf(f64));
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorPoissonChecked(rng, @Vector(4, u64), &empty_poisson, std.math.inf(f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorPoissonAhrensDieterCheckedFrom(&engine, @Vector(4, u64), &empty_poisson, 11);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorPoissonAhrensDieterChecked(rng, @Vector(4, u64), &empty_poisson, 11);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try fillVectorBernoulliCheckedFrom(&engine, @Vector(8, bool), &empty_bool, -0.1);

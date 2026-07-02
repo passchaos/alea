@@ -56,6 +56,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoisson u64x4 lambda=12", lanes / 4, 0xb012, fillDistPoissonU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoisson u64x4 direct lambda=12", lanes / 4, 0xb012, fillDistPoissonU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorPoisson.fill u64x4 lambda=12", lanes / 4, 0xb012, fillDistPoissonSamplerU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoissonAhrensDieter u64x4 lambda=20", lanes / 4, 0xb020, fillDistPoissonAhrensDieterU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoissonAhrensDieter u64x4 direct lambda=20", lanes / 4, 0xb020, fillDistPoissonAhrensDieterU64Direct);
+    try benchVectorU64x4(io, stdout, "alea distributions.VectorPoissonAhrensDieter.fill u64x4 lambda=20", lanes / 4, 0xb020, fillDistPoissonAhrensDieterSamplerU64);
     try benchFillVectorOpenF32(io, stdout, "alea fillVectorOpen f32x8", lanes);
     try benchFillVectorOpenClosedF32(io, stdout, "alea fillVectorOpenClosed f32x8", lanes);
     try benchFillVectorRangeF32(io, stdout, "alea fillVectorRange f32x8", lanes);
@@ -456,6 +459,19 @@ fn fillDistPoissonU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vect
 
 fn fillDistPoissonSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
     const sampler = alea.distributions.VectorPoisson(@Vector(4, u64)).init(12) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistPoissonAhrensDieterU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorPoissonAhrensDieter(rng, @Vector(4, u64), dest, 20);
+}
+
+fn fillDistPoissonAhrensDieterU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorPoissonAhrensDieterFrom(engine, @Vector(4, u64), dest, 20);
+}
+
+fn fillDistPoissonAhrensDieterSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    const sampler = alea.distributions.VectorPoissonAhrensDieter(@Vector(4, u64)).init(20) catch unreachable;
     sampler.fill(rng, dest);
 }
 
