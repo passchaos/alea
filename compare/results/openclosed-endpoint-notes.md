@@ -59,6 +59,9 @@ Rust.
 - Skipping explicit `littleToNative(u64, raw_word)` in the local x86_64 probe
   keeps matching checksums but regresses or ties, so the portable endian-normalized
   form remains preferable.
+- Narrowing the 53-bit shifted raw value to `u53` / `u54` before
+  `@floatFromInt` keeps matching checksums but regresses versus the current
+  `u64` shift-plus-one expression.
 - Raw byte-buffer reads that skip proper word conversion can appear fast but
   produce invalid means/checksums and are rejected.
 
