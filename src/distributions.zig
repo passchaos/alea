@@ -11184,6 +11184,7 @@ pub fn VectorZipf(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(1);
             var out: VectorType = undefined;
             inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -11194,6 +11195,10 @@ pub fn VectorZipf(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(1)));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -11249,7 +11254,7 @@ pub fn Zipf(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            if (std.math.isInf(self.exponent)) return 1;
+            if (self.isDegenerate()) return 1;
 
             while (true) {
                 const inv_b = self.invCdf(Rng.floatFrom(source, T));
@@ -11266,7 +11271,15 @@ pub fn Zipf(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, 1);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.maxValue() == 1;
         }
 
         fn invCdf(self: Self, p: T) T {
@@ -16555,6 +16568,26 @@ test "degenerate discrete distribution helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
     vector_geometric_failures.fillFrom(&engine, &vector_u64_buf);
     for (vector_u64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const zipf_sampler = try Zipf(f64).init(1, 1.5);
+    try std.testing.expectEqual(@as(f64, 1), zipf_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(f64, 1), try zipfChecked(rng, f64, 1, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var f64_buf: [5]f64 = undefined;
+    zipf_sampler.fillFrom(&engine, &f64_buf);
+    for (f64_buf) |sample| try std.testing.expectEqual(@as(f64, 1), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_zipf_sampler = try VectorZipf(@Vector(4, f64)).init(1, 1.5);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), vector_zipf_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_f64_buf: [3]@Vector(4, f64) = undefined;
+    vector_zipf_sampler.fillFrom(&engine, &vector_f64_buf);
+    for (vector_f64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
