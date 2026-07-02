@@ -1699,6 +1699,14 @@ pub fn HalfNormal(comptime T: type) type {
             return self.scale;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.scale * @sqrt(2 / @as(T, @floatCast(std.math.pi)));
+        }
+
+        pub fn varianceValue(self: Self) T {
+            return self.scale * self.scale * (1 - 2 / @as(T, @floatCast(std.math.pi)));
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8236,6 +8244,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, fillHalfNormalCheckedFrom(&direct_engine, f64, &direct_half_normal_buf, 0));
     const half_normal_sampler = try HalfNormal(f64).init(2);
     try std.testing.expectApproxEqAbs(@as(f64, 2), half_normal_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(2.0 / std.math.pi), half_normal_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4) * (1 - 2.0 / std.math.pi), half_normal_sampler.varianceValue(), 1e-12);
     half_normal_sampler.fillFrom(&direct_engine, &direct_half_normal_buf);
     for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try halfNormalCheckedFrom(&direct_engine, f64, 2) >= 0);

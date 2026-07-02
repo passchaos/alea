@@ -392,6 +392,8 @@ Reusable samplers:
 - `HalfNormal(T)`
 - `HalfNormal(T).init`
 - `HalfNormal(T).scaleValue`
+- `HalfNormal(T).expectedValue`
+- `HalfNormal(T).varianceValue`
 - `HalfNormal(T).sample`
 - `HalfNormal(T).sampleFrom`
 - `HalfNormal(T).fill`
