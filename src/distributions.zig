@@ -2884,6 +2884,54 @@ pub fn fillLogNormalApproxF32CheckedFrom(source: anytype, dest: []f32, mean: f32
     fillLogNormalApproxF32From(source, dest, mean, stddev);
 }
 
+pub fn vectorLogNormalApproxF32(rng: Rng, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+    return vectorLogNormalApproxF32From(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorLogNormalApproxF32From(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorLogNormalApproxF32 expects an f32 vector");
+    std.debug.assert(logNormalApproxF32ParametersValid(mean, stddev));
+
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = logNormalApproxF32From(source, mean, stddev);
+    return out;
+}
+
+pub fn vectorLogNormalApproxF32Checked(rng: Rng, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
+    return vectorLogNormalApproxF32CheckedFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorLogNormalApproxF32CheckedFrom(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorLogNormalApproxF32Checked expects an f32 vector");
+    if (!logNormalApproxF32ParametersValid(mean, stddev)) return error.InvalidParameter;
+    return vectorLogNormalApproxF32From(source, VectorType, mean, stddev);
+}
+
+pub fn fillVectorLogNormalApproxF32(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
+    fillVectorLogNormalApproxF32From(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorLogNormalApproxF32From(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorLogNormalApproxF32 expects an f32 vector");
+    std.debug.assert(logNormalApproxF32ParametersValid(mean, stddev));
+    for (dest) |*item| item.* = vectorLogNormalApproxF32From(source, VectorType, mean, stddev);
+}
+
+pub fn fillVectorLogNormalApproxF32Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) Error!void {
+    return fillVectorLogNormalApproxF32CheckedFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorLogNormalApproxF32CheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorLogNormalApproxF32Checked expects an f32 vector");
+    if (dest.len == 0) return;
+    if (!logNormalApproxF32ParametersValid(mean, stddev)) return error.InvalidParameter;
+    fillVectorLogNormalApproxF32From(source, VectorType, dest, mean, stddev);
+}
+
 pub fn LogNormal(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -3075,6 +3123,58 @@ pub const LogNormalApproxF32 = struct {
         fillLogNormalApproxF32From(source, dest, self.mean, self.stddev);
     }
 };
+
+pub fn VectorLogNormalApproxF32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorLogNormalApproxF32 expects an f32 vector");
+
+    return struct {
+        const Self = @This();
+
+        pub const max_abs_mean: f32 = log_normal_approx_f32_max_abs_mean;
+        pub const max_stddev: f32 = log_normal_approx_f32_max_stddev;
+
+        mean: f32,
+        stddev: f32,
+
+        pub fn init(mean: f32, stddev: f32) Error!Self {
+            if (!logNormalApproxF32ParametersValid(mean, stddev)) return error.InvalidParameter;
+            return .{ .mean = mean, .stddev = stddev };
+        }
+
+        pub fn meanValue(self: Self) f32 {
+            return self.mean;
+        }
+
+        pub fn stddevValue(self: Self) f32 {
+            return self.stddev;
+        }
+
+        pub fn maxAbsMeanValue(_: Self) f32 {
+            return max_abs_mean;
+        }
+
+        pub fn maxStddevValue(_: Self) f32 {
+            return max_stddev;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorLogNormalApproxF32From(source, VectorType, self.mean, self.stddev);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            fillVectorLogNormalApproxF32From(source, VectorType, dest, self.mean, self.stddev);
+        }
+    };
+}
 
 pub fn halfNormal(rng: Rng, comptime T: type, scale: T) T {
     return halfNormalFrom(rng, T, scale);
@@ -13743,6 +13843,23 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(sampled_log_normal_vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const approx_log_normal_vec = try vectorLogNormalApproxF32Checked(rng, @Vector(8, f32), 0, 0.25);
+    const direct_approx_log_normal_vec = try vectorLogNormalApproxF32CheckedFrom(&direct_engine, @Vector(8, f32), 0, 0.25);
+    try std.testing.expectEqual(approx_log_normal_vec, direct_approx_log_normal_vec);
+    inline for (0..8) |lane| try std.testing.expect(approx_log_normal_vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_approx_log_normal_sampler = try VectorLogNormalApproxF32(@Vector(8, f32)).init(0, 0.25);
+    try std.testing.expectEqual(@as(f32, 0), vector_approx_log_normal_sampler.meanValue());
+    try std.testing.expectEqual(@as(f32, 0.25), vector_approx_log_normal_sampler.stddevValue());
+    try std.testing.expectEqual(VectorLogNormalApproxF32(@Vector(8, f32)).max_abs_mean, vector_approx_log_normal_sampler.maxAbsMeanValue());
+    try std.testing.expectEqual(VectorLogNormalApproxF32(@Vector(8, f32)).max_stddev, vector_approx_log_normal_sampler.maxStddevValue());
+    const sampled_approx_log_normal_vec = vector_approx_log_normal_sampler.sample(rng);
+    const direct_sampled_approx_log_normal_vec = vector_approx_log_normal_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_approx_log_normal_vec, direct_sampled_approx_log_normal_vec);
+    inline for (0..8) |lane| try std.testing.expect(sampled_approx_log_normal_vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const exp_vec = try vectorExponentialChecked(rng, @Vector(8, f32), 2);
     const direct_exp_vec = try vectorExponentialCheckedFrom(&direct_engine, @Vector(8, f32), 2);
     try std.testing.expectEqual(exp_vec, direct_exp_vec);
@@ -13838,6 +13955,19 @@ test "distribution vector helpers preserve support and stream shape" {
     vector_log_normal_sampler.fillFrom(&direct_engine, &direct_log_normal_buf_vec);
     try std.testing.expectEqualSlices(@Vector(4, f64), &log_normal_buf_vec, &direct_log_normal_buf_vec);
     for (log_normal_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var approx_log_normal_buf_vec: [3]@Vector(8, f32) = undefined;
+    var direct_approx_log_normal_buf_vec: [3]@Vector(8, f32) = undefined;
+    try fillVectorLogNormalApproxF32Checked(rng, @Vector(8, f32), &approx_log_normal_buf_vec, 0, 0.25);
+    try fillVectorLogNormalApproxF32CheckedFrom(&direct_engine, @Vector(8, f32), &direct_approx_log_normal_buf_vec, 0, 0.25);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &approx_log_normal_buf_vec, &direct_approx_log_normal_buf_vec);
+    for (approx_log_normal_buf_vec) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_approx_log_normal_sampler.fill(rng, &approx_log_normal_buf_vec);
+    vector_approx_log_normal_sampler.fillFrom(&direct_engine, &direct_approx_log_normal_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &approx_log_normal_buf_vec, &direct_approx_log_normal_buf_vec);
+    for (approx_log_normal_buf_vec) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     const half_normal_vec = try vectorHalfNormalChecked(rng, @Vector(4, f64), 2);
@@ -15069,6 +15199,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorLogNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorLogNormalApproxF32CheckedFrom(&engine, @Vector(8, f32), 0, 0.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -15167,6 +15300,10 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorLogNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var approx_log_normal_buf: [4]@Vector(8, f32) = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillVectorLogNormalApproxF32CheckedFrom(&engine, @Vector(8, f32), &approx_log_normal_buf, 0, 0.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -15312,6 +15449,9 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLogNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
+    var empty_f32: [0]@Vector(8, f32) = .{};
+    try fillVectorLogNormalApproxF32CheckedFrom(&engine, @Vector(8, f32), &empty_f32, 0, 0.5);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorGammaCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1);
@@ -15377,6 +15517,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorNormalChecked(rng, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLogNormalChecked(rng, @Vector(4, f64), &empty, 0, -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorLogNormalApproxF32Checked(rng, @Vector(8, f32), &empty_f32, 0, 0.5);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorHalfNormalChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());

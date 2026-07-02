@@ -181,6 +181,10 @@ Single-shot helpers:
   `logNormalApproxF32Checked`, `logNormalApproxF32CheckedFrom`,
   `fillLogNormalApproxF32`, `fillLogNormalApproxF32From`,
   `fillLogNormalApproxF32Checked`, `fillLogNormalApproxF32CheckedFrom`,
+  `vectorLogNormalApproxF32`, `vectorLogNormalApproxF32From`,
+  `vectorLogNormalApproxF32Checked`, `vectorLogNormalApproxF32CheckedFrom`,
+  `fillVectorLogNormalApproxF32`, `fillVectorLogNormalApproxF32From`,
+  `fillVectorLogNormalApproxF32Checked`, `fillVectorLogNormalApproxF32CheckedFrom`,
   `halfNormal`, `halfNormalFrom`, `halfNormalChecked`,
   `halfNormalCheckedFrom`, `fillHalfNormal`, `fillHalfNormalFrom`,
   `fillHalfNormalChecked`, `fillHalfNormalCheckedFrom`, `vectorHalfNormal`,
@@ -741,6 +745,18 @@ Reusable samplers:
 - `LogNormalApproxF32.sampleFrom`
 - `LogNormalApproxF32.fill`
 - `LogNormalApproxF32.fillFrom`
+- `VectorLogNormalApproxF32(VectorType)`
+- `VectorLogNormalApproxF32(VectorType).max_abs_mean`
+- `VectorLogNormalApproxF32(VectorType).max_stddev`
+- `VectorLogNormalApproxF32(VectorType).init`
+- `VectorLogNormalApproxF32(VectorType).meanValue`
+- `VectorLogNormalApproxF32(VectorType).stddevValue`
+- `VectorLogNormalApproxF32(VectorType).maxAbsMeanValue`
+- `VectorLogNormalApproxF32(VectorType).maxStddevValue`
+- `VectorLogNormalApproxF32(VectorType).sample`
+- `VectorLogNormalApproxF32(VectorType).sampleFrom`
+- `VectorLogNormalApproxF32(VectorType).fill`
+- `VectorLogNormalApproxF32(VectorType).fillFrom`
 - `HalfNormal(T)`
 - `HalfNormal(T).init`
 - `HalfNormal(T).scaleValue`
