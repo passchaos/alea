@@ -302,6 +302,8 @@ Reusable samplers:
 - `Hypergeometric.populationValue`
 - `Hypergeometric.successesValue`
 - `Hypergeometric.drawsValue`
+- `Hypergeometric.expectedValue`
+- `Hypergeometric.varianceValue`
 - `Hypergeometric.sample`
 - `Hypergeometric.sampleFrom`
 - `Hypergeometric.fill`

@@ -597,6 +597,22 @@ pub const Hypergeometric = struct {
         return self.draws;
     }
 
+    pub fn expectedValue(self: Hypergeometric) f64 {
+        if (self.population == 0) return 0;
+        return @as(f64, @floatFromInt(self.draws)) *
+            @as(f64, @floatFromInt(self.successes)) /
+            @as(f64, @floatFromInt(self.population));
+    }
+
+    pub fn varianceValue(self: Hypergeometric) f64 {
+        if (self.population <= 1) return 0;
+        const population: f64 = @floatFromInt(self.population);
+        const successes: f64 = @floatFromInt(self.successes);
+        const draws: f64 = @floatFromInt(self.draws);
+        const p = successes / population;
+        return draws * p * (1 - p) * (population - draws) / (population - 1);
+    }
+
     pub fn sample(self: *const Hypergeometric, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -9048,6 +9064,8 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     try std.testing.expectEqual(@as(u64, 100), hg.populationValue());
     try std.testing.expectEqual(@as(u64, 30), hg.successesValue());
     try std.testing.expectEqual(@as(u64, 10), hg.drawsValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 3), hg.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 21.0 / 11.0), hg.varianceValue(), 1e-12);
     const samples = 20_000;
     var nb_sum: f64 = 0;
     var hg_sum: f64 = 0;
