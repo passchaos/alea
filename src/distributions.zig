@@ -8114,7 +8114,8 @@ pub fn rayleighCheckedFrom(source: anytype, comptime T: type, scale: T) Error!T 
 
 pub fn rayleighFrom(source: anytype, comptime T: type, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) return 0;
 
     return scale * @sqrt(-2 * @log(Rng.floatOpenFrom(source, T)));
 }
@@ -8125,7 +8126,11 @@ pub fn fillRayleigh(rng: Rng, comptime T: type, dest: []T, scale: T) void {
 
 pub fn fillRayleighFrom(source: anytype, comptime T: type, dest: []T, scale: T) void {
     comptime requireFloat(T);
-    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, 0);
+        return;
+    }
     Rng.fillOpenFrom(source, T, dest);
     rayleighFromOpenUniforms(T, dest, scale);
 }
@@ -8178,6 +8183,7 @@ pub fn fillVectorRayleighCheckedFrom(source: anytype, comptime VectorType: type,
 }
 
 fn rayleighFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, scale: vectorChild(VectorType)) VectorType {
+    if (scale == 0) return @splat(0);
     const scale_vec: VectorType = @splat(scale);
     const neg_two_vec: VectorType = @splat(-2.0);
     return scale_vec * @sqrt(neg_two_vec * @log(uniform_vec));
@@ -8229,6 +8235,7 @@ pub fn VectorRayleigh(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(0);
             const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
             return rayleighFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
         }
@@ -8238,6 +8245,10 @@ pub fn VectorRayleigh(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -8251,7 +8262,7 @@ pub fn Rayleigh(comptime T: type) type {
 
         pub fn init(scale: T) Error!Self {
             comptime requireFloat(T);
-            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return .{ .scale = scale };
         }
 
@@ -8281,8 +8292,7 @@ pub fn Rayleigh(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) 0 else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -8299,6 +8309,10 @@ pub fn Rayleigh(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             fillRayleighFrom(source, T, dest, self.scale);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
     };
 }
@@ -14408,6 +14422,73 @@ test "degenerate arcsine helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "degenerate rayleigh helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1c7);
+    var control = alea.ScalarPrng.init(0x5150_d1c7);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 0), rayleighFrom(&engine, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 0), try rayleighChecked(rng, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillRayleighFrom(&engine, f64, &scalar_buf, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillRayleighChecked(rng, f64, &scalar_buf, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try Rayleigh(f64).init(0);
+    try std.testing.expectEqual(@as(f64, 0), sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.maxValue().?);
+    try std.testing.expectEqual(@as(f64, 0), sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorRayleighFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), try vectorRayleighChecked(rng, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorRayleighFrom(&engine, @Vector(4, f64), &vector_buf, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorRayleighChecked(rng, @Vector(4, f64), &vector_buf, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorRayleigh(@Vector(4, f64)).init(0);
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "degenerate power-function helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1d7);
@@ -16427,7 +16508,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorPowerFunctionCheckedFrom(&engine, @Vector(4, f64), -1, 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, vectorRayleighCheckedFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectError(error.InvalidParameter, vectorRayleighCheckedFrom(&engine, @Vector(4, f64), -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, vectorMaxwellCheckedFrom(&engine, @Vector(4, f64), 0));
@@ -16531,7 +16612,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorPowerFunctionCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, -1, 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorRayleighCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, fillVectorRayleighCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorMaxwellCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -16669,7 +16750,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorPowerFunctionCheckedFrom(&engine, @Vector(4, f64), &empty, -1, 2, 0);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorRayleighCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
+    try fillVectorRayleighCheckedFrom(&engine, @Vector(4, f64), &empty, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorMaxwellCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16737,7 +16818,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorPowerFunctionChecked(rng, @Vector(4, f64), &empty, -1, 2, 0);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorRayleighChecked(rng, @Vector(4, f64), &empty, 0);
+    try fillVectorRayleighChecked(rng, @Vector(4, f64), &empty, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorMaxwellChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16899,7 +16980,7 @@ test "invalid distribution facade tail scalars do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, powerFunctionChecked(rng, f64, -1, 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, rayleighChecked(rng, f64, 0));
+    try std.testing.expectError(error.InvalidParameter, rayleighChecked(rng, f64, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, maxwellChecked(rng, f64, 0));
@@ -17404,7 +17485,7 @@ test "invalid tail scalar helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, powerFunctionCheckedFrom(&engine, f64, -1, 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, rayleighCheckedFrom(&engine, f64, 0));
+    try std.testing.expectError(error.InvalidParameter, rayleighCheckedFrom(&engine, f64, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -17546,14 +17627,14 @@ test "zero-length tail distribution fills do not validate or consume random stre
     try std.testing.expectEqual(control.next(), engine.next());
     try fillPowerFunctionCheckedFrom(&engine, f64, &out, 2, 1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillRayleighCheckedFrom(&engine, f64, &out, 0);
+    try fillRayleighCheckedFrom(&engine, f64, &out, -1);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try fillLogisticChecked(rng, f64, &out, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillKumaraswamyChecked(rng, f64, &out, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillRayleighChecked(rng, f64, &out, 0);
+    try fillRayleighChecked(rng, f64, &out, -1);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var one: [1]f64 = undefined;
@@ -18782,7 +18863,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (rayleigh_buf) |value| try std.testing.expect(value >= 0);
     try fillRayleighCheckedFrom(&direct_engine, f64, &direct_rayleigh_buf, 2);
     for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
-    try std.testing.expectError(error.InvalidParameter, fillRayleighCheckedFrom(&direct_engine, f64, &direct_rayleigh_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, fillRayleighCheckedFrom(&direct_engine, f64, &direct_rayleigh_buf, -1));
     const rayleigh_sampler = try Rayleigh(f64).init(2);
     try std.testing.expectApproxEqAbs(@as(f64, 2), rayleigh_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(std.math.pi / 2.0), rayleigh_sampler.expectedValue(), 1e-12);
@@ -18794,7 +18875,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     rayleigh_sampler.fillFrom(&direct_engine, &direct_rayleigh_buf);
     for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try rayleighCheckedFrom(&direct_engine, f64, 2) >= 0);
-    try std.testing.expectError(error.InvalidParameter, rayleighCheckedFrom(&direct_engine, f64, 0));
+    try std.testing.expectError(error.InvalidParameter, rayleighCheckedFrom(&direct_engine, f64, -1));
 
     var maxwells = rng.sampleIter(f64, try Maxwell(f64).init(2));
     try std.testing.expect(maxwells.next().? >= 0);
@@ -19140,7 +19221,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, LogLogistic(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, Kumaraswamy(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, PowerFunction(f64).init(0, 1, 0));
-    try std.testing.expectError(error.InvalidParameter, Rayleigh(f64).init(0));
+    try std.testing.expectError(error.InvalidParameter, Rayleigh(f64).init(-1));
     try std.testing.expectError(error.InvalidParameter, Maxwell(f64).init(0));
     try std.testing.expectError(error.InvalidParameter, Pareto(f64).init(1, 0));
     try std.testing.expectError(error.InvalidParameter, Weibull(f64).init(0, 1));
