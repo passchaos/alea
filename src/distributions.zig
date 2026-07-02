@@ -9602,6 +9602,35 @@ pub fn fillUnitSphereFrom(source: anytype, comptime T: type, dest: [][3]T) void 
     for (dest) |*item| item.* = unitSphereFrom(source, T);
 }
 
+pub fn vectorUnitSphere(rng: Rng, comptime VectorType: type) [3]VectorType {
+    return vectorUnitSphereFrom(rng, VectorType);
+}
+
+pub fn vectorUnitSphereFrom(source: anytype, comptime VectorType: type) [3]VectorType {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    const len = @typeInfo(VectorType).vector.len;
+    var x: VectorType = undefined;
+    var y: VectorType = undefined;
+    var z: VectorType = undefined;
+    inline for (0..len) |lane| {
+        const point = unitSphereFrom(source, Child);
+        x[lane] = point[0];
+        y[lane] = point[1];
+        z[lane] = point[2];
+    }
+    return .{ x, y, z };
+}
+
+pub fn fillVectorUnitSphere(rng: Rng, comptime VectorType: type, dest: [][3]VectorType) void {
+    fillVectorUnitSphereFrom(rng, VectorType, dest);
+}
+
+pub fn fillVectorUnitSphereFrom(source: anytype, comptime VectorType: type, dest: [][3]VectorType) void {
+    _ = vectorChild(VectorType);
+    for (dest) |*item| item.* = vectorUnitSphereFrom(source, VectorType);
+}
+
 pub fn unitBall(rng: Rng, comptime T: type) [3]T {
     return unitBallFrom(rng, T);
 }
@@ -9627,6 +9656,35 @@ pub fn fillUnitBallFrom(source: anytype, comptime T: type, dest: [][3]T) void {
         return;
     }
     for (dest) |*item| item.* = unitBallFrom(source, T);
+}
+
+pub fn vectorUnitBall(rng: Rng, comptime VectorType: type) [3]VectorType {
+    return vectorUnitBallFrom(rng, VectorType);
+}
+
+pub fn vectorUnitBallFrom(source: anytype, comptime VectorType: type) [3]VectorType {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    const len = @typeInfo(VectorType).vector.len;
+    var x: VectorType = undefined;
+    var y: VectorType = undefined;
+    var z: VectorType = undefined;
+    inline for (0..len) |lane| {
+        const point = unitBallFrom(source, Child);
+        x[lane] = point[0];
+        y[lane] = point[1];
+        z[lane] = point[2];
+    }
+    return .{ x, y, z };
+}
+
+pub fn fillVectorUnitBall(rng: Rng, comptime VectorType: type, dest: [][3]VectorType) void {
+    fillVectorUnitBallFrom(rng, VectorType, dest);
+}
+
+pub fn fillVectorUnitBallFrom(source: anytype, comptime VectorType: type, dest: [][3]VectorType) void {
+    _ = vectorChild(VectorType);
+    for (dest) |*item| item.* = vectorUnitBallFrom(source, VectorType);
 }
 
 inline fn signedUnitFloatFrom(source: anytype, comptime T: type) T {
@@ -10044,6 +10102,57 @@ pub fn UnitSphere(comptime T: type) type {
     };
 }
 
+pub fn VectorUnitSphere(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        pub fn dimensionValue(_: @This()) usize {
+            return 3;
+        }
+
+        pub fn radiusValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn isSurface(_: @This()) bool {
+            return true;
+        }
+
+        pub fn coordinateExpectedValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn coordinateVarianceValue(_: @This()) Child {
+            return 1.0 / 3.0;
+        }
+
+        pub fn radialExpectedValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn radialVarianceValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn sample(_: @This(), rng: Rng) [3]VectorType {
+            return vectorUnitSphere(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) [3]VectorType {
+            return vectorUnitSphereFrom(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: [][3]VectorType) void {
+            fillVectorUnitSphere(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: [][3]VectorType) void {
+            fillVectorUnitSphereFrom(source, VectorType, dest);
+        }
+    };
+}
+
 pub fn UnitBall(comptime T: type) type {
     return struct {
         pub fn dimensionValue(_: @This()) usize {
@@ -10088,6 +10197,57 @@ pub fn UnitBall(comptime T: type) type {
 
         pub fn fillFrom(_: @This(), source: anytype, dest: [][3]T) void {
             fillUnitBallFrom(source, T, dest);
+        }
+    };
+}
+
+pub fn VectorUnitBall(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        pub fn dimensionValue(_: @This()) usize {
+            return 3;
+        }
+
+        pub fn radiusValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn isSurface(_: @This()) bool {
+            return false;
+        }
+
+        pub fn coordinateExpectedValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn coordinateVarianceValue(_: @This()) Child {
+            return 1.0 / 5.0;
+        }
+
+        pub fn radialExpectedValue(_: @This()) Child {
+            return 3.0 / 4.0;
+        }
+
+        pub fn radialVarianceValue(_: @This()) Child {
+            return 3.0 / 80.0;
+        }
+
+        pub fn sample(_: @This(), rng: Rng) [3]VectorType {
+            return vectorUnitBall(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) [3]VectorType {
+            return vectorUnitBallFrom(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: [][3]VectorType) void {
+            fillVectorUnitBall(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: [][3]VectorType) void {
+            fillVectorUnitBallFrom(source, VectorType, dest);
         }
     };
 }
@@ -13145,7 +13305,7 @@ test "invalid discrete distribution helpers do not consume random stream" {
 }
 
 test "distribution vector helpers preserve support and stream shape" {
-    @setEvalBranchQuota(4000);
+    @setEvalBranchQuota(6000);
     const alea = @import("root.zig");
     var facade_engine = alea.ScalarPrng.init(0x5eed_51d4);
     var direct_engine = alea.ScalarPrng.init(0x5eed_51d4);
@@ -14750,6 +14910,72 @@ test "distribution vector helpers preserve support and stream shape" {
     vector_unit_disc_sampler.fillFrom(&direct_engine, &direct_unit_disc_buf_vec);
     try std.testing.expectEqualSlices([2]@Vector(4, f64), &unit_disc_buf_vec, &direct_unit_disc_buf_vec);
     for (unit_disc_buf_vec) |point| inline for (0..4) |lane| try std.testing.expect(point[0][lane] * point[0][lane] + point[1][lane] * point[1][lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const unit_sphere_vec = vectorUnitSphere(rng, @Vector(4, f64));
+    const direct_unit_sphere_vec = vectorUnitSphereFrom(&direct_engine, @Vector(4, f64));
+    try std.testing.expectEqual(unit_sphere_vec, direct_unit_sphere_vec);
+    inline for (0..4) |lane| try std.testing.expectApproxEqAbs(@as(f64, 1), unit_sphere_vec[0][lane] * unit_sphere_vec[0][lane] + unit_sphere_vec[1][lane] * unit_sphere_vec[1][lane] + unit_sphere_vec[2][lane] * unit_sphere_vec[2][lane], 1e-12);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_unit_sphere_sampler = VectorUnitSphere(@Vector(4, f64)){};
+    try std.testing.expectEqual(@as(usize, 3), vector_unit_sphere_sampler.dimensionValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_unit_sphere_sampler.radiusValue(), 0);
+    try std.testing.expect(vector_unit_sphere_sampler.isSurface());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_unit_sphere_sampler.coordinateExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), vector_unit_sphere_sampler.coordinateVarianceValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_unit_sphere_sampler.radialExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_unit_sphere_sampler.radialVarianceValue(), 0);
+    const sampled_unit_sphere_vec = vector_unit_sphere_sampler.sample(rng);
+    const direct_sampled_unit_sphere_vec = vector_unit_sphere_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_unit_sphere_vec, direct_sampled_unit_sphere_vec);
+    inline for (0..4) |lane| try std.testing.expectApproxEqAbs(@as(f64, 1), sampled_unit_sphere_vec[0][lane] * sampled_unit_sphere_vec[0][lane] + sampled_unit_sphere_vec[1][lane] * sampled_unit_sphere_vec[1][lane] + sampled_unit_sphere_vec[2][lane] * sampled_unit_sphere_vec[2][lane], 1e-12);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var unit_sphere_buf_vec: [3][3]@Vector(4, f64) = undefined;
+    var direct_unit_sphere_buf_vec: [3][3]@Vector(4, f64) = undefined;
+    fillVectorUnitSphere(rng, @Vector(4, f64), &unit_sphere_buf_vec);
+    fillVectorUnitSphereFrom(&direct_engine, @Vector(4, f64), &direct_unit_sphere_buf_vec);
+    try std.testing.expectEqualSlices([3]@Vector(4, f64), &unit_sphere_buf_vec, &direct_unit_sphere_buf_vec);
+    for (unit_sphere_buf_vec) |point| inline for (0..4) |lane| try std.testing.expectApproxEqAbs(@as(f64, 1), point[0][lane] * point[0][lane] + point[1][lane] * point[1][lane] + point[2][lane] * point[2][lane], 1e-12);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_unit_sphere_sampler.fill(rng, &unit_sphere_buf_vec);
+    vector_unit_sphere_sampler.fillFrom(&direct_engine, &direct_unit_sphere_buf_vec);
+    try std.testing.expectEqualSlices([3]@Vector(4, f64), &unit_sphere_buf_vec, &direct_unit_sphere_buf_vec);
+    for (unit_sphere_buf_vec) |point| inline for (0..4) |lane| try std.testing.expectApproxEqAbs(@as(f64, 1), point[0][lane] * point[0][lane] + point[1][lane] * point[1][lane] + point[2][lane] * point[2][lane], 1e-12);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const unit_ball_vec = vectorUnitBall(rng, @Vector(4, f64));
+    const direct_unit_ball_vec = vectorUnitBallFrom(&direct_engine, @Vector(4, f64));
+    try std.testing.expectEqual(unit_ball_vec, direct_unit_ball_vec);
+    inline for (0..4) |lane| try std.testing.expect(unit_ball_vec[0][lane] * unit_ball_vec[0][lane] + unit_ball_vec[1][lane] * unit_ball_vec[1][lane] + unit_ball_vec[2][lane] * unit_ball_vec[2][lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_unit_ball_sampler = VectorUnitBall(@Vector(4, f64)){};
+    try std.testing.expectEqual(@as(usize, 3), vector_unit_ball_sampler.dimensionValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_unit_ball_sampler.radiusValue(), 0);
+    try std.testing.expect(!vector_unit_ball_sampler.isSurface());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_unit_ball_sampler.coordinateExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.2), vector_unit_ball_sampler.coordinateVarianceValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.75), vector_unit_ball_sampler.radialExpectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.0 / 80.0), vector_unit_ball_sampler.radialVarianceValue(), 0);
+    const sampled_unit_ball_vec = vector_unit_ball_sampler.sample(rng);
+    const direct_sampled_unit_ball_vec = vector_unit_ball_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_unit_ball_vec, direct_sampled_unit_ball_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_unit_ball_vec[0][lane] * sampled_unit_ball_vec[0][lane] + sampled_unit_ball_vec[1][lane] * sampled_unit_ball_vec[1][lane] + sampled_unit_ball_vec[2][lane] * sampled_unit_ball_vec[2][lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var unit_ball_buf_vec: [3][3]@Vector(4, f64) = undefined;
+    var direct_unit_ball_buf_vec: [3][3]@Vector(4, f64) = undefined;
+    fillVectorUnitBall(rng, @Vector(4, f64), &unit_ball_buf_vec);
+    fillVectorUnitBallFrom(&direct_engine, @Vector(4, f64), &direct_unit_ball_buf_vec);
+    try std.testing.expectEqualSlices([3]@Vector(4, f64), &unit_ball_buf_vec, &direct_unit_ball_buf_vec);
+    for (unit_ball_buf_vec) |point| inline for (0..4) |lane| try std.testing.expect(point[0][lane] * point[0][lane] + point[1][lane] * point[1][lane] + point[2][lane] * point[2][lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_unit_ball_sampler.fill(rng, &unit_ball_buf_vec);
+    vector_unit_ball_sampler.fillFrom(&direct_engine, &direct_unit_ball_buf_vec);
+    try std.testing.expectEqualSlices([3]@Vector(4, f64), &unit_ball_buf_vec, &direct_unit_ball_buf_vec);
+    for (unit_ball_buf_vec) |point| inline for (0..4) |lane| try std.testing.expect(point[0][lane] * point[0][lane] + point[1][lane] * point[1][lane] + point[2][lane] * point[2][lane] <= 1);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;

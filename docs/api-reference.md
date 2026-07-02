@@ -400,7 +400,11 @@ Single-shot helpers:
   `vectorUnitDisc`, `vectorUnitDiscFrom`, `fillVectorUnitDisc`,
   `fillVectorUnitDiscFrom`,
   `unitSphere`, `unitSphereFrom`, `fillUnitSphere`, `fillUnitSphereFrom`,
-  `unitBall`, `unitBallFrom`, `fillUnitBall`, `fillUnitBallFrom`
+  `vectorUnitSphere`, `vectorUnitSphereFrom`, `fillVectorUnitSphere`,
+  `fillVectorUnitSphereFrom`,
+  `unitBall`, `unitBallFrom`, `fillUnitBall`, `fillUnitBallFrom`,
+  `vectorUnitBall`, `vectorUnitBallFrom`, `fillVectorUnitBall`,
+  `fillVectorUnitBallFrom`
 
 Reusable samplers:
 
@@ -1608,6 +1612,18 @@ Reusable samplers:
 - `UnitSphere(T).sampleFrom`
 - `UnitSphere(T).fill`
 - `UnitSphere(T).fillFrom`
+- `VectorUnitSphere(VectorType)`
+- `VectorUnitSphere(VectorType).dimensionValue`
+- `VectorUnitSphere(VectorType).radiusValue`
+- `VectorUnitSphere(VectorType).isSurface`
+- `VectorUnitSphere(VectorType).coordinateExpectedValue`
+- `VectorUnitSphere(VectorType).coordinateVarianceValue`
+- `VectorUnitSphere(VectorType).radialExpectedValue`
+- `VectorUnitSphere(VectorType).radialVarianceValue`
+- `VectorUnitSphere(VectorType).sample`
+- `VectorUnitSphere(VectorType).sampleFrom`
+- `VectorUnitSphere(VectorType).fill`
+- `VectorUnitSphere(VectorType).fillFrom`
 - `UnitBall(T)`
 - `UnitBall(T).dimensionValue`
 - `UnitBall(T).radiusValue`
@@ -1620,6 +1636,18 @@ Reusable samplers:
 - `UnitBall(T).sampleFrom`
 - `UnitBall(T).fill`
 - `UnitBall(T).fillFrom`
+- `VectorUnitBall(VectorType)`
+- `VectorUnitBall(VectorType).dimensionValue`
+- `VectorUnitBall(VectorType).radiusValue`
+- `VectorUnitBall(VectorType).isSurface`
+- `VectorUnitBall(VectorType).coordinateExpectedValue`
+- `VectorUnitBall(VectorType).coordinateVarianceValue`
+- `VectorUnitBall(VectorType).radialExpectedValue`
+- `VectorUnitBall(VectorType).radialVarianceValue`
+- `VectorUnitBall(VectorType).sample`
+- `VectorUnitBall(VectorType).sampleFrom`
+- `VectorUnitBall(VectorType).fill`
+- `VectorUnitBall(VectorType).fillFrom`
 - `Dirichlet(T)`
 - `Dirichlet(T).init`
 - `Dirichlet(T).alphaValues`

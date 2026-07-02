@@ -161,6 +161,12 @@ pub fn main(init: std.process.Init) !void {
     try benchUnit2F64x4(io, stdout, "alea distributions.fillVectorUnitDisc f64x4", lanes / 8, 0xd464, fillDistUnitDiscF64);
     try benchUnit2F64x4(io, stdout, "alea distributions.fillVectorUnitDisc f64x4 direct", lanes / 8, 0xd464, fillDistUnitDiscF64Direct);
     try benchUnit2F64x4(io, stdout, "alea distributions.VectorUnitDisc.fill f64x4", lanes / 8, 0xd464, fillDistUnitDiscSamplerF64);
+    try benchUnit3F64x4(io, stdout, "alea distributions.fillVectorUnitSphere f64x4", lanes / 8, 0xd474, fillDistUnitSphereF64);
+    try benchUnit3F64x4(io, stdout, "alea distributions.fillVectorUnitSphere f64x4 direct", lanes / 8, 0xd474, fillDistUnitSphereF64Direct);
+    try benchUnit3F64x4(io, stdout, "alea distributions.VectorUnitSphere.fill f64x4", lanes / 8, 0xd474, fillDistUnitSphereSamplerF64);
+    try benchUnit3F64x4(io, stdout, "alea distributions.fillVectorUnitBall f64x4", lanes / 16, 0xd484, fillDistUnitBallF64);
+    try benchUnit3F64x4(io, stdout, "alea distributions.fillVectorUnitBall f64x4 direct", lanes / 16, 0xd484, fillDistUnitBallF64Direct);
+    try benchUnit3F64x4(io, stdout, "alea distributions.VectorUnitBall.fill f64x4", lanes / 16, 0xd484, fillDistUnitBallSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -771,6 +777,45 @@ fn benchUnit2F64x4(
     try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchUnit3F64x4(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    lanes: usize,
+    comptime seed: u64,
+    comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, [][3]@Vector(4, f64)) void,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [256][3]@Vector(4, f64) = undefined;
+    const vector_count = lanes / 4;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = vector_count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, rng, out[0..n]);
+            checksum += checksumUnit3F64x4(&out, n);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(vector_count * 4)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn fillDistUniformF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
     alea.distributions.fillVectorUniform(rng, @Vector(8, f32), dest, -1, 1);
 }
@@ -1203,6 +1248,32 @@ fn fillDistUnitDiscF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: [][2]@
 
 fn fillDistUnitDiscSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][2]@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorUnitDisc(@Vector(4, f64)){};
+    sampler.fill(rng, dest);
+}
+
+fn fillDistUnitSphereF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][3]@Vector(4, f64)) void {
+    alea.distributions.fillVectorUnitSphere(rng, @Vector(4, f64), dest);
+}
+
+fn fillDistUnitSphereF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: [][3]@Vector(4, f64)) void {
+    alea.distributions.fillVectorUnitSphereFrom(engine, @Vector(4, f64), dest);
+}
+
+fn fillDistUnitSphereSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][3]@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorUnitSphere(@Vector(4, f64)){};
+    sampler.fill(rng, dest);
+}
+
+fn fillDistUnitBallF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][3]@Vector(4, f64)) void {
+    alea.distributions.fillVectorUnitBall(rng, @Vector(4, f64), dest);
+}
+
+fn fillDistUnitBallF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: [][3]@Vector(4, f64)) void {
+    alea.distributions.fillVectorUnitBallFrom(engine, @Vector(4, f64), dest);
+}
+
+fn fillDistUnitBallSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][3]@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorUnitBall(@Vector(4, f64)){};
     sampler.fill(rng, dest);
 }
 
@@ -1886,6 +1957,14 @@ fn checksumUnit2F64x4(points: []const [2]@Vector(4, f64), len: usize) f64 {
     var checksum: f64 = 0;
     for (points[0..len]) |point| {
         inline for (0..4) |lane| checksum += point[0][lane] + point[1][lane];
+    }
+    return checksum;
+}
+
+fn checksumUnit3F64x4(points: []const [3]@Vector(4, f64), len: usize) f64 {
+    var checksum: f64 = 0;
+    for (points[0..len]) |point| {
+        inline for (0..4) |lane| checksum += point[0][lane] + point[1][lane] + point[2][lane];
     }
     return checksum;
 }
