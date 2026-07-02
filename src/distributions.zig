@@ -11819,6 +11819,10 @@ pub fn AliasTable(comptime Weight: type) type {
             return try self.weightAt(index) / self.total;
         }
 
+        pub fn constantIndex(self: Self) ?usize {
+            return self.constant_index;
+        }
+
         pub fn sample(self: Self, rng: Rng) usize {
             return self.sampleFrom(rng);
         }
@@ -13363,6 +13367,7 @@ test "single-positive alias table does not consume random stream" {
 
     var table = try AliasTable(u32).init(std.testing.allocator, &.{ 0, 0, 5, 0 });
     defer table.deinit();
+    try std.testing.expectEqual(@as(?usize, 2), table.constantIndex());
 
     try std.testing.expectEqual(@as(usize, 2), table.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
@@ -13380,8 +13385,12 @@ test "single-positive alias table does not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try table.update(&.{ 0, 7, 0, 0 });
+    try std.testing.expectEqual(@as(?usize, 1), table.constantIndex());
     try std.testing.expectEqual(@as(usize, 1), table.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    try table.update(&.{ 1, 7, 0, 0 });
+    try std.testing.expect(table.constantIndex() == null);
 }
 
 test "alias table update allocation failure preserves table" {

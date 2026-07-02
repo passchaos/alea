@@ -771,6 +771,10 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []*const T) void {
+            if (self.table.constantIndex()) |index| {
+                @memset(dest, &self.items[index]);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
 
@@ -779,6 +783,10 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.table.constantIndex()) |index| {
+                @memset(dest, self.items[index]);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleValueFrom(source);
         }
 

@@ -1738,6 +1738,7 @@ Alias helpers:
 - `AliasTable.probabilitiesInto`
 - `AliasTable.weightAt`
 - `AliasTable.probabilityAt`
+- `AliasTable.constantIndex`
 - `AliasTable.sample`
 - `AliasTable.sampleFrom`
 - `AliasTable.fill`
