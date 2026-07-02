@@ -67,7 +67,7 @@ including facade and direct-source `From` helpers for single scalar draws and
 scalar fills, including duration ranges. The same checked/error-returning style
 is available for vector ranges, vector probabilities, and parameterized vector
 normal/exponential sampling, including facade and direct-source `From` helpers
-for ranges, probability vectors, Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson vectors,
+for ranges, probability vectors, Bernoulli/binomial/binomial-approx/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson vectors,
 and parameterized normal/exponential vectors/fills when the engine type is
 comptime-known.
 Zero-length checked scalar and vector fills, including the distribution-namespace
@@ -91,7 +91,7 @@ The distributions module also mirrors `Rng.fillNormal*` and
 distribution namespace; `fillUniform*` and `fillUniformInclusive*` do the same
 for exclusive and inclusive uniform ranges. Vector callers can stay in the
 same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
-`vectorBinomial*`, `fillVectorBinomial*`, `vectorNegativeBinomial*`, `fillVectorNegativeBinomial*`,
+`vectorBinomial*`, `fillVectorBinomial*`, `vectorBinomialPoissonApprox*`, `fillVectorBinomialPoissonApprox*`, `vectorNegativeBinomial*`, `fillVectorNegativeBinomial*`,
 `vectorHypergeometric*`, `fillVectorHypergeometric*`, `vectorGeometric*`,
 `fillVectorGeometric*`, `vectorGeometricFailures*`,
 `fillVectorGeometricFailures*`, `vectorStandardGeometric*`,
@@ -108,7 +108,7 @@ same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
 `vectorStandardExponential*`,
 `fillVectorStandardExponential*`, `vectorExponential*`, and
 `fillVectorExponential*`; reusable vector samplers `VectorBernoulli`,
-`VectorBinomial`, `VectorGeometric`, `VectorGeometricFailures`, `VectorStandardGeometric`,
+`VectorBinomial`, `VectorBinomialPoissonApprox`, `VectorGeometric`, `VectorGeometricFailures`, `VectorStandardGeometric`,
 `VectorPoisson`, `VectorUniform`, `VectorStandardNormal`, `VectorNormal`, `VectorLogNormal`,
 `VectorLogNormalApproxF32`, `VectorHalfNormal`, `VectorGamma`, `VectorChiSquared`, `VectorChi`, `VectorErlang`, `VectorBeta`,
 `VectorFisherF`, `VectorStudentT`, `VectorTriangular`, `VectorArcsine`, `VectorCauchy`, `VectorLaplace`, `VectorLogistic`, `VectorLogLogistic`, `VectorKumaraswamy`, `VectorPowerFunction`, `VectorRayleigh`, `VectorMaxwell`, `VectorPareto`, `VectorWeibull`, `VectorGumbel`, `VectorFrechet`, `VectorSkewNormal`, `VectorPert`, `VectorInverseGaussian`, `VectorNormalInverseGaussian`, `VectorZipf`, `VectorZeta`, `VectorUnitCircle`, `VectorUnitDisc`, `VectorUnitSphere`, `VectorUnitBall`, `VectorStandardExponential`, and `VectorExponential`; strict interval samplers
@@ -132,7 +132,7 @@ required.
 
 Single-shot helpers and reusable samplers cover:
 
-- uniform, Bernoulli, binomial, negative-binomial, vector Bernoulli/binomial/negative-binomial
+- uniform, Bernoulli, binomial, negative-binomial, vector Bernoulli/binomial/binomial-approx/negative-binomial
 - standard normal, normal, exact/vector log-normal plus opt-in bounded f32
   approximate log-normal/vector approximate log-normal, half-normal/vector half-normal, standard exponential,
   exponential
@@ -336,7 +336,7 @@ benchmark shape.
 Use `vectorbench` for focused SIMD/vector-slice evidence without slowing the
 full throughput suite. The current local rows cover packed bool chance/ratio,
 strict-open/open-closed/range vector float fills, distribution-namespace vector
-Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/log-normal/approx-log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/cauchy/laplace/logistic/log-logistic/kumaraswamy/power-function/rayleigh/maxwell/pareto/weibull/gumbel/frechet/skew-normal/PERT/inverse-Gaussian/normal-inverse-Gaussian/Zipf/Zeta/unit-circle/unit-disc/unit-sphere/unit-ball/exponential wrappers over those kernels, and
+Bernoulli/binomial/binomial-approx/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/log-normal/approx-log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/cauchy/laplace/logistic/log-logistic/kumaraswamy/power-function/rayleigh/maxwell/pareto/weibull/gumbel/frechet/skew-normal/PERT/inverse-Gaussian/normal-inverse-Gaussian/Zipf/Zeta/unit-circle/unit-disc/unit-sphere/unit-ball/exponential wrappers over those kernels, and
 scalar-lane normal/exponential vector fills;
 representative rows are about 1.01B lanes/s
 for `fillVectorRange(f32x8)`, about 694M lanes/s for

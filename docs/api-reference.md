@@ -146,7 +146,11 @@ Single-shot helpers:
   `fillVectorBinomialFrom`, `fillVectorBinomialChecked`,
   `fillVectorBinomialCheckedFrom`,
   `binomialPoissonApprox`, `binomialPoissonApproxFrom`,
-  `binomialPoissonApproxChecked`, `binomialPoissonApproxCheckedFrom`
+  `binomialPoissonApproxChecked`, `binomialPoissonApproxCheckedFrom`,
+  `vectorBinomialPoissonApprox`, `vectorBinomialPoissonApproxFrom`,
+  `vectorBinomialPoissonApproxChecked`, `vectorBinomialPoissonApproxCheckedFrom`,
+  `fillVectorBinomialPoissonApprox`, `fillVectorBinomialPoissonApproxFrom`,
+  `fillVectorBinomialPoissonApproxChecked`, `fillVectorBinomialPoissonApproxCheckedFrom`
 - `negativeBinomial`, `negativeBinomialFrom`, `negativeBinomialChecked`,
   `negativeBinomialCheckedFrom`, `fillNegativeBinomial`,
   `fillNegativeBinomialFrom`, `fillNegativeBinomialChecked`,
@@ -505,6 +509,18 @@ Reusable samplers:
 - `NegativeBinomial.sampleFrom`
 - `NegativeBinomial.fill`
 - `NegativeBinomial.fillFrom`
+- `VectorBinomialPoissonApprox(VectorType)`
+- `VectorBinomialPoissonApprox(VectorType).init`
+- `VectorBinomialPoissonApprox(VectorType).trialsValue`
+- `VectorBinomialPoissonApprox(VectorType).probabilityValue`
+- `VectorBinomialPoissonApprox(VectorType).expectedValue`
+- `VectorBinomialPoissonApprox(VectorType).varianceValue`
+- `VectorBinomialPoissonApprox(VectorType).minValue`
+- `VectorBinomialPoissonApprox(VectorType).maxValue`
+- `VectorBinomialPoissonApprox(VectorType).sample`
+- `VectorBinomialPoissonApprox(VectorType).sampleFrom`
+- `VectorBinomialPoissonApprox(VectorType).fill`
+- `VectorBinomialPoissonApprox(VectorType).fillFrom`
 - `VectorNegativeBinomial(VectorType)`
 - `VectorNegativeBinomial(VectorType).init`
 - `VectorNegativeBinomial(VectorType).successesValue`
