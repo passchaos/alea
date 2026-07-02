@@ -124,7 +124,14 @@ Single-shot helpers:
   `uniformInclusiveCheckedFrom`, `fillUniform`, `fillUniformFrom`,
   `fillUniformChecked`, `fillUniformCheckedFrom`, `fillUniformInclusive`,
   `fillUniformInclusiveFrom`, `fillUniformInclusiveChecked`,
-  `fillUniformInclusiveCheckedFrom`
+  `fillUniformInclusiveCheckedFrom`, `vectorUniform`, `vectorUniformFrom`,
+  `vectorUniformChecked`, `vectorUniformCheckedFrom`, `fillVectorUniform`,
+  `fillVectorUniformFrom`, `fillVectorUniformChecked`,
+  `fillVectorUniformCheckedFrom`, `vectorUniformInclusive`,
+  `vectorUniformInclusiveFrom`, `vectorUniformInclusiveChecked`,
+  `vectorUniformInclusiveCheckedFrom`, `fillVectorUniformInclusive`,
+  `fillVectorUniformInclusiveFrom`, `fillVectorUniformInclusiveChecked`,
+  `fillVectorUniformInclusiveCheckedFrom`
 - `bernoulli`, `bernoulliFrom`, `bernoulliChecked`,
   `bernoulliCheckedFrom`, `fillBernoulli`, `fillBernoulliFrom`,
   `fillBernoulliChecked`, `fillBernoulliCheckedFrom`, `binomial`,
@@ -140,19 +147,30 @@ Single-shot helpers:
   `fillHypergeometric`, `fillHypergeometricFrom`,
   `fillHypergeometricChecked`, `fillHypergeometricCheckedFrom`
 - `standardNormal`, `standardNormalFrom`, `fillStandardNormal`,
-  `fillStandardNormalFrom`, `normal`, `normalFrom`, `normalChecked`,
+  `fillStandardNormalFrom`, `vectorStandardNormal`,
+  `vectorStandardNormalFrom`, `fillVectorStandardNormal`,
+  `fillVectorStandardNormalFrom`, `normal`, `normalFrom`, `normalChecked`,
   `normalCheckedFrom`, `fillNormal`, `fillNormalFrom`, `fillNormalChecked`,
-  `fillNormalCheckedFrom`, `logNormal`, `logNormalFrom`, `logNormalChecked`,
-  `logNormalCheckedFrom`, `fillLogNormal`, `fillLogNormalFrom`,
-  `fillLogNormalChecked`, `fillLogNormalCheckedFrom`, `halfNormal`,
-  `halfNormalFrom`, `halfNormalChecked`, `halfNormalCheckedFrom`,
-  `fillHalfNormal`, `fillHalfNormalFrom`, `fillHalfNormalChecked`,
-  `fillHalfNormalCheckedFrom`, `chi`, `chiFrom`,
+  `fillNormalCheckedFrom`, `vectorNormal`, `vectorNormalFrom`,
+  `vectorNormalChecked`, `vectorNormalCheckedFrom`, `fillVectorNormal`,
+  `fillVectorNormalFrom`, `fillVectorNormalChecked`,
+  `fillVectorNormalCheckedFrom`, `logNormal`, `logNormalFrom`,
+  `logNormalChecked`, `logNormalCheckedFrom`, `fillLogNormal`,
+  `fillLogNormalFrom`, `fillLogNormalChecked`, `fillLogNormalCheckedFrom`,
+  `halfNormal`, `halfNormalFrom`, `halfNormalChecked`,
+  `halfNormalCheckedFrom`, `fillHalfNormal`, `fillHalfNormalFrom`,
+  `fillHalfNormalChecked`, `fillHalfNormalCheckedFrom`, `chi`, `chiFrom`,
   `standardExponential`, `standardExponentialFrom`,
-  `fillStandardExponential`, `fillStandardExponentialFrom`, `exponential`,
-  `exponentialFrom`, `exponentialChecked`, `exponentialCheckedFrom`,
-  `fillExponential`, `fillExponentialFrom`, `fillExponentialChecked`,
-  `fillExponentialCheckedFrom`
+  `fillStandardExponential`, `fillStandardExponentialFrom`,
+  `vectorStandardExponential`, `vectorStandardExponentialFrom`,
+  `fillVectorStandardExponential`, `fillVectorStandardExponentialFrom`,
+  `exponential`, `exponentialFrom`, `exponentialChecked`,
+  `exponentialCheckedFrom`, `fillExponential`, `fillExponentialFrom`,
+  `fillExponentialChecked`, `fillExponentialCheckedFrom`,
+  `vectorExponential`, `vectorExponentialFrom`, `vectorExponentialChecked`,
+  `vectorExponentialCheckedFrom`, `fillVectorExponential`,
+  `fillVectorExponentialFrom`, `fillVectorExponentialChecked`,
+  `fillVectorExponentialCheckedFrom`
 - `poisson`, `poissonFrom`, `poissonChecked`, `poissonCheckedFrom`,
   `fillPoisson`, `fillPoissonFrom`, `fillPoissonChecked`,
   `fillPoissonCheckedFrom`, `geometric`,
@@ -361,6 +379,8 @@ Reusable samplers:
 - `OpenClosed01.sampleFrom`
 - `OpenClosed01.fill`
 - `OpenClosed01.fillFrom`
+  (`Open01` and `OpenClosed01` sample/fill scalar `f32`/`f64` and float vector
+  types such as `@Vector(8, f32)`.)
 - `StandardNormal(T)`
 - `StandardNormal(T).meanValue`
 - `StandardNormal(T).stddevValue`

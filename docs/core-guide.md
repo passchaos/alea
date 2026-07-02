@@ -56,8 +56,9 @@ See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 - bulk sampling: `fill` / `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,
   `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`,
-  `fillVectorOpen`, `fillVectorOpenClosed`, `fillVectorOpenFrom`, `fillVectorOpenClosedFrom`, `fillStandardNormal`,
-  `fillNormal`, `fillLogNormal`, `fillVectorStandardNormal`, `fillVectorNormal`,
+  `fillVectorOpen`, `fillVectorOpenClosed`, `fillVectorOpenFrom`,
+  `fillVectorOpenClosedFrom`, `fillStandardNormal`, `fillNormal`,
+  `fillLogNormal`, `fillVectorStandardNormal`, `fillVectorNormal`,
   `fillStandardExponential`, `fillExponential`, `fillVectorStandardExponential`,
   and `fillVectorExponential`
 
@@ -87,7 +88,14 @@ family, and Zipf/Zeta fills return before validating user parameters.
 The distributions module also mirrors `Rng.fillNormal*` and
 `Rng.fillExponential*` as top-level helpers for callers who prefer the
 distribution namespace; `fillUniform*` and `fillUniformInclusive*` do the same
-for exclusive and inclusive uniform ranges.
+for exclusive and inclusive uniform ranges. Vector callers can stay in the
+same namespace with `vectorUniform*`, `fillVectorUniform*`,
+`vectorUniformInclusive*`, `fillVectorUniformInclusive*`,
+`vectorStandardNormal*`, `fillVectorStandardNormal*`, `vectorNormal*`,
+`fillVectorNormal*`, `vectorStandardExponential*`,
+`fillVectorStandardExponential*`, `vectorExponential*`, and
+`fillVectorExponential*`; strict interval samplers `Open01` and `OpenClosed01`
+also sample/fill float vector slices.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar
@@ -297,8 +305,9 @@ benchmark shape.
 
 Use `vectorbench` for focused SIMD/vector-slice evidence without slowing the
 full throughput suite. The current local rows cover packed bool chance/ratio,
-strict-open/open-closed/range vector float fills, and scalar-lane
-normal/exponential vector fills; representative rows are about 1.01B lanes/s
+strict-open/open-closed/range vector float fills, distribution-namespace vector
+wrappers over those kernels, and scalar-lane normal/exponential vector fills;
+representative rows are about 1.01B lanes/s
 for `fillVectorRange(f32x8)`, about 694M lanes/s for
 `fillVectorRange(f64x4)`, about 498-502M lanes/s for normal vectors, and about
 468-473M lanes/s for exponential vectors. Requirements for a future true dense

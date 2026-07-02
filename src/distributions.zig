@@ -126,6 +126,102 @@ pub fn fillUniformInclusiveCheckedFrom(source: anytype, comptime T: type, dest: 
     }
 }
 
+pub fn vectorUniform(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    return vectorUniformFrom(rng, VectorType, min, max);
+}
+
+pub fn vectorUniformFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    return Rng.vectorRangeFrom(source, VectorType, min, max);
+}
+
+pub fn vectorUniformChecked(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
+    return vectorUniformCheckedFrom(rng, VectorType, min, max);
+}
+
+pub fn vectorUniformCheckedFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
+    return Rng.vectorRangeCheckedFrom(source, VectorType, min, max);
+}
+
+pub fn fillVectorUniform(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    fillVectorUniformFrom(rng, VectorType, dest, min, max);
+}
+
+pub fn fillVectorUniformFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    Rng.fillVectorRangeFrom(source, VectorType, dest, min, max);
+}
+
+pub fn fillVectorUniformChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    return fillVectorUniformCheckedFrom(rng, VectorType, dest, min, max);
+}
+
+pub fn fillVectorUniformCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    return Rng.fillVectorRangeCheckedFrom(source, VectorType, dest, min, max);
+}
+
+pub fn vectorUniformInclusive(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    return vectorUniformInclusiveFrom(rng, VectorType, min, max);
+}
+
+pub fn vectorUniformInclusiveFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    const info = vectorInfo(VectorType);
+    switch (@typeInfo(info.child)) {
+        .int => {
+            std.debug.assert(min <= max);
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = Rng.intRangeAtMostFrom(source, info.child, min, max);
+            return out;
+        },
+        .float => {
+            std.debug.assert(min <= max and std.math.isFinite(min) and std.math.isFinite(max));
+            return @as(VectorType, @splat(min)) +
+                (@as(VectorType, @splat(max)) - @as(VectorType, @splat(min))) *
+                    vectorClosedUnitFrom(source, VectorType);
+        },
+        else => @compileError("vectorUniformInclusive supports integer and floating-point vectors"),
+    }
+}
+
+pub fn vectorUniformInclusiveChecked(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
+    return vectorUniformInclusiveCheckedFrom(rng, VectorType, min, max);
+}
+
+pub fn vectorUniformInclusiveCheckedFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
+    try validateVectorInclusiveRange(VectorType, min, max);
+    return vectorUniformInclusiveFrom(source, VectorType, min, max);
+}
+
+pub fn fillVectorUniformInclusive(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    fillVectorUniformInclusiveFrom(rng, VectorType, dest, min, max);
+}
+
+pub fn fillVectorUniformInclusiveFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    _ = vectorInfo(VectorType);
+    for (dest) |*item| item.* = vectorUniformInclusiveFrom(source, VectorType, min, max);
+}
+
+pub fn fillVectorUniformInclusiveChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    return fillVectorUniformInclusiveCheckedFrom(rng, VectorType, dest, min, max);
+}
+
+pub fn fillVectorUniformInclusiveCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    try validateVectorInclusiveRange(VectorType, min, max);
+    fillVectorUniformInclusiveFrom(source, VectorType, dest, min, max);
+}
+
+fn validateVectorInclusiveRange(comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    const info = vectorInfo(VectorType);
+    switch (@typeInfo(info.child)) {
+        .int => {
+            if (min > max) return error.EmptyRange;
+        },
+        .float => {
+            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+        },
+        else => @compileError("vectorUniformInclusiveChecked supports integer and floating-point vectors"),
+    }
+}
+
 fn uniformClosedUnitFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
@@ -135,6 +231,14 @@ fn uniformClosedUnitFrom(source: anytype, comptime T: type) T {
             (1.0 / 9007199254740991.0),
         else => @compileError("alea supports f32 and f64 floats"),
     };
+}
+
+fn vectorClosedUnitFrom(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = uniformClosedUnitFrom(source, info.child);
+    return out;
 }
 
 pub fn bernoulli(rng: Rng, p: f64) bool {
@@ -1333,12 +1437,12 @@ pub fn Uniform(comptime T: type) type {
 pub const Open01 = struct {
     pub fn lowValue(self: Open01, comptime T: type) T {
         _ = self;
-        return 0;
+        return zeroOf(T);
     }
 
     pub fn highValue(self: Open01, comptime T: type) T {
         _ = self;
-        return 1;
+        return oneOf(T);
     }
 
     pub fn includesLow(self: Open01) bool {
@@ -1353,40 +1457,40 @@ pub const Open01 = struct {
 
     pub fn expectedValue(self: Open01, comptime T: type) T {
         _ = self;
-        return 0.5;
+        return splatOrScalar(T, 0.5);
     }
 
     pub fn varianceValue(self: Open01, comptime T: type) T {
         _ = self;
-        return 1.0 / 12.0;
+        return splatOrScalar(T, 1.0 / 12.0);
     }
 
     pub fn sample(_: Open01, rng: Rng, comptime T: type) T {
-        return Rng.floatOpenFrom(rng, T);
+        return open01From(rng, T);
     }
 
     pub fn sampleFrom(_: Open01, source: anytype, comptime T: type) T {
-        return Rng.floatOpenFrom(source, T);
+        return open01From(source, T);
     }
 
     pub fn fill(_: Open01, rng: Rng, comptime T: type, dest: []T) void {
-        Rng.fillOpenFrom(rng, T, dest);
+        fillOpen01From(rng, T, dest);
     }
 
     pub fn fillFrom(_: Open01, source: anytype, comptime T: type, dest: []T) void {
-        Rng.fillOpenFrom(source, T, dest);
+        fillOpen01From(source, T, dest);
     }
 };
 
 pub const OpenClosed01 = struct {
     pub fn lowValue(self: OpenClosed01, comptime T: type) T {
         _ = self;
-        return 0;
+        return zeroOf(T);
     }
 
     pub fn highValue(self: OpenClosed01, comptime T: type) T {
         _ = self;
-        return 1;
+        return oneOf(T);
     }
 
     pub fn includesLow(self: OpenClosed01) bool {
@@ -1401,28 +1505,28 @@ pub const OpenClosed01 = struct {
 
     pub fn expectedValue(self: OpenClosed01, comptime T: type) T {
         _ = self;
-        return 0.5;
+        return splatOrScalar(T, 0.5);
     }
 
     pub fn varianceValue(self: OpenClosed01, comptime T: type) T {
         _ = self;
-        return 1.0 / 12.0;
+        return splatOrScalar(T, 1.0 / 12.0);
     }
 
     pub fn sample(_: OpenClosed01, rng: Rng, comptime T: type) T {
-        return Rng.floatOpenClosedFrom(rng, T);
+        return openClosed01From(rng, T);
     }
 
     pub fn sampleFrom(_: OpenClosed01, source: anytype, comptime T: type) T {
-        return Rng.floatOpenClosedFrom(source, T);
+        return openClosed01From(source, T);
     }
 
     pub fn fill(_: OpenClosed01, rng: Rng, comptime T: type, dest: []T) void {
-        Rng.fillOpenClosedFrom(rng, T, dest);
+        fillOpenClosed01From(rng, T, dest);
     }
 
     pub fn fillFrom(_: OpenClosed01, source: anytype, comptime T: type, dest: []T) void {
-        Rng.fillOpenClosedFrom(source, T, dest);
+        fillOpenClosed01From(source, T, dest);
     }
 };
 
@@ -1441,6 +1545,22 @@ pub fn fillStandardNormal(rng: Rng, comptime T: type, dest: []T) void {
 pub fn fillStandardNormalFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireFloat(T);
     for (dest) |*item| item.* = standardNormalFrom(source, T);
+}
+
+pub fn vectorStandardNormal(rng: Rng, comptime VectorType: type) VectorType {
+    return vectorStandardNormalFrom(rng, VectorType);
+}
+
+pub fn vectorStandardNormalFrom(source: anytype, comptime VectorType: type) VectorType {
+    return Rng.vectorStandardNormalFrom(source, VectorType);
+}
+
+pub fn fillVectorStandardNormal(rng: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorStandardNormalFrom(rng, VectorType, dest);
+}
+
+pub fn fillVectorStandardNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    Rng.fillVectorStandardNormalFrom(source, VectorType, dest);
 }
 
 pub fn normal(rng: Rng, comptime T: type, mean: T, stddev: T) T {
@@ -1475,6 +1595,38 @@ pub fn fillNormalChecked(rng: Rng, comptime T: type, dest: []T, mean: T, stddev:
 
 pub fn fillNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
     try Rng.fillNormalCheckedFrom(source, T, dest, mean, stddev);
+}
+
+pub fn vectorNormal(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
+    return vectorNormalFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
+    return Rng.vectorNormalFrom(source, VectorType, mean, stddev);
+}
+
+pub fn vectorNormalChecked(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!VectorType {
+    return vectorNormalCheckedFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorNormalCheckedFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!VectorType {
+    return Rng.vectorNormalCheckedFrom(source, VectorType, mean, stddev);
+}
+
+pub fn fillVectorNormal(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    fillVectorNormalFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    Rng.fillVectorNormalFrom(source, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorNormalChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!void {
+    return fillVectorNormalCheckedFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorNormalCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!void {
+    return Rng.fillVectorNormalCheckedFrom(source, VectorType, dest, mean, stddev);
 }
 
 pub fn StandardNormal(comptime T: type) type {
@@ -1546,6 +1698,22 @@ pub fn fillStandardExponentialFrom(source: anytype, comptime T: type, dest: []T)
     for (dest) |*item| item.* = standardExponentialFrom(source, T);
 }
 
+pub fn vectorStandardExponential(rng: Rng, comptime VectorType: type) VectorType {
+    return vectorStandardExponentialFrom(rng, VectorType);
+}
+
+pub fn vectorStandardExponentialFrom(source: anytype, comptime VectorType: type) VectorType {
+    return Rng.vectorStandardExponentialFrom(source, VectorType);
+}
+
+pub fn fillVectorStandardExponential(rng: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorStandardExponentialFrom(rng, VectorType, dest);
+}
+
+pub fn fillVectorStandardExponentialFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    Rng.fillVectorStandardExponentialFrom(source, VectorType, dest);
+}
+
 pub fn exponential(rng: Rng, comptime T: type, rate: T) T {
     return exponentialFrom(rng, T, rate);
 }
@@ -1578,6 +1746,38 @@ pub fn fillExponentialChecked(rng: Rng, comptime T: type, dest: []T, rate: T) Er
 
 pub fn fillExponentialCheckedFrom(source: anytype, comptime T: type, dest: []T, rate: T) Error!void {
     try Rng.fillExponentialCheckedFrom(source, T, dest, rate);
+}
+
+pub fn vectorExponential(rng: Rng, comptime VectorType: type, rate: vectorChild(VectorType)) VectorType {
+    return vectorExponentialFrom(rng, VectorType, rate);
+}
+
+pub fn vectorExponentialFrom(source: anytype, comptime VectorType: type, rate: vectorChild(VectorType)) VectorType {
+    return Rng.vectorExponentialFrom(source, VectorType, rate);
+}
+
+pub fn vectorExponentialChecked(rng: Rng, comptime VectorType: type, rate: vectorChild(VectorType)) Error!VectorType {
+    return vectorExponentialCheckedFrom(rng, VectorType, rate);
+}
+
+pub fn vectorExponentialCheckedFrom(source: anytype, comptime VectorType: type, rate: vectorChild(VectorType)) Error!VectorType {
+    return Rng.vectorExponentialCheckedFrom(source, VectorType, rate);
+}
+
+pub fn fillVectorExponential(rng: Rng, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) void {
+    fillVectorExponentialFrom(rng, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) void {
+    Rng.fillVectorExponentialFrom(source, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) Error!void {
+    return fillVectorExponentialCheckedFrom(rng, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) Error!void {
+    return Rng.fillVectorExponentialCheckedFrom(source, VectorType, dest, rate);
 }
 
 pub fn Normal(comptime T: type) type {
@@ -7154,6 +7354,87 @@ fn requireFloat(comptime T: type) void {
     if (@typeInfo(T) != .float) @compileError("expected float type, found " ++ @typeName(T));
 }
 
+fn requireFloatOrFloatVector(comptime T: type) void {
+    switch (@typeInfo(T)) {
+        .float => {},
+        .vector => |info| requireFloat(info.child),
+        else => @compileError("expected float or float vector type, found " ++ @typeName(T)),
+    }
+}
+
+fn vectorInfo(comptime VectorType: type) @TypeOf(@typeInfo(VectorType).vector) {
+    const info = @typeInfo(VectorType);
+    if (info != .vector) @compileError("expected vector type, found " ++ @typeName(VectorType));
+    return info.vector;
+}
+
+fn vectorChild(comptime VectorType: type) type {
+    return vectorInfo(VectorType).child;
+}
+
+fn zeroOf(comptime T: type) T {
+    requireFloatOrFloatVector(T);
+    return switch (@typeInfo(T)) {
+        .float => 0,
+        .vector => @splat(0),
+        else => unreachable,
+    };
+}
+
+fn oneOf(comptime T: type) T {
+    requireFloatOrFloatVector(T);
+    return switch (@typeInfo(T)) {
+        .float => 1,
+        .vector => @splat(1),
+        else => unreachable,
+    };
+}
+
+fn splatOrScalar(comptime T: type, comptime value: comptime_float) T {
+    requireFloatOrFloatVector(T);
+    return switch (@typeInfo(T)) {
+        .float => value,
+        .vector => |info| @splat(@as(info.child, value)),
+        else => unreachable,
+    };
+}
+
+fn open01From(source: anytype, comptime T: type) T {
+    requireFloatOrFloatVector(T);
+    return switch (@typeInfo(T)) {
+        .float => Rng.floatOpenFrom(source, T),
+        .vector => Rng.vectorOpenFrom(source, T),
+        else => unreachable,
+    };
+}
+
+fn openClosed01From(source: anytype, comptime T: type) T {
+    requireFloatOrFloatVector(T);
+    return switch (@typeInfo(T)) {
+        .float => Rng.floatOpenClosedFrom(source, T),
+        .vector => Rng.vectorOpenClosedFrom(source, T),
+        else => unreachable,
+    };
+}
+
+fn fillOpen01From(source: anytype, comptime T: type, dest: []T) void {
+    requireFloatOrFloatVector(T);
+    switch (@typeInfo(T)) {
+        .float => Rng.fillOpenFrom(source, T, dest),
+        .vector => Rng.fillVectorOpenFrom(source, T, dest),
+        else => unreachable,
+    }
+}
+
+fn fillOpenClosed01From(source: anytype, comptime T: type, dest: []T) void {
+    requireFloatOrFloatVector(T);
+    switch (@typeInfo(T)) {
+        .float => Rng.fillOpenClosedFrom(source, T, dest),
+        .vector => Rng.fillVectorOpenClosedFrom(source, T, dest),
+        else => unreachable,
+    }
+}
+
 fn expInPlace(comptime T: type, dest: []T) void {
     comptime requireFloat(T);
     switch (T) {
@@ -8455,6 +8736,187 @@ test "invalid discrete distribution helpers do not consume random stream" {
 
     var buf: [4]u64 = undefined;
     try std.testing.expectError(error.InvalidParameter, fillHypergeometricCheckedFrom(&engine, &buf, 10, 11, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "distribution vector helpers preserve support and stream shape" {
+    const alea = @import("root.zig");
+    var facade_engine = alea.ScalarPrng.init(0x5eed_51d4);
+    var direct_engine = alea.ScalarPrng.init(0x5eed_51d4);
+    const rng = Rng.init(&facade_engine);
+
+    const uniform_vec = vectorUniform(rng, @Vector(4, f32), -1, 2);
+    const direct_uniform_vec = vectorUniformFrom(&direct_engine, @Vector(4, f32), -1, 2);
+    try std.testing.expectEqual(uniform_vec, direct_uniform_vec);
+    inline for (0..4) |lane| try std.testing.expect(uniform_vec[lane] >= -1 and uniform_vec[lane] < 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const uniform_int_vec = try vectorUniformChecked(rng, @Vector(4, u16), 3, 9);
+    const direct_uniform_int_vec = try vectorUniformCheckedFrom(&direct_engine, @Vector(4, u16), 3, 9);
+    try std.testing.expectEqual(uniform_int_vec, direct_uniform_int_vec);
+    inline for (0..4) |lane| try std.testing.expect(uniform_int_vec[lane] >= 3 and uniform_int_vec[lane] < 9);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const inclusive_vec = vectorUniformInclusive(rng, @Vector(4, f32), -1, 2);
+    const direct_inclusive_vec = vectorUniformInclusiveFrom(&direct_engine, @Vector(4, f32), -1, 2);
+    try std.testing.expectEqual(inclusive_vec, direct_inclusive_vec);
+    inline for (0..4) |lane| try std.testing.expect(inclusive_vec[lane] >= -1 and inclusive_vec[lane] <= 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const inclusive_int_vec = try vectorUniformInclusiveChecked(rng, @Vector(4, i16), -3, 3);
+    const direct_inclusive_int_vec = try vectorUniformInclusiveCheckedFrom(&direct_engine, @Vector(4, i16), -3, 3);
+    try std.testing.expectEqual(inclusive_int_vec, direct_inclusive_int_vec);
+    inline for (0..4) |lane| try std.testing.expect(inclusive_int_vec[lane] >= -3 and inclusive_int_vec[lane] <= 3);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), (Open01{}).lowValue(@Vector(4, f64)));
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), (Open01{}).highValue(@Vector(4, f64)));
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0.5)), (Open01{}).expectedValue(@Vector(4, f64)));
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.0 / 12.0)), (OpenClosed01{}).varianceValue(@Vector(4, f64)));
+
+    const open_vec = (Open01{}).sample(rng, @Vector(4, f64));
+    const direct_open_vec = (Open01{}).sampleFrom(&direct_engine, @Vector(4, f64));
+    try std.testing.expectEqual(open_vec, direct_open_vec);
+    inline for (0..4) |lane| try std.testing.expect(open_vec[lane] > 0 and open_vec[lane] < 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const open_closed_vec = (OpenClosed01{}).sample(rng, @Vector(4, f64));
+    const direct_open_closed_vec = (OpenClosed01{}).sampleFrom(&direct_engine, @Vector(4, f64));
+    try std.testing.expectEqual(open_closed_vec, direct_open_closed_vec);
+    inline for (0..4) |lane| try std.testing.expect(open_closed_vec[lane] > 0 and open_closed_vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const normal_vec = try vectorNormalChecked(rng, @Vector(4, f64), 1, 2);
+    const direct_normal_vec = try vectorNormalCheckedFrom(&direct_engine, @Vector(4, f64), 1, 2);
+    try std.testing.expectEqual(normal_vec, direct_normal_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(normal_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const exp_vec = try vectorExponentialChecked(rng, @Vector(8, f32), 2);
+    const direct_exp_vec = try vectorExponentialCheckedFrom(&direct_engine, @Vector(8, f32), 2);
+    try std.testing.expectEqual(exp_vec, direct_exp_vec);
+    inline for (0..8) |lane| try std.testing.expect(exp_vec[lane] >= 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var uniform_buf: [3]@Vector(4, f32) = undefined;
+    var direct_uniform_buf: [3]@Vector(4, f32) = undefined;
+    try fillVectorUniformChecked(rng, @Vector(4, f32), &uniform_buf, -1, 2);
+    try fillVectorUniformCheckedFrom(&direct_engine, @Vector(4, f32), &direct_uniform_buf, -1, 2);
+    try std.testing.expectEqualSlices(@Vector(4, f32), &uniform_buf, &direct_uniform_buf);
+    for (uniform_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] < 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var inclusive_buf: [3]@Vector(4, f32) = undefined;
+    var direct_inclusive_buf: [3]@Vector(4, f32) = undefined;
+    try fillVectorUniformInclusiveChecked(rng, @Vector(4, f32), &inclusive_buf, -1, 2);
+    try fillVectorUniformInclusiveCheckedFrom(&direct_engine, @Vector(4, f32), &direct_inclusive_buf, -1, 2);
+    try std.testing.expectEqualSlices(@Vector(4, f32), &inclusive_buf, &direct_inclusive_buf);
+    for (inclusive_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var open_buf: [3]@Vector(8, f32) = undefined;
+    var direct_open_buf: [3]@Vector(8, f32) = undefined;
+    (Open01{}).fill(rng, @Vector(8, f32), &open_buf);
+    (Open01{}).fillFrom(&direct_engine, @Vector(8, f32), &direct_open_buf);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &open_buf, &direct_open_buf);
+    for (open_buf) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] > 0 and vec[lane] < 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var open_closed_buf: [3]@Vector(8, f32) = undefined;
+    var direct_open_closed_buf: [3]@Vector(8, f32) = undefined;
+    (OpenClosed01{}).fill(rng, @Vector(8, f32), &open_closed_buf);
+    (OpenClosed01{}).fillFrom(&direct_engine, @Vector(8, f32), &direct_open_closed_buf);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &open_closed_buf, &direct_open_closed_buf);
+    for (open_closed_buf) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] > 0 and vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var standard_normal_buf: [3]@Vector(4, f64) = undefined;
+    var direct_standard_normal_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorStandardNormal(rng, @Vector(4, f64), &standard_normal_buf);
+    fillVectorStandardNormalFrom(&direct_engine, @Vector(4, f64), &direct_standard_normal_buf);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &standard_normal_buf, &direct_standard_normal_buf);
+    for (standard_normal_buf) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var normal_buf: [3]@Vector(8, f32) = undefined;
+    var direct_normal_buf: [3]@Vector(8, f32) = undefined;
+    try fillVectorNormalChecked(rng, @Vector(8, f32), &normal_buf, 1, 2);
+    try fillVectorNormalCheckedFrom(&direct_engine, @Vector(8, f32), &direct_normal_buf, 1, 2);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &normal_buf, &direct_normal_buf);
+    for (normal_buf) |vec| inline for (0..8) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var standard_exp_buf: [3]@Vector(4, f64) = undefined;
+    var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
+    fillVectorStandardExponentialFrom(&direct_engine, @Vector(4, f64), &direct_standard_exp_buf);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &standard_exp_buf, &direct_standard_exp_buf);
+    for (standard_exp_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var exp_buf: [3]@Vector(8, f32) = undefined;
+    var direct_exp_buf: [3]@Vector(8, f32) = undefined;
+    try fillVectorExponentialChecked(rng, @Vector(8, f32), &exp_buf, 2);
+    try fillVectorExponentialCheckedFrom(&direct_engine, @Vector(8, f32), &direct_exp_buf, 2);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &exp_buf, &direct_exp_buf);
+    for (exp_buf) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] >= 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+}
+
+test "invalid distribution vector helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1e7);
+    var control = alea.ScalarPrng.init(0x5150_d1e7);
+
+    try std.testing.expectError(error.EmptyRange, vectorUniformCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, vectorUniformInclusiveCheckedFrom(&engine, @Vector(4, u16), 4, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, vectorNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var uniform_buf: [4]@Vector(4, f64) = undefined;
+    try std.testing.expectError(error.EmptyRange, fillVectorUniformCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, fillVectorUniformInclusiveCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "zero-length distribution vector fills do not validate or consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1e8);
+    var control = alea.ScalarPrng.init(0x5150_d1e8);
+    const rng = Rng.init(&engine);
+
+    var empty: [0]@Vector(4, f64) = .{};
+
+    try fillVectorUniformCheckedFrom(&engine, @Vector(4, f64), &empty, std.math.inf(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorUniformInclusiveCheckedFrom(&engine, @Vector(4, f64), &empty, std.math.inf(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorUniformInclusiveChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorNormalChecked(rng, @Vector(4, f64), &empty, 0, -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

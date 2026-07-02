@@ -36,6 +36,18 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorOpenF64(io, stdout, "alea fillVectorOpen f64x4", lanes);
     try benchFillVectorOpenClosedF64(io, stdout, "alea fillVectorOpenClosed f64x4", lanes);
     try benchFillVectorRangeF64(io, stdout, "alea fillVectorRange f64x4", lanes);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorUniform f32x8", lanes, 0xa118, fillDistUniformF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorUniform f32x8 direct", lanes, 0xa118, fillDistUniformF32Direct);
+    try benchVectorF32x8(io, stdout, "alea distributions.Open01.fill f32x8", lanes, 0xa119, fillDistOpen01F32);
+    try benchVectorF64x4(io, stdout, "alea distributions.OpenClosed01.fill f64x4", lanes, 0xa11a, fillDistOpenClosed01F64);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardNormal f32x8", lanes / 4, 0xd188, fillDistStandardNormalF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardNormal f32x8 direct", lanes / 4, 0xd188, fillDistStandardNormalF32Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormal f64x4", lanes / 8, 0xd184, fillDistNormalF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormal f64x4 direct", lanes / 8, 0xd184, fillDistNormalF64Direct);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4 direct", lanes / 2, 0xe184, fillDistExponentialF64Direct);
     try benchFillVectorStandardNormalF32(io, stdout, "alea fillVectorStandardNormal f32x8", lanes / 4);
     try benchFillVectorStandardNormalF32Direct(io, stdout, "alea fillVectorStandardNormal f32x8 direct", lanes / 4);
     try benchFillVectorStandardNormalF32Repair(io, stdout, "alea fillVectorStandardNormal f32x8 repair candidate", lanes / 4);
@@ -341,6 +353,132 @@ fn benchFillVectorRangeF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchVectorF32x8(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    lanes: usize,
+    comptime seed: u64,
+    comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, []@Vector(8, f32)) void,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [256]@Vector(8, f32) = undefined;
+    const vector_count = lanes / 8;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = vector_count;
+        var checksum: f32 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, rng, out[0..n]);
+            checksum += checksumVectors(&out, n);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(vector_count * 8)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchVectorF64x4(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    lanes: usize,
+    comptime seed: u64,
+    comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, []@Vector(4, f64)) void,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [256]@Vector(4, f64) = undefined;
+    const vector_count = lanes / 4;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = vector_count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, rng, out[0..n]);
+            checksum += checksumVectorsF64(&out, n);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(vector_count * 4)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn fillDistUniformF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorUniform(rng, @Vector(8, f32), dest, -1, 1);
+}
+
+fn fillDistUniformF32Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorUniformFrom(engine, @Vector(8, f32), dest, -1, 1);
+}
+
+fn fillDistOpen01F32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    (alea.distributions.Open01{}).fill(rng, @Vector(8, f32), dest);
+}
+
+fn fillDistOpenClosed01F64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    (alea.distributions.OpenClosed01{}).fill(rng, @Vector(4, f64), dest);
+}
+
+fn fillDistStandardNormalF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorStandardNormal(rng, @Vector(8, f32), dest);
+}
+
+fn fillDistStandardNormalF32Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorStandardNormalFrom(engine, @Vector(8, f32), dest);
+}
+
+fn fillDistNormalF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorNormal(rng, @Vector(4, f64), dest, 0, 1);
+}
+
+fn fillDistNormalF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorNormalFrom(engine, @Vector(4, f64), dest, 0, 1);
+}
+
+fn fillDistStandardExponentialF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorStandardExponential(rng, @Vector(8, f32), dest);
+}
+
+fn fillDistStandardExponentialF32Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorStandardExponentialFrom(engine, @Vector(8, f32), dest);
+}
+
+fn fillDistExponentialF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorExponential(rng, @Vector(4, f64), dest, 2);
+}
+
+fn fillDistExponentialF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorExponentialFrom(engine, @Vector(4, f64), dest, 2);
 }
 
 fn benchFillVectorStandardNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {

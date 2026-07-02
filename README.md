@@ -16,9 +16,9 @@ The current Linux-first roadmap is intentionally broad:
 - `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling,
   including bulk `fill` methods where stream policy permits
 - bulk `fillSample`, `fillRange`, strict-interval scalar and vector float
-  fill, standard/parameterized vector normal and exponential fills, `fillNormal`,
-  `fillExponential`, and unit geometry fill APIs for high-volume sampling
-  without iterator ceremony
+  fill, distribution-namespace vector uniform/strict-interval/normal/exponential
+  wrappers, `fillNormal`, `fillExponential`, and unit geometry fill APIs for
+  high-volume sampling without iterator ceremony
 - deterministic seed derivation with named streams and system-entropy helpers
 - scalar helpers for integers, floats, durations, ranges, booleans, and bytes
 - collection helpers for `choose`, `shuffle`, partial shuffle, weighted indexes,
@@ -111,8 +111,9 @@ The Rust command benchmarks against the local `rand` checkout in
 `~/Work/rand`. Latest comparison data is kept under
 `compare/results/`. Use `vectorbench` for focused vector-slice evidence such
 as packed bool chance/ratio, strict-interval vector float fills, vector ranges,
-and scalar-lane normal/exponential vector fills without slowing the full
-throughput suite; `compare/results/simd-distribution-kernel-notes.md` records
+distribution-namespace vector wrappers, and scalar-lane normal/exponential
+vector fills without slowing the full throughput suite;
+`compare/results/simd-distribution-kernel-notes.md` records
 requirements for future dense SIMD distribution kernels. The optional
 `bench -- [bytes] [filter]` arguments override the byte count and
 filter rows by case-insensitive substring, which is useful for focused
