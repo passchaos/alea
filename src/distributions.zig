@@ -1489,6 +1489,14 @@ pub fn StandardNormal(comptime T: type) type {
             return 1;
         }
 
+        pub fn medianValue(_: @This()) T {
+            return 0;
+        }
+
+        pub fn modeValue(_: @This()) T {
+            return 0;
+        }
+
         pub fn minValue(_: @This()) ?T {
             return null;
         }
@@ -1604,6 +1612,14 @@ pub fn Normal(comptime T: type) type {
 
         pub fn varianceValue(self: Self) T {
             return self.stddev * self.stddev;
+        }
+
+        pub fn medianValue(self: Self) T {
+            return self.mean;
+        }
+
+        pub fn modeValue(self: Self) T {
+            return self.mean;
         }
 
         pub fn minValue(self: Self) ?T {
@@ -9141,6 +9157,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), normal_cv_sampler.stddevValue(), 1e-15);
     try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.expectedValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 4), normal_cv_sampler.varianceValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.medianValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.modeValue(), 0);
     try std.testing.expect(normal_cv_sampler.minValue() == null);
     try std.testing.expect(normal_cv_sampler.maxValue() == null);
     const degenerate_normal = try Normal(f64).init(3, 0);
@@ -9173,6 +9191,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectEqual(@as(f64, 1), (StandardNormal(f64){}).stddevValue());
     try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).expectedValue());
     try std.testing.expectEqual(@as(f64, 1), (StandardNormal(f64){}).varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).medianValue());
+    try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).modeValue());
     try std.testing.expect((StandardNormal(f64){}).minValue() == null);
     try std.testing.expect((StandardNormal(f64){}).maxValue() == null);
     var standard_normal_buf: [8]f64 = undefined;
