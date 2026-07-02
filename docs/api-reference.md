@@ -565,6 +565,8 @@ Reusable samplers:
 - `Kumaraswamy(T).init`
 - `Kumaraswamy(T).alphaValue`
 - `Kumaraswamy(T).betaValue`
+- `Kumaraswamy(T).expectedValue`
+- `Kumaraswamy(T).varianceValue`
 - `Kumaraswamy(T).sample`
 - `Kumaraswamy(T).sampleFrom`
 - `Kumaraswamy(T).fill`

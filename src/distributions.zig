@@ -3689,6 +3689,22 @@ pub fn Kumaraswamy(comptime T: type) type {
             return 1 / self.inverse_beta;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.momentValue(1);
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const first_moment = self.momentValue(1);
+            const second_moment = self.momentValue(2);
+            return second_moment - first_moment * first_moment;
+        }
+
+        fn momentValue(self: Self, order: T) T {
+            const beta_param = self.betaValue();
+            const beta_arg = 1 + order * self.inverse_alpha;
+            return beta_param * @exp(std.math.lgamma(T, beta_arg) + std.math.lgamma(T, beta_param) - std.math.lgamma(T, beta_arg + beta_param));
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8843,6 +8859,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     const kumaraswamy_sampler = try Kumaraswamy(f64).init(2, 5);
     try std.testing.expectApproxEqAbs(@as(f64, 2), kumaraswamy_sampler.alphaValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5), kumaraswamy_sampler.betaValue(), 1e-12);
+    const kumaraswamy_first_moment = 5.0 * @exp(std.math.lgamma(f64, 1.0 + 1.0 / 2.0) + std.math.lgamma(f64, 5.0) - std.math.lgamma(f64, 1.0 + 1.0 / 2.0 + 5.0));
+    const kumaraswamy_second_moment = 5.0 * @exp(std.math.lgamma(f64, 1.0 + 2.0 / 2.0) + std.math.lgamma(f64, 5.0) - std.math.lgamma(f64, 1.0 + 2.0 / 2.0 + 5.0));
+    try std.testing.expectApproxEqAbs(kumaraswamy_first_moment, kumaraswamy_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(kumaraswamy_second_moment - kumaraswamy_first_moment * kumaraswamy_first_moment, kumaraswamy_sampler.varianceValue(), 1e-12);
     kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf);
     for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
     const direct_checked_kumaraswamy = try kumaraswamyCheckedFrom(&direct_engine, f64, 2, 5);
