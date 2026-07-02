@@ -33,6 +33,14 @@ pub const Charset = struct {
         return self.bytes[index];
     }
 
+    pub fn indexOf(self: Charset, byte: u8) ?usize {
+        return std.mem.indexOfScalar(u8, self.bytes, byte);
+    }
+
+    pub fn contains(self: Charset, byte: u8) bool {
+        return self.indexOf(byte) != null;
+    }
+
     pub fn probabilityAt(self: Charset, index: usize) error{InvalidParameter}!f64 {
         if (index >= self.bytes.len) return error.InvalidParameter;
         return 1.0 / @as(f64, @floatFromInt(self.bytes.len));
@@ -192,6 +200,10 @@ test "ascii charset fills requested length" {
     try std.testing.expectEqual(alphanumeric.len, Alphanumeric.len());
     try std.testing.expectEqual(@as(u8, 'A'), try Alphanumeric.byteAt(0));
     try std.testing.expectError(error.InvalidParameter, Alphanumeric.byteAt(alphanumeric.len));
+    try std.testing.expectEqual(@as(?usize, 0), Alphanumeric.indexOf('A'));
+    try std.testing.expectEqual(@as(?usize, 61), Alphanumeric.indexOf('9'));
+    try std.testing.expect(Alphanumeric.contains('z'));
+    try std.testing.expect(!Alphanumeric.contains('_'));
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), try Alphanumeric.probabilityAt(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), try Alphanumeric.probabilityAt(alphanumeric.len - 1), 1e-12);
     try std.testing.expectError(error.InvalidParameter, Alphanumeric.probabilityAt(alphanumeric.len));
