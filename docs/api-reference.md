@@ -888,6 +888,7 @@ Alias helpers:
 - `AliasTable.init`
 - `AliasTable.update`
 - `AliasTable.len`
+- `AliasTable.isEmpty`
 - `AliasTable.totalWeight`
 - `AliasTable.weights`
 - `AliasTable.weightsInto`
@@ -981,7 +982,7 @@ Dynamic weighted helpers:
 - Reusable samplers: `Choice(T)`, `chooseIter`, `chooseIterFrom`,
   `chooseIterChecked`, `chooseIterCheckedFrom`,
   `WeightedChoice(T, Weight)`,
-  `Choice.init`, `Choice.initChecked`, `Choice.len`,
+  `Choice.init`, `Choice.initChecked`, `Choice.len`, `Choice.isEmpty`,
   `Choice.itemsValue`, `Choice.itemAt`, `Choice.probabilityAt`,
   `Choice.probabilities`, `Choice.probabilitiesInto`,
   `Choice.sample`,
@@ -990,6 +991,7 @@ Dynamic weighted helpers:
   `Choice.fillValues`, `Choice.fillValuesFrom`, `Choice.iter`,
   `Choice.iterFrom`,
   `WeightedChoice.init`, `WeightedChoice.deinit`, `WeightedChoice.len`,
+  `WeightedChoice.isEmpty`,
   `WeightedChoice.itemsValue`, `WeightedChoice.itemAt`,
   `WeightedChoice.totalWeight`, `WeightedChoice.weights`,
   `WeightedChoice.weightsInto`, `WeightedChoice.probabilities`,

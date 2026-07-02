@@ -22,7 +22,7 @@ Zig-native way.
 | `UniformDuration` | Covered by `durationRangeLessThan` and `durationRangeAtMost` for `std.Io.Duration` |
 | `Bernoulli` | Covered by `Bernoulli`, `chance`, `ratio`, checked variants, and probability/moment/support accessors |
 | `Alphanumeric`, `Alphabetic` | Covered by ASCII charsets and `Charset`, including charset byte/membership/probability diagnostics |
-| `Slice::Choose` | Covered by `seq.Choice` and `chooseIter`, including item-slice diagnostics plus single and bulk uniform-probability exports |
+| `Slice::Choose` | Covered by `seq.Choice` and `chooseIter`, including item-slice/emptiness diagnostics plus single and bulk uniform-probability exports |
 | `WeightedIndex` | Covered by `weightedIndex`, `AliasTable`, `WeightedChoice`; checked paths reject non-finite weights and overflowing totals, and `AliasTable.update` / `WeightedChoice.update` support weight replacement |
 
 ## Historical Rust `rand` Non-Uniform Distributions
@@ -46,8 +46,8 @@ Zig-native way.
 | Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper, and trials/probability/moment/support accessors |
 | Geometric / StandardGeometric | Covered: one-based `Geometric`, rand-style failure-count `GeometricFailures`, probability/moment/support accessors, and p=0.5 `StandardGeometric` fast path/accessor |
 | Hypergeometric | Covered: `Hypergeometric`, including parameter/moment/support accessors and HIN inverse-transform fast path for small-mode regimes; large-parameter H2PE-equivalent performance remains tracked in `performance-triage.md` |
-| WeightedChoice | Covered: `WeightedChoice`, including item diagnostics, weight/probability diagnostics and exports, weight updates, single/bulk weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
-| WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `totalWeight`, `weightAt`, `probabilityAt`, and allocation-returning or caller-buffer weight/probability reconstruction |
+| WeightedChoice | Covered: `WeightedChoice`, including item/emptiness diagnostics, weight/probability diagnostics and exports, weight updates, single/bulk weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
+| WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `isEmpty`, `totalWeight`, `weightAt`, `probabilityAt`, and allocation-returning or caller-buffer weight/probability reconstruction |
 | WeightedTreeIndex | Covered: `WeightedTree(Weight)` for generic weights and `WeightedIntTree(Weight)` for faster unsigned integer sample/update/push/pop workloads; both expose single-weight/probability lookup plus `weights` / `weightsInto` and `probabilities` / `probabilitiesInto` export for diagnostics; `WeightedIntTree` stores subtotals in `u64` and rejects wider integer values that do not fit |
 | InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)`, including mean/shape/moment/support accessors |
 | NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)`, including alpha/beta/gamma and moment/support accessors |
