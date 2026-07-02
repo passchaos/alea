@@ -40,6 +40,18 @@ pub const IndexVec = union(enum) {
         };
     }
 
+    pub fn indexOf(self: IndexVec, value: usize) ?usize {
+        var index: usize = 0;
+        while (index < self.len()) : (index += 1) {
+            if (self.at(index) == value) return index;
+        }
+        return null;
+    }
+
+    pub fn contains(self: IndexVec, value: usize) bool {
+        return self.indexOf(value) != null;
+    }
+
     pub fn copyInto(self: IndexVec, out: []usize) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
         switch (self) {
@@ -1162,6 +1174,10 @@ test "portable index sampling has stable snapshots" {
     try std.testing.expect(!index_vec.isEmpty());
     const expected = [_]usize{ 70, 11, 8, 89, 0, 1, 18, 74 };
     for (expected, 0..) |value, i| try std.testing.expectEqual(value, index_vec.at(i));
+    try std.testing.expectEqual(@as(?usize, 0), index_vec.indexOf(70));
+    try std.testing.expectEqual(@as(?usize, 4), index_vec.indexOf(0));
+    try std.testing.expect(index_vec.contains(18));
+    try std.testing.expect(!index_vec.contains(99));
     var iter = index_vec.iter();
     try std.testing.expectEqual(@as(usize, expected.len), iter.remaining());
     for (expected, 0..) |value, i| {
@@ -1188,6 +1204,9 @@ test "index vec conversion supports native backing" {
     const index_vec = IndexVec{ .usize = &backing };
     try std.testing.expectEqual(@as(usize, 3), index_vec.len());
     try std.testing.expect(!index_vec.isEmpty());
+    try std.testing.expectEqual(@as(?usize, 1), index_vec.indexOf(8));
+    try std.testing.expect(index_vec.contains(13));
+    try std.testing.expect(!index_vec.contains(21));
 
     var iter = index_vec.iter();
     try std.testing.expectEqual(@as(usize, 3), iter.remaining());
