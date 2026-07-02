@@ -33,6 +33,24 @@ pub const Charset = struct {
         return self.bytes[index];
     }
 
+    pub fn probabilityAt(self: Charset, index: usize) error{InvalidParameter}!f64 {
+        if (index >= self.bytes.len) return error.InvalidParameter;
+        return 1.0 / @as(f64, @floatFromInt(self.bytes.len));
+    }
+
+    pub fn probabilities(self: Charset, allocator: std.mem.Allocator) ![]f64 {
+        const out = try allocator.alloc(f64, self.bytes.len);
+        errdefer allocator.free(out);
+        try self.probabilitiesInto(out);
+        return out;
+    }
+
+    pub fn probabilitiesInto(self: Charset, out: []f64) error{InvalidParameter}!void {
+        if (out.len != self.bytes.len) return error.InvalidParameter;
+        if (out.len == 0) return;
+        @memset(out, 1.0 / @as(f64, @floatFromInt(self.bytes.len)));
+    }
+
     pub fn sample(self: Charset, rng: Rng) u8 {
         return self.sampleFrom(rng);
     }
@@ -174,6 +192,19 @@ test "ascii charset fills requested length" {
     try std.testing.expectEqual(alphanumeric.len, Alphanumeric.len());
     try std.testing.expectEqual(@as(u8, 'A'), try Alphanumeric.byteAt(0));
     try std.testing.expectError(error.InvalidParameter, Alphanumeric.byteAt(alphanumeric.len));
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), try Alphanumeric.probabilityAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), try Alphanumeric.probabilityAt(alphanumeric.len - 1), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, Alphanumeric.probabilityAt(alphanumeric.len));
+    var probabilities_buf: [alphanumeric.len]f64 = undefined;
+    try Alphanumeric.probabilitiesInto(&probabilities_buf);
+    for (probabilities_buf) |probability| {
+        try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), probability, 1e-12);
+    }
+    var wrong_probability_len: [alphanumeric.len - 1]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, Alphanumeric.probabilitiesInto(&wrong_probability_len));
+    const probabilities = try Alphanumeric.probabilities(std.testing.allocator);
+    defer std.testing.allocator.free(probabilities);
+    try std.testing.expectEqualSlices(f64, &probabilities_buf, probabilities);
     try std.testing.expectEqual(@as(usize, 32), password.len);
     for (password) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
 
@@ -326,6 +357,11 @@ test "invalid charset init does not consume random stream" {
     defer std.testing.allocator.free(zero_alloc);
     try std.testing.expectEqual(@as(usize, 0), zero_alloc.len);
     try std.testing.expectEqual(@as(u64, 0xf4008d0537611435), engine.next());
+    var empty_probabilities: [0]f64 = .{};
+    try empty.probabilitiesInto(&empty_probabilities);
+    const owned_empty_probabilities = try empty.probabilities(std.testing.allocator);
+    defer std.testing.allocator.free(owned_empty_probabilities);
+    try std.testing.expectEqual(@as(usize, 0), owned_empty_probabilities.len);
 }
 
 test "invalid charset facade helpers do not consume random stream" {
