@@ -29,6 +29,9 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("vector microbench\n", .{});
     try benchFillVectorChanceBool(io, stdout, "alea fillVectorChance boolx64 p=0.25", lanes);
     try benchFillVectorRatioBool(io, stdout, "alea fillVectorRatio boolx64 1/4", lanes);
+    try benchBoolX64(io, stdout, "alea distributions.fillVectorBernoulli boolx64 p=0.25", lanes, 0xb464, fillDistBernoulliBool);
+    try benchBoolX64(io, stdout, "alea distributions.fillVectorBernoulli boolx64 direct p=0.25", lanes, 0xb464, fillDistBernoulliBoolDirect);
+    try benchBoolX64(io, stdout, "alea distributions.VectorBernoulli.fill boolx64 p=0.25", lanes, 0xb464, fillDistBernoulliSamplerBool);
     try benchFillVectorOpenF32(io, stdout, "alea fillVectorOpen f32x8", lanes);
     try benchFillVectorOpenClosedF32(io, stdout, "alea fillVectorOpenClosed f32x8", lanes);
     try benchFillVectorRangeF32(io, stdout, "alea fillVectorRange f32x8", lanes);
@@ -101,6 +104,58 @@ fn benchFillVectorChanceBool(io: std.Io, stdout: *std.Io.Writer, name: []const u
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M lanes/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchBoolX64(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    lanes: usize,
+    comptime seed: u64,
+    comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, []@Vector(64, bool)) void,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [256]@Vector(64, bool) = undefined;
+    const vector_count = lanes / 64;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = vector_count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, rng, out[0..n]);
+            checksum += checksumBoolVectors(&out, n);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(vector_count * 64)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn fillDistBernoulliBool(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(64, bool)) void {
+    alea.distributions.fillVectorBernoulli(rng, @Vector(64, bool), dest, 0.25);
+}
+
+fn fillDistBernoulliBoolDirect(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(64, bool)) void {
+    alea.distributions.fillVectorBernoulliFrom(engine, @Vector(64, bool), dest, 0.25);
+}
+
+fn fillDistBernoulliSamplerBool(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(64, bool)) void {
+    const sampler = alea.distributions.VectorBernoulli(@Vector(64, bool)).initRatio(1, 4) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 fn benchFillVectorRatioBool(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {

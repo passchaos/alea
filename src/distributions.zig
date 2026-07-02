@@ -279,6 +279,43 @@ pub fn fillBernoulliCheckedFrom(source: anytype, dest: []bool, p: f64) Error!voi
     dist.fillFrom(source, dest);
 }
 
+pub fn vectorBernoulli(rng: Rng, comptime VectorType: type, p: f64) VectorType {
+    return vectorBernoulliFrom(rng, VectorType, p);
+}
+
+pub fn vectorBernoulliFrom(source: anytype, comptime VectorType: type, p: f64) VectorType {
+    const dist = VectorBernoulli(VectorType).init(p) catch unreachable;
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorBernoulliChecked(rng: Rng, comptime VectorType: type, p: f64) Error!VectorType {
+    return vectorBernoulliCheckedFrom(rng, VectorType, p);
+}
+
+pub fn vectorBernoulliCheckedFrom(source: anytype, comptime VectorType: type, p: f64) Error!VectorType {
+    const dist = try VectorBernoulli(VectorType).init(p);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorBernoulli(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) void {
+    fillVectorBernoulliFrom(rng, VectorType, dest, p);
+}
+
+pub fn fillVectorBernoulliFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) void {
+    const dist = VectorBernoulli(VectorType).init(p) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorBernoulliChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
+    return fillVectorBernoulliCheckedFrom(rng, VectorType, dest, p);
+}
+
+pub fn fillVectorBernoulliCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorBernoulli(VectorType).init(p);
+    dist.fillFrom(source, dest);
+}
+
 pub const Bernoulli = struct {
     const always_true = std.math.maxInt(u64);
     const scale = 0x1.0p64;
@@ -365,6 +402,105 @@ pub const Bernoulli = struct {
         for (dest) |*item| item.* = Rng.nextFrom(source) < self.p_int;
     }
 };
+
+pub fn VectorBernoulli(comptime VectorType: type) type {
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("VectorBernoulli expects a bool vector");
+
+    return struct {
+        const Self = @This();
+        const always_true = Bernoulli.always_true;
+        const scale = Bernoulli.scale;
+
+        p_int: u64,
+
+        pub fn init(p: f64) Error!Self {
+            if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+            if (p == 1) return .{ .p_int = always_true };
+            return .{ .p_int = Rng.probabilityThreshold(p) };
+        }
+
+        pub fn initRatio(numerator: u32, denominator: u32) Error!Self {
+            if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
+            if (numerator == denominator) return .{ .p_int = always_true };
+            const p = @as(f64, @floatFromInt(numerator)) / @as(f64, @floatFromInt(denominator));
+            return .{ .p_int = Rng.probabilityThreshold(p) };
+        }
+
+        pub fn probability(self: Self) f64 {
+            if (self.p_int == always_true) return 1;
+            return @as(f64, @floatFromInt(self.p_int)) / scale;
+        }
+
+        pub fn probabilityValue(self: Self) f64 {
+            return self.probability();
+        }
+
+        pub fn expectedValue(self: Self) f64 {
+            return self.probability();
+        }
+
+        pub fn varianceValue(self: Self) f64 {
+            const p = self.probability();
+            return p * (1 - p);
+        }
+
+        pub fn modeValue(self: Self) ?bool {
+            const p = self.probability();
+            if (p == 0.5) return null;
+            return p > 0.5;
+        }
+
+        pub fn minValue(self: Self) bool {
+            _ = self;
+            return false;
+        }
+
+        pub fn maxValue(self: Self) bool {
+            _ = self;
+            return true;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.p_int == 0) return @splat(false);
+            if (self.p_int == always_true) return @splat(true);
+            if (self.p_int == Rng.probabilityThreshold(0.5)) return Rng.vectorChanceFrom(source, VectorType, 0.5);
+            if (self.p_int == Rng.probabilityThreshold(0.25)) return Rng.vectorChanceFrom(source, VectorType, 0.25);
+
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = Rng.nextFrom(source) < self.p_int;
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.p_int == 0) {
+                @memset(dest, @as(VectorType, @splat(false)));
+                return;
+            }
+            if (self.p_int == always_true) {
+                @memset(dest, @as(VectorType, @splat(true)));
+                return;
+            }
+            if (self.p_int == Rng.probabilityThreshold(0.5)) {
+                Rng.fillVectorChanceFrom(source, VectorType, dest, 0.5);
+                return;
+            }
+            if (self.p_int == Rng.probabilityThreshold(0.25)) {
+                Rng.fillVectorChanceFrom(source, VectorType, dest, 0.25);
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
 
 pub const Binomial = struct {
     trials: u64,
@@ -9092,6 +9228,44 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_engine = alea.ScalarPrng.init(0x5eed_51d4);
     const rng = Rng.init(&facade_engine);
 
+    const bernoulli_vec = vectorBernoulli(rng, @Vector(8, bool), 0.25);
+    const direct_bernoulli_vec = vectorBernoulliFrom(&direct_engine, @Vector(8, bool), 0.25);
+    try std.testing.expectEqual(bernoulli_vec, direct_bernoulli_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const checked_bernoulli_vec = try vectorBernoulliChecked(rng, @Vector(8, bool), 0.5);
+    const direct_checked_bernoulli_vec = try vectorBernoulliCheckedFrom(&direct_engine, @Vector(8, bool), 0.5);
+    try std.testing.expectEqual(checked_bernoulli_vec, direct_checked_bernoulli_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_bernoulli_sampler = try VectorBernoulli(@Vector(8, bool)).initRatio(1, 4);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), vector_bernoulli_sampler.probabilityValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), vector_bernoulli_sampler.expectedValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.1875), vector_bernoulli_sampler.varianceValue(), 1e-15);
+    try std.testing.expectEqual(false, vector_bernoulli_sampler.modeValue().?);
+    try std.testing.expectEqual(false, vector_bernoulli_sampler.minValue());
+    try std.testing.expectEqual(true, vector_bernoulli_sampler.maxValue());
+    const sampled_bernoulli_vec = vector_bernoulli_sampler.sample(rng);
+    const direct_sampled_bernoulli_vec = vector_bernoulli_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_bernoulli_vec, direct_sampled_bernoulli_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var bernoulli_buf: [3]@Vector(8, bool) = undefined;
+    var direct_bernoulli_buf: [3]@Vector(8, bool) = undefined;
+    try fillVectorBernoulliChecked(rng, @Vector(8, bool), &bernoulli_buf, 0.25);
+    try fillVectorBernoulliCheckedFrom(&direct_engine, @Vector(8, bool), &direct_bernoulli_buf, 0.25);
+    try std.testing.expectEqualSlices(@Vector(8, bool), &bernoulli_buf, &direct_bernoulli_buf);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    vector_bernoulli_sampler.fill(rng, &bernoulli_buf);
+    vector_bernoulli_sampler.fillFrom(&direct_engine, &direct_bernoulli_buf);
+    try std.testing.expectEqualSlices(@Vector(8, bool), &bernoulli_buf, &direct_bernoulli_buf);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const always_true_vec = (try VectorBernoulli(@Vector(8, bool)).init(1)).sample(rng);
+    try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), always_true_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const uniform_vec = vectorUniform(rng, @Vector(4, f32), -1, 2);
     const direct_uniform_vec = vectorUniformFrom(&direct_engine, @Vector(4, f32), -1, 2);
     try std.testing.expectEqual(uniform_vec, direct_uniform_vec);
@@ -9293,6 +9467,13 @@ test "invalid distribution vector helpers do not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_d1e7);
     var control = alea.ScalarPrng.init(0x5150_d1e7);
 
+    try std.testing.expectError(error.InvalidProbability, vectorBernoulliCheckedFrom(&engine, @Vector(8, bool), -0.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var bool_buf: [4]@Vector(8, bool) = undefined;
+    try std.testing.expectError(error.InvalidProbability, fillVectorBernoulliCheckedFrom(&engine, @Vector(8, bool), &bool_buf, -0.1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.EmptyRange, vectorUniformCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -9326,7 +9507,12 @@ test "zero-length distribution vector fills do not validate or consume random st
     const rng = Rng.init(&engine);
 
     var empty: [0]@Vector(4, f64) = .{};
+    var empty_bool: [0]@Vector(8, bool) = .{};
 
+    try fillVectorBernoulliCheckedFrom(&engine, @Vector(8, bool), &empty_bool, -0.1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorBernoulliChecked(rng, @Vector(8, bool), &empty_bool, -0.1);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformCheckedFrom(&engine, @Vector(4, f64), &empty, std.math.inf(f64), 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformInclusiveCheckedFrom(&engine, @Vector(4, f64), &empty, std.math.inf(f64), 1);

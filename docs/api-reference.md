@@ -134,7 +134,11 @@ Single-shot helpers:
   `fillVectorUniformInclusiveCheckedFrom`
 - `bernoulli`, `bernoulliFrom`, `bernoulliChecked`,
   `bernoulliCheckedFrom`, `fillBernoulli`, `fillBernoulliFrom`,
-  `fillBernoulliChecked`, `fillBernoulliCheckedFrom`, `binomial`,
+  `fillBernoulliChecked`, `fillBernoulliCheckedFrom`, `vectorBernoulli`,
+  `vectorBernoulliFrom`, `vectorBernoulliChecked`,
+  `vectorBernoulliCheckedFrom`, `fillVectorBernoulli`,
+  `fillVectorBernoulliFrom`, `fillVectorBernoulliChecked`,
+  `fillVectorBernoulliCheckedFrom`, `binomial`,
   `binomialFrom`, `binomialChecked`, `binomialCheckedFrom`, `fillBinomial`, `fillBinomialFrom`,
   `fillBinomialChecked`, `fillBinomialCheckedFrom`,
   `binomialPoissonApprox`, `binomialPoissonApproxFrom`,
@@ -279,6 +283,20 @@ Reusable samplers:
 - `Bernoulli.sampleFrom`
 - `Bernoulli.fill`
 - `Bernoulli.fillFrom`
+- `VectorBernoulli(VectorType)`
+- `VectorBernoulli(VectorType).init`
+- `VectorBernoulli(VectorType).initRatio`
+- `VectorBernoulli(VectorType).probability`
+- `VectorBernoulli(VectorType).probabilityValue`
+- `VectorBernoulli(VectorType).expectedValue`
+- `VectorBernoulli(VectorType).varianceValue`
+- `VectorBernoulli(VectorType).modeValue`
+- `VectorBernoulli(VectorType).minValue`
+- `VectorBernoulli(VectorType).maxValue`
+- `VectorBernoulli(VectorType).sample`
+- `VectorBernoulli(VectorType).sampleFrom`
+- `VectorBernoulli(VectorType).fill`
+- `VectorBernoulli(VectorType).fillFrom`
 - `Binomial`
 - `Binomial.init`
 - `Binomial.trialsValue`
