@@ -30,7 +30,7 @@ Zig-native way.
 | Rust distribution family | Alea status |
 | --- | --- |
 | Normal / StandardNormal | Covered: `standardNormal`, `StandardNormal(T)`, `normal`, `Normal(T)`, including coefficient-of-variation construction/accessor, z-score conversion, and standard-parameter/moment/support accessors |
-| LogNormal | Covered: `logNormal`, `LogNormal(T)`, including linear-space mean/coefficient-of-variation construction and accessors, z-score conversion, log-space, moment, and support accessors, and f32/f64 benchmark rows |
+| LogNormal | Covered: `logNormal`, `LogNormal(T)`, including linear-space mean/coefficient-of-variation construction and accessors, median/mode diagnostics, z-score conversion, log-space, moment, and support accessors, and f32/f64 benchmark rows |
 | Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)`, including reusable-sampler and standard rate/moment/support accessors |
 | Gamma | Covered: `gamma`, `Gamma(T)`, including shape/scale/moment/support accessors |
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment/support accessors |

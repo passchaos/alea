@@ -1838,6 +1838,15 @@ pub fn LogNormal(comptime T: type) type {
             return @exp(self.logMean() + 0.5 * sigma * sigma);
         }
 
+        pub fn medianValue(self: Self) T {
+            return @exp(self.logMean());
+        }
+
+        pub fn modeValue(self: Self) T {
+            const sigma = self.logStddev();
+            return @exp(self.logMean() - sigma * sigma);
+        }
+
         pub fn expectedValue(self: Self) T {
             return self.linearMeanValue();
         }
@@ -9198,18 +9207,25 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(log_normal_mean_cv_sampler.logStddev() > 0);
     try std.testing.expectApproxEqAbs(log_normal_mean_cv_sampler.logStddev(), log_normal_mean_cv_sampler.logStddevValue(), 1e-15);
     try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_mean_cv_sampler.linearMeanValue(), 1e-14);
+    const log_normal_median = @as(f64, 2) / @sqrt(@as(f64, 1.25));
+    try std.testing.expectApproxEqAbs(log_normal_median, log_normal_mean_cv_sampler.medianValue(), 1e-14);
+    try std.testing.expectApproxEqAbs(log_normal_median / 1.25, log_normal_mean_cv_sampler.modeValue(), 1e-14);
     try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_mean_cv_sampler.expectedValue(), 1e-14);
     try std.testing.expectApproxEqAbs(@as(f64, 1), log_normal_mean_cv_sampler.varianceValue(), 1e-14);
     try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_mean_cv_sampler.minValue(), 0);
     try std.testing.expect(log_normal_mean_cv_sampler.maxValue() == null);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), log_normal_mean_cv_sampler.coefficientOfVariationValue(), 1e-14);
     try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_zero_cv_sampler.linearMeanValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_zero_cv_sampler.medianValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_zero_cv_sampler.modeValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_zero_cv_sampler.expectedValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_zero_cv_sampler.varianceValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_zero_cv_sampler.minValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_zero_cv_sampler.maxValue().?, 0);
     try std.testing.expectApproxEqAbs(@as(f64, 0), log_normal_zero_cv_sampler.coefficientOfVariationValue(), 0);
     const log_normal_positive_degenerate = try LogNormal(f64).initMeanCv(2, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_positive_degenerate.medianValue(), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_positive_degenerate.modeValue(), 1e-14);
     try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_positive_degenerate.minValue(), 1e-14);
     try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_positive_degenerate.maxValue().?, 1e-14);
     log_normal_mean_cv_sampler.fillFrom(&direct_engine, &direct_log_normal_buf);
