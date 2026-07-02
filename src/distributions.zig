@@ -1066,6 +1066,18 @@ pub fn Uniform(comptime T: type) type {
             return .{ .low = low, .high = high, .inclusive = true };
         }
 
+        pub fn lowValue(self: Self) T {
+            return self.low;
+        }
+
+        pub fn highValue(self: Self) T {
+            return self.high;
+        }
+
+        pub fn isInclusive(self: Self) bool {
+            return self.inclusive;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -7696,6 +7708,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_engine = alea.ScalarPrng.init(166);
 
     const uniform_sampler = try Uniform(u32).init(3, 9);
+    try std.testing.expectEqual(@as(u32, 3), uniform_sampler.lowValue());
+    try std.testing.expectEqual(@as(u32, 9), uniform_sampler.highValue());
+    try std.testing.expect(!uniform_sampler.isInclusive());
     const uniform_value = uniform_sampler.sampleFrom(&direct_engine);
     try std.testing.expect(uniform_value >= 3 and uniform_value < 9);
     var uniform_buf: [8]u32 = undefined;
@@ -7703,6 +7718,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (uniform_buf) |value| try std.testing.expect(value >= 3 and value < 9);
     var direct_uniform_buf: [8]u32 = undefined;
     uniform_sampler.fillFrom(&direct_engine, &direct_uniform_buf);
+    const uniform_inclusive_sampler = try Uniform(u32).initInclusive(3, 9);
+    try std.testing.expectEqual(@as(u32, 3), uniform_inclusive_sampler.lowValue());
+    try std.testing.expectEqual(@as(u32, 9), uniform_inclusive_sampler.highValue());
+    try std.testing.expect(uniform_inclusive_sampler.isInclusive());
     for (direct_uniform_buf) |value| try std.testing.expect(value >= 3 and value < 9);
 
     const inclusive_uniform = try Uniform(u32).initInclusive(3, 9);

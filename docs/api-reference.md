@@ -298,6 +298,9 @@ Reusable samplers:
 - `Uniform(T)`
 - `Uniform(T).init`
 - `Uniform(T).initInclusive`
+- `Uniform(T).lowValue`
+- `Uniform(T).highValue`
+- `Uniform(T).isInclusive`
 - `Uniform(T).sample`
 - `Uniform(T).sampleFrom`
 - `Uniform(T).fill`
