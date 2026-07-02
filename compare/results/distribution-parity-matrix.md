@@ -71,7 +71,7 @@ toolkit functionality and reduce reliance on companion crates:
 | HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale accessor |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale accessor |
 | Chi | Covered: `chi`, `Chi(T)`, including dof accessor |
-| Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale accessors |
+| Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment accessors |
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape accessors |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta accessors |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape accessors |

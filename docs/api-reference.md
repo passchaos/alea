@@ -461,6 +461,8 @@ Reusable samplers:
 - `Erlang(T).init`
 - `Erlang(T).shapeValue`
 - `Erlang(T).scaleValue`
+- `Erlang(T).expectedValue`
+- `Erlang(T).varianceValue`
 - `Erlang(T).sample`
 - `Erlang(T).sampleFrom`
 - `Erlang(T).fill`

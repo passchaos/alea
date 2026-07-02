@@ -2622,6 +2622,15 @@ pub fn Erlang(comptime T: type) type {
             return self.gamma_sampler.scaleValue();
         }
 
+        pub fn expectedValue(self: Self) T {
+            return @as(T, @floatFromInt(self.shape)) * self.scaleValue();
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const scale = self.scaleValue();
+            return @as(T, @floatFromInt(self.shape)) * scale * scale;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8373,6 +8382,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const erlang_sampler = try Erlang(f64).init(3, 2);
     try std.testing.expectEqual(@as(u64, 3), erlang_sampler.shapeValue());
     try std.testing.expectApproxEqAbs(@as(f64, 2), erlang_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 6), erlang_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), erlang_sampler.varianceValue(), 1e-12);
     erlang_sampler.fillFrom(&direct_engine, &direct_erlang_buf);
     for (direct_erlang_buf) |value| try std.testing.expect(value > 0);
 
