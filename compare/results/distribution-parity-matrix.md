@@ -36,8 +36,8 @@ Zig-native way.
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment/mode/support accessors |
 | FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2, finite-moment, and support accessors |
 | StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment and support accessors |
-| Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment/mode/support accessors |
-| Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape, finite-moment, mode, and support accessors |
+| Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment/median/mode/support accessors |
+| Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape, finite-moment, median/mode, and support accessors |
 | SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter/moment/support accessors |
 | Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, range-builder constructors, builder diagnostics, and parameter/moment accessors |
 | UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)`, including geometry, coordinate-moment, and radial-moment accessors |
@@ -67,7 +67,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/mode/scale, undefined-moment, and support accessors |
 | Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/median/mode/moment/support accessors |
 | Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/median/mode/moment/support accessors |
-| Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment/mode/support accessors |
+| Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment/median/mode/support accessors |
 | HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment/support accessors |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment/mode/support accessors |
 | Chi | Covered: `chi`, `Chi(T)`, including dof/moment/mode/support accessors |
@@ -75,8 +75,8 @@ toolkit functionality and reduce reliance on companion crates:
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape, finite-moment, median/mode, and support accessors |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment/mode/support accessors |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment/median accessors |
-| Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, mode, and support accessors |
-| Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/mode/support accessors |
+| Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, median/mode, and support accessors |
+| Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/median/mode/support accessors |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance export and dimension/total-alpha accessors |
 | Multinomial | Covered: `Multinomial`, including trials/category/probability lookup/export and count moment lookup/export accessors |
 | NegativeBinomial | Covered: `NegativeBinomial`, including successes/probability/moment/support accessors |

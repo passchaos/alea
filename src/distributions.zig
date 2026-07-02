@@ -4495,6 +4495,10 @@ pub fn Rayleigh(comptime T: type) type {
             return self.scale * self.scale * (4 - @as(T, @floatCast(std.math.pi))) / 2;
         }
 
+        pub fn medianValue(self: Self) T {
+            return self.scale * @sqrt(2 * @log(@as(T, 2)));
+        }
+
         pub fn modeValue(self: Self) T {
             return self.scale;
         }
@@ -4706,6 +4710,10 @@ pub fn Pareto(comptime T: type) type {
             return self.scale * self.scale * self.shape / (shape_minus_one * shape_minus_one * (self.shape - 2));
         }
 
+        pub fn medianValue(self: Self) T {
+            return self.scale * std.math.pow(T, 2, 1 / self.shape);
+        }
+
         pub fn modeValue(self: Self) T {
             return self.scale;
         }
@@ -4816,6 +4824,10 @@ pub fn Weibull(comptime T: type) type {
             return scale_squared * (second_moment_scale_factor - mean_scale_factor * mean_scale_factor);
         }
 
+        pub fn medianValue(self: Self) T {
+            return self.scale * std.math.pow(T, @log(@as(T, 2)), 1 / self.shape);
+        }
+
         pub fn modeValue(self: Self) T {
             if (self.shape <= 1) return 0;
             return self.scale * std.math.pow(T, (self.shape - 1) / self.shape, 1 / self.shape);
@@ -4920,6 +4932,10 @@ pub fn Gumbel(comptime T: type) type {
         pub fn varianceValue(self: Self) T {
             const scale = self.scale;
             return std.math.pi * std.math.pi * scale * scale / 6;
+        }
+
+        pub fn medianValue(self: Self) T {
+            return self.location - self.scale * @log(@log(@as(T, 2)));
         }
 
         pub fn modeValue(self: Self) T {
@@ -5039,6 +5055,10 @@ pub fn Frechet(comptime T: type) type {
             const second_moment_factor = std.math.gamma(T, 1 - 2 / self.shape);
             const scale_squared = self.scale * self.scale;
             return scale_squared * (second_moment_factor - mean_factor * mean_factor);
+        }
+
+        pub fn medianValue(self: Self) T {
+            return self.location + self.scale * std.math.pow(T, @log(@as(T, 2)), -1 / self.shape);
         }
 
         pub fn modeValue(self: Self) T {
@@ -9981,6 +10001,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), rayleigh_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(std.math.pi / 2.0), rayleigh_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2) * (4 - std.math.pi), rayleigh_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(2.0 * @log(@as(f64, 2))), rayleigh_sampler.medianValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), rayleigh_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), rayleigh_sampler.minValue(), 0);
     try std.testing.expect(rayleigh_sampler.maxValue() == null);
@@ -10033,6 +10054,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 3), pareto_sampler.shapeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), pareto_sampler.expectedValue().?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), pareto_sampler.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * std.math.pow(f64, 2, 1.0 / 3.0), pareto_sampler.medianValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), pareto_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), pareto_sampler.minValue(), 0);
     try std.testing.expect(pareto_sampler.maxValue() == null);
@@ -10067,6 +10089,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     const weibull_second_moment_factor = std.math.gamma(f64, 1.0 + 2.0 / 1.5);
     try std.testing.expectApproxEqAbs(2.0 * weibull_mean_factor, weibull_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(4.0 * (weibull_second_moment_factor - weibull_mean_factor * weibull_mean_factor), weibull_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * std.math.pow(f64, @log(@as(f64, 2)), 1.0 / 1.5), weibull_sampler.medianValue(), 1e-12);
     try std.testing.expectApproxEqAbs(2.0 * std.math.pow(f64, (1.5 - 1.0) / 1.5, 1.0 / 1.5), weibull_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), weibull_sampler.minValue(), 0);
     try std.testing.expect(weibull_sampler.maxValue() == null);
@@ -10097,6 +10120,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), gumbel_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5772156649015329), gumbel_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(std.math.pi * std.math.pi / 6.0, gumbel_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(-@log(@log(@as(f64, 2))), gumbel_sampler.medianValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), gumbel_sampler.modeValue(), 1e-12);
     try std.testing.expect(gumbel_sampler.minValue() == null);
     try std.testing.expect(gumbel_sampler.maxValue() == null);
@@ -10125,6 +10149,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), frechet_sampler.shapeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@sqrt(std.math.pi), frechet_sampler.expectedValue().?, 1e-12);
     try std.testing.expect(frechet_sampler.varianceValue() == null);
+    try std.testing.expectApproxEqAbs(1.0 / @sqrt(@log(@as(f64, 2))), frechet_sampler.medianValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@sqrt(@as(f64, 2.0 / 3.0)), frechet_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), frechet_sampler.minValue(), 0);
     try std.testing.expect(frechet_sampler.maxValue() == null);

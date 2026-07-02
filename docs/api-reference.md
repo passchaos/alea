@@ -687,6 +687,7 @@ Reusable samplers:
 - `Rayleigh(T).scaleValue`
 - `Rayleigh(T).expectedValue`
 - `Rayleigh(T).varianceValue`
+- `Rayleigh(T).medianValue`
 - `Rayleigh(T).modeValue`
 - `Rayleigh(T).minValue`
 - `Rayleigh(T).maxValue`
@@ -712,6 +713,7 @@ Reusable samplers:
 - `Pareto(T).shapeValue`
 - `Pareto(T).expectedValue`
 - `Pareto(T).varianceValue`
+- `Pareto(T).medianValue`
 - `Pareto(T).modeValue`
 - `Pareto(T).minValue`
 - `Pareto(T).maxValue`
@@ -725,6 +727,7 @@ Reusable samplers:
 - `Weibull(T).shapeValue`
 - `Weibull(T).expectedValue`
 - `Weibull(T).varianceValue`
+- `Weibull(T).medianValue`
 - `Weibull(T).modeValue`
 - `Weibull(T).minValue`
 - `Weibull(T).maxValue`
@@ -738,6 +741,7 @@ Reusable samplers:
 - `Gumbel(T).scaleValue`
 - `Gumbel(T).expectedValue`
 - `Gumbel(T).varianceValue`
+- `Gumbel(T).medianValue`
 - `Gumbel(T).modeValue`
 - `Gumbel(T).minValue`
 - `Gumbel(T).maxValue`
@@ -752,6 +756,7 @@ Reusable samplers:
 - `Frechet(T).shapeValue`
 - `Frechet(T).expectedValue`
 - `Frechet(T).varianceValue`
+- `Frechet(T).medianValue`
 - `Frechet(T).modeValue`
 - `Frechet(T).minValue`
 - `Frechet(T).maxValue`
