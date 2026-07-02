@@ -266,7 +266,11 @@ Single-shot helpers:
   `fillVectorStudentTChecked`, `fillVectorStudentTCheckedFrom`
 - `triangular`, `triangularFrom`, `triangularChecked`,
   `triangularCheckedFrom`, `fillTriangular`, `fillTriangularFrom`,
-  `fillTriangularChecked`, `fillTriangularCheckedFrom`, `arcsine`,
+  `fillTriangularChecked`, `fillTriangularCheckedFrom`, `vectorTriangular`,
+  `vectorTriangularFrom`, `vectorTriangularChecked`,
+  `vectorTriangularCheckedFrom`, `fillVectorTriangular`,
+  `fillVectorTriangularFrom`, `fillVectorTriangularChecked`,
+  `fillVectorTriangularCheckedFrom`, `arcsine`,
   `arcsineFrom`, `arcsineChecked`, `arcsineCheckedFrom`,
   `fillArcsine`, `fillArcsineFrom`, `fillArcsineChecked`,
   `fillArcsineCheckedFrom`,
@@ -959,6 +963,18 @@ Reusable samplers:
 - `Triangular(T).sampleFrom`
 - `Triangular(T).fill`
 - `Triangular(T).fillFrom`
+- `VectorTriangular(VectorType)`
+- `VectorTriangular(VectorType).init`
+- `VectorTriangular(VectorType).minValue`
+- `VectorTriangular(VectorType).modeValue`
+- `VectorTriangular(VectorType).maxValue`
+- `VectorTriangular(VectorType).expectedValue`
+- `VectorTriangular(VectorType).varianceValue`
+- `VectorTriangular(VectorType).medianValue`
+- `VectorTriangular(VectorType).sample`
+- `VectorTriangular(VectorType).sampleFrom`
+- `VectorTriangular(VectorType).fill`
+- `VectorTriangular(VectorType).fillFrom`
 - `Arcsine(T)`
 - `Arcsine(T).init`
 - `Arcsine(T).minValue`

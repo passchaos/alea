@@ -95,6 +95,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorStudentT f64x4", lanes / 32, 0xd304, fillDistStudentTF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorStudentT f64x4 direct", lanes / 32, 0xd304, fillDistStudentTF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorStudentT.fill f64x4", lanes / 32, 0xd304, fillDistStudentTSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorTriangular f64x4", lanes, 0xd314, fillDistTriangularF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorTriangular f64x4 direct", lanes, 0xd314, fillDistTriangularF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorTriangular.fill f64x4", lanes, 0xd314, fillDistTriangularSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -812,6 +815,19 @@ fn fillDistStudentTF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vec
 
 fn fillDistStudentTSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorStudentT(@Vector(4, f64)).init(10) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistTriangularF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorTriangular(rng, @Vector(4, f64), dest, -1, 0, 2);
+}
+
+fn fillDistTriangularF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorTriangularFrom(engine, @Vector(4, f64), dest, -1, 0, 2);
+}
+
+fn fillDistTriangularSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorTriangular(@Vector(4, f64)).init(-1, 0, 2) catch unreachable;
     sampler.fill(rng, dest);
 }
 
