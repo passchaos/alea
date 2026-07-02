@@ -409,6 +409,21 @@ pub const Multinomial = struct {
         return @as(f64, @floatFromInt(self.trials)) * p;
     }
 
+    pub fn expectedCounts(self: Multinomial, allocator: std.mem.Allocator) ![]f64 {
+        const out = try allocator.alloc(f64, self.probabilities.len);
+        errdefer allocator.free(out);
+        try self.expectedCountsInto(out);
+        return out;
+    }
+
+    pub fn expectedCountsInto(self: Multinomial, out: []f64) Error!void {
+        if (out.len != self.probabilities.len) return error.InvalidLength;
+        const trials_float = @as(f64, @floatFromInt(self.trials));
+        for (self.probabilities, out) |probability, *slot| {
+            slot.* = trials_float * probability / self.total_probability;
+        }
+    }
+
     pub fn varianceAt(self: Multinomial, index: usize) Error!f64 {
         const p = try self.normalizedProbabilityAt(index);
         return @as(f64, @floatFromInt(self.trials)) * p * (1 - p);
@@ -9716,6 +9731,16 @@ test "multinomial sampler returns category counts" {
     defer std.testing.allocator.free(owned_probabilities);
     try std.testing.expectEqualSlices(f64, &normalized_probabilities, owned_probabilities);
     try std.testing.expectApproxEqAbs(@as(f64, 100.0 / 3.0), try dist.expectedCountAt(1), 1e-12);
+    var expected_counts: [3]f64 = undefined;
+    try dist.expectedCountsInto(&expected_counts);
+    try std.testing.expectApproxEqAbs(@as(f64, 100.0 / 6.0), expected_counts[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 100.0 / 3.0), expected_counts[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 50), expected_counts[2], 1e-12);
+    var wrong_expected_len: [2]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.expectedCountsInto(&wrong_expected_len));
+    const owned_expected_counts = try dist.expectedCounts(std.testing.allocator);
+    defer std.testing.allocator.free(owned_expected_counts);
+    try std.testing.expectEqualSlices(f64, &expected_counts, owned_expected_counts);
     try std.testing.expectApproxEqAbs(@as(f64, 200.0 / 9.0), try dist.varianceAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, -100.0 / 18.0), try dist.covarianceAt(0, 1), 1e-12);
     try std.testing.expectApproxEqAbs(try dist.varianceAt(1), try dist.covarianceAt(1, 1), 1e-12);

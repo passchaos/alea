@@ -277,6 +277,8 @@ Reusable samplers:
 - `Multinomial.normalizedProbabilities`
 - `Multinomial.normalizedProbabilitiesInto`
 - `Multinomial.expectedCountAt`
+- `Multinomial.expectedCounts`
+- `Multinomial.expectedCountsInto`
 - `Multinomial.varianceAt`
 - `Multinomial.covarianceAt`
 - `Multinomial.categoryCountValue`
