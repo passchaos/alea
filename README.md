@@ -17,7 +17,7 @@ The current Linux-first roadmap is intentionally broad:
   including bulk `fill` methods where stream policy permits
 - bulk `fillSample`, `fillRange`, strict-interval scalar and vector float
   fill, distribution-namespace vector uniform/strict-interval/normal/exponential
-  wrappers, `fillNormal`, `fillExponential`, and unit geometry fill APIs for
+  wrappers and reusable vector samplers, `fillNormal`, `fillExponential`, and unit geometry fill APIs for
   high-volume sampling without iterator ceremony
 - deterministic seed derivation with named streams and system-entropy helpers
 - scalar helpers for integers, floats, durations, ranges, booleans, and bytes

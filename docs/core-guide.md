@@ -94,8 +94,10 @@ same namespace with `vectorUniform*`, `fillVectorUniform*`,
 `vectorStandardNormal*`, `fillVectorStandardNormal*`, `vectorNormal*`,
 `fillVectorNormal*`, `vectorStandardExponential*`,
 `fillVectorStandardExponential*`, `vectorExponential*`, and
-`fillVectorExponential*`; strict interval samplers `Open01` and `OpenClosed01`
-also sample/fill float vector slices.
+`fillVectorExponential*`; reusable vector samplers `VectorUniform`,
+`VectorStandardNormal`, `VectorNormal`, `VectorStandardExponential`, and
+`VectorExponential`; strict interval samplers `Open01` and `OpenClosed01` also
+sample/fill float vector slices.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar

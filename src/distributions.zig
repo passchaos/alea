@@ -1434,6 +1434,96 @@ pub fn Uniform(comptime T: type) type {
     };
 }
 
+pub fn VectorUniform(comptime VectorType: type) type {
+    const info = vectorInfo(VectorType);
+    const Child = info.child;
+    _ = UniformMoment(Child);
+
+    return struct {
+        const Self = @This();
+
+        low: Child,
+        high: Child,
+        inclusive: bool = false,
+
+        pub fn init(low: Child, high: Child) Error!Self {
+            if (!rangeLess(Child, low, high)) return error.EmptyRange;
+            return .{ .low = low, .high = high, .inclusive = false };
+        }
+
+        pub fn initInclusive(low: Child, high: Child) Error!Self {
+            if (!rangeLessEqual(Child, low, high)) return error.EmptyRange;
+            return .{ .low = low, .high = high, .inclusive = true };
+        }
+
+        pub fn lowValue(self: Self) Child {
+            return self.low;
+        }
+
+        pub fn highValue(self: Self) Child {
+            return self.high;
+        }
+
+        pub fn isInclusive(self: Self) bool {
+            return self.inclusive;
+        }
+
+        pub fn expectedValue(self: Self) UniformMoment(Child) {
+            return switch (@typeInfo(Child)) {
+                .int => blk: {
+                    const low = @as(f64, @floatFromInt(self.low));
+                    const high = @as(f64, @floatFromInt(self.high));
+                    const endpoint_count: f64 = if (self.inclusive) 1 else 0;
+                    const count = high - low + endpoint_count;
+                    break :blk low + (count - 1) / 2;
+                },
+                .float => self.low + (self.high - self.low) / 2,
+                else => unreachable,
+            };
+        }
+
+        pub fn varianceValue(self: Self) UniformMoment(Child) {
+            return switch (@typeInfo(Child)) {
+                .int => blk: {
+                    const low = @as(f64, @floatFromInt(self.low));
+                    const high = @as(f64, @floatFromInt(self.high));
+                    const endpoint_count: f64 = if (self.inclusive) 1 else 0;
+                    const count = high - low + endpoint_count;
+                    break :blk (count * count - 1) / 12;
+                },
+                .float => blk: {
+                    const width = self.high - self.low;
+                    break :blk width * width / 12;
+                },
+                else => unreachable,
+            };
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.inclusive) {
+                return vectorUniformInclusiveFrom(source, VectorType, self.low, self.high);
+            }
+            return vectorUniformFrom(source, VectorType, self.low, self.high);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.inclusive) {
+                fillVectorUniformInclusiveFrom(source, VectorType, dest, self.low, self.high);
+            } else {
+                fillVectorUniformFrom(source, VectorType, dest, self.low, self.high);
+            }
+        }
+    };
+}
+
 pub const Open01 = struct {
     pub fn lowValue(self: Open01, comptime T: type) T {
         _ = self;
@@ -1681,6 +1771,61 @@ pub fn StandardNormal(comptime T: type) type {
     };
 }
 
+pub fn VectorStandardNormal(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        pub fn meanValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn stddevValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn expectedValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn varianceValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn medianValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn modeValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn minValue(_: @This()) ?Child {
+            return null;
+        }
+
+        pub fn maxValue(_: @This()) ?Child {
+            return null;
+        }
+
+        pub fn sample(_: @This(), rng: Rng) VectorType {
+            return vectorStandardNormal(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) VectorType {
+            return vectorStandardNormalFrom(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: []VectorType) void {
+            fillVectorStandardNormal(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: []VectorType) void {
+            fillVectorStandardNormalFrom(source, VectorType, dest);
+        }
+    };
+}
+
 pub fn standardExponential(rng: Rng, comptime T: type) T {
     return Rng.standardExponentialFastFrom(rng, T);
 }
@@ -1859,6 +2004,86 @@ pub fn Normal(comptime T: type) type {
     };
 }
 
+pub fn VectorNormal(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        mean: Child,
+        stddev: Child,
+
+        pub fn init(mean: Child, stddev: Child) Error!Self {
+            if (!(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+            if (!std.math.isFinite(mean)) return error.InvalidParameter;
+            return .{ .mean = mean, .stddev = stddev };
+        }
+
+        pub fn initMeanCv(mean: Child, coefficient_of_variation: Child) Error!Self {
+            if (!(coefficient_of_variation >= 0) or !std.math.isFinite(coefficient_of_variation)) return error.InvalidParameter;
+            return Self.init(mean, @abs(mean) * coefficient_of_variation);
+        }
+
+        pub fn fromZScore(self: Self, z_score: Child) Child {
+            return self.mean + self.stddev * z_score;
+        }
+
+        pub fn meanValue(self: Self) Child {
+            return self.mean;
+        }
+
+        pub fn stddevValue(self: Self) Child {
+            return self.stddev;
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.mean;
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.stddev * self.stddev;
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.mean;
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.mean;
+        }
+
+        pub fn minValue(self: Self) ?Child {
+            return if (self.stddev == 0) self.mean else null;
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return if (self.stddev == 0) self.mean else null;
+        }
+
+        pub fn coefficientOfVariationValue(self: Self) ?Child {
+            if (self.mean == 0) return null;
+            return self.stddev / @abs(self.mean);
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return vectorNormal(rng, VectorType, self.mean, self.stddev);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorNormalFrom(source, VectorType, self.mean, self.stddev);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            fillVectorNormalFrom(source, VectorType, dest, self.mean, self.stddev);
+        }
+    };
+}
+
 pub fn StandardExponential(comptime T: type) type {
     return struct {
         pub fn rateValue(_: @This()) T {
@@ -1907,6 +2132,61 @@ pub fn StandardExponential(comptime T: type) type {
 
         pub fn fillFrom(_: @This(), source: anytype, dest: []T) void {
             fillStandardExponentialFrom(source, T, dest);
+        }
+    };
+}
+
+pub fn VectorStandardExponential(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        pub fn rateValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn inverseRateValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn expectedValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn varianceValue(_: @This()) Child {
+            return 1;
+        }
+
+        pub fn medianValue(_: @This()) Child {
+            return @log(@as(Child, 2));
+        }
+
+        pub fn modeValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn minValue(_: @This()) Child {
+            return 0;
+        }
+
+        pub fn maxValue(_: @This()) ?Child {
+            return null;
+        }
+
+        pub fn sample(_: @This(), rng: Rng) VectorType {
+            return vectorStandardExponential(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) VectorType {
+            return vectorStandardExponentialFrom(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: []VectorType) void {
+            fillVectorStandardExponential(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: []VectorType) void {
+            fillVectorStandardExponentialFrom(source, VectorType, dest);
         }
     };
 }
@@ -1972,6 +2252,73 @@ pub fn Exponential(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+pub fn VectorExponential(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        inverse_rate: Child,
+
+        pub fn init(rate: Child) Error!Self {
+            if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+            return .{ .inverse_rate = 1 / rate };
+        }
+
+        pub fn rateValue(self: Self) Child {
+            return 1 / self.inverse_rate;
+        }
+
+        pub fn inverseRateValue(self: Self) Child {
+            return self.inverse_rate;
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.inverse_rate;
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.inverse_rate * self.inverse_rate;
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return @log(@as(Child, 2)) * self.inverse_rate;
+        }
+
+        pub fn modeValue(self: Self) Child {
+            _ = self;
+            return 0;
+        }
+
+        pub fn minValue(self: Self) Child {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            _ = self;
+            return null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return vectorStandardExponential(rng, VectorType) * @as(VectorType, @splat(self.inverse_rate));
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorStandardExponentialFrom(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            fillVectorExponentialFrom(source, VectorType, dest, 1 / self.inverse_rate);
         }
     };
 }
@@ -8769,6 +9116,28 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(inclusive_int_vec[lane] >= -3 and inclusive_int_vec[lane] <= 3);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const vector_uniform_sampler = try VectorUniform(@Vector(4, f32)).init(-1, 2);
+    try std.testing.expectEqual(@as(f32, -1), vector_uniform_sampler.lowValue());
+    try std.testing.expectEqual(@as(f32, 2), vector_uniform_sampler.highValue());
+    try std.testing.expect(!vector_uniform_sampler.isInclusive());
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), vector_uniform_sampler.expectedValue(), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.75), vector_uniform_sampler.varianceValue(), 1e-6);
+    const sampled_uniform_vec = vector_uniform_sampler.sample(rng);
+    const direct_sampled_uniform_vec = vector_uniform_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_uniform_vec, direct_sampled_uniform_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_uniform_vec[lane] >= -1 and sampled_uniform_vec[lane] < 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_uniform_inclusive_sampler = try VectorUniform(@Vector(4, i16)).initInclusive(-3, 3);
+    try std.testing.expect(vector_uniform_inclusive_sampler.isInclusive());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_uniform_inclusive_sampler.expectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), vector_uniform_inclusive_sampler.varianceValue(), 0);
+    const sampled_inclusive_vec = vector_uniform_inclusive_sampler.sample(rng);
+    const direct_sampled_inclusive_vec = vector_uniform_inclusive_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_inclusive_vec, direct_sampled_inclusive_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_inclusive_vec[lane] >= -3 and sampled_inclusive_vec[lane] <= 3);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), (Open01{}).lowValue(@Vector(4, f64)));
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), (Open01{}).highValue(@Vector(4, f64)));
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0.5)), (Open01{}).expectedValue(@Vector(4, f64)));
@@ -8792,10 +9161,48 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(normal_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const vector_standard_normal_sampler = VectorStandardNormal(@Vector(4, f64)){};
+    try std.testing.expectEqual(@as(f64, 0), vector_standard_normal_sampler.meanValue());
+    try std.testing.expectEqual(@as(f64, 1), vector_standard_normal_sampler.stddevValue());
+    try std.testing.expect(vector_standard_normal_sampler.minValue() == null);
+    const sampled_standard_normal_vec = vector_standard_normal_sampler.sample(rng);
+    const direct_sampled_standard_normal_vec = vector_standard_normal_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_standard_normal_vec, direct_sampled_standard_normal_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(sampled_standard_normal_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_normal_sampler = try VectorNormal(@Vector(4, f64)).init(1, 2);
+    try std.testing.expectEqual(@as(f64, 1), vector_normal_sampler.meanValue());
+    try std.testing.expectEqual(@as(f64, 2), vector_normal_sampler.stddevValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_normal_sampler.coefficientOfVariationValue().?, 0);
+    const sampled_normal_vec = vector_normal_sampler.sample(rng);
+    const direct_sampled_normal_vec = vector_normal_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_normal_vec, direct_sampled_normal_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(sampled_normal_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const exp_vec = try vectorExponentialChecked(rng, @Vector(8, f32), 2);
     const direct_exp_vec = try vectorExponentialCheckedFrom(&direct_engine, @Vector(8, f32), 2);
     try std.testing.expectEqual(exp_vec, direct_exp_vec);
     inline for (0..8) |lane| try std.testing.expect(exp_vec[lane] >= 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_standard_exp_sampler = VectorStandardExponential(@Vector(8, f32)){};
+    try std.testing.expectEqual(@as(f32, 1), vector_standard_exp_sampler.rateValue());
+    try std.testing.expectEqual(@as(f32, 0), vector_standard_exp_sampler.minValue());
+    const sampled_standard_exp_vec = vector_standard_exp_sampler.sample(rng);
+    const direct_sampled_standard_exp_vec = vector_standard_exp_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_standard_exp_vec, direct_sampled_standard_exp_vec);
+    inline for (0..8) |lane| try std.testing.expect(sampled_standard_exp_vec[lane] >= 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_exp_sampler = try VectorExponential(@Vector(8, f32)).init(2);
+    try std.testing.expectEqual(@as(f32, 2), vector_exp_sampler.rateValue());
+    try std.testing.expectEqual(@as(f32, 0.5), vector_exp_sampler.inverseRateValue());
+    const sampled_exp_vec = vector_exp_sampler.sample(rng);
+    const direct_sampled_exp_vec = vector_exp_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_exp_vec, direct_sampled_exp_vec);
+    inline for (0..8) |lane| try std.testing.expect(sampled_exp_vec[lane] >= 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     var uniform_buf: [3]@Vector(4, f32) = undefined;
@@ -8812,6 +9219,12 @@ test "distribution vector helpers preserve support and stream shape" {
     try fillVectorUniformInclusiveCheckedFrom(&direct_engine, @Vector(4, f32), &direct_inclusive_buf, -1, 2);
     try std.testing.expectEqualSlices(@Vector(4, f32), &inclusive_buf, &direct_inclusive_buf);
     for (inclusive_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    vector_uniform_sampler.fill(rng, &uniform_buf);
+    vector_uniform_sampler.fillFrom(&direct_engine, &direct_uniform_buf);
+    try std.testing.expectEqualSlices(@Vector(4, f32), &uniform_buf, &direct_uniform_buf);
+    for (uniform_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] < 2);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     var open_buf: [3]@Vector(8, f32) = undefined;
@@ -8838,6 +9251,12 @@ test "distribution vector helpers preserve support and stream shape" {
     for (standard_normal_buf) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    vector_standard_normal_sampler.fill(rng, &standard_normal_buf);
+    vector_standard_normal_sampler.fillFrom(&direct_engine, &direct_standard_normal_buf);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &standard_normal_buf, &direct_standard_normal_buf);
+    for (standard_normal_buf) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var normal_buf: [3]@Vector(8, f32) = undefined;
     var direct_normal_buf: [3]@Vector(8, f32) = undefined;
     try fillVectorNormalChecked(rng, @Vector(8, f32), &normal_buf, 1, 2);
@@ -8858,6 +9277,12 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_exp_buf: [3]@Vector(8, f32) = undefined;
     try fillVectorExponentialChecked(rng, @Vector(8, f32), &exp_buf, 2);
     try fillVectorExponentialCheckedFrom(&direct_engine, @Vector(8, f32), &direct_exp_buf, 2);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &exp_buf, &direct_exp_buf);
+    for (exp_buf) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] >= 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    vector_exp_sampler.fill(rng, &exp_buf);
+    vector_exp_sampler.fillFrom(&direct_engine, &direct_exp_buf);
     try std.testing.expectEqualSlices(@Vector(8, f32), &exp_buf, &direct_exp_buf);
     for (exp_buf) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] >= 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
