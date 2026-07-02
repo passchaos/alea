@@ -305,7 +305,11 @@ Single-shot helpers:
   `fillVectorLogLogisticCheckedFrom`, `kumaraswamy`,
   `kumaraswamyFrom`, `kumaraswamyChecked`, `kumaraswamyCheckedFrom`,
   `fillKumaraswamy`, `fillKumaraswamyFrom`, `fillKumaraswamyChecked`,
-  `fillKumaraswamyCheckedFrom`,
+  `fillKumaraswamyCheckedFrom`, `vectorKumaraswamy`,
+  `vectorKumaraswamyFrom`, `vectorKumaraswamyChecked`,
+  `vectorKumaraswamyCheckedFrom`, `fillVectorKumaraswamy`,
+  `fillVectorKumaraswamyFrom`, `fillVectorKumaraswamyChecked`,
+  `fillVectorKumaraswamyCheckedFrom`,
   `powerFunction`, `powerFunctionFrom`, `powerFunctionChecked`,
   `powerFunctionCheckedFrom`, `fillPowerFunction`,
   `fillPowerFunctionFrom`, `fillPowerFunctionChecked`,
@@ -1138,6 +1142,20 @@ Reusable samplers:
 - `Kumaraswamy(T).sampleFrom`
 - `Kumaraswamy(T).fill`
 - `Kumaraswamy(T).fillFrom`
+- `VectorKumaraswamy(VectorType)`
+- `VectorKumaraswamy(VectorType).init`
+- `VectorKumaraswamy(VectorType).alphaValue`
+- `VectorKumaraswamy(VectorType).betaValue`
+- `VectorKumaraswamy(VectorType).expectedValue`
+- `VectorKumaraswamy(VectorType).varianceValue`
+- `VectorKumaraswamy(VectorType).modeValue`
+- `VectorKumaraswamy(VectorType).medianValue`
+- `VectorKumaraswamy(VectorType).minValue`
+- `VectorKumaraswamy(VectorType).maxValue`
+- `VectorKumaraswamy(VectorType).sample`
+- `VectorKumaraswamy(VectorType).sampleFrom`
+- `VectorKumaraswamy(VectorType).fill`
+- `VectorKumaraswamy(VectorType).fillFrom`
 - `PowerFunction(T)`
 - `PowerFunction(T).init`
 - `PowerFunction(T).minValue`

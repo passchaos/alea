@@ -7113,6 +7113,128 @@ pub fn fillKumaraswamyCheckedFrom(source: anytype, comptime T: type, dest: []T, 
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorKumaraswamy(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
+    return vectorKumaraswamyFrom(rng, VectorType, alpha, beta_param);
+}
+
+pub fn vectorKumaraswamyFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
+    const sampler = VectorKumaraswamy(VectorType).init(alpha, beta_param) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorKumaraswamyChecked(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!VectorType {
+    return vectorKumaraswamyCheckedFrom(rng, VectorType, alpha, beta_param);
+}
+
+pub fn vectorKumaraswamyCheckedFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorKumaraswamy(VectorType).init(alpha, beta_param);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorKumaraswamy(rng: Rng, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) void {
+    fillVectorKumaraswamyFrom(rng, VectorType, dest, alpha, beta_param);
+}
+
+pub fn fillVectorKumaraswamyFrom(source: anytype, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) void {
+    const sampler = VectorKumaraswamy(VectorType).init(alpha, beta_param) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorKumaraswamyChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!void {
+    return fillVectorKumaraswamyCheckedFrom(rng, VectorType, dest, alpha, beta_param);
+}
+
+pub fn fillVectorKumaraswamyCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorKumaraswamy(VectorType).init(alpha, beta_param);
+    sampler.fillFrom(source, dest);
+}
+
+fn kumaraswamyFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, inverse_alpha: vectorChild(VectorType), inverse_beta: vectorChild(VectorType)) VectorType {
+    const one_vec: VectorType = @splat(1);
+    const inverse_alpha_vec: VectorType = @splat(inverse_alpha);
+    const inverse_beta_vec: VectorType = @splat(inverse_beta);
+    return @exp(@log(one_vec - @exp(@log(one_vec - uniform_vec) * inverse_beta_vec)) * inverse_alpha_vec);
+}
+
+fn kumaraswamyBetaOneFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, inverse_alpha: vectorChild(VectorType)) VectorType {
+    const inverse_alpha_vec: VectorType = @splat(inverse_alpha);
+    return @exp(@log(uniform_vec) * inverse_alpha_vec);
+}
+
+fn kumaraswamyAlphaOneFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, inverse_beta: vectorChild(VectorType)) VectorType {
+    const one_vec: VectorType = @splat(1);
+    const inverse_beta_vec: VectorType = @splat(inverse_beta);
+    return one_vec - @exp(@log(one_vec - uniform_vec) * inverse_beta_vec);
+}
+
+pub fn VectorKumaraswamy(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Kumaraswamy(Child),
+
+        pub fn init(alpha: Child, beta_param: Child) Error!Self {
+            return .{ .sampler = try Kumaraswamy(Child).init(alpha, beta_param) };
+        }
+
+        pub fn alphaValue(self: Self) Child {
+            return self.sampler.alphaValue();
+        }
+
+        pub fn betaValue(self: Self) Child {
+            return self.sampler.betaValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn modeValue(self: Self) ?Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+            if (self.sampler.method == .beta_one_sqrt) return @sqrt(uniform_vec);
+            if (self.sampler.method == .beta_one) return kumaraswamyBetaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue());
+            if (self.sampler.method == .alpha_one) return kumaraswamyAlphaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.betaValue());
+            return kumaraswamyFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue(), 1 / self.betaValue());
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Kumaraswamy(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -12504,6 +12626,49 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(log_logistic_shape_one_vec[lane] > 0 and std.math.isFinite(log_logistic_shape_one_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const kumaraswamy_vec = try vectorKumaraswamyChecked(rng, @Vector(4, f64), 2, 5);
+    const direct_kumaraswamy_vec = try vectorKumaraswamyCheckedFrom(&direct_engine, @Vector(4, f64), 2, 5);
+    try std.testing.expectEqual(kumaraswamy_vec, direct_kumaraswamy_vec);
+    inline for (0..4) |lane| try std.testing.expect(kumaraswamy_vec[lane] >= 0 and kumaraswamy_vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_kumaraswamy_sampler = try VectorKumaraswamy(@Vector(4, f64)).init(2, 5);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_kumaraswamy_sampler.alphaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), vector_kumaraswamy_sampler.betaValue(), 1e-12);
+    const vector_kumaraswamy_first_moment = 5.0 * @exp(std.math.lgamma(f64, 1.0 + 1.0 / 2.0) + std.math.lgamma(f64, 5.0) - std.math.lgamma(f64, 1.0 + 1.0 / 2.0 + 5.0));
+    const vector_kumaraswamy_second_moment = 5.0 * @exp(std.math.lgamma(f64, 1.0 + 2.0 / 2.0) + std.math.lgamma(f64, 5.0) - std.math.lgamma(f64, 1.0 + 2.0 / 2.0 + 5.0));
+    try std.testing.expectApproxEqAbs(vector_kumaraswamy_first_moment, vector_kumaraswamy_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(vector_kumaraswamy_second_moment - vector_kumaraswamy_first_moment * vector_kumaraswamy_first_moment, vector_kumaraswamy_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), vector_kumaraswamy_sampler.modeValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@sqrt(1.0 - std.math.pow(f64, 0.5, 1.0 / 5.0)), vector_kumaraswamy_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_kumaraswamy_sampler.minValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_kumaraswamy_sampler.maxValue(), 0);
+    const sampled_kumaraswamy_vec = vector_kumaraswamy_sampler.sample(rng);
+    const direct_sampled_kumaraswamy_vec = vector_kumaraswamy_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_kumaraswamy_vec, direct_sampled_kumaraswamy_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_kumaraswamy_vec[lane] >= 0 and sampled_kumaraswamy_vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var kumaraswamy_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_kumaraswamy_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorKumaraswamyChecked(rng, @Vector(4, f64), &kumaraswamy_buf_vec, 2, 5);
+    try fillVectorKumaraswamyCheckedFrom(&direct_engine, @Vector(4, f64), &direct_kumaraswamy_buf_vec, 2, 5);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &kumaraswamy_buf_vec, &direct_kumaraswamy_buf_vec);
+    for (kumaraswamy_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_kumaraswamy_sampler.fill(rng, &kumaraswamy_buf_vec);
+    vector_kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &kumaraswamy_buf_vec, &direct_kumaraswamy_buf_vec);
+    for (kumaraswamy_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_kumaraswamy_beta_one = try VectorKumaraswamy(@Vector(4, f64)).init(2, 1);
+    const kumaraswamy_beta_one_vec = vector_kumaraswamy_beta_one.sample(rng);
+    const direct_kumaraswamy_beta_one_vec = vector_kumaraswamy_beta_one.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(kumaraswamy_beta_one_vec, direct_kumaraswamy_beta_one_vec);
+    inline for (0..4) |lane| try std.testing.expect(kumaraswamy_beta_one_vec[lane] >= 0 and kumaraswamy_beta_one_vec[lane] <= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -12637,6 +12802,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorLogLogisticCheckedFrom(&engine, @Vector(4, f64), 0, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorKumaraswamyCheckedFrom(&engine, @Vector(4, f64), 0, 5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -12693,6 +12861,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorLogLogisticCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorKumaraswamyCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 5));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -12782,6 +12953,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLogLogisticCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorKumaraswamyCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 5);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -12819,6 +12992,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorLogisticChecked(rng, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLogLogisticChecked(rng, @Vector(4, f64), &empty, 0, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorKumaraswamyChecked(rng, @Vector(4, f64), &empty, 0, 5);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -15644,6 +15819,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorLogLogisticFrom(&unchecked, @Vector(4, f64), &vector_log_logistic_unchecked, 2, 3);
         try fillVectorLogLogisticCheckedFrom(&checked, @Vector(4, f64), &vector_log_logistic_checked, 2, 3);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_log_logistic_unchecked, &vector_log_logistic_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_kumaraswamy_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_kumaraswamy_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorKumaraswamyFrom(&unchecked, @Vector(4, f64), &vector_kumaraswamy_unchecked, 2, 5);
+        try fillVectorKumaraswamyCheckedFrom(&checked, @Vector(4, f64), &vector_kumaraswamy_checked, 2, 5);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_kumaraswamy_unchecked, &vector_kumaraswamy_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;
