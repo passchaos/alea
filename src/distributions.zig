@@ -1030,6 +1030,10 @@ pub const Multinomial = struct {
     pub fn sampleIntoFrom(self: Multinomial, source: anytype, out: []u64) void {
         std.debug.assert(out.len == self.probabilities.len);
         @memset(out, 0);
+        if (self.probabilities.len == 1) {
+            out[0] = self.trials;
+            return;
+        }
 
         var remaining_trials = self.trials;
         var remaining_probability = self.total_probability;
@@ -11621,6 +11625,10 @@ pub fn Dirichlet(comptime T: type) type {
 
         pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
             std.debug.assert(out.len == self.alpha.len);
+            if (self.alpha.len == 1) {
+                out[0] = 1;
+                return;
+            }
             var total: T = 0;
             for (self.alpha, out) |a, *slot| {
                 const value = gammaFrom(source, T, a, 1);
@@ -17291,6 +17299,43 @@ test "zero-length multivariate batch outputs do not consume random stream" {
     var dirichlet_facade_control = alea.ScalarPrng.init(0x5150_d18e);
     try dirichlet.sampleManyIntoChecked(Rng.init(&dirichlet_facade_engine), &empty_simplex);
     try std.testing.expectEqual(dirichlet_facade_control.next(), dirichlet_facade_engine.next());
+}
+
+test "degenerate multivariate samplers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1b0);
+    var control = alea.ScalarPrng.init(0x5150_d1b0);
+    const rng = Rng.init(&engine);
+
+    const multinomial = try Multinomial.init(20, &.{1.0});
+    var counts: [1]u64 = undefined;
+    multinomial.sampleIntoFrom(&engine, &counts);
+    try std.testing.expectEqualSlices(u64, &.{20}, &counts);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try multinomial.sampleIntoChecked(rng, &counts);
+    try std.testing.expectEqualSlices(u64, &.{20}, &counts);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var many_counts: [3]u64 = undefined;
+    multinomial.sampleManyIntoFrom(&engine, &many_counts);
+    try std.testing.expectEqualSlices(u64, &.{ 20, 20, 20 }, &many_counts);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const dirichlet = try Dirichlet(f64).init(&.{2.0});
+    var simplex: [1]f64 = undefined;
+    dirichlet.sampleIntoFrom(&engine, &simplex);
+    try std.testing.expectEqualSlices(f64, &.{1}, &simplex);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try dirichlet.sampleIntoChecked(rng, &simplex);
+    try std.testing.expectEqualSlices(f64, &.{1}, &simplex);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var many_simplex: [3]f64 = undefined;
+    dirichlet.sampleManyIntoFrom(&engine, &many_simplex);
+    try std.testing.expectEqualSlices(f64, &.{ 1, 1, 1 }, &many_simplex);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "log-normal approximation has stable snapshots" {
