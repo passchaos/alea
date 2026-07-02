@@ -339,7 +339,11 @@ Single-shot helpers:
   `fillVectorParetoChecked`, `fillVectorParetoCheckedFrom`,
   `weibull`, `weibullFrom`,
   `weibullChecked`, `weibullCheckedFrom`, `fillWeibull`, `fillWeibullFrom`,
-  `fillWeibullChecked`, `fillWeibullCheckedFrom`
+  `fillWeibullChecked`, `fillWeibullCheckedFrom`,
+  `vectorWeibull`, `vectorWeibullFrom`, `vectorWeibullChecked`,
+  `vectorWeibullCheckedFrom`, `fillVectorWeibull`,
+  `fillVectorWeibullFrom`, `fillVectorWeibullChecked`,
+  `fillVectorWeibullCheckedFrom`
 - `gumbel`, `gumbelFrom`, `fillGumbel`, `fillGumbelFrom`,
   `fillGumbelChecked`, `fillGumbelCheckedFrom`,
   `gumbelChecked`, `gumbelCheckedFrom`,
@@ -1288,6 +1292,20 @@ Reusable samplers:
 - `Weibull(T).sampleFrom`
 - `Weibull(T).fill`
 - `Weibull(T).fillFrom`
+- `VectorWeibull(VectorType)`
+- `VectorWeibull(VectorType).init`
+- `VectorWeibull(VectorType).scaleValue`
+- `VectorWeibull(VectorType).shapeValue`
+- `VectorWeibull(VectorType).expectedValue`
+- `VectorWeibull(VectorType).varianceValue`
+- `VectorWeibull(VectorType).medianValue`
+- `VectorWeibull(VectorType).modeValue`
+- `VectorWeibull(VectorType).minValue`
+- `VectorWeibull(VectorType).maxValue`
+- `VectorWeibull(VectorType).sample`
+- `VectorWeibull(VectorType).sampleFrom`
+- `VectorWeibull(VectorType).fill`
+- `VectorWeibull(VectorType).fillFrom`
 - `Gumbel(T)`
 - `Gumbel(T).init`
 - `Gumbel(T).locationValue`
