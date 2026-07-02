@@ -497,6 +497,7 @@ Reusable samplers:
 - `Gamma(T).scaleValue`
 - `Gamma(T).expectedValue`
 - `Gamma(T).varianceValue`
+- `Gamma(T).modeValue`
 - `Gamma(T).minValue`
 - `Gamma(T).maxValue`
 - `Gamma(T).sample`
@@ -508,6 +509,7 @@ Reusable samplers:
 - `ChiSquared(T).dofValue`
 - `ChiSquared(T).expectedValue`
 - `ChiSquared(T).varianceValue`
+- `ChiSquared(T).modeValue`
 - `ChiSquared(T).minValue`
 - `ChiSquared(T).maxValue`
 - `ChiSquared(T).sample`
@@ -519,6 +521,7 @@ Reusable samplers:
 - `Chi(T).dofValue`
 - `Chi(T).expectedValue`
 - `Chi(T).varianceValue`
+- `Chi(T).modeValue`
 - `Chi(T).minValue`
 - `Chi(T).maxValue`
 - `Chi(T).sample`
@@ -531,6 +534,7 @@ Reusable samplers:
 - `Erlang(T).scaleValue`
 - `Erlang(T).expectedValue`
 - `Erlang(T).varianceValue`
+- `Erlang(T).modeValue`
 - `Erlang(T).minValue`
 - `Erlang(T).maxValue`
 - `Erlang(T).sample`

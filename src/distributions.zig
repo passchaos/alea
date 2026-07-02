@@ -2662,6 +2662,11 @@ pub fn Gamma(comptime T: type) type {
             return self.shape * self.scale * self.scale;
         }
 
+        pub fn modeValue(self: Self) T {
+            if (self.shape <= 1) return 0;
+            return (self.shape - 1) * self.scale;
+        }
+
         pub fn minValue(self: Self) T {
             _ = self;
             return 0;
@@ -2810,6 +2815,11 @@ pub fn ChiSquared(comptime T: type) type {
             return 2 * self.dof;
         }
 
+        pub fn modeValue(self: Self) T {
+            if (self.dof <= 2) return 0;
+            return self.dof - 2;
+        }
+
         pub fn minValue(self: Self) T {
             _ = self;
             return 0;
@@ -2905,6 +2915,12 @@ pub fn Chi(comptime T: type) type {
         pub fn varianceValue(self: Self) T {
             const mean = self.expectedValue();
             return self.dofValue() - mean * mean;
+        }
+
+        pub fn modeValue(self: Self) T {
+            const dof = self.dofValue();
+            if (dof <= 1) return 0;
+            return @sqrt(dof - 1);
         }
 
         pub fn minValue(self: Self) T {
@@ -3005,6 +3021,10 @@ pub fn Erlang(comptime T: type) type {
         pub fn varianceValue(self: Self) T {
             const scale = self.scaleValue();
             return @as(T, @floatFromInt(self.shape)) * scale * scale;
+        }
+
+        pub fn modeValue(self: Self) T {
+            return @as(T, @floatFromInt(self.shape - 1)) * self.scaleValue();
         }
 
         pub fn minValue(self: Self) T {
@@ -9418,6 +9438,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 3), gamma_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 6), gamma_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 18), gamma_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), gamma_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), gamma_sampler.minValue(), 0);
     try std.testing.expect(gamma_sampler.maxValue() == null);
     gamma_sampler.fillFrom(&direct_engine, &direct_gamma_buf);
@@ -9452,6 +9473,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 4), chi_squared_sampler.dofValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 4), chi_squared_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 8), chi_squared_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), chi_squared_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), chi_squared_sampler.minValue(), 0);
     try std.testing.expect(chi_squared_sampler.maxValue() == null);
     chi_squared_sampler.fillFrom(&direct_engine, &direct_chi_squared_buf);
@@ -9483,6 +9505,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     const chi_mean = 3.0 * @sqrt(2.0 * std.math.pi) / 4.0;
     try std.testing.expectApproxEqAbs(chi_mean, chi_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(4.0 - chi_mean * chi_mean, chi_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@sqrt(@as(f64, 3)), chi_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), chi_sampler.minValue(), 0);
     try std.testing.expect(chi_sampler.maxValue() == null);
     chi_sampler.fillFrom(&direct_engine, &direct_chi_buf);
@@ -9510,6 +9533,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), erlang_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 6), erlang_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 12), erlang_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), erlang_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), erlang_sampler.minValue(), 0);
     try std.testing.expect(erlang_sampler.maxValue() == null);
     erlang_sampler.fillFrom(&direct_engine, &direct_erlang_buf);
