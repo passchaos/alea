@@ -5237,6 +5237,14 @@ pub fn InverseGaussian(comptime T: type) type {
             return self.shape;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.mean;
+        }
+
+        pub fn varianceValue(self: Self) T {
+            return self.mean_squared * self.mean / self.shape;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -9150,6 +9158,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const inverse_gaussian_sampler = try InverseGaussian(f64).init(1, 2);
     try std.testing.expectApproxEqAbs(@as(f64, 1), inverse_gaussian_sampler.meanValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), inverse_gaussian_sampler.shapeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), inverse_gaussian_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), inverse_gaussian_sampler.varianceValue(), 1e-12);
     inverse_gaussian_sampler.fillFrom(&direct_engine, &direct_inverse_gaussian_buf);
     for (direct_inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
 

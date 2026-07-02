@@ -679,6 +679,8 @@ Reusable samplers:
 - `InverseGaussian(T).init`
 - `InverseGaussian(T).meanValue`
 - `InverseGaussian(T).shapeValue`
+- `InverseGaussian(T).expectedValue`
+- `InverseGaussian(T).varianceValue`
 - `InverseGaussian(T).sample`
 - `InverseGaussian(T).sampleFrom`
 - `InverseGaussian(T).fill`
