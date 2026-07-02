@@ -23,7 +23,7 @@ Only the Zig 0.16.0 x86_64 Linux toolchain is suitable for this project in the
 current environment. Zig can list cross-compilation targets, but S4-M1 requires
 executed snapshots, not merely cross-compiled artifacts.
 
-Checked runtime tools on 2026-07-02:
+Checked runtime tools on 2026-07-03:
 
 ```text
 qemu-aarch64: missing
@@ -51,7 +51,10 @@ on the local x86_64 Linux Zig 0.16.0 toolchain. The second-platform runtime
 blocker was refreshed on 2026-07-02 with `command -v qemu-aarch64`,
 `command -v qemu-riscv64`, `command -v wine`, `command -v wasmtime`,
 `uname -a`, and `zig version`; the host is still x86_64 Linux with Zig 0.16.0
-and no second-platform runtime was available.
+and no second-platform runtime was available. It was refreshed again on
+2026-07-03 with the same runtime checks, plus `zig build repro`,
+`zig build test`, and `zig build -Doptimize=ReleaseFast statcheck`; all passed
+locally, and no second-platform runtime was available.
 
 ## Follow-Up
 
