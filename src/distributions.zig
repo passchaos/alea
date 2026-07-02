@@ -1994,6 +1994,11 @@ pub const GeometricFailures = struct {
 };
 
 pub const StandardGeometric = struct {
+    pub fn probabilityValue(self: StandardGeometric) f64 {
+        _ = self;
+        return 0.5;
+    }
+
     pub fn sample(self: StandardGeometric, rng: Rng) u64 {
         _ = self;
         return standardGeometricFrom(rng);
@@ -7911,6 +7916,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     fillStandardGeometric(rng, &standard_geometric_buf);
     fillStandardGeometricFrom(&direct_engine, &standard_geometric_buf);
     const standard_geometric_sampler = StandardGeometric{};
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), standard_geometric_sampler.probabilityValue(), 1e-12);
     standard_geometric_sampler.fillFrom(&direct_engine, &standard_geometric_buf);
     _ = standardGeometric(rng);
     _ = standard_geometric_sampler.sampleFrom(&direct_engine);

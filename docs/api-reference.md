@@ -383,6 +383,7 @@ Reusable samplers:
 - `GeometricFailures.fill`
 - `GeometricFailures.fillFrom`
 - `StandardGeometric`
+- `StandardGeometric.probabilityValue`
 - `StandardGeometric.sample`
 - `StandardGeometric.sampleFrom`
 - `StandardGeometric.fill`
