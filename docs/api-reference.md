@@ -465,6 +465,7 @@ Reusable samplers:
 - `Geometric.probabilityValue`
 - `Geometric.expectedValue`
 - `Geometric.varianceValue`
+- `Geometric.modeValue`
 - `Geometric.minValue`
 - `Geometric.maxValue`
 - `Geometric.sample`
@@ -476,6 +477,7 @@ Reusable samplers:
 - `GeometricFailures.probabilityValue`
 - `GeometricFailures.expectedValue`
 - `GeometricFailures.varianceValue`
+- `GeometricFailures.modeValue`
 - `GeometricFailures.minValue`
 - `GeometricFailures.maxValue`
 - `GeometricFailures.sample`
@@ -486,6 +488,7 @@ Reusable samplers:
 - `StandardGeometric.probabilityValue`
 - `StandardGeometric.expectedValue`
 - `StandardGeometric.varianceValue`
+- `StandardGeometric.modeValue`
 - `StandardGeometric.minValue`
 - `StandardGeometric.maxValue`
 - `StandardGeometric.sample`
