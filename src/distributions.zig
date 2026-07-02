@@ -2753,6 +2753,15 @@ pub fn Beta(comptime T: type) type {
             return self.beta_param;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.alpha / (self.alpha + self.beta_param);
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const total = self.alpha + self.beta_param;
+            return self.alpha * self.beta_param / (total * total * (total + 1));
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8409,6 +8418,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const beta_sampler = try Beta(f64).init(2, 5);
     try std.testing.expectApproxEqAbs(@as(f64, 2), beta_sampler.alphaValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5), beta_sampler.betaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 7.0), beta_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 196.0), beta_sampler.varianceValue(), 1e-12);
     beta_sampler.fillFrom(&direct_engine, &direct_beta_buf);
     for (direct_beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
     var beta_unit_buf: [8]f64 = undefined;
