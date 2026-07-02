@@ -45,6 +45,9 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   136-141M. Keep the scalar f64 transform loop as the default.
 - Indexing through the destination slice in a `while` loop is mixed and
   regresses the FastPrng f64 profile, so pointer iteration remains the default.
+- Prefetching ahead in the exact `@exp` transform loop is mixed in the isolated
+  probe and does not survive a production `fillLogNormal` retry as a durable
+  no-regression win, so no prefetching is used in the default transform loops.
 - `@setFloatMode(.optimized)` is tied/mixed and not a no-regression win.
 - f32 vector width changes do not produce a durable win.
 - f32 `expm1(x) + 1` can be faster for narrow `stddev = 0.25`, but changes

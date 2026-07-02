@@ -32,6 +32,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x1062, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar exp", 0x1062, sample_count, stagedScalarExp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged index exp", 0x1062, sample_count, stagedIndexExp);
+    try benchFill(alea.FastPrng, io, stdout, "fast staged prefetch8 exp", 0x1062, sample_count, stagedPrefetch8Exp);
+    try benchFill(alea.FastPrng, io, stdout, "fast staged prefetch16 exp", 0x1062, sample_count, stagedPrefetch16Exp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged libc exp", 0x1062, sample_count, stagedLibcExp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged unroll4 exp", 0x1062, sample_count, stagedUnroll4Exp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged unroll8 exp", 0x1062, sample_count, stagedUnroll8Exp);
@@ -48,6 +50,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.ScalarPrng, io, stdout, "scalar current fill", 0x1062, sample_count, currentFill);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged scalar exp", 0x1062, sample_count, stagedScalarExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged index exp", 0x1062, sample_count, stagedIndexExp);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar staged prefetch8 exp", 0x1062, sample_count, stagedPrefetch8Exp);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar staged prefetch16 exp", 0x1062, sample_count, stagedPrefetch16Exp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged libc exp", 0x1062, sample_count, stagedLibcExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged unroll4 exp", 0x1062, sample_count, stagedUnroll4Exp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged unroll8 exp", 0x1062, sample_count, stagedUnroll8Exp);
@@ -64,6 +68,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 current fill", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged index exp", 0x1063, sample_count, stagedIndexExpF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged prefetch16 exp", 0x1063, sample_count, stagedPrefetch16ExpF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged prefetch32 exp", 0x1063, sample_count, stagedPrefetch32ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged libc expf", 0x1063, sample_count, stagedLibcExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged unroll4 exp", 0x1063, sample_count, stagedUnroll4ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged unroll8 exp", 0x1063, sample_count, stagedUnroll8ExpF32);
@@ -83,6 +89,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 current fill", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged index exp", 0x1063, sample_count, stagedIndexExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged prefetch16 exp", 0x1063, sample_count, stagedPrefetch16ExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged prefetch32 exp", 0x1063, sample_count, stagedPrefetch32ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged libc expf", 0x1063, sample_count, stagedLibcExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged unroll4 exp", 0x1063, sample_count, stagedUnroll4ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged unroll8 exp", 0x1063, sample_count, stagedUnroll8ExpF32);
@@ -258,6 +266,16 @@ fn stagedIndexExp(source: anytype, dest: []f64) void {
     expIndex(dest);
 }
 
+fn stagedPrefetch8Exp(source: anytype, dest: []f64) void {
+    alea.Rng.fillNormalFrom(source, f64, dest, 0, 0.25);
+    expPrefetch(dest, 8);
+}
+
+fn stagedPrefetch16Exp(source: anytype, dest: []f64) void {
+    alea.Rng.fillNormalFrom(source, f64, dest, 0, 0.25);
+    expPrefetch(dest, 16);
+}
+
 fn stagedLibcExp(source: anytype, dest: []f64) void {
     alea.Rng.fillNormalFrom(source, f64, dest, 0, 0.25);
     expLibc(dest);
@@ -327,6 +345,16 @@ fn stagedScalarExpF32(source: anytype, dest: []f32) void {
 fn stagedIndexExpF32(source: anytype, dest: []f32) void {
     alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
     expIndexF32(dest);
+}
+
+fn stagedPrefetch16ExpF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    expPrefetchF32(dest, 16);
+}
+
+fn stagedPrefetch32ExpF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    expPrefetchF32(dest, 32);
 }
 
 fn stagedLibcExpF32(source: anytype, dest: []f32) void {
@@ -413,6 +441,16 @@ fn expIndex(dest: []f64) void {
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
 }
 
+fn expPrefetch(dest: []f64, comptime distance: usize) void {
+    var i: usize = 0;
+    while (i < dest.len) : (i += 1) {
+        if (i + distance < dest.len) {
+            @prefetch(&dest[i + distance], .{ .rw = .read, .locality = 3, .cache = .data });
+        }
+        dest[i] = @exp(dest[i]);
+    }
+}
+
 fn expLibc(dest: []f64) void {
     for (dest) |*item| item.* = exp(item.*);
 }
@@ -475,6 +513,16 @@ fn expScalarF32(dest: []f32) void {
 fn expIndexF32(dest: []f32) void {
     var i: usize = 0;
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
+}
+
+fn expPrefetchF32(dest: []f32, comptime distance: usize) void {
+    var i: usize = 0;
+    while (i < dest.len) : (i += 1) {
+        if (i + distance < dest.len) {
+            @prefetch(&dest[i + distance], .{ .rw = .read, .locality = 3, .cache = .data });
+        }
+        dest[i] = @exp(dest[i]);
+    }
 }
 
 fn expLibcF32(dest: []f32) void {
