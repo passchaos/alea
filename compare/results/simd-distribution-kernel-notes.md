@@ -41,6 +41,11 @@ numbers.
   repair is required.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
   rejected lanes: prefetching candidates changes how repair consumes randomness.
+- Reinterpreting packed f64 vector slices as scalar slices and routing them
+  through the scalar bulk fills is also not a durable default. It can improve
+  some facade/distribution rows in a same-host `vectorbench` run, but it
+  regressed direct standard/parameterized f64 vector rows while checksums
+  matched, so scalar lane-fill remains the baseline.
 
 ## Requirements For The Next Candidate
 
