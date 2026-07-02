@@ -23,6 +23,13 @@ Focused rows are at the local Rust noise boundary:
 - local Rust `OpenClosed01 f64`: about 778M samples/s in the latest focused
   rerun.
 
+A later fresh focused rerun on the same host was slower overall and again shows
+a measurable gap: Alea facade / FastPrng direct / ScalarPrng direct about
+653M / 631M / 649M samples/s versus Rust `OpenClosed01 f64` about 685M.
+Repeated `open-closed-probe -- 134217728` runs show raw 96-word and 128-word
+buffers remain tied within noise, so the adopted 128-word path remains the
+simplest no-regression production choice.
+
 ## Rust Algorithm Audit
 
 Local `~/Work/rand/src/distr/float.rs` uses the same multiply-based 53-bit
