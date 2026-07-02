@@ -11982,12 +11982,17 @@ pub fn WeightedTree(comptime Weight: type) type {
             if (dest.len == 0) return;
             const total = self.totalWeight();
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            if (self.subtotals.items.len == 1) {
+                @memset(dest, 0);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
         }
 
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            if (self.subtotals.items.len == 1) return 0;
 
             return self.sampleWithTotalFrom(source, total);
         }
@@ -12206,12 +12211,17 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             if (dest.len == 0) return;
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
+            if (self.subtotals.items.len == 1) {
+                @memset(dest, 0);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
         }
 
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
+            if (self.subtotals.items.len == 1) return 0;
 
             return self.sampleWithTotalFrom(source, total);
         }
@@ -13450,6 +13460,34 @@ test "zero-length weighted tree fills do not validate or consume random stream" 
 
     var one_buf: [1]usize = undefined;
     try std.testing.expectError(error.InvalidWeight, invalid_tree.fillCheckedFrom(&engine, &one_buf));
+}
+
+test "single-root weighted trees do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7ee4);
+    var control = alea.ScalarPrng.init(0x5150_7ee4);
+    const rng = Rng.init(&engine);
+
+    var tree = try WeightedTree(u32).init(std.testing.allocator, &.{5});
+    defer tree.deinit();
+    try std.testing.expectEqual(@as(usize, 0), tree.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(usize, 0), tree.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+    var out: [4]usize = undefined;
+    try tree.fillCheckedFrom(&engine, &out);
+    for (out) |index| try std.testing.expectEqual(@as(usize, 0), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{7});
+    defer int_tree.deinit();
+    try std.testing.expectEqual(@as(usize, 0), int_tree.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(usize, 0), int_tree.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try int_tree.fillCheckedFrom(&engine, &out);
+    for (out) |index| try std.testing.expectEqual(@as(usize, 0), index);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "weighted int tree supports dynamic updates" {
