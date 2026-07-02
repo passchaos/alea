@@ -77,6 +77,7 @@ pub const Charset = struct {
     }
 
     pub fn sampleFrom(self: Charset, source: anytype) u8 {
+        if (self.bytes.len == 1) return self.bytes[0];
         return self.bytes[Rng.uintLessThanFrom(source, usize, self.bytes.len)];
     }
 
@@ -95,6 +96,10 @@ pub const Charset = struct {
     }
 
     pub fn fillFrom(self: Charset, source: anytype, out: []u8) void {
+        if (self.bytes.len == 1) {
+            @memset(out, self.bytes[0]);
+            return;
+        }
         for (out) |*byte| byte.* = self.sampleFrom(source);
     }
 
@@ -397,6 +402,39 @@ test "invalid charset facade helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.EmptyCharset, empty.allocChecked(std.testing.allocator, rng, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "single-byte charset helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a5d0);
+    var control = alea.ScalarPrng.init(0x5150_a5d0);
+    const rng = Rng.init(&engine);
+    const only_x = Charset.init("x");
+
+    try std.testing.expectEqual(@as(u8, 'x'), only_x.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u8, 'x'), try only_x.sampleChecked(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [5]u8 = undefined;
+    only_x.fillFrom(&engine, &out);
+    try std.testing.expectEqualSlices(u8, "xxxxx", &out);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try only_x.fillChecked(rng, &out);
+    try std.testing.expectEqualSlices(u8, "xxxxx", &out);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const allocated = try only_x.allocFrom(std.testing.allocator, &engine, 5);
+    defer std.testing.allocator.free(allocated);
+    try std.testing.expectEqualSlices(u8, "xxxxx", allocated);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const checked_allocated = try only_x.allocChecked(std.testing.allocator, rng, 5);
+    defer std.testing.allocator.free(checked_allocated);
+    try std.testing.expectEqualSlices(u8, "xxxxx", checked_allocated);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
