@@ -152,6 +152,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZipf f64x4", lanes / 128, 0xd434, fillDistZipfF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZipf f64x4 direct", lanes / 128, 0xd434, fillDistZipfF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorZipf.fill f64x4", lanes / 128, 0xd434, fillDistZipfSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZeta f64x4", lanes / 128, 0xd444, fillDistZetaF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZeta f64x4 direct", lanes / 128, 0xd444, fillDistZetaF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorZeta.fill f64x4", lanes / 128, 0xd444, fillDistZetaSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -1116,6 +1119,19 @@ fn fillDistZipfF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(
 
 fn fillDistZipfSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorZipf(@Vector(4, f64)).init(10, 1.5) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistZetaF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorZeta(rng, @Vector(4, f64), dest, 3);
+}
+
+fn fillDistZetaF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorZetaFrom(engine, @Vector(4, f64), dest, 3);
+}
+
+fn fillDistZetaSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorZeta(@Vector(4, f64)).init(3) catch unreachable;
     sampler.fill(rng, dest);
 }
 

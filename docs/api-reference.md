@@ -389,7 +389,10 @@ Single-shot helpers:
   `vectorZipfCheckedFrom`, `fillVectorZipf`, `fillVectorZipfFrom`,
   `fillVectorZipfChecked`, `fillVectorZipfCheckedFrom`, `zeta`,
   `zetaFrom`, `zetaChecked`, `zetaCheckedFrom`, `fillZeta`, `fillZetaFrom`,
-  `fillZetaChecked`, `fillZetaCheckedFrom`
+  `fillZetaChecked`, `fillZetaCheckedFrom`, `vectorZeta`,
+  `vectorZetaFrom`, `vectorZetaChecked`, `vectorZetaCheckedFrom`,
+  `fillVectorZeta`, `fillVectorZetaFrom`, `fillVectorZetaChecked`,
+  `fillVectorZetaCheckedFrom`
 - `unitCircle`, `unitCircleFrom`, `fillUnitCircle`, `fillUnitCircleFrom`,
   `unitDisc`, `unitDiscFrom`, `fillUnitDisc`, `fillUnitDiscFrom`,
   `unitSphere`, `unitSphereFrom`, `fillUnitSphere`, `fillUnitSphereFrom`,
@@ -1532,6 +1535,15 @@ Reusable samplers:
 - `Zeta(T).sampleFrom`
 - `Zeta(T).fill`
 - `Zeta(T).fillFrom`
+- `VectorZeta(VectorType)`
+- `VectorZeta(VectorType).init`
+- `VectorZeta(VectorType).exponentValue`
+- `VectorZeta(VectorType).minValue`
+- `VectorZeta(VectorType).maxValue`
+- `VectorZeta(VectorType).sample`
+- `VectorZeta(VectorType).sampleFrom`
+- `VectorZeta(VectorType).fill`
+- `VectorZeta(VectorType).fillFrom`
 - `UnitCircle(T)`
 - `UnitCircle(T).dimensionValue`
 - `UnitCircle(T).radiusValue`

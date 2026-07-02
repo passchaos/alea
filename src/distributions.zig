@@ -10625,6 +10625,88 @@ pub fn fillZetaCheckedFrom(source: anytype, comptime T: type, dest: []T, exponen
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorZeta(rng: Rng, comptime VectorType: type, exponent: vectorChild(VectorType)) VectorType {
+    return vectorZetaFrom(rng, VectorType, exponent);
+}
+
+pub fn vectorZetaFrom(source: anytype, comptime VectorType: type, exponent: vectorChild(VectorType)) VectorType {
+    const sampler = VectorZeta(VectorType).init(exponent) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorZetaChecked(rng: Rng, comptime VectorType: type, exponent: vectorChild(VectorType)) Error!VectorType {
+    return vectorZetaCheckedFrom(rng, VectorType, exponent);
+}
+
+pub fn vectorZetaCheckedFrom(source: anytype, comptime VectorType: type, exponent: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorZeta(VectorType).init(exponent);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorZeta(rng: Rng, comptime VectorType: type, dest: []VectorType, exponent: vectorChild(VectorType)) void {
+    fillVectorZetaFrom(rng, VectorType, dest, exponent);
+}
+
+pub fn fillVectorZetaFrom(source: anytype, comptime VectorType: type, dest: []VectorType, exponent: vectorChild(VectorType)) void {
+    const sampler = VectorZeta(VectorType).init(exponent) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorZetaChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, exponent: vectorChild(VectorType)) Error!void {
+    return fillVectorZetaCheckedFrom(rng, VectorType, dest, exponent);
+}
+
+pub fn fillVectorZetaCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, exponent: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorZeta(VectorType).init(exponent);
+    sampler.fillFrom(source, dest);
+}
+
+pub fn VectorZeta(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Zeta(Child),
+
+        pub fn init(exponent: Child) Error!Self {
+            return .{ .sampler = try Zeta(Child).init(exponent) };
+        }
+
+        pub fn exponentValue(self: Self) Child {
+            return self.sampler.exponentValue();
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Zeta(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -14418,6 +14500,35 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), zipf_degenerate_vec);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const zeta_vec = try vectorZetaChecked(rng, @Vector(4, f64), 3);
+    const direct_zeta_vec = try vectorZetaCheckedFrom(&direct_engine, @Vector(4, f64), 3);
+    try std.testing.expectEqual(zeta_vec, direct_zeta_vec);
+    inline for (0..4) |lane| try std.testing.expect(zeta_vec[lane] >= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_zeta_sampler = try VectorZeta(@Vector(4, f64)).init(3);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), vector_zeta_sampler.exponentValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_zeta_sampler.minValue(), 0);
+    try std.testing.expect(vector_zeta_sampler.maxValue() == null);
+    const sampled_zeta_vec = vector_zeta_sampler.sample(rng);
+    const direct_sampled_zeta_vec = vector_zeta_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_zeta_vec, direct_sampled_zeta_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_zeta_vec[lane] >= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var zeta_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_zeta_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorZetaChecked(rng, @Vector(4, f64), &zeta_buf_vec, 3);
+    try fillVectorZetaCheckedFrom(&direct_engine, @Vector(4, f64), &direct_zeta_buf_vec, 3);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &zeta_buf_vec, &direct_zeta_buf_vec);
+    for (zeta_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_zeta_sampler.fill(rng, &zeta_buf_vec);
+    vector_zeta_sampler.fillFrom(&direct_engine, &direct_zeta_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &zeta_buf_vec, &direct_zeta_buf_vec);
+    for (zeta_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -14590,6 +14701,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorZipfCheckedFrom(&engine, @Vector(4, f64), 0, 1.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorZetaCheckedFrom(&engine, @Vector(4, f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -14685,6 +14799,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorZipfCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorZetaCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -14800,6 +14917,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorZipfCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1.5);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorZetaCheckedFrom(&engine, @Vector(4, f64), &empty, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -14863,6 +14982,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorNormalInverseGaussianChecked(rng, @Vector(4, f64), &empty, 1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorZipfChecked(rng, @Vector(4, f64), &empty, 0, 1.5);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorZetaChecked(rng, @Vector(4, f64), &empty, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17779,6 +17900,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorZipfFrom(&unchecked, @Vector(4, f64), &vector_zipf_unchecked, 10, 1.5);
         try fillVectorZipfCheckedFrom(&checked, @Vector(4, f64), &vector_zipf_checked, 10, 1.5);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_zipf_unchecked, &vector_zipf_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_zeta_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_zeta_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorZetaFrom(&unchecked, @Vector(4, f64), &vector_zeta_unchecked, 3);
+        try fillVectorZetaCheckedFrom(&checked, @Vector(4, f64), &vector_zeta_checked, 3);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_zeta_unchecked, &vector_zeta_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;
