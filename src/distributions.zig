@@ -559,6 +559,14 @@ pub const Binomial = struct {
     }
 
     pub fn fillFrom(self: Binomial, source: anytype, dest: []u64) void {
+        if (self.trials == 0 or self.p == 0) {
+            @memset(dest, 0);
+            return;
+        }
+        if (self.p == 1) {
+            @memset(dest, self.trials);
+            return;
+        }
         for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
@@ -675,6 +683,8 @@ pub fn VectorBinomial(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.trials == 0 or self.sampler.p == 0) return @splat(0);
+            if (self.sampler.p == 1) return @splat(self.sampler.trials);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -816,6 +826,8 @@ pub fn VectorBinomialPoissonApprox(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.trials == 0 or self.p == 0) return @splat(0);
+            if (self.p == 1) return @splat(self.trials);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = binomialPoissonApproxFrom(source, self.trials, self.p);
             return out;
@@ -1083,6 +1095,10 @@ pub const NegativeBinomial = struct {
     }
 
     pub fn fillFrom(self: NegativeBinomial, source: anytype, dest: []u64) void {
+        if (self.p == 1) {
+            @memset(dest, 0);
+            return;
+        }
         for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
@@ -1198,6 +1214,7 @@ pub fn VectorNegativeBinomial(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.p == 1) return @splat(0);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -1234,17 +1251,26 @@ pub const Hypergeometric = struct {
     successes: u64,
     draws: u64,
     method: HypergeometricMethodTag,
+    constant: u64 = 0,
     inverse_transform: HypergeometricInverseTransform = undefined,
     rejection_acceptance: HypergeometricRejectionAcceptance = undefined,
 
     pub fn init(population: u64, successes: u64, draws: u64) Error!Hypergeometric {
         if (successes > population or draws > population) return error.InvalidParameter;
+        const failures = population - successes;
+        const min = if (draws > failures) draws - failures else 0;
+        const max = @min(successes, draws);
         var self: Hypergeometric = .{
             .population = population,
             .successes = successes,
             .draws = draws,
             .method = .draw_loop,
         };
+        if (min == max) {
+            self.method = .constant;
+            self.constant = min;
+            return self;
+        }
         if (HypergeometricInverseTransform.init(population, successes, draws)) |method| {
             self.method = .inverse_transform;
             self.inverse_transform = method;
@@ -1298,6 +1324,7 @@ pub const Hypergeometric = struct {
 
     pub fn sampleFrom(self: *const Hypergeometric, source: anytype) u64 {
         return switch (self.method) {
+            .constant => self.constant,
             .draw_loop => hypergeometricDrawLoopFrom(source, self.population, self.successes, self.draws),
             .inverse_transform => self.inverse_transform.sampleFrom(source),
             .rejection_acceptance => self.rejection_acceptance.sampleFrom(source),
@@ -1309,6 +1336,10 @@ pub const Hypergeometric = struct {
     }
 
     pub fn fillFrom(self: *const Hypergeometric, source: anytype, dest: []u64) void {
+        if (self.method == .constant) {
+            @memset(dest, self.constant);
+            return;
+        }
         for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
@@ -1428,6 +1459,7 @@ pub fn VectorHypergeometric(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: *const Self, source: anytype) VectorType {
+            if (self.sampler.method == .constant) return @splat(self.sampler.constant);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -1459,6 +1491,7 @@ pub fn hypergeometricFrom(source: anytype, population: u64, successes: u64, draw
 }
 
 const HypergeometricMethodTag = enum {
+    constant,
     draw_loop,
     inverse_transform,
     rejection_acceptance,
@@ -4195,6 +4228,10 @@ pub const Geometric = struct {
     }
 
     pub fn fillFrom(self: Geometric, source: anytype, dest: []u64) void {
+        if (self.p == 1) {
+            @memset(dest, 1);
+            return;
+        }
         for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
@@ -4241,6 +4278,7 @@ pub fn VectorGeometric(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.p == 1) return @splat(1);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -4308,6 +4346,10 @@ pub const GeometricFailures = struct {
     }
 
     pub fn fillFrom(self: GeometricFailures, source: anytype, dest: []u64) void {
+        if (self.p == 1) {
+            @memset(dest, 0);
+            return;
+        }
         for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
@@ -4391,6 +4433,7 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.p == 1) return @splat(0);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -16414,6 +16457,104 @@ test "degenerate uniform distribution helpers do not consume random stream" {
 
     try fillVectorUniformInclusiveChecked(rng, @Vector(4, f64), &vec_floats, -16.5, -16.5);
     for (vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(-16.5)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate discrete distribution helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1f7);
+    var control = alea.ScalarPrng.init(0x5150_d1f7);
+    const rng = Rng.init(&engine);
+
+    const binomial_zero = try Binomial.init(10, 0);
+    try std.testing.expectEqual(@as(u64, 0), binomial_zero.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var u64_buf: [5]u64 = undefined;
+    binomial_zero.fillFrom(&engine, &u64_buf);
+    for (u64_buf) |sample| try std.testing.expectEqual(@as(u64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const binomial_all = try Binomial.init(10, 1);
+    try std.testing.expectEqual(@as(u64, 10), binomial_all.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(u64, 10), try binomialChecked(rng, 10, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+    binomial_all.fillFrom(&engine, &u64_buf);
+    for (u64_buf) |sample| try std.testing.expectEqual(@as(u64, 10), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_binomial_all = try VectorBinomial(@Vector(4, u64)).init(7, 1);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(7)), vector_binomial_all.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    var vector_u64_buf: [3]@Vector(4, u64) = undefined;
+    vector_binomial_all.fillFrom(&engine, &vector_u64_buf);
+    for (vector_u64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(7)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_binomial_approx_zero = try VectorBinomialPoissonApprox(@Vector(4, u64)).init(10_000, 0);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), vector_binomial_approx_zero.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const negative_binomial = try NegativeBinomial.init(5, 1);
+    try std.testing.expectEqual(@as(u64, 0), negative_binomial.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    negative_binomial.fillFrom(&engine, &u64_buf);
+    for (u64_buf) |sample| try std.testing.expectEqual(@as(u64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_negative_binomial = try VectorNegativeBinomial(@Vector(4, u64)).init(5, 1);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), vector_negative_binomial.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var hypergeometric_all = try Hypergeometric.init(10, 10, 4);
+    try std.testing.expectEqual(@as(u64, 4), hypergeometric_all.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(u64, 4), try hypergeometricChecked(rng, 10, 10, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+    hypergeometric_all.fillFrom(&engine, &u64_buf);
+    for (u64_buf) |sample| try std.testing.expectEqual(@as(u64, 4), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var hypergeometric_none = try Hypergeometric.init(10, 0, 4);
+    try std.testing.expectEqual(@as(u64, 0), hypergeometric_none.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_hypergeometric = try VectorHypergeometric(@Vector(4, u64)).init(10, 7, 10);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(7)), vector_hypergeometric.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_hypergeometric.fillFrom(&engine, &vector_u64_buf);
+    for (vector_u64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(7)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const geometric_sampler = try Geometric.init(1);
+    try std.testing.expectEqual(@as(u64, 1), geometric_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(u64, 1), try geometricChecked(rng, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+    geometric_sampler.fillFrom(&engine, &u64_buf);
+    for (u64_buf) |sample| try std.testing.expectEqual(@as(u64, 1), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_geometric = try VectorGeometric(@Vector(4, u64)).init(1);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(1)), vector_geometric.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_geometric.fillFrom(&engine, &vector_u64_buf);
+    for (vector_u64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(1)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const geometric_failures = try GeometricFailures.init(1);
+    try std.testing.expectEqual(@as(u64, 0), geometric_failures.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    geometric_failures.fillFrom(&engine, &u64_buf);
+    for (u64_buf) |sample| try std.testing.expectEqual(@as(u64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_geometric_failures = try VectorGeometricFailures(@Vector(4, u64)).init(1);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), vector_geometric_failures.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_geometric_failures.fillFrom(&engine, &vector_u64_buf);
+    for (vector_u64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
