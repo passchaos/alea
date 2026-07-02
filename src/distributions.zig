@@ -1729,6 +1729,14 @@ pub const Poisson = struct {
         };
     }
 
+    pub fn expectedValue(self: Poisson) f64 {
+        return self.lambdaValue();
+    }
+
+    pub fn varianceValue(self: Poisson) f64 {
+        return self.lambdaValue();
+    }
+
     pub fn sample(self: Poisson, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -8111,6 +8119,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, fillPoissonCheckedFrom(&direct_engine, &direct_poisson_buf, std.math.inf(f64)));
     const poisson_sampler = try Poisson.init(12);
     try std.testing.expectApproxEqAbs(@as(f64, 12), poisson_sampler.lambdaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), poisson_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), poisson_sampler.varianceValue(), 1e-12);
     poisson_sampler.fillFrom(&direct_engine, &direct_poisson_buf);
     for (direct_poisson_buf) |value| try std.testing.expect(value < 64);
 

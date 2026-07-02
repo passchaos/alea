@@ -389,6 +389,8 @@ Reusable samplers:
 - `Poisson`
 - `Poisson.init`
 - `Poisson.lambdaValue`
+- `Poisson.expectedValue`
+- `Poisson.varianceValue`
 - `Poisson.sample`
 - `Poisson.sampleFrom`
 - `Poisson.fill`
