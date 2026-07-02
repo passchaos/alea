@@ -32,8 +32,8 @@ Zig-native way.
 | Normal / StandardNormal | Covered: `standardNormal`, `StandardNormal(T)`, `normal`, `Normal(T)`, including coefficient-of-variation construction/accessor, z-score conversion, and standard-parameter/moment accessors |
 | LogNormal | Covered: `logNormal`, `LogNormal(T)`, including linear-space mean/coefficient-of-variation construction and accessors, z-score conversion, log-space and moment accessors, and f32/f64 benchmark rows |
 | Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)`, including reusable-sampler and standard rate/moment/support accessors |
-| Gamma | Covered: `gamma`, `Gamma(T)`, including shape/scale/moment accessors |
-| ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment accessors |
+| Gamma | Covered: `gamma`, `Gamma(T)`, including shape/scale/moment/support accessors |
+| ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment/support accessors |
 | FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2 and finite-moment accessors |
 | StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment accessors |
 | Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment accessors |
@@ -70,8 +70,8 @@ toolkit functionality and reduce reliance on companion crates:
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment accessors |
 | HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment accessors |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment accessors |
-| Chi | Covered: `chi`, `Chi(T)`, including dof/moment accessors |
-| Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment accessors |
+| Chi | Covered: `chi`, `Chi(T)`, including dof/moment/support accessors |
+| Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment/support accessors |
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape and finite-moment accessors |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment accessors |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment accessors |

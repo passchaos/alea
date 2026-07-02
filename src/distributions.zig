@@ -2537,6 +2537,16 @@ pub fn Gamma(comptime T: type) type {
             return self.shape * self.scale * self.scale;
         }
 
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -2675,6 +2685,16 @@ pub fn ChiSquared(comptime T: type) type {
             return 2 * self.dof;
         }
 
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -2760,6 +2780,16 @@ pub fn Chi(comptime T: type) type {
         pub fn varianceValue(self: Self) T {
             const mean = self.expectedValue();
             return self.dofValue() - mean * mean;
+        }
+
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -2850,6 +2880,16 @@ pub fn Erlang(comptime T: type) type {
         pub fn varianceValue(self: Self) T {
             const scale = self.scaleValue();
             return @as(T, @floatFromInt(self.shape)) * scale * scale;
+        }
+
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9022,6 +9062,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 3), gamma_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 6), gamma_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 18), gamma_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), gamma_sampler.minValue(), 0);
+    try std.testing.expect(gamma_sampler.maxValue() == null);
     gamma_sampler.fillFrom(&direct_engine, &direct_gamma_buf);
     for (direct_gamma_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try gammaCheckedFrom(&direct_engine, f64, 2, 3) > 0);
@@ -9054,6 +9096,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 4), chi_squared_sampler.dofValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 4), chi_squared_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 8), chi_squared_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), chi_squared_sampler.minValue(), 0);
+    try std.testing.expect(chi_squared_sampler.maxValue() == null);
     chi_squared_sampler.fillFrom(&direct_engine, &direct_chi_squared_buf);
     for (direct_chi_squared_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try chiSquaredCheckedFrom(&direct_engine, f64, 4) > 0);
@@ -9083,6 +9127,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const chi_mean = 3.0 * @sqrt(2.0 * std.math.pi) / 4.0;
     try std.testing.expectApproxEqAbs(chi_mean, chi_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(4.0 - chi_mean * chi_mean, chi_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), chi_sampler.minValue(), 0);
+    try std.testing.expect(chi_sampler.maxValue() == null);
     chi_sampler.fillFrom(&direct_engine, &direct_chi_buf);
     try std.testing.expect(try chiCheckedFrom(&direct_engine, f64, 4) > 0);
     try std.testing.expectError(error.InvalidParameter, chiCheckedFrom(&direct_engine, f64, 0));
@@ -9108,6 +9154,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), erlang_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 6), erlang_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 12), erlang_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), erlang_sampler.minValue(), 0);
+    try std.testing.expect(erlang_sampler.maxValue() == null);
     erlang_sampler.fillFrom(&direct_engine, &direct_erlang_buf);
     for (direct_erlang_buf) |value| try std.testing.expect(value > 0);
 
