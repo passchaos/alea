@@ -624,6 +624,8 @@ Reusable samplers:
 - `UnitBall(T).fillFrom`
 - `Dirichlet(T)`
 - `Dirichlet(T).init`
+- `Dirichlet(T).alphaValues`
+- `Dirichlet(T).dimensionValue`
 - `Dirichlet(T).sample`
 - `Dirichlet(T).sampleFrom`
 - `Dirichlet(T).sampleInto`

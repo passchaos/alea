@@ -5020,6 +5020,14 @@ pub fn Dirichlet(comptime T: type) type {
             return .{ .alpha = alpha };
         }
 
+        pub fn alphaValues(self: Self) []const T {
+            return self.alpha;
+        }
+
+        pub fn dimensionValue(self: Self) usize {
+            return self.alpha.len;
+        }
+
         pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
             return self.sampleFrom(allocator, rng);
         }
@@ -8897,6 +8905,8 @@ test "dirichlet sampler returns simplex vectors" {
     const rng = Rng.init(&engine);
 
     const dist = try Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
+    try std.testing.expectEqualSlices(f64, &.{ 1.0, 2.0, 3.0 }, dist.alphaValues());
+    try std.testing.expectEqual(@as(usize, 3), dist.dimensionValue());
     const sample = try dist.sample(std.testing.allocator, rng);
     defer std.testing.allocator.free(sample);
 
