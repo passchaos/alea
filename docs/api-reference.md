@@ -541,6 +541,8 @@ Reusable samplers:
 - `Logistic(T).init`
 - `Logistic(T).locationValue`
 - `Logistic(T).scaleValue`
+- `Logistic(T).expectedValue`
+- `Logistic(T).varianceValue`
 - `Logistic(T).sample`
 - `Logistic(T).sampleFrom`
 - `Logistic(T).fill`

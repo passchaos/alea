@@ -3428,6 +3428,15 @@ pub fn Logistic(comptime T: type) type {
             return self.scale;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.location;
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const pi: T = @floatCast(std.math.pi);
+            return pi * pi * self.scale * self.scale / 3;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8693,6 +8702,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const logistic_sampler = try Logistic(f64).init(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), logistic_sampler.locationValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), logistic_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), logistic_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(std.math.pi * std.math.pi / 3.0, logistic_sampler.varianceValue(), 1e-12);
     logistic_sampler.fillFrom(&direct_engine, &direct_logistic_buf);
     for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try logisticCheckedFrom(&direct_engine, f64, 0, 1)));

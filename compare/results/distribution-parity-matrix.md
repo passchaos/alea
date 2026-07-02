@@ -66,7 +66,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Arcsine | Covered: `arcsine`, `Arcsine(T)`, including min/max/moment accessors |
 | Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/scale accessors |
 | Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/moment accessors |
-| Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale accessors |
+| Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/moment accessors |
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment accessors |
 | HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment accessors |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment accessors |
