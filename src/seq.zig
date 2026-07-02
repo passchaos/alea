@@ -2211,6 +2211,35 @@ test "zero-length choice fills do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "single-item choice sampler does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_c0df);
+    var control = alea.ScalarPrng.init(0x5150_c0df);
+
+    const values = [_]u8{42};
+    const choice = Choice(u8).init(&values).?;
+
+    try std.testing.expectEqual(&values[0], choice.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u8, 42), choice.sampleValueFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var pointer_buf: [4]*const u8 = undefined;
+    choice.fillFrom(&engine, &pointer_buf);
+    for (pointer_buf) |item| try std.testing.expectEqual(&values[0], item);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var value_buf: [4]u8 = undefined;
+    choice.fillValuesFrom(&engine, &value_buf);
+    for (value_buf) |item| try std.testing.expectEqual(@as(u8, 42), item);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var iter = choice.iterFrom(&engine);
+    try std.testing.expectEqual(&values[0], iter.next().?);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "weighted choice init allocation failure cleans up" {
     const items = [_]u8{ 1, 2, 3 };
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });

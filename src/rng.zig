@@ -3526,6 +3526,27 @@ test "invalid facade choice helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "single-item choice helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba4c);
+    var control = alea.ScalarPrng.init(0x5150_ba4c);
+    const rng = Rng.init(&engine);
+
+    const items = [_]u8{42};
+    try std.testing.expectEqual(@as(?u8, 42), chooseFrom(&engine, u8, &items));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u8, 42), try rng.chooseChecked(u8, &items));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var mutable_items = [_]u8{99};
+    try std.testing.expectEqual(&mutable_items[0], choosePtrFrom(&engine, u8, &mutable_items).?);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(&mutable_items[0], try rng.choosePtrChecked(u8, &mutable_items));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "collection helpers preserve direct stream shape" {
     const alea = @import("root.zig");
     const items = [_]u8{ 10, 20, 30, 40, 50 };
