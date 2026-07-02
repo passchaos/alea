@@ -143,6 +143,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorPert f64x4", lanes / 32, 0xd404, fillDistPertF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorPert f64x4 direct", lanes / 32, 0xd404, fillDistPertF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorPert.fill f64x4", lanes / 32, 0xd404, fillDistPertSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorInverseGaussian f64x4", lanes / 8, 0xd414, fillDistInverseGaussianF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorInverseGaussian f64x4 direct", lanes / 8, 0xd414, fillDistInverseGaussianF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorInverseGaussian.fill f64x4", lanes / 8, 0xd414, fillDistInverseGaussianSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -1068,6 +1071,19 @@ fn fillDistPertF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(
 
 fn fillDistPertSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorPert(@Vector(4, f64)).init(0, 4, 10, 4) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistInverseGaussianF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorInverseGaussian(rng, @Vector(4, f64), dest, 1, 2);
+}
+
+fn fillDistInverseGaussianF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorInverseGaussianFrom(engine, @Vector(4, f64), dest, 1, 2);
+}
+
+fn fillDistInverseGaussianSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorInverseGaussian(@Vector(4, f64)).init(1, 2) catch unreachable;
     sampler.fill(rng, dest);
 }
 

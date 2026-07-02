@@ -371,6 +371,10 @@ Single-shot helpers:
 - `inverseGaussian`, `inverseGaussianFrom`, `inverseGaussianChecked`,
   `inverseGaussianCheckedFrom`, `fillInverseGaussian`, `fillInverseGaussianFrom`,
   `fillInverseGaussianChecked`, `fillInverseGaussianCheckedFrom`,
+  `vectorInverseGaussian`, `vectorInverseGaussianFrom`,
+  `vectorInverseGaussianChecked`, `vectorInverseGaussianCheckedFrom`,
+  `fillVectorInverseGaussian`, `fillVectorInverseGaussianFrom`,
+  `fillVectorInverseGaussianChecked`, `fillVectorInverseGaussianCheckedFrom`,
   `normalInverseGaussian`, `normalInverseGaussianFrom`,
   `normalInverseGaussianChecked`, `normalInverseGaussianCheckedFrom`,
   `fillNormalInverseGaussian`, `fillNormalInverseGaussianFrom`,
@@ -1454,6 +1458,18 @@ Reusable samplers:
 - `InverseGaussian(T).sampleFrom`
 - `InverseGaussian(T).fill`
 - `InverseGaussian(T).fillFrom`
+- `VectorInverseGaussian(VectorType)`
+- `VectorInverseGaussian(VectorType).init`
+- `VectorInverseGaussian(VectorType).meanValue`
+- `VectorInverseGaussian(VectorType).shapeValue`
+- `VectorInverseGaussian(VectorType).expectedValue`
+- `VectorInverseGaussian(VectorType).varianceValue`
+- `VectorInverseGaussian(VectorType).minValue`
+- `VectorInverseGaussian(VectorType).maxValue`
+- `VectorInverseGaussian(VectorType).sample`
+- `VectorInverseGaussian(VectorType).sampleFrom`
+- `VectorInverseGaussian(VectorType).fill`
+- `VectorInverseGaussian(VectorType).fillFrom`
 - `NormalInverseGaussian(T)`
 - `NormalInverseGaussian(T).init`
 - `NormalInverseGaussian(T).alphaValue`
