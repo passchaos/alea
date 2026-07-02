@@ -560,6 +560,8 @@ Reusable samplers:
 - `PowerFunction(T).minValue`
 - `PowerFunction(T).maxValue`
 - `PowerFunction(T).shapeValue`
+- `PowerFunction(T).expectedValue`
+- `PowerFunction(T).varianceValue`
 - `PowerFunction(T).sample`
 - `PowerFunction(T).sampleFrom`
 - `PowerFunction(T).fill`

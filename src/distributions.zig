@@ -3751,6 +3751,16 @@ pub fn PowerFunction(comptime T: type) type {
             return 1 / self.inverse_shape;
         }
 
+        pub fn expectedValue(self: Self) T {
+            const shape = self.shapeValue();
+            return self.min + self.range * shape / (shape + 1);
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const shape = self.shapeValue();
+            return self.range * self.range * shape / ((shape + 1) * (shape + 1) * (shape + 2));
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8727,6 +8737,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, -1), power_function_sampler.minValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), power_function_sampler.maxValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), power_function_sampler.shapeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25), power_function_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 27.0 / 80.0), power_function_sampler.varianceValue(), 1e-12);
     power_function_sampler.fillFrom(&direct_engine, &direct_power_function_buf);
     for (direct_power_function_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
     const direct_checked_power = try powerFunctionCheckedFrom(&direct_engine, f64, -1, 2, 3);
