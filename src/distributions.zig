@@ -6844,7 +6844,8 @@ pub fn laplaceCheckedFrom(source: anytype, comptime T: type, location: T, scale:
 
 pub fn laplaceFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) return location;
 
     const u = Rng.floatOpenFrom(source, T) - @as(T, 0.5);
     const one: T = 1;
@@ -6858,7 +6859,11 @@ pub fn fillLaplace(rng: Rng, comptime T: type, dest: []T, location: T, scale: T)
 
 pub fn fillLaplaceFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) void {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, location);
+        return;
+    }
     Rng.fillOpenFrom(source, T, dest);
     laplaceFromOpenUniforms(T, dest, location, scale);
 }
@@ -6912,6 +6917,7 @@ pub fn fillVectorLaplaceCheckedFrom(source: anytype, comptime VectorType: type, 
 
 fn laplaceFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
     const Child = vectorChild(VectorType);
+    if (scale == 0) return @splat(location);
     const location_vec: VectorType = @splat(location);
     const scale_vec: VectorType = @splat(scale);
     const half_vec: VectorType = @splat(0.5);
@@ -6974,6 +6980,7 @@ pub fn VectorLaplace(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
             const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
             return laplaceFromOpenUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
         }
@@ -6983,6 +6990,10 @@ pub fn VectorLaplace(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.locationValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -6998,7 +7009,7 @@ pub fn Laplace(comptime T: type) type {
         pub fn init(location: T, scale: T) Error!Self {
             comptime requireFloat(T);
             if (!std.math.isFinite(location)) return error.InvalidParameter;
-            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale };
         }
 
@@ -7027,13 +7038,11 @@ pub fn Laplace(comptime T: type) type {
         }
 
         pub fn minValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.location else null;
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.location else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -7050,6 +7059,10 @@ pub fn Laplace(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             fillLaplaceFrom(source, T, dest, self.location, self.scale);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
     };
 }
@@ -7069,7 +7082,8 @@ pub fn logisticCheckedFrom(source: anytype, comptime T: type, location: T, scale
 
 pub fn logisticFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) return location;
 
     const u = Rng.floatOpenFrom(source, T);
     return location + scale * @log(u / (1 - u));
@@ -7081,7 +7095,11 @@ pub fn fillLogistic(rng: Rng, comptime T: type, dest: []T, location: T, scale: T
 
 pub fn fillLogisticFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T) void {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(scale));
+    std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, location);
+        return;
+    }
     Rng.fillOpenFrom(source, T, dest);
     logisticFromOpenUniforms(T, dest, location, scale);
 }
@@ -7134,6 +7152,7 @@ pub fn fillVectorLogisticCheckedFrom(source: anytype, comptime VectorType: type,
 }
 
 fn logisticFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    if (scale == 0) return @splat(location);
     const location_vec: VectorType = @splat(location);
     const scale_vec: VectorType = @splat(scale);
     const one_vec: VectorType = @splat(1);
@@ -7190,6 +7209,7 @@ pub fn VectorLogistic(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
             const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
             return logisticFromOpenUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
         }
@@ -7199,6 +7219,10 @@ pub fn VectorLogistic(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.locationValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -7214,7 +7238,7 @@ pub fn Logistic(comptime T: type) type {
         pub fn init(location: T, scale: T) Error!Self {
             comptime requireFloat(T);
             if (!std.math.isFinite(location)) return error.InvalidParameter;
-            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale };
         }
 
@@ -7244,13 +7268,11 @@ pub fn Logistic(comptime T: type) type {
         }
 
         pub fn minValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.location else null;
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.location else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -7267,6 +7289,10 @@ pub fn Logistic(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             fillLogisticFrom(source, T, dest, self.location, self.scale);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
     };
 }
@@ -14303,6 +14329,129 @@ test "degenerate half-normal helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "degenerate laplace and logistic helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1d6);
+    var control = alea.ScalarPrng.init(0x5150_d1d6);
+    const rng = Rng.init(&engine);
+
+    const laplace_point: f64 = -4.25;
+    try std.testing.expectEqual(laplace_point, laplaceFrom(&engine, f64, laplace_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(laplace_point, try laplaceChecked(rng, f64, laplace_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillLaplaceFrom(&engine, f64, &scalar_buf, laplace_point, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(laplace_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillLaplaceChecked(rng, f64, &scalar_buf, laplace_point, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(laplace_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const laplace_sampler = try Laplace(f64).init(laplace_point, 0);
+    try std.testing.expectEqual(laplace_point, laplace_sampler.locationValue());
+    try std.testing.expectEqual(@as(f64, 0), laplace_sampler.scaleValue());
+    try std.testing.expectEqual(laplace_point, laplace_sampler.medianValue());
+    try std.testing.expectEqual(laplace_point, laplace_sampler.modeValue());
+    try std.testing.expectEqual(laplace_point, laplace_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), laplace_sampler.varianceValue());
+    try std.testing.expectEqual(laplace_point, laplace_sampler.minValue().?);
+    try std.testing.expectEqual(laplace_point, laplace_sampler.maxValue().?);
+    try std.testing.expectEqual(laplace_point, laplace_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    laplace_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(laplace_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(laplace_point)), vectorLaplaceFrom(&engine, @Vector(4, f64), laplace_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(laplace_point)), try vectorLaplaceChecked(rng, @Vector(4, f64), laplace_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorLaplaceFrom(&engine, @Vector(4, f64), &vector_buf, laplace_point, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(laplace_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorLaplaceChecked(rng, @Vector(4, f64), &vector_buf, laplace_point, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(laplace_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_laplace_sampler = try VectorLaplace(@Vector(4, f64)).init(laplace_point, 0);
+    try std.testing.expectEqual(laplace_point, vector_laplace_sampler.locationValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_laplace_sampler.scaleValue());
+    try std.testing.expectEqual(laplace_point, vector_laplace_sampler.minValue().?);
+    try std.testing.expectEqual(laplace_point, vector_laplace_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(laplace_point)), vector_laplace_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_laplace_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(laplace_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const logistic_point: f64 = 8.5;
+    try std.testing.expectEqual(logistic_point, logisticFrom(&engine, f64, logistic_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(logistic_point, try logisticChecked(rng, f64, logistic_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillLogisticFrom(&engine, f64, &scalar_buf, logistic_point, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(logistic_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillLogisticChecked(rng, f64, &scalar_buf, logistic_point, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(logistic_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const logistic_sampler = try Logistic(f64).init(logistic_point, 0);
+    try std.testing.expectEqual(logistic_point, logistic_sampler.locationValue());
+    try std.testing.expectEqual(@as(f64, 0), logistic_sampler.scaleValue());
+    try std.testing.expectEqual(logistic_point, logistic_sampler.medianValue());
+    try std.testing.expectEqual(logistic_point, logistic_sampler.modeValue());
+    try std.testing.expectEqual(logistic_point, logistic_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), logistic_sampler.varianceValue());
+    try std.testing.expectEqual(logistic_point, logistic_sampler.minValue().?);
+    try std.testing.expectEqual(logistic_point, logistic_sampler.maxValue().?);
+    try std.testing.expectEqual(logistic_point, logistic_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    logistic_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(logistic_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(logistic_point)), vectorLogisticFrom(&engine, @Vector(4, f64), logistic_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(logistic_point)), try vectorLogisticChecked(rng, @Vector(4, f64), logistic_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorLogisticFrom(&engine, @Vector(4, f64), &vector_buf, logistic_point, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(logistic_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorLogisticChecked(rng, @Vector(4, f64), &vector_buf, logistic_point, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(logistic_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_logistic_sampler = try VectorLogistic(@Vector(4, f64)).init(logistic_point, 0);
+    try std.testing.expectEqual(logistic_point, vector_logistic_sampler.locationValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_logistic_sampler.scaleValue());
+    try std.testing.expectEqual(logistic_point, vector_logistic_sampler.minValue().?);
+    try std.testing.expectEqual(logistic_point, vector_logistic_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(logistic_point)), vector_logistic_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_logistic_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(logistic_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "degenerate triangular helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1f7);
@@ -16571,10 +16720,10 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorCauchyCheckedFrom(&engine, @Vector(4, f64), 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, vectorLaplaceCheckedFrom(&engine, @Vector(4, f64), 0, 0));
+    try std.testing.expectError(error.InvalidParameter, vectorLaplaceCheckedFrom(&engine, @Vector(4, f64), 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, vectorLogisticCheckedFrom(&engine, @Vector(4, f64), 0, 0));
+    try std.testing.expectError(error.InvalidParameter, vectorLogisticCheckedFrom(&engine, @Vector(4, f64), 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, vectorLogLogisticCheckedFrom(&engine, @Vector(4, f64), 0, 3));
@@ -16675,10 +16824,10 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorLaplaceCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillVectorLaplaceCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorLogisticCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillVectorLogisticCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorLogLogisticCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 3));
@@ -16818,9 +16967,9 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorLaplaceCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
+    try fillVectorLaplaceCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorLogisticCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0);
+    try fillVectorLogisticCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLogLogisticCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16886,9 +17035,9 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorCauchyChecked(rng, @Vector(4, f64), &empty, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorLaplaceChecked(rng, @Vector(4, f64), &empty, 0, 0);
+    try fillVectorLaplaceChecked(rng, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorLogisticChecked(rng, @Vector(4, f64), &empty, 0, 0);
+    try fillVectorLogisticChecked(rng, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLogLogisticChecked(rng, @Vector(4, f64), &empty, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17043,7 +17192,7 @@ test "invalid distribution facade tail scalars do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, arcsineChecked(rng, f64, 2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, laplaceChecked(rng, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, laplaceChecked(rng, f64, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, paretoChecked(rng, f64, 0, 3));
@@ -17139,7 +17288,7 @@ test "invalid distribution facade fill helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillStudentTChecked(rng, f64, &floats, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillLogisticChecked(rng, f64, &floats, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillLogisticChecked(rng, f64, &floats, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -17193,7 +17342,7 @@ test "invalid distribution facade scalar helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, exponentialChecked(rng, f64, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, logisticChecked(rng, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, logisticChecked(rng, f64, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -17551,7 +17700,7 @@ test "invalid tail scalar helpers do not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_d1f8);
     var control = alea.ScalarPrng.init(0x5150_d1f8);
 
-    try std.testing.expectError(error.InvalidParameter, logisticCheckedFrom(&engine, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, logisticCheckedFrom(&engine, f64, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, logLogisticCheckedFrom(&engine, f64, 0, 3));
@@ -17581,7 +17730,7 @@ test "invalid bounded scalar helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, cauchyCheckedFrom(&engine, f64, 0, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, laplaceCheckedFrom(&engine, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, laplaceCheckedFrom(&engine, f64, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -17697,7 +17846,7 @@ test "zero-length tail distribution fills do not validate or consume random stre
 
     var out: [0]f64 = .{};
 
-    try fillLogisticCheckedFrom(&engine, f64, &out, 0, 0);
+    try fillLogisticCheckedFrom(&engine, f64, &out, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillLogLogisticCheckedFrom(&engine, f64, &out, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17708,7 +17857,7 @@ test "zero-length tail distribution fills do not validate or consume random stre
     try fillRayleighCheckedFrom(&engine, f64, &out, -1);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try fillLogisticChecked(rng, f64, &out, 0, 0);
+    try fillLogisticChecked(rng, f64, &out, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillKumaraswamyChecked(rng, f64, &out, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17716,7 +17865,7 @@ test "zero-length tail distribution fills do not validate or consume random stre
     try std.testing.expectEqual(control.next(), engine.next());
 
     var one: [1]f64 = undefined;
-    try std.testing.expectError(error.InvalidParameter, fillLogisticCheckedFrom(&engine, f64, &one, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillLogisticCheckedFrom(&engine, f64, &one, 0, -1));
 }
 
 test "zero-length derived distribution fills do not validate or consume random stream" {
@@ -17740,7 +17889,7 @@ test "zero-length derived distribution fills do not validate or consume random s
     try std.testing.expectEqual(control.next(), engine.next());
     try fillCauchyCheckedFrom(&engine, f64, &out, 0, 0);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillLaplaceCheckedFrom(&engine, f64, &out, 0, 0);
+    try fillLaplaceCheckedFrom(&engine, f64, &out, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try fillLogNormalChecked(rng, f64, &out, 0, -1);
@@ -18780,7 +18929,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try fillLaplaceCheckedFrom(&direct_engine, f64, &direct_laplace_buf, 0, 1);
     for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
-    try std.testing.expectError(error.InvalidParameter, fillLaplaceCheckedFrom(&direct_engine, f64, &direct_laplace_buf, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillLaplaceCheckedFrom(&direct_engine, f64, &direct_laplace_buf, 0, -1));
     const laplace_sampler = try Laplace(f64).init(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), laplace_sampler.locationValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), laplace_sampler.scaleValue(), 1e-12);
@@ -18793,7 +18942,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     laplace_sampler.fillFrom(&direct_engine, &direct_laplace_buf);
     for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try laplaceCheckedFrom(&direct_engine, f64, 0, 1)));
-    try std.testing.expectError(error.InvalidParameter, laplaceCheckedFrom(&direct_engine, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, laplaceCheckedFrom(&direct_engine, f64, 0, -1));
 
     var logistics = rng.sampleIter(f64, try Logistic(f64).init(0, 1));
     try std.testing.expect(std.math.isFinite(logistics.next().?));
@@ -18807,7 +18956,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try fillLogisticCheckedFrom(&direct_engine, f64, &direct_logistic_buf, 0, 1);
     for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
-    try std.testing.expectError(error.InvalidParameter, fillLogisticCheckedFrom(&direct_engine, f64, &direct_logistic_buf, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, fillLogisticCheckedFrom(&direct_engine, f64, &direct_logistic_buf, 0, -1));
     const logistic_sampler = try Logistic(f64).init(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), logistic_sampler.locationValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), logistic_sampler.scaleValue(), 1e-12);
@@ -18820,7 +18969,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     logistic_sampler.fillFrom(&direct_engine, &direct_logistic_buf);
     for (direct_logistic_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try logisticCheckedFrom(&direct_engine, f64, 0, 1)));
-    try std.testing.expectError(error.InvalidParameter, logisticCheckedFrom(&direct_engine, f64, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, logisticCheckedFrom(&direct_engine, f64, 0, -1));
 
     var log_logistics = rng.sampleIter(f64, try LogLogistic(f64).init(2, 3));
     try std.testing.expect(log_logistics.next().? > 0);
@@ -19294,8 +19443,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Triangular(f64).init(1, 0, 2));
     try std.testing.expectError(error.InvalidParameter, Arcsine(f64).init(2, 1));
     try std.testing.expectError(error.InvalidParameter, Cauchy(f64).init(0, 0));
-    try std.testing.expectError(error.InvalidParameter, Laplace(f64).init(0, 0));
-    try std.testing.expectError(error.InvalidParameter, Logistic(f64).init(0, 0));
+    try std.testing.expectError(error.InvalidParameter, Laplace(f64).init(0, -1));
+    try std.testing.expectError(error.InvalidParameter, Logistic(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, LogLogistic(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, Kumaraswamy(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, PowerFunction(f64).init(0, 1, 0));

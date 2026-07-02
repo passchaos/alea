@@ -65,8 +65,8 @@ toolkit functionality and reduce reliance on companion crates:
 | Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max/moment/median accessors and collapsed `min == mode == max` point masses |
 | Arcsine | Covered: `arcsine`, `Arcsine(T)`, including min/max/moment/median accessors and collapsed `min == max` point masses |
 | Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/mode/scale, undefined-moment, and support accessors |
-| Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/median/mode/moment/support accessors |
-| Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/median/mode/moment/support accessors |
+| Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/median/mode/moment/support accessors and collapsed `scale == 0` point masses |
+| Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/median/mode/moment/support accessors and collapsed `scale == 0` point masses |
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment/median/mode/support accessors and collapsed `scale == 0` point masses |
 | HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment/support accessors and collapsed `scale == 0` point masses |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment/mode/support accessors and collapsed `scale == 0` point masses |
