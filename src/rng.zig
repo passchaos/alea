@@ -242,6 +242,10 @@ pub fn fillRangeFrom(source: anytype, comptime T: type, dest: []T, min: T, max: 
     switch (@typeInfo(T)) {
         .int => {
             std.debug.assert(min < max);
+            if (exclusiveIntRangeHasSingleValue(T, min, max)) {
+                @memset(dest, min);
+                return;
+            }
             for (dest) |*item| item.* = intRangeLessThanFrom(source, T, min, max);
         },
         .float => {
@@ -405,6 +409,10 @@ pub fn fillVectorOpenClosedFrom(source: anytype, comptime VectorType: type, dest
 
 pub fn fillVectorRangeFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
     const info = vectorInfo(VectorType);
+    if (@typeInfo(info.child) == .int and exclusiveIntRangeHasSingleValue(info.child, min, max)) {
+        @memset(dest, @as(VectorType, @splat(min)));
+        return;
+    }
     if (@typeInfo(info.child) == .float and min == max) {
         @memset(dest, @as(VectorType, @splat(min)));
         return;
@@ -1296,6 +1304,7 @@ pub fn vectorRangeFrom(source: anytype, comptime VectorType: type, min: vectorCh
     switch (@typeInfo(info.child)) {
         .int => {
             std.debug.assert(min < max);
+            if (exclusiveIntRangeHasSingleValue(info.child, min, max)) return @splat(min);
             var out: VectorType = undefined;
             inline for (0..info.len) |i| out[i] = intRangeLessThanFrom(source, info.child, min, max);
             return out;
@@ -1307,6 +1316,18 @@ pub fn vectorRangeFrom(source: anytype, comptime VectorType: type, min: vectorCh
         },
         else => @compileError("Rng.vectorRange supports integer and floating-point vectors"),
     }
+}
+
+fn exclusiveIntRangeHasSingleValue(comptime T: type, min: T, max: T) bool {
+    comptime requireInt(T);
+    const info = @typeInfo(T).int;
+    if (info.signedness == .signed) {
+        const Unsigned = std.meta.Int(.unsigned, info.bits);
+        const lo: Unsigned = @bitCast(min);
+        const hi: Unsigned = @bitCast(max);
+        return hi -% lo == 1;
+    }
+    return max - min == 1;
 }
 
 pub fn vectorRangeChecked(self: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
@@ -3346,7 +3367,13 @@ test "degenerate range helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u32, 7), intRangeAtMostFrom(&engine, u32, 7, 7));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectEqual(@as(u32, 8), intRangeLessThanFrom(&engine, u32, 8, 9));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(i32, -5), try rng.intRangeAtMostChecked(i32, -5, -5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(i32, -4), try rng.intRangeLessThanChecked(i32, -4, -3));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(std.Io.Duration.fromSeconds(3), durationRangeAtMostFrom(&engine, .fromSeconds(3), .fromSeconds(3)));
@@ -3358,6 +3385,16 @@ test "degenerate range helpers do not consume random stream" {
     try std.testing.expectEqual(@as(f32, -1.25), try floatRangeCheckedFrom(&engine, f32, -1.25, -1.25));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var ints: [5]u32 = undefined;
+    fillRangeFrom(&engine, u32, &ints, 10, 11);
+    for (ints) |sample| try std.testing.expectEqual(@as(u32, 10), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var signed_ints: [5]i32 = undefined;
+    try rng.fillRangeChecked(i32, &signed_ints, -12, -11);
+    for (signed_ints) |sample| try std.testing.expectEqual(@as(i32, -12), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var floats: [5]f64 = undefined;
     fillRangeFrom(&engine, f64, &floats, 4.75, 4.75);
     for (floats) |sample| try std.testing.expectEqual(@as(f64, 4.75), sample);
@@ -3367,10 +3404,26 @@ test "degenerate range helpers do not consume random stream" {
     for (floats) |sample| try std.testing.expectEqual(@as(f64, -3.5), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectEqual(@as(@Vector(4, u32), @splat(13)), vectorRangeFrom(&engine, @Vector(4, u32), 13, 14));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-14)), try rng.vectorRangeChecked(@Vector(4, i32), -14, -13));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(6.25)), vectorRangeFrom(&engine, @Vector(4, f64), 6.25, 6.25));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(@Vector(8, f32), @splat(-2.5)), try rng.vectorRangeChecked(@Vector(8, f32), -2.5, -2.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vec_ints: [3]@Vector(4, u32) = undefined;
+    fillVectorRangeFrom(&engine, @Vector(4, u32), &vec_ints, 15, 16);
+    for (vec_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, u32), @splat(15)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vec_signed_ints: [3]@Vector(4, i32) = undefined;
+    try rng.fillVectorRangeChecked(@Vector(4, i32), &vec_signed_ints, -16, -15);
+    for (vec_signed_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-16)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var vec_floats: [3]@Vector(4, f64) = undefined;
