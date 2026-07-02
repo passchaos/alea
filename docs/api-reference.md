@@ -659,6 +659,7 @@ Reusable samplers:
 - `Kumaraswamy(T).betaValue`
 - `Kumaraswamy(T).expectedValue`
 - `Kumaraswamy(T).varianceValue`
+- `Kumaraswamy(T).modeValue`
 - `Kumaraswamy(T).minValue`
 - `Kumaraswamy(T).maxValue`
 - `Kumaraswamy(T).sample`

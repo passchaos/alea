@@ -4196,6 +4196,18 @@ pub fn Kumaraswamy(comptime T: type) type {
             return second_moment - first_moment * first_moment;
         }
 
+        pub fn modeValue(self: Self) ?T {
+            const alpha = self.alphaValue();
+            const beta_param = self.betaValue();
+            if (alpha > 1 and alpha * beta_param > 1) {
+                return std.math.pow(T, (alpha - 1) / (alpha * beta_param - 1), 1 / alpha);
+            }
+            if (alpha < 1 and beta_param < 1) return null;
+            if (alpha == 1 and beta_param == 1) return null;
+            if (beta_param <= 1) return 1;
+            return 0;
+        }
+
         pub fn minValue(self: Self) T {
             _ = self;
             return 0;
@@ -9869,6 +9881,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     const kumaraswamy_second_moment = 5.0 * @exp(std.math.lgamma(f64, 1.0 + 2.0 / 2.0) + std.math.lgamma(f64, 5.0) - std.math.lgamma(f64, 1.0 + 2.0 / 2.0 + 5.0));
     try std.testing.expectApproxEqAbs(kumaraswamy_first_moment, kumaraswamy_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(kumaraswamy_second_moment - kumaraswamy_first_moment * kumaraswamy_first_moment, kumaraswamy_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), kumaraswamy_sampler.modeValue().?, 1e-12);
+    try std.testing.expect((try Kumaraswamy(f64).init(1, 1)).modeValue() == null);
+    try std.testing.expect((try Kumaraswamy(f64).init(0.5, 0.5)).modeValue() == null);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), (try Kumaraswamy(f64).init(1, 5)).modeValue().?, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), (try Kumaraswamy(f64).init(2, 1)).modeValue().?, 0);
     try std.testing.expectApproxEqAbs(@as(f64, 0), kumaraswamy_sampler.minValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 1), kumaraswamy_sampler.maxValue(), 0);
     kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf);

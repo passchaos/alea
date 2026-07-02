@@ -73,7 +73,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Chi | Covered: `chi`, `Chi(T)`, including dof/moment/mode/support accessors |
 | Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment/mode/support accessors |
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape, finite-moment, median/mode, and support accessors |
-| Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment/support accessors |
+| Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment/mode/support accessors |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment accessors |
 | Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, mode, and support accessors |
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/mode/support accessors |
