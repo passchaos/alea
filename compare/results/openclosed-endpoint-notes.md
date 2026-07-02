@@ -1,8 +1,8 @@
 # OpenClosed f64 Endpoint Notes
 
 This note captures the current evidence for exact `(0, 1]` f64 bulk sampling.
-The remaining gap is not endpoint semantics or a Rust algorithm mismatch; it is
-throughput while preserving the 53-bit endpoint grid.
+The previous throughput gap versus local Rust evidence has been closed on the
+current Linux host while preserving the 53-bit endpoint grid.
 
 ## Current Baseline
 
@@ -39,8 +39,9 @@ method for `OpenClosed01<f64>`:
 3. cast to float,
 4. multiply by `2^-53`.
 
-Therefore the remaining gap is not an algorithm-family mismatch with local
-Rust.
+Therefore the historical gap was not an algorithm-family mismatch with local
+Rust; the adopted exact `@mulAdd` conversion now exceeds the current local Rust
+row on this host.
 
 ## Rejected Or Exhausted Shapes
 
