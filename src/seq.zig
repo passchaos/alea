@@ -479,6 +479,14 @@ fn sampleWeightedIndicesExactFrom(allocator: std.mem.Allocator, source: anytype,
     std.debug.assert(amount > 0);
     std.debug.assert(amount <= weights.len);
 
+    if (amount == 1) {
+        if (try singlePositiveWeightIndex(Weight, weights)) |index| {
+            const out = try allocator.alloc(usize, 1);
+            out[0] = index;
+            return out;
+        }
+    }
+
     const out = try allocator.alloc(usize, amount);
     errdefer allocator.free(out);
 
@@ -1086,6 +1094,21 @@ fn countPositiveWeights(comptime Weight: type, weights: []const Weight) Error!us
     return positive;
 }
 
+fn singlePositiveWeightIndex(comptime Weight: type, weights: []const Weight) Error!?usize {
+    var positive_index: ?usize = null;
+    var positive: usize = 0;
+    for (weights, 0..) |weight, index| {
+        const value = weightAsF64(Weight, weight);
+        if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+        if (value > 0) {
+            positive_index = index;
+            positive += 1;
+            if (positive > 1) return null;
+        }
+    }
+    return positive_index;
+}
+
 fn ensureEnoughPositiveWeights(comptime Weight: type, weights: []const Weight, amount: usize) Error!void {
     const positive = try countPositiveWeights(Weight, weights);
     if (positive < amount) return error.InvalidParameter;
@@ -1686,6 +1709,34 @@ test "invalid checked weighted sample counts do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2, 3 }, &.{ 0, 0, 0 }, 1));
     try std.testing.expectEqual(@as(u64, 0x2fe6d69480ac1690), engine.next());
+}
+
+test "single-positive weighted no-replacement does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7712);
+    var control = alea.ScalarPrng.init(0x5150_7712);
+    const weights = [_]u32{ 0, 5, 0 };
+    const items = [_]u8{ 10, 20, 30 };
+
+    const indices = try sampleWeightedIndicesFrom(std.testing.allocator, &engine, u32, &weights, 2);
+    defer std.testing.allocator.free(indices);
+    try std.testing.expectEqualSlices(usize, &.{1}, indices);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const checked_indices = try sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, u32, &weights, 1);
+    defer std.testing.allocator.free(checked_indices);
+    try std.testing.expectEqualSlices(usize, &.{1}, checked_indices);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sample = try sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &items, &weights, 2);
+    defer std.testing.allocator.free(sample);
+    try std.testing.expectEqualSlices(u8, &.{20}, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const checked_sample = try sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &items, &weights, 1);
+    defer std.testing.allocator.free(checked_sample);
+    try std.testing.expectEqualSlices(u8, &.{20}, checked_sample);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "empty optional iterator choices do not consume random stream" {
