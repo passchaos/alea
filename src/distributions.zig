@@ -6170,7 +6170,8 @@ pub fn triangularCheckedFrom(source: anytype, comptime T: type, min: T, mode: T,
 
 pub fn triangularFrom(source: anytype, comptime T: type, min: T, mode: T, max: T) T {
     comptime requireFloat(T);
-    std.debug.assert(min <= mode and mode <= max and min < max);
+    std.debug.assert(min <= mode and mode <= max and min <= max);
+    if (min == max) return min;
 
     const u = Rng.floatFrom(source, T);
     const c = (mode - min) / (max - min);
@@ -6186,7 +6187,11 @@ pub fn fillTriangular(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, ma
 
 pub fn fillTriangularFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: T, max: T) void {
     comptime requireFloat(T);
-    std.debug.assert(min <= mode and mode <= max and min < max);
+    std.debug.assert(min <= mode and mode <= max and min <= max);
+    if (min == max) {
+        @memset(dest, min);
+        return;
+    }
     Rng.fillFrom(source, T, dest);
     triangularFromUniforms(T, dest, min, mode, max);
 }
@@ -6240,6 +6245,7 @@ pub fn fillVectorTriangularCheckedFrom(source: anytype, comptime VectorType: typ
 
 fn triangularFromUniformVector(comptime VectorType: type, uniform_vec: VectorType, min: vectorChild(VectorType), mode: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
     const Child = vectorChild(VectorType);
+    if (min == max) return @splat(min);
     const width = max - min;
     const left_width = mode - min;
     const right_width = max - mode;
@@ -6296,6 +6302,7 @@ pub fn VectorTriangular(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.minValue());
             const uniform_vec = Rng.vectorFrom(source, VectorType);
             return triangularFromUniformVector(VectorType, uniform_vec, self.minValue(), self.modeValue(), self.maxValue());
         }
@@ -6305,6 +6312,10 @@ pub fn VectorTriangular(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.minValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -6320,7 +6331,7 @@ pub fn Triangular(comptime T: type) type {
 
         pub fn init(min: T, mode: T, max: T) Error!Self {
             comptime requireFloat(T);
-            if (!(min <= mode and mode <= max and min < max)) return error.InvalidParameter;
+            if (!(min <= mode and mode <= max and min <= max)) return error.InvalidParameter;
             if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) return error.InvalidParameter;
             return .{ .min = min, .mode = mode, .max = max };
         }
@@ -6368,6 +6379,10 @@ pub fn Triangular(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             fillTriangularFrom(source, T, dest, self.min, self.mode, self.max);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.min == self.max;
         }
     };
 }
@@ -14137,6 +14152,73 @@ test "degenerate normal and log-normal helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
     zero_cv_log_normal_sampler.fillFrom(&engine, &log_normal_buf);
     for (log_normal_buf) |value| try std.testing.expectEqual(@as(f64, 0), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate triangular helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1f7);
+    var control = alea.ScalarPrng.init(0x5150_d1f7);
+    const rng = Rng.init(&engine);
+
+    const point: f64 = 2.25;
+    try std.testing.expectEqual(point, triangularFrom(&engine, f64, point, point, point));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, try triangularChecked(rng, f64, point, point, point));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillTriangularFrom(&engine, f64, &scalar_buf, point, point, point);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillTriangularChecked(rng, f64, &scalar_buf, point, point, point);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try Triangular(f64).init(point, point, point);
+    try std.testing.expectEqual(point, sampler.minValue());
+    try std.testing.expectEqual(point, sampler.modeValue());
+    try std.testing.expectEqual(point, sampler.maxValue());
+    try std.testing.expectEqual(point, sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(point, sampler.medianValue());
+    try std.testing.expectEqual(point, sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_point: f32 = -3.5;
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vectorTriangularFrom(&engine, @Vector(4, f32), vector_point, vector_point, vector_point));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), try vectorTriangularChecked(rng, @Vector(4, f32), vector_point, vector_point, vector_point));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f32) = undefined;
+    fillVectorTriangularFrom(&engine, @Vector(4, f32), &vector_buf, vector_point, vector_point, vector_point);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorTriangularChecked(rng, @Vector(4, f32), &vector_buf, vector_point, vector_point, vector_point);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorTriangular(@Vector(4, f32)).init(vector_point, vector_point, vector_point);
+    try std.testing.expectEqual(vector_point, vector_sampler.minValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.modeValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.maxValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f32, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.medianValue());
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
