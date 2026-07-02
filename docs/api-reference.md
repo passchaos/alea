@@ -513,6 +513,8 @@ Reusable samplers:
 - `Arcsine(T).init`
 - `Arcsine(T).minValue`
 - `Arcsine(T).maxValue`
+- `Arcsine(T).expectedValue`
+- `Arcsine(T).varianceValue`
 - `Arcsine(T).sample`
 - `Arcsine(T).sampleFrom`
 - `Arcsine(T).fill`
