@@ -860,19 +860,27 @@ pub const Multinomial = struct {
     trials: u64,
     probabilities: []const f64,
     total_probability: f64,
+    constant_category: ?usize,
 
     pub fn init(trials: u64, probabilities: []const f64) Error!Multinomial {
         if (probabilities.len == 0) return error.EmptyRange;
         var total: f64 = 0;
-        for (probabilities) |p| {
+        var positive_index: ?usize = null;
+        var positive_count: usize = 0;
+        for (probabilities, 0..) |p, index| {
             if (!(p >= 0) or !std.math.isFinite(p)) return error.InvalidProbability;
             total += p;
+            if (p > 0) {
+                positive_index = index;
+                positive_count += 1;
+            }
         }
         if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidProbability;
         return .{
             .trials = trials,
             .probabilities = probabilities,
             .total_probability = total,
+            .constant_category = if (positive_count == 1) positive_index else null,
         };
     }
 
@@ -1030,6 +1038,19 @@ pub const Multinomial = struct {
             @memset(out, self.trials);
             return;
         }
+        if (self.trials == 0) {
+            @memset(out, 0);
+            return;
+        }
+        if (self.constant_category) |index| {
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += self.probabilities.len) {
+                const sample_out = out[offset..][0..self.probabilities.len];
+                @memset(sample_out, 0);
+                sample_out[index] = self.trials;
+            }
+            return;
+        }
         var offset: usize = 0;
         while (offset < out.len) : (offset += self.probabilities.len) {
             self.sampleIntoFrom(source, out[offset..][0..self.probabilities.len]);
@@ -1041,6 +1062,11 @@ pub const Multinomial = struct {
         @memset(out, 0);
         if (self.probabilities.len == 1) {
             out[0] = self.trials;
+            return;
+        }
+        if (self.trials == 0) return;
+        if (self.constant_category) |index| {
+            out[index] = self.trials;
             return;
         }
 
@@ -17422,6 +17448,36 @@ test "degenerate multivariate samplers do not consume random stream" {
 
     try multinomial.sampleManyIntoChecked(rng, &many_counts);
     try std.testing.expectEqualSlices(u64, &.{ 20, 20, 20 }, &many_counts);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const zero_trials_multinomial = try Multinomial.init(0, &.{ 1.0, 2.0, 3.0 });
+    var zero_counts: [3]u64 = undefined;
+    zero_trials_multinomial.sampleIntoFrom(&engine, &zero_counts);
+    try std.testing.expectEqualSlices(u64, &.{ 0, 0, 0 }, &zero_counts);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var many_zero_counts: [6]u64 = undefined;
+    zero_trials_multinomial.sampleManyIntoFrom(&engine, &many_zero_counts);
+    try std.testing.expectEqualSlices(u64, &.{ 0, 0, 0, 0, 0, 0 }, &many_zero_counts);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const single_positive_multinomial = try Multinomial.init(11, &.{ 0.0, 5.0, 0.0 });
+    var positive_counts: [3]u64 = undefined;
+    single_positive_multinomial.sampleIntoFrom(&engine, &positive_counts);
+    try std.testing.expectEqualSlices(u64, &.{ 0, 11, 0 }, &positive_counts);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try single_positive_multinomial.sampleIntoChecked(rng, &positive_counts);
+    try std.testing.expectEqualSlices(u64, &.{ 0, 11, 0 }, &positive_counts);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var many_positive_counts: [6]u64 = undefined;
+    single_positive_multinomial.sampleManyIntoFrom(&engine, &many_positive_counts);
+    try std.testing.expectEqualSlices(u64, &.{ 0, 11, 0, 0, 11, 0 }, &many_positive_counts);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try single_positive_multinomial.sampleManyIntoChecked(rng, &many_positive_counts);
+    try std.testing.expectEqualSlices(u64, &.{ 0, 11, 0, 0, 11, 0 }, &many_positive_counts);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const dirichlet = try Dirichlet(f64).init(&.{2.0});
