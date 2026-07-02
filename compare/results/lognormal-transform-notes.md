@@ -37,9 +37,12 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   regresses another and requires linking libc, so it is not a generic default.
 - Manual unrolling of the exact `@exp` transform loop is mixed: it can provide
   small isolated wins in one profile while regressing or tying others.
-- Vector2 exact `@exp` transform loops can look good in the isolated probe but
-  regress the real production `fillLogNormal` harness, so they are not a
-  default.
+- Vector-lane exact `@exp` transform loops can look good in the isolated probe
+  but regress the real production `fillLogNormal` harness. Vector2 previously
+  regressed the 1GiB harness badly, and a later f64 vector4 production retry
+  based on fresh 1Mi probe wins dropped the focused 256Mi f64 ScalarPrng direct
+  fill row to about 117M versus surrounding scalar-loop baseline rows around
+  136-141M. Keep the scalar f64 transform loop as the default.
 - Indexing through the destination slice in a `while` loop is mixed and
   regresses the FastPrng f64 profile, so pointer iteration remains the default.
 - `@setFloatMode(.optimized)` is tied/mixed and not a no-regression win.
