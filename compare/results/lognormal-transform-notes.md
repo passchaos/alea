@@ -40,6 +40,9 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   `|mean| <= 0.25` and `stddev <= 0.25`, not as the exact default.
 - A branchy f32 hybrid can keep wider-parameter error near 1 ULP, but the
   branch cost is too high for the measured fill workload.
+- Filling standard normal samples and fusing the affine transform with exact
+  `@exp` / `std.math.exp` in one pass regresses or is mixed versus the current
+  parameterized-normal staging plus exact transform.
 
 ## Adopted Opt-In Approximation
 
