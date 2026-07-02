@@ -452,6 +452,32 @@ pub const Multinomial = struct {
         return -@as(f64, @floatFromInt(self.trials)) * p_i * p_j;
     }
 
+    pub fn covariances(self: Multinomial, allocator: std.mem.Allocator) ![]f64 {
+        const count = std.math.mul(usize, self.probabilities.len, self.probabilities.len) catch return error.OutOfMemory;
+        const out = try allocator.alloc(f64, count);
+        errdefer allocator.free(out);
+        try self.covariancesInto(out);
+        return out;
+    }
+
+    pub fn covariancesInto(self: Multinomial, out: []f64) Error!void {
+        const count = std.math.mul(usize, self.probabilities.len, self.probabilities.len) catch return error.InvalidLength;
+        if (out.len != count) return error.InvalidLength;
+        const trials_float = @as(f64, @floatFromInt(self.trials));
+        var row: usize = 0;
+        while (row < self.probabilities.len) : (row += 1) {
+            const p_i = self.probabilities[row] / self.total_probability;
+            var col: usize = 0;
+            while (col < self.probabilities.len) : (col += 1) {
+                const p_j = self.probabilities[col] / self.total_probability;
+                out[row * self.probabilities.len + col] = if (row == col)
+                    trials_float * p_i * (1 - p_i)
+                else
+                    -trials_float * p_i * p_j;
+            }
+        }
+    }
+
     pub fn categoryCountValue(self: Multinomial) usize {
         return self.probabilities.len;
     }
@@ -9770,6 +9796,22 @@ test "multinomial sampler returns category counts" {
     try std.testing.expectEqualSlices(f64, &multinomial_variances, owned_variances);
     try std.testing.expectApproxEqAbs(@as(f64, -100.0 / 18.0), try dist.covarianceAt(0, 1), 1e-12);
     try std.testing.expectApproxEqAbs(try dist.varianceAt(1), try dist.covarianceAt(1, 1), 1e-12);
+    var multinomial_covariances: [9]f64 = undefined;
+    try dist.covariancesInto(&multinomial_covariances);
+    try std.testing.expectApproxEqAbs(@as(f64, 125.0 / 9.0), multinomial_covariances[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -100.0 / 18.0), multinomial_covariances[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -25.0 / 3.0), multinomial_covariances[2], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -100.0 / 18.0), multinomial_covariances[3], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 200.0 / 9.0), multinomial_covariances[4], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -50.0 / 3.0), multinomial_covariances[5], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -25.0 / 3.0), multinomial_covariances[6], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -50.0 / 3.0), multinomial_covariances[7], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 25), multinomial_covariances[8], 1e-12);
+    var wrong_covariances_len: [8]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.covariancesInto(&wrong_covariances_len));
+    const owned_covariances = try dist.covariances(std.testing.allocator);
+    defer std.testing.allocator.free(owned_covariances);
+    try std.testing.expectEqualSlices(f64, &multinomial_covariances, owned_covariances);
     try std.testing.expectError(error.InvalidParameter, dist.probabilityAt(3));
     try std.testing.expectError(error.InvalidParameter, dist.normalizedProbabilityAt(3));
     try std.testing.expectError(error.InvalidParameter, dist.expectedCountAt(3));

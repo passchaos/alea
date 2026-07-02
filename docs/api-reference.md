@@ -283,6 +283,8 @@ Reusable samplers:
 - `Multinomial.variances`
 - `Multinomial.variancesInto`
 - `Multinomial.covarianceAt`
+- `Multinomial.covariances`
+- `Multinomial.covariancesInto`
 - `Multinomial.categoryCountValue`
 - `Multinomial.totalProbabilityValue`
 - `Multinomial.sample`
