@@ -5988,6 +5988,10 @@ pub fn AliasTable(comptime Weight: type) type {
             return value;
         }
 
+        pub fn probabilityAt(self: Self, index: usize) Error!f64 {
+            return try self.weightAt(index) / self.total;
+        }
+
         pub fn sample(self: Self, rng: Rng) usize {
             return self.sampleFrom(rng);
         }
@@ -7156,6 +7160,11 @@ test "alias table exposes totals and reconstructs weights" {
     try std.testing.expectApproxEqAbs(@as(f64, 5), try table.weightAt(2), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), try table.weightAt(3), 1e-12);
     try std.testing.expectError(error.InvalidParameter, table.weightAt(4));
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 9.0), try table.probabilityAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try table.probabilityAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 9.0), try table.probabilityAt(2), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), try table.probabilityAt(3), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, table.probabilityAt(4));
 
     var wrong_len: [3]f64 = undefined;
     try std.testing.expectError(error.InvalidLength, table.weightsInto(&wrong_len));
