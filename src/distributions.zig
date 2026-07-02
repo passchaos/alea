@@ -10409,6 +10409,42 @@ test "zero-length multivariate batch outputs do not consume random stream" {
     try std.testing.expectEqual(dirichlet_facade_control.next(), dirichlet_facade_engine.next());
 }
 
+test "log-normal approximation has stable snapshots" {
+    const alea = @import("root.zig");
+
+    var sample_engine = alea.ScalarPrng.init(0x1064);
+    const sample = logNormalApproxF32From(&sample_engine, 0, 0.25);
+    try std.testing.expectEqual(@as(u32, 0x3fa987ee), @as(u32, @bitCast(sample)));
+    try std.testing.expectEqual(@as(u64, 0x8e9892981fa2b6eb), sample_engine.next());
+
+    var checked_engine = alea.ScalarPrng.init(0x1064);
+    const checked = try logNormalApproxF32CheckedFrom(&checked_engine, 0, 0.25);
+    try std.testing.expectEqual(@as(u32, 0x3fa987ee), @as(u32, @bitCast(checked)));
+    try std.testing.expectEqual(@as(u64, 0x8e9892981fa2b6eb), checked_engine.next());
+
+    var fill_engine = alea.ScalarPrng.init(0x1064);
+    var buf: [6]f32 = undefined;
+    fillLogNormalApproxF32From(&fill_engine, &buf, 0, 0.25);
+    const expected_bits = [_]u32{
+        0x3fa987ee,
+        0x3f829519,
+        0x3f276bee,
+        0x3f653a10,
+        0x3f4bfc87,
+        0x3f58edbd,
+    };
+    inline for (expected_bits, 0..) |bits, i| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(buf[i])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x96f2d6a8eb67add4), fill_engine.next());
+
+    var sampler_engine = alea.ScalarPrng.init(0x1064);
+    const sampler = try LogNormalApproxF32.init(0, 0.25);
+    const sampler_sample = sampler.sampleFrom(&sampler_engine);
+    try std.testing.expectEqual(@as(u32, 0x3fa987ee), @as(u32, @bitCast(sampler_sample)));
+    try std.testing.expectEqual(@as(u64, 0x8e9892981fa2b6eb), sampler_engine.next());
+}
+
 test "poisson large lambda has plausible moments" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(55);
