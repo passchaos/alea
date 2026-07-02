@@ -11827,19 +11827,30 @@ pub fn WeightedTree(comptime Weight: type) type {
         const Self = @This();
 
         subtotals: std.ArrayList(f64),
+        positive_count: usize = 0,
+        positive_index: ?usize = null,
         allocator: std.mem.Allocator,
 
         pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
             var subtotals = try std.ArrayList(f64).initCapacity(allocator, input_weights.len);
             errdefer subtotals.deinit(allocator);
 
-            for (input_weights) |weight| {
-                try subtotals.append(allocator, try weightToF64(weight));
+            var positive_count: usize = 0;
+            var positive_index: ?usize = null;
+            for (input_weights, 0..) |weight, index| {
+                const value = try weightToF64(weight);
+                try subtotals.append(allocator, value);
+                if (value > 0) {
+                    positive_count += 1;
+                    if (positive_index == null) positive_index = index;
+                }
             }
             try buildSubtotals(subtotals.items);
 
             return .{
                 .subtotals = subtotals,
+                .positive_count = positive_count,
+                .positive_index = positive_index,
                 .allocator = allocator,
             };
         }
@@ -11920,6 +11931,10 @@ pub fn WeightedTree(comptime Weight: type) type {
                 index = (index - 1) / 2;
                 self.subtotals.items[index] += value;
             }
+            if (value > 0) {
+                self.positive_count += 1;
+                if (self.positive_index == null) self.positive_index = self.subtotals.items.len - 1;
+            }
         }
 
         pub fn pop(self: *Self) ?f64 {
@@ -11933,6 +11948,14 @@ pub fn WeightedTree(comptime Weight: type) type {
             while (parent_index != 0) {
                 parent_index = (parent_index - 1) / 2;
                 self.subtotals.items[parent_index] -= weight;
+            }
+            if (weight > 0) {
+                self.positive_count -= 1;
+                if (self.positive_count == 0) {
+                    self.positive_index = null;
+                } else if (self.positive_index == index) {
+                    self.positive_index = self.findFirstPositive();
+                }
             }
             return weight;
         }
@@ -11952,6 +11975,7 @@ pub fn WeightedTree(comptime Weight: type) type {
                 if (cursor == 0) break;
                 cursor = (cursor - 1) / 2;
             }
+            self.updatePositiveState(index, old, value);
         }
 
         pub fn sample(self: Self, rng: Rng) usize {
@@ -11982,8 +12006,8 @@ pub fn WeightedTree(comptime Weight: type) type {
             if (dest.len == 0) return;
             const total = self.totalWeight();
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
-            if (self.subtotals.items.len == 1) {
-                @memset(dest, 0);
+            if (self.positive_count == 1) {
+                @memset(dest, self.positive_index.?);
                 return;
             }
             for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
@@ -11992,7 +12016,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
-            if (self.subtotals.items.len == 1) return 0;
+            if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(source, total);
         }
@@ -12026,6 +12050,32 @@ pub fn WeightedTree(comptime Weight: type) type {
             return if (index < self.subtotals.items.len) self.subtotals.items[index] else 0;
         }
 
+        fn updatePositiveState(self: *Self, index: usize, old: f64, new: f64) void {
+            const old_positive = old > 0;
+            const new_positive = new > 0;
+            if (!old_positive and new_positive) {
+                self.positive_count += 1;
+                if (self.positive_index == null) self.positive_index = index;
+            } else if (old_positive and !new_positive) {
+                self.positive_count -= 1;
+                if (self.positive_count == 0) {
+                    self.positive_index = null;
+                } else if (self.positive_index == index) {
+                    self.positive_index = self.findFirstPositive();
+                }
+            } else if (old_positive and new_positive and self.positive_count == 1) {
+                self.positive_index = index;
+            }
+        }
+
+        fn findFirstPositive(self: Self) ?usize {
+            var index: usize = 0;
+            while (index < self.subtotals.items.len) : (index += 1) {
+                if ((self.get(index) catch unreachable) > 0) return index;
+            }
+            return null;
+        }
+
         fn weightToF64(weight: Weight) Error!f64 {
             const value: f64 = switch (@typeInfo(Weight)) {
                 .int => @floatFromInt(weight),
@@ -12053,6 +12103,8 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         const Self = @This();
 
         subtotals: std.ArrayList(u64),
+        positive_count: usize = 0,
+        positive_index: ?usize = null,
         allocator: std.mem.Allocator,
 
         pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
@@ -12060,10 +12112,24 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             var subtotals = try std.ArrayList(u64).initCapacity(allocator, input_weights.len);
             errdefer subtotals.deinit(allocator);
 
-            for (input_weights) |weight| try subtotals.append(allocator, try weightToU64(weight));
+            var positive_count: usize = 0;
+            var positive_index: ?usize = null;
+            for (input_weights, 0..) |weight, index| {
+                const value = try weightToU64(weight);
+                try subtotals.append(allocator, value);
+                if (value > 0) {
+                    positive_count += 1;
+                    if (positive_index == null) positive_index = index;
+                }
+            }
             try buildSubtotals(subtotals.items);
 
-            return .{ .subtotals = subtotals, .allocator = allocator };
+            return .{
+                .subtotals = subtotals,
+                .positive_count = positive_count,
+                .positive_index = positive_index,
+                .allocator = allocator,
+            };
         }
 
         pub fn deinit(self: *Self) void {
@@ -12141,6 +12207,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 index = (index - 1) / 2;
                 self.subtotals.items[index] += value;
             }
+            if (value > 0) {
+                self.positive_count += 1;
+                if (self.positive_index == null) self.positive_index = self.subtotals.items.len - 1;
+            }
             std.debug.assert(self.totalWeight() == next_total);
         }
 
@@ -12155,6 +12225,14 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             while (parent_index != 0) {
                 parent_index = (parent_index - 1) / 2;
                 self.subtotals.items[parent_index] -= weight;
+            }
+            if (weight > 0) {
+                self.positive_count -= 1;
+                if (self.positive_count == 0) {
+                    self.positive_index = null;
+                } else if (self.positive_index == index) {
+                    self.positive_index = self.findFirstPositive();
+                }
             }
             return weight;
         }
@@ -12181,6 +12259,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                     cursor = (cursor - 1) / 2;
                 }
             }
+            self.updatePositiveState(index, old, value);
         }
 
         pub fn sample(self: Self, rng: Rng) usize {
@@ -12211,8 +12290,8 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             if (dest.len == 0) return;
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
-            if (self.subtotals.items.len == 1) {
-                @memset(dest, 0);
+            if (self.positive_count == 1) {
+                @memset(dest, self.positive_index.?);
                 return;
             }
             for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
@@ -12221,7 +12300,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
-            if (self.subtotals.items.len == 1) return 0;
+            if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(source, total);
         }
@@ -12253,6 +12332,32 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         fn subtotal(self: Self, index: usize) u64 {
             return if (index < self.subtotals.items.len) self.subtotals.items[index] else 0;
+        }
+
+        fn updatePositiveState(self: *Self, index: usize, old: u64, new: u64) void {
+            const old_positive = old > 0;
+            const new_positive = new > 0;
+            if (!old_positive and new_positive) {
+                self.positive_count += 1;
+                if (self.positive_index == null) self.positive_index = index;
+            } else if (old_positive and !new_positive) {
+                self.positive_count -= 1;
+                if (self.positive_count == 0) {
+                    self.positive_index = null;
+                } else if (self.positive_index == index) {
+                    self.positive_index = self.findFirstPositive();
+                }
+            } else if (old_positive and new_positive and self.positive_count == 1) {
+                self.positive_index = index;
+            }
+        }
+
+        fn findFirstPositive(self: Self) ?usize {
+            var index: usize = 0;
+            while (index < self.subtotals.items.len) : (index += 1) {
+                if ((self.get(index) catch unreachable) > 0) return index;
+            }
+            return null;
         }
 
         fn buildSubtotals(subtotals: []u64) Error!void {
@@ -13487,6 +13592,49 @@ test "single-root weighted trees do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
     try int_tree.fillCheckedFrom(&engine, &out);
     for (out) |index| try std.testing.expectEqual(@as(usize, 0), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "single-positive weighted trees do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7ee5);
+    var control = alea.ScalarPrng.init(0x5150_7ee5);
+
+    var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 0, 0, 5, 0 });
+    defer tree.deinit();
+    try std.testing.expectEqual(@as(usize, 2), tree.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    var out: [4]usize = undefined;
+    try tree.fillCheckedFrom(&engine, &out);
+    for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try tree.update(1, 7);
+    const sampled = tree.sampleFrom(&engine);
+    try std.testing.expect(sampled == 1 or sampled == 2);
+    _ = control.next();
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try tree.update(2, 0);
+    try std.testing.expectEqual(@as(usize, 1), tree.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0, 7, 0 });
+    defer int_tree.deinit();
+    try std.testing.expectEqual(@as(usize, 2), int_tree.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try int_tree.fillCheckedFrom(&engine, &out);
+    for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try int_tree.update(0, 3);
+    const int_sampled = int_tree.sampleFrom(&engine);
+    try std.testing.expect(int_sampled == 0 or int_sampled == 2);
+    _ = control.next();
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try int_tree.update(2, 0);
+    try std.testing.expectEqual(@as(usize, 0), int_tree.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
