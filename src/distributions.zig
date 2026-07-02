@@ -371,6 +371,10 @@ pub const Multinomial = struct {
         return self.probabilities[index];
     }
 
+    pub fn normalizedProbabilityAt(self: Multinomial, index: usize) Error!f64 {
+        return try self.probabilityAt(index) / self.total_probability;
+    }
+
     pub fn categoryCountValue(self: Multinomial) usize {
         return self.probabilities.len;
     }
@@ -8851,7 +8855,9 @@ test "multinomial sampler returns category counts" {
     try std.testing.expectEqual(@as(u64, 100), dist.trialsValue());
     try std.testing.expectEqualSlices(f64, &.{ 1.0, 2.0, 3.0 }, dist.probabilitiesValue());
     try std.testing.expectApproxEqAbs(@as(f64, 2), try dist.probabilityAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 6.0), try dist.normalizedProbabilityAt(1), 1e-12);
     try std.testing.expectError(error.InvalidParameter, dist.probabilityAt(3));
+    try std.testing.expectError(error.InvalidParameter, dist.normalizedProbabilityAt(3));
     try std.testing.expectEqual(@as(usize, 3), dist.categoryCountValue());
     try std.testing.expectApproxEqAbs(@as(f64, 6), dist.totalProbabilityValue(), 1e-12);
     const counts = try dist.sample(std.testing.allocator, rng);
