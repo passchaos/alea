@@ -67,9 +67,9 @@ toolkit functionality and reduce reliance on companion crates:
 | Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/scale and undefined-moment accessors |
 | Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/moment accessors |
 | Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/moment accessors |
-| Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment accessors |
-| HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment accessors |
-| Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment accessors |
+| Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment/support accessors |
+| HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment/support accessors |
+| Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment/support accessors |
 | Chi | Covered: `chi`, `Chi(T)`, including dof/moment/support accessors |
 | Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment/support accessors |
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape and finite-moment accessors |

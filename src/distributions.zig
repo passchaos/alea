@@ -1879,6 +1879,16 @@ pub fn HalfNormal(comptime T: type) type {
             return self.scale * self.scale * (1 - 2 / @as(T, @floatCast(std.math.pi)));
         }
 
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -4223,6 +4233,16 @@ pub fn Rayleigh(comptime T: type) type {
             return self.scale * self.scale * (4 - @as(T, @floatCast(std.math.pi))) / 2;
         }
 
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -4307,6 +4327,16 @@ pub fn Maxwell(comptime T: type) type {
         pub fn varianceValue(self: Self) T {
             const pi: T = @floatCast(std.math.pi);
             return self.scale * self.scale * (3 * pi - 8) / pi;
+        }
+
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -8990,6 +9020,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), half_normal_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(2.0 / std.math.pi), half_normal_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 4) * (1 - 2.0 / std.math.pi), half_normal_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), half_normal_sampler.minValue(), 0);
+    try std.testing.expect(half_normal_sampler.maxValue() == null);
     half_normal_sampler.fillFrom(&direct_engine, &direct_half_normal_buf);
     for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try halfNormalCheckedFrom(&direct_engine, f64, 2) >= 0);
@@ -9516,6 +9548,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), rayleigh_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(std.math.pi / 2.0), rayleigh_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2) * (4 - std.math.pi), rayleigh_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), rayleigh_sampler.minValue(), 0);
+    try std.testing.expect(rayleigh_sampler.maxValue() == null);
     rayleigh_sampler.fillFrom(&direct_engine, &direct_rayleigh_buf);
     for (direct_rayleigh_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try rayleighCheckedFrom(&direct_engine, f64, 2) >= 0);
@@ -9538,6 +9572,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), maxwell_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 4) * @sqrt(2.0 / std.math.pi), maxwell_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 4) * (3 * std.math.pi - 8) / std.math.pi, maxwell_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), maxwell_sampler.minValue(), 0);
+    try std.testing.expect(maxwell_sampler.maxValue() == null);
     maxwell_sampler.fillFrom(&direct_engine, &direct_maxwell_buf);
     for (direct_maxwell_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try maxwellCheckedFrom(&direct_engine, f64, 2) >= 0);

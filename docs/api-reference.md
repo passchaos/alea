@@ -418,6 +418,8 @@ Reusable samplers:
 - `HalfNormal(T).scaleValue`
 - `HalfNormal(T).expectedValue`
 - `HalfNormal(T).varianceValue`
+- `HalfNormal(T).minValue`
+- `HalfNormal(T).maxValue`
 - `HalfNormal(T).sample`
 - `HalfNormal(T).sampleFrom`
 - `HalfNormal(T).fill`
@@ -631,6 +633,8 @@ Reusable samplers:
 - `Rayleigh(T).scaleValue`
 - `Rayleigh(T).expectedValue`
 - `Rayleigh(T).varianceValue`
+- `Rayleigh(T).minValue`
+- `Rayleigh(T).maxValue`
 - `Rayleigh(T).sample`
 - `Rayleigh(T).sampleFrom`
 - `Rayleigh(T).fill`
@@ -640,6 +644,8 @@ Reusable samplers:
 - `Maxwell(T).scaleValue`
 - `Maxwell(T).expectedValue`
 - `Maxwell(T).varianceValue`
+- `Maxwell(T).minValue`
+- `Maxwell(T).maxValue`
 - `Maxwell(T).sample`
 - `Maxwell(T).sampleFrom`
 - `Maxwell(T).fill`
