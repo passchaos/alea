@@ -67,6 +67,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 current fill", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged widened f64 exp", 0x1063, sample_count, stagedWidenedExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged index exp", 0x1063, sample_count, stagedIndexExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged prefetch16 exp", 0x1063, sample_count, stagedPrefetch16ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged prefetch32 exp", 0x1063, sample_count, stagedPrefetch32ExpF32);
@@ -88,6 +89,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 current fill", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged widened f64 exp", 0x1063, sample_count, stagedWidenedExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged index exp", 0x1063, sample_count, stagedIndexExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged prefetch16 exp", 0x1063, sample_count, stagedPrefetch16ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged prefetch32 exp", 0x1063, sample_count, stagedPrefetch32ExpF32);
@@ -109,6 +111,9 @@ pub fn main(init: std.process.Init) !void {
     try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=0.25", 0x1064, sample_count, 0.25);
     try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=1.0", 0x1064, sample_count, 1.0);
     try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=2.0", 0x1064, sample_count, 2.0);
+    try compareWidenedExpErrorF32(io, stdout, "f32 widened f64 exp diff stddev=0.25", 0x1067, sample_count, 0.25);
+    try compareWidenedExpErrorF32(io, stdout, "f32 widened f64 exp diff stddev=1.0", 0x1067, sample_count, 1.0);
+    try compareWidenedExpErrorF32(io, stdout, "f32 widened f64 exp diff stddev=2.0", 0x1067, sample_count, 2.0);
     try compareHybridExpm1ErrorF32(io, stdout, "f32 hybrid expm1 diff stddev=1.0 threshold=0.25", 0x1065, sample_count, 1.0, 0.25);
     try compareHybridExpm1ErrorF32(io, stdout, "f32 hybrid expm1 diff stddev=2.0 threshold=0.25", 0x1065, sample_count, 2.0, 0.25);
     try stdout.flush();
@@ -342,6 +347,11 @@ fn stagedScalarExpF32(source: anytype, dest: []f32) void {
     expScalarF32(dest);
 }
 
+fn stagedWidenedExpF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    expWidenedF32(dest);
+}
+
 fn stagedIndexExpF32(source: anytype, dest: []f32) void {
     alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
     expIndexF32(dest);
@@ -510,6 +520,10 @@ fn expScalarF32(dest: []f32) void {
     for (dest) |*item| item.* = @exp(item.*);
 }
 
+fn expWidenedF32(dest: []f32) void {
+    for (dest) |*item| item.* = @floatCast(@exp(@as(f64, @floatCast(item.*))));
+}
+
 fn expIndexF32(dest: []f32) void {
     var i: usize = 0;
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
@@ -609,6 +623,46 @@ fn compareExpm1ErrorF32(
         const x = stddev * alea.Rng.standardNormalFastFrom(&engine, f32);
         const direct = @exp(x);
         const candidate = std.math.expm1(x) + 1.0;
+        if (direct != candidate) {
+            changed += 1;
+            const abs_diff = @abs(candidate - direct);
+            const rel_diff = abs_diff / direct;
+            const ulp_diff = floatDistanceF32(direct, candidate);
+            max_abs = @max(max_abs, abs_diff);
+            max_rel = @max(max_rel, rel_diff);
+            max_ulp = @max(max_ulp, ulp_diff);
+        }
+    }
+    const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+    const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+        (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+
+    try stdout.print(
+        "{s}: {d:.1} M samples/s changed={} max_abs={d:.9} max_rel={d:.9} max_ulp={}\n",
+        .{ name, million_per_s, changed, max_abs, max_rel, max_ulp },
+    );
+}
+
+fn compareWidenedExpErrorF32(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    stddev: f32,
+) !void {
+    var engine = alea.ScalarPrng.init(seed);
+    var max_abs: f32 = 0;
+    var max_rel: f32 = 0;
+    var max_ulp: u32 = 0;
+    var changed: usize = 0;
+    var i: usize = 0;
+
+    const start = std.Io.Clock.awake.now(io).nanoseconds;
+    while (i < sample_count) : (i += 1) {
+        const x = stddev * alea.Rng.standardNormalFastFrom(&engine, f32);
+        const direct = @exp(x);
+        const candidate: f32 = @floatCast(@exp(@as(f64, @floatCast(x))));
         if (direct != candidate) {
             changed += 1;
             const abs_diff = @abs(candidate - direct);

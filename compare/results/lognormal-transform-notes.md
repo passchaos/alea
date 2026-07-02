@@ -50,6 +50,9 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   no-regression win, so no prefetching is used in the default transform loops.
 - `@setFloatMode(.optimized)` is tied/mixed and not a no-regression win.
 - f32 vector width changes do not produce a durable win.
+- Widening the exact f32 transform to f64 `@exp` and casting back to f32 keeps
+  max error to 1 ULP across the checked spreads, but it is slower than the
+  exact f32 transform in the staged fill probe, so it is not a production win.
 - f32 `expm1(x) + 1` can be faster for narrow `stddev = 0.25`, but changes
   output rounding; max error is 1 ULP for the narrow benchmark and grows
   substantially for wider spreads. It is therefore exposed only through the
@@ -90,7 +93,10 @@ Fresh local evidence:
   `LogNormal.fillFrom` routes through the same optimized helper.
 - `log-normal-probe -- 1048576`: f32 current/approx fill remains sensitive to
   probe shape, with recent rows around 134M/139M FastPrng and 140M/130M
-  ScalarPrng; older focused rows showed approx peaks around 143M/150M.
+  ScalarPrng; older focused rows showed approx peaks around 143M/150M. A later
+  exact widened f64-`@exp` probe row was slower than exact f32 `@exp`: about
+  124M versus 138M FastPrng and about 130M versus 144M ScalarPrng in the same
+  run, despite max 1 ULP difference at `stddev=0.25`, `1.0`, and `2.0`.
 - The same probe reports max 1 ULP at `stddev=0.25`, but max 51 ULP at
   `stddev=1.0` and 8028 ULP at `stddev=2.0`, which is why the public
   approximation is parameter-bounded.
