@@ -596,6 +596,7 @@ Reusable samplers:
 - `Cauchy(T)`
 - `Cauchy(T).init`
 - `Cauchy(T).medianValue`
+- `Cauchy(T).modeValue`
 - `Cauchy(T).scaleValue`
 - `Cauchy(T).expectedValue`
 - `Cauchy(T).varianceValue`
@@ -609,6 +610,8 @@ Reusable samplers:
 - `Laplace(T).init`
 - `Laplace(T).locationValue`
 - `Laplace(T).scaleValue`
+- `Laplace(T).medianValue`
+- `Laplace(T).modeValue`
 - `Laplace(T).expectedValue`
 - `Laplace(T).varianceValue`
 - `Laplace(T).minValue`
@@ -621,6 +624,8 @@ Reusable samplers:
 - `Logistic(T).init`
 - `Logistic(T).locationValue`
 - `Logistic(T).scaleValue`
+- `Logistic(T).medianValue`
+- `Logistic(T).modeValue`
 - `Logistic(T).expectedValue`
 - `Logistic(T).varianceValue`
 - `Logistic(T).minValue`

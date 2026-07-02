@@ -64,9 +64,9 @@ toolkit functionality and reduce reliance on companion crates:
 | Beta | Covered: `beta`, `Beta(T)`, including alpha/beta/moment/support accessors |
 | Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max/moment accessors |
 | Arcsine | Covered: `arcsine`, `Arcsine(T)`, including min/max/moment accessors |
-| Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/scale, undefined-moment, and support accessors |
-| Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/moment/support accessors |
-| Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/moment/support accessors |
+| Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/mode/scale, undefined-moment, and support accessors |
+| Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/median/mode/moment/support accessors |
+| Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/median/mode/moment/support accessors |
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment/support accessors |
 | HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment/support accessors |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment/support accessors |

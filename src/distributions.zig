@@ -3658,6 +3658,10 @@ pub fn Cauchy(comptime T: type) type {
             return self.median;
         }
 
+        pub fn modeValue(self: Self) T {
+            return self.median;
+        }
+
         pub fn scaleValue(self: Self) T {
             return self.scale;
         }
@@ -3766,6 +3770,14 @@ pub fn Laplace(comptime T: type) type {
             return self.scale;
         }
 
+        pub fn medianValue(self: Self) T {
+            return self.location;
+        }
+
+        pub fn modeValue(self: Self) T {
+            return self.location;
+        }
+
         pub fn expectedValue(self: Self) T {
             return self.location;
         }
@@ -3864,6 +3876,14 @@ pub fn Logistic(comptime T: type) type {
 
         pub fn scaleValue(self: Self) T {
             return self.scale;
+        }
+
+        pub fn medianValue(self: Self) T {
+            return self.location;
+        }
+
+        pub fn modeValue(self: Self) T {
+            return self.location;
         }
 
         pub fn expectedValue(self: Self) T {
@@ -9657,6 +9677,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&direct_engine, f64, &direct_cauchy_buf, 0, 0));
     const cauchy_sampler = try Cauchy(f64).init(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), cauchy_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), cauchy_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), cauchy_sampler.scaleValue(), 1e-12);
     try std.testing.expect(cauchy_sampler.expectedValue() == null);
     try std.testing.expect(cauchy_sampler.varianceValue() == null);
@@ -9683,6 +9704,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const laplace_sampler = try Laplace(f64).init(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), laplace_sampler.locationValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), laplace_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), laplace_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), laplace_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), laplace_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), laplace_sampler.varianceValue(), 1e-12);
     try std.testing.expect(laplace_sampler.minValue() == null);
@@ -9708,6 +9731,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const logistic_sampler = try Logistic(f64).init(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), logistic_sampler.locationValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), logistic_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), logistic_sampler.medianValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), logistic_sampler.modeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), logistic_sampler.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(std.math.pi * std.math.pi / 3.0, logistic_sampler.varianceValue(), 1e-12);
     try std.testing.expect(logistic_sampler.minValue() == null);
