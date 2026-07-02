@@ -5535,6 +5535,15 @@ pub fn Zipf(comptime T: type) type {
             return std.math.pow(T, self.t * (1 - self.exponent) + self.exponent, self.q);
         }
 
+        pub fn minValue(_: Self) T {
+            return 1;
+        }
+
+        pub fn maxValue(self: Self) T {
+            if (std.math.isInf(self.exponent)) return 1;
+            return self.nValue().?;
+        }
+
         pub fn exponentValue(self: Self) T {
             return self.exponent;
         }
@@ -5632,6 +5641,14 @@ pub fn Zeta(comptime T: type) type {
 
         pub fn exponentValue(self: Self) T {
             return self.exponent_minus_one + 1;
+        }
+
+        pub fn minValue(_: Self) T {
+            return 1;
+        }
+
+        pub fn maxValue(_: Self) ?T {
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9309,6 +9326,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const direct_zipf = (try Zipf(f64).init(10, 1.5)).sampleFrom(&direct_engine);
     try std.testing.expect(direct_zipf >= 1 and direct_zipf <= 10);
     const zipf_sampler = try Zipf(f64).init(10, 1.5);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), zipf_sampler.minValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), zipf_sampler.maxValue(), 1e-12);
     var zipf_buf: [8]f64 = undefined;
     zipf_sampler.fill(rng, &zipf_buf);
     for (zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
@@ -9329,6 +9348,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(zetas.next().? >= 1);
     try std.testing.expect((try Zeta(f64).init(3)).sampleFrom(&direct_engine) >= 1);
     const zeta_sampler = try Zeta(f64).init(3);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), zeta_sampler.minValue(), 0);
+    try std.testing.expect(zeta_sampler.maxValue() == null);
     var zeta_buf: [8]f64 = undefined;
     zeta_sampler.fill(rng, &zeta_buf);
     for (zeta_buf) |value| try std.testing.expect(value >= 1);

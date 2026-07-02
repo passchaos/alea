@@ -711,6 +711,8 @@ Reusable samplers:
 - `Zipf(T)`
 - `Zipf(T).init`
 - `Zipf(T).nValue`
+- `Zipf(T).minValue`
+- `Zipf(T).maxValue`
 - `Zipf(T).exponentValue`
 - `Zipf(T).sample`
 - `Zipf(T).sampleFrom`
@@ -719,6 +721,8 @@ Reusable samplers:
 - `Zeta(T)`
 - `Zeta(T).init`
 - `Zeta(T).exponentValue`
+- `Zeta(T).minValue`
+- `Zeta(T).maxValue`
 - `Zeta(T).sample`
 - `Zeta(T).sampleFrom`
 - `Zeta(T).fill`
