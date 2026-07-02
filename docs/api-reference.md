@@ -298,7 +298,11 @@ Single-shot helpers:
   `logLogistic`, `logLogisticFrom`,
   `logLogisticChecked`, `logLogisticCheckedFrom`,
   `fillLogLogistic`, `fillLogLogisticFrom`, `fillLogLogisticChecked`,
-  `fillLogLogisticCheckedFrom`, `kumaraswamy`,
+  `fillLogLogisticCheckedFrom`, `vectorLogLogistic`,
+  `vectorLogLogisticFrom`, `vectorLogLogisticChecked`,
+  `vectorLogLogisticCheckedFrom`, `fillVectorLogLogistic`,
+  `fillVectorLogLogisticFrom`, `fillVectorLogLogisticChecked`,
+  `fillVectorLogLogisticCheckedFrom`, `kumaraswamy`,
   `kumaraswamyFrom`, `kumaraswamyChecked`, `kumaraswamyCheckedFrom`,
   `fillKumaraswamy`, `fillKumaraswamyFrom`, `fillKumaraswamyChecked`,
   `fillKumaraswamyCheckedFrom`,
@@ -1106,6 +1110,20 @@ Reusable samplers:
 - `LogLogistic(T).sampleFrom`
 - `LogLogistic(T).fill`
 - `LogLogistic(T).fillFrom`
+- `VectorLogLogistic(VectorType)`
+- `VectorLogLogistic(VectorType).init`
+- `VectorLogLogistic(VectorType).scaleValue`
+- `VectorLogLogistic(VectorType).shapeValue`
+- `VectorLogLogistic(VectorType).expectedValue`
+- `VectorLogLogistic(VectorType).varianceValue`
+- `VectorLogLogistic(VectorType).medianValue`
+- `VectorLogLogistic(VectorType).modeValue`
+- `VectorLogLogistic(VectorType).minValue`
+- `VectorLogLogistic(VectorType).maxValue`
+- `VectorLogLogistic(VectorType).sample`
+- `VectorLogLogistic(VectorType).sampleFrom`
+- `VectorLogLogistic(VectorType).fill`
+- `VectorLogLogistic(VectorType).fillFrom`
 - `Kumaraswamy(T)`
 - `Kumaraswamy(T).init`
 - `Kumaraswamy(T).alphaValue`
