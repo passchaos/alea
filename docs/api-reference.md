@@ -183,7 +183,11 @@ Single-shot helpers:
   `fillLogNormalApproxF32Checked`, `fillLogNormalApproxF32CheckedFrom`,
   `halfNormal`, `halfNormalFrom`, `halfNormalChecked`,
   `halfNormalCheckedFrom`, `fillHalfNormal`, `fillHalfNormalFrom`,
-  `fillHalfNormalChecked`, `fillHalfNormalCheckedFrom`, `chi`, `chiFrom`,
+  `fillHalfNormalChecked`, `fillHalfNormalCheckedFrom`, `vectorHalfNormal`,
+  `vectorHalfNormalFrom`, `vectorHalfNormalChecked`,
+  `vectorHalfNormalCheckedFrom`, `fillVectorHalfNormal`,
+  `fillVectorHalfNormalFrom`, `fillVectorHalfNormalChecked`,
+  `fillVectorHalfNormalCheckedFrom`, `chi`, `chiFrom`,
   `standardExponential`, `standardExponentialFrom`,
   `fillStandardExponential`, `fillStandardExponentialFrom`,
   `vectorStandardExponential`, `vectorStandardExponentialFrom`,
@@ -645,6 +649,17 @@ Reusable samplers:
 - `HalfNormal(T).sampleFrom`
 - `HalfNormal(T).fill`
 - `HalfNormal(T).fillFrom`
+- `VectorHalfNormal(VectorType)`
+- `VectorHalfNormal(VectorType).init`
+- `VectorHalfNormal(VectorType).scaleValue`
+- `VectorHalfNormal(VectorType).expectedValue`
+- `VectorHalfNormal(VectorType).varianceValue`
+- `VectorHalfNormal(VectorType).minValue`
+- `VectorHalfNormal(VectorType).maxValue`
+- `VectorHalfNormal(VectorType).sample`
+- `VectorHalfNormal(VectorType).sampleFrom`
+- `VectorHalfNormal(VectorType).fill`
+- `VectorHalfNormal(VectorType).fillFrom`
 - `Poisson`
 - `Poisson.init`
 - `Poisson.lambdaValue`

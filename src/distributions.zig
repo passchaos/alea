@@ -3121,6 +3121,43 @@ pub fn fillHalfNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, s
     dist.fillFrom(source, dest);
 }
 
+pub fn vectorHalfNormal(rng: Rng, comptime VectorType: type, scale: vectorChild(VectorType)) VectorType {
+    return vectorHalfNormalFrom(rng, VectorType, scale);
+}
+
+pub fn vectorHalfNormalFrom(source: anytype, comptime VectorType: type, scale: vectorChild(VectorType)) VectorType {
+    std.debug.assert(scale > 0 and std.math.isFinite(scale));
+    return @abs(vectorNormalFrom(source, VectorType, 0, scale));
+}
+
+pub fn vectorHalfNormalChecked(rng: Rng, comptime VectorType: type, scale: vectorChild(VectorType)) Error!VectorType {
+    return vectorHalfNormalCheckedFrom(rng, VectorType, scale);
+}
+
+pub fn vectorHalfNormalCheckedFrom(source: anytype, comptime VectorType: type, scale: vectorChild(VectorType)) Error!VectorType {
+    _ = try VectorHalfNormal(VectorType).init(scale);
+    return vectorHalfNormalFrom(source, VectorType, scale);
+}
+
+pub fn fillVectorHalfNormal(rng: Rng, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) void {
+    fillVectorHalfNormalFrom(rng, VectorType, dest, scale);
+}
+
+pub fn fillVectorHalfNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) void {
+    fillVectorNormalFrom(source, VectorType, dest, 0, scale);
+    absVectorSliceInPlace(VectorType, dest);
+}
+
+pub fn fillVectorHalfNormalChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) Error!void {
+    return fillVectorHalfNormalCheckedFrom(rng, VectorType, dest, scale);
+}
+
+pub fn fillVectorHalfNormalCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, scale: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    _ = try VectorHalfNormal(VectorType).init(scale);
+    fillVectorHalfNormalFrom(source, VectorType, dest, scale);
+}
+
 pub fn HalfNormal(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -3169,6 +3206,60 @@ pub fn HalfNormal(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+pub fn VectorHalfNormal(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        scale: Child,
+
+        pub fn init(scale: Child) Error!Self {
+            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            return .{ .scale = scale };
+        }
+
+        pub fn scaleValue(self: Self) Child {
+            return self.scale;
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.scale * @sqrt(2 / @as(Child, @floatCast(std.math.pi)));
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.scale * self.scale * (1 - 2 / @as(Child, @floatCast(std.math.pi)));
+        }
+
+        pub fn minValue(self: Self) Child {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            _ = self;
+            return null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorHalfNormalFrom(source, VectorType, self.scale);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            fillVectorHalfNormalFrom(source, VectorType, dest, self.scale);
         }
     };
 }
@@ -8810,6 +8901,12 @@ fn expVectorSliceInPlace(comptime VectorType: type, dest: []VectorType) void {
     for (dest) |*item| item.* = @exp(item.*);
 }
 
+fn absVectorSliceInPlace(comptime VectorType: type, dest: []VectorType) void {
+    const info = vectorInfo(VectorType);
+    requireFloat(info.child);
+    for (dest) |*item| item.* = @abs(item.*);
+}
+
 fn absInPlace(comptime T: type, dest: []T) void {
     switch (T) {
         f32 => absInPlaceVector(T, @Vector(8, f32), dest),
@@ -10624,6 +10721,37 @@ test "distribution vector helpers preserve support and stream shape" {
     for (log_normal_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const half_normal_vec = try vectorHalfNormalChecked(rng, @Vector(4, f64), 2);
+    const direct_half_normal_vec = try vectorHalfNormalCheckedFrom(&direct_engine, @Vector(4, f64), 2);
+    try std.testing.expectEqual(half_normal_vec, direct_half_normal_vec);
+    inline for (0..4) |lane| try std.testing.expect(half_normal_vec[lane] >= 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_half_normal_sampler = try VectorHalfNormal(@Vector(4, f64)).init(2);
+    try std.testing.expectEqual(@as(f64, 2), vector_half_normal_sampler.scaleValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 2) * @sqrt(2.0 / std.math.pi), vector_half_normal_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4) * (1 - 2.0 / std.math.pi), vector_half_normal_sampler.varianceValue(), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), vector_half_normal_sampler.minValue());
+    try std.testing.expect(vector_half_normal_sampler.maxValue() == null);
+    const sampled_half_normal_vec = vector_half_normal_sampler.sample(rng);
+    const direct_sampled_half_normal_vec = vector_half_normal_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_half_normal_vec, direct_sampled_half_normal_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_half_normal_vec[lane] >= 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var half_normal_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_half_normal_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorHalfNormalChecked(rng, @Vector(4, f64), &half_normal_buf_vec, 2);
+    try fillVectorHalfNormalCheckedFrom(&direct_engine, @Vector(4, f64), &direct_half_normal_buf_vec, 2);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &half_normal_buf_vec, &direct_half_normal_buf_vec);
+    for (half_normal_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_half_normal_sampler.fill(rng, &half_normal_buf_vec);
+    vector_half_normal_sampler.fillFrom(&direct_engine, &direct_half_normal_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &half_normal_buf_vec, &direct_half_normal_buf_vec);
+    for (half_normal_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -10715,6 +10843,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorLogNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -10729,6 +10860,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorLogNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -10790,6 +10924,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLogNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -10799,6 +10935,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorNormalChecked(rng, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorLogNormalChecked(rng, @Vector(4, f64), &empty, 0, -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorHalfNormalChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -13497,6 +13635,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorLogNormalFrom(&unchecked, @Vector(4, f64), &vector_log_normal_unchecked, 0, 0.25);
         try fillVectorLogNormalCheckedFrom(&checked, @Vector(4, f64), &vector_log_normal_checked, 0, 0.25);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_log_normal_unchecked, &vector_log_normal_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_half_normal_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_half_normal_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorHalfNormalFrom(&unchecked, @Vector(4, f64), &vector_half_normal_unchecked, 2);
+        try fillVectorHalfNormalCheckedFrom(&checked, @Vector(4, f64), &vector_half_normal_checked, 2);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_half_normal_unchecked, &vector_half_normal_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

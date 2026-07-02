@@ -100,13 +100,13 @@ same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
 `fillVectorUniform*`, `vectorUniformInclusive*`,
 `fillVectorUniformInclusive*`, `vectorStandardNormal*`,
 `fillVectorStandardNormal*`, `vectorNormal*`,
-`fillVectorNormal*`, `vectorLogNormal*`, `fillVectorLogNormal*`,
-`vectorStandardExponential*`,
+`fillVectorNormal*`, `vectorLogNormal*`, `fillVectorLogNormal*`, `vectorHalfNormal*`,
+`fillVectorHalfNormal*`, `vectorStandardExponential*`,
 `fillVectorStandardExponential*`, `vectorExponential*`, and
 `fillVectorExponential*`; reusable vector samplers `VectorBernoulli`,
 `VectorBinomial`, `VectorGeometric`, `VectorGeometricFailures`, `VectorStandardGeometric`,
 `VectorPoisson`, `VectorUniform`, `VectorStandardNormal`, `VectorNormal`, `VectorLogNormal`,
-`VectorStandardExponential`, and `VectorExponential`; strict interval samplers
+`VectorHalfNormal`, `VectorStandardExponential`, and `VectorExponential`; strict interval samplers
 `Open01` and `OpenClosed01` also sample/fill float vector slices.
 Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
@@ -127,8 +127,9 @@ required.
 Single-shot helpers and reusable samplers cover:
 
 - uniform, Bernoulli, binomial, negative-binomial, vector Bernoulli/binomial/negative-binomial
-- standard normal, normal, exact log-normal plus opt-in bounded f32 approximate
-  log-normal, half-normal, standard exponential, exponential
+- standard normal, normal, exact/vector log-normal plus opt-in bounded f32
+  approximate log-normal, half-normal/vector half-normal, standard exponential,
+  exponential
 - poisson, vector poisson, geometric, vector geometric/failures
 - gamma, chi-squared, chi, erlang, beta, Fisher F, Student t
 - triangular, arcsine, cauchy, laplace, logistic, log-logistic, kumaraswamy,
@@ -328,7 +329,7 @@ benchmark shape.
 Use `vectorbench` for focused SIMD/vector-slice evidence without slowing the
 full throughput suite. The current local rows cover packed bool chance/ratio,
 strict-open/open-closed/range vector float fills, distribution-namespace vector
-Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/log-normal/exponential wrappers over those kernels, and
+Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/log-normal/half-normal/exponential wrappers over those kernels, and
 scalar-lane normal/exponential vector fills;
 representative rows are about 1.01B lanes/s
 for `fillVectorRange(f32x8)`, about 694M lanes/s for
