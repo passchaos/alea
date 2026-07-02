@@ -4024,6 +4024,17 @@ pub fn Pareto(comptime T: type) type {
             return self.shape;
         }
 
+        pub fn expectedValue(self: Self) ?T {
+            if (self.shape <= 1) return null;
+            return self.scale * self.shape / (self.shape - 1);
+        }
+
+        pub fn varianceValue(self: Self) ?T {
+            if (self.shape <= 2) return null;
+            const shape_minus_one = self.shape - 1;
+            return self.scale * self.scale * self.shape / (shape_minus_one * shape_minus_one * (self.shape - 2));
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8789,6 +8800,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     const pareto_sampler = try Pareto(f64).init(2, 3);
     try std.testing.expectApproxEqAbs(@as(f64, 2), pareto_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), pareto_sampler.shapeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), pareto_sampler.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), pareto_sampler.varianceValue().?, 1e-12);
+    try std.testing.expect((try Pareto(f64).init(2, 1)).expectedValue() == null);
+    try std.testing.expect((try Pareto(f64).init(2, 2)).varianceValue() == null);
     pareto_sampler.fillFrom(&direct_engine, &direct_pareto_buf);
     for (direct_pareto_buf) |value| try std.testing.expect(value >= 2);
     try std.testing.expect(try paretoCheckedFrom(&direct_engine, f64, 2, 3) >= 2);

@@ -75,7 +75,7 @@ toolkit functionality and reduce reliance on companion crates:
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape accessors |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta accessors |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape accessors |
-| Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape accessors |
+| Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape and finite-moment accessors |
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape accessors |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance lookup and dimension/total-alpha accessors |
 | Multinomial | Covered: `Multinomial`, including trials/category/probability lookup and count moment accessors |

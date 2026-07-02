@@ -586,6 +586,8 @@ Reusable samplers:
 - `Pareto(T).init`
 - `Pareto(T).scaleValue`
 - `Pareto(T).shapeValue`
+- `Pareto(T).expectedValue`
+- `Pareto(T).varianceValue`
 - `Pareto(T).sample`
 - `Pareto(T).sampleFrom`
 - `Pareto(T).fill`
