@@ -571,6 +571,11 @@ pub fn Choice(comptime T: type) type {
             return &self.items[index];
         }
 
+        pub fn probabilityAt(self: Self, index: usize) Error!f64 {
+            if (index >= self.items.len) return error.InvalidParameter;
+            return 1.0 / @as(f64, @floatFromInt(self.items.len));
+        }
+
         pub fn sample(self: Self, rng: Rng) *const T {
             return self.sampleFrom(rng);
         }
@@ -2079,6 +2084,9 @@ test "choice sampler repeatedly samples slice references" {
     try std.testing.expectEqualSlices(u8, &values, choice.itemsValue());
     try std.testing.expectEqual(&values[2], try choice.itemAt(2));
     try std.testing.expectError(error.InvalidParameter, choice.itemAt(4));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), try choice.probabilityAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), try choice.probabilityAt(3), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, choice.probabilityAt(4));
     try std.testing.expect(Choice(u8).init(&.{}) == null);
     try std.testing.expectError(error.EmptyInput, Choice(u8).initChecked(&.{}));
 
