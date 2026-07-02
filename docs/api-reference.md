@@ -379,6 +379,8 @@ Reusable samplers:
 - `StandardExponential(T).inverseRateValue`
 - `StandardExponential(T).expectedValue`
 - `StandardExponential(T).varianceValue`
+- `StandardExponential(T).minValue`
+- `StandardExponential(T).maxValue`
 - `StandardExponential(T).sample`
 - `StandardExponential(T).sampleFrom`
 - `StandardExponential(T).fill`
@@ -389,6 +391,8 @@ Reusable samplers:
 - `Exponential(T).inverseRateValue`
 - `Exponential(T).expectedValue`
 - `Exponential(T).varianceValue`
+- `Exponential(T).minValue`
+- `Exponential(T).maxValue`
 - `Exponential(T).sample`
 - `Exponential(T).sampleFrom`
 - `Exponential(T).fill`
