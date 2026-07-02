@@ -5800,6 +5800,20 @@ pub fn Dirichlet(comptime T: type) type {
             return alpha_i * (alpha_0 - alpha_i) / (alpha_0 * alpha_0 * (alpha_0 + 1));
         }
 
+        pub fn variances(self: Self, allocator: std.mem.Allocator) ![]T {
+            const out = try allocator.alloc(T, self.alpha.len);
+            errdefer allocator.free(out);
+            try self.variancesInto(out);
+            return out;
+        }
+
+        pub fn variancesInto(self: Self, out: []T) Error!void {
+            if (out.len != self.alpha.len) return error.InvalidLength;
+            const alpha_0 = self.totalAlphaValue();
+            const denominator = alpha_0 * alpha_0 * (alpha_0 + 1);
+            for (self.alpha, out) |alpha_i, *slot| slot.* = alpha_i * (alpha_0 - alpha_i) / denominator;
+        }
+
         pub fn covarianceAt(self: Self, i: usize, j: usize) Error!T {
             if (i == j) return self.varianceAt(i);
             const alpha_i = try self.alphaAt(i);
@@ -10047,6 +10061,16 @@ test "dirichlet sampler returns simplex vectors" {
     defer std.testing.allocator.free(owned_means);
     try std.testing.expectEqualSlices(f64, &dirichlet_means, owned_means);
     try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 63.0), try dist.varianceAt(1), 1e-12);
+    var dirichlet_variances: [3]f64 = undefined;
+    try dist.variancesInto(&dirichlet_variances);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 252.0), dirichlet_variances[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 63.0), dirichlet_variances[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 28.0), dirichlet_variances[2], 1e-12);
+    var wrong_variances_len: [2]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.variancesInto(&wrong_variances_len));
+    const owned_variances = try dist.variances(std.testing.allocator);
+    defer std.testing.allocator.free(owned_variances);
+    try std.testing.expectEqualSlices(f64, &dirichlet_variances, owned_variances);
     try std.testing.expectApproxEqAbs(@as(f64, -1.0 / 126.0), try dist.covarianceAt(0, 1), 1e-12);
     try std.testing.expectApproxEqAbs(try dist.varianceAt(1), try dist.covarianceAt(1, 1), 1e-12);
     try std.testing.expectError(error.InvalidParameter, dist.alphaAt(3));
