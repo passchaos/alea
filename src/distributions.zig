@@ -3929,6 +3929,15 @@ pub fn Maxwell(comptime T: type) type {
             return self.scale;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return 2 * self.scale * @sqrt(2 / @as(T, @floatCast(std.math.pi)));
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const pi: T = @floatCast(std.math.pi);
+            return self.scale * self.scale * (3 * pi - 8) / pi;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8756,6 +8765,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, fillMaxwellCheckedFrom(&direct_engine, f64, &direct_maxwell_buf, 0));
     const maxwell_sampler = try Maxwell(f64).init(2);
     try std.testing.expectApproxEqAbs(@as(f64, 2), maxwell_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4) * @sqrt(2.0 / std.math.pi), maxwell_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4) * (3 * std.math.pi - 8) / std.math.pi, maxwell_sampler.varianceValue(), 1e-12);
     maxwell_sampler.fillFrom(&direct_engine, &direct_maxwell_buf);
     for (direct_maxwell_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try maxwellCheckedFrom(&direct_engine, f64, 2) >= 0);

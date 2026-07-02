@@ -576,6 +576,8 @@ Reusable samplers:
 - `Maxwell(T)`
 - `Maxwell(T).init`
 - `Maxwell(T).scaleValue`
+- `Maxwell(T).expectedValue`
+- `Maxwell(T).varianceValue`
 - `Maxwell(T).sample`
 - `Maxwell(T).sampleFrom`
 - `Maxwell(T).fill`
