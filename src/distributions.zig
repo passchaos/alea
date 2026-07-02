@@ -5224,6 +5224,10 @@ pub fn Dirichlet(comptime T: type) type {
             return self.alpha[index];
         }
 
+        pub fn meanAt(self: Self, index: usize) Error!T {
+            return try self.alphaAt(index) / self.totalAlphaValue();
+        }
+
         pub fn dimensionValue(self: Self) usize {
             return self.alpha.len;
         }
@@ -9190,7 +9194,9 @@ test "dirichlet sampler returns simplex vectors" {
     const dist = try Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
     try std.testing.expectEqualSlices(f64, &.{ 1.0, 2.0, 3.0 }, dist.alphaValues());
     try std.testing.expectApproxEqAbs(@as(f64, 2), try dist.alphaAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 6.0), try dist.meanAt(1), 1e-12);
     try std.testing.expectError(error.InvalidParameter, dist.alphaAt(3));
+    try std.testing.expectError(error.InvalidParameter, dist.meanAt(3));
     try std.testing.expectEqual(@as(usize, 3), dist.dimensionValue());
     try std.testing.expectApproxEqAbs(@as(f64, 6), dist.totalAlphaValue(), 1e-12);
     const sample = try dist.sample(std.testing.allocator, rng);

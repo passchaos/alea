@@ -671,6 +671,7 @@ Reusable samplers:
 - `Dirichlet(T).init`
 - `Dirichlet(T).alphaValues`
 - `Dirichlet(T).alphaAt`
+- `Dirichlet(T).meanAt`
 - `Dirichlet(T).dimensionValue`
 - `Dirichlet(T).totalAlphaValue`
 - `Dirichlet(T).sample`
