@@ -3391,6 +3391,43 @@ pub fn fillGeometricCheckedFrom(source: anytype, dest: []u64, p: f64) Error!void
     dist.fillFrom(source, dest);
 }
 
+pub fn vectorGeometric(rng: Rng, comptime VectorType: type, p: f64) VectorType {
+    return vectorGeometricFrom(rng, VectorType, p);
+}
+
+pub fn vectorGeometricFrom(source: anytype, comptime VectorType: type, p: f64) VectorType {
+    const dist = VectorGeometric(VectorType).init(p) catch unreachable;
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorGeometricChecked(rng: Rng, comptime VectorType: type, p: f64) Error!VectorType {
+    return vectorGeometricCheckedFrom(rng, VectorType, p);
+}
+
+pub fn vectorGeometricCheckedFrom(source: anytype, comptime VectorType: type, p: f64) Error!VectorType {
+    const dist = try VectorGeometric(VectorType).init(p);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorGeometric(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) void {
+    fillVectorGeometricFrom(rng, VectorType, dest, p);
+}
+
+pub fn fillVectorGeometricFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) void {
+    const dist = VectorGeometric(VectorType).init(p) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorGeometricChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
+    return fillVectorGeometricCheckedFrom(rng, VectorType, dest, p);
+}
+
+pub fn fillVectorGeometricCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorGeometric(VectorType).init(p);
+    dist.fillFrom(source, dest);
+}
+
 pub const Geometric = struct {
     p: f64,
 
@@ -3443,6 +3480,67 @@ pub const Geometric = struct {
     }
 };
 
+pub fn VectorGeometric(comptime VectorType: type) type {
+    const info = vectorInfo(VectorType);
+    if (info.child != u64) @compileError("VectorGeometric expects a u64 vector");
+
+    return struct {
+        const Self = @This();
+
+        sampler: Geometric,
+
+        pub fn init(p: f64) Error!Self {
+            return .{ .sampler = try Geometric.init(p) };
+        }
+
+        pub fn probabilityValue(self: Self) f64 {
+            return self.sampler.probabilityValue();
+        }
+
+        pub fn expectedValue(self: Self) f64 {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) f64 {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn modeValue(self: Self) u64 {
+            return self.sampler.modeValue();
+        }
+
+        pub fn minValue(self: Self) u64 {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?u64 {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.p == 1) {
+                @memset(dest, @as(VectorType, @splat(1)));
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub const GeometricFailures = struct {
     p: f64,
 
@@ -3494,6 +3592,104 @@ pub const GeometricFailures = struct {
         for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
+
+pub fn vectorGeometricFailures(rng: Rng, comptime VectorType: type, p: f64) VectorType {
+    return vectorGeometricFailuresFrom(rng, VectorType, p);
+}
+
+pub fn vectorGeometricFailuresFrom(source: anytype, comptime VectorType: type, p: f64) VectorType {
+    const dist = VectorGeometricFailures(VectorType).init(p) catch unreachable;
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorGeometricFailuresChecked(rng: Rng, comptime VectorType: type, p: f64) Error!VectorType {
+    return vectorGeometricFailuresCheckedFrom(rng, VectorType, p);
+}
+
+pub fn vectorGeometricFailuresCheckedFrom(source: anytype, comptime VectorType: type, p: f64) Error!VectorType {
+    const dist = try VectorGeometricFailures(VectorType).init(p);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorGeometricFailures(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) void {
+    fillVectorGeometricFailuresFrom(rng, VectorType, dest, p);
+}
+
+pub fn fillVectorGeometricFailuresFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) void {
+    const dist = VectorGeometricFailures(VectorType).init(p) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorGeometricFailuresChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
+    return fillVectorGeometricFailuresCheckedFrom(rng, VectorType, dest, p);
+}
+
+pub fn fillVectorGeometricFailuresCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorGeometricFailures(VectorType).init(p);
+    dist.fillFrom(source, dest);
+}
+
+pub fn VectorGeometricFailures(comptime VectorType: type) type {
+    const info = vectorInfo(VectorType);
+    if (info.child != u64) @compileError("VectorGeometricFailures expects a u64 vector");
+
+    return struct {
+        const Self = @This();
+
+        sampler: GeometricFailures,
+
+        pub fn init(p: f64) Error!Self {
+            return .{ .sampler = try GeometricFailures.init(p) };
+        }
+
+        pub fn probabilityValue(self: Self) f64 {
+            return self.sampler.probabilityValue();
+        }
+
+        pub fn expectedValue(self: Self) f64 {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) f64 {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn modeValue(self: Self) u64 {
+            return self.sampler.modeValue();
+        }
+
+        pub fn minValue(self: Self) u64 {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?u64 {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.p == 1) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
 
 pub const StandardGeometric = struct {
     pub fn probabilityValue(self: StandardGeometric) f64 {
@@ -9625,6 +9821,79 @@ test "distribution vector helpers preserve support and stream shape" {
     for (binomial_buf) |vec| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(10)), vec);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const geometric_vec = vectorGeometric(rng, @Vector(4, u64), 0.25);
+    const direct_geometric_vec = vectorGeometricFrom(&direct_engine, @Vector(4, u64), 0.25);
+    try std.testing.expectEqual(geometric_vec, direct_geometric_vec);
+    inline for (0..4) |lane| try std.testing.expect(geometric_vec[lane] >= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const checked_geometric_vec = try vectorGeometricChecked(rng, @Vector(4, u64), 0.25);
+    const direct_checked_geometric_vec = try vectorGeometricCheckedFrom(&direct_engine, @Vector(4, u64), 0.25);
+    try std.testing.expectEqual(checked_geometric_vec, direct_checked_geometric_vec);
+    inline for (0..4) |lane| try std.testing.expect(checked_geometric_vec[lane] >= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_geometric_sampler = try VectorGeometric(@Vector(4, u64)).init(0.25);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), vector_geometric_sampler.probabilityValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), vector_geometric_sampler.expectedValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), vector_geometric_sampler.varianceValue(), 1e-15);
+    try std.testing.expectEqual(@as(u64, 1), vector_geometric_sampler.modeValue());
+    try std.testing.expectEqual(@as(u64, 1), vector_geometric_sampler.minValue());
+    try std.testing.expect(vector_geometric_sampler.maxValue() == null);
+    const sampled_geometric_vec = vector_geometric_sampler.sample(rng);
+    const direct_sampled_geometric_vec = vector_geometric_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_geometric_vec, direct_sampled_geometric_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_geometric_vec[lane] >= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const geometric_failures_vec = vectorGeometricFailures(rng, @Vector(4, u64), 0.25);
+    const direct_geometric_failures_vec = vectorGeometricFailuresFrom(&direct_engine, @Vector(4, u64), 0.25);
+    try std.testing.expectEqual(geometric_failures_vec, direct_geometric_failures_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_geometric_failures_sampler = try VectorGeometricFailures(@Vector(4, u64)).init(0.25);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), vector_geometric_failures_sampler.expectedValue(), 1e-15);
+    try std.testing.expectEqual(@as(u64, 0), vector_geometric_failures_sampler.modeValue());
+    try std.testing.expectEqual(@as(u64, 0), vector_geometric_failures_sampler.minValue());
+    const sampled_geometric_failures_vec = vector_geometric_failures_sampler.sample(rng);
+    const direct_sampled_geometric_failures_vec = vector_geometric_failures_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_geometric_failures_vec, direct_sampled_geometric_failures_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var geometric_buf: [3]@Vector(4, u64) = undefined;
+    var direct_geometric_buf: [3]@Vector(4, u64) = undefined;
+    try fillVectorGeometricChecked(rng, @Vector(4, u64), &geometric_buf, 0.25);
+    try fillVectorGeometricCheckedFrom(&direct_engine, @Vector(4, u64), &direct_geometric_buf, 0.25);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &geometric_buf, &direct_geometric_buf);
+    for (geometric_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 1);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    vector_geometric_sampler.fill(rng, &geometric_buf);
+    vector_geometric_sampler.fillFrom(&direct_engine, &direct_geometric_buf);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &geometric_buf, &direct_geometric_buf);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var geometric_failures_buf: [3]@Vector(4, u64) = undefined;
+    var direct_geometric_failures_buf: [3]@Vector(4, u64) = undefined;
+    try fillVectorGeometricFailuresChecked(rng, @Vector(4, u64), &geometric_failures_buf, 0.25);
+    try fillVectorGeometricFailuresCheckedFrom(&direct_engine, @Vector(4, u64), &direct_geometric_failures_buf, 0.25);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &geometric_failures_buf, &direct_geometric_failures_buf);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    vector_geometric_failures_sampler.fill(rng, &geometric_failures_buf);
+    vector_geometric_failures_sampler.fillFrom(&direct_engine, &direct_geometric_failures_buf);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &geometric_failures_buf, &direct_geometric_failures_buf);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const always_success_geometric = try VectorGeometric(@Vector(4, u64)).init(1);
+    const always_success_geometric_vec = always_success_geometric.sample(rng);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(1)), always_success_geometric_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    const always_success_failures = try VectorGeometricFailures(@Vector(4, u64)).init(1);
+    const always_success_failures_vec = always_success_failures.sample(rng);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), always_success_failures_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const poisson_vec = vectorPoisson(rng, @Vector(4, u64), 12);
     const direct_poisson_vec = vectorPoissonFrom(&direct_engine, @Vector(4, u64), 12);
     try std.testing.expectEqual(poisson_vec, direct_poisson_vec);
@@ -9888,6 +10157,19 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, fillVectorBinomialCheckedFrom(&engine, @Vector(4, u64), &binomial_buf, 10, 1.1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidProbability, vectorGeometricCheckedFrom(&engine, @Vector(4, u64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, vectorGeometricFailuresCheckedFrom(&engine, @Vector(4, u64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var geometric_buf: [4]@Vector(4, u64) = undefined;
+    try std.testing.expectError(error.InvalidProbability, fillVectorGeometricCheckedFrom(&engine, @Vector(4, u64), &geometric_buf, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidProbability, fillVectorGeometricFailuresCheckedFrom(&engine, @Vector(4, u64), &geometric_buf, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorPoissonCheckedFrom(&engine, @Vector(4, u64), std.math.inf(f64)));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -9931,6 +10213,16 @@ test "zero-length distribution vector fills do not validate or consume random st
     var empty_bool: [0]@Vector(8, bool) = .{};
     var empty_poisson: [0]@Vector(4, u64) = .{};
     var empty_binomial: [0]@Vector(4, u64) = .{};
+    var empty_geometric: [0]@Vector(4, u64) = .{};
+
+    try fillVectorGeometricCheckedFrom(&engine, @Vector(4, u64), &empty_geometric, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorGeometricChecked(rng, @Vector(4, u64), &empty_geometric, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorGeometricFailuresCheckedFrom(&engine, @Vector(4, u64), &empty_geometric, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorGeometricFailuresChecked(rng, @Vector(4, u64), &empty_geometric, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
 
     try fillVectorBinomialCheckedFrom(&engine, @Vector(4, u64), &empty_binomial, 10, 1.1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -12671,6 +12963,20 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorBinomialFrom(&unchecked, @Vector(4, u64), &vector_binomial_unchecked, 10, 0.5);
         try fillVectorBinomialCheckedFrom(&checked, @Vector(4, u64), &vector_binomial_checked, 10, 0.5);
         try std.testing.expectEqualSlices(@Vector(4, u64), &vector_binomial_unchecked, &vector_binomial_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_geometric_unchecked: [4]@Vector(4, u64) = undefined;
+        var vector_geometric_checked: [4]@Vector(4, u64) = undefined;
+        fillVectorGeometricFrom(&unchecked, @Vector(4, u64), &vector_geometric_unchecked, 0.25);
+        try fillVectorGeometricCheckedFrom(&checked, @Vector(4, u64), &vector_geometric_checked, 0.25);
+        try std.testing.expectEqualSlices(@Vector(4, u64), &vector_geometric_unchecked, &vector_geometric_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_geometric_failures_unchecked: [4]@Vector(4, u64) = undefined;
+        var vector_geometric_failures_checked: [4]@Vector(4, u64) = undefined;
+        fillVectorGeometricFailuresFrom(&unchecked, @Vector(4, u64), &vector_geometric_failures_unchecked, 0.25);
+        try fillVectorGeometricFailuresCheckedFrom(&checked, @Vector(4, u64), &vector_geometric_failures_checked, 0.25);
+        try std.testing.expectEqualSlices(@Vector(4, u64), &vector_geometric_failures_unchecked, &vector_geometric_failures_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var vector_poisson_unchecked: [4]@Vector(4, u64) = undefined;

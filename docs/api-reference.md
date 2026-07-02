@@ -191,11 +191,18 @@ Single-shot helpers:
   `fillVectorPoissonCheckedFrom`, `geometric`,
   `geometricFrom`, `geometricChecked`, `geometricCheckedFrom`,
   `fillGeometric`, `fillGeometricFrom`, `fillGeometricChecked`,
-  `fillGeometricCheckedFrom`,
+  `fillGeometricCheckedFrom`, `vectorGeometric`, `vectorGeometricFrom`,
+  `vectorGeometricChecked`, `vectorGeometricCheckedFrom`,
+  `fillVectorGeometric`, `fillVectorGeometricFrom`,
+  `fillVectorGeometricChecked`, `fillVectorGeometricCheckedFrom`,
   `geometricFailures`, `geometricFailuresFrom`, `geometricFailuresChecked`,
   `geometricFailuresCheckedFrom`, `fillGeometricFailures`,
   `fillGeometricFailuresFrom`, `fillGeometricFailuresChecked`,
-  `fillGeometricFailuresCheckedFrom`, `standardGeometric`,
+  `fillGeometricFailuresCheckedFrom`, `vectorGeometricFailures`,
+  `vectorGeometricFailuresFrom`, `vectorGeometricFailuresChecked`,
+  `vectorGeometricFailuresCheckedFrom`, `fillVectorGeometricFailures`,
+  `fillVectorGeometricFailuresFrom`, `fillVectorGeometricFailuresChecked`,
+  `fillVectorGeometricFailuresCheckedFrom`, `standardGeometric`,
   `standardGeometricFrom`, `fillStandardGeometric`,
   `fillStandardGeometricFrom`, `poissonAhrensDieter`,
   `poissonAhrensDieterFrom`, `poissonAhrensDieterChecked`,
@@ -625,6 +632,18 @@ Reusable samplers:
 - `Geometric.sampleFrom`
 - `Geometric.fill`
 - `Geometric.fillFrom`
+- `VectorGeometric(VectorType)`
+- `VectorGeometric(VectorType).init`
+- `VectorGeometric(VectorType).probabilityValue`
+- `VectorGeometric(VectorType).expectedValue`
+- `VectorGeometric(VectorType).varianceValue`
+- `VectorGeometric(VectorType).modeValue`
+- `VectorGeometric(VectorType).minValue`
+- `VectorGeometric(VectorType).maxValue`
+- `VectorGeometric(VectorType).sample`
+- `VectorGeometric(VectorType).sampleFrom`
+- `VectorGeometric(VectorType).fill`
+- `VectorGeometric(VectorType).fillFrom`
 - `GeometricFailures`
 - `GeometricFailures.init`
 - `GeometricFailures.probabilityValue`
@@ -637,6 +656,18 @@ Reusable samplers:
 - `GeometricFailures.sampleFrom`
 - `GeometricFailures.fill`
 - `GeometricFailures.fillFrom`
+- `VectorGeometricFailures(VectorType)`
+- `VectorGeometricFailures(VectorType).init`
+- `VectorGeometricFailures(VectorType).probabilityValue`
+- `VectorGeometricFailures(VectorType).expectedValue`
+- `VectorGeometricFailures(VectorType).varianceValue`
+- `VectorGeometricFailures(VectorType).modeValue`
+- `VectorGeometricFailures(VectorType).minValue`
+- `VectorGeometricFailures(VectorType).maxValue`
+- `VectorGeometricFailures(VectorType).sample`
+- `VectorGeometricFailures(VectorType).sampleFrom`
+- `VectorGeometricFailures(VectorType).fill`
+- `VectorGeometricFailures(VectorType).fillFrom`
 - `StandardGeometric`
 - `StandardGeometric.probabilityValue`
 - `StandardGeometric.expectedValue`
