@@ -316,6 +316,8 @@ Reusable samplers:
 - `Uniform(T).lowValue`
 - `Uniform(T).highValue`
 - `Uniform(T).isInclusive`
+- `Uniform(T).expectedValue`
+- `Uniform(T).varianceValue`
 - `Uniform(T).sample`
 - `Uniform(T).sampleFrom`
 - `Uniform(T).fill`

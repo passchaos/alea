@@ -1123,6 +1123,14 @@ fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     }
 }
 
+fn UniformMoment(comptime T: type) type {
+    return switch (@typeInfo(T)) {
+        .int => f64,
+        .float => T,
+        else => @compileError("Uniform supports integer and floating-point types"),
+    };
+}
+
 pub fn Uniform(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1151,6 +1159,37 @@ pub fn Uniform(comptime T: type) type {
 
         pub fn isInclusive(self: Self) bool {
             return self.inclusive;
+        }
+
+        pub fn expectedValue(self: Self) UniformMoment(T) {
+            return switch (@typeInfo(T)) {
+                .int => blk: {
+                    const low = @as(f64, @floatFromInt(self.low));
+                    const high = @as(f64, @floatFromInt(self.high));
+                    const endpoint_count: f64 = if (self.inclusive) 1 else 0;
+                    const count = high - low + endpoint_count;
+                    break :blk low + (count - 1) / 2;
+                },
+                .float => self.low + (self.high - self.low) / 2,
+                else => @compileError("Uniform supports integer and floating-point types"),
+            };
+        }
+
+        pub fn varianceValue(self: Self) UniformMoment(T) {
+            return switch (@typeInfo(T)) {
+                .int => blk: {
+                    const low = @as(f64, @floatFromInt(self.low));
+                    const high = @as(f64, @floatFromInt(self.high));
+                    const endpoint_count: f64 = if (self.inclusive) 1 else 0;
+                    const count = high - low + endpoint_count;
+                    break :blk (count * count - 1) / 12;
+                },
+                .float => blk: {
+                    const width = self.high - self.low;
+                    break :blk width * width / 12;
+                },
+                else => @compileError("Uniform supports integer and floating-point types"),
+            };
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -8341,6 +8380,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectEqual(@as(u32, 3), uniform_sampler.lowValue());
     try std.testing.expectEqual(@as(u32, 9), uniform_sampler.highValue());
     try std.testing.expect(!uniform_sampler.isInclusive());
+    try std.testing.expectApproxEqAbs(@as(f64, 5.5), uniform_sampler.expectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 35.0 / 12.0), uniform_sampler.varianceValue(), 0);
     const uniform_value = uniform_sampler.sampleFrom(&direct_engine);
     try std.testing.expect(uniform_value >= 3 and uniform_value < 9);
     var uniform_buf: [8]u32 = undefined;
@@ -8352,8 +8393,13 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectEqual(@as(u32, 3), uniform_inclusive_sampler.lowValue());
     try std.testing.expectEqual(@as(u32, 9), uniform_inclusive_sampler.highValue());
     try std.testing.expect(uniform_inclusive_sampler.isInclusive());
+    try std.testing.expectApproxEqAbs(@as(f64, 6), uniform_inclusive_sampler.expectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), uniform_inclusive_sampler.varianceValue(), 0);
     for (direct_uniform_buf) |value| try std.testing.expect(value >= 3 and value < 9);
 
+    const float_uniform = try Uniform(f64).init(1, 3);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), float_uniform.expectedValue(), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), float_uniform.varianceValue(), 0);
     const inclusive_uniform = try Uniform(u32).initInclusive(3, 9);
     const inclusive_value = inclusive_uniform.sampleFrom(&direct_engine);
     try std.testing.expect(inclusive_value >= 3 and inclusive_value <= 9);
