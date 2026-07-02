@@ -238,7 +238,10 @@ Single-shot helpers:
   `fillVectorChiSquaredChecked`, `fillVectorChiSquaredCheckedFrom`,
   `chi`, `chiFrom`, `chiChecked`,
   `chiCheckedFrom`, `fillChi`, `fillChiFrom`, `fillChiChecked`,
-  `fillChiCheckedFrom`, `erlang`, `erlangFrom`, `erlangChecked`,
+  `fillChiCheckedFrom`, `vectorChi`, `vectorChiFrom`, `vectorChiChecked`,
+  `vectorChiCheckedFrom`, `fillVectorChi`, `fillVectorChiFrom`,
+  `fillVectorChiChecked`, `fillVectorChiCheckedFrom`,
+  `erlang`, `erlangFrom`, `erlangChecked`,
   `erlangCheckedFrom`, `fillErlang`, `fillErlangFrom`,
   `fillErlangChecked`, `fillErlangCheckedFrom`, `beta`, `betaFrom`,
   `betaChecked`, `betaCheckedFrom`, `fillBeta`, `fillBetaFrom`,
@@ -821,6 +824,18 @@ Reusable samplers:
 - `Chi(T).sampleFrom`
 - `Chi(T).fill`
 - `Chi(T).fillFrom`
+- `VectorChi(VectorType)`
+- `VectorChi(VectorType).init`
+- `VectorChi(VectorType).dofValue`
+- `VectorChi(VectorType).expectedValue`
+- `VectorChi(VectorType).varianceValue`
+- `VectorChi(VectorType).modeValue`
+- `VectorChi(VectorType).minValue`
+- `VectorChi(VectorType).maxValue`
+- `VectorChi(VectorType).sample`
+- `VectorChi(VectorType).sampleFrom`
+- `VectorChi(VectorType).fill`
+- `VectorChi(VectorType).fillFrom`
 - `Erlang(T)`
 - `Erlang(T).init`
 - `Erlang(T).shapeValue`

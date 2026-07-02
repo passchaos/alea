@@ -4717,6 +4717,100 @@ pub fn fillChiCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T) 
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorChi(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType)) VectorType {
+    return vectorChiFrom(rng, VectorType, dof);
+}
+
+pub fn vectorChiFrom(source: anytype, comptime VectorType: type, dof: vectorChild(VectorType)) VectorType {
+    const sampler = VectorChi(VectorType).init(dof) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorChiChecked(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType)) Error!VectorType {
+    return vectorChiCheckedFrom(rng, VectorType, dof);
+}
+
+pub fn vectorChiCheckedFrom(source: anytype, comptime VectorType: type, dof: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorChi(VectorType).init(dof);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorChi(rng: Rng, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) void {
+    fillVectorChiFrom(rng, VectorType, dest, dof);
+}
+
+pub fn fillVectorChiFrom(source: anytype, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) void {
+    const sampler = VectorChi(VectorType).init(dof) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorChiChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) Error!void {
+    return fillVectorChiCheckedFrom(rng, VectorType, dest, dof);
+}
+
+pub fn fillVectorChiCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorChi(VectorType).init(dof);
+    sampler.fillFrom(source, dest);
+}
+
+pub fn VectorChi(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: Chi(Child),
+
+        pub fn init(dof: Child) Error!Self {
+            return .{ .sampler = try Chi(Child).init(dof) };
+        }
+
+        pub fn dofValue(self: Self) Child {
+            return self.sampler.dofValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn Chi(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -11009,6 +11103,38 @@ test "distribution vector helpers preserve support and stream shape" {
     for (chi_squared_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const chi_vec = try vectorChiChecked(rng, @Vector(4, f64), 4);
+    const direct_chi_vec = try vectorChiCheckedFrom(&direct_engine, @Vector(4, f64), 4);
+    try std.testing.expectEqual(chi_vec, direct_chi_vec);
+    inline for (0..4) |lane| try std.testing.expect(chi_vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_chi_sampler = try VectorChi(@Vector(4, f64)).init(4);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), vector_chi_sampler.dofValue(), 1e-12);
+    try std.testing.expect(vector_chi_sampler.expectedValue() > 0);
+    try std.testing.expect(vector_chi_sampler.varianceValue() > 0);
+    try std.testing.expectApproxEqAbs(@sqrt(@as(f64, 3)), vector_chi_sampler.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), vector_chi_sampler.minValue(), 0);
+    try std.testing.expect(vector_chi_sampler.maxValue() == null);
+    const sampled_chi_vec = vector_chi_sampler.sample(rng);
+    const direct_sampled_chi_vec = vector_chi_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_chi_vec, direct_sampled_chi_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_chi_vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var chi_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_chi_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorChiChecked(rng, @Vector(4, f64), &chi_buf_vec, 4);
+    try fillVectorChiCheckedFrom(&direct_engine, @Vector(4, f64), &direct_chi_buf_vec, 4);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &chi_buf_vec, &direct_chi_buf_vec);
+    for (chi_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_chi_sampler.fill(rng, &chi_buf_vec);
+    vector_chi_sampler.fillFrom(&direct_engine, &direct_chi_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &chi_buf_vec, &direct_chi_buf_vec);
+    for (chi_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -11109,6 +11235,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorChiSquaredCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorChiCheckedFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -11132,6 +11261,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorChiSquaredCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorChiCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -11199,6 +11331,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorChiSquaredCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorChiCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -11214,6 +11348,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorGammaChecked(rng, @Vector(4, f64), &empty, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorChiSquaredChecked(rng, @Vector(4, f64), &empty, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorChiChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -13933,6 +14069,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorChiSquaredFrom(&unchecked, @Vector(4, f64), &vector_chi_squared_unchecked, 4);
         try fillVectorChiSquaredCheckedFrom(&checked, @Vector(4, f64), &vector_chi_squared_checked, 4);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_chi_squared_unchecked, &vector_chi_squared_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_chi_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_chi_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorChiFrom(&unchecked, @Vector(4, f64), &vector_chi_unchecked, 4);
+        try fillVectorChiCheckedFrom(&checked, @Vector(4, f64), &vector_chi_checked, 4);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_chi_unchecked, &vector_chi_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;
