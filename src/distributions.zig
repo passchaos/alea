@@ -1457,8 +1457,16 @@ pub fn LogNormal(comptime T: type) type {
             return self.normal_sampler.meanValue();
         }
 
+        pub fn logMeanValue(self: Self) T {
+            return self.logMean();
+        }
+
         pub fn logStddev(self: Self) T {
             return self.normal_sampler.stddevValue();
+        }
+
+        pub fn logStddevValue(self: Self) T {
+            return self.logStddev();
         }
 
         pub fn fill(self: *Self, rng: Rng, dest: []T) void {
@@ -7830,7 +7838,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     var log_normal_mean_cv_sampler = try LogNormal(f64).initMeanCv(2, 0.5);
     try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_mean_cv_sampler.fromZScore(0) * @exp(0.5 * log_normal_mean_cv_sampler.logStddev() * log_normal_mean_cv_sampler.logStddev()), 1e-14);
     try std.testing.expect(std.math.isFinite(log_normal_mean_cv_sampler.logMean()));
+    try std.testing.expectApproxEqAbs(log_normal_mean_cv_sampler.logMean(), log_normal_mean_cv_sampler.logMeanValue(), 1e-15);
     try std.testing.expect(log_normal_mean_cv_sampler.logStddev() > 0);
+    try std.testing.expectApproxEqAbs(log_normal_mean_cv_sampler.logStddev(), log_normal_mean_cv_sampler.logStddevValue(), 1e-15);
     log_normal_mean_cv_sampler.fillFrom(&direct_engine, &direct_log_normal_buf);
     for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try logNormalCheckedFrom(&direct_engine, f64, 0, 0.25) > 0);

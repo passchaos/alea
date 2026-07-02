@@ -349,7 +349,9 @@ Reusable samplers:
 - `LogNormal(T).initMeanCv`
 - `LogNormal(T).fromZScore`
 - `LogNormal(T).logMean`
+- `LogNormal(T).logMeanValue`
 - `LogNormal(T).logStddev`
+- `LogNormal(T).logStddevValue`
 - `LogNormal(T).sample`
 - `LogNormal(T).sampleFrom`
 - `LogNormal(T).fill`
