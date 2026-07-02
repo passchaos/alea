@@ -72,7 +72,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment accessors |
 | Chi | Covered: `chi`, `Chi(T)`, including dof accessor |
 | Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment accessors |
-| LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape accessors |
+| LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape and finite-moment accessors |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta accessors |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment accessors |
 | Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape and finite-moment accessors |

@@ -551,6 +551,8 @@ Reusable samplers:
 - `LogLogistic(T).init`
 - `LogLogistic(T).scaleValue`
 - `LogLogistic(T).shapeValue`
+- `LogLogistic(T).expectedValue`
+- `LogLogistic(T).varianceValue`
 - `LogLogistic(T).sample`
 - `LogLogistic(T).sampleFrom`
 - `LogLogistic(T).fill`

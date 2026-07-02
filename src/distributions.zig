@@ -3527,6 +3527,23 @@ pub fn LogLogistic(comptime T: type) type {
             return 1 / self.inverse_shape;
         }
 
+        pub fn expectedValue(self: Self) ?T {
+            const shape = self.shapeValue();
+            if (shape <= 1) return null;
+            const angle = @as(T, @floatCast(std.math.pi)) / shape;
+            return self.scale * angle / @sin(angle);
+        }
+
+        pub fn varianceValue(self: Self) ?T {
+            const shape = self.shapeValue();
+            if (shape <= 2) return null;
+            const angle = @as(T, @floatCast(std.math.pi)) / shape;
+            const second_angle = 2 * angle;
+            const second_moment = self.scale * self.scale * second_angle / @sin(second_angle);
+            const mean = self.expectedValue().?;
+            return second_moment - mean * mean;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8725,6 +8742,11 @@ test "non-uniform samplers can be reused with sample iterators" {
     const log_logistic_sampler = try LogLogistic(f64).init(2, 3);
     try std.testing.expectApproxEqAbs(@as(f64, 2), log_logistic_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), log_logistic_sampler.shapeValue(), 1e-12);
+    const log_logistic_mean = @as(f64, 4) * std.math.pi / (3 * @sqrt(@as(f64, 3)));
+    try std.testing.expectApproxEqAbs(log_logistic_mean, log_logistic_sampler.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 16) * std.math.pi / (3 * @sqrt(@as(f64, 3))) - log_logistic_mean * log_logistic_mean, log_logistic_sampler.varianceValue().?, 1e-12);
+    try std.testing.expect((try LogLogistic(f64).init(2, 1)).expectedValue() == null);
+    try std.testing.expect((try LogLogistic(f64).init(2, 2)).varianceValue() == null);
     log_logistic_sampler.fillFrom(&direct_engine, &direct_log_logistic_buf);
     for (direct_log_logistic_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try logLogisticCheckedFrom(&direct_engine, f64, 2, 3) > 0);
