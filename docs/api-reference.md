@@ -612,6 +612,8 @@ Reusable samplers:
 - `Weibull(T).init`
 - `Weibull(T).scaleValue`
 - `Weibull(T).shapeValue`
+- `Weibull(T).expectedValue`
+- `Weibull(T).varianceValue`
 - `Weibull(T).sample`
 - `Weibull(T).sampleFrom`
 - `Weibull(T).fill`

@@ -4204,6 +4204,17 @@ pub fn Weibull(comptime T: type) type {
             return self.shape;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.scale * std.math.gamma(T, 1 + 1 / self.shape);
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const mean_scale_factor = std.math.gamma(T, 1 + 1 / self.shape);
+            const second_moment_scale_factor = std.math.gamma(T, 1 + 2 / self.shape);
+            const scale_squared = self.scale * self.scale;
+            return scale_squared * (second_moment_scale_factor - mean_scale_factor * mean_scale_factor);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8942,6 +8953,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     const weibull_sampler = try Weibull(f64).init(2, 1.5);
     try std.testing.expectApproxEqAbs(@as(f64, 2), weibull_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.5), weibull_sampler.shapeValue(), 1e-12);
+    const weibull_mean_factor = std.math.gamma(f64, 1.0 + 1.0 / 1.5);
+    const weibull_second_moment_factor = std.math.gamma(f64, 1.0 + 2.0 / 1.5);
+    try std.testing.expectApproxEqAbs(2.0 * weibull_mean_factor, weibull_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(4.0 * (weibull_second_moment_factor - weibull_mean_factor * weibull_mean_factor), weibull_sampler.varianceValue(), 1e-12);
     weibull_sampler.fillFrom(&direct_engine, &direct_weibull_buf);
     for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try weibullCheckedFrom(&direct_engine, f64, 2, 1.5) >= 0);
