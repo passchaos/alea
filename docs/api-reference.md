@@ -701,6 +701,7 @@ Dynamic weighted helpers:
 - `WeightedTree.pop`
 - `WeightedTree.update`
 - `WeightedTree.get`
+- `WeightedTree.weightAt`
 - `WeightedTree.sample`
 - `WeightedTree.sampleChecked`
 - `WeightedTree.sampleFrom`
@@ -723,6 +724,7 @@ Dynamic weighted helpers:
 - `WeightedIntTree.pop`
 - `WeightedIntTree.update`
 - `WeightedIntTree.get`
+- `WeightedIntTree.weightAt`
 - `WeightedIntTree.sample`
 - `WeightedIntTree.sampleChecked`
 - `WeightedIntTree.sampleFrom`

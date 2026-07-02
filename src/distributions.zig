@@ -5446,6 +5446,10 @@ pub fn WeightedTree(comptime Weight: type) type {
             return self.subtotals.items[index] - self.subtotal(2 * index + 1) - self.subtotal(2 * index + 2);
         }
 
+        pub fn weightAt(self: Self, index: usize) Error!f64 {
+            return self.get(index);
+        }
+
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]f64 {
             const out = try allocator.alloc(f64, self.len());
             errdefer allocator.free(out);
@@ -5634,6 +5638,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn get(self: Self, index: usize) Error!u64 {
             if (index >= self.subtotals.items.len) return error.InvalidParameter;
             return self.subtotals.items[index] - self.subtotal(2 * index + 1) - self.subtotal(2 * index + 2);
+        }
+
+        pub fn weightAt(self: Self, index: usize) Error!u64 {
+            return self.get(index);
         }
 
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]u64 {
@@ -6630,6 +6638,8 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 9), try tree.get(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), try tree.get(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), try tree.get(2), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try tree.weightAt(1), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, tree.weightAt(3));
     var weights_buf: [3]f64 = undefined;
     try tree.weightsInto(&weights_buf);
     try std.testing.expectApproxEqAbs(@as(f64, 9), weights_buf[0], 1e-12);
@@ -6773,6 +6783,8 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectEqual(@as(u64, 9), try tree.get(0));
     try std.testing.expectEqual(@as(u64, 1), try tree.get(1));
     try std.testing.expectEqual(@as(u64, 0), try tree.get(2));
+    try std.testing.expectEqual(@as(u64, 1), try tree.weightAt(1));
+    try std.testing.expectError(error.InvalidParameter, tree.weightAt(3));
     var weights_buf: [3]u64 = undefined;
     try tree.weightsInto(&weights_buf);
     try std.testing.expectEqualSlices(u64, &.{ 9, 1, 0 }, &weights_buf);
