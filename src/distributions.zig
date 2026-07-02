@@ -366,6 +366,11 @@ pub const Multinomial = struct {
         return self.probabilities;
     }
 
+    pub fn probabilityAt(self: Multinomial, index: usize) Error!f64 {
+        if (index >= self.probabilities.len) return error.InvalidParameter;
+        return self.probabilities[index];
+    }
+
     pub fn categoryCountValue(self: Multinomial) usize {
         return self.probabilities.len;
     }
@@ -5210,6 +5215,11 @@ pub fn Dirichlet(comptime T: type) type {
             return self.alpha;
         }
 
+        pub fn alphaAt(self: Self, index: usize) Error!T {
+            if (index >= self.alpha.len) return error.InvalidParameter;
+            return self.alpha[index];
+        }
+
         pub fn dimensionValue(self: Self) usize {
             return self.alpha.len;
         }
@@ -8840,6 +8850,8 @@ test "multinomial sampler returns category counts" {
     const dist = try Multinomial.init(100, &.{ 1.0, 2.0, 3.0 });
     try std.testing.expectEqual(@as(u64, 100), dist.trialsValue());
     try std.testing.expectEqualSlices(f64, &.{ 1.0, 2.0, 3.0 }, dist.probabilitiesValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 2), try dist.probabilityAt(1), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, dist.probabilityAt(3));
     try std.testing.expectEqual(@as(usize, 3), dist.categoryCountValue());
     try std.testing.expectApproxEqAbs(@as(f64, 6), dist.totalProbabilityValue(), 1e-12);
     const counts = try dist.sample(std.testing.allocator, rng);
@@ -9171,6 +9183,8 @@ test "dirichlet sampler returns simplex vectors" {
 
     const dist = try Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
     try std.testing.expectEqualSlices(f64, &.{ 1.0, 2.0, 3.0 }, dist.alphaValues());
+    try std.testing.expectApproxEqAbs(@as(f64, 2), try dist.alphaAt(1), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, dist.alphaAt(3));
     try std.testing.expectEqual(@as(usize, 3), dist.dimensionValue());
     try std.testing.expectApproxEqAbs(@as(f64, 6), dist.totalAlphaValue(), 1e-12);
     const sample = try dist.sample(std.testing.allocator, rng);

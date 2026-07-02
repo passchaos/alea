@@ -268,6 +268,7 @@ Reusable samplers:
 - `Multinomial.init`
 - `Multinomial.trialsValue`
 - `Multinomial.probabilitiesValue`
+- `Multinomial.probabilityAt`
 - `Multinomial.categoryCountValue`
 - `Multinomial.totalProbabilityValue`
 - `Multinomial.sample`
@@ -668,6 +669,7 @@ Reusable samplers:
 - `Dirichlet(T)`
 - `Dirichlet(T).init`
 - `Dirichlet(T).alphaValues`
+- `Dirichlet(T).alphaAt`
 - `Dirichlet(T).dimensionValue`
 - `Dirichlet(T).totalAlphaValue`
 - `Dirichlet(T).sample`
