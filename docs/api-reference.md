@@ -620,6 +620,8 @@ Reusable samplers:
 - `Gumbel(T).init`
 - `Gumbel(T).locationValue`
 - `Gumbel(T).scaleValue`
+- `Gumbel(T).expectedValue`
+- `Gumbel(T).varianceValue`
 - `Gumbel(T).sample`
 - `Gumbel(T).sampleFrom`
 - `Gumbel(T).fill`

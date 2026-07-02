@@ -4285,6 +4285,16 @@ pub fn Gumbel(comptime T: type) type {
             return self.scale;
         }
 
+        pub fn expectedValue(self: Self) T {
+            const euler_mascheroni = @as(T, 0.57721566490153286060651209008240243104215933593992);
+            return self.location + euler_mascheroni * self.scale;
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const scale = self.scale;
+            return std.math.pi * std.math.pi * scale * scale / 6;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8957,6 +8967,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const gumbel_sampler = try Gumbel(f64).init(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), gumbel_sampler.locationValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), gumbel_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5772156649015329), gumbel_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(std.math.pi * std.math.pi / 6.0, gumbel_sampler.varianceValue(), 1e-12);
     gumbel_sampler.fillFrom(&direct_engine, &direct_gumbel_buf);
     for (direct_gumbel_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try gumbelCheckedFrom(&direct_engine, f64, 0, 1)));
