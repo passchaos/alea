@@ -89,6 +89,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorBeta f64x4", lanes / 32, 0xd2e4, fillDistBetaF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorBeta f64x4 direct", lanes / 32, 0xd2e4, fillDistBetaF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorBeta.fill f64x4", lanes / 32, 0xd2e4, fillDistBetaSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorFisherF f64x4", lanes / 32, 0xd2f4, fillDistFisherF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorFisherF f64x4 direct", lanes / 32, 0xd2f4, fillDistFisherF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorFisherF.fill f64x4", lanes / 32, 0xd2f4, fillDistFisherFSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -780,6 +783,19 @@ fn fillDistBetaF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(
 
 fn fillDistBetaSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorBeta(@Vector(4, f64)).init(2, 5) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistFisherF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorFisherF(rng, @Vector(4, f64), dest, 5, 20);
+}
+
+fn fillDistFisherF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorFisherFFrom(engine, @Vector(4, f64), dest, 5, 20);
+}
+
+fn fillDistFisherFSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorFisherF(@Vector(4, f64)).init(5, 20) catch unreachable;
     sampler.fill(rng, dest);
 }
 

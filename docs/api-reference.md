@@ -254,6 +254,10 @@ Single-shot helpers:
   `fillVectorBetaCheckedFrom`, `fisherF`, `fisherFFrom`,
   `fisherFChecked`, `fisherFCheckedFrom`, `fillFisherF`,
   `fillFisherFFrom`, `fillFisherFChecked`, `fillFisherFCheckedFrom`,
+  `vectorFisherF`, `vectorFisherFFrom`, `vectorFisherFChecked`,
+  `vectorFisherFCheckedFrom`, `fillVectorFisherF`,
+  `fillVectorFisherFFrom`, `fillVectorFisherFChecked`,
+  `fillVectorFisherFCheckedFrom`,
   `studentT`, `studentTFrom`, `studentTChecked`, `studentTCheckedFrom`,
   `fillStudentT`, `fillStudentTFrom`, `fillStudentTChecked`,
   `fillStudentTCheckedFrom`
@@ -906,6 +910,18 @@ Reusable samplers:
 - `FisherF(T).sampleFrom`
 - `FisherF(T).fill`
 - `FisherF(T).fillFrom`
+- `VectorFisherF(VectorType)`
+- `VectorFisherF(VectorType).init`
+- `VectorFisherF(VectorType).d1Value`
+- `VectorFisherF(VectorType).d2Value`
+- `VectorFisherF(VectorType).expectedValue`
+- `VectorFisherF(VectorType).varianceValue`
+- `VectorFisherF(VectorType).minValue`
+- `VectorFisherF(VectorType).maxValue`
+- `VectorFisherF(VectorType).sample`
+- `VectorFisherF(VectorType).sampleFrom`
+- `VectorFisherF(VectorType).fill`
+- `VectorFisherF(VectorType).fillFrom`
 - `StudentT(T)`
 - `StudentT(T).init`
 - `StudentT(T).dofValue`
