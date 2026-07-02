@@ -70,7 +70,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment accessors |
 | HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment accessors |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment accessors |
-| Chi | Covered: `chi`, `Chi(T)`, including dof accessor |
+| Chi | Covered: `chi`, `Chi(T)`, including dof/moment accessors |
 | Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment accessors |
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape and finite-moment accessors |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta accessors |

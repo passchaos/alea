@@ -2549,6 +2549,17 @@ pub fn Chi(comptime T: type) type {
             return self.chi_squared_sampler.dofValue();
         }
 
+        pub fn expectedValue(self: Self) T {
+            const dof = self.dofValue();
+            const half = dof / 2;
+            return @exp(@log(@as(T, 2)) / 2 + std.math.lgamma(T, (dof + 1) / 2) - std.math.lgamma(T, half));
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const mean = self.expectedValue();
+            return self.dofValue() - mean * mean;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8500,6 +8511,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (chi_one_buf) |value| try std.testing.expect(value >= 0);
     const chi_sampler = try Chi(f64).init(4);
     try std.testing.expectApproxEqAbs(@as(f64, 4), chi_sampler.dofValue(), 1e-12);
+    const chi_mean = 3.0 * @sqrt(2.0 * std.math.pi) / 4.0;
+    try std.testing.expectApproxEqAbs(chi_mean, chi_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(4.0 - chi_mean * chi_mean, chi_sampler.varianceValue(), 1e-12);
     chi_sampler.fillFrom(&direct_engine, &direct_chi_buf);
     try std.testing.expect(try chiCheckedFrom(&direct_engine, f64, 4) > 0);
     try std.testing.expectError(error.InvalidParameter, chiCheckedFrom(&direct_engine, f64, 0));

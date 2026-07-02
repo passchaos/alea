@@ -455,6 +455,8 @@ Reusable samplers:
 - `Chi(T)`
 - `Chi(T).init`
 - `Chi(T).dofValue`
+- `Chi(T).expectedValue`
+- `Chi(T).varianceValue`
 - `Chi(T).sample`
 - `Chi(T).sampleFrom`
 - `Chi(T).fill`
