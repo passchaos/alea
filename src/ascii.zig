@@ -28,6 +28,10 @@ pub const Charset = struct {
         return self.bytes.len;
     }
 
+    pub fn isEmpty(self: Charset) bool {
+        return self.len() == 0;
+    }
+
     pub fn byteAt(self: Charset, index: usize) error{InvalidParameter}!u8 {
         if (index >= self.bytes.len) return error.InvalidParameter;
         return self.bytes[index];
@@ -198,6 +202,7 @@ test "ascii charset fills requested length" {
 
     try std.testing.expectEqualSlices(u8, alphanumeric, Alphanumeric.bytesValue());
     try std.testing.expectEqual(alphanumeric.len, Alphanumeric.len());
+    try std.testing.expect(!Alphanumeric.isEmpty());
     try std.testing.expectEqual(@as(u8, 'A'), try Alphanumeric.byteAt(0));
     try std.testing.expectError(error.InvalidParameter, Alphanumeric.byteAt(alphanumeric.len));
     try std.testing.expectEqual(@as(?usize, 0), Alphanumeric.indexOf('A'));
@@ -354,6 +359,7 @@ test "invalid charset init does not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0x96ac5eed591f009a), engine.next());
 
     const empty = Charset{ .bytes = "" };
+    try std.testing.expect(empty.isEmpty());
     try std.testing.expectError(error.EmptyCharset, empty.sampleCheckedFrom(&engine));
     try std.testing.expectEqual(@as(u64, 0xb0fd2136eb6f389a), engine.next());
     var buf: [4]u8 = undefined;
