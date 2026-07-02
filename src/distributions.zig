@@ -7413,6 +7413,117 @@ pub fn fillPowerFunctionCheckedFrom(source: anytype, comptime T: type, dest: []T
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorPowerFunction(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) VectorType {
+    return vectorPowerFunctionFrom(rng, VectorType, min, max, shape);
+}
+
+pub fn vectorPowerFunctionFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) VectorType {
+    const sampler = VectorPowerFunction(VectorType).init(min, max, shape) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorPowerFunctionChecked(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!VectorType {
+    return vectorPowerFunctionCheckedFrom(rng, VectorType, min, max, shape);
+}
+
+pub fn vectorPowerFunctionCheckedFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorPowerFunction(VectorType).init(min, max, shape);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorPowerFunction(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) void {
+    fillVectorPowerFunctionFrom(rng, VectorType, dest, min, max, shape);
+}
+
+pub fn fillVectorPowerFunctionFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) void {
+    const sampler = VectorPowerFunction(VectorType).init(min, max, shape) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorPowerFunctionChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!void {
+    return fillVectorPowerFunctionCheckedFrom(rng, VectorType, dest, min, max, shape);
+}
+
+pub fn fillVectorPowerFunctionCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType), shape: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorPowerFunction(VectorType).init(min, max, shape);
+    sampler.fillFrom(source, dest);
+}
+
+fn powerFunctionFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, min: vectorChild(VectorType), width: vectorChild(VectorType), inverse_shape: vectorChild(VectorType)) VectorType {
+    const min_vec: VectorType = @splat(min);
+    const width_vec: VectorType = @splat(width);
+    const inverse_shape_vec: VectorType = @splat(inverse_shape);
+    return min_vec + width_vec * @exp(@log(uniform_vec) * inverse_shape_vec);
+}
+
+pub fn VectorPowerFunction(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: PowerFunction(Child),
+
+        pub fn init(min: Child, max: Child, shape: Child) Error!Self {
+            return .{ .sampler = try PowerFunction(Child).init(min, max, shape) };
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn shapeValue(self: Self) Child {
+            return self.sampler.shapeValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            switch (self.sampler.method) {
+                .uniform => return Rng.vectorRangeFrom(source, VectorType, self.minValue(), self.maxValue()),
+                .sqrt => {
+                    const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+                    const min_vec: VectorType = @splat(self.minValue());
+                    const width_vec: VectorType = @splat(self.maxValue() - self.minValue());
+                    return min_vec + width_vec * @sqrt(uniform_vec);
+                },
+                .generic => {
+                    const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+                    return powerFunctionFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), self.maxValue() - self.minValue(), 1 / self.shapeValue());
+                },
+            }
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn PowerFunction(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -12669,6 +12780,52 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(kumaraswamy_beta_one_vec[lane] >= 0 and kumaraswamy_beta_one_vec[lane] <= 1);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const power_function_vec = try vectorPowerFunctionChecked(rng, @Vector(4, f64), -1, 2, 3);
+    const direct_power_function_vec = try vectorPowerFunctionCheckedFrom(&direct_engine, @Vector(4, f64), -1, 2, 3);
+    try std.testing.expectEqual(power_function_vec, direct_power_function_vec);
+    inline for (0..4) |lane| try std.testing.expect(power_function_vec[lane] >= -1 and power_function_vec[lane] <= 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_power_function_sampler = try VectorPowerFunction(@Vector(4, f64)).init(-1, 2, 3);
+    try std.testing.expectApproxEqAbs(@as(f64, -1), vector_power_function_sampler.minValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_power_function_sampler.maxValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), vector_power_function_sampler.shapeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25), vector_power_function_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 27.0 / 80.0), vector_power_function_sampler.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -1) + @as(f64, 3) * std.math.pow(f64, 0.5, 1.0 / 3.0), vector_power_function_sampler.medianValue(), 1e-12);
+    const sampled_power_function_vec = vector_power_function_sampler.sample(rng);
+    const direct_sampled_power_function_vec = vector_power_function_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_power_function_vec, direct_sampled_power_function_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_power_function_vec[lane] >= -1 and sampled_power_function_vec[lane] <= 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var power_function_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_power_function_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorPowerFunctionChecked(rng, @Vector(4, f64), &power_function_buf_vec, -1, 2, 3);
+    try fillVectorPowerFunctionCheckedFrom(&direct_engine, @Vector(4, f64), &direct_power_function_buf_vec, -1, 2, 3);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &power_function_buf_vec, &direct_power_function_buf_vec);
+    for (power_function_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_power_function_sampler.fill(rng, &power_function_buf_vec);
+    vector_power_function_sampler.fillFrom(&direct_engine, &direct_power_function_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &power_function_buf_vec, &direct_power_function_buf_vec);
+    for (power_function_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_power_function_uniform = try VectorPowerFunction(@Vector(4, f64)).init(-1, 2, 1);
+    const power_function_uniform_vec = vector_power_function_uniform.sample(rng);
+    const direct_power_function_uniform_vec = vector_power_function_uniform.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(power_function_uniform_vec, direct_power_function_uniform_vec);
+    inline for (0..4) |lane| try std.testing.expect(power_function_uniform_vec[lane] >= -1 and power_function_uniform_vec[lane] < 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_power_function_sqrt = try VectorPowerFunction(@Vector(4, f64)).init(-1, 2, 2);
+    const power_function_sqrt_vec = vector_power_function_sqrt.sample(rng);
+    const direct_power_function_sqrt_vec = vector_power_function_sqrt.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(power_function_sqrt_vec, direct_power_function_sqrt_vec);
+    inline for (0..4) |lane| try std.testing.expect(power_function_sqrt_vec[lane] >= -1 and power_function_sqrt_vec[lane] <= 2);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -12805,6 +12962,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorKumaraswamyCheckedFrom(&engine, @Vector(4, f64), 0, 5));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorPowerFunctionCheckedFrom(&engine, @Vector(4, f64), -1, 2, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -12864,6 +13024,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorKumaraswamyCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorPowerFunctionCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, -1, 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -12955,6 +13118,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorKumaraswamyCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 5);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorPowerFunctionCheckedFrom(&engine, @Vector(4, f64), &empty, -1, 2, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -12994,6 +13159,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorLogLogisticChecked(rng, @Vector(4, f64), &empty, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorKumaraswamyChecked(rng, @Vector(4, f64), &empty, 0, 5);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorPowerFunctionChecked(rng, @Vector(4, f64), &empty, -1, 2, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -15826,6 +15993,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorKumaraswamyFrom(&unchecked, @Vector(4, f64), &vector_kumaraswamy_unchecked, 2, 5);
         try fillVectorKumaraswamyCheckedFrom(&checked, @Vector(4, f64), &vector_kumaraswamy_checked, 2, 5);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_kumaraswamy_unchecked, &vector_kumaraswamy_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_power_function_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_power_function_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorPowerFunctionFrom(&unchecked, @Vector(4, f64), &vector_power_function_unchecked, -1, 2, 3);
+        try fillVectorPowerFunctionCheckedFrom(&checked, @Vector(4, f64), &vector_power_function_checked, -1, 2, 3);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_power_function_unchecked, &vector_power_function_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;
