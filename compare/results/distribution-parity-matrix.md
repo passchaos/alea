@@ -22,7 +22,7 @@ Zig-native way.
 | `UniformDuration` | Covered by `durationRangeLessThan` and `durationRangeAtMost` for `std.Io.Duration` |
 | `Bernoulli` | Covered by `Bernoulli`, `chance`, `ratio`, checked variants, and probability/moment accessors |
 | `Alphanumeric`, `Alphabetic` | Covered by ASCII charsets and `Charset`, including charset byte diagnostics |
-| `Slice::Choose` | Covered by `seq.Choice` and `chooseIter`, including item-slice and uniform-probability diagnostics |
+| `Slice::Choose` | Covered by `seq.Choice` and `chooseIter`, including item-slice diagnostics plus single and bulk uniform-probability exports |
 | `WeightedIndex` | Covered by `weightedIndex`, `AliasTable`, `WeightedChoice`; checked paths reject non-finite weights and overflowing totals, and `AliasTable.update` / `WeightedChoice.update` support weight replacement |
 
 ## Historical Rust `rand` Non-Uniform Distributions

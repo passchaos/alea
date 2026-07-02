@@ -898,6 +898,7 @@ Dynamic weighted helpers:
   `WeightedChoice(T, Weight)`,
   `Choice.init`, `Choice.initChecked`, `Choice.len`,
   `Choice.itemsValue`, `Choice.itemAt`, `Choice.probabilityAt`,
+  `Choice.probabilities`, `Choice.probabilitiesInto`,
   `Choice.sample`,
   `Choice.sampleFrom`, `Choice.sampleValue`, `Choice.sampleValueFrom`,
   `Choice.fill`, `Choice.fillFrom`,

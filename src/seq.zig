@@ -576,6 +576,18 @@ pub fn Choice(comptime T: type) type {
             return 1.0 / @as(f64, @floatFromInt(self.items.len));
         }
 
+        pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
+            const out = try allocator.alloc(f64, self.items.len);
+            errdefer allocator.free(out);
+            try self.probabilitiesInto(out);
+            return out;
+        }
+
+        pub fn probabilitiesInto(self: Self, out: []f64) Error!void {
+            if (out.len != self.items.len) return error.LengthMismatch;
+            @memset(out, 1.0 / @as(f64, @floatFromInt(self.items.len)));
+        }
+
         pub fn sample(self: Self, rng: Rng) *const T {
             return self.sampleFrom(rng);
         }
@@ -2096,6 +2108,14 @@ test "choice sampler repeatedly samples slice references" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), try choice.probabilityAt(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), try choice.probabilityAt(3), 1e-12);
     try std.testing.expectError(error.InvalidParameter, choice.probabilityAt(4));
+    var choice_probabilities: [4]f64 = undefined;
+    try choice.probabilitiesInto(&choice_probabilities);
+    for (choice_probabilities) |probability| try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability, 1e-12);
+    var wrong_probability_len: [3]f64 = undefined;
+    try std.testing.expectError(error.LengthMismatch, choice.probabilitiesInto(&wrong_probability_len));
+    const owned_probabilities = try choice.probabilities(std.testing.allocator);
+    defer std.testing.allocator.free(owned_probabilities);
+    try std.testing.expectEqualSlices(f64, &choice_probabilities, owned_probabilities);
     try std.testing.expect(Choice(u8).init(&.{}) == null);
     try std.testing.expectError(error.EmptyInput, Choice(u8).initChecked(&.{}));
 
