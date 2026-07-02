@@ -1199,6 +1199,16 @@ pub const Open01 = struct {
         return false;
     }
 
+    pub fn expectedValue(self: Open01, comptime T: type) T {
+        _ = self;
+        return 0.5;
+    }
+
+    pub fn varianceValue(self: Open01, comptime T: type) T {
+        _ = self;
+        return 1.0 / 12.0;
+    }
+
     pub fn sample(_: Open01, rng: Rng, comptime T: type) T {
         return Rng.floatOpenFrom(rng, T);
     }
@@ -1235,6 +1245,16 @@ pub const OpenClosed01 = struct {
     pub fn includesHigh(self: OpenClosed01) bool {
         _ = self;
         return true;
+    }
+
+    pub fn expectedValue(self: OpenClosed01, comptime T: type) T {
+        _ = self;
+        return 0.5;
+    }
+
+    pub fn varianceValue(self: OpenClosed01, comptime T: type) T {
+        _ = self;
+        return 1.0 / 12.0;
     }
 
     pub fn sample(_: OpenClosed01, rng: Rng, comptime T: type) T {
@@ -8348,6 +8368,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectEqual(@as(f64, 1), (Open01{}).highValue(f64));
     try std.testing.expect(!(Open01{}).includesLow());
     try std.testing.expect(!(Open01{}).includesHigh());
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), (Open01{}).expectedValue(f64), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 12.0), (Open01{}).varianceValue(f64), 0);
     (Open01{}).fill(rng, f64, &open01_buf);
     for (open01_buf) |value| try std.testing.expect(value > 0 and value < 1);
     (Open01{}).fillFrom(&direct_engine, f64, &open01_buf);
@@ -8360,6 +8382,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectEqual(@as(f64, 1), (OpenClosed01{}).highValue(f64));
     try std.testing.expect(!(OpenClosed01{}).includesLow());
     try std.testing.expect((OpenClosed01{}).includesHigh());
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), (OpenClosed01{}).expectedValue(f64), 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 12.0), (OpenClosed01{}).varianceValue(f64), 0);
     (OpenClosed01{}).fill(rng, f64, &open_closed01_buf);
     for (open_closed01_buf) |value| try std.testing.expect(value > 0 and value <= 1);
     (OpenClosed01{}).fillFrom(&direct_engine, f64, &open_closed01_buf);

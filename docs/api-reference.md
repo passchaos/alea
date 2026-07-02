@@ -325,6 +325,8 @@ Reusable samplers:
 - `Open01.highValue`
 - `Open01.includesLow`
 - `Open01.includesHigh`
+- `Open01.expectedValue`
+- `Open01.varianceValue`
 - `Open01.sample`
 - `Open01.sampleFrom`
 - `Open01.fill`
@@ -334,6 +336,8 @@ Reusable samplers:
 - `OpenClosed01.highValue`
 - `OpenClosed01.includesLow`
 - `OpenClosed01.includesHigh`
+- `OpenClosed01.expectedValue`
+- `OpenClosed01.varianceValue`
 - `OpenClosed01.sample`
 - `OpenClosed01.sampleFrom`
 - `OpenClosed01.fill`
