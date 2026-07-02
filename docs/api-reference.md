@@ -251,6 +251,7 @@ Reusable samplers:
 - `Bernoulli.init`
 - `Bernoulli.initRatio`
 - `Bernoulli.probability`
+- `Bernoulli.probabilityValue`
 - `Bernoulli.sample`
 - `Bernoulli.sampleFrom`
 - `Bernoulli.fill`
