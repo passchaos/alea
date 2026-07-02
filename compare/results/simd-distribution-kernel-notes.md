@@ -16,10 +16,14 @@ the scalar draw/repair policy simple.
 Latest `vectorbench` evidence is tracked in `performance-triage.md` and
 `core-rand-coverage.md`. Representative rows are roughly:
 
-- normal f32x8 / f64x4 direct: about 498M / 497M lanes/s,
-- standard normal f32x8 / f64x4: about 499M / 502M lanes/s,
-- exponential f32x8 / f64x4 direct: about 471M / 468M lanes/s,
-- standard exponential f32x8 / f64x4: about 473M / 472M lanes/s.
+- normal f32x8 / f64x4 direct: about 478M / 443M lanes/s,
+- standard normal f32x8 / f64x4 direct: about 453M / 456M lanes/s,
+- exponential f32x8 / f64x4 direct: about 412M / 422M lanes/s,
+- standard exponential f32x8 / f64x4 direct: about 397M / 381M lanes/s.
+
+These rows are host/load sensitive, so production decisions should compare
+candidates in the same `vectorbench` run rather than against stale absolute
+numbers.
 
 ## Rejected Or Deferred Shapes
 
@@ -28,10 +32,13 @@ Latest `vectorbench` evidence is tracked in `performance-triage.md` and
 - f64x4 ziggurat fast-path plus scalar repair loses to scalar lane-fill.
 - f32x8 repair probes are useful evidence in isolated `ziggurat-probe` rows,
   but the advantage does not survive the real vector-slice fill harness:
-  standard repair rows match but do not beat the current direct rows, and
-  parameterized repair rows trail the current parameterized defaults. FastPrng
-  repair probe rows likewise trail or only match current production rows once
-  correct stream-shape repair is required.
+  standard repair rows can be close to current direct rows in a given run, but
+  do not provide a durable standard/parameterized no-regression win. Recent
+  vectorbench rows show f32x8 repair about 472M standard-normal, 476M normal,
+  389M standard-exponential, and 378M exponential lanes/s versus matching
+  direct rows around 453M, 478M, 397M, and 412M. FastPrng repair probe rows
+  likewise trail or only match current production rows once correct stream-shape
+  repair is required.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
   rejected lanes: prefetching candidates changes how repair consumes randomness.
 
