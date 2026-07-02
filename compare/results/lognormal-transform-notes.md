@@ -33,6 +33,8 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
 - `@mulAdd` in the single-sample expression does not win.
 - `exp2(x * log2e)` regresses.
 - `std.math.exp` is tied with `@exp`.
+- Manual unrolling of the exact `@exp` transform loop is mixed: it can provide
+  small isolated wins in one profile while regressing or tying others.
 - `@setFloatMode(.optimized)` is tied/mixed and not a no-regression win.
 - f32 vector width changes do not produce a durable win.
 - f32 `expm1(x) + 1` can be faster for narrow `stddev = 0.25`, but changes
