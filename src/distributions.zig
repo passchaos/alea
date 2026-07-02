@@ -2072,6 +2072,14 @@ pub const Geometric = struct {
         return self.p;
     }
 
+    pub fn expectedValue(self: Geometric) f64 {
+        return 1 / self.p;
+    }
+
+    pub fn varianceValue(self: Geometric) f64 {
+        return (1 - self.p) / (self.p * self.p);
+    }
+
     pub fn sample(self: Geometric, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -2101,6 +2109,14 @@ pub const GeometricFailures = struct {
         return self.p;
     }
 
+    pub fn expectedValue(self: GeometricFailures) f64 {
+        return (1 - self.p) / self.p;
+    }
+
+    pub fn varianceValue(self: GeometricFailures) f64 {
+        return (1 - self.p) / (self.p * self.p);
+    }
+
     pub fn sample(self: GeometricFailures, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -2122,6 +2138,16 @@ pub const StandardGeometric = struct {
     pub fn probabilityValue(self: StandardGeometric) f64 {
         _ = self;
         return 0.5;
+    }
+
+    pub fn expectedValue(self: StandardGeometric) f64 {
+        _ = self;
+        return 1;
+    }
+
+    pub fn varianceValue(self: StandardGeometric) f64 {
+        _ = self;
+        return 2;
     }
 
     pub fn sample(self: StandardGeometric, rng: Rng) u64 {
@@ -8140,6 +8166,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidProbability, fillGeometricCheckedFrom(&direct_engine, &direct_geometric_buf, 0));
     const geometric_sampler = try Geometric.init(0.25);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), geometric_sampler.probabilityValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), geometric_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), geometric_sampler.varianceValue(), 1e-12);
     geometric_sampler.fillFrom(&direct_engine, &direct_geometric_buf);
     for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
     try std.testing.expect(try geometricCheckedFrom(&direct_engine, 0.25) >= 1);
@@ -8156,6 +8184,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidProbability, fillGeometricFailuresCheckedFrom(&direct_engine, &geometric_failures_buf, 0));
     const geometric_failures_sampler = try GeometricFailures.init(0.25);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), geometric_failures_sampler.probabilityValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), geometric_failures_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), geometric_failures_sampler.varianceValue(), 1e-12);
     geometric_failures_sampler.fillFrom(&direct_engine, &geometric_failures_buf);
     try std.testing.expectEqual(@as(u64, 0), geometricFailures(rng, 1));
     try std.testing.expect(try geometricFailuresCheckedFrom(&direct_engine, 0.25) < 64);
@@ -8167,6 +8197,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     fillStandardGeometricFrom(&direct_engine, &standard_geometric_buf);
     const standard_geometric_sampler = StandardGeometric{};
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), standard_geometric_sampler.probabilityValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), standard_geometric_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), standard_geometric_sampler.varianceValue(), 1e-12);
     standard_geometric_sampler.fillFrom(&direct_engine, &standard_geometric_buf);
     _ = standardGeometric(rng);
     _ = standard_geometric_sampler.sampleFrom(&direct_engine);

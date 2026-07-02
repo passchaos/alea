@@ -398,6 +398,8 @@ Reusable samplers:
 - `Geometric`
 - `Geometric.init`
 - `Geometric.probabilityValue`
+- `Geometric.expectedValue`
+- `Geometric.varianceValue`
 - `Geometric.sample`
 - `Geometric.sampleFrom`
 - `Geometric.fill`
@@ -405,12 +407,16 @@ Reusable samplers:
 - `GeometricFailures`
 - `GeometricFailures.init`
 - `GeometricFailures.probabilityValue`
+- `GeometricFailures.expectedValue`
+- `GeometricFailures.varianceValue`
 - `GeometricFailures.sample`
 - `GeometricFailures.sampleFrom`
 - `GeometricFailures.fill`
 - `GeometricFailures.fillFrom`
 - `StandardGeometric`
 - `StandardGeometric.probabilityValue`
+- `StandardGeometric.expectedValue`
+- `StandardGeometric.varianceValue`
 - `StandardGeometric.sample`
 - `StandardGeometric.sampleFrom`
 - `StandardGeometric.fill`
