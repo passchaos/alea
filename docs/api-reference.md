@@ -173,6 +173,10 @@ Single-shot helpers:
   `fillVectorNormalCheckedFrom`, `logNormal`, `logNormalFrom`,
   `logNormalChecked`, `logNormalCheckedFrom`, `fillLogNormal`,
   `fillLogNormalFrom`, `fillLogNormalChecked`, `fillLogNormalCheckedFrom`,
+  `vectorLogNormal`, `vectorLogNormalFrom`, `vectorLogNormalChecked`,
+  `vectorLogNormalCheckedFrom`, `fillVectorLogNormal`,
+  `fillVectorLogNormalFrom`, `fillVectorLogNormalChecked`,
+  `fillVectorLogNormalCheckedFrom`,
   `logNormalApproxF32`, `logNormalApproxF32From`,
   `logNormalApproxF32Checked`, `logNormalApproxF32CheckedFrom`,
   `fillLogNormalApproxF32`, `fillLogNormalApproxF32From`,
@@ -610,6 +614,14 @@ Reusable samplers:
 - `LogNormal(T).sampleFrom`
 - `LogNormal(T).fill`
 - `LogNormal(T).fillFrom`
+- `VectorLogNormal(VectorType)`
+- `VectorLogNormal(VectorType).init`
+- `VectorLogNormal(VectorType).meanValue`
+- `VectorLogNormal(VectorType).stddevValue`
+- `VectorLogNormal(VectorType).sample`
+- `VectorLogNormal(VectorType).sampleFrom`
+- `VectorLogNormal(VectorType).fill`
+- `VectorLogNormal(VectorType).fillFrom`
 - `LogNormalApproxF32`
 - `LogNormalApproxF32.max_abs_mean`
 - `LogNormalApproxF32.max_stddev`

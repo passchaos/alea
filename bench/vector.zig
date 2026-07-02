@@ -68,6 +68,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardNormal f32x8 direct", lanes / 4, 0xd188, fillDistStandardNormalF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormal f64x4", lanes / 8, 0xd184, fillDistNormalF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormal f64x4 direct", lanes / 8, 0xd184, fillDistNormalF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorLogNormal f64x4", lanes / 16, 0xd194, fillDistLogNormalF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorLogNormal f64x4 direct", lanes / 16, 0xd194, fillDistLogNormalF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorLogNormal.fill f64x4", lanes / 16, 0xd194, fillDistLogNormalSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -669,6 +672,19 @@ fn fillDistNormalF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)
 
 fn fillDistNormalF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
     alea.distributions.fillVectorNormalFrom(engine, @Vector(4, f64), dest, 0, 1);
+}
+
+fn fillDistLogNormalF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorLogNormal(rng, @Vector(4, f64), dest, 0, 0.25);
+}
+
+fn fillDistLogNormalF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorLogNormalFrom(engine, @Vector(4, f64), dest, 0, 0.25);
+}
+
+fn fillDistLogNormalSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorLogNormal(@Vector(4, f64)).init(0, 0.25) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 fn fillDistStandardExponentialF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {

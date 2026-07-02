@@ -2804,6 +2804,43 @@ pub fn fillLogNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, me
     dist.fillFrom(source, dest);
 }
 
+pub fn vectorLogNormal(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
+    return vectorLogNormalFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorLogNormalFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
+    const normal_vec = vectorNormalFrom(source, VectorType, mean, stddev);
+    return @exp(normal_vec);
+}
+
+pub fn vectorLogNormalChecked(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!VectorType {
+    return vectorLogNormalCheckedFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorLogNormalCheckedFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!VectorType {
+    _ = try VectorLogNormal(VectorType).init(mean, stddev);
+    return vectorLogNormalFrom(source, VectorType, mean, stddev);
+}
+
+pub fn fillVectorLogNormal(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    fillVectorLogNormalFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorLogNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    fillVectorNormalFrom(source, VectorType, dest, mean, stddev);
+    expVectorSliceInPlace(VectorType, dest);
+}
+
+pub fn fillVectorLogNormalChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!void {
+    return fillVectorLogNormalCheckedFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorLogNormalCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    _ = try VectorLogNormal(VectorType).init(mean, stddev);
+    fillVectorLogNormalFrom(source, VectorType, dest, mean, stddev);
+}
+
 const log_normal_approx_f32_max_abs_mean: f32 = 0.25;
 const log_normal_approx_f32_max_stddev: f32 = 0.25;
 
@@ -2949,6 +2986,45 @@ pub fn LogNormal(comptime T: type) type {
         pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
             self.normal_sampler.fillFrom(source, dest);
             expInPlace(T, dest);
+        }
+    };
+}
+
+pub fn VectorLogNormal(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        normal_sampler: VectorNormal(VectorType),
+
+        pub fn init(mean: Child, stddev: Child) Error!Self {
+            return .{ .normal_sampler = try VectorNormal(VectorType).init(mean, stddev) };
+        }
+
+        pub fn meanValue(self: Self) Child {
+            return self.normal_sampler.meanValue();
+        }
+
+        pub fn stddevValue(self: Self) Child {
+            return self.normal_sampler.stddevValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorLogNormalFrom(source, VectorType, self.normal_sampler.mean, self.normal_sampler.stddev);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            fillVectorLogNormalFrom(source, VectorType, dest, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
     };
 }
@@ -8728,6 +8804,12 @@ fn floatDistancePositiveF32(a: f32, b: f32) u32 {
     return if (ai >= bi) ai - bi else bi - ai;
 }
 
+fn expVectorSliceInPlace(comptime VectorType: type, dest: []VectorType) void {
+    const info = vectorInfo(VectorType);
+    requireFloat(info.child);
+    for (dest) |*item| item.* = @exp(item.*);
+}
+
 fn absInPlace(comptime T: type, dest: []T) void {
     switch (T) {
         f32 => absInPlaceVector(T, @Vector(8, f32), dest),
@@ -10430,6 +10512,21 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(sampled_normal_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const log_normal_vec = try vectorLogNormalChecked(rng, @Vector(4, f64), 0, 0.25);
+    const direct_log_normal_vec = try vectorLogNormalCheckedFrom(&direct_engine, @Vector(4, f64), 0, 0.25);
+    try std.testing.expectEqual(log_normal_vec, direct_log_normal_vec);
+    inline for (0..4) |lane| try std.testing.expect(log_normal_vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_log_normal_sampler = try VectorLogNormal(@Vector(4, f64)).init(0, 0.25);
+    try std.testing.expectEqual(@as(f64, 0), vector_log_normal_sampler.meanValue());
+    try std.testing.expectEqual(@as(f64, 0.25), vector_log_normal_sampler.stddevValue());
+    const sampled_log_normal_vec = vector_log_normal_sampler.sample(rng);
+    const direct_sampled_log_normal_vec = vector_log_normal_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_log_normal_vec, direct_sampled_log_normal_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_log_normal_vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const exp_vec = try vectorExponentialChecked(rng, @Vector(8, f32), 2);
     const direct_exp_vec = try vectorExponentialCheckedFrom(&direct_engine, @Vector(8, f32), 2);
     try std.testing.expectEqual(exp_vec, direct_exp_vec);
@@ -10512,6 +10609,19 @@ test "distribution vector helpers preserve support and stream shape" {
     try fillVectorNormalCheckedFrom(&direct_engine, @Vector(8, f32), &direct_normal_buf, 1, 2);
     try std.testing.expectEqualSlices(@Vector(8, f32), &normal_buf, &direct_normal_buf);
     for (normal_buf) |vec| inline for (0..8) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var log_normal_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_log_normal_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorLogNormalChecked(rng, @Vector(4, f64), &log_normal_buf_vec, 0, 0.25);
+    try fillVectorLogNormalCheckedFrom(&direct_engine, @Vector(4, f64), &direct_log_normal_buf_vec, 0, 0.25);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &log_normal_buf_vec, &direct_log_normal_buf_vec);
+    for (log_normal_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_log_normal_sampler.fill(rng, &log_normal_buf_vec);
+    vector_log_normal_sampler.fillFrom(&direct_engine, &direct_log_normal_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &log_normal_buf_vec, &direct_log_normal_buf_vec);
+    for (log_normal_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
@@ -10602,6 +10712,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorLogNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -10613,6 +10726,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorLogNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -10672,6 +10788,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorLogNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -10679,6 +10797,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorUniformInclusiveChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorNormalChecked(rng, @Vector(4, f64), &empty, 0, -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorLogNormalChecked(rng, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -13370,6 +13490,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillNormalFrom(&unchecked, f64, &normal_unchecked, 0, 1);
         try fillNormalCheckedFrom(&checked, f64, &normal_checked, 0, 1);
         try std.testing.expectEqualSlices(f64, &normal_unchecked, &normal_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_log_normal_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_log_normal_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorLogNormalFrom(&unchecked, @Vector(4, f64), &vector_log_normal_unchecked, 0, 0.25);
+        try fillVectorLogNormalCheckedFrom(&checked, @Vector(4, f64), &vector_log_normal_checked, 0, 0.25);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_log_normal_unchecked, &vector_log_normal_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;
