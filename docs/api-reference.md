@@ -689,6 +689,9 @@ Reusable samplers:
 - `NormalInverseGaussian(T).init`
 - `NormalInverseGaussian(T).alphaValue`
 - `NormalInverseGaussian(T).betaValue`
+- `NormalInverseGaussian(T).gammaValue`
+- `NormalInverseGaussian(T).expectedValue`
+- `NormalInverseGaussian(T).varianceValue`
 - `NormalInverseGaussian(T).sample`
 - `NormalInverseGaussian(T).sampleFrom`
 - `NormalInverseGaussian(T).fill`

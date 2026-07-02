@@ -50,7 +50,7 @@ Zig-native way.
 | WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `totalWeight`, `weightAt`, and allocation-returning or caller-buffer weight reconstruction |
 | WeightedTreeIndex | Covered: `WeightedTree(Weight)` for generic weights and `WeightedIntTree(Weight)` for faster unsigned integer sample/update/push/pop workloads; both expose single-weight lookup plus `weights` / `weightsInto` export for diagnostics; `WeightedIntTree` stores subtotals in `u64` and rejects wider integer values that do not fit |
 | InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)`, including mean/shape/moment accessors |
-| NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)`, including alpha/beta accessors |
+| NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)`, including alpha/beta/gamma and moment accessors |
 | Zipf | Covered: `zipf`, `Zipf(T)`, including n/exponent accessors |
 | Zeta | Covered: `zeta`, `Zeta(T)`, including exponent accessor |
 

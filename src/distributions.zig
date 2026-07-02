@@ -5342,6 +5342,20 @@ pub fn NormalInverseGaussian(comptime T: type) type {
             return self.beta_param;
         }
 
+        pub fn gammaValue(self: Self) T {
+            return 1 / self.inverse_mean;
+        }
+
+        pub fn expectedValue(self: Self) T {
+            return self.beta_param * self.inverse_mean;
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const gamma_param = self.gammaValue();
+            const alpha = self.alphaValue();
+            return alpha * alpha / (gamma_param * gamma_param * gamma_param);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -9179,6 +9193,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     const nig_sampler = try NormalInverseGaussian(f64).init(2, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 2), nig_sampler.alphaValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), nig_sampler.betaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@sqrt(@as(f64, 3)), nig_sampler.gammaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(1.0 / @sqrt(@as(f64, 3)), nig_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(4.0 / (3.0 * @sqrt(@as(f64, 3))), nig_sampler.varianceValue(), 1e-12);
     nig_sampler.fillFrom(&direct_engine, &direct_nig_buf);
     for (direct_nig_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
