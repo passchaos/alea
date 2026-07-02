@@ -125,6 +125,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorMaxwell f64x4", lanes / 32, 0xd3a4, fillDistMaxwellF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorMaxwell f64x4 direct", lanes / 32, 0xd3a4, fillDistMaxwellF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorMaxwell.fill f64x4", lanes / 32, 0xd3a4, fillDistMaxwellSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorPareto f64x4", lanes / 2, 0xd3b4, fillDistParetoF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorPareto f64x4 direct", lanes / 2, 0xd3b4, fillDistParetoF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorPareto.fill f64x4", lanes / 2, 0xd3b4, fillDistParetoSamplerF64);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8", lanes, 0xe188, fillDistStandardExponentialF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponential f32x8 direct", lanes, 0xe188, fillDistStandardExponentialF32Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
@@ -972,6 +975,19 @@ fn fillDistMaxwellF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vect
 
 fn fillDistMaxwellSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorMaxwell(@Vector(4, f64)).init(2) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistParetoF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorPareto(rng, @Vector(4, f64), dest, 2, 3);
+}
+
+fn fillDistParetoF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorParetoFrom(engine, @Vector(4, f64), dest, 2, 3);
+}
+
+fn fillDistParetoSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorPareto(@Vector(4, f64)).init(2, 3) catch unreachable;
     sampler.fill(rng, dest);
 }
 

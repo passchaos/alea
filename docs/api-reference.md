@@ -333,7 +333,11 @@ Single-shot helpers:
   `fillVectorMaxwellCheckedFrom`,
   `pareto`, `paretoFrom`, `paretoChecked`, `paretoCheckedFrom`,
   `fillPareto`, `fillParetoFrom`, `fillParetoChecked`,
-  `fillParetoCheckedFrom`, `weibull`, `weibullFrom`,
+  `fillParetoCheckedFrom`, `vectorPareto`, `vectorParetoFrom`,
+  `vectorParetoChecked`, `vectorParetoCheckedFrom`,
+  `fillVectorPareto`, `fillVectorParetoFrom`,
+  `fillVectorParetoChecked`, `fillVectorParetoCheckedFrom`,
+  `weibull`, `weibullFrom`,
   `weibullChecked`, `weibullCheckedFrom`, `fillWeibull`, `fillWeibullFrom`,
   `fillWeibullChecked`, `fillWeibullCheckedFrom`
 - `gumbel`, `gumbelFrom`, `fillGumbel`, `fillGumbelFrom`,
@@ -1256,6 +1260,20 @@ Reusable samplers:
 - `Pareto(T).sampleFrom`
 - `Pareto(T).fill`
 - `Pareto(T).fillFrom`
+- `VectorPareto(VectorType)`
+- `VectorPareto(VectorType).init`
+- `VectorPareto(VectorType).scaleValue`
+- `VectorPareto(VectorType).shapeValue`
+- `VectorPareto(VectorType).expectedValue`
+- `VectorPareto(VectorType).varianceValue`
+- `VectorPareto(VectorType).medianValue`
+- `VectorPareto(VectorType).modeValue`
+- `VectorPareto(VectorType).minValue`
+- `VectorPareto(VectorType).maxValue`
+- `VectorPareto(VectorType).sample`
+- `VectorPareto(VectorType).sampleFrom`
+- `VectorPareto(VectorType).fill`
+- `VectorPareto(VectorType).fillFrom`
 - `Weibull(T)`
 - `Weibull(T).init`
 - `Weibull(T).scaleValue`
