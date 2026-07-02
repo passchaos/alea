@@ -31,6 +31,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast staged optimized exp", 0x1062, sample_count, stagedOptimizedExp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged std.math.exp", 0x1062, sample_count, stagedStdMathExp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged expm1+1", 0x1062, sample_count, stagedExpm1Exp);
+    try benchFill(alea.FastPrng, io, stdout, "fast standard scale then exp", 0x1062, sample_count, standardScaleThenExp);
     try benchFill(alea.FastPrng, io, stdout, "fast standard fused affine exp", 0x1062, sample_count, standardFusedAffineExp);
     try benchFill(alea.FastPrng, io, stdout, "fast standard fused affine std.math.exp", 0x1062, sample_count, standardFusedAffineStdMathExp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged vector4 exp", 0x1062, sample_count, stagedVector4Exp);
@@ -41,6 +42,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged optimized exp", 0x1062, sample_count, stagedOptimizedExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged std.math.exp", 0x1062, sample_count, stagedStdMathExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged expm1+1", 0x1062, sample_count, stagedExpm1Exp);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar standard scale then exp", 0x1062, sample_count, standardScaleThenExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar standard fused affine exp", 0x1062, sample_count, standardFusedAffineExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar standard fused affine std.math.exp", 0x1062, sample_count, standardFusedAffineStdMathExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged vector4 exp", 0x1062, sample_count, stagedVector4Exp);
@@ -51,6 +53,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged optimized exp", 0x1063, sample_count, stagedOptimizedExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged std.math.exp", 0x1063, sample_count, stagedStdMathExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged expm1+1", 0x1063, sample_count, stagedExpm1ExpF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 standard scale then exp", 0x1063, sample_count, standardScaleThenExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 standard fused affine exp", 0x1063, sample_count, standardFusedAffineExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 standard fused affine std.math.exp", 0x1063, sample_count, standardFusedAffineStdMathExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 public approx", 0x1063, sample_count, publicApproxFillF32);
@@ -64,6 +67,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged optimized exp", 0x1063, sample_count, stagedOptimizedExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged std.math.exp", 0x1063, sample_count, stagedStdMathExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged expm1+1", 0x1063, sample_count, stagedExpm1ExpF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 standard scale then exp", 0x1063, sample_count, standardScaleThenExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 standard fused affine exp", 0x1063, sample_count, standardFusedAffineExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 standard fused affine std.math.exp", 0x1063, sample_count, standardFusedAffineStdMathExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 public approx", 0x1063, sample_count, publicApproxFillF32);
@@ -241,6 +245,12 @@ fn stagedExpm1Exp(source: anytype, dest: []f64) void {
     expm1PlusOne(dest);
 }
 
+fn standardScaleThenExp(source: anytype, dest: []f64) void {
+    alea.Rng.fillNormalFrom(source, f64, dest, 0, 1);
+    scaleOnly(dest, 0.25);
+    expScalar(dest);
+}
+
 fn standardFusedAffineExp(source: anytype, dest: []f64) void {
     alea.Rng.fillNormalFrom(source, f64, dest, 0, 1);
     fusedAffineExp(dest, 0, 0.25);
@@ -279,6 +289,12 @@ fn stagedStdMathExpF32(source: anytype, dest: []f32) void {
 fn stagedExpm1ExpF32(source: anytype, dest: []f32) void {
     alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
     expm1PlusOneF32(dest);
+}
+
+fn standardScaleThenExpF32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 1);
+    scaleOnlyF32(dest, 0.25);
+    expScalarF32(dest);
 }
 
 fn standardFusedAffineExpF32(source: anytype, dest: []f32) void {
@@ -332,6 +348,10 @@ fn expm1PlusOne(dest: []f64) void {
     for (dest) |*item| item.* = std.math.expm1(item.*) + 1.0;
 }
 
+fn scaleOnly(dest: []f64, scale: f64) void {
+    for (dest) |*item| item.* *= scale;
+}
+
 fn fusedAffineExp(dest: []f64, mean: f64, stddev: f64) void {
     for (dest) |*item| item.* = @exp(mean + stddev * item.*);
 }
@@ -355,6 +375,10 @@ fn expStdMathF32(dest: []f32) void {
 
 fn expm1PlusOneF32(dest: []f32) void {
     for (dest) |*item| item.* = std.math.expm1(item.*) + 1.0;
+}
+
+fn scaleOnlyF32(dest: []f32, scale: f32) void {
+    for (dest) |*item| item.* *= scale;
 }
 
 fn fusedAffineExpF32(dest: []f32, mean: f32, stddev: f32) void {
