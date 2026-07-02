@@ -439,6 +439,14 @@ pub fn fillVectorChanceFrom(source: anytype, comptime VectorType: type, dest: []
     const info = vectorInfo(VectorType);
     if (info.child != bool) @compileError("Rng.fillVectorChance expects a bool vector");
     std.debug.assert(p >= 0 and p <= 1);
+    if (p == 0) {
+        @memset(dest, @as(VectorType, @splat(false)));
+        return;
+    }
+    if (p == 1) {
+        @memset(dest, @as(VectorType, @splat(true)));
+        return;
+    }
     for (dest) |*item| item.* = vectorChanceFrom(source, VectorType, p);
 }
 
@@ -462,6 +470,14 @@ pub fn fillVectorRatioFrom(source: anytype, comptime VectorType: type, dest: []V
     const info = vectorInfo(VectorType);
     if (info.child != bool) @compileError("Rng.fillVectorRatio expects a bool vector");
     std.debug.assert(denominator > 0 and numerator <= denominator);
+    if (numerator == 0) {
+        @memset(dest, @as(VectorType, @splat(false)));
+        return;
+    }
+    if (numerator == denominator) {
+        @memset(dest, @as(VectorType, @splat(true)));
+        return;
+    }
     for (dest) |*item| item.* = vectorRatioFrom(source, VectorType, numerator, denominator);
 }
 
@@ -3152,6 +3168,30 @@ test "invalid vector probability helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "degenerate vector probability fills do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_bad);
+    var control = alea.ScalarPrng.init(0x5150_bad);
+    const rng = Rng.init(&engine);
+
+    var vec_bools: [3]@Vector(8, bool) = undefined;
+    fillVectorChanceFrom(&engine, @Vector(8, bool), &vec_bools, 0);
+    for (vec_bools) |vec_sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(false)), vec_sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try rng.fillVectorChanceChecked(@Vector(8, bool), &vec_bools, 1);
+    for (vec_bools) |vec_sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), vec_sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorRatioFrom(&engine, @Vector(8, bool), &vec_bools, 0, 7);
+    for (vec_bools) |vec_sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(false)), vec_sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try rng.fillVectorRatioChecked(@Vector(8, bool), &vec_bools, 7, 7);
+    for (vec_bools) |vec_sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), vec_sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "invalid vector distribution helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_baa);
@@ -3391,7 +3431,6 @@ test "degenerate normal helpers do not consume random stream" {
 
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(-3.5)), try vectorNormalCheckedFrom(&engine, @Vector(4, f64), -3.5, 0));
     try std.testing.expectEqual(control.next(), engine.next());
-
     var vec_out: [3]@Vector(8, f32) = undefined;
     rng.fillVectorNormal(@Vector(8, f32), &vec_out, -1.5, 0);
     for (vec_out) |vec_sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(-1.5)), vec_sample);
