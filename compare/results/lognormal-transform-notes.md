@@ -37,6 +37,8 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   regresses another and requires linking libc, so it is not a generic default.
 - Manual unrolling of the exact `@exp` transform loop is mixed: it can provide
   small isolated wins in one profile while regressing or tying others.
+- Indexing through the destination slice in a `while` loop is mixed and
+  regresses the FastPrng f64 profile, so pointer iteration remains the default.
 - `@setFloatMode(.optimized)` is tied/mixed and not a no-regression win.
 - f32 vector width changes do not produce a durable win.
 - f32 `expm1(x) + 1` can be faster for narrow `stddev = 0.25`, but changes
