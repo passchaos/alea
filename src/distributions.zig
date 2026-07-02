@@ -10201,6 +10201,106 @@ pub fn fillNormalInverseGaussianCheckedFrom(source: anytype, comptime T: type, d
     sampler.fillFrom(source, dest);
 }
 
+pub fn vectorNormalInverseGaussian(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
+    return vectorNormalInverseGaussianFrom(rng, VectorType, alpha, beta_param);
+}
+
+pub fn vectorNormalInverseGaussianFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
+    const sampler = VectorNormalInverseGaussian(VectorType).init(alpha, beta_param) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorNormalInverseGaussianChecked(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!VectorType {
+    return vectorNormalInverseGaussianCheckedFrom(rng, VectorType, alpha, beta_param);
+}
+
+pub fn vectorNormalInverseGaussianCheckedFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!VectorType {
+    const sampler = try VectorNormalInverseGaussian(VectorType).init(alpha, beta_param);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorNormalInverseGaussian(rng: Rng, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) void {
+    fillVectorNormalInverseGaussianFrom(rng, VectorType, dest, alpha, beta_param);
+}
+
+pub fn fillVectorNormalInverseGaussianFrom(source: anytype, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) void {
+    const sampler = VectorNormalInverseGaussian(VectorType).init(alpha, beta_param) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorNormalInverseGaussianChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!void {
+    return fillVectorNormalInverseGaussianCheckedFrom(rng, VectorType, dest, alpha, beta_param);
+}
+
+pub fn fillVectorNormalInverseGaussianCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorNormalInverseGaussian(VectorType).init(alpha, beta_param);
+    sampler.fillFrom(source, dest);
+}
+
+pub fn VectorNormalInverseGaussian(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: NormalInverseGaussian(Child),
+
+        pub fn init(alpha: Child, beta_param: Child) Error!Self {
+            return .{ .sampler = try NormalInverseGaussian(Child).init(alpha, beta_param) };
+        }
+
+        pub fn alphaValue(self: Self) Child {
+            return self.sampler.alphaValue();
+        }
+
+        pub fn betaValue(self: Self) Child {
+            return self.sampler.betaValue();
+        }
+
+        pub fn gammaValue(self: Self) Child {
+            return self.sampler.gammaValue();
+        }
+
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn minValue(self: Self) ?Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const inverse_mean = 1 / self.gammaValue();
+            const inv_gauss = vectorInverseGaussianFrom(source, VectorType, inverse_mean, 1);
+            const normal_vec = vectorStandardNormalFrom(source, VectorType);
+            const beta_vec: VectorType = @splat(self.betaValue());
+            return beta_vec * inv_gauss + @sqrt(inv_gauss) * normal_vec;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn NormalInverseGaussian(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -14160,6 +14260,39 @@ test "distribution vector helpers preserve support and stream shape" {
     for (inverse_gaussian_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0 and std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const nig_vec = try vectorNormalInverseGaussianChecked(rng, @Vector(4, f64), 2, 1);
+    const direct_nig_vec = try vectorNormalInverseGaussianCheckedFrom(&direct_engine, @Vector(4, f64), 2, 1);
+    try std.testing.expectEqual(nig_vec, direct_nig_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(nig_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_nig_sampler = try VectorNormalInverseGaussian(@Vector(4, f64)).init(2, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), vector_nig_sampler.alphaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), vector_nig_sampler.betaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@sqrt(@as(f64, 3)), vector_nig_sampler.gammaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1) / @sqrt(@as(f64, 3)), vector_nig_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4) / (3 * @sqrt(@as(f64, 3))), vector_nig_sampler.varianceValue(), 1e-12);
+    try std.testing.expect(vector_nig_sampler.minValue() == null);
+    try std.testing.expect(vector_nig_sampler.maxValue() == null);
+    const sampled_nig_vec = vector_nig_sampler.sample(rng);
+    const direct_sampled_nig_vec = vector_nig_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_nig_vec, direct_sampled_nig_vec);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(sampled_nig_vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var nig_buf_vec: [3]@Vector(4, f64) = undefined;
+    var direct_nig_buf_vec: [3]@Vector(4, f64) = undefined;
+    try fillVectorNormalInverseGaussianChecked(rng, @Vector(4, f64), &nig_buf_vec, 2, 1);
+    try fillVectorNormalInverseGaussianCheckedFrom(&direct_engine, @Vector(4, f64), &direct_nig_buf_vec, 2, 1);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &nig_buf_vec, &direct_nig_buf_vec);
+    for (nig_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    vector_nig_sampler.fill(rng, &nig_buf_vec);
+    vector_nig_sampler.fillFrom(&direct_engine, &direct_nig_buf_vec);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &nig_buf_vec, &direct_nig_buf_vec);
+    for (nig_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var standard_exp_buf: [3]@Vector(4, f64) = undefined;
     var direct_standard_exp_buf: [3]@Vector(4, f64) = undefined;
     fillVectorStandardExponential(rng, @Vector(4, f64), &standard_exp_buf);
@@ -14326,6 +14459,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorInverseGaussianCheckedFrom(&engine, @Vector(4, f64), 0, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorNormalInverseGaussianCheckedFrom(&engine, @Vector(4, f64), 1, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -14415,6 +14551,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorInverseGaussianCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 1, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillVectorNormalInverseGaussianCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
@@ -14526,6 +14665,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorInverseGaussianCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorNormalInverseGaussianCheckedFrom(&engine, @Vector(4, f64), &empty, 1, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorUniformChecked(rng, @Vector(4, f64), &empty, std.math.inf(f64), 1);
@@ -14585,6 +14726,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try fillVectorPertChecked(rng, @Vector(4, f64), &empty, 0, 11, 10, 4);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorInverseGaussianChecked(rng, @Vector(4, f64), &empty, 0, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorNormalInverseGaussianChecked(rng, @Vector(4, f64), &empty, 1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialChecked(rng, @Vector(4, f64), &empty, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17487,6 +17630,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorInverseGaussianFrom(&unchecked, @Vector(4, f64), &vector_inverse_gaussian_unchecked, 1, 2);
         try fillVectorInverseGaussianCheckedFrom(&checked, @Vector(4, f64), &vector_inverse_gaussian_checked, 1, 2);
         try std.testing.expectEqualSlices(@Vector(4, f64), &vector_inverse_gaussian_unchecked, &vector_inverse_gaussian_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_nig_unchecked: [4]@Vector(4, f64) = undefined;
+        var vector_nig_checked: [4]@Vector(4, f64) = undefined;
+        fillVectorNormalInverseGaussianFrom(&unchecked, @Vector(4, f64), &vector_nig_unchecked, 2, 1);
+        try fillVectorNormalInverseGaussianCheckedFrom(&checked, @Vector(4, f64), &vector_nig_checked, 2, 1);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &vector_nig_unchecked, &vector_nig_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var exponential_unchecked: [8]f64 = undefined;

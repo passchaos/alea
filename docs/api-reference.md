@@ -379,6 +379,10 @@ Single-shot helpers:
   `normalInverseGaussianChecked`, `normalInverseGaussianCheckedFrom`,
   `fillNormalInverseGaussian`, `fillNormalInverseGaussianFrom`,
   `fillNormalInverseGaussianChecked`, `fillNormalInverseGaussianCheckedFrom`,
+  `vectorNormalInverseGaussian`, `vectorNormalInverseGaussianFrom`,
+  `vectorNormalInverseGaussianChecked`, `vectorNormalInverseGaussianCheckedFrom`,
+  `fillVectorNormalInverseGaussian`, `fillVectorNormalInverseGaussianFrom`,
+  `fillVectorNormalInverseGaussianChecked`, `fillVectorNormalInverseGaussianCheckedFrom`,
   `zipf`, `zipfFrom`, `zipfChecked`, `zipfCheckedFrom`, `fillZipf`,
   `fillZipfFrom`, `fillZipfChecked`, `fillZipfCheckedFrom`, `zeta`,
   `zetaFrom`, `zetaChecked`, `zetaCheckedFrom`, `fillZeta`, `fillZetaFrom`,
@@ -1483,6 +1487,19 @@ Reusable samplers:
 - `NormalInverseGaussian(T).sampleFrom`
 - `NormalInverseGaussian(T).fill`
 - `NormalInverseGaussian(T).fillFrom`
+- `VectorNormalInverseGaussian(VectorType)`
+- `VectorNormalInverseGaussian(VectorType).init`
+- `VectorNormalInverseGaussian(VectorType).alphaValue`
+- `VectorNormalInverseGaussian(VectorType).betaValue`
+- `VectorNormalInverseGaussian(VectorType).gammaValue`
+- `VectorNormalInverseGaussian(VectorType).expectedValue`
+- `VectorNormalInverseGaussian(VectorType).varianceValue`
+- `VectorNormalInverseGaussian(VectorType).minValue`
+- `VectorNormalInverseGaussian(VectorType).maxValue`
+- `VectorNormalInverseGaussian(VectorType).sample`
+- `VectorNormalInverseGaussian(VectorType).sampleFrom`
+- `VectorNormalInverseGaussian(VectorType).fill`
+- `VectorNormalInverseGaussian(VectorType).fillFrom`
 - `Zipf(T)`
 - `Zipf(T).init`
 - `Zipf(T).nValue`
