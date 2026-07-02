@@ -242,6 +242,14 @@ pub const Binomial = struct {
         return .{ .trials = trials, .p = p };
     }
 
+    pub fn trialsValue(self: Binomial) u64 {
+        return self.trials;
+    }
+
+    pub fn probabilityValue(self: Binomial) f64 {
+        return self.p;
+    }
+
     pub fn sample(self: Binomial, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -418,6 +426,14 @@ pub const NegativeBinomial = struct {
         if (successes == 0) return error.InvalidParameter;
         if (!(p > 0 and p <= 1)) return error.InvalidProbability;
         return .{ .successes = successes, .p = p };
+    }
+
+    pub fn successesValue(self: NegativeBinomial) u64 {
+        return self.successes;
+    }
+
+    pub fn probabilityValue(self: NegativeBinomial) f64 {
+        return self.p;
     }
 
     pub fn sample(self: NegativeBinomial, rng: Rng) u64 {
@@ -6194,6 +6210,8 @@ test "basic distributions stay in expected ranges" {
     for (binomial_buf) |value| try std.testing.expectEqual(@as(u64, 10), value);
     try std.testing.expectError(error.InvalidProbability, fillBinomialCheckedFrom(&direct_bernoulli_engine, &binomial_buf, 10, 1.1));
     const binomial_sampler = try Binomial.init(10, 0.5);
+    try std.testing.expectEqual(@as(u64, 10), binomial_sampler.trialsValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), binomial_sampler.probabilityValue(), 1e-12);
     binomial_sampler.fillFrom(&direct_bernoulli_engine, &binomial_buf);
     for (binomial_buf) |value| try std.testing.expect(value <= 10);
     try std.testing.expect(exponential(rng, f64, 2) >= 0);
@@ -8584,6 +8602,8 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     const rng = Rng.init(&engine);
 
     const nb = try NegativeBinomial.init(5, 0.4);
+    try std.testing.expectEqual(@as(u64, 5), nb.successesValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 0.4), nb.probabilityValue(), 1e-12);
     const hg = try Hypergeometric.init(100, 30, 10);
     const samples = 20_000;
     var nb_sum: f64 = 0;

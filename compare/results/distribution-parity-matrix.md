@@ -43,7 +43,7 @@ Zig-native way.
 | UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)` |
 | UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)` |
 | Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path |
-| Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper |
+| Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper, and trials/probability accessors |
 | Geometric / StandardGeometric | Covered: one-based `Geometric`, rand-style failure-count `GeometricFailures`, and p=0.5 `StandardGeometric` fast path |
 | Hypergeometric | Covered: `Hypergeometric`, including HIN inverse-transform fast path for small-mode regimes; large-parameter H2PE-equivalent performance remains tracked in `performance-triage.md` |
 | WeightedChoice | Covered: `WeightedChoice`, including weight updates, single/bulk weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
@@ -79,7 +79,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape accessors |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs |
 | Multinomial | Covered: `Multinomial` |
-| NegativeBinomial | Covered: `NegativeBinomial` |
+| NegativeBinomial | Covered: `NegativeBinomial`, including successes/probability accessors |
 
 ## Explicit Out Of Scope
 

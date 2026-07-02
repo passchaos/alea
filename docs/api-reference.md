@@ -257,6 +257,8 @@ Reusable samplers:
 - `Bernoulli.fillFrom`
 - `Binomial`
 - `Binomial.init`
+- `Binomial.trialsValue`
+- `Binomial.probabilityValue`
 - `Binomial.sample`
 - `Binomial.sampleFrom`
 - `Binomial.fill`
@@ -275,6 +277,8 @@ Reusable samplers:
 - `Multinomial.sampleManyIntoCheckedFrom`
 - `NegativeBinomial`
 - `NegativeBinomial.init`
+- `NegativeBinomial.successesValue`
+- `NegativeBinomial.probabilityValue`
 - `NegativeBinomial.sample`
 - `NegativeBinomial.sampleFrom`
 - `NegativeBinomial.fill`
