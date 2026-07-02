@@ -1229,6 +1229,110 @@ pub fn fillHypergeometricCheckedFrom(source: anytype, dest: []u64, population: u
     dist.fillFrom(source, dest);
 }
 
+pub fn vectorHypergeometric(rng: Rng, comptime VectorType: type, population: u64, successes: u64, draws: u64) VectorType {
+    return vectorHypergeometricFrom(rng, VectorType, population, successes, draws);
+}
+
+pub fn vectorHypergeometricFrom(source: anytype, comptime VectorType: type, population: u64, successes: u64, draws: u64) VectorType {
+    const dist = VectorHypergeometric(VectorType).init(population, successes, draws) catch unreachable;
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorHypergeometricChecked(rng: Rng, comptime VectorType: type, population: u64, successes: u64, draws: u64) Error!VectorType {
+    return vectorHypergeometricCheckedFrom(rng, VectorType, population, successes, draws);
+}
+
+pub fn vectorHypergeometricCheckedFrom(source: anytype, comptime VectorType: type, population: u64, successes: u64, draws: u64) Error!VectorType {
+    const dist = try VectorHypergeometric(VectorType).init(population, successes, draws);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorHypergeometric(rng: Rng, comptime VectorType: type, dest: []VectorType, population: u64, successes: u64, draws: u64) void {
+    fillVectorHypergeometricFrom(rng, VectorType, dest, population, successes, draws);
+}
+
+pub fn fillVectorHypergeometricFrom(source: anytype, comptime VectorType: type, dest: []VectorType, population: u64, successes: u64, draws: u64) void {
+    const dist = VectorHypergeometric(VectorType).init(population, successes, draws) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorHypergeometricChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, population: u64, successes: u64, draws: u64) Error!void {
+    return fillVectorHypergeometricCheckedFrom(rng, VectorType, dest, population, successes, draws);
+}
+
+pub fn fillVectorHypergeometricCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, population: u64, successes: u64, draws: u64) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorHypergeometric(VectorType).init(population, successes, draws);
+    dist.fillFrom(source, dest);
+}
+
+pub fn VectorHypergeometric(comptime VectorType: type) type {
+    const info = vectorInfo(VectorType);
+    if (info.child != u64) @compileError("VectorHypergeometric expects a u64 vector");
+
+    return struct {
+        const Self = @This();
+
+        sampler: Hypergeometric,
+
+        pub fn init(population: u64, successes: u64, draws: u64) Error!Self {
+            return .{ .sampler = try Hypergeometric.init(population, successes, draws) };
+        }
+
+        pub fn populationValue(self: Self) u64 {
+            return self.sampler.populationValue();
+        }
+
+        pub fn successesValue(self: Self) u64 {
+            return self.sampler.successesValue();
+        }
+
+        pub fn drawsValue(self: Self) u64 {
+            return self.sampler.drawsValue();
+        }
+
+        pub fn expectedValue(self: Self) f64 {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) f64 {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn minValue(self: Self) u64 {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) u64 {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: *const Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: *const Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: *const Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: *const Self, source: anytype, dest: []VectorType) void {
+            const min = self.sampler.minValue();
+            const max = self.sampler.maxValue();
+            if (min == max) {
+                @memset(dest, @as(VectorType, @splat(min)));
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn hypergeometricFrom(source: anytype, population: u64, successes: u64, draws: u64) u64 {
     std.debug.assert(successes <= population and draws <= population);
     if (population == 0 or successes == 0 or draws == 0) return 0;
@@ -10037,6 +10141,57 @@ test "distribution vector helpers preserve support and stream shape" {
     for (negative_binomial_buf) |vec| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), vec);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const hypergeometric_vec = vectorHypergeometric(rng, @Vector(4, u64), 100, 30, 10);
+    const direct_hypergeometric_vec = vectorHypergeometricFrom(&direct_engine, @Vector(4, u64), 100, 30, 10);
+    try std.testing.expectEqual(hypergeometric_vec, direct_hypergeometric_vec);
+    inline for (0..4) |lane| try std.testing.expect(hypergeometric_vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const checked_hypergeometric_vec = try vectorHypergeometricChecked(rng, @Vector(4, u64), 100, 30, 10);
+    const direct_checked_hypergeometric_vec = try vectorHypergeometricCheckedFrom(&direct_engine, @Vector(4, u64), 100, 30, 10);
+    try std.testing.expectEqual(checked_hypergeometric_vec, direct_checked_hypergeometric_vec);
+    inline for (0..4) |lane| try std.testing.expect(checked_hypergeometric_vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_hypergeometric_sampler = try VectorHypergeometric(@Vector(4, u64)).init(100, 30, 10);
+    try std.testing.expectEqual(@as(u64, 100), vector_hypergeometric_sampler.populationValue());
+    try std.testing.expectEqual(@as(u64, 30), vector_hypergeometric_sampler.successesValue());
+    try std.testing.expectEqual(@as(u64, 10), vector_hypergeometric_sampler.drawsValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 3), vector_hypergeometric_sampler.expectedValue(), 1e-15);
+    try std.testing.expectEqual(@as(u64, 0), vector_hypergeometric_sampler.minValue());
+    try std.testing.expectEqual(@as(u64, 10), vector_hypergeometric_sampler.maxValue());
+    const sampled_hypergeometric_vec = vector_hypergeometric_sampler.sample(rng);
+    const direct_sampled_hypergeometric_vec = vector_hypergeometric_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_hypergeometric_vec, direct_sampled_hypergeometric_vec);
+    inline for (0..4) |lane| try std.testing.expect(sampled_hypergeometric_vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var hypergeometric_buf: [3]@Vector(4, u64) = undefined;
+    var direct_hypergeometric_buf: [3]@Vector(4, u64) = undefined;
+    try fillVectorHypergeometricChecked(rng, @Vector(4, u64), &hypergeometric_buf, 100, 30, 10);
+    try fillVectorHypergeometricCheckedFrom(&direct_engine, @Vector(4, u64), &direct_hypergeometric_buf, 100, 30, 10);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &hypergeometric_buf, &direct_hypergeometric_buf);
+    for (hypergeometric_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    vector_hypergeometric_sampler.fill(rng, &hypergeometric_buf);
+    vector_hypergeometric_sampler.fillFrom(&direct_engine, &direct_hypergeometric_buf);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &hypergeometric_buf, &direct_hypergeometric_buf);
+    for (hypergeometric_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] <= 10);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const deterministic_hypergeometric = try VectorHypergeometric(@Vector(4, u64)).init(10, 10, 4);
+    const deterministic_vec = deterministic_hypergeometric.sample(rng);
+    const direct_deterministic_vec = deterministic_hypergeometric.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(deterministic_vec, direct_deterministic_vec);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(4)), deterministic_vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    deterministic_hypergeometric.fill(rng, &hypergeometric_buf);
+    deterministic_hypergeometric.fillFrom(&direct_engine, &direct_hypergeometric_buf);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &hypergeometric_buf, &direct_hypergeometric_buf);
+    for (hypergeometric_buf) |vec| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(4)), vec);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const geometric_vec = vectorGeometric(rng, @Vector(4, u64), 0.25);
     const direct_geometric_vec = vectorGeometricFrom(&direct_engine, @Vector(4, u64), 0.25);
     try std.testing.expectEqual(geometric_vec, direct_geometric_vec);
@@ -10411,6 +10566,13 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, fillVectorNegativeBinomialCheckedFrom(&engine, @Vector(4, u64), &negative_binomial_buf, 5, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorHypergeometricCheckedFrom(&engine, @Vector(4, u64), 10, 11, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var hypergeometric_buf: [4]@Vector(4, u64) = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillVectorHypergeometricCheckedFrom(&engine, @Vector(4, u64), &hypergeometric_buf, 10, 11, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidProbability, vectorGeometricCheckedFrom(&engine, @Vector(4, u64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -10469,6 +10631,12 @@ test "zero-length distribution vector fills do not validate or consume random st
     var empty_binomial: [0]@Vector(4, u64) = .{};
     var empty_geometric: [0]@Vector(4, u64) = .{};
     var empty_negative_binomial: [0]@Vector(4, u64) = .{};
+    var empty_hypergeometric: [0]@Vector(4, u64) = .{};
+
+    try fillVectorHypergeometricCheckedFrom(&engine, @Vector(4, u64), &empty_hypergeometric, 10, 11, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorHypergeometricChecked(rng, @Vector(4, u64), &empty_hypergeometric, 10, 11, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
 
     try fillVectorNegativeBinomialCheckedFrom(&engine, @Vector(4, u64), &empty_negative_binomial, 0, 0.25);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -13223,6 +13391,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorBinomialFrom(&unchecked, @Vector(4, u64), &vector_binomial_unchecked, 10, 0.5);
         try fillVectorBinomialCheckedFrom(&checked, @Vector(4, u64), &vector_binomial_checked, 10, 0.5);
         try std.testing.expectEqualSlices(@Vector(4, u64), &vector_binomial_unchecked, &vector_binomial_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var vector_hypergeometric_unchecked: [4]@Vector(4, u64) = undefined;
+        var vector_hypergeometric_checked: [4]@Vector(4, u64) = undefined;
+        fillVectorHypergeometricFrom(&unchecked, @Vector(4, u64), &vector_hypergeometric_unchecked, 100, 30, 10);
+        try fillVectorHypergeometricCheckedFrom(&checked, @Vector(4, u64), &vector_hypergeometric_checked, 100, 30, 10);
+        try std.testing.expectEqualSlices(@Vector(4, u64), &vector_hypergeometric_unchecked, &vector_hypergeometric_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var vector_negative_binomial_unchecked: [4]@Vector(4, u64) = undefined;

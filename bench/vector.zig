@@ -38,6 +38,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorNegativeBinomial u64x4 r=5 p=0.25", lanes / 16, 0xb180, fillDistNegativeBinomialU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorNegativeBinomial u64x4 direct r=5 p=0.25", lanes / 16, 0xb180, fillDistNegativeBinomialU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorNegativeBinomial.fill u64x4 r=5 p=0.25", lanes / 16, 0xb180, fillDistNegativeBinomialSamplerU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorHypergeometric u64x4", lanes / 8, 0xb190, fillDistHypergeometricU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorHypergeometric u64x4 direct", lanes / 8, 0xb190, fillDistHypergeometricU64Direct);
+    try benchVectorU64x4(io, stdout, "alea distributions.VectorHypergeometric.fill u64x4", lanes / 8, 0xb190, fillDistHypergeometricSamplerU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorGeometric u64x4 p=0.25", lanes / 8, 0xb250, fillDistGeometricU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorGeometric u64x4 direct p=0.25", lanes / 8, 0xb250, fillDistGeometricU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorGeometric.fill u64x4 p=0.25", lanes / 8, 0xb250, fillDistGeometricSamplerU64);
@@ -270,6 +273,19 @@ fn fillDistNegativeBinomialU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest
 
 fn fillDistNegativeBinomialSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
     const sampler = alea.distributions.VectorNegativeBinomial(@Vector(4, u64)).init(5, 0.25) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistHypergeometricU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorHypergeometric(rng, @Vector(4, u64), dest, 100, 30, 10);
+}
+
+fn fillDistHypergeometricU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorHypergeometricFrom(engine, @Vector(4, u64), dest, 100, 30, 10);
+}
+
+fn fillDistHypergeometricSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    const sampler = alea.distributions.VectorHypergeometric(@Vector(4, u64)).init(100, 30, 10) catch unreachable;
     sampler.fill(rng, dest);
 }
 

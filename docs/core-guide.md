@@ -67,7 +67,7 @@ including facade and direct-source `From` helpers for single scalar draws and
 scalar fills, including duration ranges. The same checked/error-returning style
 is available for vector ranges, vector probabilities, and parameterized vector
 normal/exponential sampling, including facade and direct-source `From` helpers
-for ranges, probability vectors, Bernoulli/binomial/negative-binomial/geometric/standard-geometric/Poisson vectors,
+for ranges, probability vectors, Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson vectors,
 and parameterized normal/exponential vectors/fills when the engine type is
 comptime-known.
 Zero-length checked scalar and vector fills, including the distribution-namespace
@@ -91,8 +91,8 @@ The distributions module also mirrors `Rng.fillNormal*` and
 distribution namespace; `fillUniform*` and `fillUniformInclusive*` do the same
 for exclusive and inclusive uniform ranges. Vector callers can stay in the
 same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
-`vectorBinomial*`, `fillVectorBinomial*`, `vectorNegativeBinomial*`,
-`fillVectorNegativeBinomial*`, `vectorGeometric*`,
+`vectorBinomial*`, `fillVectorBinomial*`, `vectorNegativeBinomial*`, `fillVectorNegativeBinomial*`,
+`vectorHypergeometric*`, `fillVectorHypergeometric*`, `vectorGeometric*`,
 `fillVectorGeometric*`, `vectorGeometricFailures*`,
 `fillVectorGeometricFailures*`, `vectorStandardGeometric*`,
 `fillVectorStandardGeometric*`, `vectorPoisson*`, `fillVectorPoisson*`,
@@ -327,7 +327,7 @@ benchmark shape.
 Use `vectorbench` for focused SIMD/vector-slice evidence without slowing the
 full throughput suite. The current local rows cover packed bool chance/ratio,
 strict-open/open-closed/range vector float fills, distribution-namespace vector
-Bernoulli/binomial/negative-binomial/geometric/standard-geometric/Poisson/uniform/normal/exponential wrappers over those kernels, and
+Bernoulli/binomial/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/uniform/normal/exponential wrappers over those kernels, and
 scalar-lane normal/exponential vector fills;
 representative rows are about 1.01B lanes/s
 for `fillVectorRange(f32x8)`, about 694M lanes/s for

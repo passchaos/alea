@@ -157,7 +157,11 @@ Single-shot helpers:
   `fillVectorNegativeBinomialCheckedFrom`, `hypergeometric`, `hypergeometricFrom`,
   `hypergeometricChecked`, `hypergeometricCheckedFrom`,
   `fillHypergeometric`, `fillHypergeometricFrom`,
-  `fillHypergeometricChecked`, `fillHypergeometricCheckedFrom`
+  `fillHypergeometricChecked`, `fillHypergeometricCheckedFrom`,
+  `vectorHypergeometric`, `vectorHypergeometricFrom`,
+  `vectorHypergeometricChecked`, `vectorHypergeometricCheckedFrom`,
+  `fillVectorHypergeometric`, `fillVectorHypergeometricFrom`,
+  `fillVectorHypergeometricChecked`, `fillVectorHypergeometricCheckedFrom`
 - `standardNormal`, `standardNormalFrom`, `fillStandardNormal`,
   `fillStandardNormalFrom`, `vectorStandardNormal`,
   `vectorStandardNormalFrom`, `fillVectorStandardNormal`,
@@ -411,6 +415,19 @@ Reusable samplers:
 - `Hypergeometric.sampleFrom`
 - `Hypergeometric.fill`
 - `Hypergeometric.fillFrom`
+- `VectorHypergeometric(VectorType)`
+- `VectorHypergeometric(VectorType).init`
+- `VectorHypergeometric(VectorType).populationValue`
+- `VectorHypergeometric(VectorType).successesValue`
+- `VectorHypergeometric(VectorType).drawsValue`
+- `VectorHypergeometric(VectorType).expectedValue`
+- `VectorHypergeometric(VectorType).varianceValue`
+- `VectorHypergeometric(VectorType).minValue`
+- `VectorHypergeometric(VectorType).maxValue`
+- `VectorHypergeometric(VectorType).sample`
+- `VectorHypergeometric(VectorType).sampleFrom`
+- `VectorHypergeometric(VectorType).fill`
+- `VectorHypergeometric(VectorType).fillFrom`
 - `Uniform(T)`
 - `Uniform(T).init`
 - `Uniform(T).initInclusive`
