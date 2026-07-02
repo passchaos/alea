@@ -246,6 +246,10 @@ pub fn fillRangeFrom(source: anytype, comptime T: type, dest: []T, min: T, max: 
         },
         .float => {
             std.debug.assert(min <= max);
+            if (min == max) {
+                @memset(dest, min);
+                return;
+            }
             fillFloatRangeFrom(source, T, dest, min, max);
         },
         else => @compileError("alea.Rng.fillRangeFrom supports integer and floating-point slices"),
@@ -400,7 +404,11 @@ pub fn fillVectorOpenClosedFrom(source: anytype, comptime VectorType: type, dest
 }
 
 pub fn fillVectorRangeFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
-    _ = vectorInfo(VectorType);
+    const info = vectorInfo(VectorType);
+    if (@typeInfo(info.child) == .float and min == max) {
+        @memset(dest, @as(VectorType, @splat(min)));
+        return;
+    }
     for (dest) |*item| item.* = vectorRangeFrom(source, VectorType, min, max);
 }
 
@@ -1094,6 +1102,7 @@ pub fn uintFrom(source: anytype, comptime T: type) T {
 pub fn uintLessThanFrom(source: anytype, comptime T: type, less_than: T) T {
     comptime requireUnsigned(T);
     std.debug.assert(less_than > 0);
+    if (less_than == 1) return 0;
 
     const bits = @typeInfo(T).int.bits;
     if (bits == 0) unreachable;
@@ -1122,6 +1131,7 @@ pub fn uintLessThanFrom(source: anytype, comptime T: type, less_than: T) T {
 
 pub fn uintAtMostFrom(source: anytype, comptime T: type, at_most: T) T {
     comptime requireUnsigned(T);
+    if (at_most == 0) return 0;
     if (at_most == std.math.maxInt(T)) return uintFrom(source, T);
     return uintLessThanFrom(source, T, at_most + 1);
 }
@@ -1171,6 +1181,7 @@ pub fn intRangeLessThanFrom(source: anytype, comptime T: type, at_least: T, less
 pub fn intRangeAtMostFrom(source: anytype, comptime T: type, at_least: T, at_most: T) T {
     comptime requireInt(T);
     std.debug.assert(at_least <= at_most);
+    if (at_least == at_most) return at_least;
 
     const info = @typeInfo(T).int;
     if (info.signedness == .signed) {
@@ -1275,6 +1286,7 @@ pub fn vectorRangeFrom(source: anytype, comptime VectorType: type, min: vectorCh
         },
         .float => {
             std.debug.assert(min <= max);
+            if (min == max) return @splat(min);
             return @as(VectorType, @splat(min)) + (@as(VectorType, @splat(max)) - @as(VectorType, @splat(min))) * vectorFrom(source, VectorType);
         },
         else => @compileError("Rng.vectorRange supports integer and floating-point vectors"),
@@ -2171,6 +2183,7 @@ pub fn floatOpenClosedFrom(source: anytype, comptime T: type) T {
 pub fn floatRangeFrom(source: anytype, comptime T: type, min: T, max: T) T {
     comptime requireFloat(T);
     std.debug.assert(min <= max);
+    if (min == max) return min;
     return min + (max - min) * floatFrom(source, T);
 }
 
@@ -3268,6 +3281,58 @@ test "invalid facade range helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate range helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba4);
+    var control = alea.ScalarPrng.init(0x5150_ba4);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(u32, 0), uintLessThanFrom(&engine, u32, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u32, 0), uintAtMostFrom(&engine, u32, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u32, 7), intRangeAtMostFrom(&engine, u32, 7, 7));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(i32, -5), try rng.intRangeAtMostChecked(i32, -5, -5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.Io.Duration.fromSeconds(3), durationRangeAtMostFrom(&engine, .fromSeconds(3), .fromSeconds(3)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 2.5), rng.floatRange(f64, 2.5, 2.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f32, -1.25), try floatRangeCheckedFrom(&engine, f32, -1.25, -1.25));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var floats: [5]f64 = undefined;
+    fillRangeFrom(&engine, f64, &floats, 4.75, 4.75);
+    for (floats) |sample| try std.testing.expectEqual(@as(f64, 4.75), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try rng.fillRangeChecked(f64, &floats, -3.5, -3.5);
+    for (floats) |sample| try std.testing.expectEqual(@as(f64, -3.5), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(6.25)), vectorRangeFrom(&engine, @Vector(4, f64), 6.25, 6.25));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(8, f32), @splat(-2.5)), try rng.vectorRangeChecked(@Vector(8, f32), -2.5, -2.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vec_floats: [3]@Vector(4, f64) = undefined;
+    fillVectorRangeFrom(&engine, @Vector(4, f64), &vec_floats, 9.125, 9.125);
+    for (vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(9.125)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try rng.fillVectorRangeChecked(@Vector(4, f64), &vec_floats, -8.25, -8.25);
+    for (vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(-8.25)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

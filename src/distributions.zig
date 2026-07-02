@@ -68,6 +68,7 @@ pub fn uniformInclusiveFrom(source: anytype, comptime T: type, min: T, max: T) T
         .int => return Rng.intRangeAtMostFrom(source, T, min, max),
         .float => {
             std.debug.assert(min <= max);
+            if (min == max) return min;
             return min + (max - min) * uniformClosedUnitFrom(source, T);
         },
         else => @compileError("uniformInclusive supports integer and floating-point types"),
@@ -100,6 +101,10 @@ pub fn fillUniformInclusiveFrom(source: anytype, comptime T: type, dest: []T, mi
         },
         .float => {
             std.debug.assert(min <= max and std.math.isFinite(min) and std.math.isFinite(max));
+            if (min == max) {
+                @memset(dest, min);
+                return;
+            }
             const width = max - min;
             for (dest) |*item| item.* = min + width * uniformClosedUnitFrom(source, T);
         },
@@ -173,6 +178,7 @@ pub fn vectorUniformInclusiveFrom(source: anytype, comptime VectorType: type, mi
         },
         .float => {
             std.debug.assert(min <= max and std.math.isFinite(min) and std.math.isFinite(max));
+            if (min == max) return @splat(min);
             return @as(VectorType, @splat(min)) +
                 (@as(VectorType, @splat(max)) - @as(VectorType, @splat(min))) *
                     vectorClosedUnitFrom(source, VectorType);
@@ -195,7 +201,11 @@ pub fn fillVectorUniformInclusive(rng: Rng, comptime VectorType: type, dest: []V
 }
 
 pub fn fillVectorUniformInclusiveFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
-    _ = vectorInfo(VectorType);
+    const info = vectorInfo(VectorType);
+    if (@typeInfo(info.child) == .float and min == max) {
+        @memset(dest, @as(VectorType, @splat(min)));
+        return;
+    }
     for (dest) |*item| item.* = vectorUniformInclusiveFrom(source, VectorType, min, max);
 }
 
@@ -16339,6 +16349,71 @@ test "invalid uniform distribution helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.EmptyRange, fillUniformInclusiveCheckedFrom(&engine, u32, &ints, 9, 5));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate uniform distribution helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1f3);
+    var control = alea.ScalarPrng.init(0x5150_d1f3);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 1.5), uniformFrom(&engine, f64, 1.5, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f32, -2.25), try uniformChecked(rng, f32, -2.25, -2.25));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 3.75), uniformInclusiveFrom(&engine, f64, 3.75, 3.75));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u32, 11), try uniformInclusiveCheckedFrom(&engine, u32, 11, 11));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var floats: [5]f64 = undefined;
+    fillUniformFrom(&engine, f64, &floats, 4.5, 4.5);
+    for (floats) |sample| try std.testing.expectEqual(@as(f64, 4.5), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillUniformChecked(rng, f64, &floats, -3.5, -3.5);
+    for (floats) |sample| try std.testing.expectEqual(@as(f64, -3.5), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillUniformInclusiveFrom(&engine, f64, &floats, 6.5, 6.5);
+    for (floats) |sample| try std.testing.expectEqual(@as(f64, 6.5), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillUniformInclusiveChecked(rng, f64, &floats, -7.5, -7.5);
+    for (floats) |sample| try std.testing.expectEqual(@as(f64, -7.5), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(8.5)), vectorUniformFrom(&engine, @Vector(4, f64), 8.5, 8.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(8, f32), @splat(-9.5)), try vectorUniformChecked(rng, @Vector(8, f32), -9.5, -9.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(10.5)), vectorUniformInclusiveFrom(&engine, @Vector(4, f64), 10.5, 10.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, u32), @splat(12)), try vectorUniformInclusiveCheckedFrom(&engine, @Vector(4, u32), 12, 12));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vec_floats: [3]@Vector(4, f64) = undefined;
+    fillVectorUniformFrom(&engine, @Vector(4, f64), &vec_floats, 13.5, 13.5);
+    for (vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(13.5)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorUniformChecked(rng, @Vector(4, f64), &vec_floats, -14.5, -14.5);
+    for (vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(-14.5)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorUniformInclusiveFrom(&engine, @Vector(4, f64), &vec_floats, 15.5, 15.5);
+    for (vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(15.5)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorUniformInclusiveChecked(rng, @Vector(4, f64), &vec_floats, -16.5, -16.5);
+    for (vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(-16.5)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
