@@ -5978,6 +5978,18 @@ pub fn AliasTable(comptime Weight: type) type {
             }
         }
 
+        pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
+            const out = try allocator.alloc(f64, self.prob.len);
+            errdefer allocator.free(out);
+            try self.probabilitiesInto(out);
+            return out;
+        }
+
+        pub fn probabilitiesInto(self: Self, out: []f64) Error!void {
+            try self.weightsInto(out);
+            for (out) |*value| value.* /= self.total;
+        }
+
         pub fn weightAt(self: Self, index: usize) Error!f64 {
             if (index >= self.prob.len) return error.InvalidParameter;
             const column_scale = self.total / @as(f64, @floatFromInt(self.prob.len));
@@ -7179,13 +7191,23 @@ test "alias table exposes totals and reconstructs weights" {
     try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 9.0), try table.probabilityAt(2), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), try table.probabilityAt(3), 1e-12);
     try std.testing.expectError(error.InvalidParameter, table.probabilityAt(4));
+    var stack_probabilities: [4]f64 = undefined;
+    try table.probabilitiesInto(&stack_probabilities);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 9.0), stack_probabilities[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), stack_probabilities[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 9.0), stack_probabilities[2], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), stack_probabilities[3], 1e-12);
 
     var wrong_len: [3]f64 = undefined;
     try std.testing.expectError(error.InvalidLength, table.weightsInto(&wrong_len));
+    try std.testing.expectError(error.InvalidLength, table.probabilitiesInto(&wrong_len));
 
     const owned_weights = try table.weights(std.testing.allocator);
     defer std.testing.allocator.free(owned_weights);
     try std.testing.expectEqualSlices(f64, &stack_weights, owned_weights);
+    const owned_probabilities = try table.probabilities(std.testing.allocator);
+    defer std.testing.allocator.free(owned_probabilities);
+    try std.testing.expectEqualSlices(f64, &stack_probabilities, owned_probabilities);
 
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, table.weights(failing.allocator()));

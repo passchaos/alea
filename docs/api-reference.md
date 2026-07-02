@@ -807,6 +807,8 @@ Alias helpers:
 - `AliasTable.totalWeight`
 - `AliasTable.weights`
 - `AliasTable.weightsInto`
+- `AliasTable.probabilities`
+- `AliasTable.probabilitiesInto`
 - `AliasTable.weightAt`
 - `AliasTable.probabilityAt`
 - `AliasTable.sample`
@@ -900,7 +902,8 @@ Dynamic weighted helpers:
   `WeightedChoice.init`, `WeightedChoice.deinit`, `WeightedChoice.len`,
   `WeightedChoice.itemsValue`, `WeightedChoice.itemAt`,
   `WeightedChoice.totalWeight`, `WeightedChoice.weights`,
-  `WeightedChoice.weightsInto`, `WeightedChoice.weightAt`,
+  `WeightedChoice.weightsInto`, `WeightedChoice.probabilities`,
+  `WeightedChoice.probabilitiesInto`, `WeightedChoice.weightAt`,
   `WeightedChoice.probabilityAt`,
   `WeightedChoice.update`, `WeightedChoice.sample`,
   `WeightedChoice.sampleFrom`,

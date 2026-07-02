@@ -686,6 +686,15 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             self.table.weightsInto(out) catch unreachable;
         }
 
+        pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
+            return self.table.probabilities(allocator);
+        }
+
+        pub fn probabilitiesInto(self: Self, out: []f64) Error!void {
+            if (out.len != self.items.len) return error.LengthMismatch;
+            self.table.probabilitiesInto(out) catch unreachable;
+        }
+
         pub fn weightAt(self: Self, index: usize) Error!f64 {
             if (index >= self.items.len) return error.InvalidParameter;
             return self.table.weightAt(index) catch unreachable;
@@ -2188,11 +2197,20 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 8.0), try choice.probabilityAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 7.0 / 8.0), try choice.probabilityAt(2), 1e-12);
     try std.testing.expectError(error.InvalidParameter, choice.probabilityAt(3));
+    var reconstructed_probabilities: [3]f64 = undefined;
+    try choice.probabilitiesInto(&reconstructed_probabilities);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), reconstructed_probabilities[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 8.0), reconstructed_probabilities[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7.0 / 8.0), reconstructed_probabilities[2], 1e-12);
     var wrong_weight_len: [2]f64 = undefined;
     try std.testing.expectError(error.LengthMismatch, choice.weightsInto(&wrong_weight_len));
+    try std.testing.expectError(error.LengthMismatch, choice.probabilitiesInto(&wrong_weight_len));
     const owned_weights = try choice.weights(std.testing.allocator);
     defer std.testing.allocator.free(owned_weights);
     try std.testing.expectEqualSlices(f64, &reconstructed_weights, owned_weights);
+    const owned_probabilities = try choice.probabilities(std.testing.allocator);
+    defer std.testing.allocator.free(owned_probabilities);
+    try std.testing.expectEqualSlices(f64, &reconstructed_probabilities, owned_probabilities);
 
     var i: usize = 0;
     var saw_often = false;
