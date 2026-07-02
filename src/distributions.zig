@@ -254,6 +254,14 @@ pub const Binomial = struct {
         return self.p;
     }
 
+    pub fn expectedValue(self: Binomial) f64 {
+        return @as(f64, @floatFromInt(self.trials)) * self.p;
+    }
+
+    pub fn varianceValue(self: Binomial) f64 {
+        return @as(f64, @floatFromInt(self.trials)) * self.p * (1 - self.p);
+    }
+
     pub fn sample(self: Binomial, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -6530,6 +6538,8 @@ test "basic distributions stay in expected ranges" {
     const binomial_sampler = try Binomial.init(10, 0.5);
     try std.testing.expectEqual(@as(u64, 10), binomial_sampler.trialsValue());
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), binomial_sampler.probabilityValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), binomial_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.5), binomial_sampler.varianceValue(), 1e-12);
     binomial_sampler.fillFrom(&direct_bernoulli_engine, &binomial_buf);
     for (binomial_buf) |value| try std.testing.expect(value <= 10);
     try std.testing.expect(exponential(rng, f64, 2) >= 0);

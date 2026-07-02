@@ -260,6 +260,8 @@ Reusable samplers:
 - `Binomial.init`
 - `Binomial.trialsValue`
 - `Binomial.probabilityValue`
+- `Binomial.expectedValue`
+- `Binomial.varianceValue`
 - `Binomial.sample`
 - `Binomial.sampleFrom`
 - `Binomial.fill`
