@@ -1021,6 +1021,10 @@ pub const Multinomial = struct {
 
     pub fn sampleManyIntoFrom(self: Multinomial, source: anytype, out: []u64) void {
         std.debug.assert(out.len % self.probabilities.len == 0);
+        if (self.probabilities.len == 1) {
+            @memset(out, self.trials);
+            return;
+        }
         var offset: usize = 0;
         while (offset < out.len) : (offset += self.probabilities.len) {
             self.sampleIntoFrom(source, out[offset..][0..self.probabilities.len]);
@@ -11617,6 +11621,10 @@ pub fn Dirichlet(comptime T: type) type {
 
         pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
             std.debug.assert(out.len % self.alpha.len == 0);
+            if (self.alpha.len == 1) {
+                @memset(out, 1);
+                return;
+            }
             var offset: usize = 0;
             while (offset < out.len) : (offset += self.alpha.len) {
                 self.sampleIntoFrom(source, out[offset..][0..self.alpha.len]);
@@ -17322,6 +17330,10 @@ test "degenerate multivariate samplers do not consume random stream" {
     try std.testing.expectEqualSlices(u64, &.{ 20, 20, 20 }, &many_counts);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try multinomial.sampleManyIntoChecked(rng, &many_counts);
+    try std.testing.expectEqualSlices(u64, &.{ 20, 20, 20 }, &many_counts);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const dirichlet = try Dirichlet(f64).init(&.{2.0});
     var simplex: [1]f64 = undefined;
     dirichlet.sampleIntoFrom(&engine, &simplex);
@@ -17334,6 +17346,10 @@ test "degenerate multivariate samplers do not consume random stream" {
 
     var many_simplex: [3]f64 = undefined;
     dirichlet.sampleManyIntoFrom(&engine, &many_simplex);
+    try std.testing.expectEqualSlices(f64, &.{ 1, 1, 1 }, &many_simplex);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try dirichlet.sampleManyIntoChecked(rng, &many_simplex);
     try std.testing.expectEqualSlices(f64, &.{ 1, 1, 1 }, &many_simplex);
     try std.testing.expectEqual(control.next(), engine.next());
 }
