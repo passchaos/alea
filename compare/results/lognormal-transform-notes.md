@@ -14,10 +14,10 @@ Production LogNormal sampling uses the exact conceptual shape:
 Bulk fills stage normal samples into the destination slice and apply the
 transform in place. Current evidence shows:
 
-- f64 fill is around 133M samples/s for facade/FastPrng direct and around
-  140M for ScalarPrng direct,
-- f32 fill is around 132M for facade/FastPrng direct and around 141M for
-  ScalarPrng direct,
+- fresh 1GiB focused f64 fill is around 112M samples/s for facade/FastPrng
+  direct and around 118M for ScalarPrng direct, versus local Rust around 118M,
+- fresh 1GiB focused f32 fill is around 116M for facade/FastPrng direct and
+  around 127M for ScalarPrng direct, versus local Rust around 128M,
 - normal-only fill is much faster, so the bottleneck is the transform.
 
 Local `rand_distr 0.6.0` uses the same high-level algorithm:
@@ -56,13 +56,17 @@ The exact `LogNormal(f32)` and `fillLogNormal` paths remain unchanged and keep
 
 Fresh local evidence:
 
-- `log-normal-probe -- 1048576`: f32 current/approx fill about 138.6M/142.8M
-  FastPrng and 143.3M/149.6M ScalarPrng.
+- `bench -- 1073741824 fillLogNormal`: exact f64 facade/FastPrng-direct/
+  ScalarPrng-direct about 112M/112M/118M versus local Rust log-normal about
+  118M; exact f32 about 116M/116M/127M versus local Rust f32 about 128M.
+- `log-normal-probe -- 1048576`: f32 current/approx fill remains sensitive to
+  probe shape, with recent rows around 134M/139M FastPrng and 140M/130M
+  ScalarPrng; older focused rows showed approx peaks around 143M/150M.
 - The same probe reports max 1 ULP at `stddev=0.25`, but max 51 ULP at
   `stddev=1.0` and 8028 ULP at `stddev=2.0`, which is why the public
   approximation is parameter-bounded.
-- Focused throughput rows show approximate f32 fill around 131.2M facade,
-  138.0M FastPrng direct, and 151.3M ScalarPrng direct.
+- The public approximation is therefore still an opt-in narrow-profile path,
+  not a replacement for exact `LogNormal(f32)`.
 
 ## Requirements For A Future Default Change
 
