@@ -11439,6 +11439,7 @@ pub fn VectorZeta(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.isDegenerate()) return @splat(1);
             var out: VectorType = undefined;
             inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -11449,7 +11450,15 @@ pub fn VectorZeta(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(1)));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return std.math.isInf(self.exponentValue());
         }
     };
 }
@@ -11479,8 +11488,8 @@ pub fn Zeta(comptime T: type) type {
             return 1;
         }
 
-        pub fn maxValue(_: Self) ?T {
-            return null;
+        pub fn maxValue(self: Self) ?T {
+            return if (self.isDegenerate()) 1 else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -11488,6 +11497,7 @@ pub fn Zeta(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return 1;
             while (true) {
                 const u = Rng.floatOpenClosedFrom(source, T);
                 const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
@@ -11504,7 +11514,15 @@ pub fn Zeta(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, 1);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return std.math.isInf(self.exponentValue());
         }
     };
 }
@@ -16949,6 +16967,24 @@ test "degenerate discrete distribution helpers do not consume random stream" {
 
     var vector_f64_buf: [3]@Vector(4, f64) = undefined;
     vector_zipf_sampler.fillFrom(&engine, &vector_f64_buf);
+    for (vector_f64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const zeta_sampler = try Zeta(f64).init(std.math.inf(f64));
+    try std.testing.expectEqual(@as(f64, 1), zeta_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(f64, 1), zeta_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(f64, 1), try zetaCheckedFrom(&engine, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    zeta_sampler.fillFrom(&engine, &f64_buf);
+    for (f64_buf) |sample| try std.testing.expectEqual(@as(f64, 1), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_zeta_sampler = try VectorZeta(@Vector(4, f64)).init(std.math.inf(f64));
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), vector_zeta_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_zeta_sampler.fillFrom(&engine, &vector_f64_buf);
     for (vector_f64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
