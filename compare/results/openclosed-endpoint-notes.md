@@ -56,6 +56,9 @@ Rust.
 - Complement-grid mappings such as `1.0 - float(raw >> 11) * 2^-53` and
   `float(2^53 - (raw >> 11)) * 2^-53` are exact endpoint-equivalent but
   regress in `open-closed-probe`.
+- Skipping explicit `littleToNative(u64, raw_word)` in the local x86_64 probe
+  keeps matching checksums but regresses or ties, so the portable endian-normalized
+  form remains preferable.
 - Raw byte-buffer reads that skip proper word conversion can appear fast but
   produce invalid means/checksums and are rejected.
 
