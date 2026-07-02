@@ -1345,6 +1345,11 @@ pub fn Normal(comptime T: type) type {
             return self.stddev;
         }
 
+        pub fn coefficientOfVariationValue(self: Self) ?T {
+            if (self.mean == 0) return null;
+            return self.stddev / @abs(self.mean);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return rng.normal(T, self.mean, self.stddev);
         }
@@ -7928,6 +7933,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, -7), normal_cv_sampler.fromZScore(1.5), 1e-15);
     try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.meanValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 2), normal_cv_sampler.stddevValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.2), normal_cv_sampler.coefficientOfVariationValue().?, 1e-15);
+    try std.testing.expect((try Normal(f64).init(0, 0)).coefficientOfVariationValue() == null);
 
     var exponentials = rng.sampleIter(f64, try Exponential(f64).init(2));
     try std.testing.expect(exponentials.next().? >= 0);

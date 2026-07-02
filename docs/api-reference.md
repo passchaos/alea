@@ -337,6 +337,7 @@ Reusable samplers:
 - `Normal(T).fromZScore`
 - `Normal(T).meanValue`
 - `Normal(T).stddevValue`
+- `Normal(T).coefficientOfVariationValue`
 - `Normal(T).sample`
 - `Normal(T).sampleFrom`
 - `Normal(T).fill`
