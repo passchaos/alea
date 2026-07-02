@@ -531,6 +531,8 @@ Reusable samplers:
 - `Laplace(T).init`
 - `Laplace(T).locationValue`
 - `Laplace(T).scaleValue`
+- `Laplace(T).expectedValue`
+- `Laplace(T).varianceValue`
 - `Laplace(T).sample`
 - `Laplace(T).sampleFrom`
 - `Laplace(T).fill`

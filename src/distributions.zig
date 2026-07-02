@@ -3338,6 +3338,14 @@ pub fn Laplace(comptime T: type) type {
             return self.scale;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.location;
+        }
+
+        pub fn varianceValue(self: Self) T {
+            return 2 * self.scale * self.scale;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8662,6 +8670,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const laplace_sampler = try Laplace(f64).init(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), laplace_sampler.locationValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), laplace_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), laplace_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), laplace_sampler.varianceValue(), 1e-12);
     laplace_sampler.fillFrom(&direct_engine, &direct_laplace_buf);
     for (direct_laplace_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try std.testing.expect(std.math.isFinite(try laplaceCheckedFrom(&direct_engine, f64, 0, 1)));
