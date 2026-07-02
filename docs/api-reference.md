@@ -561,6 +561,12 @@ Reusable samplers:
 - `Pert(T).initDefault`
 - `Pert(T).initRange`
 - `Pert(T).initMean`
+- `Pert(T).minValue`
+- `Pert(T).maxValue`
+- `Pert(T).shapeValue`
+- `Pert(T).modeValue`
+- `Pert(T).alphaValue`
+- `Pert(T).betaValue`
 - `PertBuilder(T).withShape`
 - `PertBuilder(T).withMode`
 - `PertBuilder(T).withMean`
