@@ -625,6 +625,10 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []*const T) void {
+            if (self.items.len == 1) {
+                @memset(dest, &self.items[0]);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
 
@@ -633,6 +637,10 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.items.len == 1) {
+                @memset(dest, self.items[0]);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleValueFrom(source);
         }
 
