@@ -2128,7 +2128,7 @@ fn f64OpenFromRaw(raw: u64) f64 {
 }
 
 fn f64OpenClosedFromRaw(raw: u64) f64 {
-    return (@as(f64, @floatFromInt(raw >> 11)) + 1.0) * (1.0 / 9007199254740992.0);
+    return @mulAdd(f64, @as(f64, @floatFromInt(raw >> 11)), 1.0 / 9007199254740992.0, 1.0 / 9007199254740992.0);
 }
 
 pub fn floatFrom(source: anytype, comptime T: type) T {

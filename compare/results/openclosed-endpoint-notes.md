@@ -13,22 +13,21 @@ values into the destination slice.
 The current conversion shape is:
 
 ```zig
-(@as(f64, @floatFromInt(raw >> 11)) + 1.0) * (1.0 / 9007199254740992.0)
+@mulAdd(f64, @as(f64, @floatFromInt(raw >> 11)), 1.0 / 9007199254740992.0, 1.0 / 9007199254740992.0)
 ```
 
-Focused rows are at the local Rust noise boundary:
+Focused rows now exceed local Rust evidence after the exact `@mulAdd` conversion update:
 
-- facade / FastPrng direct / ScalarPrng direct: about 776M / 775M / 782M
-  samples/s,
-- local Rust `OpenClosed01 f64`: about 778M samples/s in the latest focused
+- facade / FastPrng direct / ScalarPrng direct: about 792M / 792M / 793M
+  samples/s on repeated 1GiB focused reruns,
+- local Rust `OpenClosed01 f64`: about 778M samples/s in the same focused
   rerun.
 
-A later fresh focused rerun on the same host was slower overall and again shows
-a measurable gap: Alea facade / FastPrng direct / ScalarPrng direct about
-653M / 631M / 649M samples/s versus Rust `OpenClosed01 f64` about 685M.
-Repeated `open-closed-probe -- 134217728` runs show raw 96-word and 128-word
-buffers remain tied within noise, so the adopted 128-word path remains the
-simplest no-regression production choice.
+Earlier same-host reruns with the previous multiply-after-add expression were
+slower, about 653M / 631M / 649M versus Rust around 685M. Repeated
+`open-closed-probe -- 134217728` runs showed 96-word and 128-word buffers tied
+within noise, but the exact `@mulAdd` conversion repeatedly beat the raw
+float-plus-one expression while preserving checksums.
 
 ## Rust Algorithm Audit
 
@@ -48,9 +47,9 @@ Rust.
 - Scalar loop without raw-word buffering is slower.
 - 64/96/128/160/192/224/256 word buffers are all within noise or worse; 128
   remains the simplest no-regression choice.
-- Integer-domain `+1` before float conversion is tied with the adopted
-  float-plus-one expression.
-- Division by `2^53` is tied with the adopted multiply-by-reciprocal expression.
+- Integer-domain `+1` before float conversion is tied with or below the adopted
+  `@mulAdd` expression.
+- Division by `2^53` is tied with or below the adopted multiply-add expression.
 - Bitcast-based `(0, 1]` constructions regress.
 - In-place conversion, raw-vector conversion, and manual unrolling regress.
 - Complement-grid mappings such as `1.0 - float(raw >> 11) * 2^-53` and
@@ -76,5 +75,6 @@ A future production candidate must:
    focused rows, or be explicitly scoped to one source profile.
 4. Be measured against local Rust `OpenClosed01 f64` in the same focused rerun.
 
-Until a candidate meets those requirements, keep the current raw-word
-multiply-by-reciprocal path.
+The current exact `@mulAdd` raw-word path meets the local Linux S4-M4 bar for
+this focused workload. Future changes should still satisfy the requirements
+above before replacing it.

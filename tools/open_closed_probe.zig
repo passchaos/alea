@@ -28,6 +28,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(io, stdout, "facade raw int-add 128", sample_count, facadeRawFillIntAdd128);
     try benchFill(io, stdout, "facade raw narrow 128", sample_count, facadeRawFillNarrow128);
     try benchFill(io, stdout, "facade raw narrow-add 128", sample_count, facadeRawFillNarrowAdd128);
+    try benchFill(io, stdout, "facade raw split-add 128", sample_count, facadeRawFillSplitAdd128);
+    try benchFill(io, stdout, "facade raw muladd 128", sample_count, facadeRawFillMulAdd128);
     try benchFill(io, stdout, "facade raw div 128", sample_count, facadeRawFillDiv128);
     try benchFill(io, stdout, "facade raw complement 128", sample_count, facadeRawFillComplement128);
     try benchFill(io, stdout, "facade raw int-sub 128", sample_count, facadeRawFillIntSub128);
@@ -44,6 +46,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(io, stdout, "raw fill int-add 128", sample_count, rawFillIntAdd128);
     try benchFill(io, stdout, "raw fill narrow 128", sample_count, rawFillNarrow128);
     try benchFill(io, stdout, "raw fill narrow-add 128", sample_count, rawFillNarrowAdd128);
+    try benchFill(io, stdout, "raw fill split-add 128", sample_count, rawFillSplitAdd128);
+    try benchFill(io, stdout, "raw fill muladd 128", sample_count, rawFillMulAdd128);
     try benchFill(io, stdout, "raw fill div 128", sample_count, rawFillDiv128);
     try benchFill(io, stdout, "raw fill complement 128", sample_count, rawFillComplement128);
     try benchFill(io, stdout, "raw fill int-sub 128", sample_count, rawFillIntSub128);
@@ -128,6 +132,14 @@ fn facadeRawFillNarrowAdd128(engine: *alea.FastPrng, dest: []f64) void {
     facadeRawFillNarrowAdd(engine, dest, 128);
 }
 
+fn facadeRawFillSplitAdd128(engine: *alea.FastPrng, dest: []f64) void {
+    facadeRawFillSplitAdd(engine, dest, 128);
+}
+
+fn facadeRawFillMulAdd128(engine: *alea.FastPrng, dest: []f64) void {
+    facadeRawFillMulAdd(engine, dest, 128);
+}
+
 fn facadeRawFillDiv128(engine: *alea.FastPrng, dest: []f64) void {
     facadeRawFillDiv(engine, dest, 128);
 }
@@ -190,6 +202,14 @@ fn rawFillNarrow128(engine: *alea.FastPrng, dest: []f64) void {
 
 fn rawFillNarrowAdd128(engine: *alea.FastPrng, dest: []f64) void {
     rawFillNarrowAdd(engine, dest, 128);
+}
+
+fn rawFillSplitAdd128(engine: *alea.FastPrng, dest: []f64) void {
+    rawFillSplitAdd(engine, dest, 128);
+}
+
+fn rawFillMulAdd128(engine: *alea.FastPrng, dest: []f64) void {
+    rawFillMulAdd(engine, dest, 128);
 }
 
 fn rawFillDiv128(engine: *alea.FastPrng, dest: []f64) void {
@@ -385,6 +405,76 @@ fn rawFillNarrowAdd(engine: *alea.FastPrng, dest: []f64, comptime word_count: us
     }
 }
 
+fn facadeRawFillSplitAdd(engine: *alea.FastPrng, dest: []f64, comptime word_count: usize) void {
+    const rng = alea.Rng.init(engine);
+    var raw_words: [word_count]u64 = undefined;
+
+    var i: usize = 0;
+    while (i < dest.len) {
+        const take = @min(dest.len - i, raw_words.len);
+        rng.bytes(std.mem.sliceAsBytes(raw_words[0..take]));
+
+        var lane: usize = 0;
+        while (lane < take) : (lane += 1) {
+            const raw = std.mem.littleToNative(u64, raw_words[lane]);
+            dest[i + lane] = f64OpenClosedFromRawSplitAdd(raw);
+        }
+        i += take;
+    }
+}
+
+fn rawFillSplitAdd(engine: *alea.FastPrng, dest: []f64, comptime word_count: usize) void {
+    var raw_words: [word_count]u64 = undefined;
+
+    var i: usize = 0;
+    while (i < dest.len) {
+        const take = @min(dest.len - i, raw_words.len);
+        engine.fill(std.mem.sliceAsBytes(raw_words[0..take]));
+
+        var lane: usize = 0;
+        while (lane < take) : (lane += 1) {
+            const raw = std.mem.littleToNative(u64, raw_words[lane]);
+            dest[i + lane] = f64OpenClosedFromRawSplitAdd(raw);
+        }
+        i += take;
+    }
+}
+
+fn facadeRawFillMulAdd(engine: *alea.FastPrng, dest: []f64, comptime word_count: usize) void {
+    const rng = alea.Rng.init(engine);
+    var raw_words: [word_count]u64 = undefined;
+
+    var i: usize = 0;
+    while (i < dest.len) {
+        const take = @min(dest.len - i, raw_words.len);
+        rng.bytes(std.mem.sliceAsBytes(raw_words[0..take]));
+
+        var lane: usize = 0;
+        while (lane < take) : (lane += 1) {
+            const raw = std.mem.littleToNative(u64, raw_words[lane]);
+            dest[i + lane] = f64OpenClosedFromRawMulAdd(raw);
+        }
+        i += take;
+    }
+}
+
+fn rawFillMulAdd(engine: *alea.FastPrng, dest: []f64, comptime word_count: usize) void {
+    var raw_words: [word_count]u64 = undefined;
+
+    var i: usize = 0;
+    while (i < dest.len) {
+        const take = @min(dest.len - i, raw_words.len);
+        engine.fill(std.mem.sliceAsBytes(raw_words[0..take]));
+
+        var lane: usize = 0;
+        while (lane < take) : (lane += 1) {
+            const raw = std.mem.littleToNative(u64, raw_words[lane]);
+            dest[i + lane] = f64OpenClosedFromRawMulAdd(raw);
+        }
+        i += take;
+    }
+}
+
 fn facadeRawFillDiv(engine: *alea.FastPrng, dest: []f64, comptime word_count: usize) void {
     const rng = alea.Rng.init(engine);
     var raw_words: [word_count]u64 = undefined;
@@ -506,6 +596,14 @@ fn f64OpenClosedFromRawNarrow(raw: u64) f64 {
 fn f64OpenClosedFromRawNarrowAdd(raw: u64) f64 {
     const truncated: u54 = @as(u53, @truncate(raw >> 11)) + 1;
     return @as(f64, @floatFromInt(truncated)) * (1.0 / 9007199254740992.0);
+}
+
+fn f64OpenClosedFromRawSplitAdd(raw: u64) f64 {
+    return @as(f64, @floatFromInt(raw >> 11)) * (1.0 / 9007199254740992.0) + (1.0 / 9007199254740992.0);
+}
+
+fn f64OpenClosedFromRawMulAdd(raw: u64) f64 {
+    return @mulAdd(f64, @as(f64, @floatFromInt(raw >> 11)), 1.0 / 9007199254740992.0, 1.0 / 9007199254740992.0);
 }
 
 fn f64OpenClosedFromRawDiv(raw: u64) f64 {
