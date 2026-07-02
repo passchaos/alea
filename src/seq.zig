@@ -527,7 +527,9 @@ pub fn sampleWeightedIndicesChecked(allocator: std.mem.Allocator, rng: Rng, comp
 pub fn sampleWeightedIndicesCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
     if (amount == 0) return allocator.alloc(usize, 0);
     if (amount > weights.len) return error.InvalidParameter;
-    try ensureEnoughPositiveWeights(Weight, weights, amount);
+    const positive = try countPositiveWeights(Weight, weights);
+    if (positive < amount) return error.InvalidParameter;
+    if (positive == 1 and amount == 1) return singlePositiveWeightIndexAlloc(allocator, Weight, weights);
     return sampleWeightedIndicesExactFrom(allocator, source, Weight, weights, amount);
 }
 
@@ -538,20 +540,13 @@ pub fn sampleWeightedIndicesFrom(allocator: std.mem.Allocator, source: anytype, 
     const positive = try countPositiveWeights(Weight, weights);
     const count = @min(amount, positive);
     if (count == 0) return allocator.alloc(usize, 0);
+    if (positive == 1) return singlePositiveWeightIndexAlloc(allocator, Weight, weights);
     return sampleWeightedIndicesExactFrom(allocator, source, Weight, weights, count);
 }
 
 fn sampleWeightedIndicesExactFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
     std.debug.assert(amount > 0);
     std.debug.assert(amount <= weights.len);
-
-    if (amount == 1) {
-        if (try singlePositiveWeightIndex(Weight, weights)) |index| {
-            const out = try allocator.alloc(usize, 1);
-            out[0] = index;
-            return out;
-        }
-    }
 
     const out = try allocator.alloc(usize, amount);
     errdefer allocator.free(out);
@@ -600,7 +595,9 @@ pub fn sampleWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
     if (amount == 0) return allocator.alloc(T, 0);
     if (items.len != weights.len) return error.LengthMismatch;
     if (amount > items.len) return error.InvalidParameter;
-    try ensureEnoughPositiveWeights(Weight, weights, amount);
+    const positive = try countPositiveWeights(Weight, weights);
+    if (positive < amount) return error.InvalidParameter;
+    if (positive == 1 and amount == 1) return singlePositiveWeightItemAlloc(allocator, T, Weight, items, weights);
 
     const out = try allocator.alloc(T, amount);
     errdefer allocator.free(out);
@@ -619,6 +616,7 @@ pub fn sampleWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptim
     const positive = try countPositiveWeights(Weight, weights);
     const count = @min(amount, positive);
     if (count == 0) return allocator.alloc(T, 0);
+    if (positive == 1) return singlePositiveWeightItemAlloc(allocator, T, Weight, items, weights);
 
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
@@ -1175,9 +1173,24 @@ fn singlePositiveWeightIndex(comptime Weight: type, weights: []const Weight) Err
     return positive_index;
 }
 
-fn ensureEnoughPositiveWeights(comptime Weight: type, weights: []const Weight, amount: usize) Error!void {
-    const positive = try countPositiveWeights(Weight, weights);
-    if (positive < amount) return error.InvalidParameter;
+fn singlePositiveWeightIndexAlloc(allocator: std.mem.Allocator, comptime Weight: type, weights: []const Weight) ![]usize {
+    const index = (try singlePositiveWeightIndex(Weight, weights)).?;
+    const out = try allocator.alloc(usize, 1);
+    out[0] = index;
+    return out;
+}
+
+fn singlePositiveWeightItemAlloc(
+    allocator: std.mem.Allocator,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    weights: []const Weight,
+) ![]T {
+    const index = (try singlePositiveWeightIndex(Weight, weights)).?;
+    const out = try allocator.alloc(T, 1);
+    out[0] = items[index];
+    return out;
 }
 
 fn weightedSelectionKeyFrom(source: anytype, weight: f64) f64 {
