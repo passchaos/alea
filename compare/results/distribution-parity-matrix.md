@@ -78,7 +78,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape and finite-moment accessors |
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment accessors |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance lookup and dimension/total-alpha accessors |
-| Multinomial | Covered: `Multinomial`, including trials/category/probability lookup and count moment accessors |
+| Multinomial | Covered: `Multinomial`, including trials/category/probability lookup/export and count moment accessors |
 | NegativeBinomial | Covered: `NegativeBinomial`, including successes/probability/moment accessors |
 
 ## Explicit Out Of Scope
