@@ -4643,6 +4643,18 @@ fn fillSignedUnitF64(source: anytype, dest: []f64) void {
 
 pub fn UnitCircle(comptime T: type) type {
     return struct {
+        pub fn dimensionValue(_: @This()) usize {
+            return 2;
+        }
+
+        pub fn radiusValue(_: @This()) T {
+            return 1;
+        }
+
+        pub fn isSurface(_: @This()) bool {
+            return true;
+        }
+
         pub fn sample(_: @This(), rng: Rng) [2]T {
             return unitCircle(rng, T);
         }
@@ -4663,6 +4675,18 @@ pub fn UnitCircle(comptime T: type) type {
 
 pub fn UnitDisc(comptime T: type) type {
     return struct {
+        pub fn dimensionValue(_: @This()) usize {
+            return 2;
+        }
+
+        pub fn radiusValue(_: @This()) T {
+            return 1;
+        }
+
+        pub fn isSurface(_: @This()) bool {
+            return false;
+        }
+
         pub fn sample(_: @This(), rng: Rng) [2]T {
             return unitDisc(rng, T);
         }
@@ -4683,6 +4707,18 @@ pub fn UnitDisc(comptime T: type) type {
 
 pub fn UnitSphere(comptime T: type) type {
     return struct {
+        pub fn dimensionValue(_: @This()) usize {
+            return 3;
+        }
+
+        pub fn radiusValue(_: @This()) T {
+            return 1;
+        }
+
+        pub fn isSurface(_: @This()) bool {
+            return true;
+        }
+
         pub fn sample(_: @This(), rng: Rng) [3]T {
             return unitSphere(rng, T);
         }
@@ -4703,6 +4739,18 @@ pub fn UnitSphere(comptime T: type) type {
 
 pub fn UnitBall(comptime T: type) type {
     return struct {
+        pub fn dimensionValue(_: @This()) usize {
+            return 3;
+        }
+
+        pub fn radiusValue(_: @This()) T {
+            return 1;
+        }
+
+        pub fn isSurface(_: @This()) bool {
+            return false;
+        }
+
         pub fn sample(_: @This(), rng: Rng) [3]T {
             return unitBall(rng, T);
         }
@@ -9041,6 +9089,19 @@ test "unit geometric distributions stay on expected support" {
     (UnitDisc(f64){}).fill(rng, &discs);
     (UnitSphere(f64){}).fillFrom(&direct_engine, &spheres);
     (UnitBall(f64){}).fillFrom(&direct_engine, &balls);
+
+    try std.testing.expectEqual(@as(usize, 2), (UnitCircle(f64){}).dimensionValue());
+    try std.testing.expectEqual(@as(f64, 1), (UnitCircle(f64){}).radiusValue());
+    try std.testing.expect((UnitCircle(f64){}).isSurface());
+    try std.testing.expectEqual(@as(usize, 2), (UnitDisc(f64){}).dimensionValue());
+    try std.testing.expectEqual(@as(f64, 1), (UnitDisc(f64){}).radiusValue());
+    try std.testing.expect(!(UnitDisc(f64){}).isSurface());
+    try std.testing.expectEqual(@as(usize, 3), (UnitSphere(f64){}).dimensionValue());
+    try std.testing.expectEqual(@as(f64, 1), (UnitSphere(f64){}).radiusValue());
+    try std.testing.expect((UnitSphere(f64){}).isSurface());
+    try std.testing.expectEqual(@as(usize, 3), (UnitBall(f64){}).dimensionValue());
+    try std.testing.expectEqual(@as(f64, 1), (UnitBall(f64){}).radiusValue());
+    try std.testing.expect(!(UnitBall(f64){}).isSurface());
 }
 
 test "dirichlet sampler returns simplex vectors" {

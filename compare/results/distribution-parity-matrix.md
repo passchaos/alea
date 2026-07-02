@@ -40,8 +40,8 @@ Zig-native way.
 | Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape accessors |
 | SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter accessors |
 | Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, range-builder constructors, and parameter accessors |
-| UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)` |
-| UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)` |
+| UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)`, including geometry accessors |
+| UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)`, including geometry accessors |
 | Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path, and lambda accessor |
 | Binomial | Covered: `binomial`, `Binomial`, exact small/p=0.5/large rejection paths, explicit sparse Poisson approximation helper, and trials/probability accessors |
 | Geometric / StandardGeometric | Covered: one-based `Geometric`, rand-style failure-count `GeometricFailures`, probability accessors, and p=0.5 `StandardGeometric` fast path/accessor |
