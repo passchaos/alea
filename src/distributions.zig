@@ -2952,6 +2952,16 @@ pub fn StudentT(comptime T: type) type {
             return self.dof;
         }
 
+        pub fn expectedValue(self: Self) ?T {
+            if (self.dof <= 1) return null;
+            return 0;
+        }
+
+        pub fn varianceValue(self: Self) ?T {
+            if (self.dof <= 2) return null;
+            return self.dof / (self.dof - 2);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8472,6 +8482,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, fillStudentTCheckedFrom(&direct_engine, f64, &direct_student_buf, 0));
     const student_sampler = try StudentT(f64).init(10);
     try std.testing.expectApproxEqAbs(@as(f64, 10), student_sampler.dofValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), student_sampler.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25), student_sampler.varianceValue().?, 1e-12);
+    try std.testing.expect((try StudentT(f64).init(1)).expectedValue() == null);
+    try std.testing.expect((try StudentT(f64).init(2)).varianceValue() == null);
     student_sampler.fillFrom(&direct_engine, &direct_student_buf);
     for (direct_student_buf) |value| try std.testing.expect(std.math.isFinite(value));
 

@@ -488,6 +488,8 @@ Reusable samplers:
 - `StudentT(T)`
 - `StudentT(T).init`
 - `StudentT(T).dofValue`
+- `StudentT(T).expectedValue`
+- `StudentT(T).varianceValue`
 - `StudentT(T).sample`
 - `StudentT(T).sampleFrom`
 - `StudentT(T).fill`

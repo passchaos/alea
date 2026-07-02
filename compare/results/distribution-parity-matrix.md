@@ -35,7 +35,7 @@ Zig-native way.
 | Gamma | Covered: `gamma`, `Gamma(T)`, including shape/scale/moment accessors |
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment accessors |
 | FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2 accessors |
-| StudentT | Covered: `studentT`, `StudentT(T)`, including dof accessor |
+| StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment accessors |
 | Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale accessors |
 | Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape accessors |
 | SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter accessors |
