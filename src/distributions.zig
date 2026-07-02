@@ -4538,6 +4538,17 @@ pub fn SkewNormal(comptime T: type) type {
             return self.shape;
         }
 
+        pub fn expectedValue(self: Self) T {
+            const delta = self.shape / @sqrt(1 + self.shape * self.shape);
+            return self.location + self.scale * delta * @sqrt(2.0 / std.math.pi);
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const delta = self.shape / @sqrt(1 + self.shape * self.shape);
+            const scale_squared = self.scale * self.scale;
+            return scale_squared * (1 - 2.0 * delta * delta / std.math.pi);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -9053,6 +9064,9 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), skew_normal_sampler.locationValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 1), skew_normal_sampler.scaleValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 1), skew_normal_sampler.shapeValue(), 0);
+    const skew_normal_delta = 1.0 / @sqrt(2.0);
+    try std.testing.expectApproxEqAbs(skew_normal_delta * @sqrt(2.0 / std.math.pi), skew_normal_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(1.0 - 2.0 * skew_normal_delta * skew_normal_delta / std.math.pi, skew_normal_sampler.varianceValue(), 1e-12);
     skew_normal_sampler.fillFrom(&direct_engine, &direct_skew_normal_buf);
     for (direct_skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
 

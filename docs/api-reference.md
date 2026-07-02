@@ -644,6 +644,8 @@ Reusable samplers:
 - `SkewNormal(T).locationValue`
 - `SkewNormal(T).scaleValue`
 - `SkewNormal(T).shapeValue`
+- `SkewNormal(T).expectedValue`
+- `SkewNormal(T).varianceValue`
 - `SkewNormal(T).sample`
 - `SkewNormal(T).sampleFrom`
 - `SkewNormal(T).fill`
