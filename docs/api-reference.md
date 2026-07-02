@@ -268,6 +268,7 @@ Reusable samplers:
 - `Multinomial.init`
 - `Multinomial.trialsValue`
 - `Multinomial.probabilitiesValue`
+- `Multinomial.categoryCountValue`
 - `Multinomial.totalProbabilityValue`
 - `Multinomial.sample`
 - `Multinomial.sampleFrom`
