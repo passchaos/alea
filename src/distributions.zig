@@ -2319,6 +2319,14 @@ pub fn Gamma(comptime T: type) type {
             return self.scale;
         }
 
+        pub fn expectedValue(self: Self) T {
+            return self.shape * self.scale;
+        }
+
+        pub fn varianceValue(self: Self) T {
+            return self.shape * self.scale * self.scale;
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -8274,6 +8282,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     const gamma_sampler = try Gamma(f64).init(2, 3);
     try std.testing.expectApproxEqAbs(@as(f64, 2), gamma_sampler.shapeValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), gamma_sampler.scaleValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 6), gamma_sampler.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 18), gamma_sampler.varianceValue(), 1e-12);
     gamma_sampler.fillFrom(&direct_engine, &direct_gamma_buf);
     for (direct_gamma_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try gammaCheckedFrom(&direct_engine, f64, 2, 3) > 0);

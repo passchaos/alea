@@ -435,6 +435,8 @@ Reusable samplers:
 - `Gamma(T).init`
 - `Gamma(T).shapeValue`
 - `Gamma(T).scaleValue`
+- `Gamma(T).expectedValue`
+- `Gamma(T).varianceValue`
 - `Gamma(T).sample`
 - `Gamma(T).sampleFrom`
 - `Gamma(T).fill`
