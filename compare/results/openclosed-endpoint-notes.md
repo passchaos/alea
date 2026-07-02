@@ -46,6 +46,9 @@ Rust.
 - Division by `2^53` is tied with the adopted multiply-by-reciprocal expression.
 - Bitcast-based `(0, 1]` constructions regress.
 - In-place conversion, raw-vector conversion, and manual unrolling regress.
+- Complement-grid mappings such as `1.0 - float(raw >> 11) * 2^-53` and
+  `float(2^53 - (raw >> 11)) * 2^-53` are exact endpoint-equivalent but
+  regress in `open-closed-probe`.
 - Raw byte-buffer reads that skip proper word conversion can appear fast but
   produce invalid means/checksums and are rejected.
 
