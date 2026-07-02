@@ -6064,6 +6064,13 @@ pub fn WeightedTree(comptime Weight: type) type {
             return self.get(index);
         }
 
+        pub fn probabilityAt(self: Self, index: usize) Error!f64 {
+            const weight = try self.get(index);
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            return weight / total;
+        }
+
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]f64 {
             const out = try allocator.alloc(f64, self.len());
             errdefer allocator.free(out);
@@ -6256,6 +6263,13 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn weightAt(self: Self, index: usize) Error!u64 {
             return self.get(index);
+        }
+
+        pub fn probabilityAt(self: Self, index: usize) Error!f64 {
+            const weight = try self.get(index);
+            const total = self.totalWeight();
+            if (total == 0) return error.InvalidWeight;
+            return @as(f64, @floatFromInt(weight)) / @as(f64, @floatFromInt(total));
         }
 
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]u64 {
@@ -7263,6 +7277,10 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), try tree.get(2), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), try tree.weightAt(1), 1e-12);
     try std.testing.expectError(error.InvalidParameter, tree.weightAt(3));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9), try tree.probabilityAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.1), try tree.probabilityAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try tree.probabilityAt(2), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, tree.probabilityAt(3));
     var weights_buf: [3]f64 = undefined;
     try tree.weightsInto(&weights_buf);
     try std.testing.expectApproxEqAbs(@as(f64, 9), weights_buf[0], 1e-12);
@@ -7281,6 +7299,7 @@ test "weighted tree supports dynamic updates" {
     try tree.update(1, 0);
     try std.testing.expect(!tree.isValid());
     try std.testing.expectError(error.InvalidWeight, tree.sampleChecked(rng));
+    try std.testing.expectError(error.InvalidWeight, tree.probabilityAt(0));
 
     try tree.push(7);
     var i: usize = 0;
@@ -7408,6 +7427,10 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectEqual(@as(u64, 0), try tree.get(2));
     try std.testing.expectEqual(@as(u64, 1), try tree.weightAt(1));
     try std.testing.expectError(error.InvalidParameter, tree.weightAt(3));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9), try tree.probabilityAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.1), try tree.probabilityAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try tree.probabilityAt(2), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, tree.probabilityAt(3));
     var weights_buf: [3]u64 = undefined;
     try tree.weightsInto(&weights_buf);
     try std.testing.expectEqualSlices(u64, &.{ 9, 1, 0 }, &weights_buf);
@@ -7424,6 +7447,7 @@ test "weighted int tree supports dynamic updates" {
     try tree.update(1, 0);
     try std.testing.expect(!tree.isValid());
     try std.testing.expectError(error.InvalidWeight, tree.sampleChecked(rng));
+    try std.testing.expectError(error.InvalidWeight, tree.probabilityAt(0));
 
     try tree.push(5);
     try std.testing.expectEqual(@as(usize, 4), tree.len());
