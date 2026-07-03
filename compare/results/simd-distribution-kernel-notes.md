@@ -74,6 +74,16 @@ repair rows before a real `vectorbench` follow-up.
   exponential lanes/s versus matching FastPrng direct rows around 409M, 407M,
   388M, and 385M. FastPrng repair probe rows therefore also trail or only match
   current production rows once correct stream-shape repair is required.
+- A same-candidate f32x8 repair shape also loses in the real vector-slice
+  harness. This candidate repairs each rejected lane using the lane's first
+  rejected ziggurat candidate before drawing another candidate, avoiding the
+  optimistic stream-shape caveat. A focused 64Mi-lane `vectorbench` run showed
+  ScalarPrng same-candidate repair around 333M standard-normal, 329M normal,
+  294M standard-exponential, and 294M exponential lanes/s versus direct rows
+  around 497-498M normal and 470-471M exponential. FastPrng same-candidate
+  repair was lower still around 307M/307M normal and 274M/272M exponential.
+  Preserving the rejected candidate is therefore correct but too expensive for
+  production.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
   rejected lanes: prefetching candidates changes how repair consumes randomness.
 - Reinterpreting packed f64 vector slices as scalar slices and routing them
