@@ -34,8 +34,8 @@ identifies two unresolved S4-M4 blockers:
 
 1. Exact default LogNormal transform/codegen still trails local Rust evidence.
    `lognormal-codegen-audit.md` confirms local exact paths call compiler-rt
-   `exp` / `expf`, and the known expression/libc/approximation variants either
-   do not win durably or change output/accuracy contracts.
+   `exp` / `expf`, and the known expression/libc/approximation/platform variants
+   either do not win durably or change output/accuracy/platform contracts.
 2. Dense SIMD normal/exponential kernels have not beaten scalar ziggurat
    lane-fill in the real `vectorbench` slice-fill harness. The minimum
    real-harness benchmark gate is listed in `simd-distribution-kernel-notes.md`.
@@ -54,7 +54,9 @@ The goal remains active until at least one of these happens:
   evidence across f32/f64, facade/direct, and narrow/wide spread rows;
 - or a clearly named opt-in LogNormal profile is added with a documented
   accuracy/reproducibility contract that covers a gap not already served by the
-  existing opt-ins;
+  existing opt-ins (`LogNormalApproxF32`, `LogNormalExp2F32`,
+  `LogNormalNativeF32`, `LogNormalNativeExp2F32`, `BufferedLogNormal`, and
+  `LogNormalLibmvec`);
 - and a dense SIMD normal/exponential candidate beats scalar lane-fill in the
   real vector-slice harness while preserving or explicitly versioning rejected
   lane stream shape;
