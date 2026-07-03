@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const Rng = @import("rng.zig");
 const Alea4x64 = @import("engines/alea4x64.zig");
 const std_ziggurat = std.Random.ziggurat;
@@ -52,7 +53,15 @@ pub const Error = error{
     InvalidWeight,
     InvalidParameter,
     InvalidLength,
+    LibmvecUnavailable,
 };
+
+const LibmvecExpF64x4 = *const fn (@Vector(4, f64)) callconv(.c) @Vector(4, f64);
+const LibmvecExpF32x8 = *const fn (@Vector(8, f32)) callconv(.c) @Vector(8, f32);
+const can_try_libmvec = builtin.target.cpu.arch == .x86_64 and
+    builtin.target.os.tag == .linux and
+    builtin.target.abi.isGnu() and
+    builtin.link_libc;
 
 pub fn uniform(rng: Rng, comptime T: type, min: T, max: T) T {
     return uniformFrom(rng, T, min, max);
@@ -4592,6 +4601,128 @@ pub fn BufferedLogNormal(comptime T: type, comptime buffer_len: usize) type {
                 const n = dest.len - written;
                 @memcpy(dest[written..], self.buffer[0..n]);
                 self.index = n;
+            }
+        }
+    };
+}
+
+pub fn LogNormalLibmvec(comptime T: type, comptime buffer_len: usize) type {
+    comptime {
+        requireFloat(T);
+        if (T != f32 and T != f64) @compileError("LogNormalLibmvec supports f32 and f64");
+        if (buffer_len == 0) @compileError("LogNormalLibmvec buffer_len must be greater than zero");
+    }
+
+    return struct {
+        const Self = @This();
+
+        pub const capacity: usize = buffer_len;
+
+        log_mean: T,
+        log_stddev: T,
+        buffer: [buffer_len]T = undefined,
+        index: usize = buffer_len,
+        lib: std.DynLib,
+        exp_f64x4: if (T == f64) LibmvecExpF64x4 else void,
+        exp_f32x8: if (T == f32) LibmvecExpF32x8 else void,
+
+        pub fn init(mean: T, stddev: T) Error!Self {
+            const base = try LogNormal(T).init(mean, stddev);
+            var lib = openLibmvec() catch return error.LibmvecUnavailable;
+            errdefer lib.close();
+            return .{
+                .log_mean = base.normal_sampler.mean,
+                .log_stddev = base.normal_sampler.stddev,
+                .lib = lib,
+                .exp_f64x4 = if (T == f64) lookupLibmvecExpF64x4(&lib) orelse return error.LibmvecUnavailable else {},
+                .exp_f32x8 = if (T == f32) lookupLibmvecExpF32x8(&lib) orelse return error.LibmvecUnavailable else {},
+            };
+        }
+
+        pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
+            const base = try LogNormal(T).initMeanCv(mean, coefficient_of_variation);
+            var lib = openLibmvec() catch return error.LibmvecUnavailable;
+            errdefer lib.close();
+            return .{
+                .log_mean = base.normal_sampler.mean,
+                .log_stddev = base.normal_sampler.stddev,
+                .lib = lib,
+                .exp_f64x4 = if (T == f64) lookupLibmvecExpF64x4(&lib) orelse return error.LibmvecUnavailable else {},
+                .exp_f32x8 = if (T == f32) lookupLibmvecExpF32x8(&lib) orelse return error.LibmvecUnavailable else {},
+            };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.lib.close();
+            self.* = undefined;
+        }
+
+        pub fn logMeanValue(self: Self) T {
+            return self.log_mean;
+        }
+
+        pub fn logStddevValue(self: Self) T {
+            return self.log_stddev;
+        }
+
+        pub fn bufferedValueCount(self: Self) usize {
+            return buffer_len - self.index;
+        }
+
+        pub fn reset(self: *Self) void {
+            self.index = buffer_len;
+        }
+
+        pub fn sample(self: *Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: *Self, source: anytype) T {
+            if (self.log_stddev == 0) return libmvecScalarExp(T, self.log_mean);
+            if (self.index == buffer_len) {
+                self.refill(source, self.buffer[0..]);
+                self.index = 0;
+            }
+            const value = self.buffer[self.index];
+            self.index += 1;
+            return value;
+        }
+
+        pub fn fill(self: *Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
+            if (self.log_stddev == 0) {
+                @memset(dest, libmvecScalarExp(T, self.log_mean));
+                return;
+            }
+            var written: usize = 0;
+            if (self.index < buffer_len) {
+                const buffered_count = buffer_len - self.index;
+                const n = @min(dest.len, buffered_count);
+                @memcpy(dest[0..n], self.buffer[self.index..][0..n]);
+                self.index += n;
+                written += n;
+            }
+            while (written + buffer_len <= dest.len) : (written += buffer_len) {
+                self.refill(source, dest[written..][0..buffer_len]);
+            }
+            if (written < dest.len) {
+                self.refill(source, self.buffer[0..]);
+                self.index = 0;
+                const n = dest.len - written;
+                @memcpy(dest[written..], self.buffer[0..n]);
+                self.index = n;
+            }
+        }
+
+        fn refill(self: *Self, source: anytype, dest: []T) void {
+            Rng.fillNormalFrom(source, T, dest, self.log_mean, self.log_stddev);
+            switch (T) {
+                f64 => libmvecExpInPlaceF64(dest, self.exp_f64x4),
+                f32 => libmvecExpInPlaceF32(dest, self.exp_f32x8),
+                else => unreachable,
             }
         }
     };
@@ -15023,6 +15154,52 @@ fn expInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T) void
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
 }
 
+fn openLibmvec() !std.DynLib {
+    if (!comptime can_try_libmvec) return error.LibmvecUnavailable;
+    return std.DynLib.open("libmvec.so.1");
+}
+
+fn lookupLibmvecExpF64x4(lib: *std.DynLib) ?LibmvecExpF64x4 {
+    return lib.lookup(LibmvecExpF64x4, "_ZGVcN4v_exp");
+}
+
+fn lookupLibmvecExpF32x8(lib: *std.DynLib) ?LibmvecExpF32x8 {
+    return lib.lookup(LibmvecExpF32x8, "_ZGVcN8v_expf");
+}
+
+fn libmvecScalarExp(comptime T: type, value: T) T {
+    return @exp(value);
+}
+
+fn libmvecExpInPlaceF64(dest: []f64, exp_fn: LibmvecExpF64x4) void {
+    var i: usize = 0;
+    while (i + 4 <= dest.len) : (i += 4) {
+        const vec: @Vector(4, f64) = .{ dest[i], dest[i + 1], dest[i + 2], dest[i + 3] };
+        const out = exp_fn(vec);
+        inline for (0..4) |lane| dest[i + lane] = out[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
+}
+
+fn libmvecExpInPlaceF32(dest: []f32, exp_fn: LibmvecExpF32x8) void {
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec: @Vector(8, f32) = .{
+            dest[i],
+            dest[i + 1],
+            dest[i + 2],
+            dest[i + 3],
+            dest[i + 4],
+            dest[i + 5],
+            dest[i + 6],
+            dest[i + 7],
+        };
+        const out = exp_fn(vec);
+        inline for (0..8) |lane| dest[i + lane] = out[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
+}
+
 fn logNormalApproxF32ParametersValid(mean: f32, stddev: f32) bool {
     return std.math.isFinite(mean) and
         std.math.isFinite(stddev) and
@@ -15059,6 +15236,13 @@ fn floatDistancePositiveF32(a: f32, b: f32) u32 {
     std.debug.assert(a >= 0 and b >= 0);
     const ai: u32 = @bitCast(a);
     const bi: u32 = @bitCast(b);
+    return if (ai >= bi) ai - bi else bi - ai;
+}
+
+fn floatDistancePositiveF64(a: f64, b: f64) u64 {
+    std.debug.assert(a >= 0 and b >= 0);
+    const ai: u64 = @bitCast(a);
+    const bi: u64 = @bitCast(b);
     return if (ai >= bi) ai - bi else bi - ai;
 }
 
@@ -23478,6 +23662,37 @@ test "buffered log-normal sampler has explicit refill stream contract" {
     try std.testing.expectEqual(@as(f64, 0), mean_cv.logStddevValue());
     try std.testing.expectEqual(@as(f64, 1), mean_cv.minValue());
     try std.testing.expectEqual(@as(?f64, 1), mean_cv.maxValue());
+}
+
+test "libmvec log-normal opt-in loads explicitly when available" {
+    const alea = @import("root.zig");
+
+    var maybe_sampler = LogNormalLibmvec(f64, 4).init(0, 0.25) catch |err| {
+        try std.testing.expectEqual(error.LibmvecUnavailable, err);
+        return;
+    };
+    defer maybe_sampler.deinit();
+
+    var sample_engine = alea.ScalarPrng.init(0x32a0);
+    const sample = maybe_sampler.sampleFrom(&sample_engine);
+    try std.testing.expectEqual(@as(usize, 3), maybe_sampler.bufferedValueCount());
+
+    var exact_engine = alea.ScalarPrng.init(0x32a0);
+    const exact = logNormalFrom(&exact_engine, f64, 0, 0.25);
+    try std.testing.expect(floatDistancePositiveF64(exact, sample) <= 3);
+
+    var fill_engine = alea.ScalarPrng.init(0x32a0);
+    var fill_sampler = try LogNormalLibmvec(f32, 8).init(0, 0.25);
+    defer fill_sampler.deinit();
+    var out: [9]f32 = undefined;
+    fill_sampler.fillFrom(&fill_engine, &out);
+    var exact_fill_engine = alea.ScalarPrng.init(0x32a0);
+    var exact_out: [9]f32 = undefined;
+    fillLogNormalFrom(&exact_fill_engine, f32, &exact_out, 0, 0.25);
+    for (exact_out, out) |exact_value, libmvec_value| {
+        try std.testing.expect(floatDistancePositiveF32(exact_value, libmvec_value) <= 3);
+    }
+    try std.testing.expectEqual(@as(usize, 7), fill_sampler.bufferedValueCount());
 }
 
 test "poisson large lambda has plausible moments" {

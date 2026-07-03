@@ -31,7 +31,7 @@ coverage; it is the two concrete hard blockers below.
 
 | Area | Current evidence | Why not closed |
 | --- | --- | --- |
-| Exact LogNormal transform/codegen | Focused f64 single-sample rows remain around 118M for facade/FastPrng/raw versus local Rust f64 around 146M. Exact f32 rows improved: `fillLogNormal f32` is about 138.5M facade, 144.2M FastPrng direct, and 148.9M ScalarPrng direct after the direct-source f32 standard-fill refinement, but Rust f32 evidence is about 155.3M. Wider `stddev=1` rows are still much slower, around 65M f64 and 60-64M f32 single-sample versus Rust around 80M/79M. | Exact `@exp` transform/codegen is still the bottleneck. `lognormal-codegen-audit.md` confirms local exact paths call compiler-rt exp/expf; useful f32/native/exp2 paths are opt-in because they change output mapping or accuracy contract. |
+| Exact LogNormal transform/codegen | Focused f64 single-sample rows remain around 118M for facade/FastPrng/raw versus local Rust f64 around 146M. Exact f32 rows improved: `fillLogNormal f32` is about 138.5M facade, 144.2M FastPrng direct, and 148.9M ScalarPrng direct after the direct-source f32 standard-fill refinement, but Rust f32 evidence is about 155.3M. Wider `stddev=1` rows are still much slower, around 65M f64 and 60-64M f32 single-sample versus Rust around 80M/79M. | Exact `@exp` transform/codegen is still the bottleneck. `lognormal-codegen-audit.md` confirms local exact paths call compiler-rt exp/expf; useful f32/native/exp2/libmvec paths are opt-in because they change output mapping, accuracy contract, or platform availability. |
 | Dense SIMD normal/exponential distribution kernels | Vector APIs and vectorbench coverage are complete, but production vector normal/exponential kernels still use scalar ziggurat lane-fill. f32x8/f64x4 repair, same-candidate repair, all-accepted repair, block-fallback, flat-slice routing, FastPrng repair, and Alea4x64 lane-local repair have all trailed the current direct rows in the real vector-slice harness. | No genuinely dense SIMD candidate has beaten scalar lane-fill while preserving or explicitly versioning rejected-lane stream shape; `simd-distribution-kernel-notes.md` now lists the minimum real-harness vectorbench rows required for any future candidate. |
 
 ## Recently Closed Or Narrowed Items
@@ -68,7 +68,8 @@ A candidate that could close S4-M4 should do one of the following:
 1. Improve exact default LogNormal without changing exact output mapping, or add
    a clearly named opt-in profile with documented accuracy/reproducibility
    tradeoffs that covers a gap not already served by `LogNormalApproxF32`,
-   `LogNormalExp2F32`, `LogNormalNativeF32`, or `LogNormalNativeExp2F32`.
+   `LogNormalExp2F32`, `LogNormalNativeF32`, `LogNormalNativeExp2F32`,
+   `BufferedLogNormal`, or `LogNormalLibmvec`.
 2. Provide a dense SIMD normal/exponential kernel that runs in the real
    vector-slice harness, preserves or explicitly versions rejected-lane stream
    shape, and beats current direct standard and parameterized vectorbench rows.

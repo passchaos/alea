@@ -57,8 +57,9 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
 - glibc libmvec vector `exp` / `expf` calls are much faster in the staged
   Linux-local probe, but they change exact `@exp` output mapping by up to 3 ULP
   in the checked `stddev=0.25` and `stddev=1.0` samples and depend on
-  x86_64-linux-gnu libmvec/IFUNC behavior. Treat them as deferred opt-in
-  evidence, not an exact default replacement.
+  x86_64-linux-gnu libmvec/IFUNC behavior. They are exposed only through the
+  explicit `LogNormalLibmvec(T, buffer_len)` opt-in, not as an exact default
+  replacement.
 - Buffering one-at-a-time LogNormal sampling through the existing exact bulk fill
   path improves repeated-sample throughput, especially for FastPrng and f32, but
   it does not close the narrow exact LogNormal gap versus Rust and would need an
@@ -162,7 +163,9 @@ Fresh local evidence:
   `distcheck` now includes independent `buffered-log-normal` and
   `buffered-log-normal-mean-cv` mean gates for this opt-in. This helps
   one-at-a-time users, but the primary narrow exact f64/f32 rows still trail
-  Rust and the libmvec variants keep their platform/output-mapping caveat.
+  Rust. `LogNormalLibmvec(T, buffer_len)` provides the fast
+  platform/output-mapping-changing path only when libc-linked libmvec is
+  available, leaving exact defaults unchanged.
 - A new Linux/glibc libmvec probe directly calls x86_64 vector math ABI
   symbols (`_ZGVbN2v_exp`, `_ZGVcN4v_exp`, `_ZGVcN8v_expf`) from
   `log-normal-probe` when building for x86_64-linux-gnu. Focused

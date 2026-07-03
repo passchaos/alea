@@ -190,7 +190,7 @@ Single-shot helpers:
   `fillVectorNormalCheckedFrom`, `logNormal`, `logNormalFrom`,
   `logNormalChecked`, `logNormalCheckedFrom`, `fillLogNormal`,
   `fillLogNormalFrom`, `fillLogNormalChecked`, `fillLogNormalCheckedFrom`,
-  `BufferedLogNormal`,
+  `BufferedLogNormal`, `LogNormalLibmvec`,
   `logNormalNativeF32`, `logNormalNativeF32From`,
   `logNormalNativeF32Checked`, `logNormalNativeF32CheckedFrom`,
   `fillLogNormalNativeF32`, `fillLogNormalNativeF32From`,
@@ -952,6 +952,19 @@ Reusable samplers:
 - `BufferedLogNormal(T, buffer_len).sampleFrom`
 - `BufferedLogNormal(T, buffer_len).fill`
 - `BufferedLogNormal(T, buffer_len).fillFrom`
+- `LogNormalLibmvec(T, buffer_len)`
+- `LogNormalLibmvec(T, buffer_len).capacity`
+- `LogNormalLibmvec(T, buffer_len).init`
+- `LogNormalLibmvec(T, buffer_len).initMeanCv`
+- `LogNormalLibmvec(T, buffer_len).deinit`
+- `LogNormalLibmvec(T, buffer_len).logMeanValue`
+- `LogNormalLibmvec(T, buffer_len).logStddevValue`
+- `LogNormalLibmvec(T, buffer_len).bufferedValueCount`
+- `LogNormalLibmvec(T, buffer_len).reset`
+- `LogNormalLibmvec(T, buffer_len).sample`
+- `LogNormalLibmvec(T, buffer_len).sampleFrom`
+- `LogNormalLibmvec(T, buffer_len).fill`
+- `LogNormalLibmvec(T, buffer_len).fillFrom`
 - `LogNormalNativeF32`
 - `LogNormalNativeF32.init`
 - `LogNormalNativeF32.meanValue`
