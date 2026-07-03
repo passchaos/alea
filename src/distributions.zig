@@ -3195,7 +3195,8 @@ pub fn fillVectorLogNormalExp2F32From(source: anytype, comptime VectorType: type
         @memset(dest, @as(VectorType, @splat(exp2ApproxPositiveF32(mean))));
         return;
     }
-    for (dest) |*item| item.* = vectorLogNormalExp2F32From(source, VectorType, mean, stddev);
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    fillLogNormalExp2F32From(source, scalars, mean, stddev);
 }
 
 pub fn fillVectorLogNormalExp2F32Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) Error!void {
@@ -3248,7 +3249,8 @@ pub fn fillVectorLogNormalApproxF32From(source: anytype, comptime VectorType: ty
         @memset(dest, @as(VectorType, @splat(expm1ApproxPositiveF32(mean))));
         return;
     }
-    for (dest) |*item| item.* = vectorLogNormalApproxF32From(source, VectorType, mean, stddev);
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    fillLogNormalApproxF32From(source, scalars, mean, stddev);
 }
 
 pub fn fillVectorLogNormalApproxF32Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) Error!void {
