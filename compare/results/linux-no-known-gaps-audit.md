@@ -92,9 +92,10 @@ current blocker audit is `s4-m4-remaining-gaps.md`. In short:
 - vector normal/exponential APIs have broad Zig-native coverage and strong
   scalar-lane-fill rows, but no genuinely dense SIMD distribution kernel has
   beaten scalar ziggurat lane-fill in the real `vectorbench` harness; the
-  repair, block-fallback, all-accepted, flat-slice, lane-local, Marsaglia polar,
-  ratio-of-uniforms, inverse-CDF, libmvec vector-log, and cached-Rng attempts
-  are recorded in `simd-distribution-kernel-notes.md`; the new f32 vector
+  repair, block-fallback, all-accepted, mask-redraw, flat-slice, lane-local,
+  Marsaglia polar, approximate-log polar, ratio-of-uniforms, inverse-CDF
+  variants, libmvec vector-log, f64 approximate-log, and cached-Rng attempts are
+  recorded in `simd-distribution-kernel-notes.md`; the new f32 vector
   approximate-log exponential opt-in narrows the exponential side for users who
   accept an approximation/output-mapping contract, but does not close normal or
   f64/default dense-kernel requirements. Current evidence is recorded in
