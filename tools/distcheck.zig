@@ -130,6 +130,13 @@ fn checkContinuous() !void {
             return alea.distributions.standardNormalNativeF32(r);
         }
     }.sample, -0.05, 0.05);
+    var native_parameterized_normal_engine = alea.DefaultPrng.init(0xc0ff_ee44);
+    const native_parameterized_normal_rng = alea.Rng.init(&native_parameterized_normal_engine);
+    try expectContinuousMean("normal-native-f32", native_parameterized_normal_rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.normalNativeF32(r, 5, 2);
+        }
+    }.sample, 4.95, 5.05);
     try expectContinuousMean("exponential", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.exponential(r, f64, 4);
@@ -147,6 +154,13 @@ fn checkContinuous() !void {
             return alea.distributions.standardExponentialNativeF32(r);
         }
     }.sample, 0.98, 1.02);
+    var native_parameterized_exponential_engine = alea.DefaultPrng.init(0xc0ff_ee45);
+    const native_parameterized_exponential_rng = alea.Rng.init(&native_parameterized_exponential_engine);
+    try expectContinuousMean("exponential-native-f32", native_parameterized_exponential_rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.exponentialNativeF32(r, 4);
+        }
+    }.sample, 0.24, 0.26);
     try expectContinuousMean("gamma", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.gamma(r, f64, 2, 3);

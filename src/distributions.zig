@@ -2403,6 +2403,25 @@ pub fn normalFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     return Rng.normalFastFrom(source, T, mean, stddev);
 }
 
+pub fn normalNativeF32(rng: Rng, mean: f32, stddev: f32) f32 {
+    return normalNativeF32From(rng, mean, stddev);
+}
+
+pub fn normalNativeF32From(source: anytype, mean: f32, stddev: f32) f32 {
+    std.debug.assert(std.math.isFinite(mean) and stddev >= 0 and std.math.isFinite(stddev));
+    if (stddev == 0) return mean;
+    return mean + stddev * standardNormalNativeF32From(source);
+}
+
+pub fn normalNativeF32Checked(rng: Rng, mean: f32, stddev: f32) Error!f32 {
+    return normalNativeF32CheckedFrom(rng, mean, stddev);
+}
+
+pub fn normalNativeF32CheckedFrom(source: anytype, mean: f32, stddev: f32) Error!f32 {
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    return normalNativeF32From(source, mean, stddev);
+}
+
 pub fn normalChecked(rng: Rng, comptime T: type, mean: T, stddev: T) Error!T {
     return normalCheckedFrom(rng, T, mean, stddev);
 }
@@ -2417,6 +2436,34 @@ pub fn fillNormal(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) voi
 
 pub fn fillNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
     Rng.fillNormalFrom(source, T, dest, mean, stddev);
+}
+
+pub fn fillNormalNativeF32(rng: Rng, dest: []f32, mean: f32, stddev: f32) void {
+    fillNormalNativeF32From(rng, dest, mean, stddev);
+}
+
+pub fn fillNormalNativeF32From(source: anytype, dest: []f32, mean: f32, stddev: f32) void {
+    std.debug.assert(std.math.isFinite(mean) and stddev >= 0 and std.math.isFinite(stddev));
+    if (stddev == 0) {
+        @memset(dest, mean);
+        return;
+    }
+    fillStandardNormalNativeF32From(source, dest);
+    if (mean == 0) {
+        for (dest) |*item| item.* *= stddev;
+    } else {
+        for (dest) |*item| item.* = mean + stddev * item.*;
+    }
+}
+
+pub fn fillNormalNativeF32Checked(rng: Rng, dest: []f32, mean: f32, stddev: f32) Error!void {
+    return fillNormalNativeF32CheckedFrom(rng, dest, mean, stddev);
+}
+
+pub fn fillNormalNativeF32CheckedFrom(source: anytype, dest: []f32, mean: f32, stddev: f32) Error!void {
+    if (dest.len == 0) return;
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    fillNormalNativeF32From(source, dest, mean, stddev);
 }
 
 pub fn fillNormalChecked(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
@@ -2770,6 +2817,25 @@ pub fn exponentialFrom(source: anytype, comptime T: type, rate: T) T {
     return Rng.exponentialFastFrom(source, T, rate);
 }
 
+pub fn exponentialNativeF32(rng: Rng, rate: f32) f32 {
+    return exponentialNativeF32From(rng, rate);
+}
+
+pub fn exponentialNativeF32From(source: anytype, rate: f32) f32 {
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    if (rate == std.math.inf(f32)) return 0;
+    return standardExponentialNativeF32From(source) / rate;
+}
+
+pub fn exponentialNativeF32Checked(rng: Rng, rate: f32) Error!f32 {
+    return exponentialNativeF32CheckedFrom(rng, rate);
+}
+
+pub fn exponentialNativeF32CheckedFrom(source: anytype, rate: f32) Error!f32 {
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    return exponentialNativeF32From(source, rate);
+}
+
 pub fn exponentialChecked(rng: Rng, comptime T: type, rate: T) Error!T {
     return exponentialCheckedFrom(rng, T, rate);
 }
@@ -2784,6 +2850,31 @@ pub fn fillExponential(rng: Rng, comptime T: type, dest: []T, rate: T) void {
 
 pub fn fillExponentialFrom(source: anytype, comptime T: type, dest: []T, rate: T) void {
     Rng.fillExponentialFrom(source, T, dest, rate);
+}
+
+pub fn fillExponentialNativeF32(rng: Rng, dest: []f32, rate: f32) void {
+    fillExponentialNativeF32From(rng, dest, rate);
+}
+
+pub fn fillExponentialNativeF32From(source: anytype, dest: []f32, rate: f32) void {
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    if (rate == std.math.inf(f32)) {
+        @memset(dest, 0);
+        return;
+    }
+    fillStandardExponentialNativeF32From(source, dest);
+    const inverse_rate = 1 / rate;
+    for (dest) |*item| item.* *= inverse_rate;
+}
+
+pub fn fillExponentialNativeF32Checked(rng: Rng, dest: []f32, rate: f32) Error!void {
+    return fillExponentialNativeF32CheckedFrom(rng, dest, rate);
+}
+
+pub fn fillExponentialNativeF32CheckedFrom(source: anytype, dest: []f32, rate: f32) Error!void {
+    if (dest.len == 0) return;
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    fillExponentialNativeF32From(source, dest, rate);
 }
 
 pub fn fillExponentialChecked(rng: Rng, comptime T: type, dest: []T, rate: T) Error!void {
@@ -2904,6 +2995,80 @@ pub fn Normal(comptime T: type) type {
         }
     };
 }
+
+pub const NormalNativeF32 = struct {
+    const Self = @This();
+
+    mean: f32,
+    stddev: f32,
+
+    pub fn init(mean: f32, stddev: f32) Error!Self {
+        if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+        return .{ .mean = mean, .stddev = stddev };
+    }
+
+    pub fn initMeanCv(mean: f32, coefficient_of_variation: f32) Error!Self {
+        if (!(coefficient_of_variation >= 0) or !std.math.isFinite(coefficient_of_variation)) return error.InvalidParameter;
+        return Self.init(mean, @abs(mean) * coefficient_of_variation);
+    }
+
+    pub fn fromZScore(self: Self, z_score: f32) f32 {
+        return self.mean + self.stddev * z_score;
+    }
+
+    pub fn meanValue(self: Self) f32 {
+        return self.mean;
+    }
+
+    pub fn stddevValue(self: Self) f32 {
+        return self.stddev;
+    }
+
+    pub fn expectedValue(self: Self) f32 {
+        return self.mean;
+    }
+
+    pub fn varianceValue(self: Self) f32 {
+        return self.stddev * self.stddev;
+    }
+
+    pub fn medianValue(self: Self) f32 {
+        return self.mean;
+    }
+
+    pub fn modeValue(self: Self) f32 {
+        return self.mean;
+    }
+
+    pub fn minValue(self: Self) ?f32 {
+        return if (self.stddev == 0) self.mean else null;
+    }
+
+    pub fn maxValue(self: Self) ?f32 {
+        return if (self.stddev == 0) self.mean else null;
+    }
+
+    pub fn coefficientOfVariationValue(self: Self) ?f32 {
+        if (self.mean == 0) return null;
+        return self.stddev / @abs(self.mean);
+    }
+
+    pub fn sample(self: Self, rng: Rng) f32 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Self, source: anytype) f32 {
+        return normalNativeF32From(source, self.mean, self.stddev);
+    }
+
+    pub fn fill(self: Self, rng: Rng, dest: []f32) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {
+        fillNormalNativeF32From(source, dest, self.mean, self.stddev);
+    }
+};
 
 pub fn VectorNormal(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
@@ -3269,6 +3434,71 @@ pub fn Exponential(comptime T: type) type {
         }
     };
 }
+
+pub const ExponentialNativeF32 = struct {
+    const Self = @This();
+
+    inverse_rate: f32,
+
+    pub fn init(rate: f32) Error!Self {
+        if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+        return .{ .inverse_rate = 1 / rate };
+    }
+
+    pub fn rateValue(self: Self) f32 {
+        return 1 / self.inverse_rate;
+    }
+
+    pub fn inverseRateValue(self: Self) f32 {
+        return self.inverse_rate;
+    }
+
+    pub fn expectedValue(self: Self) f32 {
+        return self.inverse_rate;
+    }
+
+    pub fn varianceValue(self: Self) f32 {
+        return self.inverse_rate * self.inverse_rate;
+    }
+
+    pub fn medianValue(self: Self) f32 {
+        return @log(@as(f32, 2)) * self.inverse_rate;
+    }
+
+    pub fn modeValue(_: Self) f32 {
+        return 0;
+    }
+
+    pub fn minValue(_: Self) f32 {
+        return 0;
+    }
+
+    pub fn maxValue(self: Self) ?f32 {
+        return if (self.inverse_rate == 0) 0 else null;
+    }
+
+    pub fn sample(self: Self, rng: Rng) f32 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Self, source: anytype) f32 {
+        if (self.inverse_rate == 0) return 0;
+        return standardExponentialNativeF32From(source) * self.inverse_rate;
+    }
+
+    pub fn fill(self: Self, rng: Rng, dest: []f32) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {
+        if (self.inverse_rate == 0) {
+            @memset(dest, 0);
+            return;
+        }
+        fillStandardExponentialNativeF32From(source, dest);
+        for (dest) |*item| item.* *= self.inverse_rate;
+    }
+};
 
 pub fn VectorExponential(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
@@ -22155,6 +22385,72 @@ test "native f32 standard samplers have stable snapshots" {
         try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_vec_buf[0][lane])));
     }
     try std.testing.expectEqual(@as(u64, 0x1571c35ce5d0ed07), exp_vec_sampler_engine.next());
+}
+
+test "native f32 parameterized samplers have stable snapshots" {
+    const alea = @import("root.zig");
+
+    var normal_engine = alea.ScalarPrng.init(0x3250);
+    const normal_sample = normalNativeF32From(&normal_engine, 1, 2);
+    try std.testing.expectEqual(@as(u32, 0x3fec1c03), @as(u32, @bitCast(normal_sample)));
+    try std.testing.expectEqual(@as(u64, 0xe26fe309bc38e217), normal_engine.next());
+
+    var normal_fill_engine = alea.ScalarPrng.init(0x3250);
+    var normal_buf: [4]f32 = undefined;
+    fillNormalNativeF32From(&normal_fill_engine, &normal_buf, 1, 2);
+    const normal_expected = [_]u32{ 0x3fec1c03, 0x4059850d, 0xbf8c759a, 0x3fb01bb6 };
+    inline for (normal_expected, 0..) |bits, i| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(normal_buf[i])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x78ba750225db3b78), normal_fill_engine.next());
+
+    var normal_sampler_engine = alea.ScalarPrng.init(0x3250);
+    const normal_sampler = try NormalNativeF32.init(1, 2);
+    try std.testing.expectEqual(@as(f32, 1), normal_sampler.meanValue());
+    try std.testing.expectEqual(@as(f32, 2), normal_sampler.stddevValue());
+    try std.testing.expectEqual(@as(f32, 4), normal_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f32, 1), normal_sampler.medianValue());
+    try std.testing.expectEqual(@as(f32, 1), normal_sampler.modeValue());
+    try std.testing.expectEqual(@as(f32, 2), normal_sampler.coefficientOfVariationValue().?);
+    try std.testing.expectEqual(@as(u32, 0x3fec1c03), @as(u32, @bitCast(normal_sampler.sampleFrom(&normal_sampler_engine))));
+    try std.testing.expectEqual(@as(u64, 0xe26fe309bc38e217), normal_sampler_engine.next());
+
+    var exp_engine = alea.ScalarPrng.init(0x3251);
+    const exp_sample = exponentialNativeF32From(&exp_engine, 2);
+    try std.testing.expectEqual(@as(u32, 0x3e0f77ab), @as(u32, @bitCast(exp_sample)));
+    try std.testing.expectEqual(@as(u64, 0x7c874e79cdd8fac8), exp_engine.next());
+
+    var exp_fill_engine = alea.ScalarPrng.init(0x3251);
+    var exp_buf: [4]f32 = undefined;
+    fillExponentialNativeF32From(&exp_fill_engine, &exp_buf, 2);
+    const exp_expected = [_]u32{ 0x3e0f77ab, 0x3eb1dfb4, 0x3e6ca75c, 0x3f7aec25 };
+    inline for (exp_expected, 0..) |bits, i| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_buf[i])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x6144e2a513481396), exp_fill_engine.next());
+
+    var exp_sampler_engine = alea.ScalarPrng.init(0x3251);
+    const exp_sampler = try ExponentialNativeF32.init(2);
+    try std.testing.expectEqual(@as(f32, 2), exp_sampler.rateValue());
+    try std.testing.expectEqual(@as(f32, 0.5), exp_sampler.inverseRateValue());
+    try std.testing.expectEqual(@as(f32, 0.5), exp_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f32, 0.25), exp_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f32, @log(@as(f32, 2)) * 0.5), exp_sampler.medianValue());
+    try std.testing.expectEqual(@as(u32, 0x3e0f77ab), @as(u32, @bitCast(exp_sampler.sampleFrom(&exp_sampler_engine))));
+    try std.testing.expectEqual(@as(u64, 0x7c874e79cdd8fac8), exp_sampler_engine.next());
+
+    var invalid_engine = alea.ScalarPrng.init(0x3252);
+    var invalid_control = alea.ScalarPrng.init(0x3252);
+    try std.testing.expectError(error.InvalidParameter, normalNativeF32CheckedFrom(&invalid_engine, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, exponentialNativeF32CheckedFrom(&invalid_engine, 0));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x3253);
+    var empty_control = alea.ScalarPrng.init(0x3253);
+    var empty: [0]f32 = .{};
+    try fillNormalNativeF32CheckedFrom(&empty_engine, &empty, 0, -1);
+    try fillExponentialNativeF32CheckedFrom(&empty_engine, &empty, 0);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 }
 
 test "native f32 log-normal has stable snapshots" {
