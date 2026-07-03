@@ -80,6 +80,20 @@ pub fn main(init: std.process.Init) !void {
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample stddev1 direct exp", 0x106b, sample_count, sampleDirectExpStddev1F32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample stddev1 std.math.exp", 0x106b, sample_count, sampleStdMathExpStddev1F32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample stddev1 libc expf", 0x106b, sample_count, sampleLibcExpStddev1F32);
+    try benchBufferedSample(alea.FastPrng, f64, io, stdout, "fast buffered sample current", 0x1060, sample_count, 0.25, refillBufferedLogNormalExact);
+    try benchBufferedSample(alea.ScalarPrng, f64, io, stdout, "scalar buffered sample current", 0x1061, sample_count, 0.25, refillBufferedLogNormalExact);
+    try benchBufferedSample(alea.FastPrng, f64, io, stdout, "fast buffered sample stddev1 current", 0x1068, sample_count, 1.0, refillBufferedLogNormalExact);
+    try benchBufferedSample(alea.ScalarPrng, f64, io, stdout, "scalar buffered sample stddev1 current", 0x1069, sample_count, 1.0, refillBufferedLogNormalExact);
+    try benchBufferedSample(alea.FastPrng, f32, io, stdout, "fast f32 buffered sample current", 0x1066, sample_count, 0.25, refillBufferedLogNormalExact);
+    try benchBufferedSample(alea.ScalarPrng, f32, io, stdout, "scalar f32 buffered sample current", 0x1066, sample_count, 0.25, refillBufferedLogNormalExact);
+    try benchBufferedSample(alea.FastPrng, f32, io, stdout, "fast f32 buffered sample stddev1 current", 0x106a, sample_count, 1.0, refillBufferedLogNormalExact);
+    try benchBufferedSample(alea.ScalarPrng, f32, io, stdout, "scalar f32 buffered sample stddev1 current", 0x106b, sample_count, 1.0, refillBufferedLogNormalExact);
+    if (comptime has_libmvec) {
+        try benchBufferedSample(alea.FastPrng, f64, io, stdout, "fast buffered sample libmvec f64x2", 0x1060, sample_count, 0.25, refillBufferedLogNormalLibmvec);
+        try benchBufferedSample(alea.ScalarPrng, f64, io, stdout, "scalar buffered sample libmvec f64x2", 0x1061, sample_count, 0.25, refillBufferedLogNormalLibmvec);
+        try benchBufferedSample(alea.FastPrng, f32, io, stdout, "fast f32 buffered sample libmvec f32x8", 0x1066, sample_count, 0.25, refillBufferedLogNormalLibmvec);
+        try benchBufferedSample(alea.ScalarPrng, f32, io, stdout, "scalar f32 buffered sample libmvec f32x8", 0x1066, sample_count, 0.25, refillBufferedLogNormalLibmvec);
+    }
     try benchFill(alea.FastPrng, io, stdout, "fast normal-only fill", 0x1062, sample_count, normalOnlyFill);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x1062, sample_count, currentFill);
     try benchFillSized(alea.FastPrng, 256, io, stdout, "fast current fill chunk256", 0x1062, sample_count, currentFill);
@@ -319,6 +333,89 @@ fn benchSampleF32(
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchBufferedSample(
+    comptime Source: type,
+    comptime T: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime stddev: T,
+    comptime refillFn: anytype,
+) !void {
+    if (!shouldRun(name)) return;
+    const buffer_len = 1024;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var sampler = BufferedLogNormal(Source, T, buffer_len, refillFn).init(seed, stddev);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += @floatCast(sampler.sample());
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn BufferedLogNormal(
+    comptime Source: type,
+    comptime T: type,
+    comptime buffer_len: usize,
+    comptime refillFn: anytype,
+) type {
+    return struct {
+        engine: Source,
+        buffer: [buffer_len]T = undefined,
+        index: usize = buffer_len,
+        stddev: T,
+
+        const Self = @This();
+
+        fn init(seed: u64, stddev: T) Self {
+            return .{ .engine = Source.init(seed), .stddev = stddev };
+        }
+
+        fn sample(self: *Self) T {
+            if (self.index == buffer_len) {
+                refillFn(&self.engine, @as([]T, self.buffer[0..]), self.stddev);
+                self.index = 0;
+            }
+            const value = self.buffer[self.index];
+            self.index += 1;
+            return value;
+        }
+    };
+}
+
+fn refillBufferedLogNormalExact(source: anytype, dest: anytype, stddev: anytype) void {
+    const T = @typeInfo(@TypeOf(dest)).pointer.child;
+    alea.distributions.fillLogNormalFrom(source, T, dest, 0, stddev);
+}
+
+fn refillBufferedLogNormalLibmvec(source: anytype, dest: anytype, stddev: anytype) void {
+    const T = @typeInfo(@TypeOf(dest)).pointer.child;
+    alea.Rng.fillNormalFrom(source, T, dest, 0, stddev);
+    switch (T) {
+        f64 => expLibmvec2(dest),
+        f32 => expLibmvec8F32(dest),
+        else => unreachable,
+    }
 }
 
 fn benchFill(

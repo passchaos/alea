@@ -59,6 +59,10 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   in the checked `stddev=0.25` and `stddev=1.0` samples and depend on
   x86_64-linux-gnu libmvec/IFUNC behavior. Treat them as deferred opt-in
   evidence, not an exact default replacement.
+- Buffering one-at-a-time LogNormal sampling through the existing exact bulk fill
+  path improves repeated-sample throughput, especially for FastPrng and f32, but
+  it does not close the narrow exact LogNormal gap versus Rust and would need an
+  explicit refill/stream contract before becoming a public reusable sampler.
 - Manual unrolling of the exact `@exp` transform loop is mixed: it can provide
   small isolated wins in one profile while regressing or tying others.
 - Vector-lane exact `@exp` transform loops can look good in the isolated probe
@@ -138,6 +142,15 @@ remain unchanged and keep `@exp` output semantics.
 
 Fresh local evidence:
 
+- A buffered exact sampling probe checks whether repeated `sample()`-style
+  workflows can reuse the existing staged bulk fill path. With 1024-sample
+  buffers, `log-normal-probe -- 4194304 "sample current"` moves exact f64
+  FastPrng/ScalarPrng rows from about 116M/131M to about 131M/136M and exact
+  f32 rows from about 120M/136M to about 138M/148M. `"buffered sample
+  stddev1"` reaches about 72M/73M f64 and 78M/80M f32. This confirms that
+  buffering helps one-at-a-time users, but it remains evidence only because it
+  still trails Rust for the primary narrow f64/f32 rows and changes the
+  random-consumption contract by refilling in chunks.
 - A new Linux/glibc libmvec probe directly calls x86_64 vector math ABI
   symbols (`_ZGVbN2v_exp`, `_ZGVcN4v_exp`, `_ZGVcN8v_expf`) from
   `log-normal-probe` when building for x86_64-linux-gnu. Focused
