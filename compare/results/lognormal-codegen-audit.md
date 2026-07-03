@@ -155,6 +155,10 @@ platform-specific opt-in candidate rather than a replacement for exact
 
 ## Current Conclusion
 
+A full-sample-loop `@setFloatMode(.optimized)` scratch probe was also too small
+and mixed to matter: narrow f64 rows moved only from about 118M/133M to
+120M/135M FastPrng/ScalarPrng, and `stddev=1` stayed around 57M/60M.
+
 No exact-default expression variant has enough evidence to replace direct
 `@exp`. The accepted production changes remain limited to:
 
