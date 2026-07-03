@@ -624,6 +624,11 @@ fn checkVectorDistributions() !void {
     alea.distributions.fillVectorStandardExponentialNativeF32From(&vector_native_exponential_engine, @Vector(8, f32), &native_exponential);
     try expectVectorMean(@Vector(8, f32), "vector standard-exponential native f32x8", &native_exponential, 0.94, 1.06);
 
+    var vector_approx_log_exponential_engine = alea.ScalarPrng.init(0x7113);
+    var approx_log_exponential: [128]@Vector(8, f32) = undefined;
+    alea.distributions.fillVectorStandardExponentialApproxLogF32From(&vector_approx_log_exponential_engine, @Vector(8, f32), &approx_log_exponential);
+    try expectVectorMean(@Vector(8, f32), "vector standard-exponential approx-log f32x8", &approx_log_exponential, 0.94, 1.06);
+
     var vector_parameterized_native_normal_engine = alea.ScalarPrng.init(0x7110);
     var parameterized_native_normal: [128]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorNormalNativeF32From(&vector_parameterized_native_normal_engine, @Vector(8, f32), &parameterized_native_normal, 5, 2);
@@ -633,6 +638,11 @@ fn checkVectorDistributions() !void {
     var parameterized_native_exponential: [128]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorExponentialNativeF32From(&vector_parameterized_native_exponential_engine, @Vector(8, f32), &parameterized_native_exponential, 4);
     try expectVectorMean(@Vector(8, f32), "vector exponential native f32x8", &parameterized_native_exponential, 0.23, 0.27);
+
+    var vector_parameterized_approx_log_exponential_engine = alea.ScalarPrng.init(0x7114);
+    var parameterized_approx_log_exponential: [128]@Vector(8, f32) = undefined;
+    alea.distributions.fillVectorExponentialApproxLogF32From(&vector_parameterized_approx_log_exponential_engine, @Vector(8, f32), &parameterized_approx_log_exponential, 4);
+    try expectVectorMean(@Vector(8, f32), "vector exponential approx-log f32x8", &parameterized_approx_log_exponential, 0.23, 0.27);
 }
 
 fn expectVectorMean(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType, min: f64, max: f64) !void {

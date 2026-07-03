@@ -3045,6 +3045,77 @@ pub fn fillVectorExponentialNativeF32CheckedFrom(source: anytype, comptime Vecto
     fillVectorExponentialNativeF32From(source, VectorType, dest, rate);
 }
 
+pub fn vectorStandardExponentialApproxLogF32(rng: Rng, comptime VectorType: type) VectorType {
+    return vectorStandardExponentialApproxLogF32From(rng, VectorType);
+}
+
+pub fn vectorStandardExponentialApproxLogF32From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorStandardExponentialApproxLogF32 expects an f32 vector");
+    return approxNegLogF32Vector(vectorOpenMidpointF32From(source, VectorType));
+}
+
+pub fn fillVectorStandardExponentialApproxLogF32(rng: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorStandardExponentialApproxLogF32From(rng, VectorType, dest);
+}
+
+pub fn fillVectorStandardExponentialApproxLogF32From(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorStandardExponentialApproxLogF32 expects an f32 vector");
+    for (dest) |*item| item.* = vectorStandardExponentialApproxLogF32From(source, VectorType);
+}
+
+pub fn vectorExponentialApproxLogF32(rng: Rng, comptime VectorType: type, rate: f32) VectorType {
+    return vectorExponentialApproxLogF32From(rng, VectorType, rate);
+}
+
+pub fn vectorExponentialApproxLogF32From(source: anytype, comptime VectorType: type, rate: f32) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorExponentialApproxLogF32 expects an f32 vector");
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    if (rate == std.math.inf(f32)) return @splat(0);
+    return vectorStandardExponentialApproxLogF32From(source, VectorType) * @as(VectorType, @splat(1 / rate));
+}
+
+pub fn vectorExponentialApproxLogF32Checked(rng: Rng, comptime VectorType: type, rate: f32) Error!VectorType {
+    return vectorExponentialApproxLogF32CheckedFrom(rng, VectorType, rate);
+}
+
+pub fn vectorExponentialApproxLogF32CheckedFrom(source: anytype, comptime VectorType: type, rate: f32) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorExponentialApproxLogF32Checked expects an f32 vector");
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    return vectorExponentialApproxLogF32From(source, VectorType, rate);
+}
+
+pub fn fillVectorExponentialApproxLogF32(rng: Rng, comptime VectorType: type, dest: []VectorType, rate: f32) void {
+    fillVectorExponentialApproxLogF32From(rng, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialApproxLogF32From(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f32) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorExponentialApproxLogF32 expects an f32 vector");
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    if (rate == std.math.inf(f32)) {
+        @memset(dest, @as(VectorType, @splat(0)));
+        return;
+    }
+    const inverse_rate_vec: VectorType = @splat(1 / rate);
+    for (dest) |*item| item.* = vectorStandardExponentialApproxLogF32From(source, VectorType) * inverse_rate_vec;
+}
+
+pub fn fillVectorExponentialApproxLogF32Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, rate: f32) Error!void {
+    return fillVectorExponentialApproxLogF32CheckedFrom(rng, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialApproxLogF32CheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f32) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorExponentialApproxLogF32Checked expects an f32 vector");
+    if (dest.len == 0) return;
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    fillVectorExponentialApproxLogF32From(source, VectorType, dest, rate);
+}
+
 pub fn Normal(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -3514,6 +3585,61 @@ pub fn VectorStandardExponentialNativeF32(comptime VectorType: type) type {
     };
 }
 
+pub fn VectorStandardExponentialApproxLogF32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorStandardExponentialApproxLogF32 expects an f32 vector");
+
+    return struct {
+        pub fn rateValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn inverseRateValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn expectedValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn varianceValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn medianValue(_: @This()) f32 {
+            return @log(@as(f32, 2));
+        }
+
+        pub fn modeValue(_: @This()) f32 {
+            return 0;
+        }
+
+        pub fn minValue(_: @This()) f32 {
+            return 0;
+        }
+
+        pub fn maxValue(_: @This()) ?f32 {
+            return null;
+        }
+
+        pub fn sample(_: @This(), rng: Rng) VectorType {
+            return vectorStandardExponentialApproxLogF32(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) VectorType {
+            return vectorStandardExponentialApproxLogF32From(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: []VectorType) void {
+            fillVectorStandardExponentialApproxLogF32(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: []VectorType) void {
+            fillVectorStandardExponentialApproxLogF32From(source, VectorType, dest);
+        }
+    };
+}
+
 pub fn VectorStandardExponential(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -3772,6 +3898,77 @@ pub fn VectorExponentialNativeF32(comptime VectorType: type) type {
                 return;
             }
             fillVectorStandardExponentialNativeF32From(source, VectorType, dest);
+            const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+            for (scalars) |*item| item.* *= self.inverse_rate;
+        }
+    };
+}
+
+pub fn VectorExponentialApproxLogF32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorExponentialApproxLogF32 expects an f32 vector");
+
+    return struct {
+        const Self = @This();
+
+        inverse_rate: f32,
+
+        pub fn init(rate: f32) Error!Self {
+            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+            return .{ .inverse_rate = 1 / rate };
+        }
+
+        pub fn rateValue(self: Self) f32 {
+            return 1 / self.inverse_rate;
+        }
+
+        pub fn inverseRateValue(self: Self) f32 {
+            return self.inverse_rate;
+        }
+
+        pub fn expectedValue(self: Self) f32 {
+            return self.inverse_rate;
+        }
+
+        pub fn varianceValue(self: Self) f32 {
+            return self.inverse_rate * self.inverse_rate;
+        }
+
+        pub fn medianValue(self: Self) f32 {
+            return @log(@as(f32, 2)) * self.inverse_rate;
+        }
+
+        pub fn modeValue(_: Self) f32 {
+            return 0;
+        }
+
+        pub fn minValue(_: Self) f32 {
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?f32 {
+            return if (self.inverse_rate == 0) 0 else null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.inverse_rate == 0) return @splat(0);
+            return vectorStandardExponentialApproxLogF32From(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.inverse_rate == 0) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            fillVectorStandardExponentialApproxLogF32From(source, VectorType, dest);
             const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
             for (scalars) |*item| item.* *= self.inverse_rate;
         }
@@ -15185,6 +15382,50 @@ fn openClosed01From(source: anytype, comptime T: type) T {
     };
 }
 
+fn vectorOpenMidpointF32From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorOpenMidpointF32From expects an f32 vector");
+
+    var out: VectorType = undefined;
+    var bits: u64 = 0;
+    inline for (0..info.len) |lane| {
+        if (lane % 2 == 0) bits = Rng.nextFrom(source);
+        const raw: u24 = if (lane % 2 == 0)
+            @truncate(bits >> 40)
+        else
+            @truncate(bits >> 16);
+        out[lane] = (@as(f32, @floatFromInt(raw)) + 0.5) * (1.0 / 16777216.0);
+    }
+    return out;
+}
+
+fn approxNegLogF32Vector(u: anytype) @TypeOf(u) {
+    const Vec = @TypeOf(u);
+    const info = vectorInfo(Vec);
+    if (info.child != f32) @compileError("approxNegLogF32Vector expects an f32 vector");
+    const VecU = @Vector(info.len, u32);
+    const bits: VecU = @bitCast(u);
+    const exponent_bits = (bits >> @as(VecU, @splat(23))) & @as(VecU, @splat(0xff));
+    const mantissa_bits = (bits & @as(VecU, @splat(0x7fffff))) | @as(VecU, @splat(@as(u32, 0x7f) << 23));
+    var exponent = @as(Vec, @floatFromInt(@as(@Vector(info.len, i32), @intCast(exponent_bits)))) - @as(Vec, @splat(127.0));
+    var m = @as(Vec, @bitCast(mantissa_bits));
+    const high_mask = m > @as(Vec, @splat(1.4142135623730951));
+    m = @select(f32, high_mask, m * @as(Vec, @splat(0.5)), m);
+    exponent += @select(f32, high_mask, @as(Vec, @splat(1.0)), @as(Vec, @splat(0.0)));
+
+    const z = (m - @as(Vec, @splat(1.0))) / (m + @as(Vec, @splat(1.0)));
+    const z2 = z * z;
+    const z4 = z2 * z2;
+    const z8 = z4 * z4;
+    const poly = @as(Vec, @splat(1.0)) +
+        z2 * @as(Vec, @splat(1.0 / 3.0)) +
+        z4 * @as(Vec, @splat(1.0 / 5.0)) +
+        z4 * z2 * @as(Vec, @splat(1.0 / 7.0)) +
+        z8 * @as(Vec, @splat(1.0 / 9.0));
+    const log_m = @as(Vec, @splat(2.0)) * z * poly;
+    return -(exponent * @as(Vec, @splat(std.math.ln2)) + log_m);
+}
+
 fn fillOpen01From(source: anytype, comptime T: type, dest: []T) void {
     requireFloatOrFloatVector(T);
     switch (@typeInfo(T)) {
@@ -23575,6 +23816,89 @@ test "vector native f32 parameterized samplers have stable snapshots" {
     var empty: [0]@Vector(8, f32) = .{};
     try fillVectorNormalNativeF32CheckedFrom(&empty_engine, @Vector(8, f32), &empty, 0, -1);
     try fillVectorExponentialNativeF32CheckedFrom(&empty_engine, @Vector(8, f32), &empty, 0);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "vector approximate-log f32 exponential has stable snapshots" {
+    const alea = @import("root.zig");
+
+    var standard_engine = alea.ScalarPrng.init(0x3270);
+    const standard_vec = vectorStandardExponentialApproxLogF32From(&standard_engine, @Vector(8, f32));
+    const standard_expected = [_]u32{ 0x3d045a30, 0x3d6edd7c, 0x3ed80578, 0x3b0c2c59, 0x3d73ec35, 0x3fde13ed, 0x3f3d440c, 0x3eb74805 };
+    inline for (standard_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(standard_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x5258cacf9348d26a), standard_engine.next());
+
+    var standard_fill_engine = alea.ScalarPrng.init(0x3270);
+    var standard_buf: [2]@Vector(8, f32) = undefined;
+    fillVectorStandardExponentialApproxLogF32From(&standard_fill_engine, @Vector(8, f32), &standard_buf);
+    inline for (standard_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(standard_buf[0][lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x25f8d7ce9e4d98e9), standard_fill_engine.next());
+
+    var standard_sampler_engine = alea.ScalarPrng.init(0x3270);
+    const standard_sampler = VectorStandardExponentialApproxLogF32(@Vector(8, f32)){};
+    try std.testing.expectEqual(@as(f32, 1), standard_sampler.rateValue());
+    try std.testing.expectEqual(@as(f32, 1), standard_sampler.inverseRateValue());
+    try std.testing.expectEqual(@as(f32, 1), standard_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f32, 1), standard_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f32, @log(@as(f32, 2))), standard_sampler.medianValue());
+    try std.testing.expectEqual(@as(f32, 0), standard_sampler.modeValue());
+    try std.testing.expectEqual(@as(f32, 0), standard_sampler.minValue());
+    try std.testing.expect(standard_sampler.maxValue() == null);
+    const standard_sampler_vec = standard_sampler.sampleFrom(&standard_sampler_engine);
+    inline for (standard_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(standard_sampler_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x5258cacf9348d26a), standard_sampler_engine.next());
+
+    var exp_engine = alea.ScalarPrng.init(0x3271);
+    const exp_vec = vectorExponentialApproxLogF32From(&exp_engine, @Vector(8, f32), 2);
+    const exp_expected = [_]u32{ 0x3fee4cc0, 0x3eeb7c78, 0x3f3fe156, 0x3de463b6, 0x3ee9f83c, 0x3d7c935d, 0x3fc68971, 0x3ddd47a4 };
+    inline for (exp_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xaafa8d6d02998de4), exp_engine.next());
+
+    var exp_fill_engine = alea.ScalarPrng.init(0x3271);
+    var exp_buf: [2]@Vector(8, f32) = undefined;
+    fillVectorExponentialApproxLogF32From(&exp_fill_engine, @Vector(8, f32), &exp_buf, 2);
+    inline for (exp_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_buf[0][lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x900edfc4bab56265), exp_fill_engine.next());
+
+    var exp_sampler_engine = alea.ScalarPrng.init(0x3271);
+    const exp_sampler = try VectorExponentialApproxLogF32(@Vector(8, f32)).init(2);
+    try std.testing.expectEqual(@as(f32, 2), exp_sampler.rateValue());
+    try std.testing.expectEqual(@as(f32, 0.5), exp_sampler.inverseRateValue());
+    try std.testing.expectEqual(@as(f32, 0.5), exp_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f32, 0.25), exp_sampler.varianceValue());
+    const exp_sampler_vec = exp_sampler.sampleFrom(&exp_sampler_engine);
+    inline for (exp_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_sampler_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xaafa8d6d02998de4), exp_sampler_engine.next());
+
+    var inf_engine = alea.ScalarPrng.init(0x3272);
+    var inf_control = alea.ScalarPrng.init(0x3272);
+    const point_mass = vectorExponentialApproxLogF32From(&inf_engine, @Vector(8, f32), std.math.inf(f32));
+    try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), point_mass);
+    try std.testing.expectEqual(inf_control.next(), inf_engine.next());
+
+    var invalid_engine = alea.ScalarPrng.init(0x3273);
+    var invalid_control = alea.ScalarPrng.init(0x3273);
+    try std.testing.expectError(error.InvalidParameter, vectorExponentialApproxLogF32CheckedFrom(&invalid_engine, @Vector(8, f32), 0));
+    var invalid_out: [1]@Vector(8, f32) = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillVectorExponentialApproxLogF32CheckedFrom(&invalid_engine, @Vector(8, f32), &invalid_out, 0));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x3274);
+    var empty_control = alea.ScalarPrng.init(0x3274);
+    var empty: [0]@Vector(8, f32) = .{};
+    try fillVectorExponentialApproxLogF32CheckedFrom(&empty_engine, @Vector(8, f32), &empty, 0);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 }
 

@@ -63,7 +63,7 @@ Out of scope for this Linux-first audit:
 
 | Local Rust family | Alea API | Validation |
 | --- | --- | --- |
-| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `BufferedLogNormal`, `LogNormalDlsymExp`, `LogNormalLibmvec`, `exponential`, `Exponential`, plus explicit bounded/native f32 LogNormal opt-ins | unit tests, `distcheck`, `distcheck-libc` for f64/f32 libmvec/dlsym availability, vector `distcheck`, benchmark rows |
+| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `BufferedLogNormal`, `LogNormalDlsymExp`, `LogNormalLibmvec`, `exponential`, `Exponential`, plus explicit bounded/native f32 LogNormal opt-ins and vector-only approximate-log f32 Exponential opt-ins | unit tests, `distcheck`, `distcheck-libc` for f64/f32 libmvec/dlsym availability, vector `distcheck`, benchmark rows |
 | Gamma, ChiSquared, Beta | `gamma`, `Gamma`, `chiSquared`, `ChiSquared`, `beta`, `Beta` | unit tests, `distcheck`, benchmark rows |
 | FisherF, StudentT | `fisherF`, `FisherF`, `studentT`, `StudentT` | unit tests, `distcheck`, benchmark rows |
 | Poisson, Binomial | `poisson`, `Poisson`, `binomial`, `Binomial` | unit tests, `distcheck`, benchmark rows |
@@ -94,7 +94,11 @@ current blocker audit is `s4-m4-remaining-gaps.md`. In short:
   beaten scalar ziggurat lane-fill in the real `vectorbench` harness; the
   repair, block-fallback, all-accepted, flat-slice, lane-local, Marsaglia polar,
   ratio-of-uniforms, inverse-CDF, libmvec vector-log, and cached-Rng attempts
-  are recorded in `simd-distribution-kernel-notes.md`,
+  are recorded in `simd-distribution-kernel-notes.md`; the new f32 vector
+  approximate-log exponential opt-in narrows the exponential side for users who
+  accept an approximation/output-mapping contract, but does not close normal or
+  f64/default dense-kernel requirements. Current evidence is recorded in
+  `simd-distribution-kernel-notes.md`,
   `performance-triage.md`, and `s4-m4-remaining-gaps.md`.
 
 ## Alea Extras Beyond The Local Rust Surface

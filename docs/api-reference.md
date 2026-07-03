@@ -247,7 +247,12 @@ Single-shot helpers:
   `vectorStandardExponentialNativeF32`,
   `vectorStandardExponentialNativeF32From`,
   `fillVectorStandardExponentialNativeF32`,
-  `fillVectorStandardExponentialNativeF32From`, `vectorStandardExponential`,
+  `fillVectorStandardExponentialNativeF32From`,
+  `vectorStandardExponentialApproxLogF32`,
+  `vectorStandardExponentialApproxLogF32From`,
+  `fillVectorStandardExponentialApproxLogF32`,
+  `fillVectorStandardExponentialApproxLogF32From`,
+  `vectorStandardExponential`,
   `vectorStandardExponentialFrom`,
   `fillVectorStandardExponential`, `fillVectorStandardExponentialFrom`,
   `exponential`, `exponentialFrom`, `exponentialChecked`,
@@ -263,6 +268,13 @@ Single-shot helpers:
   `fillVectorExponentialNativeF32`, `fillVectorExponentialNativeF32From`,
   `fillVectorExponentialNativeF32Checked`,
   `fillVectorExponentialNativeF32CheckedFrom`,
+  `vectorExponentialApproxLogF32`, `vectorExponentialApproxLogF32From`,
+  `vectorExponentialApproxLogF32Checked`,
+  `vectorExponentialApproxLogF32CheckedFrom`,
+  `fillVectorExponentialApproxLogF32`,
+  `fillVectorExponentialApproxLogF32From`,
+  `fillVectorExponentialApproxLogF32Checked`,
+  `fillVectorExponentialApproxLogF32CheckedFrom`,
   `vectorExponential`, `vectorExponentialFrom`, `vectorExponentialChecked`,
   `vectorExponentialCheckedFrom`, `fillVectorExponential`,
   `fillVectorExponentialFrom`, `fillVectorExponentialChecked`,
@@ -841,6 +853,19 @@ Reusable samplers:
 - `VectorStandardExponentialNativeF32(VectorType).sampleFrom`
 - `VectorStandardExponentialNativeF32(VectorType).fill`
 - `VectorStandardExponentialNativeF32(VectorType).fillFrom`
+- `VectorStandardExponentialApproxLogF32(VectorType)`
+- `VectorStandardExponentialApproxLogF32(VectorType).rateValue`
+- `VectorStandardExponentialApproxLogF32(VectorType).inverseRateValue`
+- `VectorStandardExponentialApproxLogF32(VectorType).expectedValue`
+- `VectorStandardExponentialApproxLogF32(VectorType).varianceValue`
+- `VectorStandardExponentialApproxLogF32(VectorType).medianValue`
+- `VectorStandardExponentialApproxLogF32(VectorType).modeValue`
+- `VectorStandardExponentialApproxLogF32(VectorType).minValue`
+- `VectorStandardExponentialApproxLogF32(VectorType).maxValue`
+- `VectorStandardExponentialApproxLogF32(VectorType).sample`
+- `VectorStandardExponentialApproxLogF32(VectorType).sampleFrom`
+- `VectorStandardExponentialApproxLogF32(VectorType).fill`
+- `VectorStandardExponentialApproxLogF32(VectorType).fillFrom`
 - `Exponential(T)`
 - `Exponential(T).init`
 - `Exponential(T).rateValue`
@@ -883,6 +908,20 @@ Reusable samplers:
 - `VectorExponentialNativeF32(VectorType).sampleFrom`
 - `VectorExponentialNativeF32(VectorType).fill`
 - `VectorExponentialNativeF32(VectorType).fillFrom`
+- `VectorExponentialApproxLogF32(VectorType)`
+- `VectorExponentialApproxLogF32(VectorType).init`
+- `VectorExponentialApproxLogF32(VectorType).rateValue`
+- `VectorExponentialApproxLogF32(VectorType).inverseRateValue`
+- `VectorExponentialApproxLogF32(VectorType).expectedValue`
+- `VectorExponentialApproxLogF32(VectorType).varianceValue`
+- `VectorExponentialApproxLogF32(VectorType).medianValue`
+- `VectorExponentialApproxLogF32(VectorType).modeValue`
+- `VectorExponentialApproxLogF32(VectorType).minValue`
+- `VectorExponentialApproxLogF32(VectorType).maxValue`
+- `VectorExponentialApproxLogF32(VectorType).sample`
+- `VectorExponentialApproxLogF32(VectorType).sampleFrom`
+- `VectorExponentialApproxLogF32(VectorType).fill`
+- `VectorExponentialApproxLogF32(VectorType).fillFrom`
 - `VectorStandardExponential(VectorType)`
 - `VectorStandardExponential(VectorType).rateValue`
 - `VectorStandardExponential(VectorType).inverseRateValue`

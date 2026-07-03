@@ -70,6 +70,14 @@ repair rows before a real `vectorbench` follow-up.
   polynomial-selection cost is far above ziggurat lane-fill, and the output
   mapping changes.
 - Vector-log exponential kernels are too slow for default use.
+- Approx-log f32 vector exponential is useful only as an explicit output-mapping
+  opt-in, not as a default dense kernel. A vector-only midpoint-uniform plus
+  atanh-polynomial approximation for `-log(U)` has real-harness f32x8 rows above
+  scalar ziggurat lane-fill and is exposed as
+  `VectorStandardExponentialApproxLogF32` / `VectorExponentialApproxLogF32`, but
+  it intentionally changes the output mapping and has an approximation contract
+  rather than exact ziggurat or exact inverse-transform semantics. It does not
+  solve normal kernels or f64/default exponential dense kernels.
 - Platform libmvec vector-log inverse-transform exponential is also not a
   production direction. A scratch x86_64-linux-gnu probe using `_ZGVcN8v_logf`
   / `_ZGVcN4v_log` reached about 427M f32 and 216M f64 lanes/s for
