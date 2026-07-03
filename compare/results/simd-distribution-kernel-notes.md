@@ -46,6 +46,14 @@ works but not replacing the full-run baseline above.
   2026-07-03 full `vectorbench` run shows f32x8 repair about 476M
   standard-normal, 476M normal, 450M standard-exponential, and 449M exponential
   lanes/s versus matching direct rows around 501M, 496M, 471M, and 470M.
+  A later long filtered rerun with
+  `vectorbench -- 268435456 "StandardNormal f32x8"` /
+  `"fillVectorNormal f32x8"` / `"StandardExponential f32x8"` /
+  `"fillVectorExponential f32x8"` kept the same same-harness ordering even
+  though absolute rates were lower on that host pass: repair reached about
+  395M standard-normal, 395M normal, 375M standard-exponential, and 377M
+  exponential lanes/s versus matching direct core rows around 415M, 414M,
+  391M, and 390M.
   FastPrng repair probe rows
   likewise trail or only match current production rows once correct stream-shape
   repair is required.
