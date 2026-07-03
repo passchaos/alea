@@ -61,6 +61,34 @@ call/codegen rather than missing reusable-sampler dispatch specialization. That
 matches the existing `lognormal-transform-notes.md` conclusion and the raw
 single-sample rows in `performance-triage.md`.
 
+## Local Rust `rand_distr` Codegen Check
+
+The matching Rust benchmark binary (`compare/rand_bench/target/release/alea-rand-compare`)
+links dynamically against glibc `libm` and imports `exp`:
+
+```text
+libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6
+                 U exp
+```
+
+Local `rand_distr 0.6.0` implements `LogNormal.sample` as
+`self.norm.sample(rng).exp()`. Disassembly of the focused benchmark rows shows
+both `LogNormal<f64>` and `LogNormal<f32>` call `exp@GLIBC_2.29` rather than an
+`expf` symbol, for example:
+
+```text
+<alea_rand_compare::bench_distr_f32::<rand_distr::normal::LogNormal<f32>>>:
+    call   *... <exp@GLIBC_2.29>
+<alea_rand_compare::bench_distr_f64::<rand_distr::normal::LogNormal<f64>>>:
+    call   *... <exp@GLIBC_2.29>
+```
+
+A fresh focused Rust run remains around 144.8M f64, 158.9M f32, 80.0M
+`stddev=1` f64, and 79.0M `stddev=1` f32 samples/s. This narrows the exact
+LogNormal blocker: Rust is not faster because it uses a different distribution
+algorithm or an `expf` f32 transform; its benchmark is using dynamic glibc libm
+`exp` with LLVM/Rust codegen around the normal source and transform.
+
 ## Libmvec Follow-up
 
 A later Linux-local probe linked `log-normal-probe` to glibc `libmvec` on
