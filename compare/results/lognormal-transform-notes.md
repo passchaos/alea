@@ -124,6 +124,19 @@ Fresh local evidence:
   approximation is parameter-bounded.
 - The public approximation is therefore still an opt-in narrow-profile path,
   not a replacement for exact `LogNormal(f32)`.
+- A smaller same-host `log-normal-probe -- 262144` rerun after the point-mass
+  cleanup sweep again failed to produce a safe exact default. The short run was
+  noisy enough that current production f64 fill rows appeared low in isolation,
+  but the candidate ordering still matched earlier conclusions: libc `exp` /
+  `expf` and exact out-of-place or vector-lane transforms can win isolated
+  rows, while requiring libc or showing profile-specific regressions; f32
+  `expm1(x)+1` / public approximation remain faster only in the bounded narrow
+  profile and keep the same wider-spread ULP growth (`expm1+1` around 51 ULP at
+  `stddev=1` and thousands at `stddev=2`). The widened f64 exact f32 transform
+  stayed 1 ULP across the checked spreads but remained slower than the exact
+  f32 default in relevant rows. This rerun therefore adds no production change
+  and reinforces keeping exact LogNormal on `@exp` plus the existing opt-in f32
+  approximation.
 
 ## Requirements For A Future Default Change
 
