@@ -412,9 +412,10 @@ new concrete hypothesis is available:
   `std.math.exp`, optimized float mode, `exp2`, f32 vector width, out-of-place
   exact transforms, staging chunk size, widened f64 `exp` for f32,
   general-purpose `expm1 + 1`, branchy hybrid `expm1`, and stddev=1 branch
-  specialization have all been ruled out as defaults; future work needs a sound
-  exact-`exp` transform/codegen improvement or an explicitly parameter-limited
-  opt-in. See `lognormal-transform-notes.md`.
+  specialization have all been ruled out as exact defaults. `LogNormalApproxF32`
+  and `LogNormalExp2F32` now provide explicit bounded f32 opt-in approximation
+  paths; future work needs a sound exact-`exp` transform/codegen improvement or
+  a clearly justified additional opt-in. See `lognormal-transform-notes.md`.
 - OpenClosed f64: exact endpoint-grid bulk fill now exceeds local Rust evidence
   after the `@mulAdd` raw-word conversion; keep `openclosed-endpoint-notes.md`
   for regression history and future portability checks.
