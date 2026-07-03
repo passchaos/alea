@@ -89,6 +89,17 @@ repair rows before a real `vectorbench` follow-up.
   repair was lower still around 307M/307M normal and 274M/272M exponential.
   Preserving the rejected candidate is therefore correct but too expensive for
   production.
+- A block-fallback vector ziggurat policy also loses in the real vector-slice
+  harness. This stream-versioned candidate accepts a whole vector only when all
+  lanes hit the ziggurat fast path, otherwise discards the candidate block and
+  falls back to scalar lane-fill for that output vector. A focused 64Mi-lane
+  `vectorbench` run showed f32x8 ScalarPrng block-fallback around 430M/421M
+  standard/parameterized normal and 393M/394M standard/parameterized
+  exponential lanes/s versus direct rows around 499M/500M normal and
+  472M/471M exponential. f64x4 block-fallback was about 432M/430M normal and
+  403M/398M exponential versus direct rows around 454M/454M and 469M/468M.
+  FastPrng f32x8 block-fallback likewise trailed direct rows at about
+  423M/420M normal and 380M/377M exponential.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
   rejected lanes: prefetching candidates changes how repair consumes randomness.
 - Reinterpreting packed f64 vector slices as scalar slices and routing them

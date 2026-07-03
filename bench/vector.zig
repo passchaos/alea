@@ -200,46 +200,58 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorStandardNormalF32Direct(io, stdout, "alea fillVectorStandardNormal f32x8 direct", lanes / 4);
     try benchFillVectorStandardNormalF32Repair(io, stdout, "alea fillVectorStandardNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 same-candidate repair", lanes / 4, 0xd188, fillStandardNormalF32SameCandidateRepair);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 block-fallback candidate", lanes / 4, 0xd188, fillStandardNormalF32BlockFallback);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorStandardNormal f32x8 fast direct", lanes / 4, 0xd188, fillStandardNormalF32FastDirect);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorStandardNormal f32x8 fast repair candidate", lanes / 4, 0xd188, fillStandardNormalF32FastRepair);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorStandardNormal f32x8 fast same-candidate repair", lanes / 4, 0xd188, fillStandardNormalF32FastSameCandidateRepair);
+    try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorStandardNormal f32x8 fast block-fallback candidate", lanes / 4, 0xd188, fillStandardNormalF32FastBlockFallback);
     try benchFillVectorStandardNormalF64(io, stdout, "alea fillVectorStandardNormal f64x4", lanes / 8);
     try benchFillVectorStandardNormalF64Direct(io, stdout, "alea fillVectorStandardNormal f64x4 direct", lanes / 8);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 local scalar candidate", lanes / 8, 0xd184, fillStandardNormalF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillStandardNormalF64SameCandidateRepair);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillStandardNormalF64BlockFallback);
     try benchFillVectorNormalF32(io, stdout, "alea fillVectorNormal f32x8", lanes / 4);
     try benchFillVectorNormalF32Direct(io, stdout, "alea fillVectorNormal f32x8 direct", lanes / 4);
     try benchFillVectorNormalF32Repair(io, stdout, "alea fillVectorNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 same-candidate repair", lanes / 4, 0xd188, fillNormalF32SameCandidateRepair);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 block-fallback candidate", lanes / 4, 0xd188, fillNormalF32BlockFallback);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorNormal f32x8 fast direct", lanes / 4, 0xd188, fillNormalF32FastDirect);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorNormal f32x8 fast repair candidate", lanes / 4, 0xd188, fillNormalF32FastRepair);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorNormal f32x8 fast same-candidate repair", lanes / 4, 0xd188, fillNormalF32FastSameCandidateRepair);
+    try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorNormal f32x8 fast block-fallback candidate", lanes / 4, 0xd188, fillNormalF32FastBlockFallback);
     try benchFillVectorNormalF64(io, stdout, "alea fillVectorNormal f64x4", lanes / 8);
     try benchFillVectorNormalF64Direct(io, stdout, "alea fillVectorNormal f64x4 direct", lanes / 8);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 local scalar candidate", lanes / 8, 0xd184, fillNormalF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillNormalF64SameCandidateRepair);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillNormalF64BlockFallback);
     try benchFillVectorStandardExponentialF32(io, stdout, "alea fillVectorStandardExponential f32x8", lanes);
     try benchFillVectorStandardExponentialF32Direct(io, stdout, "alea fillVectorStandardExponential f32x8 direct", lanes);
     try benchFillVectorStandardExponentialF32Repair(io, stdout, "alea fillVectorStandardExponential f32x8 repair candidate", lanes);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 same-candidate repair", lanes, 0xe188, fillStandardExponentialF32SameCandidateRepair);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 block-fallback candidate", lanes, 0xe188, fillStandardExponentialF32BlockFallback);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorStandardExponential f32x8 fast direct", lanes, 0xe188, fillStandardExponentialF32FastDirect);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorStandardExponential f32x8 fast repair candidate", lanes, 0xe188, fillStandardExponentialF32FastRepair);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorStandardExponential f32x8 fast same-candidate repair", lanes, 0xe188, fillStandardExponentialF32FastSameCandidateRepair);
+    try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorStandardExponential f32x8 fast block-fallback candidate", lanes, 0xe188, fillStandardExponentialF32FastBlockFallback);
     try benchFillVectorStandardExponentialF64(io, stdout, "alea fillVectorStandardExponential f64x4", lanes / 2);
     try benchFillVectorStandardExponentialF64Direct(io, stdout, "alea fillVectorStandardExponential f64x4 direct", lanes / 2);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 local scalar candidate", lanes / 2, 0xe184, fillStandardExponentialF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 same-candidate repair", lanes / 2, 0xe184, fillStandardExponentialF64SameCandidateRepair);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 block-fallback candidate", lanes / 2, 0xe184, fillStandardExponentialF64BlockFallback);
     try benchFillVectorExponentialF32(io, stdout, "alea fillVectorExponential f32x8", lanes);
     try benchFillVectorExponentialF32Direct(io, stdout, "alea fillVectorExponential f32x8 direct", lanes);
     try benchFillVectorExponentialF32Repair(io, stdout, "alea fillVectorExponential f32x8 repair candidate", lanes);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorExponential f32x8 same-candidate repair", lanes, 0xe188, fillExponentialF32SameCandidateRepair);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorExponential f32x8 block-fallback candidate", lanes, 0xe188, fillExponentialF32BlockFallback);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorExponential f32x8 fast direct", lanes, 0xe188, fillExponentialF32FastDirect);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorExponential f32x8 fast repair candidate", lanes, 0xe188, fillExponentialF32FastRepair);
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorExponential f32x8 fast same-candidate repair", lanes, 0xe188, fillExponentialF32FastSameCandidateRepair);
+    try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorExponential f32x8 fast block-fallback candidate", lanes, 0xe188, fillExponentialF32FastBlockFallback);
     try benchFillVectorExponentialF64(io, stdout, "alea fillVectorExponential f64x4", lanes / 2);
     try benchFillVectorExponentialF64Direct(io, stdout, "alea fillVectorExponential f64x4 direct", lanes / 2);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 local scalar candidate", lanes / 2, 0xe184, fillExponentialF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 same-candidate repair", lanes / 2, 0xe184, fillExponentialF64SameCandidateRepair);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 block-fallback candidate", lanes / 2, 0xe184, fillExponentialF64BlockFallback);
     try stdout.flush();
 }
 
@@ -2230,6 +2242,10 @@ fn fillStandardNormalF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@V
     for (dest) |*item| item.* = vectorRepairNormalF32SameCandidate(engine);
 }
 
+fn fillStandardNormalF32BlockFallback(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorRepairNormalF32BlockFallback(engine);
+}
+
 fn fillNormalF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32), mean: f32, stddev: f32) void {
     const mean_vec: @Vector(8, f32) = @splat(mean);
     const stddev_vec: @Vector(8, f32) = @splat(stddev);
@@ -2242,12 +2258,22 @@ fn fillNormalF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8,
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRepairNormalF32SameCandidate(engine);
 }
 
+fn fillNormalF32BlockFallback(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRepairNormalF32BlockFallback(engine);
+}
+
 fn fillStandardExponentialF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairExponentialF32Correct(engine);
 }
 
 fn fillStandardExponentialF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairExponentialF32SameCandidate(engine);
+}
+
+fn fillStandardExponentialF32BlockFallback(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorRepairExponentialF32BlockFallback(engine);
 }
 
 fn fillExponentialF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32), rate: f32) void {
@@ -2260,6 +2286,11 @@ fn fillExponentialF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vect
     for (dest) |*item| item.* = vectorRepairExponentialF32SameCandidate(engine) * inverse_rate;
 }
 
+fn fillExponentialF32BlockFallback(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const inverse_rate: @Vector(8, f32) = @splat(0.5);
+    for (dest) |*item| item.* = vectorRepairExponentialF32BlockFallback(engine) * inverse_rate;
+}
+
 fn fillStandardNormalF32FastDirect(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
     alea.Rng.fillVectorStandardNormalFrom(engine, @Vector(8, f32), dest);
 }
@@ -2270,6 +2301,10 @@ fn fillStandardNormalF32FastRepair(engine: *alea.FastPrng, dest: []@Vector(8, f3
 
 fn fillStandardNormalF32FastSameCandidateRepair(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairNormalF32FastSameCandidate(engine);
+}
+
+fn fillStandardNormalF32FastBlockFallback(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorRepairNormalF32FastBlockFallback(engine);
 }
 
 fn fillNormalF32FastDirect(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
@@ -2288,6 +2323,12 @@ fn fillNormalF32FastSameCandidateRepair(engine: *alea.FastPrng, dest: []@Vector(
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRepairNormalF32FastSameCandidate(engine);
 }
 
+fn fillNormalF32FastBlockFallback(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRepairNormalF32FastBlockFallback(engine);
+}
+
 fn fillStandardExponentialF32FastDirect(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
     alea.Rng.fillVectorStandardExponentialFrom(engine, @Vector(8, f32), dest);
 }
@@ -2298,6 +2339,10 @@ fn fillStandardExponentialF32FastRepair(engine: *alea.FastPrng, dest: []@Vector(
 
 fn fillStandardExponentialF32FastSameCandidateRepair(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairExponentialF32FastSameCandidate(engine);
+}
+
+fn fillStandardExponentialF32FastBlockFallback(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorRepairExponentialF32FastBlockFallback(engine);
 }
 
 fn fillExponentialF32FastDirect(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
@@ -2314,12 +2359,21 @@ fn fillExponentialF32FastSameCandidateRepair(engine: *alea.FastPrng, dest: []@Ve
     for (dest) |*item| item.* = vectorRepairExponentialF32FastSameCandidate(engine) * inverse_rate;
 }
 
+fn fillExponentialF32FastBlockFallback(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
+    const inverse_rate: @Vector(8, f32) = @splat(0.5);
+    for (dest) |*item| item.* = vectorRepairExponentialF32FastBlockFallback(engine) * inverse_rate;
+}
+
 fn fillStandardNormalF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorNormalF64Local(engine);
 }
 
 fn fillStandardNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorRepairNormalF64SameCandidate(engine);
+}
+
+fn fillStandardNormalF64BlockFallback(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorRepairNormalF64BlockFallback(engine);
 }
 
 fn fillNormalF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
@@ -2332,12 +2386,22 @@ fn fillNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4,
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRepairNormalF64SameCandidate(engine);
 }
 
+fn fillNormalF64BlockFallback(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const mean_vec: @Vector(4, f64) = @splat(0);
+    const stddev_vec: @Vector(4, f64) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRepairNormalF64BlockFallback(engine);
+}
+
 fn fillStandardExponentialF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorExponentialF64Local(engine);
 }
 
 fn fillStandardExponentialF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorRepairExponentialF64SameCandidate(engine);
+}
+
+fn fillStandardExponentialF64BlockFallback(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorRepairExponentialF64BlockFallback(engine);
 }
 
 fn fillExponentialF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
@@ -2348,6 +2412,11 @@ fn fillExponentialF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) vo
 fn fillExponentialF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     const inverse_rate: @Vector(4, f64) = @splat(0.5);
     for (dest) |*item| item.* = vectorRepairExponentialF64SameCandidate(engine) * inverse_rate;
+}
+
+fn fillExponentialF64BlockFallback(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(0.5);
+    for (dest) |*item| item.* = vectorRepairExponentialF64BlockFallback(engine) * inverse_rate;
 }
 
 fn vectorNormalF64Local(engine: *alea.ScalarPrng) @Vector(4, f64) {
@@ -2389,6 +2458,32 @@ fn vectorRepairNormalF64SameCandidate(engine: *alea.ScalarPrng) @Vector(4, f64) 
     return out;
 }
 
+fn vectorRepairNormalF64BlockFallback(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const VecF64 = @Vector(4, f64);
+    const VecU64 = @Vector(4, u64);
+
+    var bits_vec: VecU64 = undefined;
+    inline for (0..4) |lane| bits_vec[lane] = engine.next();
+
+    var ratios: VecF64 = undefined;
+    var out: VecF64 = undefined;
+    inline for (0..4) |lane| {
+        const bits = bits_vec[lane];
+        const i: usize = @as(u8, @truncate(bits));
+        const repr = (@as(u64, 0x400) << 52) | (bits >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+        ratios[lane] = norm_ratio[i];
+        out[lane] = u * ziggurat.NormDist.x[i];
+    }
+
+    const reprs = (@as(VecU64, @splat(@as(u64, 0x400) << 52)) | (bits_vec >> @as(VecU64, @splat(12))));
+    const u_values: VecF64 = @as(VecF64, @bitCast(reprs)) - @as(VecF64, @splat(3.0));
+    const mask = @abs(u_values) < ratios;
+    var all_accepted = true;
+    inline for (0..4) |lane| all_accepted = all_accepted and mask[lane];
+    return if (all_accepted) out else vectorNormalF64Local(engine);
+}
+
 fn vectorRepairExponentialF64SameCandidate(engine: *alea.ScalarPrng) @Vector(4, f64) {
     const VecU64 = @Vector(4, u64);
 
@@ -2414,6 +2509,32 @@ fn vectorRepairExponentialF64SameCandidate(engine: *alea.ScalarPrng) @Vector(4, 
         if (!mask[lane]) out[lane] = thresholdExponentialWithInitial(engine, bits_vec[lane]);
     }
     return out;
+}
+
+fn vectorRepairExponentialF64BlockFallback(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const VecU64 = @Vector(4, u64);
+
+    var bits_vec: VecU64 = undefined;
+    inline for (0..4) |lane| bits_vec[lane] = engine.next();
+
+    var thresholds: VecU64 = undefined;
+    var mantissas: VecU64 = undefined;
+    var out: @Vector(4, f64) = undefined;
+    inline for (0..4) |lane| {
+        const bits = bits_vec[lane];
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 12;
+        const repr = (@as(u64, 0x3ff) << 52) | mantissa;
+        const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
+        thresholds[lane] = exp_threshold[i];
+        mantissas[lane] = mantissa;
+        out[lane] = u * ziggurat.ExpDist.x[i];
+    }
+
+    const mask = mantissas < thresholds;
+    var all_accepted = true;
+    inline for (0..4) |lane| all_accepted = all_accepted and mask[lane];
+    return if (all_accepted) out else vectorExponentialF64Local(engine);
 }
 
 fn vectorRepairNormalF32Correct(engine: *alea.ScalarPrng) @Vector(8, f32) {
@@ -2449,6 +2570,32 @@ fn vectorRepairNormalF32SameCandidate(engine: *alea.ScalarPrng) @Vector(8, f32) 
     return out;
 }
 
+fn vectorRepairNormalF32BlockFallback(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    const VecF64 = @Vector(8, f64);
+    const VecU64 = @Vector(8, u64);
+
+    var bits_vec: VecU64 = undefined;
+    inline for (0..8) |lane| bits_vec[lane] = engine.next();
+
+    var ratios: VecF64 = undefined;
+    var out: @Vector(8, f32) = undefined;
+    inline for (0..8) |lane| {
+        const bits = bits_vec[lane];
+        const i: usize = @as(u8, @truncate(bits));
+        const repr = (@as(u64, 0x400) << 52) | (bits >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+        ratios[lane] = norm_ratio[i];
+        out[lane] = @floatCast(u * ziggurat.NormDist.x[i]);
+    }
+
+    const reprs = (@as(VecU64, @splat(@as(u64, 0x400) << 52)) | (bits_vec >> @as(VecU64, @splat(12))));
+    const u_values: VecF64 = @as(VecF64, @bitCast(reprs)) - @as(VecF64, @splat(3.0));
+    const mask = @abs(u_values) < ratios;
+    var all_accepted = true;
+    inline for (0..8) |lane| all_accepted = all_accepted and mask[lane];
+    return if (all_accepted) out else vectorRepairNormalF32Correct(engine);
+}
+
 fn vectorRepairExponentialF32Correct(engine: *alea.ScalarPrng) @Vector(8, f32) {
     var out: @Vector(8, f32) = undefined;
     inline for (0..8) |lane| out[lane] = @floatCast(thresholdExponential(engine));
@@ -2480,6 +2627,32 @@ fn vectorRepairExponentialF32SameCandidate(engine: *alea.ScalarPrng) @Vector(8, 
         if (!mask[lane]) out[lane] = @floatCast(thresholdExponentialWithInitial(engine, bits_vec[lane]));
     }
     return out;
+}
+
+fn vectorRepairExponentialF32BlockFallback(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    const VecU64 = @Vector(8, u64);
+
+    var bits_vec: VecU64 = undefined;
+    inline for (0..8) |lane| bits_vec[lane] = engine.next();
+
+    var thresholds: VecU64 = undefined;
+    var mantissas: VecU64 = undefined;
+    var out: @Vector(8, f32) = undefined;
+    inline for (0..8) |lane| {
+        const bits = bits_vec[lane];
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 12;
+        const repr = (@as(u64, 0x3ff) << 52) | mantissa;
+        const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
+        thresholds[lane] = exp_threshold[i];
+        mantissas[lane] = mantissa;
+        out[lane] = @floatCast(u * ziggurat.ExpDist.x[i]);
+    }
+
+    const mask = mantissas < thresholds;
+    var all_accepted = true;
+    inline for (0..8) |lane| all_accepted = all_accepted and mask[lane];
+    return if (all_accepted) out else vectorRepairExponentialF32Correct(engine);
 }
 
 fn vectorRepairNormalF32FastCorrect(engine: *alea.FastPrng) @Vector(8, f32) {
@@ -2515,10 +2688,62 @@ fn vectorRepairNormalF32FastSameCandidate(engine: *alea.FastPrng) @Vector(8, f32
     return out;
 }
 
+fn vectorRepairNormalF32FastBlockFallback(engine: *alea.FastPrng) @Vector(8, f32) {
+    const VecF64 = @Vector(8, f64);
+    const VecU64 = @Vector(8, u64);
+
+    var bits_vec: VecU64 = undefined;
+    inline for (0..8) |lane| bits_vec[lane] = engine.next();
+
+    var ratios: VecF64 = undefined;
+    var out: @Vector(8, f32) = undefined;
+    inline for (0..8) |lane| {
+        const bits = bits_vec[lane];
+        const i: usize = @as(u8, @truncate(bits));
+        const repr = (@as(u64, 0x400) << 52) | (bits >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+        ratios[lane] = norm_ratio[i];
+        out[lane] = @floatCast(u * ziggurat.NormDist.x[i]);
+    }
+
+    const reprs = (@as(VecU64, @splat(@as(u64, 0x400) << 52)) | (bits_vec >> @as(VecU64, @splat(12))));
+    const u_values: VecF64 = @as(VecF64, @bitCast(reprs)) - @as(VecF64, @splat(3.0));
+    const mask = @abs(u_values) < ratios;
+    var all_accepted = true;
+    inline for (0..8) |lane| all_accepted = all_accepted and mask[lane];
+    return if (all_accepted) out else vectorRepairNormalF32FastCorrect(engine);
+}
+
 fn vectorRepairExponentialF32FastCorrect(engine: *alea.FastPrng) @Vector(8, f32) {
     var out: @Vector(8, f32) = undefined;
     inline for (0..8) |lane| out[lane] = @floatCast(thresholdExponentialFast(engine));
     return out;
+}
+
+fn vectorRepairExponentialF32FastBlockFallback(engine: *alea.FastPrng) @Vector(8, f32) {
+    const VecU64 = @Vector(8, u64);
+
+    var bits_vec: VecU64 = undefined;
+    inline for (0..8) |lane| bits_vec[lane] = engine.next();
+
+    var thresholds: VecU64 = undefined;
+    var mantissas: VecU64 = undefined;
+    var out: @Vector(8, f32) = undefined;
+    inline for (0..8) |lane| {
+        const bits = bits_vec[lane];
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 12;
+        const repr = (@as(u64, 0x3ff) << 52) | mantissa;
+        const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
+        thresholds[lane] = exp_threshold[i];
+        mantissas[lane] = mantissa;
+        out[lane] = @floatCast(u * ziggurat.ExpDist.x[i]);
+    }
+
+    const mask = mantissas < thresholds;
+    var all_accepted = true;
+    inline for (0..8) |lane| all_accepted = all_accepted and mask[lane];
+    return if (all_accepted) out else vectorRepairExponentialF32FastCorrect(engine);
 }
 
 fn vectorRepairExponentialF32FastSameCandidate(engine: *alea.FastPrng) @Vector(8, f32) {
