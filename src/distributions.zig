@@ -3985,6 +3985,109 @@ pub fn fillVectorLogNormalNativeF32CheckedFrom(source: anytype, comptime VectorT
     fillVectorLogNormalNativeF32From(source, VectorType, dest, mean, stddev);
 }
 
+pub fn logNormalNativeExp2F32(rng: Rng, mean: f32, stddev: f32) f32 {
+    return logNormalNativeExp2F32From(rng, mean, stddev);
+}
+
+pub fn logNormalNativeExp2F32From(source: anytype, mean: f32, stddev: f32) f32 {
+    std.debug.assert(logNormalExp2F32ParametersValid(mean, stddev));
+    if (stddev == 0) return exp2ApproxPositiveF32(mean);
+    const z = standardNormalNativeF32From(source);
+    const log_space = if (mean == 0) stddev * z else mean + stddev * z;
+    return exp2ApproxPositiveF32(log_space);
+}
+
+pub fn logNormalNativeExp2F32Checked(rng: Rng, mean: f32, stddev: f32) Error!f32 {
+    return logNormalNativeExp2F32CheckedFrom(rng, mean, stddev);
+}
+
+pub fn logNormalNativeExp2F32CheckedFrom(source: anytype, mean: f32, stddev: f32) Error!f32 {
+    if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+    return logNormalNativeExp2F32From(source, mean, stddev);
+}
+
+pub fn fillLogNormalNativeExp2F32(rng: Rng, dest: []f32, mean: f32, stddev: f32) void {
+    fillLogNormalNativeExp2F32From(rng, dest, mean, stddev);
+}
+
+pub fn fillLogNormalNativeExp2F32From(source: anytype, dest: []f32, mean: f32, stddev: f32) void {
+    std.debug.assert(logNormalExp2F32ParametersValid(mean, stddev));
+    if (stddev == 0) {
+        @memset(dest, exp2ApproxPositiveF32(mean));
+        return;
+    }
+    fillStandardNormalNativeF32From(source, dest);
+    if (mean == 0) {
+        scaleInPlace(f32, dest, stddev);
+    } else {
+        for (dest) |*item| item.* = mean + stddev * item.*;
+    }
+    exp2ApproxPositiveInPlaceF32(dest);
+}
+
+pub fn fillLogNormalNativeExp2F32Checked(rng: Rng, dest: []f32, mean: f32, stddev: f32) Error!void {
+    return fillLogNormalNativeExp2F32CheckedFrom(rng, dest, mean, stddev);
+}
+
+pub fn fillLogNormalNativeExp2F32CheckedFrom(source: anytype, dest: []f32, mean: f32, stddev: f32) Error!void {
+    if (dest.len == 0) return;
+    if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+    fillLogNormalNativeExp2F32From(source, dest, mean, stddev);
+}
+
+pub fn vectorLogNormalNativeExp2F32(rng: Rng, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+    return vectorLogNormalNativeExp2F32From(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorLogNormalNativeExp2F32From(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorLogNormalNativeExp2F32 expects an f32 vector");
+    std.debug.assert(logNormalExp2F32ParametersValid(mean, stddev));
+    if (stddev == 0) return @splat(exp2ApproxPositiveF32(mean));
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = logNormalNativeExp2F32From(source, mean, stddev);
+    return out;
+}
+
+pub fn vectorLogNormalNativeExp2F32Checked(rng: Rng, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
+    return vectorLogNormalNativeExp2F32CheckedFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorLogNormalNativeExp2F32CheckedFrom(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorLogNormalNativeExp2F32Checked expects an f32 vector");
+    if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+    return vectorLogNormalNativeExp2F32From(source, VectorType, mean, stddev);
+}
+
+pub fn fillVectorLogNormalNativeExp2F32(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
+    fillVectorLogNormalNativeExp2F32From(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorLogNormalNativeExp2F32From(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorLogNormalNativeExp2F32 expects an f32 vector");
+    std.debug.assert(logNormalExp2F32ParametersValid(mean, stddev));
+    if (stddev == 0) {
+        @memset(dest, @as(VectorType, @splat(exp2ApproxPositiveF32(mean))));
+        return;
+    }
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    fillLogNormalNativeExp2F32From(source, scalars, mean, stddev);
+}
+
+pub fn fillVectorLogNormalNativeExp2F32Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) Error!void {
+    return fillVectorLogNormalNativeExp2F32CheckedFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorLogNormalNativeExp2F32CheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorLogNormalNativeExp2F32Checked expects an f32 vector");
+    if (dest.len == 0) return;
+    if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+    fillVectorLogNormalNativeExp2F32From(source, VectorType, dest, mean, stddev);
+}
+
 pub fn vectorLogNormal(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
     return vectorLogNormalFrom(rng, VectorType, mean, stddev);
 }
@@ -4377,6 +4480,53 @@ pub const LogNormalNativeF32 = struct {
     }
 };
 
+pub const LogNormalNativeExp2F32 = struct {
+    const Self = @This();
+
+    pub const max_abs_mean: f32 = log_normal_exp2_f32_max_abs_mean;
+    pub const max_stddev: f32 = log_normal_exp2_f32_max_stddev;
+
+    mean: f32,
+    stddev: f32,
+
+    pub fn init(mean: f32, stddev: f32) Error!Self {
+        if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+        return .{ .mean = mean, .stddev = stddev };
+    }
+
+    pub fn meanValue(self: Self) f32 {
+        return self.mean;
+    }
+
+    pub fn stddevValue(self: Self) f32 {
+        return self.stddev;
+    }
+
+    pub fn maxAbsMeanValue(_: Self) f32 {
+        return max_abs_mean;
+    }
+
+    pub fn maxStddevValue(_: Self) f32 {
+        return max_stddev;
+    }
+
+    pub fn sample(self: Self, rng: Rng) f32 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Self, source: anytype) f32 {
+        return logNormalNativeExp2F32From(source, self.mean, self.stddev);
+    }
+
+    pub fn fill(self: Self, rng: Rng, dest: []f32) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {
+        fillLogNormalNativeExp2F32From(source, dest, self.mean, self.stddev);
+    }
+};
+
 pub fn VectorLogNormalNativeF32(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     if (Child != f32) @compileError("VectorLogNormalNativeF32 expects an f32 vector");
@@ -4414,6 +4564,58 @@ pub fn VectorLogNormalNativeF32(comptime VectorType: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             fillVectorLogNormalNativeF32From(source, VectorType, dest, self.mean, self.stddev);
+        }
+    };
+}
+
+pub fn VectorLogNormalNativeExp2F32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorLogNormalNativeExp2F32 expects an f32 vector");
+
+    return struct {
+        const Self = @This();
+
+        pub const max_abs_mean: f32 = log_normal_exp2_f32_max_abs_mean;
+        pub const max_stddev: f32 = log_normal_exp2_f32_max_stddev;
+
+        mean: f32,
+        stddev: f32,
+
+        pub fn init(mean: f32, stddev: f32) Error!Self {
+            if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+            return .{ .mean = mean, .stddev = stddev };
+        }
+
+        pub fn meanValue(self: Self) f32 {
+            return self.mean;
+        }
+
+        pub fn stddevValue(self: Self) f32 {
+            return self.stddev;
+        }
+
+        pub fn maxAbsMeanValue(_: Self) f32 {
+            return max_abs_mean;
+        }
+
+        pub fn maxStddevValue(_: Self) f32 {
+            return max_stddev;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorLogNormalNativeExp2F32From(source, VectorType, self.mean, self.stddev);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            fillVectorLogNormalNativeExp2F32From(source, VectorType, dest, self.mean, self.stddev);
         }
     };
 }
@@ -22854,6 +23056,93 @@ test "native f32 log-normal has stable snapshots" {
         try std.testing.expectEqual(bits, @as(u32, @bitCast(vector_sampler_sample[lane])));
     }
     try std.testing.expectEqual(@as(u64, 0xc00eeae70402f9e3), vector_sampler_engine.next());
+}
+
+test "native exp2 f32 log-normal has stable snapshots" {
+    const alea = @import("root.zig");
+
+    var sample_engine = alea.ScalarPrng.init(0x3270);
+    const sample = logNormalNativeExp2F32From(&sample_engine, 0, 0.25);
+    try std.testing.expectEqual(@as(u32, 0x3f7fad1f), @as(u32, @bitCast(sample)));
+    try std.testing.expectEqual(@as(u64, 0xa7e1c4ff73fa1150), sample_engine.next());
+
+    var fill_engine = alea.ScalarPrng.init(0x3270);
+    var buf: [4]f32 = undefined;
+    fillLogNormalNativeExp2F32From(&fill_engine, &buf, 0, 0.25);
+    const expected = [_]u32{ 0x3f7fad1f, 0x3f74e856, 0x3f553483, 0x3fa9a4d0 };
+    inline for (expected, 0..) |bits, i| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(buf[i])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x5258cacf9348d26a), fill_engine.next());
+
+    var checked_engine = alea.ScalarPrng.init(0x3270);
+    const checked = try logNormalNativeExp2F32CheckedFrom(&checked_engine, 0, 0.25);
+    try std.testing.expectEqual(@as(u32, 0x3f7fad1f), @as(u32, @bitCast(checked)));
+    try std.testing.expectEqual(@as(u64, 0xa7e1c4ff73fa1150), checked_engine.next());
+
+    var sampler_engine = alea.ScalarPrng.init(0x3270);
+    const sampler = try LogNormalNativeExp2F32.init(0, 0.25);
+    try std.testing.expectEqual(@as(f32, 0), sampler.meanValue());
+    try std.testing.expectEqual(@as(f32, 0.25), sampler.stddevValue());
+    try std.testing.expectEqual(@as(f32, 2), sampler.maxAbsMeanValue());
+    try std.testing.expectEqual(@as(f32, 2), sampler.maxStddevValue());
+    try std.testing.expectEqual(@as(u32, 0x3f7fad1f), @as(u32, @bitCast(sampler.sampleFrom(&sampler_engine))));
+    try std.testing.expectEqual(@as(u64, 0xa7e1c4ff73fa1150), sampler_engine.next());
+
+    var invalid_engine = alea.ScalarPrng.init(0x3272);
+    var invalid_control = alea.ScalarPrng.init(0x3272);
+    try std.testing.expectError(error.InvalidParameter, logNormalNativeExp2F32CheckedFrom(&invalid_engine, 0, 3));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x3273);
+    var empty_control = alea.ScalarPrng.init(0x3273);
+    var empty: [0]f32 = .{};
+    try fillLogNormalNativeExp2F32CheckedFrom(&empty_engine, &empty, 0, 3);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var vector_engine = alea.ScalarPrng.init(0x3271);
+    const vector_sample = vectorLogNormalNativeExp2F32From(&vector_engine, @Vector(8, f32), 0, 0.25);
+    const vector_expected = [_]u32{ 0x3ef60493, 0x3f8e5d46, 0x3f53cb74, 0x3f37f158, 0x3f5358a1, 0x3f7d418d, 0x3f82a7da, 0x3f9b7eab };
+    inline for (vector_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(vector_sample[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x900edfc4bab56265), vector_engine.next());
+
+    var vector_fill_engine = alea.ScalarPrng.init(0x3271);
+    var vector_buf: [2]@Vector(8, f32) = undefined;
+    fillVectorLogNormalNativeExp2F32From(&vector_fill_engine, @Vector(8, f32), &vector_buf, 0, 0.25);
+    inline for (vector_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(vector_buf[0][lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x3bcd764110f8bb3a), vector_fill_engine.next());
+
+    var vector_checked_engine = alea.ScalarPrng.init(0x3271);
+    const vector_checked = try vectorLogNormalNativeExp2F32CheckedFrom(&vector_checked_engine, @Vector(8, f32), 0, 0.25);
+    inline for (vector_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(vector_checked[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x900edfc4bab56265), vector_checked_engine.next());
+
+    var vector_sampler_engine = alea.ScalarPrng.init(0x3271);
+    const vector_sampler = try VectorLogNormalNativeExp2F32(@Vector(8, f32)).init(0, 0.25);
+    try std.testing.expectEqual(@as(f32, 0), vector_sampler.meanValue());
+    try std.testing.expectEqual(@as(f32, 0.25), vector_sampler.stddevValue());
+    const vector_sampler_sample = vector_sampler.sampleFrom(&vector_sampler_engine);
+    inline for (vector_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(vector_sampler_sample[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x900edfc4bab56265), vector_sampler_engine.next());
+
+    var vector_invalid_engine = alea.ScalarPrng.init(0x3274);
+    var vector_invalid_control = alea.ScalarPrng.init(0x3274);
+    try std.testing.expectError(error.InvalidParameter, vectorLogNormalNativeExp2F32CheckedFrom(&vector_invalid_engine, @Vector(8, f32), 0, 3));
+    try std.testing.expectEqual(vector_invalid_control.next(), vector_invalid_engine.next());
+
+    var vector_empty_engine = alea.ScalarPrng.init(0x3275);
+    var vector_empty_control = alea.ScalarPrng.init(0x3275);
+    var vector_empty: [0]@Vector(8, f32) = .{};
+    try fillVectorLogNormalNativeExp2F32CheckedFrom(&vector_empty_engine, @Vector(8, f32), &vector_empty, 0, 3);
+    try std.testing.expectEqual(vector_empty_control.next(), vector_empty_engine.next());
 }
 
 test "poisson large lambda has plausible moments" {

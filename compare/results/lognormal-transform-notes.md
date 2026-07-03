@@ -122,8 +122,12 @@ callers must explicitly choose the narrow f32 profile measured in the probe.
 `LogNormalExp2F32` and the matching `logNormalExp2F32*` /
 `fillLogNormalExp2F32*` helpers intentionally use `exp2(x * log2e)` for a
 broader but still bounded f32 profile, currently limited to `|mean| <= 2` and
-`stddev <= 2` based on the observed error scans. The exact `LogNormal(f32)` and
-`fillLogNormal` paths remain unchanged and keep `@exp` output semantics.
+`stddev <= 2` based on the observed error scans. `LogNormalNativeExp2F32` and
+matching scalar/vector helpers combine that bounded `exp2` transform with the
+native-f32 standard-normal source, giving the fastest current direct/fill/vector
+f32 LogNormal opt-in while intentionally changing both the normal source and the
+transform output mapping. The exact `LogNormal(f32)` and `fillLogNormal` paths
+remain unchanged and keep `@exp` output semantics.
 
 Fresh local evidence:
 
@@ -154,13 +158,17 @@ Fresh local evidence:
   ULP 7-8 in the 1Mi sample. Because the checksum/output mapping changes, this
   is exposed only through the explicit `LogNormalExp2F32` / `logNormalExp2F32*`
   opt-in approximation APIs, not as exact `LogNormal`.
-- Focused throughput rows for the new exp2 opt-in show why it is useful as a
-  named approximation: `bench -- 268435456 "exp2 f32"` reports about 163M
-  facade and 183M ScalarPrng direct single-sample throughput, while
-  `bench -- 268435456 "Exp2F32"` reports fill rows around 191M facade, 193M
-  FastPrng direct, and 212M ScalarPrng direct. Vector-slice rows are tracked in
-  `vectorbench`; a focused 64Mi-lane run reports about 147M f32x8
-  facade/reusable and 188M direct lanes/s.
+- Focused throughput rows for the exp2 opt-ins show why they are useful as
+  named approximations: `bench -- 268435456 "log-normal exp2 f32"` reports
+  about 160-164M facade and 182-183M ScalarPrng direct single-sample throughput,
+  while `bench -- 268435456 "fillLogNormalExp2F32"` reports fill rows around
+  189-193M facade/FastPrng direct and about 209-212M ScalarPrng direct.
+  Combining native-f32 normal with exp2 moves the direct/fill/vector opt-in bar
+  higher: `bench -- 268435456 "native exp2 f32"` reports about 144M facade but
+  about 201M ScalarPrng direct single-sample, `bench -- 268435456
+  "LogNormalNativeExp2F32"` reports fill around 201M facade/FastPrng direct and
+  217M ScalarPrng direct, and `vectorbench -- 268435456 "NativeExp2F32"`
+  reports about 213M facade, 219M direct, and 220M reusable f32x8 lanes/s.
 - `log-normal-probe -- 1048576 "sample stddev1"` similarly shows no
   single-sample exact expression escape hatch for wide-spread LogNormal:
   current/direct-`@exp`/`std.math.exp`/libc rows are all about 58M FastPrng and

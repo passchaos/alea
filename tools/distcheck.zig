@@ -207,6 +207,13 @@ fn checkContinuous() !void {
             return alea.distributions.logNormalNativeF32(r, 0, 0.25);
         }
     }.sample, 1.02, 1.04);
+    var log_normal_native_exp2_engine = alea.DefaultPrng.init(0xc0ff_ee46);
+    const log_normal_native_exp2_rng = alea.Rng.init(&log_normal_native_exp2_engine);
+    try expectContinuousMean("log-normal-native-exp2-f32", log_normal_native_exp2_rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.logNormalNativeExp2F32(r, 0, 0.25);
+        }
+    }.sample, 1.02, 1.04);
     try expectContinuousMean("half-normal", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.halfNormal(r, f64, 2);
@@ -494,6 +501,11 @@ fn checkVectorDistributions() !void {
     var log_normal_native: [128]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorLogNormalNativeF32From(&vector_log_normal_native_engine, @Vector(8, f32), &log_normal_native, 0, 0.25);
     try expectVectorMean(@Vector(8, f32), "vector log-normal native f32x8", &log_normal_native, 1.02, 1.04);
+
+    var vector_log_normal_native_exp2_engine = alea.ScalarPrng.init(0x7112);
+    var log_normal_native_exp2: [128]@Vector(8, f32) = undefined;
+    alea.distributions.fillVectorLogNormalNativeExp2F32From(&vector_log_normal_native_exp2_engine, @Vector(8, f32), &log_normal_native_exp2, 0, 0.25);
+    try expectVectorMean(@Vector(8, f32), "vector log-normal native exp2 f32x8", &log_normal_native_exp2, 1.02, 1.04);
 
     var vector_native_normal_engine = alea.ScalarPrng.init(0x710d);
     var native_normal: [128]@Vector(8, f32) = undefined;

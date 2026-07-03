@@ -199,6 +199,18 @@ Single-shot helpers:
   `fillVectorLogNormalNativeF32`, `fillVectorLogNormalNativeF32From`,
   `fillVectorLogNormalNativeF32Checked`,
   `fillVectorLogNormalNativeF32CheckedFrom`,
+  `logNormalNativeExp2F32`, `logNormalNativeExp2F32From`,
+  `logNormalNativeExp2F32Checked`, `logNormalNativeExp2F32CheckedFrom`,
+  `fillLogNormalNativeExp2F32`, `fillLogNormalNativeExp2F32From`,
+  `fillLogNormalNativeExp2F32Checked`,
+  `fillLogNormalNativeExp2F32CheckedFrom`,
+  `vectorLogNormalNativeExp2F32`, `vectorLogNormalNativeExp2F32From`,
+  `vectorLogNormalNativeExp2F32Checked`,
+  `vectorLogNormalNativeExp2F32CheckedFrom`,
+  `fillVectorLogNormalNativeExp2F32`,
+  `fillVectorLogNormalNativeExp2F32From`,
+  `fillVectorLogNormalNativeExp2F32Checked`,
+  `fillVectorLogNormalNativeExp2F32CheckedFrom`,
   `vectorLogNormal`, `vectorLogNormalFrom`, `vectorLogNormalChecked`,
   `vectorLogNormalCheckedFrom`, `fillVectorLogNormal`,
   `fillVectorLogNormalFrom`, `fillVectorLogNormalChecked`,
@@ -933,6 +945,30 @@ Reusable samplers:
 - `VectorLogNormalNativeF32(VectorType).sampleFrom`
 - `VectorLogNormalNativeF32(VectorType).fill`
 - `VectorLogNormalNativeF32(VectorType).fillFrom`
+- `LogNormalNativeExp2F32`
+- `LogNormalNativeExp2F32.max_abs_mean`
+- `LogNormalNativeExp2F32.max_stddev`
+- `LogNormalNativeExp2F32.init`
+- `LogNormalNativeExp2F32.meanValue`
+- `LogNormalNativeExp2F32.stddevValue`
+- `LogNormalNativeExp2F32.maxAbsMeanValue`
+- `LogNormalNativeExp2F32.maxStddevValue`
+- `LogNormalNativeExp2F32.sample`
+- `LogNormalNativeExp2F32.sampleFrom`
+- `LogNormalNativeExp2F32.fill`
+- `LogNormalNativeExp2F32.fillFrom`
+- `VectorLogNormalNativeExp2F32(VectorType)`
+- `VectorLogNormalNativeExp2F32(VectorType).max_abs_mean`
+- `VectorLogNormalNativeExp2F32(VectorType).max_stddev`
+- `VectorLogNormalNativeExp2F32(VectorType).init`
+- `VectorLogNormalNativeExp2F32(VectorType).meanValue`
+- `VectorLogNormalNativeExp2F32(VectorType).stddevValue`
+- `VectorLogNormalNativeExp2F32(VectorType).maxAbsMeanValue`
+- `VectorLogNormalNativeExp2F32(VectorType).maxStddevValue`
+- `VectorLogNormalNativeExp2F32(VectorType).sample`
+- `VectorLogNormalNativeExp2F32(VectorType).sampleFrom`
+- `VectorLogNormalNativeExp2F32(VectorType).fill`
+- `VectorLogNormalNativeExp2F32(VectorType).fillFrom`
 - `VectorLogNormal(VectorType)`
 - `VectorLogNormal(VectorType).init`
 - `VectorLogNormal(VectorType).meanValue`

@@ -287,6 +287,8 @@ pub fn main(init: std.process.Init) !void {
     try benchLogNormalApproxF32Scalar(io, stdout, "alea log-normal approx f32 scalar direct", bytes / 128);
     try benchLogNormalExp2F32(io, stdout, "alea log-normal exp2 f32", bytes / 128);
     try benchLogNormalExp2F32Scalar(io, stdout, "alea log-normal exp2 f32 scalar direct", bytes / 128);
+    try benchLogNormalNativeExp2F32(io, stdout, "alea log-normal native exp2 f32", bytes / 128);
+    try benchLogNormalNativeExp2F32Scalar(io, stdout, "alea log-normal native exp2 f32 scalar direct", bytes / 128);
     try benchFillLogNormal(io, stdout, "alea fillLogNormal", bytes / 128);
     try benchFillLogNormalFastDirect(io, stdout, "alea fillLogNormal fast direct", bytes / 128);
     try benchFillLogNormalScalar(io, stdout, "alea fillLogNormal scalar direct", bytes / 128);
@@ -308,6 +310,9 @@ pub fn main(init: std.process.Init) !void {
     try benchFillLogNormalExp2F32(io, stdout, "alea fillLogNormalExp2F32", bytes / 128);
     try benchFillLogNormalExp2F32FastDirect(io, stdout, "alea fillLogNormalExp2F32 fast direct", bytes / 128);
     try benchFillLogNormalExp2F32Scalar(io, stdout, "alea fillLogNormalExp2F32 scalar direct", bytes / 128);
+    try benchFillLogNormalNativeExp2F32(io, stdout, "alea fillLogNormalNativeExp2F32", bytes / 128);
+    try benchFillLogNormalNativeExp2F32FastDirect(io, stdout, "alea fillLogNormalNativeExp2F32 fast direct", bytes / 128);
+    try benchFillLogNormalNativeExp2F32Scalar(io, stdout, "alea fillLogNormalNativeExp2F32 scalar direct", bytes / 128);
     try benchHalfNormal(io, stdout, "alea half-normal", bytes / 128);
     try benchFillHalfNormal(io, stdout, "alea fillHalfNormal", bytes / 128);
     try benchFillHalfNormalScalar(io, stdout, "alea fillHalfNormal scalar direct", bytes / 128);
@@ -7156,6 +7161,56 @@ fn benchLogNormalExp2F32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchLogNormalNativeExp2F32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x106a);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f32 = 0;
+        while (i < count) : (i += 1) checksum += alea.distributions.logNormalNativeExp2F32(rng, 0, 0.25);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchLogNormalNativeExp2F32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    const dist = alea.distributions.LogNormalNativeExp2F32.init(0, 0.25) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x106a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f32 = 0;
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchLogNormalNativeF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
@@ -7738,6 +7793,98 @@ fn benchFillLogNormalExp2F32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []c
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.ScalarPrng.init(0x1069);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f32 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            dist.fillFrom(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillLogNormalNativeExp2F32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [1024]f32 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x106b);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f32 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillLogNormalNativeExp2F32(rng, out[0..n], 0, 0.25);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillLogNormalNativeExp2F32FastDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [1024]f32 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x106b);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f32 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillLogNormalNativeExp2F32From(&engine, out[0..n], 0, 0.25);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillLogNormalNativeExp2F32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [1024]f32 = undefined;
+    const dist = alea.distributions.LogNormalNativeExp2F32.init(0, 0.25) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x106b);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var remaining = count;
         var checksum: f32 = 0;
