@@ -9107,8 +9107,8 @@ pub fn weibullCheckedFrom(source: anytype, comptime T: type, scale: T, shape: T)
 
 pub fn weibullFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
-    if (scale == 0) return 0;
+    std.debug.assert(weibullParametersValid(T, scale, shape));
+    if (scale == 0 or shape == std.math.inf(T)) return scale;
     if (shape == 1) return scale * Rng.standardExponentialFastFrom(source, T);
     return scale * std.math.pow(T, -@log(Rng.floatOpenFrom(source, T)), 1 / shape);
 }
@@ -9119,9 +9119,9 @@ pub fn fillWeibull(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) vo
 
 pub fn fillWeibullFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
-    if (scale == 0) {
-        @memset(dest, 0);
+    std.debug.assert(weibullParametersValid(T, scale, shape));
+    if (scale == 0 or shape == std.math.inf(T)) {
+        @memset(dest, scale);
         return;
     }
     if (shape == 1) {
@@ -9131,6 +9131,12 @@ pub fn fillWeibullFrom(source: anytype, comptime T: type, dest: []T, scale: T, s
 
     Rng.fillOpenFrom(source, T, dest);
     weibullFromOpenUniforms(T, dest, scale, 1 / shape);
+}
+
+fn weibullParametersValid(comptime T: type, scale: T, shape: T) bool {
+    return scale >= 0 and shape > 0 and
+        std.math.isFinite(scale) and
+        (std.math.isFinite(shape) or shape == std.math.inf(T));
 }
 
 pub fn fillWeibullChecked(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
@@ -9237,7 +9243,7 @@ pub fn VectorWeibull(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
             const scale_vec: VectorType = @splat(self.scaleValue());
             if (self.shapeValue() == 1) return scale_vec * vectorStandardExponentialFrom(source, VectorType);
             const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
@@ -9250,7 +9256,7 @@ pub fn VectorWeibull(comptime VectorType: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
             for (dest) |*item| item.* = self.sampleFrom(source);
@@ -9267,8 +9273,7 @@ pub fn Weibull(comptime T: type) type {
 
         pub fn init(scale: T, shape: T) Error!Self {
             comptime requireFloat(T);
-            if (!(scale >= 0) or !(shape > 0)) return error.InvalidParameter;
-            if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            if (!weibullParametersValid(T, scale, shape)) return error.InvalidParameter;
             return .{ .scale = scale, .shape = shape };
         }
 
@@ -9281,10 +9286,12 @@ pub fn Weibull(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) T {
+            if (self.isDegenerate()) return self.degenerateValue();
             return self.scale * std.math.gamma(T, 1 + 1 / self.shape);
         }
 
         pub fn varianceValue(self: Self) T {
+            if (self.isDegenerate()) return 0;
             const mean_scale_factor = std.math.gamma(T, 1 + 1 / self.shape);
             const second_moment_scale_factor = std.math.gamma(T, 1 + 2 / self.shape);
             const scale_squared = self.scale * self.scale;
@@ -9292,21 +9299,22 @@ pub fn Weibull(comptime T: type) type {
         }
 
         pub fn medianValue(self: Self) T {
+            if (self.isDegenerate()) return self.degenerateValue();
             return self.scale * std.math.pow(T, @log(@as(T, 2)), 1 / self.shape);
         }
 
         pub fn modeValue(self: Self) T {
+            if (self.isDegenerate()) return self.degenerateValue();
             if (self.shape <= 1) return 0;
             return self.scale * std.math.pow(T, (self.shape - 1) / self.shape, 1 / self.shape);
         }
 
         pub fn minValue(self: Self) T {
-            _ = self;
-            return 0;
+            return if (self.isDegenerate()) self.degenerateValue() else 0;
         }
 
         pub fn maxValue(self: Self) ?T {
-            return if (self.isDegenerate()) 0 else null;
+            return if (self.isDegenerate()) self.degenerateValue() else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9314,6 +9322,7 @@ pub fn Weibull(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return self.degenerateValue();
             return weibullFrom(source, T, self.scale, self.shape);
         }
 
@@ -9322,11 +9331,19 @@ pub fn Weibull(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, self.degenerateValue());
+                return;
+            }
             fillWeibullFrom(source, T, dest, self.scale, self.shape);
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.scale == 0;
+            return self.scale == 0 or self.shape == std.math.inf(T);
+        }
+
+        fn degenerateValue(self: Self) T {
+            return self.scale;
         }
     };
 }
@@ -16485,6 +16502,58 @@ test "degenerate weibull helpers do not consume random stream" {
     for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const infinite_shape_point: f64 = 4.25;
+    try std.testing.expectEqual(infinite_shape_point, weibull(rng, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, weibullFrom(&engine, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, try weibullChecked(rng, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, try weibullCheckedFrom(&engine, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillWeibull(rng, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillWeibullFrom(&engine, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillWeibullChecked(rng, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillWeibullCheckedFrom(&engine, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_sampler = try Weibull(f64).init(infinite_shape_point, std.math.inf(f64));
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.scaleValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_sampler.shapeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_sampler.varianceValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.medianValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.modeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.minValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.maxValue().?);
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_sampler.fill(rng, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorWeibullFrom(&engine, @Vector(4, f64), 0, 1.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -16514,6 +16583,58 @@ test "degenerate weibull helpers do not consume random stream" {
 
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_vec: @Vector(4, f64) = @splat(infinite_shape_point);
+    try std.testing.expectEqual(infinite_shape_vec, vectorWeibull(rng, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, vectorWeibullFrom(&engine, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, try vectorWeibullChecked(rng, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, try vectorWeibullCheckedFrom(&engine, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorWeibull(rng, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorWeibullFrom(&engine, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorWeibullChecked(rng, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorWeibullCheckedFrom(&engine, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_vector_sampler = try VectorWeibull(@Vector(4, f64)).init(infinite_shape_point, std.math.inf(f64));
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.scaleValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_vector_sampler.shapeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_vector_sampler.varianceValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.medianValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.modeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.minValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.maxValue().?);
+    try std.testing.expectEqual(infinite_shape_vec, infinite_shape_vector_sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, infinite_shape_vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_vector_sampler.fill(rng, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
