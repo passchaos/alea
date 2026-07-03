@@ -12242,10 +12242,9 @@ fn unitCircleF64PointFrom(source: anytype) [2]f64 {
         const x = signedUnitF64PointFrom(source);
         const y = signedUnitF64PointFrom(source);
         const x2 = x * x;
-        const y2 = y * y;
         const sum = @mulAdd(f64, y, y, x2);
         if (!(sum > 0 and sum < 1)) continue;
-        return .{ (x2 - y2) / sum, 2 * x * y / sum };
+        return .{ @mulAdd(f64, -y, y, x2) / sum, @mulAdd(f64, 2 * x, y, 0) / sum };
     }
 }
 
