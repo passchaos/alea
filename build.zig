@@ -724,6 +724,7 @@ pub fn build(b: *std.Build) void {
     }
 
     const wasi_test_step = b.step("test-wasi", "Run wasm32-wasi unit tests through Node's WASI runtime");
+    const wasi_report_step = b.step("wasi-report", "Run wasm32-wasi repro/statcheck/distcheck through Node's WASI runtime");
     if (b.findProgram(&.{"node"}, &.{})) |node_path| {
         const wasi_tests = b.addTest(.{
             .name = "alea-tests-wasm32-wasi-node",
@@ -738,9 +739,22 @@ pub fn build(b: *std.Build) void {
         const run_wasi_tests = b.addRunArtifact(wasi_tests);
         run_wasi_tests.addFileInput(b.path("tools/run_wasi_test.js"));
         wasi_test_step.dependOn(&run_wasi_tests.step);
+
+        const wasi_alea_mod = b.createModule(.{
+            .root_source_file = b.path("src/root.zig"),
+            .target = b.resolveTargetQuery(wasi_test_target),
+            .optimize = optimize,
+        });
+        const wasi_repro = addWasiTool(b, optimize, node_path, wasi_alea_mod, "repro", "tools/repro.zig");
+        const wasi_statcheck = addWasiTool(b, optimize, node_path, wasi_alea_mod, "statcheck", "tools/statcheck.zig");
+        const wasi_distcheck = addWasiTool(b, optimize, node_path, wasi_alea_mod, "distcheck", "tools/distcheck.zig");
+        wasi_statcheck.step.dependOn(&wasi_repro.step);
+        wasi_distcheck.step.dependOn(&wasi_statcheck.step);
+        wasi_report_step.dependOn(&wasi_distcheck.step);
     } else |_| {
-        const node_missing = b.addFail("zig build test-wasi requires node with node:wasi support");
+        const node_missing = b.addFail("zig build test-wasi and zig build wasi-report require node with node:wasi support");
         wasi_test_step.dependOn(&node_missing.step);
+        wasi_report_step.dependOn(&node_missing.step);
     }
 
     const stream_mod = b.createModule(.{
@@ -816,6 +830,35 @@ pub fn build(b: *std.Build) void {
 
     const repro_step = b.step("repro", "Print deterministic reproducibility snapshots");
     repro_step.dependOn(&run_repro.step);
+}
+
+fn addWasiTool(
+    b: *std.Build,
+    optimize: std.builtin.OptimizeMode,
+    node_path: []const u8,
+    alea_mod: *std.Build.Module,
+    comptime name: []const u8,
+    comptime source_path: []const u8,
+) *std.Build.Step.Run {
+    const tool_mod = b.createModule(.{
+        .root_source_file = b.path(source_path),
+        .target = b.resolveTargetQuery(wasi_test_target),
+        .optimize = optimize,
+    });
+    tool_mod.addImport("alea", alea_mod);
+
+    const tool = b.addExecutable(.{
+        .name = "alea-wasi-" ++ name,
+        .root_module = tool_mod,
+    });
+
+    const run_tool = b.addSystemCommand(&.{ node_path, "--no-warnings", "tools/run_wasi_test.js" });
+    run_tool.addArtifactArg(tool);
+    run_tool.addFileInput(b.path("tools/run_wasi_test.js"));
+
+    const tool_step = b.step("wasi-" ++ name, "Run wasm32-wasi " ++ name ++ " through Node's WASI runtime");
+    tool_step.dependOn(&run_tool.step);
+    return run_tool;
 }
 
 const CrossCompileTarget = struct {

@@ -1,21 +1,31 @@
 const std = @import("std");
 const alea = @import("alea");
+const builtin = @import("builtin");
 
 pub fn main(init: std.process.Init) !void {
+    if (builtin.target.os.tag == .wasi) {
+        try runChecks();
+        std.debug.print("statcheck ok\n", .{});
+        return;
+    }
+
     const io = init.io;
     var stdout_buffer: [1024]u8 = undefined;
     var stdout_file = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_file.interface;
 
+    try runChecks();
+    try stdout.print("statcheck ok\n", .{});
+    try stdout.flush();
+}
+
+fn runChecks() !void {
     try checkEngine(alea.Alea4x64, "alea4x64");
     try checkEngine(alea.Wyhash64, "wyhash64");
     try checkEngine(alea.Xoshiro256, "xoshiro256");
     try checkEngine(alea.Xoshiro256PlusPlus, "xoshiro256++");
     try checkEngine(alea.Pcg64, "pcg64");
     try checkDistributions();
-
-    try stdout.print("statcheck ok\n", .{});
-    try stdout.flush();
 }
 
 fn checkEngine(comptime Engine: type, comptime name: []const u8) !void {

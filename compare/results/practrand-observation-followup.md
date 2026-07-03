@@ -10,6 +10,7 @@ confidence, not merely closing a single milestone.
 | --- | --- | --- |
 | `default` / `Xoshiro256` | One default-seed 128GiB PractRand `unusual` in `[Low4/64]DC6-9x1Bytes-1`; two alternate-seed 128GiB runs were clean. | No immediate engine change indicated; keep visible for later longer stages. |
 | `pcg64` | One default-seed 128GiB PractRand `unusual` in `[Low1/64]BDayS2(4,24)[60]`; two alternate-seed 128GiB runs were clean. | No immediate engine change indicated; keep visible for later longer stages. |
+| `xoshiro256++` portable `fill` mapping | `Xoshiro256PlusPlus.fill` was made target-width and pointer-alignment independent after the original 128GiB run. A fresh 1GiB portable-fill smoke is clean. | Keep the 1GiB smoke visible and rerun longer portable-fill PractRand evidence when raising the statistical bar again. |
 
 ## Escalation Rules
 

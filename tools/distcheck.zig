@@ -1,12 +1,25 @@
 const std = @import("std");
 const alea = @import("alea");
+const builtin = @import("builtin");
 
 pub fn main(init: std.process.Init) !void {
+    if (builtin.target.os.tag == .wasi) {
+        try runChecks();
+        std.debug.print("distcheck ok\n", .{});
+        return;
+    }
+
     const io = init.io;
     var stdout_buffer: [1024]u8 = undefined;
     var stdout_file = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_file.interface;
 
+    try runChecks();
+    try stdout.print("distcheck ok\n", .{});
+    try stdout.flush();
+}
+
+fn runChecks() !void {
     try checkBernoulli();
     try checkBinomial();
     try checkDiscrete();
@@ -17,9 +30,6 @@ pub fn main(init: std.process.Init) !void {
     try checkBoundedSupport();
     try checkVectorDistributions();
     try checkConstructorErgonomics();
-
-    try stdout.print("distcheck ok\n", .{});
-    try stdout.flush();
 }
 
 fn checkConstructorErgonomics() !void {
