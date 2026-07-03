@@ -434,7 +434,8 @@ project does not repeat unproductive work.
 ## Next Candidate
 
 Continue performance triage on the remaining focused watch items only when a
-new concrete hypothesis is available:
+new concrete hypothesis is available. `s4-m4-remaining-gaps.md` summarizes the
+current blocker audit and the requirements for a successful next candidate:
 
 - LogNormal: wrapper dispatch, normal generation, Rust algorithm shape,
   `std.math.exp`, optimized float mode, `exp2`, f32 vector width, noinline,
