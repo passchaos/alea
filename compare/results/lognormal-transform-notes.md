@@ -168,7 +168,8 @@ Fresh local evidence:
   `buffered-log-normal-mean-cv` mean gates for this opt-in. This helps
   one-at-a-time users, but the primary narrow exact f64/f32 rows still trail
   Rust. `LogNormalDlsymExp(T, buffer_len)` provides a scalar-libm, max-observed-1-ULP
-  opt-in with `distcheck-libc` coverage, while `LogNormalLibmvec(T, buffer_len)`
+  opt-in with `bench-libc` sample/fill rows around 158-178M and `distcheck-libc`
+  coverage, while `LogNormalLibmvec(T, buffer_len)`
   provides the fastest platform/output-mapping-changing path when libc-linked
   libmvec is available. Exact defaults remain unchanged.
 - A new Linux/glibc libmvec probe directly calls x86_64 vector math ABI
