@@ -11001,8 +11001,8 @@ pub fn inverseGaussianCheckedFrom(source: anytype, comptime T: type, mean: T, sh
 
 pub fn inverseGaussianFrom(source: anytype, comptime T: type, mean: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(mean >= 0 and shape > 0 and std.math.isFinite(mean) and std.math.isFinite(shape));
-    if (mean == 0) return 0;
+    std.debug.assert(mean >= 0 and std.math.isFinite(mean) and shape > 0 and (std.math.isFinite(shape) or shape == std.math.inf(T)));
+    if (mean == 0 or shape == std.math.inf(T)) return mean;
 
     const z = Rng.normalFastFrom(source, T, 0, 1);
     const y = mean * z * z;
@@ -11018,9 +11018,9 @@ pub fn fillInverseGaussian(rng: Rng, comptime T: type, dest: []T, mean: T, shape
 
 pub fn fillInverseGaussianFrom(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(mean >= 0 and shape > 0 and std.math.isFinite(mean) and std.math.isFinite(shape));
-    if (mean == 0) {
-        @memset(dest, 0);
+    std.debug.assert(mean >= 0 and std.math.isFinite(mean) and shape > 0 and (std.math.isFinite(shape) or shape == std.math.inf(T)));
+    if (mean == 0 or shape == std.math.inf(T)) {
+        @memset(dest, mean);
         return;
     }
     Rng.fillNormalFrom(source, T, dest, 0, 1);
@@ -11130,7 +11130,7 @@ pub fn VectorInverseGaussian(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
             const normal_vec = vectorStandardNormalFrom(source, VectorType);
             const uniform_vec = Rng.vectorFrom(source, VectorType);
             return inverseGaussianFromNormalVector(VectorType, normal_vec, uniform_vec, self.meanValue(), self.shapeValue());
@@ -11142,7 +11142,7 @@ pub fn VectorInverseGaussian(comptime VectorType: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
             for (dest) |*item| item.* = self.sampleFrom(source);
@@ -11161,8 +11161,8 @@ pub fn InverseGaussian(comptime T: type) type {
 
         pub fn init(mean: T, shape: T) Error!Self {
             comptime requireFloat(T);
-            if (!(mean >= 0) or !(shape > 0)) return error.InvalidParameter;
-            if (!std.math.isFinite(mean) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            if (!(mean >= 0) or !std.math.isFinite(mean)) return error.InvalidParameter;
+            if (!(shape > 0) or (!std.math.isFinite(shape) and shape != std.math.inf(T))) return error.InvalidParameter;
             return .{
                 .mean = mean,
                 .shape = shape,
@@ -11188,12 +11188,11 @@ pub fn InverseGaussian(comptime T: type) type {
         }
 
         pub fn minValue(self: Self) T {
-            _ = self;
-            return 0;
+            return if (self.isDegenerate()) self.degenerateValue() else 0;
         }
 
         pub fn maxValue(self: Self) ?T {
-            return if (self.isDegenerate()) 0 else null;
+            return if (self.isDegenerate()) self.degenerateValue() else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -11201,7 +11200,7 @@ pub fn InverseGaussian(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            if (self.isDegenerate()) return 0;
+            if (self.isDegenerate()) return self.degenerateValue();
             const z = Rng.normalFastFrom(source, T, 0, 1);
             const y = self.mean * z * z;
             const x = self.mean + self.mean_over_2shape * (y - @sqrt(4 * self.shape * y + y * y));
@@ -11215,14 +11214,18 @@ pub fn InverseGaussian(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             if (self.isDegenerate()) {
-                @memset(dest, 0);
+                @memset(dest, self.degenerateValue());
                 return;
             }
             fillInverseGaussianFrom(source, T, dest, self.mean, self.shape);
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.mean == 0;
+            return self.mean == 0 or self.shape == std.math.inf(T);
+        }
+
+        fn degenerateValue(self: Self) T {
+            return self.mean;
         }
     };
 }
@@ -14983,6 +14986,63 @@ test "degenerate inverse-gaussian helpers do not consume random stream" {
 
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_point: f64 = 2.5;
+    try std.testing.expectEqual(infinite_shape_point, inverseGaussianFrom(&engine, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, try inverseGaussianChecked(rng, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillInverseGaussianFrom(&engine, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillInverseGaussianChecked(rng, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_sampler = try InverseGaussian(f64).init(infinite_shape_point, std.math.inf(f64));
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.meanValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_sampler.shapeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_sampler.varianceValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.minValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.maxValue().?);
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), vectorInverseGaussianFrom(&engine, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), try vectorInverseGaussianChecked(rng, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorInverseGaussianFrom(&engine, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorInverseGaussianChecked(rng, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_vector_sampler = try VectorInverseGaussian(@Vector(4, f64)).init(infinite_shape_point, std.math.inf(f64));
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.meanValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_vector_sampler.shapeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_vector_sampler.varianceValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.minValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), infinite_shape_vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
