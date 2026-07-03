@@ -53,6 +53,11 @@ repair rows before a real `vectorbench` follow-up.
   rejection sampling plus `log`/`sqrt` transform cost is far above ziggurat
   lane-fill, so this is not a dense SIMD direction.
 - Vector-log exponential kernels are too slow for default use.
+- Platform libmvec vector-log inverse-transform exponential is also not a
+  production direction. A scratch x86_64-linux-gnu probe using `_ZGVcN8v_logf`
+  / `_ZGVcN4v_log` reached about 427M f32 and 216M f64 lanes/s for
+  `-log(open01)`, below same-host ziggurat vectorbench direct rows around 470M
+  f32x8 and 467M f64x4. It also changes output mapping and requires libc/libmvec.
 - Native f32 scalar ziggurat candidates are adopted only as explicit opt-in
   output profiles. A focused `ziggurat-probe -- 4194304 "f32"` run shows native
   f32 normal around 680M and native f32 exponential around 656M samples/s versus
