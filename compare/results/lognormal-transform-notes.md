@@ -162,13 +162,13 @@ Fresh local evidence:
   linked-libmvec buffered rows while avoiding a build-time libmvec dependency.
   The public opt-in is measured through the libc-linked `bench-libc` step:
   `bench-libc -- 268435456 "LogNormalLibmvec"` reports sample rows about
-  188M/267M f64 and 296M/329M f32 FastPrng/ScalarPrng, with fill rows about
-  246M/268M f64 and 307M/330M f32.
+  249M/270M f64 and 299M/328M f32 FastPrng/ScalarPrng, with fill rows about
+  247M/268M f64 and 306M/331M f32.
   `distcheck` now includes independent `buffered-log-normal` and
   `buffered-log-normal-mean-cv` mean gates for this opt-in. This helps
   one-at-a-time users, but the primary narrow exact f64/f32 rows still trail
   Rust. `LogNormalDlsymExp(T, buffer_len)` provides a scalar-libm, max-observed-1-ULP
-  opt-in with `bench-libc` sample/fill rows around 158-178M and `distcheck-libc`
+  opt-in with `bench-libc` sample/fill rows around 153-178M and `distcheck-libc`
   coverage, while `LogNormalLibmvec(T, buffer_len)`
   provides the fastest platform/output-mapping-changing path when libc-linked
   libmvec is available. Exact defaults remain unchanged.
