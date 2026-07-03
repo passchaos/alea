@@ -3157,6 +3157,59 @@ pub fn fillLogNormalExp2F32CheckedFrom(source: anytype, dest: []f32, mean: f32, 
     fillLogNormalExp2F32From(source, dest, mean, stddev);
 }
 
+pub fn vectorLogNormalExp2F32(rng: Rng, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+    return vectorLogNormalExp2F32From(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorLogNormalExp2F32From(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorLogNormalExp2F32 expects an f32 vector");
+    std.debug.assert(logNormalExp2F32ParametersValid(mean, stddev));
+
+    if (stddev == 0) return @splat(exp2ApproxPositiveF32(mean));
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = logNormalExp2F32From(source, mean, stddev);
+    return out;
+}
+
+pub fn vectorLogNormalExp2F32Checked(rng: Rng, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
+    return vectorLogNormalExp2F32CheckedFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorLogNormalExp2F32CheckedFrom(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorLogNormalExp2F32Checked expects an f32 vector");
+    if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+    return vectorLogNormalExp2F32From(source, VectorType, mean, stddev);
+}
+
+pub fn fillVectorLogNormalExp2F32(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
+    fillVectorLogNormalExp2F32From(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorLogNormalExp2F32From(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorLogNormalExp2F32 expects an f32 vector");
+    std.debug.assert(logNormalExp2F32ParametersValid(mean, stddev));
+    if (stddev == 0) {
+        @memset(dest, @as(VectorType, @splat(exp2ApproxPositiveF32(mean))));
+        return;
+    }
+    for (dest) |*item| item.* = vectorLogNormalExp2F32From(source, VectorType, mean, stddev);
+}
+
+pub fn fillVectorLogNormalExp2F32Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) Error!void {
+    return fillVectorLogNormalExp2F32CheckedFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorLogNormalExp2F32CheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorLogNormalExp2F32Checked expects an f32 vector");
+    if (dest.len == 0) return;
+    if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+    fillVectorLogNormalExp2F32From(source, VectorType, dest, mean, stddev);
+}
+
 pub fn vectorLogNormalApproxF32(rng: Rng, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
     return vectorLogNormalApproxF32From(rng, VectorType, mean, stddev);
 }
@@ -3447,6 +3500,58 @@ pub const LogNormalExp2F32 = struct {
         fillLogNormalExp2F32From(source, dest, self.mean, self.stddev);
     }
 };
+
+pub fn VectorLogNormalExp2F32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorLogNormalExp2F32 expects an f32 vector");
+
+    return struct {
+        const Self = @This();
+
+        pub const max_abs_mean: f32 = log_normal_exp2_f32_max_abs_mean;
+        pub const max_stddev: f32 = log_normal_exp2_f32_max_stddev;
+
+        mean: f32,
+        stddev: f32,
+
+        pub fn init(mean: f32, stddev: f32) Error!Self {
+            if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+            return .{ .mean = mean, .stddev = stddev };
+        }
+
+        pub fn meanValue(self: Self) f32 {
+            return self.mean;
+        }
+
+        pub fn stddevValue(self: Self) f32 {
+            return self.stddev;
+        }
+
+        pub fn maxAbsMeanValue(_: Self) f32 {
+            return max_abs_mean;
+        }
+
+        pub fn maxStddevValue(_: Self) f32 {
+            return max_stddev;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorLogNormalExp2F32From(source, VectorType, self.mean, self.stddev);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            fillVectorLogNormalExp2F32From(source, VectorType, dest, self.mean, self.stddev);
+        }
+    };
+}
 
 pub fn VectorLogNormalApproxF32(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
@@ -18389,6 +18494,23 @@ test "distribution vector helpers preserve support and stream shape" {
     inline for (0..8) |lane| try std.testing.expect(sampled_approx_log_normal_vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    const exp2_log_normal_vec = try vectorLogNormalExp2F32Checked(rng, @Vector(8, f32), 0, 0.25);
+    const direct_exp2_log_normal_vec = try vectorLogNormalExp2F32CheckedFrom(&direct_engine, @Vector(8, f32), 0, 0.25);
+    try std.testing.expectEqual(exp2_log_normal_vec, direct_exp2_log_normal_vec);
+    inline for (0..8) |lane| try std.testing.expect(exp2_log_normal_vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const vector_exp2_log_normal_sampler = try VectorLogNormalExp2F32(@Vector(8, f32)).init(0, 0.25);
+    try std.testing.expectEqual(@as(f32, 0), vector_exp2_log_normal_sampler.meanValue());
+    try std.testing.expectEqual(@as(f32, 0.25), vector_exp2_log_normal_sampler.stddevValue());
+    try std.testing.expectEqual(VectorLogNormalExp2F32(@Vector(8, f32)).max_abs_mean, vector_exp2_log_normal_sampler.maxAbsMeanValue());
+    try std.testing.expectEqual(VectorLogNormalExp2F32(@Vector(8, f32)).max_stddev, vector_exp2_log_normal_sampler.maxStddevValue());
+    const sampled_exp2_log_normal_vec = vector_exp2_log_normal_sampler.sample(rng);
+    const direct_sampled_exp2_log_normal_vec = vector_exp2_log_normal_sampler.sampleFrom(&direct_engine);
+    try std.testing.expectEqual(sampled_exp2_log_normal_vec, direct_sampled_exp2_log_normal_vec);
+    inline for (0..8) |lane| try std.testing.expect(sampled_exp2_log_normal_vec[lane] > 0);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const exp_vec = try vectorExponentialChecked(rng, @Vector(8, f32), 2);
     const direct_exp_vec = try vectorExponentialCheckedFrom(&direct_engine, @Vector(8, f32), 2);
     try std.testing.expectEqual(exp_vec, direct_exp_vec);
@@ -19743,6 +19865,9 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorLogNormalApproxF32CheckedFrom(&engine, @Vector(8, f32), 0, 0.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, vectorLogNormalExp2F32CheckedFrom(&engine, @Vector(8, f32), 0, 2.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, vectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -20000,6 +20125,8 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     var empty_f32: [0]@Vector(8, f32) = .{};
     try fillVectorLogNormalApproxF32CheckedFrom(&engine, @Vector(8, f32), &empty_f32, 0, 0.5);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorLogNormalExp2F32CheckedFrom(&engine, @Vector(8, f32), &empty_f32, 0, 2.5);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorHalfNormalCheckedFrom(&engine, @Vector(4, f64), &empty, -1);
     try std.testing.expectEqual(control.next(), engine.next());
