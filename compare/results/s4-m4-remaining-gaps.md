@@ -61,8 +61,8 @@ See `performance-triage.md` for detailed rows. In summary:
   mask-redraw exponential, flat scalar-slice routing, FastPrng repair, Alea4x64
   lane-local repair, Marsaglia polar normal, approximate-log Marsaglia polar
   normal, ratio-of-uniforms normal, inverse-CDF normal, f32-only inverse-CDF
-  normal, libmvec vector-log exponential, and raw-buffer prefetch without a
-  rejected-lane stream policy.
+  normal, central-fast inverse-CDF normal, libmvec vector-log exponential, and
+  raw-buffer prefetch without a rejected-lane stream policy.
 - FastPrng/facade f32 standard fills: cached-`Rng` and Alea4x64 lane cycling.
 
 ## Requirements For The Next Successful Candidate

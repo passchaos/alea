@@ -80,6 +80,12 @@ repair rows before a real `vectorbench` follow-up.
   rescue it. A focused `vectorbench -- 16777216 "inverse-cdf f32"` run reports
   f32x8 standard/parameterized rows around 100M/100M lanes/s, still far below
   direct scalar ziggurat lane-fill around 479M.
+- A central-fast inverse-CDF branch improves the approximation but remains too
+  slow. This candidate skips tail `log`/`sqrt` work when all lanes are in the
+  central region and falls back to the full inverse-CDF otherwise. A focused
+  `vectorbench -- 16777216 "inverse-cdf central"` run shows f32x8
+  standard/parameterized rows around 212M/211M and f64x4 around 202M/201M,
+  still far below scalar ziggurat lane-fill.
 - Vector-log exponential kernels are too slow for default use.
 - Approx-log f32 vector exponential is useful only as an explicit output-mapping
   opt-in, not as a default dense kernel. A vector-only midpoint-uniform plus
