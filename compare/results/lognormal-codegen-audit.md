@@ -89,6 +89,16 @@ LogNormal blocker: Rust is not faster because it uses a different distribution
 algorithm or an `expf` f32 transform; its benchmark is using dynamic glibc libm
 `exp` with LLVM/Rust codegen around the normal source and transform.
 
+A same-host Zig `log-normal-probe -- 4194304 "libc"` rerun after this audit
+confirms that simply calling libc from Zig is not enough to match Rust's
+single-sample rows. Zig libc sample rows were about 118.3M f64 FastPrng,
+133.8M f64 ScalarPrng, 119.9M f32 FastPrng, and 136.6M f32 ScalarPrng, with
+wide `stddev=1` rows about 58.4M/63.9M f64 and 56.0M/61.6M f32. Staged libc
+fill rows were better, about 136.5M/143.1M f64 and 142.0M/150.8M f32, but
+still below or only near Rust's single-sample rows and not a production default
+replacement. The remaining gap is therefore likely Rust/Zig codegen and loop
+context around the dynamic libm call, not just the choice of libm symbol.
+
 ## Libmvec Follow-up
 
 A later Linux-local probe linked `log-normal-probe` to glibc `libmvec` on
