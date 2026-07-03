@@ -304,6 +304,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf central candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfCentral);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf tail-repair candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfTailRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf tail-only candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfTailOnly);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf ziggurat-tail candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfZigguratTail);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf central-only probe", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfCentralOnly);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf tail-zero probe", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfTailZero);
     try benchFillVectorStandardNormalF32Repair(io, stdout, "alea fillVectorStandardNormal f32x8 repair candidate", lanes / 4);
@@ -328,6 +329,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 inverse-cdf central candidate", lanes / 8, 0xd184, fillStandardNormalF64InverseCdfCentral);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 inverse-cdf tail-repair candidate", lanes / 8, 0xd184, fillStandardNormalF64InverseCdfTailRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 inverse-cdf tail-only candidate", lanes / 8, 0xd184, fillStandardNormalF64InverseCdfTailOnly);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 inverse-cdf ziggurat-tail candidate", lanes / 8, 0xd184, fillStandardNormalF64InverseCdfZigguratTail);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillStandardNormalF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 all-accepted repair", lanes / 8, 0xd184, fillStandardNormalF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillStandardNormalF64BlockFallback);
@@ -344,6 +346,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf central candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfCentral);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf tail-repair candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfTailRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf tail-only candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfTailOnly);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf ziggurat-tail candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfZigguratTail);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf central-only probe", lanes / 4, 0xd188, fillNormalF32InverseCdfCentralOnly);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf tail-zero probe", lanes / 4, 0xd188, fillNormalF32InverseCdfTailZero);
     try benchFillVectorNormalF32Repair(io, stdout, "alea fillVectorNormal f32x8 repair candidate", lanes / 4);
@@ -368,6 +371,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 inverse-cdf central candidate", lanes / 8, 0xd184, fillNormalF64InverseCdfCentral);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 inverse-cdf tail-repair candidate", lanes / 8, 0xd184, fillNormalF64InverseCdfTailRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 inverse-cdf tail-only candidate", lanes / 8, 0xd184, fillNormalF64InverseCdfTailOnly);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 inverse-cdf ziggurat-tail candidate", lanes / 8, 0xd184, fillNormalF64InverseCdfZigguratTail);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillNormalF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 all-accepted repair", lanes / 8, 0xd184, fillNormalF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillNormalF64BlockFallback);
@@ -2566,6 +2570,10 @@ fn fillStandardNormalF32InverseCdfTailOnly(engine: *alea.ScalarPrng, dest: []@Ve
     for (dest) |*item| item.* = vectorInverseCdfNormalF32TailOnly(engine);
 }
 
+fn fillStandardNormalF32InverseCdfZigguratTail(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorInverseCdfNormalF32ZigguratTail(engine);
+}
+
 fn fillStandardNormalF32InverseCdfCentralOnly(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorInverseCdfNormalF32CentralOnly(engine);
 }
@@ -2663,6 +2671,12 @@ fn fillNormalF32InverseCdfTailOnly(engine: *alea.ScalarPrng, dest: []@Vector(8, 
     const mean_vec: @Vector(8, f32) = @splat(0);
     const stddev_vec: @Vector(8, f32) = @splat(1);
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorInverseCdfNormalF32TailOnly(engine);
+}
+
+fn fillNormalF32InverseCdfZigguratTail(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorInverseCdfNormalF32ZigguratTail(engine);
 }
 
 fn fillNormalF32InverseCdfCentralOnly(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -2911,6 +2925,10 @@ fn fillStandardNormalF64InverseCdfTailOnly(engine: *alea.ScalarPrng, dest: []@Ve
     for (dest) |*item| item.* = vectorInverseCdfNormalF64TailOnly(engine);
 }
 
+fn fillStandardNormalF64InverseCdfZigguratTail(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorInverseCdfNormalF64ZigguratTail(engine);
+}
+
 fn fillStandardNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorRepairNormalF64SameCandidate(engine);
 }
@@ -2973,6 +2991,11 @@ fn fillNormalF64InverseCdfTailRepair(engine: *alea.ScalarPrng, dest: []@Vector(4
 fn fillNormalF64InverseCdfTailOnly(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     const inverse_rate: @Vector(4, f64) = @splat(1);
     for (dest) |*item| item.* = vectorInverseCdfNormalF64TailOnly(engine) * inverse_rate;
+}
+
+fn fillNormalF64InverseCdfZigguratTail(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(1);
+    for (dest) |*item| item.* = vectorInverseCdfNormalF64ZigguratTail(engine) * inverse_rate;
 }
 
 fn fillNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
@@ -3315,6 +3338,15 @@ fn vectorInverseCdfNormalF32TailOnly(engine: *alea.ScalarPrng) @Vector(8, f32) {
     return out;
 }
 
+fn vectorInverseCdfNormalF32ZigguratTail(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    const p = vectorOpenF32Local(engine);
+    var out = inverseCdfNormalF32CentralVec(p);
+    inline for (0..8) |lane| {
+        if (p[lane] < 0.02425 or p[lane] > 0.97575) out[lane] = @floatCast(ratioNormal(engine));
+    }
+    return out;
+}
+
 fn vectorInverseCdfNormalF32CentralOnly(engine: *alea.ScalarPrng) @Vector(8, f32) {
     return inverseCdfNormalF32CentralVec(vectorF32Local(engine));
 }
@@ -3356,6 +3388,15 @@ fn vectorInverseCdfNormalF64TailOnly(engine: *alea.ScalarPrng) @Vector(4, f64) {
         } else if (p[lane] > 0.97575) {
             out[lane] = inverseCdfNormalHighTailScalarF64(p[lane]);
         }
+    }
+    return out;
+}
+
+fn vectorInverseCdfNormalF64ZigguratTail(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const p = vectorOpenF64Local(engine);
+    var out = inverseCdfNormalCentralVec(p);
+    inline for (0..4) |lane| {
+        if (p[lane] < 0.02425 or p[lane] > 0.97575) out[lane] = ratioNormal(engine);
     }
     return out;
 }

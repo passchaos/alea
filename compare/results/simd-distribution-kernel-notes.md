@@ -97,6 +97,11 @@ repair rows before a real `vectorbench` follow-up.
   matching tail rational expression reaches about 388M/385M f32x8 and
   295M/297M f64x4 lanes/s in `vectorbench -- 16777216 "inverse-cdf tail-only"`,
   still below scalar ziggurat lane-fill.
+- Replacing only inverse-CDF tail lanes with scalar ziggurat samples improves
+  f32 but still loses. A focused `vectorbench -- 16777216 "ziggurat-tail"` run
+  shows f32x8 standard/parameterized around 409M/409M lanes/s and f64x4 around
+  330M/329M, still below scalar ziggurat lane-fill and with a changed tail
+  mapping.
 - A central-only inverse-CDF diagnostic probe is fast but invalid. Applying the
   central rational approximation to every f32 lane reaches about 662M/652M
   f32x8 lanes/s, but it uses the central approximation outside its tail-domain
