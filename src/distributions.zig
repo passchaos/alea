@@ -6212,8 +6212,13 @@ pub fn studentTCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T {
 
 pub fn studentTFrom(source: anytype, comptime T: type, dof: T) T {
     comptime requireFloat(T);
-    std.debug.assert(dof > 0);
+    std.debug.assert(studentTParametersValid(T, dof));
+    if (dof == std.math.inf(T)) return Rng.standardNormalFastFrom(source, T);
     return Rng.normalFastFrom(source, T, 0, 1) * @sqrt(dof / chiSquaredFrom(source, T, dof));
+}
+
+fn studentTParametersValid(comptime T: type, dof: T) bool {
+    return dof > 0 and (std.math.isFinite(dof) or dof == std.math.inf(T));
 }
 
 pub fn fillStudentT(rng: Rng, comptime T: type, dest: []T, dof: T) void {
@@ -6221,6 +6226,12 @@ pub fn fillStudentT(rng: Rng, comptime T: type, dest: []T, dof: T) void {
 }
 
 pub fn fillStudentTFrom(source: anytype, comptime T: type, dest: []T, dof: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(studentTParametersValid(T, dof));
+    if (dof == std.math.inf(T)) {
+        for (dest) |*item| item.* = Rng.standardNormalFastFrom(source, T);
+        return;
+    }
     const sampler = StudentT(T).init(dof) catch unreachable;
     sampler.fillFrom(source, dest);
 }
@@ -6310,6 +6321,7 @@ pub fn VectorStudentT(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.dofValue() == std.math.inf(Child)) return vectorStandardNormalFrom(source, VectorType);
             var out: VectorType = undefined;
             inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -6334,10 +6346,13 @@ pub fn StudentT(comptime T: type) type {
 
         pub fn init(dof: T) Error!Self {
             comptime requireFloat(T);
-            if (!(dof > 0) or !std.math.isFinite(dof)) return error.InvalidParameter;
+            if (!studentTParametersValid(T, dof)) return error.InvalidParameter;
             return .{
                 .dof = dof,
-                .chi_squared_sampler = try ChiSquared(T).init(dof),
+                .chi_squared_sampler = if (dof == std.math.inf(T))
+                    try ChiSquared(T).init(0)
+                else
+                    try ChiSquared(T).init(dof),
             };
         }
 
@@ -6352,6 +6367,7 @@ pub fn StudentT(comptime T: type) type {
 
         pub fn varianceValue(self: Self) ?T {
             if (self.dof <= 2) return null;
+            if (self.dof == std.math.inf(T)) return 1;
             return self.dof / (self.dof - 2);
         }
 
@@ -6370,6 +6386,7 @@ pub fn StudentT(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.dof == std.math.inf(T)) return Rng.standardNormalFastFrom(source, T);
             return Rng.normalFastFrom(source, T, 0, 1) * @sqrt(self.dof / self.chi_squared_sampler.sampleFrom(source));
         }
 
@@ -6378,6 +6395,10 @@ pub fn StudentT(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.dof == std.math.inf(T)) {
+                for (dest) |*item| item.* = Rng.standardNormalFastFrom(source, T);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -16773,6 +16794,180 @@ test "degenerate cauchy and gumbel helpers do not consume random stream" {
     vector_gumbel_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(gumbel_point)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "infinite-dof student-t preserves standard-normal stream shape" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_57d7);
+    var control = alea.ScalarPrng.init(0x5150_57d7);
+    const rng = Rng.init(&engine);
+    const control_rng = Rng.init(&control);
+    const dof = std.math.inf(f64);
+
+    try std.testing.expectEqual(standardNormal(control_rng, f64), studentT(rng, f64, dof));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var direct_engine = alea.ScalarPrng.init(0x5150_57d8);
+    var direct_control = alea.ScalarPrng.init(0x5150_57d8);
+    try std.testing.expectEqual(standardNormalFrom(&direct_control, f64), studentTFrom(&direct_engine, f64, dof));
+    try std.testing.expectEqual(direct_control.next(), direct_engine.next());
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_57d9);
+    var checked_control = alea.ScalarPrng.init(0x5150_57d9);
+    const checked_rng = Rng.init(&checked_engine);
+    try std.testing.expectEqual(standardNormalFrom(&checked_control, f64), try studentTChecked(checked_rng, f64, dof));
+    try std.testing.expectEqual(checked_control.next(), checked_engine.next());
+
+    var checked_from_engine = alea.ScalarPrng.init(0x5150_57da);
+    var checked_from_control = alea.ScalarPrng.init(0x5150_57da);
+    try std.testing.expectEqual(standardNormalFrom(&checked_from_control, f64), try studentTCheckedFrom(&checked_from_engine, f64, dof));
+    try std.testing.expectEqual(checked_from_control.next(), checked_from_engine.next());
+
+    var fill_engine = alea.ScalarPrng.init(0x5150_57db);
+    var fill_control = alea.ScalarPrng.init(0x5150_57db);
+    const fill_rng = Rng.init(&fill_engine);
+    var fill_buf: [5]f64 = undefined;
+    var fill_control_buf: [5]f64 = undefined;
+    fillStudentT(fill_rng, f64, &fill_buf, dof);
+    fillStandardNormalFrom(&fill_control, f64, &fill_control_buf);
+    try std.testing.expectEqualSlices(f64, &fill_control_buf, &fill_buf);
+    try std.testing.expectEqual(fill_control.next(), fill_engine.next());
+
+    var fill_from_engine = alea.ScalarPrng.init(0x5150_57dc);
+    var fill_from_control = alea.ScalarPrng.init(0x5150_57dc);
+    fillStudentTFrom(&fill_from_engine, f64, &fill_buf, dof);
+    fillStandardNormalFrom(&fill_from_control, f64, &fill_control_buf);
+    try std.testing.expectEqualSlices(f64, &fill_control_buf, &fill_buf);
+    try std.testing.expectEqual(fill_from_control.next(), fill_from_engine.next());
+
+    var fill_checked_engine = alea.ScalarPrng.init(0x5150_57dd);
+    var fill_checked_control = alea.ScalarPrng.init(0x5150_57dd);
+    const fill_checked_rng = Rng.init(&fill_checked_engine);
+    try fillStudentTChecked(fill_checked_rng, f64, &fill_buf, dof);
+    fillStandardNormalFrom(&fill_checked_control, f64, &fill_control_buf);
+    try std.testing.expectEqualSlices(f64, &fill_control_buf, &fill_buf);
+    try std.testing.expectEqual(fill_checked_control.next(), fill_checked_engine.next());
+
+    var fill_checked_from_engine = alea.ScalarPrng.init(0x5150_57de);
+    var fill_checked_from_control = alea.ScalarPrng.init(0x5150_57de);
+    try fillStudentTCheckedFrom(&fill_checked_from_engine, f64, &fill_buf, dof);
+    fillStandardNormalFrom(&fill_checked_from_control, f64, &fill_control_buf);
+    try std.testing.expectEqualSlices(f64, &fill_control_buf, &fill_buf);
+    try std.testing.expectEqual(fill_checked_from_control.next(), fill_checked_from_engine.next());
+
+    var sampler_engine = alea.ScalarPrng.init(0x5150_57df);
+    var sampler_control = alea.ScalarPrng.init(0x5150_57df);
+    const sampler_rng = Rng.init(&sampler_engine);
+    const sampler = try StudentT(f64).init(dof);
+    try std.testing.expectEqual(dof, sampler.dofValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 1), sampler.varianceValue().?);
+    try std.testing.expect(sampler.minValue() == null);
+    try std.testing.expect(sampler.maxValue() == null);
+    try std.testing.expectEqual(standardNormalFrom(&sampler_control, f64), sampler.sample(sampler_rng));
+    try std.testing.expectEqual(sampler_control.next(), sampler_engine.next());
+
+    try std.testing.expectEqual(standardNormalFrom(&sampler_control, f64), sampler.sampleFrom(&sampler_engine));
+    try std.testing.expectEqual(sampler_control.next(), sampler_engine.next());
+
+    sampler.fill(sampler_rng, &fill_buf);
+    fillStandardNormalFrom(&sampler_control, f64, &fill_control_buf);
+    try std.testing.expectEqualSlices(f64, &fill_control_buf, &fill_buf);
+    try std.testing.expectEqual(sampler_control.next(), sampler_engine.next());
+
+    sampler.fillFrom(&sampler_engine, &fill_buf);
+    fillStandardNormalFrom(&sampler_control, f64, &fill_control_buf);
+    try std.testing.expectEqualSlices(f64, &fill_control_buf, &fill_buf);
+    try std.testing.expectEqual(sampler_control.next(), sampler_engine.next());
+
+    var vector_engine = alea.ScalarPrng.init(0x5150_57e0);
+    var vector_control = alea.ScalarPrng.init(0x5150_57e0);
+    const vector_rng = Rng.init(&vector_engine);
+    const vector_control_rng = Rng.init(&vector_control);
+    try std.testing.expectEqual(vectorStandardNormal(vector_control_rng, @Vector(4, f64)), vectorStudentT(vector_rng, @Vector(4, f64), dof));
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
+
+    var vector_from_engine = alea.ScalarPrng.init(0x5150_57e1);
+    var vector_from_control = alea.ScalarPrng.init(0x5150_57e1);
+    try std.testing.expectEqual(vectorStandardNormalFrom(&vector_from_control, @Vector(4, f64)), vectorStudentTFrom(&vector_from_engine, @Vector(4, f64), dof));
+    try std.testing.expectEqual(vector_from_control.next(), vector_from_engine.next());
+
+    var vector_checked_engine = alea.ScalarPrng.init(0x5150_57e11);
+    var vector_checked_control = alea.ScalarPrng.init(0x5150_57e11);
+    const vector_checked_rng = Rng.init(&vector_checked_engine);
+    try std.testing.expectEqual(vectorStandardNormalFrom(&vector_checked_control, @Vector(4, f64)), try vectorStudentTChecked(vector_checked_rng, @Vector(4, f64), dof));
+    try std.testing.expectEqual(vector_checked_control.next(), vector_checked_engine.next());
+
+    var vector_checked_from_engine = alea.ScalarPrng.init(0x5150_57e12);
+    var vector_checked_from_control = alea.ScalarPrng.init(0x5150_57e12);
+    try std.testing.expectEqual(vectorStandardNormalFrom(&vector_checked_from_control, @Vector(4, f64)), try vectorStudentTCheckedFrom(&vector_checked_from_engine, @Vector(4, f64), dof));
+    try std.testing.expectEqual(vector_checked_from_control.next(), vector_checked_from_engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    var vector_control_buf: [3]@Vector(4, f64) = undefined;
+    const vector_sampler = try VectorStudentT(@Vector(4, f64)).init(dof);
+    try std.testing.expectEqual(dof, vector_sampler.dofValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 1), vector_sampler.varianceValue().?);
+    try std.testing.expect(vector_sampler.minValue() == null);
+    try std.testing.expect(vector_sampler.maxValue() == null);
+
+    var vector_sampler_engine = alea.ScalarPrng.init(0x5150_57e2);
+    var vector_sampler_control = alea.ScalarPrng.init(0x5150_57e2);
+    const vector_sampler_rng = Rng.init(&vector_sampler_engine);
+    const vector_sampler_control_rng = Rng.init(&vector_sampler_control);
+    try std.testing.expectEqual(vectorStandardNormal(vector_sampler_control_rng, @Vector(4, f64)), vector_sampler.sample(vector_sampler_rng));
+    try std.testing.expectEqual(vector_sampler_control.next(), vector_sampler_engine.next());
+
+    var vector_sampler_from_engine = alea.ScalarPrng.init(0x5150_57e3);
+    var vector_sampler_from_control = alea.ScalarPrng.init(0x5150_57e3);
+    try std.testing.expectEqual(vectorStandardNormalFrom(&vector_sampler_from_control, @Vector(4, f64)), vector_sampler.sampleFrom(&vector_sampler_from_engine));
+    try std.testing.expectEqual(vector_sampler_from_control.next(), vector_sampler_from_engine.next());
+
+    var vector_fill_engine = alea.ScalarPrng.init(0x5150_57e4);
+    var vector_fill_control = alea.ScalarPrng.init(0x5150_57e4);
+    vector_sampler.fillFrom(&vector_fill_engine, &vector_buf);
+    fillVectorStandardNormalFrom(&vector_fill_control, @Vector(4, f64), &vector_control_buf);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_control_buf, &vector_buf);
+    try std.testing.expectEqual(vector_fill_control.next(), vector_fill_engine.next());
+
+    var vector_fill_facade_engine = alea.ScalarPrng.init(0x5150_57e5);
+    var vector_fill_facade_control = alea.ScalarPrng.init(0x5150_57e5);
+    const vector_fill_facade_rng = Rng.init(&vector_fill_facade_engine);
+    fillVectorStudentT(vector_fill_facade_rng, @Vector(4, f64), &vector_buf, dof);
+    fillVectorStandardNormalFrom(&vector_fill_facade_control, @Vector(4, f64), &vector_control_buf);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_control_buf, &vector_buf);
+    try std.testing.expectEqual(vector_fill_facade_control.next(), vector_fill_facade_engine.next());
+
+    var vector_fill_from_engine = alea.ScalarPrng.init(0x5150_57e6);
+    var vector_fill_from_control = alea.ScalarPrng.init(0x5150_57e6);
+    fillVectorStudentTFrom(&vector_fill_from_engine, @Vector(4, f64), &vector_buf, dof);
+    fillVectorStandardNormalFrom(&vector_fill_from_control, @Vector(4, f64), &vector_control_buf);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_control_buf, &vector_buf);
+    try std.testing.expectEqual(vector_fill_from_control.next(), vector_fill_from_engine.next());
+
+    var vector_fill_checked_engine = alea.ScalarPrng.init(0x5150_57e7);
+    var vector_fill_checked_control = alea.ScalarPrng.init(0x5150_57e7);
+    const vector_fill_checked_rng = Rng.init(&vector_fill_checked_engine);
+    try fillVectorStudentTChecked(vector_fill_checked_rng, @Vector(4, f64), &vector_buf, dof);
+    fillVectorStandardNormalFrom(&vector_fill_checked_control, @Vector(4, f64), &vector_control_buf);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_control_buf, &vector_buf);
+    try std.testing.expectEqual(vector_fill_checked_control.next(), vector_fill_checked_engine.next());
+
+    var vector_fill_checked_from_engine = alea.ScalarPrng.init(0x5150_57e8);
+    var vector_fill_checked_from_control = alea.ScalarPrng.init(0x5150_57e8);
+    try fillVectorStudentTCheckedFrom(&vector_fill_checked_from_engine, @Vector(4, f64), &vector_buf, dof);
+    fillVectorStandardNormalFrom(&vector_fill_checked_from_control, @Vector(4, f64), &vector_control_buf);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_control_buf, &vector_buf);
+    try std.testing.expectEqual(vector_fill_checked_from_control.next(), vector_fill_checked_from_engine.next());
+
+    var vector_sampler_fill_engine = alea.ScalarPrng.init(0x5150_57e9);
+    var vector_sampler_fill_control = alea.ScalarPrng.init(0x5150_57e9);
+    const vector_sampler_fill_rng = Rng.init(&vector_sampler_fill_engine);
+    vector_sampler.fill(vector_sampler_fill_rng, &vector_buf);
+    fillVectorStandardNormalFrom(&vector_sampler_fill_control, @Vector(4, f64), &vector_control_buf);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_control_buf, &vector_buf);
+    try std.testing.expectEqual(vector_sampler_fill_control.next(), vector_sampler_fill_engine.next());
 }
 
 test "degenerate triangular helpers do not consume random stream" {
