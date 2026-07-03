@@ -14104,6 +14104,12 @@ pub fn AliasTable(comptime Weight: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) usize {
             if (self.constant_index) |index| return index;
+            if (aliasTableCanSampleWithOneWord(self.prob.len)) {
+                const raw = Rng.nextFrom(source);
+                const column = @as(usize, @intCast(raw & @as(u64, @intCast(self.prob.len - 1))));
+                const unit = @as(f64, @floatFromInt(raw >> 11)) * (1.0 / 9007199254740992.0);
+                return if (unit < self.prob[column]) column else self.alias[column];
+            }
             const column = Rng.uintLessThanFrom(source, usize, self.prob.len);
             return if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column];
         }
@@ -14120,6 +14126,10 @@ pub fn AliasTable(comptime Weight: type) type {
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
+}
+
+fn aliasTableCanSampleWithOneWord(len: usize) bool {
+    return len > 1 and len <= 2048 and std.math.isPowerOfTwo(len);
 }
 
 pub fn WeightedTree(comptime Weight: type) type {
