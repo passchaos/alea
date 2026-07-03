@@ -12257,9 +12257,14 @@ pub fn Dirichlet(comptime T: type) type {
         pub fn init(alpha: []const T) Error!Self {
             comptime requireFloat(T);
             if (alpha.len == 0) return error.EmptyRange;
+            var infinite_count: usize = 0;
             for (alpha) |a| {
-                if (!(a > 0) or !std.math.isFinite(a)) return error.InvalidParameter;
+                if (!(a > 0)) return error.InvalidParameter;
+                if (a == std.math.inf(T)) {
+                    infinite_count += 1;
+                } else if (!std.math.isFinite(a)) return error.InvalidParameter;
             }
+            if (infinite_count > 1) return error.InvalidParameter;
             return .{ .alpha = alpha };
         }
 
@@ -12273,7 +12278,9 @@ pub fn Dirichlet(comptime T: type) type {
         }
 
         pub fn meanAt(self: Self, index: usize) Error!T {
-            return try self.alphaAt(index) / self.totalAlphaValue();
+            _ = try self.alphaAt(index);
+            if (self.degenerateIndex()) |degenerate| return if (index == degenerate) 1 else 0;
+            return self.alpha[index] / self.totalAlphaValue();
         }
 
         pub fn means(self: Self, allocator: std.mem.Allocator) ![]T {
@@ -12285,12 +12292,18 @@ pub fn Dirichlet(comptime T: type) type {
 
         pub fn meansInto(self: Self, out: []T) Error!void {
             if (out.len != self.alpha.len) return error.InvalidLength;
+            if (self.degenerateIndex()) |degenerate| {
+                @memset(out, 0);
+                out[degenerate] = 1;
+                return;
+            }
             const alpha_0 = self.totalAlphaValue();
             for (self.alpha, out) |alpha_i, *slot| slot.* = alpha_i / alpha_0;
         }
 
         pub fn varianceAt(self: Self, index: usize) Error!T {
             const alpha_i = try self.alphaAt(index);
+            if (self.isDegenerate()) return 0;
             const alpha_0 = self.totalAlphaValue();
             return alpha_i * (alpha_0 - alpha_i) / (alpha_0 * alpha_0 * (alpha_0 + 1));
         }
@@ -12304,6 +12317,10 @@ pub fn Dirichlet(comptime T: type) type {
 
         pub fn variancesInto(self: Self, out: []T) Error!void {
             if (out.len != self.alpha.len) return error.InvalidLength;
+            if (self.isDegenerate()) {
+                @memset(out, 0);
+                return;
+            }
             const alpha_0 = self.totalAlphaValue();
             const denominator = alpha_0 * alpha_0 * (alpha_0 + 1);
             for (self.alpha, out) |alpha_i, *slot| slot.* = alpha_i * (alpha_0 - alpha_i) / denominator;
@@ -12313,8 +12330,11 @@ pub fn Dirichlet(comptime T: type) type {
             if (i == j) return self.varianceAt(i);
             const alpha_i = try self.alphaAt(i);
             const alpha_j = try self.alphaAt(j);
+            _ = alpha_i;
+            _ = alpha_j;
+            if (self.isDegenerate()) return 0;
             const alpha_0 = self.totalAlphaValue();
-            return -(alpha_i * alpha_j) / (alpha_0 * alpha_0 * (alpha_0 + 1));
+            return -(self.alpha[i] * self.alpha[j]) / (alpha_0 * alpha_0 * (alpha_0 + 1));
         }
 
         pub fn covariances(self: Self, allocator: std.mem.Allocator) ![]T {
@@ -12328,6 +12348,10 @@ pub fn Dirichlet(comptime T: type) type {
         pub fn covariancesInto(self: Self, out: []T) Error!void {
             const count = std.math.mul(usize, self.alpha.len, self.alpha.len) catch return error.InvalidLength;
             if (out.len != count) return error.InvalidLength;
+            if (self.isDegenerate()) {
+                @memset(out, 0);
+                return;
+            }
             const alpha_0 = self.totalAlphaValue();
             const denominator = alpha_0 * alpha_0 * (alpha_0 + 1);
             var row: usize = 0;
@@ -12397,6 +12421,12 @@ pub fn Dirichlet(comptime T: type) type {
                 @memset(out, 1);
                 return;
             }
+            if (self.degenerateIndex()) |degenerate| {
+                @memset(out, 0);
+                var offset: usize = degenerate;
+                while (offset < out.len) : (offset += self.alpha.len) out[offset] = 1;
+                return;
+            }
             var offset: usize = 0;
             while (offset < out.len) : (offset += self.alpha.len) {
                 self.sampleIntoFrom(source, out[offset..][0..self.alpha.len]);
@@ -12409,6 +12439,11 @@ pub fn Dirichlet(comptime T: type) type {
                 out[0] = 1;
                 return;
             }
+            if (self.degenerateIndex()) |degenerate| {
+                @memset(out, 0);
+                out[degenerate] = 1;
+                return;
+            }
             var total: T = 0;
             for (self.alpha, out) |a, *slot| {
                 const value = gammaFrom(source, T, a, 1);
@@ -12417,6 +12452,17 @@ pub fn Dirichlet(comptime T: type) type {
             }
 
             for (out) |*value| value.* /= total;
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.degenerateIndex() != null;
+        }
+
+        fn degenerateIndex(self: Self) ?usize {
+            for (self.alpha, 0..) |value, index| {
+                if (value == std.math.inf(T)) return index;
+            }
+            return null;
         }
     };
 }
@@ -21087,6 +21133,54 @@ test "degenerate multivariate samplers do not consume random stream" {
     try dirichlet.sampleManyIntoChecked(rng, &many_simplex);
     try std.testing.expectEqualSlices(f64, &.{ 1, 1, 1 }, &many_simplex);
     try std.testing.expectEqual(control.next(), engine.next());
+
+    const vertex_dirichlet = try Dirichlet(f64).init(&.{ 2.0, std.math.inf(f64), 3.0 });
+    var vertex: [3]f64 = undefined;
+    vertex_dirichlet.sampleIntoFrom(&engine, &vertex);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 1, 0 }, &vertex);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try vertex_dirichlet.sampleIntoChecked(rng, &vertex);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 1, 0 }, &vertex);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var many_vertex: [6]f64 = undefined;
+    vertex_dirichlet.sampleManyIntoFrom(&engine, &many_vertex);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 1, 0, 0, 1, 0 }, &many_vertex);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try vertex_dirichlet.sampleManyIntoChecked(rng, &many_vertex);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 1, 0, 0, 1, 0 }, &many_vertex);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const allocated_vertex = try vertex_dirichlet.sampleFrom(std.testing.allocator, &engine);
+    defer std.testing.allocator.free(allocated_vertex);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 1, 0 }, allocated_vertex);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(usize, 3), vertex_dirichlet.dimensionValue());
+    try std.testing.expectEqual(std.math.inf(f64), vertex_dirichlet.totalAlphaValue());
+    try std.testing.expectEqual(@as(f64, 2), try vertex_dirichlet.alphaAt(0));
+    try std.testing.expectEqual(std.math.inf(f64), try vertex_dirichlet.alphaAt(1));
+    try std.testing.expectEqual(@as(f64, 0), try vertex_dirichlet.meanAt(0));
+    try std.testing.expectEqual(@as(f64, 1), try vertex_dirichlet.meanAt(1));
+    try std.testing.expectEqual(@as(f64, 0), try vertex_dirichlet.meanAt(2));
+    try std.testing.expectEqual(@as(f64, 0), try vertex_dirichlet.varianceAt(1));
+    try std.testing.expectEqual(@as(f64, 0), try vertex_dirichlet.covarianceAt(0, 1));
+
+    var means: [3]f64 = undefined;
+    try vertex_dirichlet.meansInto(&means);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 1, 0 }, &means);
+
+    var variances: [3]f64 = undefined;
+    try vertex_dirichlet.variancesInto(&variances);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 0, 0 }, &variances);
+
+    var covariances: [9]f64 = undefined;
+    try vertex_dirichlet.covariancesInto(&covariances);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 0, 0, 0, 0, 0, 0, 0, 0 }, &covariances);
+
+    try std.testing.expectError(error.InvalidParameter, Dirichlet(f64).init(&.{ std.math.inf(f64), std.math.inf(f64) }));
 }
 
 test "log-normal approximation has stable snapshots" {

@@ -77,7 +77,7 @@ toolkit functionality and reduce reliance on companion crates:
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment/median accessors, collapsed `min == max` point masses, and infinite-shape upper-endpoint point masses |
 | Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, median/mode, and support accessors plus collapsed `scale == 0` and infinite-shape point masses |
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/median/mode/support accessors plus collapsed `scale == 0` and infinite-shape point masses |
-| Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance export and dimension/total-alpha accessors |
+| Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance export, dimension/total-alpha accessors, one-dimensional point masses, and single-infinite-alpha vertex point masses |
 | Multinomial | Covered: `Multinomial`, including trials/category/probability lookup/export and count moment lookup/export accessors |
 | NegativeBinomial | Covered: `NegativeBinomial`, including successes/probability/moment/support accessors |
 
