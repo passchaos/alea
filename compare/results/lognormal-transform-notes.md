@@ -35,7 +35,9 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   provide a durable exact default: a focused 4Mi sample probe kept f64
   `std.math.exp` tied/slower, libc f64 only slightly ahead in the ScalarPrng
   row, and f32 variants tied.
-- `exp2(x * log2e)` regresses.
+- `exp2(x * log2e)` is not an exact default replacement. Earlier
+  single-sample rows regressed badly, and newer staged-fill rows are
+  non-bit-identical even when they are faster.
 - `std.math.exp` is tied with `@exp`.
 - libc `exp` / `expf` can help one engine/type profile in the probe but
   regresses another and requires linking libc, so it is not a generic default.
@@ -122,6 +124,15 @@ Fresh local evidence:
   FastPrng f64 row to about 72.9M while tying the other profiles around
   74.4M/76.0M/77.7M. This remains profile-specific evidence, not a default
   replacement for `@exp`.
+- `log-normal-probe -- 1048576 "staged exp2"` plus `-- "exp2 diff stddev"`
+  shows `exp2(x * log2e)` is an interesting opt-in-approximation candidate but
+  not exact-default material. Staged f32 exp2 rows are fast, around 192M
+  FastPrng and 205M ScalarPrng for `stddev=0.25`; f64 staged exp2 remains below
+  current exact rows at about 120M/128M. Error scans show changed outputs with
+  bounded observed ULP distances in this sample: f64 max ULP about 1/3/7 at
+  `stddev=0.25/1/2`, and f32 max ULP about 1/4/7. Because the checksum/output
+  mapping changes, this can only be considered as a deliberate opt-in
+  approximation, not as exact `LogNormal`.
 - `log-normal-probe -- 1048576 "sample stddev1"` similarly shows no
   single-sample exact expression escape hatch for wide-spread LogNormal:
   current/direct-`@exp`/`std.math.exp`/libc rows are all about 58M FastPrng and
