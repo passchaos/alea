@@ -87,6 +87,16 @@ The exact `LogNormal(f32)` and `fillLogNormal` paths remain unchanged and keep
 
 Fresh local evidence:
 
+- Fresh 1GiB filtered parity rows with native CPU flags: local Rust
+  `rand_distr log-normal` is about 146.2M f64 and 155.3M f32 samples/s.
+  Matching Alea scalar rows are about 117.7M facade, 118.5M raw FastPrng,
+  134.0M ScalarPrng direct, and 134.2M raw ScalarPrng for exact f64, plus
+  139.0M ScalarPrng direct and 139.8M raw ScalarPrng for exact f32. Fresh
+  `bench -- 1073741824 "fillLogNormal"` rows are about 136.6M
+  facade, 135.6M FastPrng direct, and 144.3M ScalarPrng direct for exact f64,
+  and about 133.9M/133.2M/140.9M for exact f32. The bounded f32 approximation
+  fill reaches about 142.4M/142.5M/150.4M in the same run, but remains opt-in
+  because it changes exact rounding.
 - `log-normal-probe` now accepts the same focused shape as the throughput
   harness: `zig build -Doptimize=ReleaseFast -Dcpu=native log-normal-probe --
   <count> <filter>`. A same-host 1Mi filtered smoke run verified the filter and
