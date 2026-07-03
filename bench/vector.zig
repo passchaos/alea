@@ -304,6 +304,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf central candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfCentral);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf tail-repair candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfTailRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf tail-only candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfTailOnly);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf reduced candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfReduced);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf central-mask candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfCentralMask);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf ziggurat-tail candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfZigguratTail);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf central-only probe", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfCentralOnly);
@@ -348,6 +349,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf central candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfCentral);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf tail-repair candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfTailRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf tail-only candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfTailOnly);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf reduced candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfReduced);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf central-mask candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfCentralMask);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf ziggurat-tail candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfZigguratTail);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf central-only probe", lanes / 4, 0xd188, fillNormalF32InverseCdfCentralOnly);
@@ -2574,6 +2576,10 @@ fn fillStandardNormalF32InverseCdfTailOnly(engine: *alea.ScalarPrng, dest: []@Ve
     for (dest) |*item| item.* = vectorInverseCdfNormalF32TailOnly(engine);
 }
 
+fn fillStandardNormalF32InverseCdfReduced(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorInverseCdfNormalF32Reduced(engine);
+}
+
 fn fillStandardNormalF32InverseCdfCentralMask(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorInverseCdfNormalF32CentralMask(engine);
 }
@@ -2679,6 +2685,12 @@ fn fillNormalF32InverseCdfTailOnly(engine: *alea.ScalarPrng, dest: []@Vector(8, 
     const mean_vec: @Vector(8, f32) = @splat(0);
     const stddev_vec: @Vector(8, f32) = @splat(1);
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorInverseCdfNormalF32TailOnly(engine);
+}
+
+fn fillNormalF32InverseCdfReduced(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorInverseCdfNormalF32Reduced(engine);
 }
 
 fn fillNormalF32InverseCdfCentralMask(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -3361,6 +3373,19 @@ fn vectorInverseCdfNormalF32TailOnly(engine: *alea.ScalarPrng) @Vector(8, f32) {
     return out;
 }
 
+fn vectorInverseCdfNormalF32Reduced(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    const p = vectorOpenF32Local(engine);
+    var out = inverseCdfNormalF32ReducedCentralVec(p);
+    inline for (0..8) |lane| {
+        if (p[lane] < 0.02425) {
+            out[lane] = inverseCdfNormalLowTailScalarF32(p[lane]);
+        } else if (p[lane] > 0.97575) {
+            out[lane] = inverseCdfNormalHighTailScalarF32(p[lane]);
+        }
+    }
+    return out;
+}
+
 fn vectorInverseCdfNormalF32CentralMask(engine: *alea.ScalarPrng) @Vector(8, f32) {
     const p = vectorOpenF32Local(engine);
     const out = inverseCdfNormalF32CentralVec(p);
@@ -3537,6 +3562,20 @@ fn inverseCdfNormalF32CentralVec(p: @Vector(8, f32)) @Vector(8, f32) {
     mid_den = mid_den * r + @as(Vec, @splat(1.6158583e+02));
     mid_den = mid_den * r + @as(Vec, @splat(-1.5569897e+02));
     mid_den = mid_den * r + @as(Vec, @splat(6.6801315e+01));
+    mid_den = mid_den * r + @as(Vec, @splat(-1.3280682e+01));
+    mid_den = mid_den * r + @as(Vec, @splat(1.0));
+    return mid_num / mid_den;
+}
+
+fn inverseCdfNormalF32ReducedCentralVec(p: @Vector(8, f32)) @Vector(8, f32) {
+    const Vec = @Vector(8, f32);
+    const q_mid = p - @as(Vec, @splat(0.5));
+    const r = q_mid * q_mid;
+    var mid_num: Vec = @splat(1.3835776e+02);
+    mid_num = mid_num * r + @as(Vec, @splat(-3.0664799e+01));
+    mid_num = mid_num * r + @as(Vec, @splat(2.5066283e+00));
+    mid_num *= q_mid;
+    var mid_den: Vec = @splat(6.6801315e+01);
     mid_den = mid_den * r + @as(Vec, @splat(-1.3280682e+01));
     mid_den = mid_den * r + @as(Vec, @splat(1.0));
     return mid_num / mid_den;

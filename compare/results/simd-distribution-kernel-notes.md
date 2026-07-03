@@ -97,6 +97,10 @@ repair rows before a real `vectorbench` follow-up.
   matching tail rational expression reaches about 388M/385M f32x8 and
   295M/297M f64x4 lanes/s in `vectorbench -- 16777216 "inverse-cdf tail-only"`,
   still below scalar ziggurat lane-fill.
+- Reducing the f32 central inverse-CDF polynomial degree also loses. A focused
+  `vectorbench -- 16777216 "inverse-cdf reduced"` rerun reaches about
+  413M/410M standard/parameterized f32x8 lanes/s with a changed approximation
+  checksum, still below direct scalar ziggurat lane-fill.
 - Adding an all-central vector mask before tail-only inverse-CDF repair is
   slower. A focused `vectorbench -- 16777216 "central-mask"` run reports about
   327M/326M f32x8 and 269M/268M f64x4 lanes/s, below the simpler tail-only rows.
