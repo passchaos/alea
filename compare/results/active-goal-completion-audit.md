@@ -24,17 +24,21 @@ complete.
 | S4-M1 broader platform reproducibility | `core-rand-coverage.md`, WASI report, `cross-platform-repro-blocker.md` | Closed for current bar. |
 | S4-M2 longer statistical validation | 128GiB PractRand summary and engine reports | Closed for current bar. |
 | S4-M3 SIMD/vector API design | `bench/vector.zig`, `simd-distribution-kernel-notes.md`, source audit in `core-rand-coverage.md` | Closed for API/prototype bar; performance blocker moved to S4-M4. |
-| S4-M4 targeted performance follow-up | `compare/results/performance-triage.md`, `compare/results/s4-m4-remaining-gaps.md`, `lognormal-codegen-audit.md`, `simd-distribution-kernel-notes.md` | Not complete; LogNormal performance is covered by documented opt-ins/stable-default tradeoff, but dense SIMD blocker remains. |
+| S4-M4 targeted performance follow-up | `compare/results/performance-triage.md`, `compare/results/s4-m4-remaining-gaps.md`, `lognormal-codegen-audit.md`, `simd-distribution-kernel-notes.md` | Closed for the current local Linux bar; LogNormal and vector normal/exponential throughput gaps now have documented opt-in coverage. |
+| S4-M5 default/general dense SIMD kernels | `compare/results/s4-m4-remaining-gaps.md`, `compare/results/simd-distribution-kernel-notes.md`, `compare/results/performance-triage.md` | Not complete; the next bar requires default or explicitly versioned dense SIMD normal/exponential kernels, or a documented policy accepting an approximation profile for a default/general API surface. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
 
-The active goal cannot be marked complete because `s4-m4-remaining-gaps.md`
-now identifies one unresolved S4-M4 hard blocker:
+The active goal cannot be marked complete because the roadmap has deliberately
+raised the bar beyond S4-M4. `s4-m4-remaining-gaps.md` now records S4-M4 as
+closed for the local Linux performance-follow-up bar and defines S4-M5 as the
+next unresolved milestone:
 
-1. Dense SIMD normal/exponential kernels have not beaten scalar ziggurat
-   lane-fill in the real `vectorbench` slice-fill harness. The minimum
-   real-harness benchmark gate is listed in `simd-distribution-kernel-notes.md`.
+1. Default/general dense SIMD normal/exponential kernels have not replaced or
+   versioned scalar ziggurat lane-fill in the real `vectorbench` slice-fill
+   harness, and no policy has accepted the table/approximation opt-ins as a
+   default/general substitute.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
@@ -44,20 +48,22 @@ LogNormal exact defaults are now documented as a stable-output tradeoff with
 multiple opt-in performance profiles (`BufferedLogNormal`, `LogNormalDlsymExp`,
 `LogNormalLibmvec`, and f32 approximation/native variants) that cover the local
 Rust performance gap without changing the exact default.
-The SIMD blocker has also narrowed on the vector opt-in side: table-quantile
-normal/exponential and f32 approximate-log exponential vector opt-ins now beat the matching
-ziggurat lane-fill rows for users who accept explicit approximation/output-mapping
-contracts. They do not close the dense SIMD blocker because default
-normal/exponential kernels remain unresolved.
+The SIMD performance gap has narrowed on the vector opt-in side: table-quantile
+normal/exponential and f32 approximate-log exponential vector opt-ins now beat the
+matching ziggurat lane-fill rows for users who accept explicit
+approximation/output-mapping contracts. S4-M5 remains unresolved because default
+normal/exponential kernels remain scalar ziggurat lane-fill.
 
 ## Required Next Work Before Completion
 
 The goal remains active until at least one of these happens:
 
-- a dense SIMD normal/exponential candidate beats scalar lane-fill in the
-  real vector-slice harness while preserving or explicitly versioning rejected
-  lane stream shape;
-- or the roadmap bar is deliberately raised/reshaped with explicit rationale and
-  evidence that no current local Linux core RNG gap remains under the new bar.
+- a default or explicitly versioned dense SIMD normal/exponential candidate
+  beats scalar lane-fill in the real vector-slice harness while preserving or
+  deliberately versioning rejected-lane stream shape;
+- or a documented policy accepts a named approximation profile for a
+  default/general API surface with statistical-quality and reproducibility
+  evidence;
+- or a later roadmap audit raises/reshapes the bar again with explicit rationale.
 
 Until then, do not call `update_goal(status=complete)`.
