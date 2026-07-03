@@ -82,6 +82,9 @@ A candidate that could close S4-M5 should do one of the following:
    surface, including statistical-quality gates and reproducibility snapshots.
 3. Produce new local Rust evidence showing another untracked comparable core
    workload where Alea trails, then add a targeted fix or explicit exclusion.
+   The current local Rust SIMD audit (`s4-m5-rand-simd-audit.md`) found no
+   comparable non-uniform SIMD normal/exponential Rust row; S4-M5 is therefore
+   a product-above-Rust Alea bar rather than a local Rust parity gap.
 
 Current partial S4-M5 evidence: the named vector approximation profiles now
 have stronger `distcheck` coverage with larger-sample mean/variance gates and

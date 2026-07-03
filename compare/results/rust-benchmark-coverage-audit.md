@@ -11,10 +11,14 @@ Alea gap.
 ## Summary
 
 The local Rust benchmark surface is covered by Alea benchmark/evidence rows.
-The only remaining S4-M4 blockers are the two listed in
-`s4-m4-remaining-gaps.md`: exact LogNormal transform/codegen and dense SIMD
-normal/exponential kernels. The Rust benchmark harness itself does not include a
-SIMD distribution row, but vectorbench evidence keeps that blocker open.
+The previous S4-M4 performance blockers are closed or reshaped: exact LogNormal
+is now documented as a stable-output tradeoff with explicit opt-in performance
+profiles, while dense SIMD normal/exponential work has moved to the stricter
+S4-M5 product bar. The Rust benchmark harness itself does not include a SIMD
+distribution row; `s4-m5-rand-simd-audit.md` confirms local `rand` SIMD support
+is limited to uniform/integer/wide values while local `rand_distr`
+normal/exponential remain scalar ziggurat implementations. Alea `vectorbench`
+evidence keeps the S4-M5 product-above-Rust blocker open.
 
 ## Coverage Map
 
@@ -27,7 +31,7 @@ SIMD distribution row, but vectorbench evidence keeps that blocker open.
 | `rand weighted index` | `Rng.weightedIndex`, `AliasTable`, `WeightedChoice` rows | Covered. |
 | `rand_distr WeightedAliasIndex` f32/f64/u32 | `AliasTable(f32/f64/u32)` rows | Covered after the power-of-two one-word threshold fast path; f32/f64 exceed Rust directly and u32 exceeds Rust with `ScalarPrng`. |
 | `rand_distr WeightedTreeIndex` integer/f64 | `WeightedIntTree`, `WeightedTree(f64)` rows | Covered; integer and f64 update+sample evidence now exist. |
-| standard/parameterized normal and exponential, f32/f64 | scalar, raw, native-f32 opt-in, fill, and vectorbench rows | Covered for scalar/fill evidence. Dense SIMD remains a separate S4-M4 blocker because production vector kernels are still scalar lane-fill. |
+| standard/parameterized normal and exponential, f32/f64 | scalar, raw, native-f32 opt-in, fill, vectorbench rows, and `s4-m5-rand-simd-audit.md` | Covered for scalar/fill evidence. Local Rust has no comparable SIMD non-uniform row; dense SIMD remains a separate S4-M5 product bar because production vector kernels are still scalar lane-fill. |
 | Poisson, Geometric, StandardGeometric, Binomial, Hypergeometric | discrete distribution and fill rows, HIN/H2PE rows, `distcheck` | Covered; Hypergeometric includes HIN, balanced large H2PE, and skew-large H2PE. |
 | Gamma, ChiSquared, Beta, FisherF, StudentT | distribution rows, cached sampler rows, bulk fill rows, `distcheck` | Covered. |
 | Triangular, Cauchy, Pareto, Weibull | scalar and vectorized/bulk rows, `distcheck` | Covered; current rows exceed local Rust evidence. |
