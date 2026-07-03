@@ -97,6 +97,10 @@ repair rows before a real `vectorbench` follow-up.
   f32x8 lanes/s, but it uses the central approximation outside its tail-domain
   validity and therefore is not a normal sampler. This only shows that valid
   tail handling, not the center polynomial alone, is the inverse-CDF bottleneck.
+- A tail-zero inverse-CDF diagnostic probe is also fast but invalid. Applying
+  the central polynomial and replacing tail lanes with zero reaches about
+  644M/673M f32x8 lanes/s, showing tail detection and vector select are cheap
+  while producing valid tail values is the expensive part of this route.
 - Vector-log exponential kernels are too slow for default use.
 - Approx-log f32 vector exponential is useful only as an explicit output-mapping
   opt-in, not as a default dense kernel. A vector-only midpoint-uniform plus
