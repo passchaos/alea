@@ -11503,7 +11503,8 @@ pub fn normalInverseGaussianCheckedFrom(source: anytype, comptime T: type, alpha
 
 pub fn normalInverseGaussianFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
-    std.debug.assert(alpha > 0 and @abs(beta_param) < alpha);
+    std.debug.assert(normalInverseGaussianParametersValid(T, alpha, beta_param));
+    if (alpha == std.math.inf(T)) return 0;
 
     const ratio = beta_param / alpha;
     const gamma_param = alpha * @sqrt(1 - ratio * ratio);
@@ -11511,11 +11512,24 @@ pub fn normalInverseGaussianFrom(source: anytype, comptime T: type, alpha: T, be
     return beta_param * inv_gauss + @sqrt(inv_gauss) * Rng.normalFastFrom(source, T, 0, 1);
 }
 
+fn normalInverseGaussianParametersValid(comptime T: type, alpha: T, beta_param: T) bool {
+    return alpha > 0 and
+        (std.math.isFinite(alpha) or alpha == std.math.inf(T)) and
+        std.math.isFinite(beta_param) and
+        @abs(beta_param) < alpha;
+}
+
 pub fn fillNormalInverseGaussian(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
     fillNormalInverseGaussianFrom(rng, T, dest, alpha, beta_param);
 }
 
 pub fn fillNormalInverseGaussianFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(normalInverseGaussianParametersValid(T, alpha, beta_param));
+    if (alpha == std.math.inf(T)) {
+        @memset(dest, 0);
+        return;
+    }
     const sampler = NormalInverseGaussian(T).init(alpha, beta_param) catch unreachable;
     sampler.fillFrom(source, dest);
 }
@@ -11613,6 +11627,7 @@ pub fn VectorNormalInverseGaussian(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
             const inverse_mean = 1 / self.gammaValue();
             const inv_gauss = vectorInverseGaussianFrom(source, VectorType, inverse_mean, 1);
             const normal_vec = vectorStandardNormalFrom(source, VectorType);
@@ -11625,6 +11640,10 @@ pub fn VectorNormalInverseGaussian(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -11640,8 +11659,14 @@ pub fn NormalInverseGaussian(comptime T: type) type {
 
         pub fn init(alpha: T, beta_param: T) Error!Self {
             comptime requireFloat(T);
-            if (!(alpha > 0) or !std.math.isFinite(alpha)) return error.InvalidParameter;
-            if (!std.math.isFinite(beta_param) or !(@abs(beta_param) < alpha)) return error.InvalidParameter;
+            if (!normalInverseGaussianParametersValid(T, alpha, beta_param)) return error.InvalidParameter;
+            if (alpha == std.math.inf(T)) {
+                return .{
+                    .beta_param = beta_param,
+                    .inverse_mean = 0,
+                    .inverse_gaussian = try InverseGaussian(T).init(0, 1),
+                };
+            }
 
             const ratio = beta_param / alpha;
             const gamma_param = alpha * @sqrt(1 - ratio * ratio);
@@ -11655,6 +11680,7 @@ pub fn NormalInverseGaussian(comptime T: type) type {
         }
 
         pub fn alphaValue(self: Self) T {
+            if (self.isDegenerate()) return std.math.inf(T);
             const gamma_param = 1 / self.inverse_mean;
             return @sqrt(gamma_param * gamma_param + self.beta_param * self.beta_param);
         }
@@ -11664,7 +11690,7 @@ pub fn NormalInverseGaussian(comptime T: type) type {
         }
 
         pub fn gammaValue(self: Self) T {
-            return 1 / self.inverse_mean;
+            return if (self.isDegenerate()) std.math.inf(T) else 1 / self.inverse_mean;
         }
 
         pub fn expectedValue(self: Self) T {
@@ -11672,19 +11698,18 @@ pub fn NormalInverseGaussian(comptime T: type) type {
         }
 
         pub fn varianceValue(self: Self) T {
+            if (self.isDegenerate()) return 0;
             const gamma_param = self.gammaValue();
             const alpha = self.alphaValue();
             return alpha * alpha / (gamma_param * gamma_param * gamma_param);
         }
 
         pub fn minValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.degenerateValue() else null;
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.degenerateValue() else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -11692,6 +11717,7 @@ pub fn NormalInverseGaussian(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return self.degenerateValue();
             const inv_gauss = self.inverse_gaussian.sampleFrom(source);
             return self.beta_param * inv_gauss + @sqrt(inv_gauss) * Rng.normalFastFrom(source, T, 0, 1);
         }
@@ -11701,11 +11727,23 @@ pub fn NormalInverseGaussian(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, self.degenerateValue());
+                return;
+            }
             self.inverse_gaussian.fillFrom(source, dest);
             for (dest) |*item| {
                 const inv_gauss = item.*;
                 item.* = self.beta_param * inv_gauss + @sqrt(inv_gauss) * Rng.normalFastFrom(source, T, 0, 1);
             }
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.inverse_mean == 0;
+        }
+
+        fn degenerateValue(_: Self) T {
+            return 0;
         }
     };
 }
@@ -15936,6 +15974,120 @@ test "degenerate inverse-gaussian helpers do not consume random stream" {
 
     infinite_shape_vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate normal-inverse-gaussian helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d126);
+    var control = alea.ScalarPrng.init(0x5150_d126);
+    const rng = Rng.init(&engine);
+
+    const alpha = std.math.inf(f64);
+    const beta_param: f64 = 2.5;
+    const point: f64 = 0;
+
+    try std.testing.expectEqual(point, normalInverseGaussian(rng, f64, alpha, beta_param));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, normalInverseGaussianFrom(&engine, f64, alpha, beta_param));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, try normalInverseGaussianChecked(rng, f64, alpha, beta_param));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, try normalInverseGaussianCheckedFrom(&engine, f64, alpha, beta_param));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillNormalInverseGaussian(rng, f64, &scalar_buf, alpha, beta_param);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillNormalInverseGaussianFrom(&engine, f64, &scalar_buf, alpha, beta_param);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillNormalInverseGaussianChecked(rng, f64, &scalar_buf, alpha, beta_param);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillNormalInverseGaussianCheckedFrom(&engine, f64, &scalar_buf, alpha, beta_param);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try NormalInverseGaussian(f64).init(alpha, beta_param);
+    try std.testing.expectEqual(alpha, sampler.alphaValue());
+    try std.testing.expectEqual(beta_param, sampler.betaValue());
+    try std.testing.expectEqual(alpha, sampler.gammaValue());
+    try std.testing.expectEqual(point, sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(point, sampler.minValue().?);
+    try std.testing.expectEqual(point, sampler.maxValue().?);
+    try std.testing.expectEqual(point, sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fill(rng, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const point_vec: @Vector(4, f64) = @splat(point);
+    try std.testing.expectEqual(point_vec, vectorNormalInverseGaussian(rng, @Vector(4, f64), alpha, beta_param));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point_vec, vectorNormalInverseGaussianFrom(&engine, @Vector(4, f64), alpha, beta_param));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point_vec, try vectorNormalInverseGaussianChecked(rng, @Vector(4, f64), alpha, beta_param));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point_vec, try vectorNormalInverseGaussianCheckedFrom(&engine, @Vector(4, f64), alpha, beta_param));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorNormalInverseGaussian(rng, @Vector(4, f64), &vector_buf, alpha, beta_param);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorNormalInverseGaussianFrom(&engine, @Vector(4, f64), &vector_buf, alpha, beta_param);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorNormalInverseGaussianChecked(rng, @Vector(4, f64), &vector_buf, alpha, beta_param);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorNormalInverseGaussianCheckedFrom(&engine, @Vector(4, f64), &vector_buf, alpha, beta_param);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorNormalInverseGaussian(@Vector(4, f64)).init(alpha, beta_param);
+    try std.testing.expectEqual(alpha, vector_sampler.alphaValue());
+    try std.testing.expectEqual(beta_param, vector_sampler.betaValue());
+    try std.testing.expectEqual(alpha, vector_sampler.gammaValue());
+    try std.testing.expectEqual(point, vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(point, vector_sampler.minValue().?);
+    try std.testing.expectEqual(point, vector_sampler.maxValue().?);
+    try std.testing.expectEqual(point_vec, vector_sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point_vec, vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fill(rng, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
