@@ -75,7 +75,7 @@ toolkit functionality and reduce reliance on companion crates:
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape, finite-moment, median/mode, and support accessors plus collapsed `scale == 0` point masses |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment/median/mode/support accessors |
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment/median accessors and collapsed `min == max` point masses |
-| Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, median/mode, and support accessors |
+| Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, median/mode, and support accessors plus collapsed `scale == 0` point masses |
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/median/mode/support accessors and collapsed `scale == 0` point masses |
 | Dirichlet | Covered: `Dirichlet(T)`, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance export and dimension/total-alpha accessors |
 | Multinomial | Covered: `Multinomial`, including trials/category/probability lookup/export and count moment lookup/export accessors |
