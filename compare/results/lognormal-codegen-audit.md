@@ -108,6 +108,17 @@ not change this conclusion. The dynamic binary links `libm.so.6` and `libc.so.6`
 Thus executable link mode alone does not reproduce Rust's LogNormal codegen
 advantage.
 
+A further scratch probe resolved glibc `exp` once with `std.DynLib.open("libm.so.6")`
+/ `dlsym` and called the function pointer directly. This call-boundary shape is
+much faster for f64 single-sample rows: about 162.8M FastPrng and 186.2M
+ScalarPrng at `stddev=0.25`, and the same rates at `stddev=1`. It differs from
+Zig `@exp` by at most 1 ULP in a 4Mi f64 sample. For f32, default-normal rows
+are only about 131.2M/146.3M, while native-normal+dlsym reaches about
+138.9M/161.5M with max 1 ULP versus default f32 `@exp`. This is useful evidence
+for a high-accuracy platform opt-in shape, but it is not an exact default
+replacement because it changes bit outputs and is slower than the already added
+`LogNormalLibmvec` platform profile for throughput.
+
 A follow-up scratch probe checked whether mimicking Rust's f32 `exp` symbol by
 widening f32 log-space samples to f64, calling libc `exp`, and casting back to
 f32 helps. It does not: default-normal rows were about 98.9M FastPrng and
