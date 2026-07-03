@@ -14,12 +14,13 @@ distribution kernel, but it is the default because it is fast, stable, and keeps
 the scalar draw/repair policy simple.
 
 Latest `vectorbench` evidence is tracked in `performance-triage.md` and
-`core-rand-coverage.md`. Representative rows are roughly:
+`core-rand-coverage.md`. The 2026-07-03 native full `vectorbench` run has
+representative direct rows of roughly:
 
-- normal f32x8 / f64x4 direct: about 497M / 413M lanes/s,
-- standard normal f32x8 / f64x4 direct: about 499M / 456M lanes/s,
-- exponential f32x8 / f64x4 direct: about 471M / 469M lanes/s,
-- standard exponential f32x8 / f64x4 direct: about 473M / 471M lanes/s.
+- normal f32x8 / f64x4 direct: about 496M / 413M lanes/s,
+- standard normal f32x8 / f64x4 direct: about 501M / 454M lanes/s,
+- exponential f32x8 / f64x4 direct: about 470M / 466M lanes/s,
+- standard exponential f32x8 / f64x4 direct: about 471M / 468M lanes/s.
 
 These rows are host/load sensitive, so production decisions should compare
 candidates in the same `vectorbench` run rather than against stale absolute
@@ -33,10 +34,11 @@ numbers.
 - f32x8 repair probes are useful evidence in isolated `ziggurat-probe` rows,
   but the advantage does not survive the real vector-slice fill harness:
   standard repair rows can be close to current direct rows in a given run, but
-  do not provide a durable standard/parameterized no-regression win. Recent
-  vectorbench rows show f32x8 repair about 473M standard-normal, 477M normal,
-  451M standard-exponential, and 450M exponential lanes/s versus matching
-  direct rows around 499M, 497M, 473M, and 471M. FastPrng repair probe rows
+  do not provide a durable standard/parameterized no-regression win. The
+  2026-07-03 full `vectorbench` run shows f32x8 repair about 476M
+  standard-normal, 476M normal, 450M standard-exponential, and 449M exponential
+  lanes/s versus matching direct rows around 501M, 496M, 471M, and 470M.
+  FastPrng repair probe rows
   likewise trail or only match current production rows once correct stream-shape
   repair is required.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
