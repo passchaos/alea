@@ -407,6 +407,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorStandardExponentialF64Direct(io, stdout, "alea fillVectorStandardExponential f64x4 direct", lanes / 2);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 local scalar candidate", lanes / 2, 0xe184, fillStandardExponentialF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 approx-log candidate", lanes / 2, 0xe184, fillStandardExponentialF64ApproxLog);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 approx-log-low candidate", lanes / 2, 0xe184, fillStandardExponentialF64ApproxLogLow);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 approx-log-f32 candidate", lanes / 2, 0xe184, fillStandardExponentialF64ApproxLogF32);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 same-candidate repair", lanes / 2, 0xe184, fillStandardExponentialF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 all-accepted repair", lanes / 2, 0xe184, fillStandardExponentialF64AllAcceptedRepair);
@@ -430,6 +431,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorExponentialF64Direct(io, stdout, "alea fillVectorExponential f64x4 direct", lanes / 2);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 local scalar candidate", lanes / 2, 0xe184, fillExponentialF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 approx-log candidate", lanes / 2, 0xe184, fillExponentialF64ApproxLog);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 approx-log-low candidate", lanes / 2, 0xe184, fillExponentialF64ApproxLogLow);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 approx-log-f32 candidate", lanes / 2, 0xe184, fillExponentialF64ApproxLogF32);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 same-candidate repair", lanes / 2, 0xe184, fillExponentialF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 all-accepted repair", lanes / 2, 0xe184, fillExponentialF64AllAcceptedRepair);
@@ -3103,6 +3105,10 @@ fn fillStandardExponentialF64ApproxLog(engine: *alea.ScalarPrng, dest: []@Vector
     for (dest) |*item| item.* = vectorApproxLogExponentialF64(engine);
 }
 
+fn fillStandardExponentialF64ApproxLogLow(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorApproxLogLowExponentialF64(engine);
+}
+
 fn fillStandardExponentialF64ApproxLogF32(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorApproxLogF32ExponentialF64(engine);
 }
@@ -3131,6 +3137,11 @@ fn fillExponentialF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) vo
 fn fillExponentialF64ApproxLog(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     const inverse_rate: @Vector(4, f64) = @splat(0.5);
     for (dest) |*item| item.* = vectorApproxLogExponentialF64(engine) * inverse_rate;
+}
+
+fn fillExponentialF64ApproxLogLow(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(0.5);
+    for (dest) |*item| item.* = vectorApproxLogLowExponentialF64(engine) * inverse_rate;
 }
 
 fn fillExponentialF64ApproxLogF32(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
@@ -3184,6 +3195,10 @@ fn vectorApproxLogExponentialF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
     return approxNegLogF64(vectorOpenF64Local(engine));
 }
 
+fn vectorApproxLogLowExponentialF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    return approxNegLogLowF64(vectorOpenF64Local(engine));
+}
+
 fn vectorApproxLogF32ExponentialF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
     const f32_values = approxNegLogF32(vectorOpenF32Local(engine));
     var out: @Vector(4, f64) = undefined;
@@ -3228,6 +3243,23 @@ fn approxNegLogF64(u: @Vector(4, f64)) @Vector(4, f64) {
     const z8 = z4 * z4;
     const poly = @as(Vec, @splat(1.0)) + z2 * @as(Vec, @splat(1.0 / 3.0)) + z4 * @as(Vec, @splat(1.0 / 5.0)) + z4 * z2 * @as(Vec, @splat(1.0 / 7.0)) + z8 * @as(Vec, @splat(1.0 / 9.0));
     const log_m = @as(Vec, @splat(2.0)) * z * poly;
+    return -(exponent * @as(Vec, @splat(std.math.ln2)) + log_m);
+}
+
+fn approxNegLogLowF64(u: @Vector(4, f64)) @Vector(4, f64) {
+    const Vec = @Vector(4, f64);
+    const VecU = @Vector(4, u64);
+    const bits: VecU = @bitCast(u);
+    const exponent_bits = (bits >> @as(VecU, @splat(52))) & @as(VecU, @splat(0x7ff));
+    const mantissa_bits = (bits & @as(VecU, @splat(0x000f_ffff_ffff_ffff))) | @as(VecU, @splat(@as(u64, 0x3ff) << 52));
+    var exponent = @as(Vec, @floatFromInt(@as(@Vector(4, i64), @intCast(exponent_bits)))) - @as(Vec, @splat(1023.0));
+    var m = @as(Vec, @bitCast(mantissa_bits));
+    const high_mask = m > @as(Vec, @splat(1.4142135623730951));
+    m = @select(f64, high_mask, m * @as(Vec, @splat(0.5)), m);
+    exponent += @select(f64, high_mask, @as(Vec, @splat(1.0)), @as(Vec, @splat(0.0)));
+    const z = (m - @as(Vec, @splat(1.0))) / (m + @as(Vec, @splat(1.0)));
+    const z2 = z * z;
+    const log_m = @as(Vec, @splat(2.0)) * z * (@as(Vec, @splat(1.0)) + z2 * @as(Vec, @splat(1.0 / 3.0)));
     return -(exponent * @as(Vec, @splat(std.math.ln2)) + log_m);
 }
 

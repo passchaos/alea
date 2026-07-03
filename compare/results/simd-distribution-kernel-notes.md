@@ -141,6 +141,10 @@ repair rows before a real `vectorbench` follow-up.
   `"fillVectorExponential f64x4"` run showed f64 approx-log around 386M/382M
   lanes/s versus direct scalar ziggurat lane-fill around 469M/466M. Keep the
   public ApproxLog profile restricted to f32 vectors.
+- A lower-degree f64 approximate-log variant gets close but still loses. A
+  focused `vectorbench -- 16777216 "StandardExponential f64x4"` run shows
+  approx-log-low around 457M lanes/s versus direct ziggurat around 468M, with
+  weaker approximation/output mapping.
 - Widening f32 approximate-log samples to f64 is also not useful. A focused
   `vectorbench -- 16777216 "approx-log-f32"` run reports f64x4
   standard/parameterized around 378M/371M lanes/s, still below f64 ziggurat
