@@ -19,9 +19,51 @@ pub fn main(init: std.process.Init) !void {
         default_count;
 
     try stdout.print("weighted tree probe count={}\n", .{sample_count});
+    try benchUpdateSample(io, stdout, "weighted tree current update+sample", sample_count, currentUpdateSample);
+    try benchUpdateSample(io, stdout, "weighted tree total-cached update+sample", sample_count, totalCachedUpdateSample);
+    try benchUpdateSample(io, stdout, "weighted tree inline update+sample", sample_count, inlineUpdateSample);
     try benchFill(io, stdout, "weighted tree current fill", sample_count, currentFill);
     try benchFill(io, stdout, "weighted tree inline traversal", sample_count, inlineTraversalFill);
     try stdout.flush();
+}
+
+fn benchUpdateSample(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    sample_count: usize,
+    comptime sampleFn: anytype,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    const initial = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x77ee);
+        var tree = try alea.distributions.WeightedTree(u32).init(std.heap.smp_allocator, &initial);
+        defer tree.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var checksum: usize = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) {
+            const index = i & 7;
+            try tree.update(index, @as(u32, @intCast((i % 17) + 1)));
+            checksum +%= sampleFn(&engine, tree);
+        }
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M ops/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchFill(
@@ -69,34 +111,49 @@ fn currentFill(source: *alea.FastPrng, tree: alea.distributions.WeightedTree(u32
     tree.fillFrom(source, dest);
 }
 
+fn currentUpdateSample(source: *alea.FastPrng, tree: alea.distributions.WeightedTree(u32)) usize {
+    return tree.sampleFrom(source);
+}
+
+fn totalCachedUpdateSample(source: *alea.FastPrng, tree: alea.distributions.WeightedTree(u32)) usize {
+    return sampleWithTotal(source, tree.subtotals.items, tree.subtotals.items[0]);
+}
+
+fn inlineUpdateSample(source: *alea.FastPrng, tree: alea.distributions.WeightedTree(u32)) usize {
+    return sampleInline(source, tree.subtotals.items);
+}
+
 fn inlineTraversalFill(source: *alea.FastPrng, tree: alea.distributions.WeightedTree(u32), dest: []usize) void {
     const items = tree.subtotals.items;
     const total = items[0];
-    for (dest) |*slot| {
-        var target = alea.Rng.floatFrom(source, f64) * total;
-        var index: usize = 0;
-        while (true) {
-            const left_index = 2 * index + 1;
-            const left = if (left_index < items.len) items[left_index] else 0;
-            if (target < left) {
-                index = left_index;
-                continue;
-            }
-            target -= left;
+    for (dest) |*slot| slot.* = sampleWithTotal(source, items, total);
+}
 
-            const right_index = left_index + 1;
-            const right = if (right_index < items.len) items[right_index] else 0;
-            if (target < right) {
-                index = right_index;
-                continue;
-            }
-            target -= right;
+fn sampleInline(source: *alea.FastPrng, items: []const f64) usize {
+    return sampleWithTotal(source, items, items[0]);
+}
 
-            const own = items[index] - left - right;
-            if (target < own or own > 0) {
-                slot.* = index;
-                break;
-            }
+fn sampleWithTotal(source: *alea.FastPrng, items: []const f64, total: f64) usize {
+    var target = alea.Rng.floatFrom(source, f64) * total;
+    var index: usize = 0;
+    while (true) {
+        const left_index = 2 * index + 1;
+        const left = if (left_index < items.len) items[left_index] else 0;
+        if (target < left) {
+            index = left_index;
+            continue;
         }
+        target -= left;
+
+        const right_index = left_index + 1;
+        const right = if (right_index < items.len) items[right_index] else 0;
+        if (target < right) {
+            index = right_index;
+            continue;
+        }
+        target -= right;
+
+        const own = items[index] - left - right;
+        if (target < own or own > 0) return index;
     }
 }
