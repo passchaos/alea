@@ -4575,7 +4575,24 @@ pub fn BufferedLogNormal(comptime T: type, comptime buffer_len: usize) type {
                 @memset(dest, @exp(self.log_mean));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            var written: usize = 0;
+            if (self.index < buffer_len) {
+                const buffered_count = buffer_len - self.index;
+                const n = @min(dest.len, buffered_count);
+                @memcpy(dest[0..n], self.buffer[self.index..][0..n]);
+                self.index += n;
+                written += n;
+            }
+            while (written + buffer_len <= dest.len) : (written += buffer_len) {
+                fillLogNormalFrom(source, T, dest[written..][0..buffer_len], self.log_mean, self.log_stddev);
+            }
+            if (written < dest.len) {
+                fillLogNormalFrom(source, T, self.buffer[0..], self.log_mean, self.log_stddev);
+                self.index = 0;
+                const n = dest.len - written;
+                @memcpy(dest[written..], self.buffer[0..n]);
+                self.index = n;
+            }
         }
     };
 }

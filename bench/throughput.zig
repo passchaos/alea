@@ -303,6 +303,10 @@ pub fn main(init: std.process.Init) !void {
     try benchBufferedLogNormal(f64, alea.ScalarPrng, io, stdout, "alea BufferedLogNormal f64 scalar direct", bytes / 128, 0x1061, 0.25);
     try benchBufferedLogNormal(f32, alea.FastPrng, io, stdout, "alea BufferedLogNormal f32 fast direct", bytes / 128, 0x1066, 0.25);
     try benchBufferedLogNormal(f32, alea.ScalarPrng, io, stdout, "alea BufferedLogNormal f32 scalar direct", bytes / 128, 0x1066, 0.25);
+    try benchFillBufferedLogNormal(f64, alea.FastPrng, io, stdout, "alea BufferedLogNormal.fill f64 fast direct", bytes / 128, 0x1060, 0.25);
+    try benchFillBufferedLogNormal(f64, alea.ScalarPrng, io, stdout, "alea BufferedLogNormal.fill f64 scalar direct", bytes / 128, 0x1061, 0.25);
+    try benchFillBufferedLogNormal(f32, alea.FastPrng, io, stdout, "alea BufferedLogNormal.fill f32 fast direct", bytes / 128, 0x1066, 0.25);
+    try benchFillBufferedLogNormal(f32, alea.ScalarPrng, io, stdout, "alea BufferedLogNormal.fill f32 scalar direct", bytes / 128, 0x1066, 0.25);
     try benchLogNormalStddev1Scalar(io, stdout, "alea log-normal stddev=1 scalar direct", bytes / 128);
     try benchLogNormalRawStddev1(alea.ScalarPrng, io, stdout, "alea log-normal stddev=1 raw scalar direct", bytes / 128, 0x1061);
     try benchLogNormalF32Stddev1Scalar(io, stdout, "alea log-normal f32 stddev=1 scalar direct", bytes / 128);
@@ -311,6 +315,10 @@ pub fn main(init: std.process.Init) !void {
     try benchBufferedLogNormal(f64, alea.ScalarPrng, io, stdout, "alea BufferedLogNormal f64 stddev=1 scalar direct", bytes / 128, 0x1069, 1);
     try benchBufferedLogNormal(f32, alea.FastPrng, io, stdout, "alea BufferedLogNormal f32 stddev=1 fast direct", bytes / 128, 0x106a, 1);
     try benchBufferedLogNormal(f32, alea.ScalarPrng, io, stdout, "alea BufferedLogNormal f32 stddev=1 scalar direct", bytes / 128, 0x106b, 1);
+    try benchFillBufferedLogNormal(f64, alea.FastPrng, io, stdout, "alea BufferedLogNormal.fill f64 stddev=1 fast direct", bytes / 128, 0x1068, 1);
+    try benchFillBufferedLogNormal(f64, alea.ScalarPrng, io, stdout, "alea BufferedLogNormal.fill f64 stddev=1 scalar direct", bytes / 128, 0x1069, 1);
+    try benchFillBufferedLogNormal(f32, alea.FastPrng, io, stdout, "alea BufferedLogNormal.fill f32 stddev=1 fast direct", bytes / 128, 0x106a, 1);
+    try benchFillBufferedLogNormal(f32, alea.ScalarPrng, io, stdout, "alea BufferedLogNormal.fill f32 stddev=1 scalar direct", bytes / 128, 0x106b, 1);
     try benchLogNormalNativeF32(io, stdout, "alea log-normal native f32", bytes / 128);
     try benchLogNormalNativeF32Scalar(io, stdout, "alea log-normal native f32 scalar direct", bytes / 128);
     try benchLogNormalApproxF32(io, stdout, "alea log-normal approx f32", bytes / 128);
@@ -7738,6 +7746,46 @@ fn benchBufferedLogNormal(
         var i: usize = 0;
         var checksum: f64 = 0;
         while (i < count) : (i += 1) checksum += @floatCast(dist.sampleFrom(&engine));
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillBufferedLogNormal(
+    comptime T: type,
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    count: usize,
+    seed: u64,
+    stddev: T,
+) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024]T = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        var dist = alea.distributions.BufferedLogNormal(T, 1024).init(0, stddev) catch unreachable;
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            dist.fillFrom(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += @floatCast(value);
+            remaining -= n;
+        }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

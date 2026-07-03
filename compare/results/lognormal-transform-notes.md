@@ -151,7 +151,10 @@ Fresh local evidence:
   is now exposed as `BufferedLogNormal(T, buffer_len)`, making the refill/stream
   contract explicit. Focused production `bench -- 268435456 "BufferedLogNormal"`
   rows are about 138M/141M f64 FastPrng/ScalarPrng, 136M/139M f32, 76M/77M f64
-  `stddev=1`, and 77M/79M f32 `stddev=1`. Libmvec-backed buffered rows are much
+  `stddev=1`, and 77M/79M f32 `stddev=1`. Its `fillFrom` now drains cached
+  values and writes full refill-sized chunks directly, improving focused fill
+  rows to about 139M/146M f64, 138M/141M f32, 76M/77M f64 `stddev=1`, and
+  78M/79M f32 `stddev=1`. Libmvec-backed buffered rows are much
   faster, and a dynamic-loading probe using `std.DynLib.open("libmvec.so.1")`
   shows a possible no-hard-link opt-in shape: f32 remains around 301M/341M
   FastPrng/ScalarPrng and f64 around 236M/256M FastPrng/ScalarPrng, close to the
