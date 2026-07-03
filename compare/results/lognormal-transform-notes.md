@@ -60,12 +60,14 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
 - f32 vector width changes do not produce a durable win.
 - Widening the exact f32 transform to f64 `@exp` and casting back to f32 keeps
   max error to 1 ULP across the checked spreads, but it is slower than the
-  exact f32 transform in the staged fill probe, so it is not a production win.
+  exact f32 transform in the staged fill probe and in single-sample rows, so it
+  is not a production win.
 - f32 `expm1(x) + 1` can be faster for narrow `stddev = 0.25`, but changes
-  output rounding; max error is 1 ULP for the narrow benchmark and grows
-  substantially for wider spreads. It is therefore exposed only through the
-  opt-in `LogNormalApproxF32` / `logNormalApproxF32*` APIs with bounded
-  `|mean| <= 0.25` and `stddev <= 0.25`, not as the exact default.
+  output rounding and did not help single-sample rows; max error is 1 ULP for
+  the narrow benchmark and grows substantially for wider spreads. It is
+  therefore exposed only through the opt-in `LogNormalApproxF32` /
+  `logNormalApproxF32*` APIs with bounded `|mean| <= 0.25` and
+  `stddev <= 0.25`, not as the exact default.
 - A branchy f32 hybrid can keep wider-parameter error near 1 ULP, but the
   branch cost is too high for the measured fill workload.
 - Filling standard normal samples and then applying scale before exact `@exp`
@@ -109,6 +111,11 @@ Fresh local evidence:
   135.6/135.4/135.7M. These rows add evidence only; libc remains
   engine/profile-specific and requires libc linkage, while `std.math.exp` is
   not a win.
+- A follow-up `log-normal-probe -- 4194304 "f32 sample"` split exact f32 sample
+  alternatives that had mainly been measured for fills. Widened f64 `@exp`
+  reached only about 98M FastPrng and 107M ScalarPrng versus exact current rows
+  around 119M/134M; `expm1(x)+1` reached about 113M/122M and changed the
+  checksum. Neither is a single-sample default candidate.
 - `log-normal-probe` now accepts the same focused shape as the throughput
   harness: `zig build -Doptimize=ReleaseFast -Dcpu=native log-normal-probe --
   <count> <filter>`. A same-host 1Mi filtered smoke run verified the filter and
