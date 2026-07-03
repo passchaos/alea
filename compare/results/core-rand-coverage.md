@@ -7,6 +7,8 @@ Zig-native designs.
 It is a living roadmap, not a completion certificate. When all milestones in one
 stage are closed, define the next stricter stage instead of declaring the
 broader product goal permanently finished.
+`compare/results/active-goal-completion-audit.md` records the current
+thread-level non-completion audit.
 
 The active product focus is the current Linux environment. The goal for each
 stage is to drive this platform to no known core RNG gaps against locally
