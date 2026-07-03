@@ -8803,7 +8803,8 @@ pub fn weibullCheckedFrom(source: anytype, comptime T: type, scale: T, shape: T)
 
 pub fn weibullFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(scale > 0 and shape > 0);
+    std.debug.assert(scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    if (scale == 0) return 0;
     if (shape == 1) return scale * Rng.standardExponentialFastFrom(source, T);
     return scale * std.math.pow(T, -@log(Rng.floatOpenFrom(source, T)), 1 / shape);
 }
@@ -8814,7 +8815,11 @@ pub fn fillWeibull(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) vo
 
 pub fn fillWeibullFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(scale > 0 and shape > 0);
+    std.debug.assert(scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    if (scale == 0) {
+        @memset(dest, 0);
+        return;
+    }
     if (shape == 1) {
         for (dest) |*item| item.* = scale * Rng.standardExponentialFastFrom(source, T);
         return;
@@ -8872,6 +8877,7 @@ pub fn fillVectorWeibullCheckedFrom(source: anytype, comptime VectorType: type, 
 }
 
 fn weibullFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, scale: vectorChild(VectorType), inverse_shape: vectorChild(VectorType)) VectorType {
+    if (scale == 0) return @splat(0);
     const scale_vec: VectorType = @splat(scale);
     const inverse_shape_vec: VectorType = @splat(inverse_shape);
     return scale_vec * @exp(@log(-@log(uniform_vec)) * inverse_shape_vec);
@@ -8927,6 +8933,7 @@ pub fn VectorWeibull(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(0);
             const scale_vec: VectorType = @splat(self.scaleValue());
             if (self.shapeValue() == 1) return scale_vec * vectorStandardExponentialFrom(source, VectorType);
             const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
@@ -8938,6 +8945,10 @@ pub fn VectorWeibull(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -8952,7 +8963,7 @@ pub fn Weibull(comptime T: type) type {
 
         pub fn init(scale: T, shape: T) Error!Self {
             comptime requireFloat(T);
-            if (!(scale > 0) or !(shape > 0)) return error.InvalidParameter;
+            if (!(scale >= 0) or !(shape > 0)) return error.InvalidParameter;
             if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
             return .{ .scale = scale, .shape = shape };
         }
@@ -8991,8 +9002,7 @@ pub fn Weibull(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) 0 else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9009,6 +9019,10 @@ pub fn Weibull(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             fillWeibullFrom(source, T, dest, self.scale, self.shape);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
     };
 }
@@ -14862,6 +14876,82 @@ test "degenerate rayleigh helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "degenerate weibull helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1b6);
+    var control = alea.ScalarPrng.init(0x5150_d1b6);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 0), weibullFrom(&engine, f64, 0, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 0), try weibullChecked(rng, f64, 0, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillWeibullFrom(&engine, f64, &scalar_buf, 0, 1.5);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillWeibullChecked(rng, f64, &scalar_buf, 0, 1.5);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try Weibull(f64).init(0, 1.5);
+    try std.testing.expectEqual(@as(f64, 0), sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 1.5), sampler.shapeValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.maxValue().?);
+    try std.testing.expectEqual(@as(f64, 0), sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const shape_one = try Weibull(f64).init(0, 1);
+    try std.testing.expectEqual(@as(f64, 0), shape_one.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    shape_one.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorWeibullFrom(&engine, @Vector(4, f64), 0, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), try vectorWeibullChecked(rng, @Vector(4, f64), 0, 1.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorWeibullFrom(&engine, @Vector(4, f64), &vector_buf, 0, 1.5);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorWeibullChecked(rng, @Vector(4, f64), &vector_buf, 0, 1.5);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorWeibull(@Vector(4, f64)).init(0, 1.5);
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 1.5), vector_sampler.shapeValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "degenerate power-function helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1d7);
@@ -16994,7 +17084,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorParetoCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorWeibullCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 1.5));
+    try std.testing.expectError(error.InvalidParameter, fillVectorWeibullCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, -1, 1.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
@@ -17129,7 +17219,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorParetoCheckedFrom(&engine, @Vector(4, f64), &empty, 2, 0);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorWeibullCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1.5);
+    try fillVectorWeibullCheckedFrom(&engine, @Vector(4, f64), &empty, -1, 1.5);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17197,7 +17287,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorParetoChecked(rng, @Vector(4, f64), &empty, 2, 0);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorWeibullChecked(rng, @Vector(4, f64), &empty, 0, 1.5);
+    try fillVectorWeibullChecked(rng, @Vector(4, f64), &empty, -1, 1.5);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorGumbelChecked(rng, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17359,7 +17449,7 @@ test "invalid distribution facade tail scalars do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, maxwellChecked(rng, f64, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, weibullChecked(rng, f64, 0, 1.5));
+    try std.testing.expectError(error.InvalidParameter, weibullChecked(rng, f64, -1, 1.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, gumbelChecked(rng, f64, 0, -1));
@@ -17460,7 +17550,7 @@ test "invalid distribution facade tail fills do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillPowerFunctionChecked(rng, f64, &out, 2, 1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillWeibullChecked(rng, f64, &out, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, fillWeibullChecked(rng, f64, &out, -1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillGumbelChecked(rng, f64, &out, 0, -1));
@@ -17807,7 +17897,7 @@ test "invalid remaining tail scalar helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, paretoCheckedFrom(&engine, f64, 0, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, weibullCheckedFrom(&engine, f64, 0, 1.5));
+    try std.testing.expectError(error.InvalidParameter, weibullCheckedFrom(&engine, f64, -1, 1.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, gumbelCheckedFrom(&engine, f64, 0, -1));
@@ -17958,7 +18048,7 @@ test "zero-length inverse and zeta distribution fills do not validate or consume
     try std.testing.expectEqual(control.next(), engine.next());
     try fillParetoCheckedFrom(&engine, f64, &out, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillWeibullCheckedFrom(&engine, f64, &out, 0, 1);
+    try fillWeibullCheckedFrom(&engine, f64, &out, -1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillGumbelCheckedFrom(&engine, f64, &out, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -19321,7 +19411,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (weibull_buf) |value| try std.testing.expect(value >= 0);
     try fillWeibullCheckedFrom(&direct_engine, f64, &direct_weibull_buf, 2, 1.5);
     for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
-    try std.testing.expectError(error.InvalidParameter, fillWeibullCheckedFrom(&direct_engine, f64, &direct_weibull_buf, 0, 1.5));
+    try std.testing.expectError(error.InvalidParameter, fillWeibullCheckedFrom(&direct_engine, f64, &direct_weibull_buf, -1, 1.5));
     const weibull_sampler = try Weibull(f64).init(2, 1.5);
     try std.testing.expectApproxEqAbs(@as(f64, 2), weibull_sampler.scaleValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.5), weibull_sampler.shapeValue(), 1e-12);
@@ -19336,7 +19426,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     weibull_sampler.fillFrom(&direct_engine, &direct_weibull_buf);
     for (direct_weibull_buf) |value| try std.testing.expect(value >= 0);
     try std.testing.expect(try weibullCheckedFrom(&direct_engine, f64, 2, 1.5) >= 0);
-    try std.testing.expectError(error.InvalidParameter, weibullCheckedFrom(&direct_engine, f64, 0, 1.5));
+    try std.testing.expectError(error.InvalidParameter, weibullCheckedFrom(&direct_engine, f64, -1, 1.5));
     var weibull_shape_one_buf: [8]f64 = undefined;
     fillWeibullFrom(&direct_engine, f64, &weibull_shape_one_buf, 2, 1);
     for (weibull_shape_one_buf) |value| try std.testing.expect(value >= 0);
@@ -19597,7 +19687,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Rayleigh(f64).init(-1));
     try std.testing.expectError(error.InvalidParameter, Maxwell(f64).init(-1));
     try std.testing.expectError(error.InvalidParameter, Pareto(f64).init(1, 0));
-    try std.testing.expectError(error.InvalidParameter, Weibull(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, Weibull(f64).init(-1, 1));
     try std.testing.expectError(error.InvalidParameter, Gumbel(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Frechet(f64).init(0, 1, 0));
     try std.testing.expectError(error.InvalidParameter, SkewNormal(f64).init(0, 0, 1));
