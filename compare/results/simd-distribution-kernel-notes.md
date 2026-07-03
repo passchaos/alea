@@ -86,6 +86,12 @@ repair rows before a real `vectorbench` follow-up.
   `vectorbench -- 16777216 "inverse-cdf central"` run shows f32x8
   standard/parameterized rows around 212M/211M and f64x4 around 202M/201M,
   still far below scalar ziggurat lane-fill.
+- A tail-repair inverse-CDF branch improves f32 further but still loses. This
+  candidate computes the central rational polynomial for every lane and repairs
+  only tail lanes with scalar inverse-CDF approximation. A focused `vectorbench
+  -- 16777216 "inverse-cdf tail-repair"` run shows f32x8 standard/parameterized
+  rows around 245M/245M and f64x4 around 207M/207M, still well below scalar
+  ziggurat lane-fill.
 - Vector-log exponential kernels are too slow for default use.
 - Approx-log f32 vector exponential is useful only as an explicit output-mapping
   opt-in, not as a default dense kernel. A vector-only midpoint-uniform plus
