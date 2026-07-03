@@ -52,6 +52,16 @@ numbers.
   gap: a same-host 2026-07-03 full `vectorbench` run with that probe tied or
   regressed the target facade normal/exponential rows while direct rows stayed
   essentially unchanged, so the call-boundary hint was reverted.
+- A later small isolated `ziggurat-probe -- 1048576` rerun again showed why
+  probe-only wins are not enough: scalar raw rows were about 641M standard
+  normal and 511M standard exponential; f32x8 correct repair reached about
+  629M normal and 599M exponential lanes/s in isolation, while FastPrng correct
+  repair remained around 490M/480M lanes/s. These rows are useful for candidate
+  discovery, but they do not override the full vector-slice harness evidence
+  above because previous real `vectorbench` runs showed the same repair shapes
+  trailing or tying production lane-fill once all facade/direct workflows and
+  stream-shape constraints are included. No production change follows from this
+  isolated probe.
 
 ## Requirements For The Next Candidate
 
