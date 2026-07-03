@@ -49,7 +49,7 @@ Zig-native way.
 | WeightedChoice | Covered: `WeightedChoice`, including item/emptiness diagnostics, weight/probability diagnostics and exports, weight updates, single/bulk weight introspection, `chooseIteratorWeighted`, `sampleIteratorWeighted` |
 | WeightedAliasIndex | Covered: `AliasTable(Weight)` for O(1) repeated weighted sampling, including `len`, `isEmpty`, `totalWeight`, `weightAt`, `probabilityAt`, deterministic `constantIndex`, and allocation-returning or caller-buffer weight/probability reconstruction |
 | WeightedTreeIndex | Covered: `WeightedTree(Weight)` for generic weights and `WeightedIntTree(Weight)` for faster unsigned integer sample/update/push/pop workloads; both expose single-weight/probability lookup plus `weights` / `weightsInto` and `probabilities` / `probabilitiesInto` export for diagnostics; `WeightedIntTree` stores subtotals in `u64` and rejects wider integer values that do not fit |
-| InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)`, including mean/shape/moment/support accessors |
+| InverseGaussian | Covered: `inverseGaussian`, `InverseGaussian(T)`, including mean/shape/moment/support accessors and collapsed `mean == 0` point masses |
 | NormalInverseGaussian | Covered: `normalInverseGaussian`, `NormalInverseGaussian(T)`, including alpha/beta/gamma and moment/support accessors |
 | Zipf | Covered: `zipf`, `Zipf(T)`, including n/exponent and support-bound accessors |
 | Zeta | Covered: `zeta`, `Zeta(T)`, including exponent and support-bound accessors |

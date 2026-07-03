@@ -11001,7 +11001,8 @@ pub fn inverseGaussianCheckedFrom(source: anytype, comptime T: type, mean: T, sh
 
 pub fn inverseGaussianFrom(source: anytype, comptime T: type, mean: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(mean > 0 and shape > 0);
+    std.debug.assert(mean >= 0 and shape > 0 and std.math.isFinite(mean) and std.math.isFinite(shape));
+    if (mean == 0) return 0;
 
     const z = Rng.normalFastFrom(source, T, 0, 1);
     const y = mean * z * z;
@@ -11017,7 +11018,11 @@ pub fn fillInverseGaussian(rng: Rng, comptime T: type, dest: []T, mean: T, shape
 
 pub fn fillInverseGaussianFrom(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(mean > 0 and shape > 0);
+    std.debug.assert(mean >= 0 and shape > 0 and std.math.isFinite(mean) and std.math.isFinite(shape));
+    if (mean == 0) {
+        @memset(dest, 0);
+        return;
+    }
     Rng.fillNormalFrom(source, T, dest, 0, 1);
     inverseGaussianFromNormals(source, T, dest, mean, shape);
 }
@@ -11125,6 +11130,7 @@ pub fn VectorInverseGaussian(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(0);
             const normal_vec = vectorStandardNormalFrom(source, VectorType);
             const uniform_vec = Rng.vectorFrom(source, VectorType);
             return inverseGaussianFromNormalVector(VectorType, normal_vec, uniform_vec, self.meanValue(), self.shapeValue());
@@ -11135,6 +11141,10 @@ pub fn VectorInverseGaussian(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -11151,7 +11161,7 @@ pub fn InverseGaussian(comptime T: type) type {
 
         pub fn init(mean: T, shape: T) Error!Self {
             comptime requireFloat(T);
-            if (!(mean > 0) or !(shape > 0)) return error.InvalidParameter;
+            if (!(mean >= 0) or !(shape > 0)) return error.InvalidParameter;
             if (!std.math.isFinite(mean) or !std.math.isFinite(shape)) return error.InvalidParameter;
             return .{
                 .mean = mean,
@@ -11183,8 +11193,7 @@ pub fn InverseGaussian(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) 0 else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -11192,6 +11201,7 @@ pub fn InverseGaussian(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return 0;
             const z = Rng.normalFastFrom(source, T, 0, 1);
             const y = self.mean * z * z;
             const x = self.mean + self.mean_over_2shape * (y - @sqrt(4 * self.shape * y + y * y));
@@ -11204,7 +11214,15 @@ pub fn InverseGaussian(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
             fillInverseGaussianFrom(source, T, dest, self.mean, self.shape);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.mean == 0;
         }
     };
 }
@@ -14283,7 +14301,7 @@ test "invalid checked distribution helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillCauchyCheckedFrom(&engine, f64, &f64_buf, 0, -1));
     try std.testing.expectEqual(@as(u64, 0xffc62ac12a0f359b), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, inverseGaussianCheckedFrom(&engine, f64, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, inverseGaussianCheckedFrom(&engine, f64, -1, 1));
     try std.testing.expectEqual(@as(u64, 0xa1a16919c0a88685), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, zipfCheckedFrom(&engine, f64, 0, 1));
@@ -14900,6 +14918,71 @@ test "degenerate pert helpers do not consume random stream" {
 
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate inverse-gaussian helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d136);
+    var control = alea.ScalarPrng.init(0x5150_d136);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 0), inverseGaussianFrom(&engine, f64, 0, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 0), try inverseGaussianChecked(rng, f64, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillInverseGaussianFrom(&engine, f64, &scalar_buf, 0, 2);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillInverseGaussianChecked(rng, f64, &scalar_buf, 0, 1);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try InverseGaussian(f64).init(0, 2);
+    try std.testing.expectEqual(@as(f64, 0), sampler.meanValue());
+    try std.testing.expectEqual(@as(f64, 2), sampler.shapeValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.maxValue().?);
+    try std.testing.expectEqual(@as(f64, 0), sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorInverseGaussianFrom(&engine, @Vector(4, f64), 0, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), try vectorInverseGaussianChecked(rng, @Vector(4, f64), 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorInverseGaussianFrom(&engine, @Vector(4, f64), &vector_buf, 0, 2);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorInverseGaussianChecked(rng, @Vector(4, f64), &vector_buf, 0, 1);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorInverseGaussian(@Vector(4, f64)).init(0, 2);
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.meanValue());
+    try std.testing.expectEqual(@as(f64, 2), vector_sampler.shapeValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -17667,7 +17750,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorPertCheckedFrom(&engine, @Vector(4, f64), 0, 11, 10, 4));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, vectorInverseGaussianCheckedFrom(&engine, @Vector(4, f64), 0, 2));
+    try std.testing.expectError(error.InvalidParameter, vectorInverseGaussianCheckedFrom(&engine, @Vector(4, f64), -1, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, vectorNormalInverseGaussianCheckedFrom(&engine, @Vector(4, f64), 1, 1));
@@ -18136,7 +18219,7 @@ test "invalid distribution facade tail scalars do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, pertChecked(rng, f64, 0, 2, 1, 4));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, inverseGaussianChecked(rng, f64, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, inverseGaussianChecked(rng, f64, -1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, normalInverseGaussianChecked(rng, f64, 1, 1));
@@ -18210,7 +18293,7 @@ test "invalid distribution facade tail fills do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillParetoChecked(rng, f64, &out, 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillInverseGaussianChecked(rng, f64, &out, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, fillInverseGaussianChecked(rng, f64, &out, -1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillZetaChecked(rng, f64, &out, 1));
@@ -18590,7 +18673,7 @@ test "invalid inverse and rank scalar helpers do not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_d1f9);
     var control = alea.ScalarPrng.init(0x5150_d1f9);
 
-    try std.testing.expectError(error.InvalidParameter, inverseGaussianCheckedFrom(&engine, f64, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, inverseGaussianCheckedFrom(&engine, f64, -1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, normalInverseGaussianCheckedFrom(&engine, f64, 1, 1));
@@ -18726,7 +18809,7 @@ test "zero-length inverse and zeta distribution fills do not validate or consume
     try std.testing.expectEqual(control.next(), engine.next());
     try fillFrechetCheckedFrom(&engine, f64, &out, 0, 1, 0);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillInverseGaussianCheckedFrom(&engine, f64, &out, 0, 1);
+    try fillInverseGaussianCheckedFrom(&engine, f64, &out, -1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillNormalInverseGaussianCheckedFrom(&engine, f64, &out, 1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -18737,7 +18820,7 @@ test "zero-length inverse and zeta distribution fills do not validate or consume
 
     try fillParetoChecked(rng, f64, &out, 2, 0);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillInverseGaussianChecked(rng, f64, &out, 0, 1);
+    try fillInverseGaussianChecked(rng, f64, &out, -1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillZetaChecked(rng, f64, &out, 1);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -20241,7 +20324,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
     try fillInverseGaussianCheckedFrom(&direct_engine, f64, &direct_inverse_gaussian_buf, 1, 2);
     for (direct_inverse_gaussian_buf) |value| try std.testing.expect(value > 0);
-    try std.testing.expectError(error.InvalidParameter, fillInverseGaussianCheckedFrom(&direct_engine, f64, &direct_inverse_gaussian_buf, 0, 2));
+    try std.testing.expectError(error.InvalidParameter, fillInverseGaussianCheckedFrom(&direct_engine, f64, &direct_inverse_gaussian_buf, 1, 0));
     const inverse_gaussian_sampler = try InverseGaussian(f64).init(1, 2);
     try std.testing.expectApproxEqAbs(@as(f64, 1), inverse_gaussian_sampler.meanValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), inverse_gaussian_sampler.shapeValue(), 1e-12);
@@ -20364,7 +20447,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Frechet(f64).init(0, 1, 0));
     try std.testing.expectError(error.InvalidParameter, SkewNormal(f64).init(0, -1, 1));
     try std.testing.expectError(error.InvalidParameter, Pert(f64).init(0, 2, 1, 4));
-    try std.testing.expectError(error.InvalidParameter, InverseGaussian(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, InverseGaussian(f64).init(-1, 1));
     try std.testing.expectError(error.InvalidParameter, NormalInverseGaussian(f64).init(1, 1));
     try std.testing.expectError(error.InvalidParameter, Zipf(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, Zipf(f64).init(std.math.inf(f64), 1));
@@ -20723,7 +20806,7 @@ test "inverse-gaussian and rank samplers have plausible behavior" {
 
     var direct_engine = alea.ScalarPrng.init(174);
     try std.testing.expect(try inverseGaussianCheckedFrom(&direct_engine, f64, 1, 2) > 0);
-    try std.testing.expectError(error.InvalidParameter, inverseGaussianCheckedFrom(&direct_engine, f64, 0, 2));
+    try std.testing.expectError(error.InvalidParameter, inverseGaussianCheckedFrom(&direct_engine, f64, -1, 2));
     try std.testing.expect(std.math.isFinite(try normalInverseGaussianCheckedFrom(&direct_engine, f64, 2, 1)));
     try std.testing.expectError(error.InvalidParameter, normalInverseGaussianCheckedFrom(&direct_engine, f64, 1, 1));
     const direct_zipf = try zipfCheckedFrom(&direct_engine, f64, 10, 1.5);
