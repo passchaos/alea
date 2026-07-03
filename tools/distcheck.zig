@@ -35,10 +35,19 @@ fn runChecks() !void {
 fn checkConstructorErgonomics() !void {
     var engine = alea.FastPrng.init(0xc057);
     const rng = alea.Rng.init(&engine);
+    var buffered_engine = alea.FastPrng.init(0xc058);
+    const buffered_rng = alea.Rng.init(&buffered_engine);
 
     try expectContinuousMean("log-normal-mean-cv", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             var dist = alea.distributions.LogNormal(f64).initMeanCv(2, 0.5) catch unreachable;
+            return dist.sample(r);
+        }
+    }.sample, 1.95, 2.05);
+    try expectContinuousMean("buffered-log-normal-mean-cv", buffered_rng, 20_000, struct {
+        var dist = alea.distributions.BufferedLogNormal(f64, 128).initMeanCv(2, 0.5) catch unreachable;
+
+        fn sample(r: alea.Rng) f64 {
             return dist.sample(r);
         }
     }.sample, 1.95, 2.05);
@@ -199,6 +208,15 @@ fn checkContinuous() !void {
     try expectContinuousMean("log-normal", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.logNormal(r, f64, 0, 0.25);
+        }
+    }.sample, 1.02, 1.04);
+    var buffered_log_normal_engine = alea.DefaultPrng.init(0xc0ff_ee47);
+    const buffered_log_normal_rng = alea.Rng.init(&buffered_log_normal_engine);
+    try expectContinuousMean("buffered-log-normal", buffered_log_normal_rng, 20_000, struct {
+        var dist = alea.distributions.BufferedLogNormal(f64, 128).init(0, 0.25) catch unreachable;
+
+        fn sample(r: alea.Rng) f64 {
+            return dist.sample(r);
         }
     }.sample, 1.02, 1.04);
     var log_normal_exp2_engine = alea.DefaultPrng.init(0xc0ff_ee32);

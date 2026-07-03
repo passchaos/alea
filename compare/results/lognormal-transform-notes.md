@@ -159,9 +159,10 @@ Fresh local evidence:
   shows a possible no-hard-link opt-in shape: f32 remains around 301M/341M
   FastPrng/ScalarPrng and f64 around 236M/256M FastPrng/ScalarPrng, close to the
   linked-libmvec buffered rows while avoiding a build-time libmvec dependency.
-  This helps one-at-a-time users, but the primary narrow exact f64/f32 rows
-  still trail Rust and the libmvec variants keep their platform/output-mapping
-  caveat.
+  `distcheck` now includes independent `buffered-log-normal` and
+  `buffered-log-normal-mean-cv` mean gates for this opt-in. This helps
+  one-at-a-time users, but the primary narrow exact f64/f32 rows still trail
+  Rust and the libmvec variants keep their platform/output-mapping caveat.
 - A new Linux/glibc libmvec probe directly calls x86_64 vector math ABI
   symbols (`_ZGVbN2v_exp`, `_ZGVcN4v_exp`, `_ZGVcN8v_expf`) from
   `log-normal-probe` when building for x86_64-linux-gnu. Focused
