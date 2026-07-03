@@ -244,6 +244,12 @@ Fresh local evidence:
   ScalarPrng-direct about 136M/135M/144M; exact f32 about 133M/132M/141M.
   The opt-in bounded approximation reaches about 143M FastPrng direct and
   about 150M ScalarPrng direct in this run, but exact f32 remains on `@exp`.
+- After the f32 `fillStandardNormalFrom` vector8 chunk path was adopted, routing
+  only direct-source `fillLogNormalFrom(..., f32, mean=0, stddev!=1)` through
+  that optimized standard source improves exact f32 bulk without changing
+  checksums. Focused `bench -- 268435456 "fillLogNormal f32"` reports about
+  138.5M facade, 144.2M FastPrng direct, and 148.9M ScalarPrng direct. A
+  broader facade route was rejected because it regressed the facade row.
 - Earlier 1GiB focused rows after the mean-zero standard-normal staging
   specialization were exact f64 facade/FastPrng-direct/ScalarPrng-direct about
   132M/131M/139M versus local Rust log-normal about 146M, and exact f32 about

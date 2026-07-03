@@ -3871,7 +3871,11 @@ pub fn fillLogNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, 
         return;
     }
     if (mean == 0 and stddev != 1) {
-        Rng.fillNormalFrom(source, T, dest, 0, 1);
+        if (T == f32 and comptime @TypeOf(source) != Rng) {
+            fillStandardNormalFrom(source, T, dest);
+        } else {
+            Rng.fillNormalFrom(source, T, dest, 0, 1);
+        }
         scaleInPlace(T, dest, stddev);
         expInPlace(T, dest);
         return;
