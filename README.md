@@ -95,6 +95,9 @@ pub fn main() !void {
 zig build test
 zig build apicheck
 zig build validate
+zig build crosscheck
+zig build test-wasi
+zig build wasi-report
 zig build run-basic
 zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast distcheck

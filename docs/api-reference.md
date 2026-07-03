@@ -2116,6 +2116,9 @@ Build steps:
 - `zig build validate`
 - `zig build statcheck`
 - `zig build distcheck`
+- `zig build crosscheck`
+- `zig build test-wasi`
+- `zig build wasi-report`
 - `zig build stream -- --engine <engine> --bytes <n>`
 - `zig build repro`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native bench`
