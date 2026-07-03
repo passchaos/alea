@@ -77,6 +77,7 @@ fn main() {
     bench_distr_binomial("rand_distr binomial", bytes / 64);
     bench_distr_hypergeometric("rand_distr hypergeometric", bytes / 128);
     bench_distr_hypergeometric_large("rand_distr hypergeometric large", bytes / 256);
+    bench_distr_hypergeometric_skew_large("rand_distr hypergeometric skew-large", bytes / 256);
     bench_distr_gamma("rand_distr gamma", bytes / 128);
     bench_distr_chi_squared("rand_distr chi-squared", bytes / 128);
     bench_distr_beta("rand_distr beta", bytes / 128);
@@ -1033,6 +1034,34 @@ fn bench_distr_hypergeometric_large(name: &str, count: usize) {
     let mut best_checksum = 0u64;
     for _ in 0..TRIALS {
         let mut rng = SmallRng::seed_from_u64(0x4966);
+        let start = Instant::now();
+        let mut checksum = 0u64;
+
+        for _ in 0..count {
+            checksum = checksum.wrapping_add(dist.sample(&mut rng));
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
+}
+
+fn bench_distr_hypergeometric_skew_large(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
+    let dist = rand_distr::Hypergeometric::new(10_000, 1_000, 2_000).unwrap();
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0u64;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0x4967);
         let start = Instant::now();
         let mut checksum = 0u64;
 
