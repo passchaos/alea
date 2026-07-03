@@ -69,6 +69,12 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   `fillLogNormalFrom` now specializes that shape. Fusing the affine transform
   directly with exact `@exp` / `std.math.exp` in one pass still regresses or is
   mixed versus the staged transform.
+- A production retry that changed only f64 `scaleInPlace` from vector4 scaling
+  to scalar pointer scaling regressed the real focused `bench -- 268435456
+  "fillLogNormal"` harness: exact f64 facade/FastPrng-direct/ScalarPrng-direct
+  fell to about 106M/102M/121M versus the immediately reverted vector-scale
+  baseline around 121M/119M/144M. Keep vector scaling for the mean-zero staging
+  path.
 
 ## Adopted Opt-In Approximation
 
