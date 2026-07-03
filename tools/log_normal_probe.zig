@@ -54,6 +54,9 @@ pub fn main(init: std.process.Init) !void {
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample expm1+1", 0x1066, sample_count, sampleExpm1ExpF32);
     try benchFill(alea.FastPrng, io, stdout, "fast normal-only fill", 0x1062, sample_count, normalOnlyFill);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x1062, sample_count, currentFill);
+    try benchFillSized(alea.FastPrng, 256, io, stdout, "fast current fill chunk256", 0x1062, sample_count, currentFill);
+    try benchFillSized(alea.FastPrng, 4096, io, stdout, "fast current fill chunk4096", 0x1062, sample_count, currentFill);
+    try benchFillSized(alea.FastPrng, 16384, io, stdout, "fast current fill chunk16384", 0x1062, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar exp", 0x1062, sample_count, stagedScalarExp);
     try benchFill(alea.FastPrng, io, stdout, "fast out-of-place scalar exp", 0x1062, sample_count, outOfPlaceScalarExp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged index exp", 0x1062, sample_count, stagedIndexExp);
@@ -73,6 +76,9 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast staged vector8 exp", 0x1062, sample_count, stagedVector8Exp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar normal-only fill", 0x1062, sample_count, normalOnlyFill);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar current fill", 0x1062, sample_count, currentFill);
+    try benchFillSized(alea.ScalarPrng, 256, io, stdout, "scalar current fill chunk256", 0x1062, sample_count, currentFill);
+    try benchFillSized(alea.ScalarPrng, 4096, io, stdout, "scalar current fill chunk4096", 0x1062, sample_count, currentFill);
+    try benchFillSized(alea.ScalarPrng, 16384, io, stdout, "scalar current fill chunk16384", 0x1062, sample_count, currentFill);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged scalar exp", 0x1062, sample_count, stagedScalarExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar out-of-place scalar exp", 0x1062, sample_count, outOfPlaceScalarExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged index exp", 0x1062, sample_count, stagedIndexExp);
@@ -92,6 +98,9 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged vector8 exp", 0x1062, sample_count, stagedVector8Exp);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 current fill", 0x1063, sample_count, currentFillF32);
+    try benchFillF32Sized(alea.FastPrng, 256, io, stdout, "fast f32 current fill chunk256", 0x1063, sample_count, currentFillF32);
+    try benchFillF32Sized(alea.FastPrng, 4096, io, stdout, "fast f32 current fill chunk4096", 0x1063, sample_count, currentFillF32);
+    try benchFillF32Sized(alea.FastPrng, 16384, io, stdout, "fast f32 current fill chunk16384", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 out-of-place scalar exp", 0x1063, sample_count, outOfPlaceScalarExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged widened f64 exp", 0x1063, sample_count, stagedWidenedExpF32);
@@ -115,6 +124,9 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged vector16 exp", 0x1063, sample_count, stagedVector16ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 current fill", 0x1063, sample_count, currentFillF32);
+    try benchFillF32Sized(alea.ScalarPrng, 256, io, stdout, "scalar f32 current fill chunk256", 0x1063, sample_count, currentFillF32);
+    try benchFillF32Sized(alea.ScalarPrng, 4096, io, stdout, "scalar f32 current fill chunk4096", 0x1063, sample_count, currentFillF32);
+    try benchFillF32Sized(alea.ScalarPrng, 16384, io, stdout, "scalar f32 current fill chunk16384", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 out-of-place scalar exp", 0x1063, sample_count, outOfPlaceScalarExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged widened f64 exp", 0x1063, sample_count, stagedWidenedExpF32);
@@ -258,6 +270,48 @@ fn benchFill(
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillSized(
+    comptime Source: type,
+    comptime chunk_len: usize,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime fillFn: anytype,
+) !void {
+    if (!shouldRun(name)) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [chunk_len]f64 = undefined;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var remaining = sample_count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchFillF32(
     comptime Source: type,
     io: std.Io,
@@ -271,6 +325,48 @@ fn benchFillF32(
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f32 = undefined;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var remaining = sample_count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillF32Sized(
+    comptime Source: type,
+    comptime chunk_len: usize,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime fillFn: anytype,
+) !void {
+    if (!shouldRun(name)) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [chunk_len]f32 = undefined;
 
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {

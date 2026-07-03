@@ -81,6 +81,12 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   fell to about 106M/102M/121M versus the immediately reverted vector-scale
   baseline around 121M/119M/144M. Keep vector scaling for the mean-zero staging
   path.
+- Changing the probe staging chunk size does not reveal a hidden exact-fill
+  win. A focused `log-normal-probe -- 1048576 "current fill chunk"` run showed
+  f64 FastPrng chunk256/4096/16384 around 122M/125M/123M and ScalarPrng around
+  131M/131M/129M, with f32 rows around 137M/137M/136M FastPrng and
+  143M/143M/142M ScalarPrng. These are not a no-regression improvement over the
+  existing 1024-element staging buffer.
 
 ## Adopted Opt-In Approximation
 
@@ -116,6 +122,10 @@ Fresh local evidence:
   reached only about 98M FastPrng and 107M ScalarPrng versus exact current rows
   around 119M/134M; `expm1(x)+1` reached about 113M/122M and changed the
   checksum. Neither is a single-sample default candidate.
+- `log-normal-probe -- 1048576 "current fill chunk"` checks whether the staging
+  buffer size itself is the bottleneck. It is not: chunk sizes 256/4096/16384
+  are mixed or slower than the existing 1024-element shape across f64/f32 and
+  FastPrng/ScalarPrng rows, with matching checksums.
 - `log-normal-probe` now accepts the same focused shape as the throughput
   harness: `zig build -Doptimize=ReleaseFast -Dcpu=native log-normal-probe --
   <count> <filter>`. A same-host 1Mi filtered smoke run verified the filter and
