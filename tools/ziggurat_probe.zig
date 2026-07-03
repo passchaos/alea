@@ -6,6 +6,13 @@ const ziggurat = std.Random.ziggurat;
 const trials = 3;
 const default_count: usize = 16 * 1024 * 1024;
 
+const alea4x64_increment = [_]u64{
+    0xa0761d6478bd642f,
+    0xe7037ed1a0b428db,
+    0x8ebc6af09c88c6e3,
+    0x589965cc75374cc3,
+};
+
 var probe_filter: ?[]const u8 = null;
 
 fn shouldRun(name: []const u8) bool {
@@ -91,6 +98,10 @@ pub fn main(init: std.process.Init) !void {
     try benchF32(io, stdout, "threshold exponential f32 cast candidate", sample_count, 0xe15a, thresholdExponentialF32);
     try benchVectorF64(io, stdout, "vector-repair normal f64x4 candidate", sample_count, 0xd15a, vectorRepairNormal);
     try benchVectorF64(io, stdout, "vector-repair exponential f64x4 candidate", sample_count, 0xe15a, vectorRepairExponential);
+    try benchVectorF64Fast(io, stdout, "alea4x64-lane scalar normal f64x4", sample_count, 0xd15a, vectorLaneNormalAlea4x64Scalar);
+    try benchVectorF64Fast(io, stdout, "alea4x64-lane vector-repair normal f64x4 candidate", sample_count, 0xd15a, vectorRepairNormalAlea4x64Lanes);
+    try benchVectorF64Fast(io, stdout, "alea4x64-lane scalar exponential f64x4", sample_count, 0xe15a, vectorLaneExponentialAlea4x64Scalar);
+    try benchVectorF64Fast(io, stdout, "alea4x64-lane vector-repair exponential f64x4 candidate", sample_count, 0xe15a, vectorRepairExponentialAlea4x64Lanes);
     try benchVectorF32(io, stdout, "vector-repair normal f32x8 candidate", sample_count, 0xd15a, vectorRepairNormalF32);
     try benchVectorF32(io, stdout, "vector-repair exponential f32x8 candidate", sample_count, 0xe15a, vectorRepairExponentialF32);
     try benchVectorF32(io, stdout, "vector-repair normal f32x8 correct", sample_count, 0xd15a, vectorRepairNormalF32Correct);
@@ -261,6 +272,42 @@ fn benchVectorF32Fast(
         }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(vector_count * 8)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchVectorF64Fast(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    sample_count: usize,
+    seed: u64,
+    comptime sampleFn: anytype,
+) !void {
+    if (!shouldRun(name)) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const vector_count = sample_count / 4;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < vector_count) : (i += 1) {
+            const vec = sampleFn(&engine);
+            inline for (0..4) |lane| checksum += vec[lane];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(vector_count * 4)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
         if (million_per_s > best_million_per_s) {
             best_million_per_s = million_per_s;
@@ -519,6 +566,72 @@ fn vectorRepairExponential(engine: *alea.ScalarPrng) @Vector(4, f64) {
     return out;
 }
 
+fn vectorLaneNormalAlea4x64Scalar(engine: *alea.FastPrng) @Vector(4, f64) {
+    const lanes = nextAlea4x64Lanes(engine);
+    var out: @Vector(4, f64) = undefined;
+    inline for (0..4) |lane| out[lane] = ratioNormalAlea4x64Lane(engine, lane, lanes[lane]);
+    return out;
+}
+
+fn vectorLaneExponentialAlea4x64Scalar(engine: *alea.FastPrng) @Vector(4, f64) {
+    const lanes = nextAlea4x64Lanes(engine);
+    var out: @Vector(4, f64) = undefined;
+    inline for (0..4) |lane| out[lane] = thresholdExponentialAlea4x64Lane(engine, lane, lanes[lane]);
+    return out;
+}
+
+fn vectorRepairNormalAlea4x64Lanes(engine: *alea.FastPrng) @Vector(4, f64) {
+    const VecF64 = @Vector(4, f64);
+    const VecU64 = @Vector(4, u64);
+
+    const bits = nextAlea4x64Lanes(engine);
+
+    var ratios: VecF64 = undefined;
+    var x_values: VecF64 = undefined;
+    var out: VecF64 = undefined;
+    inline for (0..4) |lane| {
+        const i: usize = @as(u8, @truncate(bits[lane]));
+        const repr = (@as(u64, 0x400) << 52) | (bits[lane] >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+        ratios[lane] = norm_ratio[i];
+        x_values[lane] = u * ziggurat.NormDist.x[i];
+        out[lane] = x_values[lane];
+    }
+
+    const reprs = (@as(VecU64, @splat(@as(u64, 0x400) << 52)) | (bits >> @as(VecU64, @splat(12))));
+    const u_values: VecF64 = @as(VecF64, @bitCast(reprs)) - @as(VecF64, @splat(3.0));
+    const mask = @abs(u_values) < ratios;
+    inline for (0..4) |lane| {
+        if (!mask[lane]) out[lane] = ratioNormalAlea4x64Lane(engine, lane, bits[lane]);
+    }
+    return out;
+}
+
+fn vectorRepairExponentialAlea4x64Lanes(engine: *alea.FastPrng) @Vector(4, f64) {
+    const VecF64 = @Vector(4, f64);
+    const VecU64 = @Vector(4, u64);
+
+    const bits = nextAlea4x64Lanes(engine);
+
+    var ratios: VecF64 = undefined;
+    var out: VecF64 = undefined;
+    inline for (0..4) |lane| {
+        const i: usize = @as(u8, @truncate(bits[lane]));
+        const repr = (@as(u64, 0x3ff) << 52) | (bits[lane] >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
+        ratios[lane] = exp_ratio[i];
+        out[lane] = u * ziggurat.ExpDist.x[i];
+    }
+
+    const reprs = (@as(VecU64, @splat(@as(u64, 0x3ff) << 52)) | (bits >> @as(VecU64, @splat(12))));
+    const u_values: VecF64 = @as(VecF64, @bitCast(reprs)) - @as(VecF64, @splat(1.0 - std.math.floatEps(f64) / 2.0));
+    const mask = u_values < ratios;
+    inline for (0..4) |lane| {
+        if (!mask[lane]) out[lane] = thresholdExponentialAlea4x64Lane(engine, lane, bits[lane]);
+    }
+    return out;
+}
+
 fn vectorRepairNormalF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
     const VecF32 = @Vector(8, f32);
     var out: VecF32 = undefined;
@@ -674,4 +787,80 @@ fn vectorRepairExponentialF32FastCorrect(engine: *alea.FastPrng) @Vector(8, f32)
 
     inline for (0..8) |lane| out[lane] = @floatCast(thresholdExponentialFast(engine));
     return out;
+}
+
+fn nextAlea4x64Lanes(engine: *alea.FastPrng) @Vector(4, u64) {
+    var out: @Vector(4, u64) = undefined;
+    inline for (0..4) |lane| out[lane] = nextAlea4x64Lane(engine, lane);
+    return out;
+}
+
+fn nextAlea4x64Lane(engine: *alea.FastPrng, comptime lane: usize) u64 {
+    engine.state[lane] +%= alea4x64_increment[lane];
+    var z = engine.state[lane];
+    z = (z ^ (z >> 30)) *% 0xbf58476d1ce4e5b9;
+    z = (z ^ (z >> 27)) *% 0x94d049bb133111eb;
+    return z ^ (z >> 31);
+}
+
+fn ratioNormalAlea4x64Lane(engine: *alea.FastPrng, comptime lane: usize, initial_bits: u64) f64 {
+    var bits = initial_bits;
+    while (true) {
+        const i: usize = @as(u8, @truncate(bits));
+        const repr = (@as(u64, 0x400) << 52) | (bits >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+
+        if (@abs(u) < norm_ratio[i]) {
+            @branchHint(.likely);
+            return u * ziggurat.NormDist.x[i];
+        }
+        const x = u * ziggurat.NormDist.x[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return normalTailAlea4x64Lane(engine, lane, u);
+        }
+        if (ziggurat.NormDist.f[i + 1] + (ziggurat.NormDist.f[i] - ziggurat.NormDist.f[i + 1]) * f64FromRaw(nextAlea4x64Lane(engine, lane)) < @exp(-x * x / 2.0)) return x;
+        bits = nextAlea4x64Lane(engine, lane);
+    }
+}
+
+fn normalTailAlea4x64Lane(engine: *alea.FastPrng, comptime lane: usize, u: f64) f64 {
+    var x: f64 = 1;
+    var y: f64 = 0;
+    while (-2.0 * y < x * x) {
+        x = @log(f64OpenFromRaw(nextAlea4x64Lane(engine, lane))) / ziggurat.norm_r;
+        y = @log(f64OpenFromRaw(nextAlea4x64Lane(engine, lane)));
+    }
+    return if (u < 0) x - ziggurat.norm_r else ziggurat.norm_r - x;
+}
+
+fn thresholdExponentialAlea4x64Lane(engine: *alea.FastPrng, comptime lane: usize, initial_bits: u64) f64 {
+    var bits = initial_bits;
+    while (true) {
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 12;
+        const repr = (@as(u64, 0x3ff) << 52) | mantissa;
+        const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
+
+        if (mantissa < exp_threshold[i]) {
+            @branchHint(.likely);
+            return u * ziggurat.ExpDist.x[i];
+        }
+        const x = u * ziggurat.ExpDist.x[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return ziggurat.exp_r - @log(f64OpenFromRaw(nextAlea4x64Lane(engine, lane)));
+        }
+        if (ziggurat.ExpDist.f[i + 1] + (ziggurat.ExpDist.f[i] - ziggurat.ExpDist.f[i + 1]) * f64FromRaw(nextAlea4x64Lane(engine, lane)) < @exp(-x)) return x;
+        bits = nextAlea4x64Lane(engine, lane);
+    }
+}
+
+fn f64FromRaw(raw: u64) f64 {
+    return @as(f64, @floatFromInt(raw >> 11)) * (1.0 / 9007199254740992.0);
+}
+
+fn f64OpenFromRaw(raw: u64) f64 {
+    const repr = (@as(u64, 0x3ff) << 52) | (raw >> 12);
+    return @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
 }

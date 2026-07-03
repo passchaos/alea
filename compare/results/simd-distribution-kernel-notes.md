@@ -44,6 +44,11 @@ repair rows before a real `vectorbench` follow-up.
 - Vector Box-Muller normal kernels are too slow for default use.
 - Vector-log exponential kernels are too slow for default use.
 - f64x4 ziggurat fast-path plus scalar repair loses to scalar lane-fill.
+- Driving f64x4 ziggurat candidates from Alea4x64's four independent lanes does
+  not rescue the repair shape. A focused `ziggurat-probe -- 4194304
+  "alea4x64-lane"` run with lane-local repair and matching checksums shows
+  vector repair about 318M normal and 320M exponential lanes/s versus
+  lane-scalar Alea4x64 rows around 450M and 493M.
 - f32x8 repair probes are useful evidence in isolated `ziggurat-probe` rows,
   but the advantage does not survive the real vector-slice fill harness:
   standard repair rows can be close to current direct rows in a given run, but
