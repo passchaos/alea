@@ -136,6 +136,10 @@ repair rows before a real `vectorbench` follow-up.
   `"fillVectorExponential f64x4"` run showed f64 approx-log around 386M/382M
   lanes/s versus direct scalar ziggurat lane-fill around 469M/466M. Keep the
   public ApproxLog profile restricted to f32 vectors.
+- Widening f32 approximate-log samples to f64 is also not useful. A focused
+  `vectorbench -- 16777216 "approx-log-f32"` run reports f64x4
+  standard/parameterized around 378M/371M lanes/s, still below f64 ziggurat
+  lane-fill and with weaker precision/output mapping.
 - Platform libmvec vector-log inverse-transform exponential is also not a
   production direction. A scratch x86_64-linux-gnu probe using `_ZGVcN8v_logf`
   / `_ZGVcN4v_log` reached about 427M f32 and 216M f64 lanes/s for

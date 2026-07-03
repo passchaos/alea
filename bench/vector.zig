@@ -405,6 +405,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorStandardExponentialF64Direct(io, stdout, "alea fillVectorStandardExponential f64x4 direct", lanes / 2);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 local scalar candidate", lanes / 2, 0xe184, fillStandardExponentialF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 approx-log candidate", lanes / 2, 0xe184, fillStandardExponentialF64ApproxLog);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 approx-log-f32 candidate", lanes / 2, 0xe184, fillStandardExponentialF64ApproxLogF32);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 same-candidate repair", lanes / 2, 0xe184, fillStandardExponentialF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 all-accepted repair", lanes / 2, 0xe184, fillStandardExponentialF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 block-fallback candidate", lanes / 2, 0xe184, fillStandardExponentialF64BlockFallback);
@@ -427,6 +428,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorExponentialF64Direct(io, stdout, "alea fillVectorExponential f64x4 direct", lanes / 2);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 local scalar candidate", lanes / 2, 0xe184, fillExponentialF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 approx-log candidate", lanes / 2, 0xe184, fillExponentialF64ApproxLog);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 approx-log-f32 candidate", lanes / 2, 0xe184, fillExponentialF64ApproxLogF32);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 same-candidate repair", lanes / 2, 0xe184, fillExponentialF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 all-accepted repair", lanes / 2, 0xe184, fillExponentialF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 block-fallback candidate", lanes / 2, 0xe184, fillExponentialF64BlockFallback);
@@ -3089,6 +3091,10 @@ fn fillStandardExponentialF64ApproxLog(engine: *alea.ScalarPrng, dest: []@Vector
     for (dest) |*item| item.* = vectorApproxLogExponentialF64(engine);
 }
 
+fn fillStandardExponentialF64ApproxLogF32(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorApproxLogF32ExponentialF64(engine);
+}
+
 fn fillStandardExponentialF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorRepairExponentialF64SameCandidate(engine);
 }
@@ -3113,6 +3119,11 @@ fn fillExponentialF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) vo
 fn fillExponentialF64ApproxLog(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     const inverse_rate: @Vector(4, f64) = @splat(0.5);
     for (dest) |*item| item.* = vectorApproxLogExponentialF64(engine) * inverse_rate;
+}
+
+fn fillExponentialF64ApproxLogF32(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(0.5);
+    for (dest) |*item| item.* = vectorApproxLogF32ExponentialF64(engine) * inverse_rate;
 }
 
 fn fillExponentialF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
@@ -3159,6 +3170,13 @@ fn vectorApproxLogExponentialF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
 
 fn vectorApproxLogExponentialF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
     return approxNegLogF64(vectorOpenF64Local(engine));
+}
+
+fn vectorApproxLogF32ExponentialF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const f32_values = approxNegLogF32(vectorOpenF32Local(engine));
+    var out: @Vector(4, f64) = undefined;
+    inline for (0..4) |lane| out[lane] = @floatCast(f32_values[lane]);
+    return out;
 }
 
 fn approxNegLogF32(u: @Vector(8, f32)) @Vector(8, f32) {

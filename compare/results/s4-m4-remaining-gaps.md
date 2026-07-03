@@ -64,7 +64,7 @@ See `performance-triage.md` for detailed rows. In summary:
   normal, f32-only inverse-CDF normal, central-fast inverse-CDF normal,
   tail-repair/tail-only/reduced-degree/central-mask inverse-CDF normal,
   ziggurat-tail inverse-CDF normal, invalid central-only/tail-zero inverse-CDF
-  diagnostics, libmvec vector-log
+  diagnostics, libmvec vector-log exponential, f32-widened approximate-log f64
   exponential, and raw-buffer prefetch without a rejected-lane stream policy.
 - FastPrng/facade f32 standard fills: cached-`Rng` and Alea4x64 lane cycling.
 
