@@ -8112,9 +8112,9 @@ pub fn powerFunctionCheckedFrom(source: anytype, comptime T: type, min: T, max: 
 
 pub fn powerFunctionFrom(source: anytype, comptime T: type, min: T, max: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(min <= max and shape > 0);
-    std.debug.assert(std.math.isFinite(min) and std.math.isFinite(max) and std.math.isFinite(shape));
+    std.debug.assert(powerFunctionParametersValid(T, min, max, shape));
     if (min == max) return min;
+    if (shape == std.math.inf(T)) return max;
 
     if (shape == 1) return Rng.floatRangeFrom(source, T, min, max);
     if (shape == 2) return min + (max - min) * @sqrt(Rng.floatOpenFrom(source, T));
@@ -8127,10 +8127,13 @@ pub fn fillPowerFunction(rng: Rng, comptime T: type, dest: []T, min: T, max: T, 
 
 pub fn fillPowerFunctionFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(min <= max and shape > 0);
-    std.debug.assert(std.math.isFinite(min) and std.math.isFinite(max) and std.math.isFinite(shape));
+    std.debug.assert(powerFunctionParametersValid(T, min, max, shape));
     if (min == max) {
         @memset(dest, min);
+        return;
+    }
+    if (shape == std.math.inf(T)) {
+        @memset(dest, max);
         return;
     }
     if (shape == 1) {
@@ -8146,6 +8149,13 @@ pub fn fillPowerFunctionFrom(source: anytype, comptime T: type, dest: []T, min: 
 
     Rng.fillOpenFrom(source, T, dest);
     powerFunctionFromOpenUniforms(T, dest, min, max - min, 1 / shape);
+}
+
+fn powerFunctionParametersValid(comptime T: type, min: T, max: T, shape: T) bool {
+    return min <= max and shape > 0 and
+        std.math.isFinite(min) and
+        std.math.isFinite(max) and
+        (std.math.isFinite(shape) or shape == std.math.inf(T));
 }
 
 pub fn fillPowerFunctionChecked(rng: Rng, comptime T: type, dest: []T, min: T, max: T, shape: T) Error!void {
@@ -8247,6 +8257,7 @@ pub fn VectorPowerFunction(comptime VectorType: type) type {
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.minValue());
             switch (self.sampler.method) {
+                .point_max => return @splat(self.maxValue()),
                 .uniform => return Rng.vectorRangeFrom(source, VectorType, self.minValue(), self.maxValue()),
                 .sqrt => {
                     const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
@@ -8278,7 +8289,7 @@ pub fn VectorPowerFunction(comptime VectorType: type) type {
 pub fn PowerFunction(comptime T: type) type {
     return struct {
         const Self = @This();
-        const Method = enum { generic, uniform, sqrt };
+        const Method = enum { generic, uniform, sqrt, point_max };
 
         min: T,
         range: T,
@@ -8287,18 +8298,24 @@ pub fn PowerFunction(comptime T: type) type {
 
         pub fn init(min: T, max: T, shape: T) Error!Self {
             comptime requireFloat(T);
-            if (!(min <= max) or !(shape > 0)) return error.InvalidParameter;
-            if (!std.math.isFinite(min) or !std.math.isFinite(max) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            if (!powerFunctionParametersValid(T, min, max, shape)) return error.InvalidParameter;
             return .{
                 .min = min,
                 .range = max - min,
-                .inverse_shape = 1 / shape,
-                .method = if (shape == 1) .uniform else if (shape == 2) .sqrt else .generic,
+                .inverse_shape = if (shape == std.math.inf(T)) 0 else 1 / shape,
+                .method = if (shape == std.math.inf(T))
+                    .point_max
+                else if (shape == 1)
+                    .uniform
+                else if (shape == 2)
+                    .sqrt
+                else
+                    .generic,
             };
         }
 
         pub fn minValue(self: Self) T {
-            return self.min;
+            return if (self.method == .point_max) self.maxValue() else self.min;
         }
 
         pub fn maxValue(self: Self) T {
@@ -8310,16 +8327,19 @@ pub fn PowerFunction(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) T {
+            if (self.method == .point_max) return self.maxValue();
             const shape = self.shapeValue();
             return self.min + self.range * shape / (shape + 1);
         }
 
         pub fn varianceValue(self: Self) T {
+            if (self.method == .point_max) return 0;
             const shape = self.shapeValue();
             return self.range * self.range * shape / ((shape + 1) * (shape + 1) * (shape + 2));
         }
 
         pub fn medianValue(self: Self) T {
+            if (self.method == .point_max) return self.maxValue();
             return self.min + self.range * std.math.pow(T, 0.5, self.inverse_shape);
         }
 
@@ -8328,8 +8348,9 @@ pub fn PowerFunction(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            if (self.isDegenerate()) return self.min;
+            if (self.isDegenerate()) return self.degenerateValue();
             return switch (self.method) {
+                .point_max => self.maxValue(),
                 .uniform => Rng.floatRangeFrom(source, T, self.min, self.min + self.range),
                 .sqrt => self.min + self.range * @sqrt(Rng.floatOpenFrom(source, T)),
                 .generic => self.min + self.range * std.math.pow(T, Rng.floatOpenFrom(source, T), self.inverse_shape),
@@ -8342,10 +8363,14 @@ pub fn PowerFunction(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             if (self.isDegenerate()) {
-                @memset(dest, self.min);
+                @memset(dest, self.degenerateValue());
                 return;
             }
             switch (self.method) {
+                .point_max => {
+                    @memset(dest, self.maxValue());
+                    return;
+                },
                 .uniform => {
                     Rng.fillRangeFrom(source, T, dest, self.min, self.min + self.range);
                     return;
@@ -8363,7 +8388,11 @@ pub fn PowerFunction(comptime T: type) type {
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.range == 0;
+            return self.range == 0 or self.method == .point_max;
+        }
+
+        fn degenerateValue(self: Self) T {
+            return if (self.method == .point_max) self.maxValue() else self.min;
         }
     };
 }
@@ -16433,6 +16462,42 @@ test "degenerate power-function helpers do not consume random stream" {
     for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const max_point: f64 = 9.25;
+    try std.testing.expectEqual(max_point, powerFunctionFrom(&engine, f64, point, max_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(max_point, try powerFunctionChecked(rng, f64, point, max_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillPowerFunctionFrom(&engine, f64, &scalar_buf, point, max_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(max_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillPowerFunctionChecked(rng, f64, &scalar_buf, point, max_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(max_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape = try PowerFunction(f64).init(point, max_point, std.math.inf(f64));
+    try std.testing.expectEqual(max_point, infinite_shape.minValue());
+    try std.testing.expectEqual(max_point, infinite_shape.maxValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.shapeValue());
+    try std.testing.expectEqual(max_point, infinite_shape.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape.varianceValue());
+    try std.testing.expectEqual(max_point, infinite_shape.medianValue());
+    try std.testing.expectEqual(max_point, infinite_shape.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(max_point, infinite_shape.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape.fill(rng, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(max_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(max_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const vector_point: f32 = -2.5;
     try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vectorPowerFunctionFrom(&engine, @Vector(4, f32), vector_point, vector_point, 3));
     try std.testing.expectEqual(control.next(), engine.next());
@@ -16447,6 +16512,42 @@ test "degenerate power-function helpers do not consume random stream" {
 
     try fillVectorPowerFunctionChecked(rng, @Vector(4, f32), &vector_buf, vector_point, vector_point, 3);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_max_point: f32 = 3.25;
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_max_point)), vectorPowerFunctionFrom(&engine, @Vector(4, f32), vector_point, vector_max_point, std.math.inf(f32)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_max_point)), try vectorPowerFunctionChecked(rng, @Vector(4, f32), vector_point, vector_max_point, std.math.inf(f32)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorPowerFunctionFrom(&engine, @Vector(4, f32), &vector_buf, vector_point, vector_max_point, std.math.inf(f32));
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_max_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorPowerFunctionChecked(rng, @Vector(4, f32), &vector_buf, vector_point, vector_max_point, std.math.inf(f32));
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_max_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_infinite_shape = try VectorPowerFunction(@Vector(4, f32)).init(vector_point, vector_max_point, std.math.inf(f32));
+    try std.testing.expectEqual(vector_max_point, vector_infinite_shape.minValue());
+    try std.testing.expectEqual(vector_max_point, vector_infinite_shape.maxValue());
+    try std.testing.expectEqual(std.math.inf(f32), vector_infinite_shape.shapeValue());
+    try std.testing.expectEqual(vector_max_point, vector_infinite_shape.expectedValue());
+    try std.testing.expectEqual(@as(f32, 0), vector_infinite_shape.varianceValue());
+    try std.testing.expectEqual(vector_max_point, vector_infinite_shape.medianValue());
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_max_point)), vector_infinite_shape.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_max_point)), vector_infinite_shape.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_infinite_shape.fill(rng, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_max_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_infinite_shape.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_max_point)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const vector_sampler = try VectorPowerFunction(@Vector(4, f32)).init(vector_point, vector_point, 3);
