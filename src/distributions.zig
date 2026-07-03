@@ -9898,7 +9898,10 @@ pub fn pertCheckedFrom(source: anytype, comptime T: type, min: T, mode: T, max: 
 
 pub fn pertFrom(source: anytype, comptime T: type, min: T, mode: T, max: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(min < max and min <= mode and mode <= max and shape >= 0);
+    std.debug.assert(std.math.isFinite(min) and std.math.isFinite(mode) and std.math.isFinite(max) and std.math.isFinite(shape));
+    std.debug.assert(min <= max and min <= mode and mode <= max and shape >= 0);
+    if (min == max) return min;
+
     const range = max - min;
     const alpha = 1 + shape * (mode - min) / range;
     const beta_param = 1 + shape * (max - mode) / range;
@@ -9911,7 +9914,13 @@ pub fn fillPert(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, max: T, 
 
 pub fn fillPertFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: T, max: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(min < max and min <= mode and mode <= max and shape >= 0);
+    std.debug.assert(std.math.isFinite(min) and std.math.isFinite(mode) and std.math.isFinite(max) and std.math.isFinite(shape));
+    std.debug.assert(min <= max and min <= mode and mode <= max and shape >= 0);
+    if (min == max) {
+        @memset(dest, min);
+        return;
+    }
+
     const sampler = Pert(T).init(min, mode, max, shape) catch unreachable;
     sampler.fillFrom(source, dest);
 }
@@ -10022,6 +10031,7 @@ pub fn VectorPert(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.minValue());
             const beta_vec = vectorBetaFrom(source, VectorType, self.alphaValue(), self.betaValue());
             return @as(VectorType, @splat(self.minValue())) + @as(VectorType, @splat(self.maxValue() - self.minValue())) * beta_vec;
         }
@@ -10031,6 +10041,10 @@ pub fn VectorPert(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.minValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -10048,9 +10062,19 @@ pub fn Pert(comptime T: type) type {
         pub fn init(min: T, mode: T, max: T, shape: T) Error!Self {
             comptime requireFloat(T);
             if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) return error.InvalidParameter;
-            if (!(min < max) or !(min <= mode and mode <= max)) return error.InvalidParameter;
+            if (!(min <= max) or !(min <= mode and mode <= max)) return error.InvalidParameter;
             if (!(shape >= 0) or !std.math.isFinite(shape)) return error.InvalidParameter;
             const range = max - min;
+            if (range == 0) {
+                const half_shape = shape / 2;
+                return .{
+                    .min = min,
+                    .range = 0,
+                    .alpha = 1 + half_shape,
+                    .beta_param = 1 + half_shape,
+                };
+            }
+
             return .{
                 .min = min,
                 .range = range,
@@ -10088,6 +10112,7 @@ pub fn Pert(comptime T: type) type {
         }
 
         pub fn modeValue(self: Self) ?T {
+            if (self.isDegenerate()) return self.min;
             const shape = self.shapeValue();
             if (shape == 0) return null;
             return self.min + self.range * (self.alpha - 1) / shape;
@@ -10115,6 +10140,7 @@ pub fn Pert(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return self.min;
             return self.min + self.range * betaFrom(source, T, self.alpha, self.beta_param);
         }
 
@@ -10123,7 +10149,15 @@ pub fn Pert(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, self.min);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.range == 0;
         }
     };
 }
@@ -14786,6 +14820,86 @@ test "degenerate pareto helpers do not consume random stream" {
 
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate pert helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d146);
+    var control = alea.ScalarPrng.init(0x5150_d146);
+    const rng = Rng.init(&engine);
+
+    const point: f64 = 2.25;
+    try std.testing.expectEqual(point, pertFrom(&engine, f64, point, point, point, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, try pertChecked(rng, f64, point, point, point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillPertFrom(&engine, f64, &scalar_buf, point, point, point, 4);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillPertChecked(rng, f64, &scalar_buf, point, point, point, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try Pert(f64).init(point, point, point, 4);
+    try std.testing.expectEqual(point, sampler.minValue());
+    try std.testing.expectEqual(point, sampler.maxValue());
+    try std.testing.expectEqual(@as(f64, 4), sampler.shapeValue());
+    try std.testing.expectEqual(point, sampler.modeValue().?);
+    try std.testing.expectEqual(@as(f64, 3), sampler.alphaValue());
+    try std.testing.expectEqual(@as(f64, 3), sampler.betaValue());
+    try std.testing.expectEqual(point, sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(point, sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const shape_zero = try Pert(f64).init(point, point, point, 0);
+    try std.testing.expectEqual(point, shape_zero.modeValue().?);
+    try std.testing.expectEqual(point, shape_zero.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const by_mean = try Pert(f64).initMean(point, point, point, 4);
+    try std.testing.expectEqual(point, by_mean.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_point: f32 = -1.5;
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vectorPertFrom(&engine, @Vector(4, f32), vector_point, vector_point, vector_point, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), try vectorPertChecked(rng, @Vector(4, f32), vector_point, vector_point, vector_point, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f32) = undefined;
+    fillVectorPertFrom(&engine, @Vector(4, f32), &vector_buf, vector_point, vector_point, vector_point, 4);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorPertChecked(rng, @Vector(4, f32), &vector_buf, vector_point, vector_point, vector_point, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorPert(@Vector(4, f32)).init(vector_point, vector_point, vector_point, 4);
+    try std.testing.expectEqual(vector_point, vector_sampler.minValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.maxValue());
+    try std.testing.expectEqual(@as(f32, 4), vector_sampler.shapeValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.modeValue().?);
+    try std.testing.expectEqual(@as(f32, 3), vector_sampler.alphaValue());
+    try std.testing.expectEqual(@as(f32, 3), vector_sampler.betaValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f32, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
