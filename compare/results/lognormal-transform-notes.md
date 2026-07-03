@@ -31,6 +31,10 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
 - Direct field storage in the reusable sampler does not close the gap.
 - Normal generation is not the bottleneck.
 - `@mulAdd` in the single-sample expression does not win.
+- Single-sample `std.math.exp` and libc `exp` / `expf` expressions do not
+  provide a durable exact default: a focused 4Mi sample probe kept f64
+  `std.math.exp` tied/slower, libc f64 only slightly ahead in the ScalarPrng
+  row, and f32 variants tied.
 - `exp2(x * log2e)` regresses.
 - `std.math.exp` is tied with `@exp`.
 - libc `exp` / `expf` can help one engine/type profile in the probe but
@@ -97,6 +101,14 @@ Fresh local evidence:
   and about 133.9M/133.2M/140.9M for exact f32. The bounded f32 approximation
   fill reaches about 142.4M/142.5M/150.4M in the same run, but remains opt-in
   because it changes exact rounding.
+- `log-normal-probe -- 4194304 "sample"` now splits single-sample exact
+  expression shapes for f64 and f32. The focused run reports f64 FastPrng
+  current/standard-scale/`std.math.exp`/libc about 116.4/116.4/116.0/116.4M,
+  f64 ScalarPrng about 131.4/132.2/131.0/133.4M, f32 FastPrng about
+  120.0/120.5/120.3M for current/`std.math.exp`/libc, and f32 ScalarPrng about
+  135.6/135.4/135.7M. These rows add evidence only; libc remains
+  engine/profile-specific and requires libc linkage, while `std.math.exp` is
+  not a win.
 - `log-normal-probe` now accepts the same focused shape as the throughput
   harness: `zig build -Doptimize=ReleaseFast -Dcpu=native log-normal-probe --
   <count> <filter>`. A same-host 1Mi filtered smoke run verified the filter and

@@ -35,9 +35,19 @@ pub fn main(init: std.process.Init) !void {
     try benchSample(alea.FastPrng, io, stdout, "fast sample current", 0x1060, sample_count, sampleCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast sample standard+scale", 0x1060, sample_count, sampleStandardScale);
     try benchSample(alea.FastPrng, io, stdout, "fast sample mulAdd", 0x1060, sample_count, sampleMulAdd);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample std.math.exp", 0x1060, sample_count, sampleStdMathExp);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample libc exp", 0x1060, sample_count, sampleLibcExp);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample current", 0x1061, sample_count, sampleCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample standard+scale", 0x1061, sample_count, sampleStandardScale);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample mulAdd", 0x1061, sample_count, sampleMulAdd);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sample std.math.exp", 0x1061, sample_count, sampleStdMathExp);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sample libc exp", 0x1061, sample_count, sampleLibcExp);
+    try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample current", 0x1066, sample_count, sampleCurrentF32);
+    try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample std.math.exp", 0x1066, sample_count, sampleStdMathExpF32);
+    try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample libc expf", 0x1066, sample_count, sampleLibcExpF32);
+    try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample current", 0x1066, sample_count, sampleCurrentF32);
+    try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample std.math.exp", 0x1066, sample_count, sampleStdMathExpF32);
+    try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample libc expf", 0x1066, sample_count, sampleLibcExpF32);
     try benchFill(alea.FastPrng, io, stdout, "fast normal-only fill", 0x1062, sample_count, normalOnlyFill);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x1062, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar exp", 0x1062, sample_count, stagedScalarExp);
@@ -134,6 +144,41 @@ pub fn main(init: std.process.Init) !void {
 }
 
 fn benchSample(
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime sampleFn: anytype,
+) !void {
+    if (!shouldRun(name)) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) checksum += sampleFn(&engine);
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchSampleF32(
     comptime Source: type,
     io: std.Io,
     stdout: *std.Io.Writer,
@@ -276,6 +321,26 @@ fn sampleStandardScale(source: anytype) f64 {
 
 fn sampleMulAdd(source: anytype) f64 {
     return @exp(@mulAdd(f64, 0.25, alea.Rng.standardNormalFastFrom(source, f64), 0));
+}
+
+fn sampleStdMathExp(source: anytype) f64 {
+    return std.math.exp(0.25 * alea.Rng.standardNormalFastFrom(source, f64));
+}
+
+fn sampleLibcExp(source: anytype) f64 {
+    return exp(0.25 * alea.Rng.standardNormalFastFrom(source, f64));
+}
+
+fn sampleCurrentF32(source: anytype) f32 {
+    return alea.distributions.logNormalFrom(source, f32, 0, 0.25);
+}
+
+fn sampleStdMathExpF32(source: anytype) f32 {
+    return std.math.exp(0.25 * alea.Rng.standardNormalFastFrom(source, f32));
+}
+
+fn sampleLibcExpF32(source: anytype) f32 {
+    return expf(0.25 * alea.Rng.standardNormalFastFrom(source, f32));
 }
 
 fn stagedScalarExp(source: anytype, dest: []f64) void {
