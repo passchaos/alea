@@ -12,6 +12,9 @@ const has_libmvec = builtin.target.cpu.arch == .x86_64 and
     builtin.target.os.tag == .linux and
     builtin.target.abi.isGnu();
 
+const LibmvecExpF64x4 = *const fn (@Vector(4, f64)) callconv(.c) @Vector(4, f64);
+const LibmvecExpF32x8 = *const fn (@Vector(8, f32)) callconv(.c) @Vector(8, f32);
+
 const trials = 3;
 const default_count: usize = 8 * 1024 * 1024;
 
@@ -93,6 +96,10 @@ pub fn main(init: std.process.Init) !void {
         try benchBufferedSample(alea.ScalarPrng, f64, io, stdout, "scalar buffered sample libmvec f64x2", 0x1061, sample_count, 0.25, refillBufferedLogNormalLibmvec);
         try benchBufferedSample(alea.FastPrng, f32, io, stdout, "fast f32 buffered sample libmvec f32x8", 0x1066, sample_count, 0.25, refillBufferedLogNormalLibmvec);
         try benchBufferedSample(alea.ScalarPrng, f32, io, stdout, "scalar f32 buffered sample libmvec f32x8", 0x1066, sample_count, 0.25, refillBufferedLogNormalLibmvec);
+        try benchDynamicLibmvecBufferedSample(alea.FastPrng, f64, io, stdout, "fast buffered sample dynamic libmvec f64x4", 0x1060, sample_count, 0.25);
+        try benchDynamicLibmvecBufferedSample(alea.ScalarPrng, f64, io, stdout, "scalar buffered sample dynamic libmvec f64x4", 0x1061, sample_count, 0.25);
+        try benchDynamicLibmvecBufferedSample(alea.FastPrng, f32, io, stdout, "fast f32 buffered sample dynamic libmvec f32x8", 0x1066, sample_count, 0.25);
+        try benchDynamicLibmvecBufferedSample(alea.ScalarPrng, f32, io, stdout, "scalar f32 buffered sample dynamic libmvec f32x8", 0x1066, sample_count, 0.25);
     }
     try benchFill(alea.FastPrng, io, stdout, "fast normal-only fill", 0x1062, sample_count, normalOnlyFill);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x1062, sample_count, currentFill);
@@ -359,6 +366,73 @@ fn benchBufferedSample(
         var checksum: f64 = 0;
         var i: usize = 0;
         while (i < sample_count) : (i += 1) checksum += @floatCast(sampler.sample());
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchDynamicLibmvecBufferedSample(
+    comptime Source: type,
+    comptime T: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime stddev: T,
+) !void {
+    if (!shouldRun(name)) return;
+    const buffer_len = 1024;
+    var lib = std.DynLib.open("libmvec.so.1") catch |err| {
+        try stdout.print("{s}: unavailable ({})\n", .{ name, err });
+        return;
+    };
+    defer lib.close();
+
+    const maybe_exp = switch (T) {
+        f64 => lib.lookup(LibmvecExpF64x4, "_ZGVcN4v_exp"),
+        f32 => lib.lookup(LibmvecExpF32x8, "_ZGVcN8v_expf"),
+        else => unreachable,
+    };
+    const exp_fn = maybe_exp orelse {
+        try stdout.print("{s}: unavailable (missing symbol)\n", .{name});
+        return;
+    };
+
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        var buffer: [buffer_len]T = undefined;
+        var index: usize = buffer_len;
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < sample_count) : (i += 1) {
+            if (index == buffer_len) {
+                alea.Rng.fillNormalFrom(&engine, T, &buffer, 0, stddev);
+                switch (T) {
+                    f64 => expDynamicLibmvec4(&buffer, @ptrCast(exp_fn)),
+                    f32 => expDynamicLibmvec8F32(&buffer, @ptrCast(exp_fn)),
+                    else => unreachable,
+                }
+                index = 0;
+            }
+            checksum += @floatCast(buffer[index]);
+            index += 1;
+        }
 
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
@@ -1120,6 +1194,17 @@ fn expLibmvec4(dest: []f64) void {
     while (i < dest.len) : (i += 1) dest[i] = exp(dest[i]);
 }
 
+fn expDynamicLibmvec4(dest: []f64, exp_fn: LibmvecExpF64x4) void {
+    const VectorType = @Vector(4, f64);
+    var i: usize = 0;
+    while (i + 4 <= dest.len) : (i += 4) {
+        const vec: VectorType = .{ dest[i], dest[i + 1], dest[i + 2], dest[i + 3] };
+        const out = exp_fn(vec);
+        inline for (0..4) |lane| dest[i + lane] = out[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = exp(dest[i]);
+}
+
 fn expUnroll4(dest: []f64) void {
     var i: usize = 0;
     while (i + 4 <= dest.len) : (i += 4) {
@@ -1235,6 +1320,26 @@ fn expLibmvec8F32(dest: []f32) void {
             dest[i + 7],
         };
         const out = _ZGVcN8v_expf(vec);
+        inline for (0..8) |lane| dest[i + lane] = out[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = expf(dest[i]);
+}
+
+fn expDynamicLibmvec8F32(dest: []f32, exp_fn: LibmvecExpF32x8) void {
+    const VectorType = @Vector(8, f32);
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec: VectorType = .{
+            dest[i],
+            dest[i + 1],
+            dest[i + 2],
+            dest[i + 3],
+            dest[i + 4],
+            dest[i + 5],
+            dest[i + 6],
+            dest[i + 7],
+        };
+        const out = exp_fn(vec);
         inline for (0..8) |lane| dest[i + lane] = out[lane];
     }
     while (i < dest.len) : (i += 1) dest[i] = expf(dest[i]);
