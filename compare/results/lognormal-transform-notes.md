@@ -81,6 +81,19 @@ The exact `LogNormal(f32)` and `fillLogNormal` paths remain unchanged and keep
 
 Fresh local evidence:
 
+- `zig build -Doptimize=ReleaseFast -Dcpu=native log-normal-probe -- 1048576`
+  on 2026-07-03 still does not reveal a portable exact default replacement.
+  Exact f64 current/staged-scalar fill is about 133M/133M FastPrng and
+  139M/141M ScalarPrng, with out-of-place/index/prefetch/unroll/vector
+  variants mixed and not a no-regression default. libc `exp` peaks higher in
+  this isolated probe for f64 at about 140M FastPrng and 145M ScalarPrng, but
+  it would require libc linkage and remains outside the generic exact default.
+  Exact f32 current/staged-scalar fill is about 140M/138M FastPrng and
+  145M/145M ScalarPrng; libc `expf` and `expm1(x)+1` peak around
+  148M ScalarPrng but are profile-specific or non-exact-default shapes, while
+  widened f64 `@exp` remains slower. Normal-only rows are much faster
+  (about 409M/473M f64 and 391M/449M f32), reconfirming the transform
+  bottleneck.
 - `cargo run --release --manifest-path compare/rand_bench/Cargo.toml --
   268435456 log-normal` with native CPU flags: Rust exact f64 about 146M and
   exact f32 about 154M samples/s. Matching Alea scalar rows are about 135M f64
