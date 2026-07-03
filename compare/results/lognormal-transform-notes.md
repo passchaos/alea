@@ -44,6 +44,12 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   same-host 4Mi rerun had current fill around 134.9M/139.1M f64
   FastPrng/ScalarPrng and 135.1M/141.2M f32, while staged noinline was about
   131.5M/138.0M f64 and 136.5M/142.6M f32.
+- Folding benchmark checksum accumulation into the exact transform pass improves
+  the probe rows but is not a library default. In a 4Mi focused run, staged
+  `exp+sum` reached about 131M/138M f64 FastPrng/ScalarPrng and 147M/153M f32,
+  above staged-scalar rows in the same host pass, with matching checksums. This
+  shows the post-transform read in the benchmark matters, not that production
+  fills should compute checksums.
 - libc `exp` / `expf` can help one engine/type profile in the probe but
   regresses another and requires linking libc, so it is not a generic default.
 - Manual unrolling of the exact `@exp` transform loop is mixed: it can provide

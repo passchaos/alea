@@ -75,6 +75,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillSized(alea.FastPrng, 16384, io, stdout, "fast current fill chunk16384", 0x1062, sample_count, currentFill);
     try benchFill(alea.FastPrng, io, stdout, "fast staged scalar exp", 0x1062, sample_count, stagedScalarExp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged noinline exp", 0x1062, sample_count, stagedNoInlineExp);
+    try benchFillWithChecksum(alea.FastPrng, io, stdout, "fast staged exp+sum", 0x1062, sample_count, stagedExpSum);
     try benchFill(alea.FastPrng, io, stdout, "fast out-of-place scalar exp", 0x1062, sample_count, outOfPlaceScalarExp);
     try benchFill(alea.FastPrng, io, stdout, "fast out-of-place noalias exp", 0x1062, sample_count, outOfPlaceNoAliasExp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged index exp", 0x1062, sample_count, stagedIndexExp);
@@ -103,6 +104,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillSized(alea.ScalarPrng, 16384, io, stdout, "scalar current fill chunk16384", 0x1062, sample_count, currentFill);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged scalar exp", 0x1062, sample_count, stagedScalarExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged noinline exp", 0x1062, sample_count, stagedNoInlineExp);
+    try benchFillWithChecksum(alea.ScalarPrng, io, stdout, "scalar staged exp+sum", 0x1062, sample_count, stagedExpSum);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar out-of-place scalar exp", 0x1062, sample_count, outOfPlaceScalarExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar out-of-place noalias exp", 0x1062, sample_count, outOfPlaceNoAliasExp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged index exp", 0x1062, sample_count, stagedIndexExp);
@@ -131,6 +133,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32Sized(alea.FastPrng, 16384, io, stdout, "fast f32 current fill chunk16384", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged noinline exp", 0x1063, sample_count, stagedNoInlineExpF32);
+    try benchFillF32WithChecksum(alea.FastPrng, io, stdout, "fast f32 staged exp+sum", 0x1063, sample_count, stagedExpSumF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 out-of-place scalar exp", 0x1063, sample_count, outOfPlaceScalarExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 out-of-place noalias exp", 0x1063, sample_count, outOfPlaceNoAliasExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged widened f64 exp", 0x1063, sample_count, stagedWidenedExpF32);
@@ -163,6 +166,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32Sized(alea.ScalarPrng, 16384, io, stdout, "scalar f32 current fill chunk16384", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged scalar exp", 0x1063, sample_count, stagedScalarExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged noinline exp", 0x1063, sample_count, stagedNoInlineExpF32);
+    try benchFillF32WithChecksum(alea.ScalarPrng, io, stdout, "scalar f32 staged exp+sum", 0x1063, sample_count, stagedExpSumF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 out-of-place scalar exp", 0x1063, sample_count, outOfPlaceScalarExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 out-of-place noalias exp", 0x1063, sample_count, outOfPlaceNoAliasExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged widened f64 exp", 0x1063, sample_count, stagedWidenedExpF32);
@@ -320,6 +324,46 @@ fn benchFill(
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillWithChecksum(
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime fillFn: anytype,
+) !void {
+    if (!shouldRun(name)) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024]f64 = undefined;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var remaining = sample_count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            checksum += fillFn(&engine, out[0..n]);
+            remaining -= n;
+        }
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchFillSized(
     comptime Source: type,
     comptime chunk_len: usize,
@@ -387,6 +431,46 @@ fn benchFillF32(
             const n = @min(remaining, out.len);
             fillFn(&engine, out[0..n]);
             for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillF32WithChecksum(
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime fillFn: anytype,
+) !void {
+    if (!shouldRun(name)) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024]f32 = undefined;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var remaining = sample_count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            checksum += fillFn(&engine, out[0..n]);
             remaining -= n;
         }
 
@@ -544,6 +628,11 @@ fn stagedNoInlineExp(source: anytype, dest: []f64) void {
     expNoInline(dest);
 }
 
+fn stagedExpSum(source: anytype, dest: []f64) f64 {
+    alea.Rng.fillNormalFrom(source, f64, dest, 0, 0.25);
+    return expSum(dest);
+}
+
 fn outOfPlaceScalarExp(source: anytype, dest: []f64) void {
     var normal_buf: [1024]f64 = undefined;
     const normals = normal_buf[0..dest.len];
@@ -662,6 +751,11 @@ fn stagedScalarExpF32(source: anytype, dest: []f32) void {
 fn stagedNoInlineExpF32(source: anytype, dest: []f32) void {
     alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
     expNoInlineF32(dest);
+}
+
+fn stagedExpSumF32(source: anytype, dest: []f32) f64 {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    return expSumF32(dest);
 }
 
 fn outOfPlaceScalarExpF32(source: anytype, dest: []f32) void {
@@ -797,6 +891,16 @@ fn expScalar(dest: []f64) void {
     for (dest) |*item| item.* = @exp(item.*);
 }
 
+fn expSum(dest: []f64) f64 {
+    var sum: f64 = 0;
+    for (dest) |*item| {
+        const value = @exp(item.*);
+        item.* = value;
+        sum += value;
+    }
+    return sum;
+}
+
 noinline fn expNoInline(dest: []f64) void {
     for (dest) |*item| item.* = @exp(item.*);
 }
@@ -881,6 +985,16 @@ fn fusedAffineStdMathExp(dest: []f64, mean: f64, stddev: f64) void {
 
 fn expScalarF32(dest: []f32) void {
     for (dest) |*item| item.* = @exp(item.*);
+}
+
+fn expSumF32(dest: []f32) f64 {
+    var sum: f64 = 0;
+    for (dest) |*item| {
+        const value = @exp(item.*);
+        item.* = value;
+        sum += value;
+    }
+    return sum;
 }
 
 noinline fn expNoInlineF32(dest: []f32) void {
