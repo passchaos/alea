@@ -62,6 +62,11 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   rows were about 131M/132M/140M versus the reverted in-place baseline around
   135M/135M/142M, while f32 moved about 136M/136M/144M versus 133M/133M/141M.
   This mixed profile is not a no-regression default.
+- Adding explicit `noalias` parameters to the out-of-place exact transform loop
+  does not reveal a hidden alias/codegen win. A same-host
+  `log-normal-probe -- 4194304 "out-of-place"` run kept scalar/noalias pairs
+  tied: about 131M f64 FastPrng, 135M f64 ScalarPrng, 137M f32 FastPrng, and
+  142M f32 ScalarPrng.
 - Prefetching ahead in the exact `@exp` transform loop is mixed in the isolated
   probe and does not survive a production `fillLogNormal` retry as a durable
   no-regression win, so no prefetching is used in the default transform loops.
@@ -234,6 +239,12 @@ Fresh local evidence:
   around 135M/135M/142M to about 131M/132M/140M facade/FastPrng/ScalarPrng;
   f32 improved to about 136M/136M/144M versus about 133M/133M/141M, but the
   cross-type result is mixed and not a safe exact default.
+- A later `noalias` out-of-place transform probe narrowed the same hypothesis
+  further without changing the production conclusion. In
+  `log-normal-probe -- 4194304 "out-of-place"`, scalar and noalias exact
+  transform rows were effectively tied with matching checksums across f64/f32
+  and FastPrng/ScalarPrng, so alias annotations are not the missing exact
+  transform/codegen escape hatch.
 - The same `expm1(x)+1` probe reports max 1 ULP at `stddev=0.25`, but max
   51 ULP at `stddev=1.0` and 8028 ULP at `stddev=2.0`, which is why
   `LogNormalApproxF32` is parameter-bounded to the narrow profile. The
