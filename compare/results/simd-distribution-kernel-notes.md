@@ -14,13 +14,17 @@ distribution kernel, but it is the default because it is fast, stable, and keeps
 the scalar draw/repair policy simple.
 
 Latest `vectorbench` evidence is tracked in `performance-triage.md` and
-`core-rand-coverage.md`. The 2026-07-03 native full `vectorbench` run has
-representative direct rows of roughly:
+`core-rand-coverage.md`. A refreshed 2026-07-03 focused run of the minimum
+real-harness set reports representative direct rows of roughly:
 
-- normal f32x8 / f64x4 direct: about 496M / 413M lanes/s,
-- standard normal f32x8 / f64x4 direct: about 501M / 454M lanes/s,
-- exponential f32x8 / f64x4 direct: about 470M / 466M lanes/s,
-- standard exponential f32x8 / f64x4 direct: about 471M / 468M lanes/s.
+- normal f32x8 / f64x4 direct: about 477M / 454M lanes/s,
+- standard normal f32x8 / f64x4 direct: about 477M / 454M lanes/s,
+- exponential f32x8 / f64x4 direct: about 470M / 467M lanes/s,
+- standard exponential f32x8 / f64x4 direct: about 471M / 467M lanes/s.
+
+Same-run rejected candidates still trail: f32x8 repair/all-accepted/block-fallback
+rows remain below the direct rows, and f64x4 same-candidate/all-accepted/block
+fallback rows likewise remain below direct scalar lane-fill.
 
 These rows are host/load sensitive, so production decisions should compare
 candidates in the same `vectorbench` run rather than against stale absolute
