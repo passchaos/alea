@@ -122,6 +122,10 @@ Fresh local evidence:
   FastPrng f64 row to about 72.9M while tying the other profiles around
   74.4M/76.0M/77.7M. This remains profile-specific evidence, not a default
   replacement for `@exp`.
+- A production retry that swapped f64 `expInPlaceScalar` to `std.math.exp`
+  likewise stayed tied/noisy rather than producing a durable win in focused
+  `bench -- 268435456 "fillLogNormal"` rows. It was reverted and exact f64
+  production remains on direct `@exp`.
 - Fresh 1GiB filtered parity rows with native CPU flags: local Rust
   `rand_distr log-normal` is about 146.2M f64 and 155.3M f32 samples/s.
   Matching Alea scalar rows are about 117.7M facade, 118.5M raw FastPrng,
