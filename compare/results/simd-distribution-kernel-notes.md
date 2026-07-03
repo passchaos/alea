@@ -66,6 +66,12 @@ repair rows before a real `vectorbench` follow-up.
   focused 4Mi-lane probe, f32x8 repair reaches about 368M normal and 265M
   exponential lanes/s versus lane-scalar Alea4x64 rows around 506M and 482M,
   with matching checksums.
+- A fill-specific lane-local Alea4x64 f32 standard normal/exponential probe
+  also fails to close the FastPrng bulk gap. `ziggurat-probe -- 4194304
+  "f32 fill"` reports current FastPrng f32 standard fill around 376.5M normal
+  and 386.3M exponential, while the stream-versioned lane-local fill shape is
+  only about 298.4M and 288.5M and changes checksums. Cycling all four engine
+  lanes is therefore not a production direction for standard f32 fills.
 - f32x8 repair probes are useful evidence in isolated `ziggurat-probe` rows,
   but the advantage does not survive the real vector-slice fill harness:
   standard repair rows can be close to current direct rows in a given run, but

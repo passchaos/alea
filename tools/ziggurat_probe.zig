@@ -155,6 +155,10 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF32Fast(io, stdout, "fast vector-repair exponential f32x8 candidate", sample_count, 0xe15a, vectorRepairExponentialF32Fast);
     try benchVectorF32Fast(io, stdout, "fast vector-repair normal f32x8 correct", sample_count, 0xd15a, vectorRepairNormalF32FastCorrect);
     try benchVectorF32Fast(io, stdout, "fast vector-repair exponential f32x8 correct", sample_count, 0xe15a, vectorRepairExponentialF32FastCorrect);
+    try benchFillF32Fast(io, stdout, "fast standard normal f32 fill current", sample_count, 0xd15a, currentStandardNormalF32FillFast);
+    try benchFillF32Fast(io, stdout, "fast alea4x64-lane standard normal f32 fill", sample_count, 0xd15a, laneStandardNormalF32FillFast);
+    try benchFillF32Fast(io, stdout, "fast standard exponential f32 fill current", sample_count, 0xe15a, currentStandardExponentialF32FillFast);
+    try benchFillF32Fast(io, stdout, "fast alea4x64-lane standard exponential f32 fill", sample_count, 0xe15a, laneStandardExponentialF32FillFast);
     try stdout.flush();
 }
 
@@ -362,6 +366,44 @@ fn benchVectorF64Fast(
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillF32Fast(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    sample_count: usize,
+    seed: u64,
+    comptime fillFn: anytype,
+) !void {
+    if (!shouldRun(name)) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [4096]f32 = undefined;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = sample_count;
+        var checksum: f32 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn genericNormal(engine: *alea.ScalarPrng) f64 {
@@ -951,6 +993,46 @@ fn vectorRepairExponentialF32FastCorrect(engine: *alea.FastPrng) @Vector(8, f32)
 
     inline for (0..8) |lane| out[lane] = @floatCast(thresholdExponentialFast(engine));
     return out;
+}
+
+fn currentStandardNormalF32FillFast(engine: *alea.FastPrng, dest: []f32) void {
+    alea.distributions.fillStandardNormalFrom(engine, f32, dest);
+}
+
+fn laneStandardNormalF32FillFast(engine: *alea.FastPrng, dest: []f32) void {
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec = vectorLaneNormalF32Alea4x64Scalar(engine);
+        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) {
+        dest[i] = switch (i & 3) {
+            0 => @floatCast(ratioNormalAlea4x64Lane(engine, 0, nextAlea4x64Lane(engine, 0))),
+            1 => @floatCast(ratioNormalAlea4x64Lane(engine, 1, nextAlea4x64Lane(engine, 1))),
+            2 => @floatCast(ratioNormalAlea4x64Lane(engine, 2, nextAlea4x64Lane(engine, 2))),
+            else => @floatCast(ratioNormalAlea4x64Lane(engine, 3, nextAlea4x64Lane(engine, 3))),
+        };
+    }
+}
+
+fn currentStandardExponentialF32FillFast(engine: *alea.FastPrng, dest: []f32) void {
+    alea.distributions.fillStandardExponentialFrom(engine, f32, dest);
+}
+
+fn laneStandardExponentialF32FillFast(engine: *alea.FastPrng, dest: []f32) void {
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec = vectorLaneExponentialF32Alea4x64Scalar(engine);
+        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) {
+        dest[i] = switch (i & 3) {
+            0 => @floatCast(thresholdExponentialAlea4x64Lane(engine, 0, nextAlea4x64Lane(engine, 0))),
+            1 => @floatCast(thresholdExponentialAlea4x64Lane(engine, 1, nextAlea4x64Lane(engine, 1))),
+            2 => @floatCast(thresholdExponentialAlea4x64Lane(engine, 2, nextAlea4x64Lane(engine, 2))),
+            else => @floatCast(thresholdExponentialAlea4x64Lane(engine, 3, nextAlea4x64Lane(engine, 3))),
+        };
+    }
 }
 
 fn nextAlea4x64Lanes(engine: *alea.FastPrng) @Vector(4, u64) {
