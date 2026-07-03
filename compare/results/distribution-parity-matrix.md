@@ -34,7 +34,7 @@ Zig-native way.
 | Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)`, including reusable-sampler and standard rate/moment/median/mode/support accessors plus infinite-rate point masses |
 | Gamma | Covered: `gamma`, `Gamma(T)`, including shape/scale/moment/mode/support accessors and collapsed `scale == 0` point masses |
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment/mode/support accessors and collapsed `dof == 0` point masses |
-| FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2, finite-moment, and support accessors |
+| FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2, finite-moment, support accessors, and both-infinite-dof point masses |
 | StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment and support accessors |
 | Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment/median/mode/support accessors and collapsed `scale == 0` point masses |
 | Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape, finite-moment, median/mode, and support accessors plus collapsed `scale == 0` and infinite-shape point masses |

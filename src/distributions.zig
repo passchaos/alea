@@ -5968,10 +5968,20 @@ pub fn fisherFCheckedFrom(source: anytype, comptime T: type, d1: T, d2: T) Error
 
 pub fn fisherFFrom(source: anytype, comptime T: type, d1: T, d2: T) T {
     comptime requireFloat(T);
-    std.debug.assert(d1 > 0 and d2 > 0);
+    std.debug.assert(fisherFParametersValid(T, d1, d2));
+    if (d1 == std.math.inf(T) and d2 == std.math.inf(T)) return 1;
     const x = chiSquaredFrom(source, T, d1) / d1;
     const y = chiSquaredFrom(source, T, d2) / d2;
     return x / y;
+}
+
+fn fisherFParametersValid(comptime T: type, d1: T, d2: T) bool {
+    const d1_inf = d1 == std.math.inf(T);
+    const d2_inf = d2 == std.math.inf(T);
+    return d1 > 0 and d2 > 0 and
+        (std.math.isFinite(d1) or d1_inf) and
+        (std.math.isFinite(d2) or d2_inf) and
+        (d1_inf == d2_inf);
 }
 
 pub fn fillFisherF(rng: Rng, comptime T: type, dest: []T, d1: T, d2: T) void {
@@ -5979,6 +5989,12 @@ pub fn fillFisherF(rng: Rng, comptime T: type, dest: []T, d1: T, d2: T) void {
 }
 
 pub fn fillFisherFFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(fisherFParametersValid(T, d1, d2));
+    if (d1 == std.math.inf(T) and d2 == std.math.inf(T)) {
+        @memset(dest, 1);
+        return;
+    }
     const sampler = FisherF(T).init(d1, d2) catch unreachable;
     sampler.fillFrom(source, dest);
 }
@@ -6072,6 +6088,7 @@ pub fn VectorFisherF(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
             var out: VectorType = undefined;
             inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -6082,6 +6099,10 @@ pub fn VectorFisherF(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -6098,8 +6119,15 @@ pub fn FisherF(comptime T: type) type {
 
         pub fn init(d1: T, d2: T) Error!Self {
             comptime requireFloat(T);
-            if (!(d1 > 0) or !(d2 > 0)) return error.InvalidParameter;
-            if (!std.math.isFinite(d1) or !std.math.isFinite(d2)) return error.InvalidParameter;
+            if (!fisherFParametersValid(T, d1, d2)) return error.InvalidParameter;
+            if (d1 == std.math.inf(T) and d2 == std.math.inf(T)) {
+                return .{
+                    .d1 = d1,
+                    .d2 = d2,
+                    .numerator = try Gamma(T).init(1, 0),
+                    .denominator = try Gamma(T).init(1, 0),
+                };
+            }
             return .{
                 .d1 = d1,
                 .d2 = d2,
@@ -6117,11 +6145,13 @@ pub fn FisherF(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) ?T {
+            if (self.isDegenerate()) return self.degenerateValue();
             if (self.d2 <= 2) return null;
             return self.d2 / (self.d2 - 2);
         }
 
         pub fn varianceValue(self: Self) ?T {
+            if (self.isDegenerate()) return 0;
             if (self.d2 <= 4) return null;
             const numerator = 2 * self.d2 * self.d2 * (self.d1 + self.d2 - 2);
             const denominator = self.d1 * (self.d2 - 2) * (self.d2 - 2) * (self.d2 - 4);
@@ -6129,13 +6159,11 @@ pub fn FisherF(comptime T: type) type {
         }
 
         pub fn minValue(self: Self) T {
-            _ = self;
-            return 0;
+            return if (self.isDegenerate()) self.degenerateValue() else 0;
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.degenerateValue() else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -6143,6 +6171,7 @@ pub fn FisherF(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return self.degenerateValue();
             return self.numerator.sampleFrom(source) / self.denominator.sampleFrom(source);
         }
 
@@ -6151,7 +6180,19 @@ pub fn FisherF(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, self.degenerateValue());
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.d1 == std.math.inf(T) and self.d2 == std.math.inf(T);
+        }
+
+        fn degenerateValue(_: Self) T {
+            return 1;
         }
     };
 }
@@ -14978,6 +15019,125 @@ test "degenerate erlang helpers do not consume random stream" {
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate fisher-f helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1b5);
+    var control = alea.ScalarPrng.init(0x5150_d1b5);
+    const rng = Rng.init(&engine);
+
+    const d1 = std.math.inf(f64);
+    const d2 = std.math.inf(f64);
+    const point: f64 = 1;
+
+    try std.testing.expectEqual(point, fisherF(rng, f64, d1, d2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, fisherFFrom(&engine, f64, d1, d2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, try fisherFChecked(rng, f64, d1, d2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, try fisherFCheckedFrom(&engine, f64, d1, d2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillFisherF(rng, f64, &scalar_buf, d1, d2);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillFisherFFrom(&engine, f64, &scalar_buf, d1, d2);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillFisherFChecked(rng, f64, &scalar_buf, d1, d2);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillFisherFCheckedFrom(&engine, f64, &scalar_buf, d1, d2);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try FisherF(f64).init(d1, d2);
+    try std.testing.expectEqual(d1, sampler.d1Value());
+    try std.testing.expectEqual(d2, sampler.d2Value());
+    try std.testing.expectEqual(point, sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue().?);
+    try std.testing.expectEqual(point, sampler.minValue());
+    try std.testing.expectEqual(point, sampler.maxValue().?);
+    try std.testing.expectEqual(point, sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fill(rng, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const point_vec: @Vector(4, f64) = @splat(point);
+    try std.testing.expectEqual(point_vec, vectorFisherF(rng, @Vector(4, f64), d1, d2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point_vec, vectorFisherFFrom(&engine, @Vector(4, f64), d1, d2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point_vec, try vectorFisherFChecked(rng, @Vector(4, f64), d1, d2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point_vec, try vectorFisherFCheckedFrom(&engine, @Vector(4, f64), d1, d2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorFisherF(rng, @Vector(4, f64), &vector_buf, d1, d2);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorFisherFFrom(&engine, @Vector(4, f64), &vector_buf, d1, d2);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorFisherFChecked(rng, @Vector(4, f64), &vector_buf, d1, d2);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorFisherFCheckedFrom(&engine, @Vector(4, f64), &vector_buf, d1, d2);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorFisherF(@Vector(4, f64)).init(d1, d2);
+    try std.testing.expectEqual(d1, vector_sampler.d1Value());
+    try std.testing.expectEqual(d2, vector_sampler.d2Value());
+    try std.testing.expectEqual(point, vector_sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.varianceValue().?);
+    try std.testing.expectEqual(point, vector_sampler.minValue());
+    try std.testing.expectEqual(point, vector_sampler.maxValue().?);
+    try std.testing.expectEqual(point_vec, vector_sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point_vec, vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fill(rng, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fisherFCheckedFrom(&engine, f64, d1, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, vectorFisherFCheckedFrom(&engine, @Vector(4, f64), 2, d2));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, FisherF(f64).init(d1, 2));
+    try std.testing.expectError(error.InvalidParameter, VectorFisherF(@Vector(4, f64)).init(2, d2));
 }
 
 test "degenerate chi-squared and chi helpers do not consume random stream" {
