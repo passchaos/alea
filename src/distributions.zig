@@ -4643,7 +4643,8 @@ pub fn gammaCheckedFrom(source: anytype, comptime T: type, shape: T, scale: T) E
 
 pub fn gammaFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(shape > 0 and scale > 0);
+    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(shape) and std.math.isFinite(scale));
+    if (scale == 0) return 0;
 
     if (shape < 1) {
         if (shape == 0.5) {
@@ -4677,6 +4678,12 @@ pub fn fillGamma(rng: Rng, comptime T: type, dest: []T, shape: T, scale: T) void
 }
 
 pub fn fillGammaFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(shape) and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, 0);
+        return;
+    }
     if (shape == 0.5) {
         const half_scale = scale * 0.5;
         for (dest) |*item| {
@@ -4783,6 +4790,7 @@ pub fn VectorGamma(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(0);
             var out: VectorType = undefined;
             inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -4793,6 +4801,10 @@ pub fn VectorGamma(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -4813,7 +4825,7 @@ pub fn Gamma(comptime T: type) type {
 
         pub fn init(shape: T, scale: T) Error!Self {
             comptime requireFloat(T);
-            if (!(shape > 0) or !(scale > 0)) return error.InvalidParameter;
+            if (!(shape > 0) or !(scale >= 0)) return error.InvalidParameter;
             if (!std.math.isFinite(shape) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return Self.initInternal(shape, scale);
         }
@@ -4845,8 +4857,7 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) 0 else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -4854,6 +4865,7 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return 0;
             if (self.shape == 1) return self.scale * Rng.standardExponentialFastFrom(source, T);
 
             if (self.is_boosted) {
@@ -4869,7 +4881,15 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
 
         fn sampleMarsaglia(_: Self, source: anytype, d: T, c: T) T {
@@ -5326,7 +5346,8 @@ pub fn erlangCheckedFrom(source: anytype, comptime T: type, shape: u64, scale: T
 
 pub fn erlangFrom(source: anytype, comptime T: type, shape: u64, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(shape > 0 and scale > 0);
+    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) return 0;
     return gammaFrom(source, T, @as(T, @floatFromInt(shape)), scale);
 }
 
@@ -5335,6 +5356,12 @@ pub fn fillErlang(rng: Rng, comptime T: type, dest: []T, shape: u64, scale: T) v
 }
 
 pub fn fillErlangFrom(source: anytype, comptime T: type, dest: []T, shape: u64, scale: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, 0);
+        return;
+    }
     const sampler = Erlang(T).init(shape, scale) catch unreachable;
     sampler.fillFrom(source, dest);
 }
@@ -5432,6 +5459,7 @@ pub fn VectorErlang(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(0);
             var out: VectorType = undefined;
             inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -5442,6 +5470,10 @@ pub fn VectorErlang(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -5457,7 +5489,7 @@ pub fn Erlang(comptime T: type) type {
         pub fn init(shape: u64, scale: T) Error!Self {
             comptime requireFloat(T);
             if (shape == 0) return error.InvalidParameter;
-            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return .{
                 .shape = shape,
                 .gamma_sampler = try Gamma(T).init(@as(T, @floatFromInt(shape)), scale),
@@ -5491,8 +5523,7 @@ pub fn Erlang(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) 0 else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -5508,7 +5539,15 @@ pub fn Erlang(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scaleValue() == 0;
         }
     };
 }
@@ -14301,6 +14340,144 @@ test "degenerate normal and log-normal helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
     zero_cv_log_normal_sampler.fillFrom(&engine, &log_normal_buf);
     for (log_normal_buf) |value| try std.testing.expectEqual(@as(f64, 0), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate gamma helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1a6);
+    var control = alea.ScalarPrng.init(0x5150_d1a6);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 0), gammaFrom(&engine, f64, 2, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 0), try gammaChecked(rng, f64, 0.5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillGammaFrom(&engine, f64, &scalar_buf, 1, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillGammaChecked(rng, f64, &scalar_buf, 0.25, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try Gamma(f64).init(0.75, 0);
+    try std.testing.expectEqual(@as(f64, 0.75), sampler.shapeValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.maxValue().?);
+    try std.testing.expectEqual(@as(f64, 0), sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const shape_one = try Gamma(f64).init(1, 0);
+    try std.testing.expectEqual(@as(f64, 0), shape_one.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorGammaFrom(&engine, @Vector(4, f64), 0.5, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), try vectorGammaChecked(rng, @Vector(4, f64), 2, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorGammaFrom(&engine, @Vector(4, f64), &vector_buf, 1, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorGammaChecked(rng, @Vector(4, f64), &vector_buf, 0.25, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorGamma(@Vector(4, f64)).init(3, 0);
+    try std.testing.expectEqual(@as(f64, 3), vector_sampler.shapeValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate erlang helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d196);
+    var control = alea.ScalarPrng.init(0x5150_d196);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 0), erlangFrom(&engine, f64, 3, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 0), try erlangChecked(rng, f64, 1, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillErlangFrom(&engine, f64, &scalar_buf, 3, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillErlangChecked(rng, f64, &scalar_buf, 1, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try Erlang(f64).init(3, 0);
+    try std.testing.expectEqual(@as(u64, 3), sampler.shapeValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.maxValue().?);
+    try std.testing.expectEqual(@as(f64, 0), sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorErlangFrom(&engine, @Vector(4, f64), 3, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), try vectorErlangChecked(rng, @Vector(4, f64), 1, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorErlangFrom(&engine, @Vector(4, f64), &vector_buf, 3, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorErlangChecked(rng, @Vector(4, f64), &vector_buf, 1, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorErlang(@Vector(4, f64)).init(3, 0);
+    try std.testing.expectEqual(@as(u64, 3), vector_sampler.shapeValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
