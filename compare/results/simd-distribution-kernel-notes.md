@@ -26,6 +26,14 @@ These rows are host/load sensitive, so production decisions should compare
 candidates in the same `vectorbench` run rather than against stale absolute
 numbers.
 
+For targeted checks, `vectorbench` now accepts an optional lane count and
+substring filter: `zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench --
+<lanes> <filter>`. For example, `-- 65536 "StandardNormal f32x8"` runs only
+the matching standard-normal f32x8 rows in the real vector-slice harness. A
+short same-host smoke run produced about 191-193M facade, 249-250M direct, and
+226M repair-candidate lanes/s at this small lane count, confirming the filter
+works but not replacing the full-run baseline above.
+
 ## Rejected Or Deferred Shapes
 
 - Vector Box-Muller normal kernels are too slow for default use.

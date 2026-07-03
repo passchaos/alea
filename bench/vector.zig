@@ -19,14 +19,27 @@ const exp_threshold = blk: {
     break :blk out;
 };
 
+var bench_filter: ?[]const u8 = null;
+
+fn shouldRun(name: []const u8) bool {
+    return bench_filter == null or std.mem.indexOf(u8, name, bench_filter.?) != null;
+}
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     var stdout_buffer: [1024]u8 = undefined;
     var stdout_file = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_file.interface;
 
-    const lanes: usize = 16 * 1024 * 1024;
-    try stdout.print("vector microbench\n", .{});
+    var args = std.process.Args.Iterator.init(init.minimal.args);
+    defer args.deinit();
+    _ = args.next();
+    const lanes: usize = if (args.next()) |arg|
+        std.fmt.parseInt(usize, arg, 10) catch 16 * 1024 * 1024
+    else
+        16 * 1024 * 1024;
+    bench_filter = args.next();
+    try stdout.print("vector microbench lanes={} filter={s}\n", .{ lanes, bench_filter orelse "<all>" });
     try benchFillVectorChanceBool(io, stdout, "alea fillVectorChance boolx64 p=0.25", lanes);
     try benchFillVectorRatioBool(io, stdout, "alea fillVectorRatio boolx64 1/4", lanes);
     try benchBoolX64(io, stdout, "alea distributions.fillVectorBernoulli boolx64 p=0.25", lanes, 0xb464, fillDistBernoulliBool);
@@ -204,6 +217,7 @@ pub fn main(init: std.process.Init) !void {
 }
 
 fn benchFillVectorChanceBool(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [256]@Vector(64, bool) = undefined;
@@ -243,6 +257,7 @@ fn benchBoolX64(
     comptime seed: u64,
     comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, []@Vector(64, bool)) void,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [256]@Vector(64, bool) = undefined;
@@ -288,6 +303,7 @@ fn fillDistBernoulliSamplerBool(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vec
 }
 
 fn benchFillVectorRatioBool(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [256]@Vector(64, bool) = undefined;
@@ -327,6 +343,7 @@ fn benchVectorU64x4(
     comptime seed: u64,
     comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, []@Vector(4, u64)) void,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [128]@Vector(4, u64) = undefined;
@@ -476,6 +493,7 @@ fn fillDistPoissonAhrensDieterSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, des
 }
 
 fn benchFillVectorOpenF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -507,6 +525,7 @@ fn benchFillVectorOpenF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchFillVectorOpenClosedF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -538,6 +557,7 @@ fn benchFillVectorOpenClosedF32(io: std.Io, stdout: *std.Io.Writer, name: []cons
 }
 
 fn benchFillVectorRangeF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -570,6 +590,7 @@ fn benchFillVectorRangeF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8,
 }
 
 fn benchFillVectorF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -602,6 +623,7 @@ fn benchFillVectorF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lane
 }
 
 fn benchFillVectorOpenF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -633,6 +655,7 @@ fn benchFillVectorOpenF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, 
 }
 
 fn benchFillVectorOpenClosedF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -664,6 +687,7 @@ fn benchFillVectorOpenClosedF64(io: std.Io, stdout: *std.Io.Writer, name: []cons
 }
 
 fn benchFillVectorRangeF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -703,6 +727,7 @@ fn benchVectorF32x8(
     comptime seed: u64,
     comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, []@Vector(8, f32)) void,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -742,6 +767,7 @@ fn benchVectorF64x4(
     comptime seed: u64,
     comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, []@Vector(4, f64)) void,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -781,6 +807,7 @@ fn benchUnit2F64x4(
     comptime seed: u64,
     comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, [][2]@Vector(4, f64)) void,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256][2]@Vector(4, f64) = undefined;
@@ -820,6 +847,7 @@ fn benchUnit3F64x4(
     comptime seed: u64,
     comptime fillFn: fn (*alea.ScalarPrng, alea.Rng, [][3]@Vector(4, f64)) void,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256][3]@Vector(4, f64) = undefined;
@@ -1342,6 +1370,7 @@ fn fillDistExponentialF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@
 }
 
 fn benchFillVectorStandardNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1374,6 +1403,7 @@ fn benchFillVectorStandardNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []
 }
 
 fn benchFillVectorStandardNormalF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1405,6 +1435,7 @@ fn benchFillVectorStandardNormalF32Direct(io: std.Io, stdout: *std.Io.Writer, na
 }
 
 fn benchFillVectorStandardNormalF32Repair(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1436,6 +1467,7 @@ fn benchFillVectorStandardNormalF32Repair(io: std.Io, stdout: *std.Io.Writer, na
 }
 
 fn benchFillVectorStandardNormalF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -1468,6 +1500,7 @@ fn benchFillVectorStandardNormalF64(io: std.Io, stdout: *std.Io.Writer, name: []
 }
 
 fn benchFillVectorStandardNormalF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -1499,6 +1532,7 @@ fn benchFillVectorStandardNormalF64Direct(io: std.Io, stdout: *std.Io.Writer, na
 }
 
 fn benchFillVectorNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1531,6 +1565,7 @@ fn benchFillVectorNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8
 }
 
 fn benchFillVectorNormalF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1562,6 +1597,7 @@ fn benchFillVectorNormalF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []co
 }
 
 fn benchFillVectorNormalF32Repair(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1593,6 +1629,7 @@ fn benchFillVectorNormalF32Repair(io: std.Io, stdout: *std.Io.Writer, name: []co
 }
 
 fn benchFillVectorNormalF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -1625,6 +1662,7 @@ fn benchFillVectorNormalF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8
 }
 
 fn benchFillVectorNormalF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -1656,6 +1694,7 @@ fn benchFillVectorNormalF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []co
 }
 
 fn benchFillVectorStandardExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1688,6 +1727,7 @@ fn benchFillVectorStandardExponentialF32(io: std.Io, stdout: *std.Io.Writer, nam
 }
 
 fn benchFillVectorStandardExponentialF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1719,6 +1759,7 @@ fn benchFillVectorStandardExponentialF32Direct(io: std.Io, stdout: *std.Io.Write
 }
 
 fn benchFillVectorStandardExponentialF32Repair(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1750,6 +1791,7 @@ fn benchFillVectorStandardExponentialF32Repair(io: std.Io, stdout: *std.Io.Write
 }
 
 fn benchFillVectorStandardExponentialF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -1782,6 +1824,7 @@ fn benchFillVectorStandardExponentialF64(io: std.Io, stdout: *std.Io.Writer, nam
 }
 
 fn benchFillVectorStandardExponentialF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -1813,6 +1856,7 @@ fn benchFillVectorStandardExponentialF64Direct(io: std.Io, stdout: *std.Io.Write
 }
 
 fn benchFillVectorExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1845,6 +1889,7 @@ fn benchFillVectorExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []con
 }
 
 fn benchFillVectorExponentialF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1876,6 +1921,7 @@ fn benchFillVectorExponentialF32Direct(io: std.Io, stdout: *std.Io.Writer, name:
 }
 
 fn benchFillVectorExponentialF32Repair(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var out: [256]@Vector(8, f32) = undefined;
@@ -1907,6 +1953,7 @@ fn benchFillVectorExponentialF32Repair(io: std.Io, stdout: *std.Io.Writer, name:
 }
 
 fn benchFillVectorExponentialF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
@@ -1939,6 +1986,7 @@ fn benchFillVectorExponentialF64(io: std.Io, stdout: *std.Io.Writer, name: []con
 }
 
 fn benchFillVectorExponentialF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [256]@Vector(4, f64) = undefined;
