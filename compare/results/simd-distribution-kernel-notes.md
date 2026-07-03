@@ -48,6 +48,10 @@ numbers.
   some facade/distribution rows in a same-host `vectorbench` run, but it
   regressed direct standard/parameterized f64 vector rows while checksums
   matched, so scalar lane-fill remains the baseline.
+- Forcing `Rng.next` itself inline does not solve the vector facade/context
+  gap: a same-host 2026-07-03 full `vectorbench` run with that probe tied or
+  regressed the target facade normal/exponential rows while direct rows stayed
+  essentially unchanged, so the call-boundary hint was reverted.
 
 ## Requirements For The Next Candidate
 
