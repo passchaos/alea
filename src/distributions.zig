@@ -2344,6 +2344,29 @@ pub fn fillStandardNormalNativeF32From(source: anytype, dest: []f32) void {
     for (dest) |*item| item.* = standardNormalNativeF32From(source);
 }
 
+pub fn vectorStandardNormalNativeF32(rng: Rng, comptime VectorType: type) VectorType {
+    return vectorStandardNormalNativeF32From(rng, VectorType);
+}
+
+pub fn vectorStandardNormalNativeF32From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorStandardNormalNativeF32 expects an f32 vector");
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = standardNormalNativeF32From(source);
+    return out;
+}
+
+pub fn fillVectorStandardNormalNativeF32(rng: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorStandardNormalNativeF32From(rng, VectorType, dest);
+}
+
+pub fn fillVectorStandardNormalNativeF32From(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorStandardNormalNativeF32 expects an f32 vector");
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    fillStandardNormalNativeF32From(source, scalars);
+}
+
 fn standardNormalNativeF32Tail(source: anytype, u: f32) f32 {
     var x: f32 = 1;
     var y: f32 = 0;
@@ -2538,6 +2561,61 @@ pub const StandardNormalNativeF32 = struct {
     }
 };
 
+pub fn VectorStandardNormalNativeF32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorStandardNormalNativeF32 expects an f32 vector");
+
+    return struct {
+        pub fn meanValue(_: @This()) f32 {
+            return 0;
+        }
+
+        pub fn stddevValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn expectedValue(_: @This()) f32 {
+            return 0;
+        }
+
+        pub fn varianceValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn medianValue(_: @This()) f32 {
+            return 0;
+        }
+
+        pub fn modeValue(_: @This()) f32 {
+            return 0;
+        }
+
+        pub fn minValue(_: @This()) ?f32 {
+            return null;
+        }
+
+        pub fn maxValue(_: @This()) ?f32 {
+            return null;
+        }
+
+        pub fn sample(_: @This(), rng: Rng) VectorType {
+            return vectorStandardNormalNativeF32(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) VectorType {
+            return vectorStandardNormalNativeF32From(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: []VectorType) void {
+            fillVectorStandardNormalNativeF32(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: []VectorType) void {
+            fillVectorStandardNormalNativeF32From(source, VectorType, dest);
+        }
+    };
+}
+
 pub fn VectorStandardNormal(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -2641,6 +2719,29 @@ pub fn fillStandardExponentialNativeF32(rng: Rng, dest: []f32) void {
 
 pub fn fillStandardExponentialNativeF32From(source: anytype, dest: []f32) void {
     for (dest) |*item| item.* = standardExponentialNativeF32From(source);
+}
+
+pub fn vectorStandardExponentialNativeF32(rng: Rng, comptime VectorType: type) VectorType {
+    return vectorStandardExponentialNativeF32From(rng, VectorType);
+}
+
+pub fn vectorStandardExponentialNativeF32From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorStandardExponentialNativeF32 expects an f32 vector");
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = standardExponentialNativeF32From(source);
+    return out;
+}
+
+pub fn fillVectorStandardExponentialNativeF32(rng: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorStandardExponentialNativeF32From(rng, VectorType, dest);
+}
+
+pub fn fillVectorStandardExponentialNativeF32From(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorStandardExponentialNativeF32 expects an f32 vector");
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    fillStandardExponentialNativeF32From(source, scalars);
 }
 
 pub fn vectorStandardExponential(rng: Rng, comptime VectorType: type) VectorType {
@@ -2985,6 +3086,61 @@ pub const StandardExponentialNativeF32 = struct {
         fillStandardExponentialNativeF32From(source, dest);
     }
 };
+
+pub fn VectorStandardExponentialNativeF32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorStandardExponentialNativeF32 expects an f32 vector");
+
+    return struct {
+        pub fn rateValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn inverseRateValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn expectedValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn varianceValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn medianValue(_: @This()) f32 {
+            return @log(@as(f32, 2));
+        }
+
+        pub fn modeValue(_: @This()) f32 {
+            return 0;
+        }
+
+        pub fn minValue(_: @This()) f32 {
+            return 0;
+        }
+
+        pub fn maxValue(_: @This()) ?f32 {
+            return null;
+        }
+
+        pub fn sample(_: @This(), rng: Rng) VectorType {
+            return vectorStandardExponentialNativeF32(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) VectorType {
+            return vectorStandardExponentialNativeF32From(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: []VectorType) void {
+            fillVectorStandardExponentialNativeF32(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: []VectorType) void {
+            fillVectorStandardExponentialNativeF32From(source, VectorType, dest);
+        }
+    };
+}
 
 pub fn VectorStandardExponential(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
@@ -21871,6 +22027,40 @@ test "native f32 standard samplers have stable snapshots" {
     try std.testing.expect(exp_sampler.maxValue() == null);
     try std.testing.expectEqual(@as(u32, 0x3f27d993), @as(u32, @bitCast(exp_sampler.sampleFrom(&exp_sampler_engine))));
     try std.testing.expectEqual(@as(u64, 0x1aff4a4ce819a5dc), exp_sampler_engine.next());
+
+    var normal_vec_engine = alea.ScalarPrng.init(0x3230);
+    const normal_vec = vectorStandardNormalNativeF32From(&normal_vec_engine, @Vector(8, f32));
+    const normal_vec_expected = [_]u32{ 0xbdb56d39, 0xbedf57d2, 0xbf9c9589, 0x3f2227c8, 0xbdce8ffb, 0xbfb45065, 0x3f9508fd, 0xbf3df25e };
+    inline for (normal_vec_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(normal_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x43cd8925e9fb3fb4), normal_vec_engine.next());
+
+    var normal_vec_sampler_engine = alea.ScalarPrng.init(0x3230);
+    const normal_vec_sampler = VectorStandardNormalNativeF32(@Vector(8, f32)){};
+    var normal_vec_buf: [2]@Vector(8, f32) = undefined;
+    normal_vec_sampler.fillFrom(&normal_vec_sampler_engine, &normal_vec_buf);
+    inline for (normal_vec_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(normal_vec_buf[0][lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xa02a572f6ebd4416), normal_vec_sampler_engine.next());
+
+    var exp_vec_engine = alea.ScalarPrng.init(0x3231);
+    const exp_vec = vectorStandardExponentialNativeF32From(&exp_vec_engine, @Vector(8, f32));
+    const exp_vec_expected = [_]u32{ 0x408d2c77, 0x3e1fa361, 0x3f823138, 0x3f1567e0, 0x3ebfd2ae, 0x3f2a540a, 0x3f9aefbe, 0x3e1346a5 };
+    inline for (exp_vec_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x9a2a28164c6d8931), exp_vec_engine.next());
+
+    var exp_vec_sampler_engine = alea.ScalarPrng.init(0x3231);
+    const exp_vec_sampler = VectorStandardExponentialNativeF32(@Vector(8, f32)){};
+    var exp_vec_buf: [2]@Vector(8, f32) = undefined;
+    exp_vec_sampler.fillFrom(&exp_vec_sampler_engine, &exp_vec_buf);
+    inline for (exp_vec_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_vec_buf[0][lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x1571c35ce5d0ed07), exp_vec_sampler_engine.next());
 }
 
 test "native f32 log-normal has stable snapshots" {

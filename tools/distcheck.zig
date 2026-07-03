@@ -475,6 +475,16 @@ fn checkVectorDistributions() !void {
     var log_normal_exp2: [128]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorLogNormalExp2F32From(&vector_log_normal_exp2_engine, @Vector(8, f32), &log_normal_exp2, 0, 0.25);
     try expectVectorMean(@Vector(8, f32), "vector log-normal exp2 f32x8", &log_normal_exp2, 1.02, 1.04);
+
+    var vector_native_normal_engine = alea.ScalarPrng.init(0x710d);
+    var native_normal: [128]@Vector(8, f32) = undefined;
+    alea.distributions.fillVectorStandardNormalNativeF32From(&vector_native_normal_engine, @Vector(8, f32), &native_normal);
+    try expectVectorMean(@Vector(8, f32), "vector standard-normal native f32x8", &native_normal, -0.08, 0.08);
+
+    var vector_native_exponential_engine = alea.ScalarPrng.init(0x710e);
+    var native_exponential: [128]@Vector(8, f32) = undefined;
+    alea.distributions.fillVectorStandardExponentialNativeF32From(&vector_native_exponential_engine, @Vector(8, f32), &native_exponential);
+    try expectVectorMean(@Vector(8, f32), "vector standard-exponential native f32x8", &native_exponential, 0.94, 1.06);
 }
 
 fn expectVectorMean(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType, min: f64, max: f64) !void {
