@@ -33,7 +33,7 @@ Zig-native way.
 | LogNormal | Covered: `logNormal`, `LogNormal(T)`, including linear-space mean/coefficient-of-variation construction and accessors, median/mode diagnostics, z-score conversion, log-space, moment, and support accessors, and f32/f64 benchmark rows |
 | Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)`, including reusable-sampler and standard rate/moment/median/mode/support accessors plus infinite-rate point masses |
 | Gamma | Covered: `gamma`, `Gamma(T)`, including shape/scale/moment/mode/support accessors and collapsed `scale == 0` point masses |
-| ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment/mode/support accessors |
+| ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment/mode/support accessors and collapsed `dof == 0` point masses |
 | FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2, finite-moment, and support accessors |
 | StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment and support accessors |
 | Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment/median/mode/support accessors and collapsed `scale == 0` point masses |
@@ -70,7 +70,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment/median/mode/support accessors and collapsed `scale == 0` point masses |
 | HalfNormal | Covered: `halfNormal`, `HalfNormal(T)`, including scale/moment/support accessors and collapsed `scale == 0` point masses |
 | Maxwell | Covered: `maxwell`, `Maxwell(T)`, including scale/moment/mode/support accessors and collapsed `scale == 0` point masses |
-| Chi | Covered: `chi`, `Chi(T)`, including dof/moment/mode/support accessors |
+| Chi | Covered: `chi`, `Chi(T)`, including dof/moment/mode/support accessors and collapsed `dof == 0` point masses |
 | Erlang | Covered: `erlang`, `Erlang(T)`, including shape/scale/moment/mode/support accessors and collapsed `scale == 0` point masses |
 | LogLogistic | Covered: `logLogistic`, `LogLogistic(T)`, including scale/shape, finite-moment, median/mode, and support accessors plus collapsed `scale == 0` point masses |
 | Kumaraswamy | Covered: `kumaraswamy`, `Kumaraswamy(T)`, including alpha/beta/moment/median/mode/support accessors |
