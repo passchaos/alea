@@ -49,6 +49,10 @@ repair rows before a real `vectorbench` follow-up.
   "alea4x64-lane"` run with lane-local repair and matching checksums shows
   vector repair about 318M normal and 320M exponential lanes/s versus
   lane-scalar Alea4x64 rows around 450M and 493M.
+- The same lane-local Alea4x64 repair shape also fails for f32x8. In the
+  focused 4Mi-lane probe, f32x8 repair reaches about 368M normal and 265M
+  exponential lanes/s versus lane-scalar Alea4x64 rows around 506M and 482M,
+  with matching checksums.
 - f32x8 repair probes are useful evidence in isolated `ziggurat-probe` rows,
   but the advantage does not survive the real vector-slice fill harness:
   standard repair rows can be close to current direct rows in a given run, but
