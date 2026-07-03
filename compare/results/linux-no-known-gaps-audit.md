@@ -32,6 +32,8 @@ Local Alea evidence:
 - `compare/results/performance-triage.md`
 - `compare/results/simd-distribution-kernel-notes.md`
 - `compare/results/lognormal-transform-notes.md`
+- `compare/results/s4-m4-remaining-gaps.md`
+- `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
 
@@ -62,7 +64,7 @@ Out of scope for this Linux-first audit:
 | Gamma, ChiSquared, Beta | `gamma`, `Gamma`, `chiSquared`, `ChiSquared`, `beta`, `Beta` | unit tests, `distcheck`, benchmark rows |
 | FisherF, StudentT | `fisherF`, `FisherF`, `studentT`, `StudentT` | unit tests, `distcheck`, benchmark rows |
 | Poisson, Binomial | `poisson`, `Poisson`, `binomial`, `Binomial` | unit tests, `distcheck`, benchmark rows |
-| Geometric, Hypergeometric | `geometric`, `Geometric`, `hypergeometric`, `Hypergeometric` | unit tests, `distcheck` |
+| Geometric, Hypergeometric | `geometric`, `Geometric`, `hypergeometric`, `Hypergeometric` | unit tests, `distcheck`, benchmark rows including HIN, balanced large H2PE, and skewed large H2PE parameters |
 | Triangular, Cauchy, Pareto, Weibull | `triangular`, `Triangular`, `cauchy`, `Cauchy`, `pareto`, `Pareto`, `weibull`, `Weibull` | unit tests, `distcheck`, benchmark rows |
 | Gumbel, Frechet, SkewNormal, PERT | `gumbel`, `Gumbel`, `frechet`, `Frechet`, `skewNormal`, `SkewNormal`, `pert`, `Pert` | unit tests, `distcheck`, benchmark rows |
 | InverseGaussian, NormalInverseGaussian | `inverseGaussian`, `InverseGaussian`, `normalInverseGaussian`, `NormalInverseGaussian` | unit tests, `distcheck`, benchmark rows |
@@ -70,21 +72,26 @@ Out of scope for this Linux-first audit:
 | UnitCircle, UnitDisc, UnitSphere, UnitBall | `unitCircle`, `UnitCircle`, `unitDisc`, `UnitDisc`, `unitSphere`, `UnitSphere`, `unitBall`, `UnitBall` | unit tests, `distcheck`, benchmark rows |
 | Dirichlet | `Dirichlet(T)` | unit tests, `distcheck`, benchmark row |
 | WeightedAliasIndex | `AliasTable(Weight)` | unit tests, benchmark rows for weighted index paths |
-| WeightedTreeIndex | `WeightedTree(Weight)` | unit tests, Zig/Rust update+sample benchmark rows |
+| WeightedTreeIndex | `WeightedTree(Weight)`, `WeightedIntTree(Weight)` | unit tests, Zig/Rust update+sample benchmark rows for integer and f64 weights |
 
 ## Current Stage 4 Performance Watch Items
 
-These are not functionality gaps, but they remain active S4-M4 work:
+These are not functionality gaps, but they remain active S4-M4 work. The
+current blocker audit is `s4-m4-remaining-gaps.md`. In short:
 
 - exact scalar/single-sample `LogNormal` transform/codegen still trails the
   latest local Rust `rand_distr` evidence for comparable exact workloads;
-  current evidence and rejected exact transform shapes are recorded in
-  `lognormal-transform-notes.md` and `performance-triage.md`.
+  exact f32 direct-source bulk fills and vector-slice rows have improved, but
+  exact defaults still remain behind the local Rust f32/f64 single-sample rows.
+  Current evidence and rejected exact transform shapes are recorded in
+  `lognormal-transform-notes.md`, `performance-triage.md`, and
+  `s4-m4-remaining-gaps.md`.
 - vector normal/exponential APIs have broad Zig-native coverage and strong
   scalar-lane-fill rows, but no genuinely dense SIMD distribution kernel has
   beaten scalar ziggurat lane-fill in the real `vectorbench` harness; the
-  repair, block-fallback, all-accepted, flat-slice, and lane-local attempts are
-  recorded in `simd-distribution-kernel-notes.md`.
+  repair, block-fallback, all-accepted, flat-slice, lane-local, and cached-Rng
+  attempts are recorded in `simd-distribution-kernel-notes.md`,
+  `performance-triage.md`, and `s4-m4-remaining-gaps.md`.
 
 ## Alea Extras Beyond The Local Rust Surface
 
@@ -101,7 +108,7 @@ These are retained as product advantages rather than parity requirements:
 
 ## Validation Commands
 
-The following validation gates were used during Stage 3 work:
+The following validation gates are used for the current Linux-first stage:
 
 ```sh
 zig build test
@@ -109,6 +116,8 @@ zig build -Doptimize=ReleaseFast distcheck
 zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
 zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench
+zig build crosscheck
+zig build validate-all
 RUSTFLAGS='-C target-cpu=native' cargo run --release --manifest-path compare/rand_bench/Cargo.toml
 ```
 
