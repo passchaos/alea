@@ -270,10 +270,16 @@ pub fn main(init: std.process.Init) !void {
     try benchFillLogNormal(io, stdout, "alea fillLogNormal", bytes / 128);
     try benchFillLogNormalFastDirect(io, stdout, "alea fillLogNormal fast direct", bytes / 128);
     try benchFillLogNormalScalar(io, stdout, "alea fillLogNormal scalar direct", bytes / 128);
+    try benchFillLogNormalParam(f64, alea.FastPrng, true, io, stdout, "alea fillLogNormal stddev=1", bytes / 128, 0x1062, 1);
+    try benchFillLogNormalParam(f64, alea.FastPrng, false, io, stdout, "alea fillLogNormal stddev=1 fast direct", bytes / 128, 0x1062, 1);
+    try benchFillLogNormalParam(f64, alea.ScalarPrng, false, io, stdout, "alea fillLogNormal stddev=1 scalar direct", bytes / 128, 0x1062, 1);
     try benchFillLogNormalSamplerScalar(io, stdout, "alea LogNormal.fill scalar direct", bytes / 128);
     try benchFillLogNormalF32(io, stdout, "alea fillLogNormal f32", bytes / 128);
     try benchFillLogNormalF32FastDirect(io, stdout, "alea fillLogNormal f32 fast direct", bytes / 128);
     try benchFillLogNormalF32Scalar(io, stdout, "alea fillLogNormal f32 scalar direct", bytes / 128);
+    try benchFillLogNormalParam(f32, alea.FastPrng, true, io, stdout, "alea fillLogNormal f32 stddev=1", bytes / 128, 0x1063, 1);
+    try benchFillLogNormalParam(f32, alea.FastPrng, false, io, stdout, "alea fillLogNormal f32 stddev=1 fast direct", bytes / 128, 0x1063, 1);
+    try benchFillLogNormalParam(f32, alea.ScalarPrng, false, io, stdout, "alea fillLogNormal f32 stddev=1 scalar direct", bytes / 128, 0x1063, 1);
     try benchFillLogNormalApproxF32(io, stdout, "alea fillLogNormalApproxF32", bytes / 128);
     try benchFillLogNormalApproxF32FastDirect(io, stdout, "alea fillLogNormalApproxF32 fast direct", bytes / 128);
     try benchFillLogNormalApproxF32Scalar(io, stdout, "alea fillLogNormalApproxF32 scalar direct", bytes / 128);
@@ -6756,6 +6762,51 @@ fn benchFillLogNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             alea.distributions.fillLogNormalFrom(&engine, f64, out[0..n], 0, 0.25);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillLogNormalParam(
+    comptime T: type,
+    comptime Source: type,
+    comptime use_facade: bool,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    count: usize,
+    seed: u64,
+    stddev: T,
+) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024]T = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            if (use_facade) {
+                alea.distributions.fillLogNormal(rng, T, out[0..n], 0, stddev);
+            } else {
+                alea.distributions.fillLogNormalFrom(&engine, T, out[0..n], 0, stddev);
+            }
             for (out[0..n]) |value| checksum += value;
             remaining -= n;
         }

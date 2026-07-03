@@ -111,6 +111,11 @@ Fresh local evidence:
   With native CPU flags and 256MiB-equivalent counts, local Rust is about
   80.0M f64 and 79.4M f32 samples/s, while Alea ScalarPrng direct/raw rows are
   about 64.9M/65.7M f64 and 63.6M/60.1M f32.
+- Matching `stddev = 1.0` bulk fill rows are much closer: exact f64
+  facade/FastPrng-direct/ScalarPrng-direct rows are about 72.2M/74.4M/76.6M,
+  and exact f32 rows are about 76.7M/77.1M/80.2M. This shows staged bulk fills
+  mitigate much of the wide-spread gap, while single-sample exact LogNormal
+  remains transform/codegen-bound versus Rust.
 - Fresh 1GiB filtered parity rows with native CPU flags: local Rust
   `rand_distr log-normal` is about 146.2M f64 and 155.3M f32 samples/s.
   Matching Alea scalar rows are about 117.7M facade, 118.5M raw FastPrng,
