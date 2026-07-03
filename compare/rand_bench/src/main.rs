@@ -88,6 +88,8 @@ fn main() {
     bench_distr_weibull("rand_distr weibull", bytes / 128);
     bench_distr_log_normal("rand_distr log-normal", bytes / 128);
     bench_distr_log_normal_f32("rand_distr log-normal f32", bytes / 128);
+    bench_distr_log_normal_stddev1("rand_distr log-normal stddev=1", bytes / 128);
+    bench_distr_log_normal_f32_stddev1("rand_distr log-normal f32 stddev=1", bytes / 128);
     bench_distr_gumbel("rand_distr gumbel", bytes / 128);
     bench_distr_frechet("rand_distr frechet", bytes / 128);
     bench_distr_skew_normal("rand_distr skew-normal", bytes / 128);
@@ -643,6 +645,22 @@ fn bench_distr_log_normal_f32(name: &str, count: usize) {
         return;
     }
     let dist = rand_distr::LogNormal::<f32>::new(0.0, 0.25).unwrap();
+    bench_distr_f32(name, count, 0x1060, dist);
+}
+
+fn bench_distr_log_normal_stddev1(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
+    let dist = rand_distr::LogNormal::new(0.0, 1.0).unwrap();
+    bench_distr_f64(name, count, 0x1060, dist);
+}
+
+fn bench_distr_log_normal_f32_stddev1(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
+    let dist = rand_distr::LogNormal::<f32>::new(0.0, 1.0).unwrap();
     bench_distr_f32(name, count, 0x1060, dist);
 }
 

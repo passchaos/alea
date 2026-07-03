@@ -106,6 +106,11 @@ The exact `LogNormal(f32)` and `fillLogNormal` paths remain unchanged and keep
 
 Fresh local evidence:
 
+- Fresh filtered `stddev = 1.0` single-sample parity rows show the exact
+  transform/codegen gap persists beyond the narrow `stddev = 0.25` workload.
+  With native CPU flags and 256MiB-equivalent counts, local Rust is about
+  80.0M f64 and 79.4M f32 samples/s, while Alea ScalarPrng direct/raw rows are
+  about 64.9M/65.7M f64 and 63.6M/60.1M f32.
 - Fresh 1GiB filtered parity rows with native CPU flags: local Rust
   `rand_distr log-normal` is about 146.2M f64 and 155.3M f32 samples/s.
   Matching Alea scalar rows are about 117.7M facade, 118.5M raw FastPrng,
