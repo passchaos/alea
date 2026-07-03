@@ -4492,8 +4492,55 @@ pub fn BufferedLogNormal(comptime T: type, comptime buffer_len: usize) type {
             return self.log_mean;
         }
 
+        pub fn logMean(self: Self) T {
+            return self.logMeanValue();
+        }
+
         pub fn logStddevValue(self: Self) T {
             return self.log_stddev;
+        }
+
+        pub fn logStddev(self: Self) T {
+            return self.logStddevValue();
+        }
+
+        pub fn linearMeanValue(self: Self) T {
+            const sigma = self.logStddev();
+            return @exp(self.logMean() + 0.5 * sigma * sigma);
+        }
+
+        pub fn medianValue(self: Self) T {
+            return @exp(self.logMean());
+        }
+
+        pub fn modeValue(self: Self) T {
+            const sigma = self.logStddev();
+            return @exp(self.logMean() - sigma * sigma);
+        }
+
+        pub fn expectedValue(self: Self) T {
+            return self.linearMeanValue();
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const sigma = self.logStddev();
+            const mean = self.linearMeanValue();
+            return (@exp(sigma * sigma) - 1) * mean * mean;
+        }
+
+        pub fn minValue(self: Self) T {
+            if (self.logStddev() == 0) return self.linearMeanValue();
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            if (self.logStddev() == 0) return self.linearMeanValue();
+            return null;
+        }
+
+        pub fn coefficientOfVariationValue(self: Self) T {
+            const sigma = self.logStddev();
+            return @sqrt(@exp(sigma * sigma) - 1);
         }
 
         pub fn bufferedValueCount(self: Self) usize {
@@ -23353,6 +23400,16 @@ test "buffered log-normal sampler has explicit refill stream contract" {
     try std.testing.expectEqual(@as(usize, 4), @TypeOf(sampler).capacity);
     try std.testing.expectEqual(@as(f64, 0), sampler.logMeanValue());
     try std.testing.expectEqual(@as(f64, 0.25), sampler.logStddevValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.logMean());
+    try std.testing.expectEqual(@as(f64, 0.25), sampler.logStddev());
+    try std.testing.expectEqual(@as(f64, @exp(@as(f64, 0.5) * 0.25 * 0.25)), sampler.linearMeanValue());
+    try std.testing.expectEqual(@as(f64, 1), sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, @exp(-0.25 * 0.25)), sampler.modeValue());
+    try std.testing.expectEqual(sampler.linearMeanValue(), sampler.expectedValue());
+    try std.testing.expectEqual((@exp(0.25 * 0.25) - 1) * sampler.linearMeanValue() * sampler.linearMeanValue(), sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.minValue());
+    try std.testing.expectEqual(@as(?f64, null), sampler.maxValue());
+    try std.testing.expectEqual(@sqrt(@exp(0.25 * 0.25) - 1), sampler.coefficientOfVariationValue());
     try std.testing.expectEqual(@as(usize, 0), sampler.bufferedValueCount());
 
     const first = sampler.sampleFrom(&sample_engine);
@@ -23402,6 +23459,8 @@ test "buffered log-normal sampler has explicit refill stream contract" {
     var mean_cv = try BufferedLogNormal(f64, 4).initMeanCv(1, 0);
     try std.testing.expectEqual(@as(f64, 0), mean_cv.logMeanValue());
     try std.testing.expectEqual(@as(f64, 0), mean_cv.logStddevValue());
+    try std.testing.expectEqual(@as(f64, 1), mean_cv.minValue());
+    try std.testing.expectEqual(@as(?f64, 1), mean_cv.maxValue());
 }
 
 test "poisson large lambda has plausible moments" {

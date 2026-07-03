@@ -935,7 +935,17 @@ Reusable samplers:
 - `BufferedLogNormal(T, buffer_len).init`
 - `BufferedLogNormal(T, buffer_len).initMeanCv`
 - `BufferedLogNormal(T, buffer_len).logMeanValue`
+- `BufferedLogNormal(T, buffer_len).logMean`
 - `BufferedLogNormal(T, buffer_len).logStddevValue`
+- `BufferedLogNormal(T, buffer_len).logStddev`
+- `BufferedLogNormal(T, buffer_len).linearMeanValue`
+- `BufferedLogNormal(T, buffer_len).medianValue`
+- `BufferedLogNormal(T, buffer_len).modeValue`
+- `BufferedLogNormal(T, buffer_len).expectedValue`
+- `BufferedLogNormal(T, buffer_len).varianceValue`
+- `BufferedLogNormal(T, buffer_len).minValue`
+- `BufferedLogNormal(T, buffer_len).maxValue`
+- `BufferedLogNormal(T, buffer_len).coefficientOfVariationValue`
 - `BufferedLogNormal(T, buffer_len).bufferedValueCount`
 - `BufferedLogNormal(T, buffer_len).reset`
 - `BufferedLogNormal(T, buffer_len).sample`
