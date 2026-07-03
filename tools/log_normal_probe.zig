@@ -1,8 +1,16 @@
 const std = @import("std");
 const alea = @import("alea");
+const builtin = @import("builtin");
 
 extern "c" fn exp(f64) f64;
 extern "c" fn expf(f32) f32;
+extern "c" fn _ZGVbN2v_exp(@Vector(2, f64)) @Vector(2, f64);
+extern "c" fn _ZGVcN4v_exp(@Vector(4, f64)) @Vector(4, f64);
+extern "c" fn _ZGVcN8v_expf(@Vector(8, f32)) @Vector(8, f32);
+
+const has_libmvec = builtin.target.cpu.arch == .x86_64 and
+    builtin.target.os.tag == .linux and
+    builtin.target.abi.isGnu();
 
 const trials = 3;
 const default_count: usize = 8 * 1024 * 1024;
@@ -86,6 +94,10 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast staged prefetch8 exp", 0x1062, sample_count, stagedPrefetch8Exp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged prefetch16 exp", 0x1062, sample_count, stagedPrefetch16Exp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged libc exp", 0x1062, sample_count, stagedLibcExp);
+    if (comptime has_libmvec) {
+        try benchFill(alea.FastPrng, io, stdout, "fast staged libmvec exp f64x2", 0x1062, sample_count, stagedLibmvecExp2);
+        try benchFill(alea.FastPrng, io, stdout, "fast staged libmvec exp f64x4", 0x1062, sample_count, stagedLibmvecExp4);
+    }
     try benchFill(alea.FastPrng, io, stdout, "fast staged unroll4 exp", 0x1062, sample_count, stagedUnroll4Exp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged unroll8 exp", 0x1062, sample_count, stagedUnroll8Exp);
     try benchFill(alea.FastPrng, io, stdout, "fast staged optimized exp", 0x1062, sample_count, stagedOptimizedExp);
@@ -115,6 +127,10 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged prefetch8 exp", 0x1062, sample_count, stagedPrefetch8Exp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged prefetch16 exp", 0x1062, sample_count, stagedPrefetch16Exp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged libc exp", 0x1062, sample_count, stagedLibcExp);
+    if (comptime has_libmvec) {
+        try benchFill(alea.ScalarPrng, io, stdout, "scalar staged libmvec exp f64x2", 0x1062, sample_count, stagedLibmvecExp2);
+        try benchFill(alea.ScalarPrng, io, stdout, "scalar staged libmvec exp f64x4", 0x1062, sample_count, stagedLibmvecExp4);
+    }
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged unroll4 exp", 0x1062, sample_count, stagedUnroll4Exp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged unroll8 exp", 0x1062, sample_count, stagedUnroll8Exp);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar staged optimized exp", 0x1062, sample_count, stagedOptimizedExp);
@@ -147,6 +163,9 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged prefetch16 exp", 0x1063, sample_count, stagedPrefetch16ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged prefetch32 exp", 0x1063, sample_count, stagedPrefetch32ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged libc expf", 0x1063, sample_count, stagedLibcExpF32);
+    if (comptime has_libmvec) {
+        try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged libmvec expf f32x8", 0x1063, sample_count, stagedLibmvecExp8F32);
+    }
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged unroll4 exp", 0x1063, sample_count, stagedUnroll4ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged unroll8 exp", 0x1063, sample_count, stagedUnroll8ExpF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 staged optimized exp", 0x1063, sample_count, stagedOptimizedExpF32);
@@ -182,6 +201,9 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged prefetch16 exp", 0x1063, sample_count, stagedPrefetch16ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged prefetch32 exp", 0x1063, sample_count, stagedPrefetch32ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged libc expf", 0x1063, sample_count, stagedLibcExpF32);
+    if (comptime has_libmvec) {
+        try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged libmvec expf f32x8", 0x1063, sample_count, stagedLibmvecExp8F32);
+    }
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged unroll4 exp", 0x1063, sample_count, stagedUnroll4ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged unroll8 exp", 0x1063, sample_count, stagedUnroll8ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged optimized exp", 0x1063, sample_count, stagedOptimizedExpF32);
@@ -200,6 +222,14 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector4 exp", 0x1063, sample_count, stagedVector4ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector8 exp", 0x1063, sample_count, stagedVector8ExpF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 staged vector16 exp", 0x1063, sample_count, stagedVector16ExpF32);
+    if (comptime has_libmvec) {
+        try compareLibmvecErrorF64(io, stdout, "f64 libmvec exp diff f64x2 stddev=0.25", 0x106c, sample_count, 0.25, expLibmvec2);
+        try compareLibmvecErrorF64(io, stdout, "f64 libmvec exp diff f64x4 stddev=0.25", 0x106c, sample_count, 0.25, expLibmvec4);
+        try compareLibmvecErrorF64(io, stdout, "f64 libmvec exp diff f64x2 stddev=1.0", 0x106c, sample_count, 1.0, expLibmvec2);
+        try compareLibmvecErrorF64(io, stdout, "f64 libmvec exp diff f64x4 stddev=1.0", 0x106c, sample_count, 1.0, expLibmvec4);
+        try compareLibmvecErrorF32(io, stdout, "f32 libmvec expf diff f32x8 stddev=0.25", 0x106d, sample_count, 0.25, expLibmvec8F32);
+        try compareLibmvecErrorF32(io, stdout, "f32 libmvec expf diff f32x8 stddev=1.0", 0x106d, sample_count, 1.0, expLibmvec8F32);
+    }
     try compareExp2ErrorF64(io, stdout, "f64 exp2 diff stddev=0.25", 0x1068, sample_count, 0.25);
     try compareExp2ErrorF64(io, stdout, "f64 exp2 diff stddev=1.0", 0x1068, sample_count, 1.0);
     try compareExp2ErrorF64(io, stdout, "f64 exp2 diff stddev=2.0", 0x1068, sample_count, 2.0);
@@ -695,6 +725,16 @@ fn stagedLibcExp(source: anytype, dest: []f64) void {
     expLibc(dest);
 }
 
+fn stagedLibmvecExp2(source: anytype, dest: []f64) void {
+    alea.Rng.fillNormalFrom(source, f64, dest, 0, 0.25);
+    expLibmvec2(dest);
+}
+
+fn stagedLibmvecExp4(source: anytype, dest: []f64) void {
+    alea.Rng.fillNormalFrom(source, f64, dest, 0, 0.25);
+    expLibmvec4(dest);
+}
+
 fn stagedUnroll4Exp(source: anytype, dest: []f64) void {
     alea.Rng.fillNormalFrom(source, f64, dest, 0, 0.25);
     expUnroll4(dest);
@@ -823,6 +863,11 @@ fn stagedPrefetch32ExpF32(source: anytype, dest: []f32) void {
 fn stagedLibcExpF32(source: anytype, dest: []f32) void {
     alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
     expLibcF32(dest);
+}
+
+fn stagedLibmvecExp8F32(source: anytype, dest: []f32) void {
+    alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
+    expLibmvec8F32(dest);
 }
 
 fn stagedUnroll4ExpF32(source: anytype, dest: []f32) void {
@@ -956,6 +1001,28 @@ fn expLibc(dest: []f64) void {
     for (dest) |*item| item.* = exp(item.*);
 }
 
+fn expLibmvec2(dest: []f64) void {
+    const VectorType = @Vector(2, f64);
+    var i: usize = 0;
+    while (i + 2 <= dest.len) : (i += 2) {
+        const vec: VectorType = .{ dest[i], dest[i + 1] };
+        const out = _ZGVbN2v_exp(vec);
+        inline for (0..2) |lane| dest[i + lane] = out[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = exp(dest[i]);
+}
+
+fn expLibmvec4(dest: []f64) void {
+    const VectorType = @Vector(4, f64);
+    var i: usize = 0;
+    while (i + 4 <= dest.len) : (i += 4) {
+        const vec: VectorType = .{ dest[i], dest[i + 1], dest[i + 2], dest[i + 3] };
+        const out = _ZGVcN4v_exp(vec);
+        inline for (0..4) |lane| dest[i + lane] = out[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = exp(dest[i]);
+}
+
 fn expUnroll4(dest: []f64) void {
     var i: usize = 0;
     while (i + 4 <= dest.len) : (i += 4) {
@@ -1056,6 +1123,26 @@ fn expLibcF32(dest: []f32) void {
     for (dest) |*item| item.* = expf(item.*);
 }
 
+fn expLibmvec8F32(dest: []f32) void {
+    const VectorType = @Vector(8, f32);
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec: VectorType = .{
+            dest[i],
+            dest[i + 1],
+            dest[i + 2],
+            dest[i + 3],
+            dest[i + 4],
+            dest[i + 5],
+            dest[i + 6],
+            dest[i + 7],
+        };
+        const out = _ZGVcN8v_expf(vec);
+        inline for (0..8) |lane| dest[i + lane] = out[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = expf(dest[i]);
+}
+
 fn expUnroll4F32(dest: []f32) void {
     var i: usize = 0;
     while (i + 4 <= dest.len) : (i += 4) {
@@ -1150,6 +1237,108 @@ fn compareExpm1ErrorF32(
             max_rel = @max(max_rel, rel_diff);
             max_ulp = @max(max_ulp, ulp_diff);
         }
+    }
+    const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+    const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+        (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+
+    try stdout.print(
+        "{s}: {d:.1} M samples/s changed={} max_abs={d:.9} max_rel={d:.9} max_ulp={}\n",
+        .{ name, million_per_s, changed, max_abs, max_rel, max_ulp },
+    );
+}
+
+fn compareLibmvecErrorF64(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    stddev: f64,
+    comptime expFn: fn ([]f64) void,
+) !void {
+    if (!shouldRun(name)) return;
+    var engine = alea.ScalarPrng.init(seed);
+    var max_abs: f64 = 0;
+    var max_rel: f64 = 0;
+    var max_ulp: u64 = 0;
+    var changed: usize = 0;
+    var i: usize = 0;
+    var values: [16]f64 = undefined;
+    var direct: [16]f64 = undefined;
+
+    const start = std.Io.Clock.awake.now(io).nanoseconds;
+    while (i < sample_count) {
+        const n = @min(values.len, sample_count - i);
+        for (values[0..n], direct[0..n]) |*value, *expected| {
+            const x = stddev * alea.Rng.standardNormalFastFrom(&engine, f64);
+            value.* = x;
+            expected.* = @exp(x);
+        }
+        expFn(values[0..n]);
+        for (values[0..n], direct[0..n]) |candidate, expected| {
+            if (candidate != expected) {
+                changed += 1;
+                const abs_diff = @abs(candidate - expected);
+                const rel_diff = abs_diff / expected;
+                const ulp_diff = floatDistanceF64(expected, candidate);
+                max_abs = @max(max_abs, abs_diff);
+                max_rel = @max(max_rel, rel_diff);
+                max_ulp = @max(max_ulp, ulp_diff);
+            }
+        }
+        i += n;
+    }
+    const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+    const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+        (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+
+    try stdout.print(
+        "{s}: {d:.1} M samples/s changed={} max_abs={d:.9} max_rel={d:.9} max_ulp={}\n",
+        .{ name, million_per_s, changed, max_abs, max_rel, max_ulp },
+    );
+}
+
+fn compareLibmvecErrorF32(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    stddev: f32,
+    comptime expFn: fn ([]f32) void,
+) !void {
+    if (!shouldRun(name)) return;
+    var engine = alea.ScalarPrng.init(seed);
+    var max_abs: f32 = 0;
+    var max_rel: f32 = 0;
+    var max_ulp: u32 = 0;
+    var changed: usize = 0;
+    var i: usize = 0;
+    var values: [32]f32 = undefined;
+    var direct: [32]f32 = undefined;
+
+    const start = std.Io.Clock.awake.now(io).nanoseconds;
+    while (i < sample_count) {
+        const n = @min(values.len, sample_count - i);
+        for (values[0..n], direct[0..n]) |*value, *expected| {
+            const x = stddev * alea.Rng.standardNormalFastFrom(&engine, f32);
+            value.* = x;
+            expected.* = @exp(x);
+        }
+        expFn(values[0..n]);
+        for (values[0..n], direct[0..n]) |candidate, expected| {
+            if (candidate != expected) {
+                changed += 1;
+                const abs_diff = @abs(candidate - expected);
+                const rel_diff = abs_diff / expected;
+                const ulp_diff = floatDistanceF32(expected, candidate);
+                max_abs = @max(max_abs, abs_diff);
+                max_rel = @max(max_rel, rel_diff);
+                max_ulp = @max(max_ulp, ulp_diff);
+            }
+        }
+        i += n;
     }
     const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
     const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /

@@ -150,6 +150,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .link_libc = true,
     });
+    if (target.result.cpu.arch == .x86_64 and target.result.os.tag == .linux and target.result.abi.isGnu()) {
+        log_normal_probe_mod.linkSystemLibrary("mvec", .{});
+    }
     log_normal_probe_mod.addImport("alea", module);
 
     const log_normal_probe = b.addExecutable(.{

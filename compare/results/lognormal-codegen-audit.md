@@ -61,6 +61,18 @@ call/codegen rather than missing reusable-sampler dispatch specialization. That
 matches the existing `lognormal-transform-notes.md` conclusion and the raw
 single-sample rows in `performance-triage.md`.
 
+## Libmvec Follow-up
+
+A later Linux-local probe linked `log-normal-probe` to glibc `libmvec` on
+x86_64-linux-gnu and called the vector math ABI symbols directly
+(`_ZGVbN2v_exp`, `_ZGVcN4v_exp`, `_ZGVcN8v_expf`). This does provide a
+different call pattern from the compiler-rt scalar `exp` / `expf` calls and is
+much faster in staged fills, but it is not exact-default evidence: checked
+outputs differ from direct `@exp` for roughly half of the samples with max 3
+ULP in the `stddev=0.25` and `stddev=1.0` probes. Treat libmvec as a deferred
+platform-specific opt-in candidate rather than a replacement for exact
+`LogNormal`.
+
 ## Current Conclusion
 
 No exact-default expression variant has enough evidence to replace direct

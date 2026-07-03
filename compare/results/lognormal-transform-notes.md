@@ -54,6 +54,11 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   fills should compute checksums.
 - libc `exp` / `expf` can help one engine/type profile in the probe but
   regresses another and requires linking libc, so it is not a generic default.
+- glibc libmvec vector `exp` / `expf` calls are much faster in the staged
+  Linux-local probe, but they change exact `@exp` output mapping by up to 3 ULP
+  in the checked `stddev=0.25` and `stddev=1.0` samples and depend on
+  x86_64-linux-gnu libmvec/IFUNC behavior. Treat them as deferred opt-in
+  evidence, not an exact default replacement.
 - Manual unrolling of the exact `@exp` transform loop is mixed: it can provide
   small isolated wins in one profile while regressing or tying others.
 - Vector-lane exact `@exp` transform loops can look good in the isolated probe
@@ -133,6 +138,18 @@ remain unchanged and keep `@exp` output semantics.
 
 Fresh local evidence:
 
+- A new Linux/glibc libmvec probe directly calls x86_64 vector math ABI
+  symbols (`_ZGVbN2v_exp`, `_ZGVcN4v_exp`, `_ZGVcN8v_expf`) from
+  `log-normal-probe` when building for x86_64-linux-gnu. Focused
+  `log-normal-probe -- 4194304 "libmvec"` rows are far faster than the
+  current exact transform loop: f64x2/f64x4 staged fills around 240M/236M
+  FastPrng and 258M/251M ScalarPrng samples/s, and f32x8 staged fills around
+  294M FastPrng and 325M ScalarPrng, versus same-host `current fill` rows
+  around 125M/132M f64 and 140M/150M f32. The same probe also shows why this
+  cannot close the exact-default blocker: f64/f32 libmvec outputs differ from
+  direct `@exp` for roughly half of samples and reach max 3 ULP in the checked
+  `stddev=0.25` and `stddev=1.0` runs. This is useful opt-in/platform-profile
+  evidence only.
 - Fresh filtered `stddev = 1.0` single-sample parity rows show the exact
   transform/codegen gap persists beyond the narrow `stddev = 0.25` workload.
   With native CPU flags and 256MiB-equivalent counts, local Rust is about
