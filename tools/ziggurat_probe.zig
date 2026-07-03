@@ -4,7 +4,13 @@ const alea = @import("alea");
 const ziggurat = std.Random.ziggurat;
 
 const trials = 3;
-const default_count = 16 * 1024 * 1024;
+const default_count: usize = 16 * 1024 * 1024;
+
+var probe_filter: ?[]const u8 = null;
+
+fn shouldRun(name: []const u8) bool {
+    return probe_filter == null or std.mem.indexOf(u8, name, probe_filter.?) != null;
+}
 
 const norm_ratio = blk: {
     var out: [256]f64 = undefined;
@@ -57,12 +63,16 @@ pub fn main(init: std.process.Init) !void {
     var args = std.process.Args.Iterator.init(init.minimal.args);
     defer args.deinit();
     _ = args.next();
-    const sample_count = if (args.next()) |arg|
-        std.fmt.parseInt(usize, arg, 10) catch default_count
-    else
-        default_count;
+    var sample_count = default_count;
+    if (args.next()) |arg| {
+        sample_count = std.fmt.parseInt(usize, arg, 10) catch blk: {
+            probe_filter = arg;
+            break :blk sample_count;
+        };
+    }
+    if (args.next()) |arg| probe_filter = arg;
 
-    try stdout.print("ziggurat probe count={}\n", .{sample_count});
+    try stdout.print("ziggurat probe count={} filter={s}\n", .{ sample_count, probe_filter orelse "<all>" });
     try benchF64(io, stdout, "generic normalFastFrom", sample_count, 0xd15a, genericNormal);
     try benchF64(io, stdout, "standard normal raw", sample_count, 0xd15a, standardNormal);
     try benchF64(io, stdout, "ratio normal inline candidate", sample_count, 0xd15a, ratioNormal);
@@ -100,6 +110,7 @@ fn benchF64(
     seed: u64,
     comptime sampleFn: anytype,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var trial: usize = 0;
@@ -130,6 +141,7 @@ fn benchF32(
     seed: u64,
     comptime sampleFn: anytype,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     var trial: usize = 0;
@@ -160,6 +172,7 @@ fn benchVectorF64(
     seed: u64,
     comptime sampleFn: anytype,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     const vector_count = sample_count / 4;
@@ -195,6 +208,7 @@ fn benchVectorF32(
     seed: u64,
     comptime sampleFn: anytype,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     const vector_count = sample_count / 8;
@@ -230,6 +244,7 @@ fn benchVectorF32Fast(
     seed: u64,
     comptime sampleFn: anytype,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
     const vector_count = sample_count / 8;

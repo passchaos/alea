@@ -34,6 +34,11 @@ short same-host smoke run produced about 191-193M facade, 249-250M direct, and
 226M repair-candidate lanes/s at this small lane count, confirming the filter
 works but not replacing the full-run baseline above.
 
+The isolated `ziggurat-probe` also accepts `<count> <filter>` for candidate
+discovery. For example, `zig build -Doptimize=ReleaseFast -Dcpu=native
+ziggurat-probe -- 1048576 "f32x8 correct"` runs only the correct f32x8
+repair rows before a real `vectorbench` follow-up.
+
 ## Rejected Or Deferred Shapes
 
 - Vector Box-Muller normal kernels are too slow for default use.
@@ -78,6 +83,12 @@ works but not replacing the full-run baseline above.
   trailing or tying production lane-fill once all facade/direct workflows and
   stream-shape constraints are included. No production change follows from this
   isolated probe.
+- A filtered `ziggurat-probe -- 1048576 "f32x8 correct"` smoke run after the
+  probe filter landed produced ScalarPrng correct repair around 530M normal and
+  605M exponential lanes/s, FastPrng correct repair around 490M/483M, and
+  same-host scalar f32 raw rows around 583M normal and 556M exponential. The
+  filtered rows confirm the filter works and keep the same conclusion: isolated
+  repair rows are candidate-discovery evidence only, not a production switch.
 
 ## Requirements For The Next Candidate
 
