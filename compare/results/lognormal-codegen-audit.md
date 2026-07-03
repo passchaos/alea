@@ -147,6 +147,9 @@ No exact-default expression variant has enough evidence to replace direct
 - explicit standard-normal expression and `mean == 0` branch for scalar samples,
 - staged bulk normal fill plus scale/`@exp`,
 - f32 direct-source bulk improvements that preserve exact checksums,
+- `BufferedLogNormal` for repeated-sample users with an explicit refill contract,
+- `LogNormalDlsymExp` and `LogNormalLibmvec` as libc-linked platform opt-ins
+  with documented ULP/output-mapping and availability tradeoffs,
 - explicit opt-in f32/native/exp2 profiles with documented output-mapping or
   approximation tradeoffs.
 
