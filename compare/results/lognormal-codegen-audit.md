@@ -114,6 +114,11 @@ compiler-rt integer helper symbols such as `__floattidf` and `__divti3`. This
 means the exact `@exp` lowering cannot be redirected to system libm by simply
 removing compiler-rt from this executable.
 
+A minimal `-fno-llvm` ReleaseFast build of an exact LogNormal loop does compile
+and run, but it is far too slow for the S4-M4 gap: about 20M samples/s for a
+1M-sample ScalarPrng f64 loop. The non-LLVM backend is therefore not a
+performance direction for this blocker.
+
 `-fbuiltin` / `-fno-builtin` command-line variants of the libc-linked
 `log-normal-probe` also do not change the conclusion. Focused `"sample current"`
 rows stayed in the same band: `-fbuiltin` around 115.7M/136.2M f64 and
