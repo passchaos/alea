@@ -2829,7 +2829,7 @@ pub fn Exponential(comptime T: type) type {
 
         pub fn init(rate: T) Error!Self {
             comptime requireFloat(T);
-            if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(T))) return error.InvalidParameter;
             return .{ .inverse_rate = 1 / rate };
         }
 
@@ -2864,15 +2864,15 @@ pub fn Exponential(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) 0 else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return Rng.exponentialFastFrom(rng, T, 1) * self.inverse_rate;
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return 0;
             return Rng.exponentialFastFrom(source, T, 1) * self.inverse_rate;
         }
 
@@ -2881,7 +2881,15 @@ pub fn Exponential(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.inverse_rate == 0;
         }
     };
 }
@@ -2896,7 +2904,7 @@ pub fn VectorExponential(comptime VectorType: type) type {
         inverse_rate: Child,
 
         pub fn init(rate: Child) Error!Self {
-            if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(Child))) return error.InvalidParameter;
             return .{ .inverse_rate = 1 / rate };
         }
 
@@ -2931,15 +2939,15 @@ pub fn VectorExponential(comptime VectorType: type) type {
         }
 
         pub fn maxValue(self: Self) ?Child {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) 0 else null;
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return vectorStandardExponential(rng, VectorType) * @as(VectorType, @splat(self.inverse_rate));
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.isDegenerate()) return @splat(0);
             return vectorStandardExponentialFrom(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
@@ -2948,7 +2956,15 @@ pub fn VectorExponential(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
             fillVectorExponentialFrom(source, VectorType, dest, 1 / self.inverse_rate);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.inverse_rate == 0;
         }
     };
 }
@@ -14338,6 +14354,75 @@ test "invalid normal exponential wrapper helpers do not consume random stream" {
 
     var exponential_buf: [4]f64 = undefined;
     try std.testing.expectError(error.InvalidParameter, fillExponentialCheckedFrom(&engine, f64, &exponential_buf, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate exponential distribution helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1e5);
+    var control = alea.ScalarPrng.init(0x5150_d1e5);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 0), exponentialFrom(&engine, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 0), try exponentialChecked(rng, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillExponentialFrom(&engine, f64, &scalar_buf, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillExponentialChecked(rng, f64, &scalar_buf, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try Exponential(f64).init(std.math.inf(f64));
+    try std.testing.expectEqual(std.math.inf(f64), sampler.rateValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.inverseRateValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.maxValue().?);
+    try std.testing.expectEqual(@as(f64, 0), sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorExponentialFrom(&engine, @Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), try vectorExponentialChecked(rng, @Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorExponentialFrom(&engine, @Vector(4, f64), &vector_buf, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorExponentialChecked(rng, @Vector(4, f64), &vector_buf, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorExponential(@Vector(4, f64)).init(std.math.inf(f64));
+    try std.testing.expectEqual(std.math.inf(f64), vector_sampler.rateValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.inverseRateValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.minValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

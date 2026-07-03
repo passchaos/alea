@@ -549,7 +549,11 @@ pub fn fillVectorExponential(self: Rng, comptime VectorType: type, dest: []Vecto
 pub fn fillVectorExponentialFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    std.debug.assert(rate > 0);
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(info.child)));
+    if (rate == std.math.inf(info.child)) {
+        @memset(dest, @as(VectorType, @splat(0)));
+        return;
+    }
     if (info.child == f32 or info.child == f64) {
         fillVectorExponentialScalarFrom(source, VectorType, dest, rate);
         return;
@@ -565,7 +569,7 @@ pub fn fillVectorExponentialCheckedFrom(source: anytype, comptime VectorType: ty
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     if (dest.len == 0) return;
-    if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(info.child))) return error.InvalidParameter;
     fillVectorExponentialFrom(source, VectorType, dest, rate);
 }
 
@@ -616,7 +620,11 @@ pub fn fillExponential(self: Rng, comptime T: type, dest: []T, rate: T) void {
 
 pub fn fillExponentialFrom(source: anytype, comptime T: type, dest: []T, rate: T) void {
     comptime requireFloat(T);
-    std.debug.assert(rate > 0);
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(T)));
+    if (rate == std.math.inf(T)) {
+        @memset(dest, 0);
+        return;
+    }
     for (dest) |*item| item.* = exponentialFastFrom(source, T, rate);
 }
 
@@ -627,7 +635,7 @@ pub fn fillExponentialChecked(self: Rng, comptime T: type, dest: []T, rate: T) E
 pub fn fillExponentialCheckedFrom(source: anytype, comptime T: type, dest: []T, rate: T) Error!void {
     comptime requireFloat(T);
     if (dest.len == 0) return;
-    if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(T))) return error.InvalidParameter;
     fillExponentialFrom(source, T, dest, rate);
 }
 
@@ -1455,14 +1463,15 @@ pub fn vectorExponentialChecked(self: Rng, comptime VectorType: type, rate: vect
 pub fn vectorExponentialCheckedFrom(source: anytype, comptime VectorType: type, rate: vectorChild(VectorType)) Error!VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(info.child))) return error.InvalidParameter;
     return vectorExponentialFrom(source, VectorType, rate);
 }
 
 pub fn vectorExponentialFrom(source: anytype, comptime VectorType: type, rate: vectorChild(VectorType)) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    std.debug.assert(rate > 0);
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(info.child)));
+    if (rate == std.math.inf(info.child)) return @splat(0);
     if (info.child == f32 or info.child == f64) return vectorExponentialScalarFrom(source, VectorType, rate);
     var out: VectorType = undefined;
     var std_random = randomFrom(source);
@@ -1569,7 +1578,7 @@ pub fn exponentialChecked(self: Rng, comptime T: type, rate: T) Error!T {
 
 pub fn exponentialCheckedFrom(source: anytype, comptime T: type, rate: T) Error!T {
     comptime requireFloat(T);
-    if (!(rate > 0) or !std.math.isFinite(rate)) return error.InvalidParameter;
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(T))) return error.InvalidParameter;
     return exponentialFastFrom(source, T, rate);
 }
 
@@ -1584,7 +1593,8 @@ pub inline fn standardExponentialFastFrom(source: anytype, comptime T: type) T {
 
 pub inline fn exponentialFastFrom(source: anytype, comptime T: type, rate: T) T {
     comptime requireFloat(T);
-    std.debug.assert(rate > 0);
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(T)));
+    if (rate == std.math.inf(T)) return 0;
     return standardExponentialFastFrom(source, T) / rate;
 }
 
@@ -2742,7 +2752,7 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), 0, -1));
     try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), std.math.inf(f64), 1));
     try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), 0));
-    try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), std.math.nan(f64)));
     try std.testing.expectError(error.InvalidParameter, Rng.vectorNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1));
     try std.testing.expectError(error.InvalidParameter, Rng.vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
     try rng.fillRangeChecked(u32, &.{}, 3, 3);
@@ -2756,7 +2766,7 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.InvalidParameter, rng.normalChecked(f64, 0, -1));
     try std.testing.expectError(error.InvalidParameter, Rng.normalCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     try std.testing.expectError(error.InvalidParameter, rng.exponentialChecked(f64, 0));
-    try std.testing.expectError(error.InvalidParameter, Rng.exponentialCheckedFrom(&engine, f64, std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidParameter, Rng.exponentialCheckedFrom(&engine, f64, std.math.nan(f64)));
 }
 
 test "scalar sampling has stable snapshots" {
@@ -3455,6 +3465,71 @@ test "invalid facade scalar helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, rng.exponentialChecked(f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate exponential helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba5);
+    var control = alea.ScalarPrng.init(0x5150_ba5);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(f64, 0), rng.exponential(f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 0), exponentialFastFrom(&engine, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 0), try rng.exponentialChecked(f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(f64, 0), try exponentialCheckedFrom(&engine, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [5]f64 = undefined;
+    rng.fillExponential(f64, &out, std.math.inf(f64));
+    for (out) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillExponentialFrom(&engine, f64, &out, std.math.inf(f64));
+    for (out) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try rng.fillExponentialChecked(f64, &out, std.math.inf(f64));
+    for (out) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillExponentialCheckedFrom(&engine, f64, &out, std.math.inf(f64));
+    for (out) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), rng.vectorExponential(@Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorExponentialFrom(&engine, @Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), try rng.vectorExponentialChecked(@Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), try vectorExponentialCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vec_out: [3]@Vector(8, f32) = undefined;
+    rng.fillVectorExponential(@Vector(8, f32), &vec_out, std.math.inf(f32));
+    for (vec_out) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorExponentialFrom(&engine, @Vector(8, f32), &vec_out, std.math.inf(f32));
+    for (vec_out) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_out, std.math.inf(f32));
+    for (vec_out) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorExponentialCheckedFrom(&engine, @Vector(8, f32), &vec_out, std.math.inf(f32));
+    for (vec_out) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
