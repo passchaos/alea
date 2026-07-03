@@ -7487,8 +7487,8 @@ pub fn logLogisticCheckedFrom(source: anytype, comptime T: type, scale: T, shape
 
 pub fn logLogisticFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
-    if (scale == 0) return 0;
+    std.debug.assert(logLogisticParametersValid(T, scale, shape));
+    if (scale == 0 or shape == std.math.inf(T)) return scale;
 
     const u = Rng.floatOpenFrom(source, T);
     if (shape == 1) return scale * u / (1 - u);
@@ -7501,9 +7501,9 @@ pub fn fillLogLogistic(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T
 
 pub fn fillLogLogisticFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
-    if (scale == 0) {
-        @memset(dest, 0);
+    std.debug.assert(logLogisticParametersValid(T, scale, shape));
+    if (scale == 0 or shape == std.math.inf(T)) {
+        @memset(dest, scale);
         return;
     }
     Rng.fillOpenFrom(source, T, dest);
@@ -7513,6 +7513,12 @@ pub fn fillLogLogisticFrom(source: anytype, comptime T: type, dest: []T, scale: 
     }
 
     logLogisticFromOpenUniforms(T, dest, scale, 1 / shape);
+}
+
+fn logLogisticParametersValid(comptime T: type, scale: T, shape: T) bool {
+    return scale >= 0 and shape > 0 and
+        std.math.isFinite(scale) and
+        (std.math.isFinite(shape) or shape == std.math.inf(T));
 }
 
 pub fn fillLogLogisticChecked(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
@@ -7625,7 +7631,7 @@ pub fn VectorLogLogistic(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
             const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
             if (self.shapeValue() == 1) return logLogisticShapeOneFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
             return logLogisticFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
@@ -7637,7 +7643,7 @@ pub fn VectorLogLogistic(comptime VectorType: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
             for (dest) |*item| item.* = self.sampleFrom(source);
@@ -7648,7 +7654,7 @@ pub fn VectorLogLogistic(comptime VectorType: type) type {
 pub fn LogLogistic(comptime T: type) type {
     return struct {
         const Self = @This();
-        const Method = enum { generic, ratio };
+        const Method = enum { generic, ratio, point_scale };
 
         scale: T,
         inverse_shape: T,
@@ -7656,9 +7662,12 @@ pub fn LogLogistic(comptime T: type) type {
 
         pub fn init(scale: T, shape: T) Error!Self {
             comptime requireFloat(T);
-            if (!(scale >= 0) or !(shape > 0)) return error.InvalidParameter;
-            if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
-            return .{ .scale = scale, .inverse_shape = 1 / shape, .method = if (shape == 1) .ratio else .generic };
+            if (!logLogisticParametersValid(T, scale, shape)) return error.InvalidParameter;
+            return .{
+                .scale = scale,
+                .inverse_shape = if (shape == std.math.inf(T)) 0 else 1 / shape,
+                .method = if (shape == std.math.inf(T)) .point_scale else if (shape == 1) .ratio else .generic,
+            };
         }
 
         pub fn scaleValue(self: Self) T {
@@ -7670,7 +7679,7 @@ pub fn LogLogistic(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) ?T {
-            if (self.isDegenerate()) return 0;
+            if (self.isDegenerate()) return self.degenerateValue();
             const shape = self.shapeValue();
             if (shape <= 1) return null;
             const angle = @as(T, @floatCast(std.math.pi)) / shape;
@@ -7693,18 +7702,18 @@ pub fn LogLogistic(comptime T: type) type {
         }
 
         pub fn modeValue(self: Self) T {
+            if (self.isDegenerate()) return self.degenerateValue();
             const shape = self.shapeValue();
             if (shape <= 1) return 0;
             return self.scale * std.math.pow(T, (shape - 1) / (shape + 1), 1 / shape);
         }
 
         pub fn minValue(self: Self) T {
-            _ = self;
-            return 0;
+            return if (self.isDegenerate()) self.degenerateValue() else 0;
         }
 
         pub fn maxValue(self: Self) ?T {
-            return if (self.isDegenerate()) 0 else null;
+            return if (self.isDegenerate()) self.degenerateValue() else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -7712,7 +7721,7 @@ pub fn LogLogistic(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            if (self.isDegenerate()) return 0;
+            if (self.isDegenerate()) return self.degenerateValue();
             const u = Rng.floatOpenFrom(source, T);
             if (self.method == .ratio) return self.scale * u / (1 - u);
             return self.scale * std.math.pow(T, u / (1 - u), self.inverse_shape);
@@ -7724,7 +7733,7 @@ pub fn LogLogistic(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             if (self.isDegenerate()) {
-                @memset(dest, 0);
+                @memset(dest, self.degenerateValue());
                 return;
             }
             Rng.fillOpenFrom(source, T, dest);
@@ -7737,7 +7746,11 @@ pub fn LogLogistic(comptime T: type) type {
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.scale == 0;
+            return self.scale == 0 or self.method == .point_scale;
+        }
+
+        fn degenerateValue(self: Self) T {
+            return self.scale;
         }
     };
 }
@@ -15187,6 +15200,58 @@ test "degenerate log-logistic helpers do not consume random stream" {
     try std.testing.expectEqual(@as(f64, 0), shape_one.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const infinite_shape_point: f64 = 3.75;
+    try std.testing.expectEqual(infinite_shape_point, logLogistic(rng, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, logLogisticFrom(&engine, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, try logLogisticChecked(rng, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, try logLogisticCheckedFrom(&engine, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillLogLogistic(rng, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillLogLogisticFrom(&engine, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillLogLogisticChecked(rng, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillLogLogisticCheckedFrom(&engine, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_sampler = try LogLogistic(f64).init(infinite_shape_point, std.math.inf(f64));
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.scaleValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_sampler.shapeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_sampler.varianceValue().?);
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.medianValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.modeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.minValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.maxValue().?);
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_sampler.fill(rng, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorLogLogisticFrom(&engine, @Vector(4, f64), 0, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -15216,6 +15281,58 @@ test "degenerate log-logistic helpers do not consume random stream" {
 
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_vec: @Vector(4, f64) = @splat(infinite_shape_point);
+    try std.testing.expectEqual(infinite_shape_vec, vectorLogLogistic(rng, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, vectorLogLogisticFrom(&engine, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, try vectorLogLogisticChecked(rng, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, try vectorLogLogisticCheckedFrom(&engine, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorLogLogistic(rng, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorLogLogisticFrom(&engine, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorLogLogisticChecked(rng, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorLogLogisticCheckedFrom(&engine, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_vector_sampler = try VectorLogLogistic(@Vector(4, f64)).init(infinite_shape_point, std.math.inf(f64));
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.scaleValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_vector_sampler.shapeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_vector_sampler.varianceValue().?);
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.medianValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.modeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.minValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.maxValue().?);
+    try std.testing.expectEqual(infinite_shape_vec, infinite_shape_vector_sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, infinite_shape_vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_vector_sampler.fill(rng, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
