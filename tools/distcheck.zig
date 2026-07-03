@@ -434,6 +434,36 @@ fn checkVectorDistributions() !void {
     for (balls) |ball| {
         if (ball[0] * ball[0] + ball[1] * ball[1] + ball[2] * ball[2] > 1) return error.DistributionCheckFailed;
     }
+
+    var vector_log_normal_engine = alea.ScalarPrng.init(0x7109);
+    var log_normal_f64: [128]@Vector(4, f64) = undefined;
+    alea.distributions.fillVectorLogNormalFrom(&vector_log_normal_engine, @Vector(4, f64), &log_normal_f64, 0, 0.25);
+    try expectVectorMean(@Vector(4, f64), "vector log-normal f64x4", &log_normal_f64, 1.02, 1.04);
+
+    var vector_log_normal_f32_engine = alea.ScalarPrng.init(0x710a);
+    var log_normal_f32: [128]@Vector(8, f32) = undefined;
+    alea.distributions.fillVectorLogNormalFrom(&vector_log_normal_f32_engine, @Vector(8, f32), &log_normal_f32, 0, 0.25);
+    try expectVectorMean(@Vector(8, f32), "vector log-normal f32x8", &log_normal_f32, 1.02, 1.04);
+
+    var vector_log_normal_approx_engine = alea.ScalarPrng.init(0x710b);
+    var log_normal_approx: [128]@Vector(8, f32) = undefined;
+    alea.distributions.fillVectorLogNormalApproxF32From(&vector_log_normal_approx_engine, @Vector(8, f32), &log_normal_approx, 0, 0.25);
+    try expectVectorMean(@Vector(8, f32), "vector log-normal approx f32x8", &log_normal_approx, 1.02, 1.04);
+
+    var vector_log_normal_exp2_engine = alea.ScalarPrng.init(0x710c);
+    var log_normal_exp2: [128]@Vector(8, f32) = undefined;
+    alea.distributions.fillVectorLogNormalExp2F32From(&vector_log_normal_exp2_engine, @Vector(8, f32), &log_normal_exp2, 0, 0.25);
+    try expectVectorMean(@Vector(8, f32), "vector log-normal exp2 f32x8", &log_normal_exp2, 1.02, 1.04);
+}
+
+fn expectVectorMean(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType, min: f64, max: f64) !void {
+    const info = @typeInfo(VectorType).vector;
+    var sum: f64 = 0;
+    for (samples) |sample| {
+        inline for (0..info.len) |lane| sum += sample[lane];
+    }
+    const count = samples.len * info.len;
+    try expectFloatBetween(label, sum / @as(f64, @floatFromInt(count)), min, max);
 }
 
 fn expectFloatBetween(comptime label: []const u8, value: f64, min: f64, max: f64) !void {
