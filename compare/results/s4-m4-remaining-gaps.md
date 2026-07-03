@@ -59,8 +59,9 @@ See `performance-triage.md` for detailed rows. In summary:
 - SIMD distribution kernels: optimistic repair, correct/same-candidate repair,
   all-accepted fast return, block fallback, mantissa-range block fallback, flat
   scalar-slice routing, FastPrng repair, Alea4x64 lane-local repair, Marsaglia
-  polar normal, ratio-of-uniforms normal, inverse-CDF normal, libmvec vector-log
-  exponential, and raw-buffer prefetch without a rejected-lane stream policy.
+  polar normal, approximate-log Marsaglia polar normal, ratio-of-uniforms normal,
+  inverse-CDF normal, libmvec vector-log exponential, and raw-buffer prefetch
+  without a rejected-lane stream policy.
 - FastPrng/facade f32 standard fills: cached-`Rng` and Alea4x64 lane cycling.
 
 ## Requirements For The Next Successful Candidate

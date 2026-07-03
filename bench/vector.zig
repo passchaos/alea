@@ -296,6 +296,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 native candidate", lanes / 4, 0xd188, fillStandardNormalF32Native);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 flat-slice candidate", lanes / 4, 0xd188, fillStandardNormalF32FlatSlice);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 marsaglia-polar candidate", lanes / 4, 0xd188, fillStandardNormalF32MarsagliaPolar);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 approx-log polar candidate", lanes / 4, 0xd188, fillStandardNormalF32ApproxLogPolar);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 ratio-uniforms candidate", lanes / 4, 0xd188, fillStandardNormalF32RatioUniforms);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 ratio-uniforms dense-block candidate", lanes / 4, 0xd188, fillStandardNormalF32RatioUniformsDenseBlock);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdf);
@@ -314,6 +315,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 local scalar candidate", lanes / 8, 0xd184, fillStandardNormalF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 noinline local candidate", lanes / 8, 0xd184, fillStandardNormalF64NoInlineLocal);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 marsaglia-polar candidate", lanes / 8, 0xd184, fillStandardNormalF64MarsagliaPolar);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 approx-log polar candidate", lanes / 8, 0xd184, fillStandardNormalF64ApproxLogPolar);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 ratio-uniforms candidate", lanes / 8, 0xd184, fillStandardNormalF64RatioUniforms);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 ratio-uniforms dense-block candidate", lanes / 8, 0xd184, fillStandardNormalF64RatioUniformsDenseBlock);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 inverse-cdf candidate", lanes / 8, 0xd184, fillStandardNormalF64InverseCdf);
@@ -325,6 +327,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorNormalF32Direct(io, stdout, "alea fillVectorNormal f32x8 direct", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 flat-slice candidate", lanes / 4, 0xd188, fillNormalF32FlatSlice);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 marsaglia-polar candidate", lanes / 4, 0xd188, fillNormalF32MarsagliaPolar);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 approx-log polar candidate", lanes / 4, 0xd188, fillNormalF32ApproxLogPolar);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 ratio-uniforms candidate", lanes / 4, 0xd188, fillNormalF32RatioUniforms);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 ratio-uniforms dense-block candidate", lanes / 4, 0xd188, fillNormalF32RatioUniformsDenseBlock);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf candidate", lanes / 4, 0xd188, fillNormalF32InverseCdf);
@@ -343,6 +346,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 local scalar candidate", lanes / 8, 0xd184, fillNormalF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 noinline local candidate", lanes / 8, 0xd184, fillNormalF64NoInlineLocal);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 marsaglia-polar candidate", lanes / 8, 0xd184, fillNormalF64MarsagliaPolar);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 approx-log polar candidate", lanes / 8, 0xd184, fillNormalF64ApproxLogPolar);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 ratio-uniforms candidate", lanes / 8, 0xd184, fillNormalF64RatioUniforms);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 ratio-uniforms dense-block candidate", lanes / 8, 0xd184, fillNormalF64RatioUniformsDenseBlock);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 inverse-cdf candidate", lanes / 8, 0xd184, fillNormalF64InverseCdf);
@@ -2508,6 +2512,10 @@ fn fillStandardNormalF32MarsagliaPolar(engine: *alea.ScalarPrng, dest: []@Vector
     for (dest) |*item| item.* = vectorMarsagliaPolarNormalF32(engine);
 }
 
+fn fillStandardNormalF32ApproxLogPolar(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorApproxLogPolarNormalF32(engine);
+}
+
 fn fillStandardNormalF32RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRatioUniformsNormalF32(engine);
 }
@@ -2561,6 +2569,12 @@ fn fillNormalF32MarsagliaPolar(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)
     const mean_vec: @Vector(8, f32) = @splat(0);
     const stddev_vec: @Vector(8, f32) = @splat(1);
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorMarsagliaPolarNormalF32(engine);
+}
+
+fn fillNormalF32ApproxLogPolar(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorApproxLogPolarNormalF32(engine);
 }
 
 fn fillNormalF32RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -2778,6 +2792,10 @@ fn fillStandardNormalF64MarsagliaPolar(engine: *alea.ScalarPrng, dest: []@Vector
     for (dest) |*item| item.* = vectorMarsagliaPolarNormalF64(engine);
 }
 
+fn fillStandardNormalF64ApproxLogPolar(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorApproxLogPolarNormalF64(engine);
+}
+
 fn fillStandardNormalF64RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorRatioUniformsNormalF64(engine);
 }
@@ -2817,6 +2835,11 @@ fn fillNormalF64NoInlineLocal(engine: *alea.ScalarPrng, dest: []@Vector(4, f64))
 fn fillNormalF64MarsagliaPolar(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     const inverse_rate: @Vector(4, f64) = @splat(1);
     for (dest) |*item| item.* = vectorMarsagliaPolarNormalF64(engine) * inverse_rate;
+}
+
+fn fillNormalF64ApproxLogPolar(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(1);
+    for (dest) |*item| item.* = vectorApproxLogPolarNormalF64(engine) * inverse_rate;
 }
 
 fn fillNormalF64RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
@@ -3005,6 +3028,52 @@ fn vectorMarsagliaPolarNormalF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
         }
     }
     return out;
+}
+
+fn vectorApproxLogPolarNormalF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    var out: [8]f32 = undefined;
+    var filled: usize = 0;
+    while (filled < out.len) {
+        const x = alea.Rng.floatRangeFrom(engine, f32, -1, 1);
+        const y = alea.Rng.floatRangeFrom(engine, f32, -1, 1);
+        const s = x * x + y * y;
+        if (s == 0 or s >= 1) continue;
+        const factor = @sqrt(2.0 * approxNegLogScalarF32(s) / s);
+        out[filled] = x * factor;
+        filled += 1;
+        if (filled < out.len) {
+            out[filled] = y * factor;
+            filled += 1;
+        }
+    }
+    return out;
+}
+
+fn vectorApproxLogPolarNormalF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    var out: [4]f64 = undefined;
+    var filled: usize = 0;
+    while (filled < out.len) {
+        const x = alea.Rng.floatRangeFrom(engine, f64, -1, 1);
+        const y = alea.Rng.floatRangeFrom(engine, f64, -1, 1);
+        const s = x * x + y * y;
+        if (s == 0 or s >= 1) continue;
+        const factor = @sqrt(2.0 * approxNegLogScalarF64(s) / s);
+        out[filled] = x * factor;
+        filled += 1;
+        if (filled < out.len) {
+            out[filled] = y * factor;
+            filled += 1;
+        }
+    }
+    return out;
+}
+
+fn approxNegLogScalarF32(u: f32) f32 {
+    return approxNegLogF32(@as(@Vector(8, f32), @splat(u)))[0];
+}
+
+fn approxNegLogScalarF64(u: f64) f64 {
+    return approxNegLogF64(@as(@Vector(4, f64), @splat(u)))[0];
 }
 
 fn vectorRatioUniformsNormalF32(engine: *alea.ScalarPrng) @Vector(8, f32) {

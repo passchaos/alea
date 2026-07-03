@@ -52,6 +52,13 @@ repair rows before a real `vectorbench` follow-up.
   lanes/s versus same-run direct scalar lane-fill around 479M/455M. The
   rejection sampling plus `log`/`sqrt` transform cost is far above ziggurat
   lane-fill, so this is not a dense SIMD direction.
+- Replacing Marsaglia polar's exact `log` with the approximate-log transform
+  used by `VectorStandardExponentialApproxLogF32` also fails. A focused
+  `vectorbench -- 16777216 "approx-log polar"` run showed f32x8
+  standard/parameterized normal around 115M/111M lanes/s and f64x4 around
+  122M/121M, still far below scalar ziggurat lane-fill and below the earlier
+  exact Marsaglia-polar rows. Approximate log does not overcome the rejection,
+  `sqrt`, and transform overhead of the polar shape.
 - Vectorized ratio-of-uniforms normal kernels are also too slow for default use.
   A real `vectorbench -- 16777216 "StandardNormal f32x8"` / `"StandardNormal
   f64x4"` run showed Leva-style ratio-of-uniforms candidates around 98M/100M
