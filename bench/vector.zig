@@ -297,6 +297,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 flat-slice candidate", lanes / 4, 0xd188, fillStandardNormalF32FlatSlice);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 marsaglia-polar candidate", lanes / 4, 0xd188, fillStandardNormalF32MarsagliaPolar);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 approx-log polar candidate", lanes / 4, 0xd188, fillStandardNormalF32ApproxLogPolar);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 dense approx-log polar candidate", lanes / 4, 0xd188, fillStandardNormalF32DenseApproxLogPolar);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 ratio-uniforms candidate", lanes / 4, 0xd188, fillStandardNormalF32RatioUniforms);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 ratio-uniforms dense-block candidate", lanes / 4, 0xd188, fillStandardNormalF32RatioUniformsDenseBlock);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdf);
@@ -344,6 +345,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 flat-slice candidate", lanes / 4, 0xd188, fillNormalF32FlatSlice);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 marsaglia-polar candidate", lanes / 4, 0xd188, fillNormalF32MarsagliaPolar);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 approx-log polar candidate", lanes / 4, 0xd188, fillNormalF32ApproxLogPolar);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 dense approx-log polar candidate", lanes / 4, 0xd188, fillNormalF32DenseApproxLogPolar);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 ratio-uniforms candidate", lanes / 4, 0xd188, fillNormalF32RatioUniforms);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 ratio-uniforms dense-block candidate", lanes / 4, 0xd188, fillNormalF32RatioUniformsDenseBlock);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf candidate", lanes / 4, 0xd188, fillNormalF32InverseCdf);
@@ -2554,6 +2556,10 @@ fn fillStandardNormalF32ApproxLogPolar(engine: *alea.ScalarPrng, dest: []@Vector
     for (dest) |*item| item.* = vectorApproxLogPolarNormalF32(engine);
 }
 
+fn fillStandardNormalF32DenseApproxLogPolar(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorDenseApproxLogPolarNormalF32(engine);
+}
+
 fn fillStandardNormalF32RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRatioUniformsNormalF32(engine);
 }
@@ -2657,6 +2663,12 @@ fn fillNormalF32ApproxLogPolar(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)
     const mean_vec: @Vector(8, f32) = @splat(0);
     const stddev_vec: @Vector(8, f32) = @splat(1);
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorApproxLogPolarNormalF32(engine);
+}
+
+fn fillNormalF32DenseApproxLogPolar(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorDenseApproxLogPolarNormalF32(engine);
 }
 
 fn fillNormalF32RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -3271,6 +3283,29 @@ fn vectorApproxLogPolarNormalF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
         if (filled < out.len) {
             out[filled] = y * factor;
             filled += 1;
+        }
+    }
+    return out;
+}
+
+fn vectorDenseApproxLogPolarNormalF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    var out: [8]f32 = undefined;
+    var filled: usize = 0;
+    while (filled < out.len) {
+        const x = @as(@Vector(8, f32), @splat(2.0)) * vectorF32Local(engine) - @as(@Vector(8, f32), @splat(1.0));
+        const y = @as(@Vector(8, f32), @splat(2.0)) * vectorF32Local(engine) - @as(@Vector(8, f32), @splat(1.0));
+        const s = x * x + y * y;
+        const valid = (s > @as(@Vector(8, f32), @splat(0))) & (s < @as(@Vector(8, f32), @splat(1)));
+        const factor = @sqrt(@as(@Vector(8, f32), @splat(2.0)) * approxNegLogF32(s) / s);
+        inline for (0..8) |lane| {
+            if (valid[lane] and filled < out.len) {
+                out[filled] = x[lane] * factor[lane];
+                filled += 1;
+                if (filled < out.len) {
+                    out[filled] = y[lane] * factor[lane];
+                    filled += 1;
+                }
+            }
         }
     }
     return out;

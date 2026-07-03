@@ -59,6 +59,11 @@ repair rows before a real `vectorbench` follow-up.
   122M/121M, still far below scalar ziggurat lane-fill and below the earlier
   exact Marsaglia-polar rows. Approximate log does not overcome the rejection,
   `sqrt`, and transform overhead of the polar shape.
+- Densifying approximate-log Marsaglia polar improves the polar family but still
+  loses. A focused `vectorbench -- 16777216 "dense approx-log polar"` run showed
+  f32x8 standard/parameterized rows around 189M/188M lanes/s, faster than the
+  scalar-pair approximate-log polar row but still far below scalar ziggurat
+  lane-fill.
 - Vectorized ratio-of-uniforms normal kernels are also too slow for default use.
   A real `vectorbench -- 16777216 "StandardNormal f32x8"` / `"StandardNormal
   f64x4"` run showed Leva-style ratio-of-uniforms candidates around 98M/100M

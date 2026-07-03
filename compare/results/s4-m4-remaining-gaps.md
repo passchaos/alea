@@ -60,8 +60,9 @@ See `performance-triage.md` for detailed rows. In summary:
   all-accepted fast return, block fallback, mantissa-range block fallback,
   mask-redraw exponential, flat scalar-slice routing, FastPrng repair, Alea4x64
   lane-local repair, Marsaglia polar normal, approximate-log Marsaglia polar
-  normal, ratio-of-uniforms normal, CLT summed-uniform normal, inverse-CDF
-  normal, f32-only inverse-CDF normal, central-fast inverse-CDF normal,
+  normal, dense approximate-log Marsaglia polar normal, ratio-of-uniforms
+  normal, CLT summed-uniform normal, inverse-CDF normal, f32-only inverse-CDF
+  normal, central-fast inverse-CDF normal,
   tail-repair/tail-only/reduced-degree/central-mask inverse-CDF normal,
   ziggurat-tail inverse-CDF normal, invalid central-only/tail-zero inverse-CDF
   diagnostics, libmvec vector-log exponential, f32-widened approximate-log f64
