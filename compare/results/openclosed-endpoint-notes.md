@@ -23,6 +23,10 @@ Focused rows now exceed local Rust evidence after the exact `@mulAdd` conversion
 - local Rust `OpenClosed01 f64`: about 778M samples/s in the same focused
   rerun.
 
+A 2026-07-03 refresh after later S4 work confirms the ordering on the current
+host: Alea facade/direct/ScalarPrng-direct is about 791.6M / 791.0M / 795.9M
+samples/s, while local Rust `OpenClosed01 f64` is about 779.0M samples/s.
+
 Earlier same-host reruns with the previous multiply-after-add expression were
 slower, about 653M / 631M / 649M versus Rust around 685M. Repeated
 `open-closed-probe -- 134217728` runs showed 96-word and 128-word buffers tied
