@@ -57,7 +57,8 @@ See `performance-triage.md` for detailed rows. In summary:
   mean-zero staging.
 - SIMD distribution kernels: optimistic repair, correct/same-candidate repair,
   all-accepted fast return, block fallback, flat scalar-slice routing,
-  FastPrng repair, Alea4x64 lane-local repair, and raw-buffer prefetch without a
+  FastPrng repair, Alea4x64 lane-local repair, Marsaglia polar normal,
+  libmvec vector-log exponential, and raw-buffer prefetch without a
   rejected-lane stream policy.
 - FastPrng/facade f32 standard fills: cached-`Rng` and Alea4x64 lane cycling.
 
