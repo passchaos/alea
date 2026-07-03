@@ -9330,7 +9330,9 @@ pub fn frechetCheckedFrom(source: anytype, comptime T: type, location: T, scale:
 
 pub fn frechetFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale > 0 and shape > 0);
+    std.debug.assert(std.math.isFinite(location) and scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    if (scale == 0) return location;
+
     const u = Rng.floatOpenClosedFrom(source, T);
     return location + scale * std.math.pow(T, -@log(u), -1 / shape);
 }
@@ -9341,7 +9343,11 @@ pub fn fillFrechet(rng: Rng, comptime T: type, dest: []T, location: T, scale: T,
 
 pub fn fillFrechetFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale > 0 and shape > 0);
+    std.debug.assert(std.math.isFinite(location) and scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    if (scale == 0) {
+        @memset(dest, location);
+        return;
+    }
     Rng.fillOpenClosedFrom(source, T, dest);
     if (shape == 1) {
         frechetShapeOneFromOpenClosedUniforms(T, dest, location, scale);
@@ -9465,6 +9471,7 @@ pub fn VectorFrechet(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
             const uniform_vec = Rng.vectorOpenClosedFrom(source, VectorType);
             if (self.shapeValue() == 1) return frechetShapeOneFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
             return frechetFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue(), -1 / self.shapeValue());
@@ -9475,6 +9482,10 @@ pub fn VectorFrechet(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.locationValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -9491,7 +9502,7 @@ pub fn Frechet(comptime T: type) type {
         pub fn init(location: T, scale: T, shape: T) Error!Self {
             comptime requireFloat(T);
             if (!std.math.isFinite(location)) return error.InvalidParameter;
-            if (!(scale > 0) or !(shape > 0)) return error.InvalidParameter;
+            if (!(scale >= 0) or !(shape > 0)) return error.InvalidParameter;
             if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale, .shape = shape };
         }
@@ -9509,11 +9520,13 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) ?T {
+            if (self.isDegenerate()) return self.location;
             if (!(self.shape > 1)) return null;
             return self.location + self.scale * std.math.gamma(T, 1 - 1 / self.shape);
         }
 
         pub fn varianceValue(self: Self) ?T {
+            if (self.isDegenerate()) return 0;
             if (!(self.shape > 2)) return null;
             const mean_factor = std.math.gamma(T, 1 - 1 / self.shape);
             const second_moment_factor = std.math.gamma(T, 1 - 2 / self.shape);
@@ -9534,8 +9547,7 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.location else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9543,6 +9555,7 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return self.location;
             return frechetFrom(source, T, self.location, self.scale, self.shape);
         }
 
@@ -9551,7 +9564,15 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, self.location);
+                return;
+            }
             fillFrechetFrom(source, T, dest, self.location, self.scale, self.shape);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
     };
 }
@@ -14593,6 +14614,85 @@ test "degenerate log-logistic helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "degenerate frechet helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d166);
+    var control = alea.ScalarPrng.init(0x5150_d166);
+    const rng = Rng.init(&engine);
+
+    const point: f64 = -2.75;
+    try std.testing.expectEqual(point, frechetFrom(&engine, f64, point, 0, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, try frechetChecked(rng, f64, point, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillFrechetFrom(&engine, f64, &scalar_buf, point, 0, 3);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillFrechetChecked(rng, f64, &scalar_buf, point, 0, 1);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try Frechet(f64).init(point, 0, 3);
+    try std.testing.expectEqual(point, sampler.locationValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 3), sampler.shapeValue());
+    try std.testing.expectEqual(point, sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue().?);
+    try std.testing.expectEqual(point, sampler.medianValue());
+    try std.testing.expectEqual(point, sampler.modeValue());
+    try std.testing.expectEqual(point, sampler.minValue());
+    try std.testing.expectEqual(point, sampler.maxValue().?);
+    try std.testing.expectEqual(point, sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const shape_one = try Frechet(f64).init(point, 0, 1);
+    try std.testing.expectEqual(point, shape_one.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 0), shape_one.varianceValue().?);
+    try std.testing.expectEqual(point, shape_one.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_point: f32 = 5.5;
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vectorFrechetFrom(&engine, @Vector(4, f32), vector_point, 0, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), try vectorFrechetChecked(rng, @Vector(4, f32), vector_point, 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f32) = undefined;
+    fillVectorFrechetFrom(&engine, @Vector(4, f32), &vector_buf, vector_point, 0, 3);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorFrechetChecked(rng, @Vector(4, f32), &vector_buf, vector_point, 0, 1);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorFrechet(@Vector(4, f32)).init(vector_point, 0, 3);
+    try std.testing.expectEqual(vector_point, vector_sampler.locationValue());
+    try std.testing.expectEqual(@as(f32, 0), vector_sampler.scaleValue());
+    try std.testing.expectEqual(@as(f32, 3), vector_sampler.shapeValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f32, 0), vector_sampler.varianceValue().?);
+    try std.testing.expectEqual(vector_point, vector_sampler.medianValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.modeValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.minValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "degenerate skew-normal helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d176);
@@ -17452,7 +17552,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0, 3));
+    try std.testing.expectError(error.InvalidParameter, fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 1, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1, 2));
@@ -17585,7 +17685,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorGumbelCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0, 3);
+    try fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 1, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1, 2);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17653,7 +17753,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorGumbelChecked(rng, @Vector(4, f64), &empty, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorFrechetChecked(rng, @Vector(4, f64), &empty, 0, 0, 3);
+    try fillVectorFrechetChecked(rng, @Vector(4, f64), &empty, 0, 1, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorSkewNormalChecked(rng, @Vector(4, f64), &empty, 0, -1, 2);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17918,7 +18018,7 @@ test "invalid distribution facade tail fills do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillGumbelChecked(rng, f64, &out, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillFrechetChecked(rng, f64, &out, 0, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, fillFrechetChecked(rng, f64, &out, 0, 1, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillSkewNormalChecked(rng, f64, &out, 0, -1, 1));
@@ -18414,7 +18514,7 @@ test "zero-length inverse and zeta distribution fills do not validate or consume
     try std.testing.expectEqual(control.next(), engine.next());
     try fillGumbelCheckedFrom(&engine, f64, &out, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillFrechetCheckedFrom(&engine, f64, &out, 0, 0, 1);
+    try fillFrechetCheckedFrom(&engine, f64, &out, 0, 1, 0);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillInverseGaussianCheckedFrom(&engine, f64, &out, 0, 1);
     try std.testing.expectEqual(control.next(), engine.next());
