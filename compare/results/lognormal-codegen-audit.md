@@ -108,6 +108,14 @@ not change this conclusion. The dynamic binary links `libm.so.6` and `libc.so.6`
 Thus executable link mode alone does not reproduce Rust's LogNormal codegen
 advantage.
 
+A scratch probe also checked whether a function-pointer or `noinline` boundary around
+Zig `@exp` itself reproduces the dlsym speedup while preserving exact compiler-rt
+outputs. It does not: direct/noinline/function-pointer/inline-wrapper `@exp`
+rows all stayed around 116M FastPrng and 131-132M ScalarPrng for f64
+`stddev=0.25`, with matching checksums. The dlsym improvement is therefore tied
+to glibc's scalar `exp` implementation/call target, not merely to introducing a
+function-call boundary around compiler-rt `@exp`.
+
 A further scratch probe resolved glibc `exp` once with `std.DynLib.open("libm.so.6")`
 / `dlsym` and called the function pointer directly. This call-boundary shape is
 much faster for f64 single-sample rows: about 162.8M FastPrng and 186.2M
