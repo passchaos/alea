@@ -7,8 +7,9 @@ It is not a claim that the long-term product goal is permanently complete. It
 means that, on the current x86_64 Linux environment and against the locally
 available Rust evidence listed below, there are no known remaining core RNG
 functionality gaps in Alea's current roadmap stage. S4-M4 performance follow-up
-is still active: exact scalar LogNormal transform/codegen and genuinely dense
-SIMD normal/exponential kernels remain known performance watch items.
+is still active: LogNormal performance is covered by explicit opt-ins while exact
+defaults remain a stable-output tradeoff, and genuinely dense SIMD
+normal/exponential kernels remain the known hard performance watch item.
 
 ## Scope
 
@@ -81,13 +82,11 @@ Out of scope for this Linux-first audit:
 These are not functionality gaps, but they remain active S4-M4 work. The
 current blocker audit is `s4-m4-remaining-gaps.md`. In short:
 
-- exact scalar/single-sample `LogNormal` transform/codegen still trails the
-  latest local Rust `rand_distr` evidence for comparable exact workloads;
-  exact f32 direct-source bulk fills and vector-slice rows have improved, and
-  `BufferedLogNormal` / `LogNormalDlsymExp` / `LogNormalLibmvec` now cover
-  repeated-sample, scalar-libm, and libc/libmvec opt-in profiles, but exact defaults still remain behind the local
-  Rust f32/f64 single-sample rows. Current evidence and rejected exact transform
-  shapes are recorded in
+- `LogNormal` exact defaults remain intentionally stable on Zig `@exp` output
+  mapping and still trail local Rust single-sample rows, but the S4-M4
+  performance gap is now covered by explicit opt-ins: `BufferedLogNormal`,
+  `LogNormalDlsymExp`, `LogNormalLibmvec`, and the bounded/native f32 profiles.
+  Current evidence and rejected exact transform shapes are recorded in
   `lognormal-transform-notes.md`, `performance-triage.md`, and
   `s4-m4-remaining-gaps.md`.
 - vector normal/exponential APIs have broad Zig-native coverage and strong

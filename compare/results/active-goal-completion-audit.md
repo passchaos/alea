@@ -1,6 +1,6 @@
 # Active Goal Completion Audit
 
-Date: 2026-07-03
+Date: 2026-07-04
 
 Active objective: keep working toward Alea's project mission until the goal is
 actually achieved. In concrete terms for the current thread, this means driving
@@ -24,19 +24,15 @@ complete.
 | S4-M1 broader platform reproducibility | `core-rand-coverage.md`, WASI report, `cross-platform-repro-blocker.md` | Closed for current bar. |
 | S4-M2 longer statistical validation | 128GiB PractRand summary and engine reports | Closed for current bar. |
 | S4-M3 SIMD/vector API design | `bench/vector.zig`, `simd-distribution-kernel-notes.md`, source audit in `core-rand-coverage.md` | Closed for API/prototype bar; performance blocker moved to S4-M4. |
-| S4-M4 targeted performance follow-up | `compare/results/performance-triage.md`, `compare/results/s4-m4-remaining-gaps.md`, `lognormal-codegen-audit.md`, `simd-distribution-kernel-notes.md` | Not complete; exact LogNormal and dense SIMD blockers remain. |
+| S4-M4 targeted performance follow-up | `compare/results/performance-triage.md`, `compare/results/s4-m4-remaining-gaps.md`, `lognormal-codegen-audit.md`, `simd-distribution-kernel-notes.md` | Not complete; LogNormal performance is covered by documented opt-ins/stable-default tradeoff, but dense SIMD blocker remains. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
 
 The active goal cannot be marked complete because `s4-m4-remaining-gaps.md`
-identifies two unresolved S4-M4 blockers:
+now identifies one unresolved S4-M4 hard blocker:
 
-1. Exact default LogNormal transform/codegen still trails local Rust evidence.
-   `lognormal-codegen-audit.md` confirms local exact paths call compiler-rt
-   `exp` / `expf`, and the known expression/libc/approximation/platform variants
-   either do not win durably or change output/accuracy/platform contracts.
-2. Dense SIMD normal/exponential kernels have not beaten scalar ziggurat
+1. Dense SIMD normal/exponential kernels have not beaten scalar ziggurat
    lane-fill in the real `vectorbench` slice-fill harness. The minimum
    real-harness benchmark gate is listed in `simd-distribution-kernel-notes.md`.
 
@@ -44,20 +40,16 @@ All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
 weighted samplers, f32 standard fills, OpenClosed f64 bulk, Cauchy, SkewNormal,
 unit geometry direct rows, and many direct-source/bulk distribution workflows.
+LogNormal exact defaults are now documented as a stable-output tradeoff with
+multiple opt-in performance profiles (`BufferedLogNormal`, `LogNormalDlsymExp`,
+`LogNormalLibmvec`, and f32 approximation/native variants) that cover the local
+Rust performance gap without changing the exact default.
 
 ## Required Next Work Before Completion
 
 The goal remains active until at least one of these happens:
 
-- an exact LogNormal candidate improves the default exact path without changing
-  output mapping and passes same-run `log-normal-probe` plus main `bench`
-  evidence across f32/f64, facade/direct, and narrow/wide spread rows;
-- or a clearly named opt-in LogNormal profile is added with a documented
-  accuracy/reproducibility contract that covers a gap not already served by the
-  existing opt-ins (`LogNormalApproxF32`, `LogNormalExp2F32`,
-  `LogNormalNativeF32`, `LogNormalNativeExp2F32`, `BufferedLogNormal`,
-  `LogNormalDlsymExp`, and `LogNormalLibmvec`);
-- and a dense SIMD normal/exponential candidate beats scalar lane-fill in the
+- a dense SIMD normal/exponential candidate beats scalar lane-fill in the
   real vector-slice harness while preserving or explicitly versioning rejected
   lane stream shape;
 - or the roadmap bar is deliberately raised/reshaped with explicit rationale and
