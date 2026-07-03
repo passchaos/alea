@@ -81,15 +81,15 @@ repair rows before a real `vectorbench` follow-up.
   output-mapping opt-in. A 16384-entry midpoint normal-quantile table produces
   discrete/truncated outputs with support around `±4.01` and table-grid variance
   around `0.99992`. Public `VectorStandardNormalTableF32` / `VectorNormalTableF32`
-  rows in `vectorbench -- 16777216 "TableF32"` reach about 1.28-1.30B f32x8
+  rows in `vectorbench -- 16777216 "TableF32"` reach about 1.24-1.30B f32x8
   lanes/s, and `VectorStandardNormalTableF64` / `VectorNormalTableF64` rows in
-  `vectorbench -- 16777216 "Table"` are also around 1.26-1.28B f64x4 lanes/s, above f64 ziggurat. These
+  `vectorbench -- 16777216 "Table"` are also around 1.20-1.28B f64x4 lanes/s, above f64 ziggurat. These
   profiles do not replace default normal.
 - Table-quantile vector exponential is also useful only as an explicit approximate
   output-mapping opt-in. A 16384-entry midpoint exponential-quantile table
   produces discrete/truncated outputs. Public `VectorStandardExponentialTableF32`
   / `VectorExponentialTableF32` and f64 counterparts in `vectorbench -- 16777216
-  "Table"` are around 1.0-1.29B lanes/s, far above ziggurat lane-fill, but do
+  "Table"` are around 1.0-1.30B lanes/s, far above ziggurat lane-fill, but do
   not replace default exponential.
 - Vectorized inverse-CDF normal approximation kernels are also too slow for a
   useful opt-in. A real `vectorbench -- 16777216 "StandardNormal f32x8"` /
