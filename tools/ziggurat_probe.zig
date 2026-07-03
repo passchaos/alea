@@ -25,6 +25,24 @@ const norm_ratio = blk: {
     break :blk out;
 };
 
+const norm_ratio_f32 = blk: {
+    var out: [256]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(ziggurat.NormDist.x[i + 1] / ziggurat.NormDist.x[i]);
+    break :blk out;
+};
+
+const norm_x_f32 = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(ziggurat.NormDist.x[i]);
+    break :blk out;
+};
+
+const norm_f_f32 = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(ziggurat.NormDist.f[i]);
+    break :blk out;
+};
+
 const norm_threshold = blk: {
     var out: [256]u64 = undefined;
     for (&out, 0..) |*item, i| {
@@ -61,6 +79,27 @@ const exp_threshold = blk: {
     break :blk out;
 };
 
+const exp_threshold_f32 = blk: {
+    var out: [256]u32 = undefined;
+    for (&out, 0..) |*item, i| {
+        const ratio = ziggurat.ExpDist.x[i + 1] / ziggurat.ExpDist.x[i];
+        item.* = @intFromFloat(@ceil(ratio * @as(f64, @floatFromInt(@as(u32, 1) << 23)) - 0.5));
+    }
+    break :blk out;
+};
+
+const exp_x_f32 = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(ziggurat.ExpDist.x[i]);
+    break :blk out;
+};
+
+const exp_f_f32 = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(ziggurat.ExpDist.f[i]);
+    break :blk out;
+};
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     var stdout_buffer: [1024]u8 = undefined;
@@ -89,6 +128,7 @@ pub fn main(init: std.process.Init) !void {
     try benchF32(io, stdout, "standard normal f32 raw", sample_count, 0xd15a, standardNormalF32);
     try benchF32(io, stdout, "ratio normal f32 cast candidate", sample_count, 0xd15a, ratioNormalF32);
     try benchF32(io, stdout, "table-bound normal f32 cast candidate", sample_count, 0xd15a, tableBoundNormalF32);
+    try benchF32(io, stdout, "native normal f32 candidate", sample_count, 0xd15a, nativeNormalF32);
     try benchF64(io, stdout, "generic exponentialFastFrom", sample_count, 0xe15a, genericExponential);
     try benchF64(io, stdout, "standard exponential raw", sample_count, 0xe15a, standardExponential);
     try benchF64(io, stdout, "ratio exponential inline candidate", sample_count, 0xe15a, ratioExponential);
@@ -96,6 +136,7 @@ pub fn main(init: std.process.Init) !void {
     try benchF64(io, stdout, "table-bound exponential candidate", sample_count, 0xe15a, tableBoundExponential);
     try benchF32(io, stdout, "standard exponential f32 raw", sample_count, 0xe15a, standardExponentialF32);
     try benchF32(io, stdout, "threshold exponential f32 cast candidate", sample_count, 0xe15a, thresholdExponentialF32);
+    try benchF32(io, stdout, "native exponential f32 candidate", sample_count, 0xe15a, nativeExponentialF32);
     try benchVectorF64(io, stdout, "vector-repair normal f64x4 candidate", sample_count, 0xd15a, vectorRepairNormal);
     try benchVectorF64(io, stdout, "vector-repair exponential f64x4 candidate", sample_count, 0xe15a, vectorRepairExponential);
     try benchVectorF64Fast(io, stdout, "alea4x64-lane scalar normal f64x4", sample_count, 0xd15a, vectorLaneNormalAlea4x64Scalar);
@@ -343,6 +384,37 @@ fn tableBoundNormalF32(engine: *alea.ScalarPrng) f32 {
     return @floatCast(tableBoundNormal(engine));
 }
 
+fn nativeNormalF32(engine: *alea.ScalarPrng) f32 {
+    while (true) {
+        const bits: u32 = @truncate(engine.next());
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 9;
+        const repr = (@as(u32, 0x80) << 23) | mantissa;
+        const u: f32 = @as(f32, @bitCast(repr)) - 3.0;
+
+        if (@abs(u) < norm_ratio_f32[i]) {
+            @branchHint(.likely);
+            return u * norm_x_f32[i];
+        }
+        const x = u * norm_x_f32[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return nativeNormalTailF32(engine, u);
+        }
+        if (norm_f_f32[i + 1] + (norm_f_f32[i] - norm_f_f32[i + 1]) * alea.Rng.floatFrom(engine, f32) < @exp(-x * x / 2.0)) return x;
+    }
+}
+
+fn nativeNormalTailF32(engine: *alea.ScalarPrng, u: f32) f32 {
+    var x: f32 = 1;
+    var y: f32 = 0;
+    while (-2.0 * y < x * x) {
+        x = @log(alea.Rng.floatOpenFrom(engine, f32)) / @as(f32, @floatCast(ziggurat.norm_r));
+        y = @log(alea.Rng.floatOpenFrom(engine, f32));
+    }
+    return if (u < 0) x - @as(f32, @floatCast(ziggurat.norm_r)) else @as(f32, @floatCast(ziggurat.norm_r)) - x;
+}
+
 fn genericExponential(engine: *alea.ScalarPrng) f64 {
     return alea.Rng.exponentialFastFrom(engine, f64, 1);
 }
@@ -357,6 +429,27 @@ fn standardExponentialF32(engine: *alea.ScalarPrng) f32 {
 
 fn thresholdExponentialF32(engine: *alea.ScalarPrng) f32 {
     return @floatCast(thresholdExponential(engine));
+}
+
+fn nativeExponentialF32(engine: *alea.ScalarPrng) f32 {
+    while (true) {
+        const bits: u32 = @truncate(engine.next());
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 9;
+        const repr = (@as(u32, 0x7f) << 23) | mantissa;
+        const u: f32 = @as(f32, @bitCast(repr)) - (1.0 - std.math.floatEps(f32) / 2.0);
+
+        if (mantissa < exp_threshold_f32[i]) {
+            @branchHint(.likely);
+            return u * exp_x_f32[i];
+        }
+        const x = u * exp_x_f32[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return @as(f32, @floatCast(ziggurat.exp_r)) - @log(alea.Rng.floatOpenFrom(engine, f32));
+        }
+        if (exp_f_f32[i + 1] + (exp_f_f32[i] - exp_f_f32[i + 1]) * alea.Rng.floatFrom(engine, f32) < @exp(-x)) return x;
+    }
 }
 
 fn ratioNormal(engine: *alea.ScalarPrng) f64 {

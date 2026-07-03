@@ -43,6 +43,12 @@ repair rows before a real `vectorbench` follow-up.
 
 - Vector Box-Muller normal kernels are too slow for default use.
 - Vector-log exponential kernels are too slow for default use.
+- Native f32 scalar ziggurat candidates are promising but output-versioned
+  evidence only for now. A focused `ziggurat-probe -- 4194304 "f32"` run shows
+  native f32 normal around 680M and native f32 exponential around 656M samples/s
+  versus current f64-cast f32 rows around 571M and 566M, but checksums/output
+  mappings differ. This could become a future explicitly versioned f32 profile,
+  not a drop-in default for current reproducibility contracts.
 - f64x4 ziggurat fast-path plus scalar repair loses to scalar lane-fill.
   A later real-harness same-candidate f64x4 repair check confirms the
   isolated-probe result: focused 64Mi-lane `vectorbench` rows are about
