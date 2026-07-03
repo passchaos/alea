@@ -59,9 +59,12 @@ repair rows before a real `vectorbench` follow-up.
   395M standard-normal, 395M normal, 375M standard-exponential, and 377M
   exponential lanes/s versus matching direct core rows around 415M, 414M,
   391M, and 390M.
-  FastPrng repair probe rows
-  likewise trail or only match current production rows once correct stream-shape
-  repair is required.
+  FastPrng repair rows likewise lose in the real vector-slice harness: a
+  focused `vectorbench -- 268435456 "f32x8 fast"` run showed FastPrng repair
+  about 376M standard-normal, 375M normal, 368M standard-exponential, and 366M
+  exponential lanes/s versus matching FastPrng direct rows around 409M, 407M,
+  388M, and 385M. FastPrng repair probe rows therefore also trail or only match
+  current production rows once correct stream-shape repair is required.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
   rejected lanes: prefetching candidates changes how repair consumes randomness.
 - Reinterpreting packed f64 vector slices as scalar slices and routing them
