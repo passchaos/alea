@@ -9592,8 +9592,9 @@ pub fn frechetCheckedFrom(source: anytype, comptime T: type, location: T, scale:
 
 pub fn frechetFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    std.debug.assert(frechetParametersValid(T, location, scale, shape));
     if (scale == 0) return location;
+    if (shape == std.math.inf(T)) return location + scale;
 
     const u = Rng.floatOpenClosedFrom(source, T);
     return location + scale * std.math.pow(T, -@log(u), -1 / shape);
@@ -9605,9 +9606,13 @@ pub fn fillFrechet(rng: Rng, comptime T: type, dest: []T, location: T, scale: T,
 
 pub fn fillFrechetFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    std.debug.assert(frechetParametersValid(T, location, scale, shape));
     if (scale == 0) {
         @memset(dest, location);
+        return;
+    }
+    if (shape == std.math.inf(T)) {
+        @memset(dest, location + scale);
         return;
     }
     Rng.fillOpenClosedFrom(source, T, dest);
@@ -9617,6 +9622,14 @@ pub fn fillFrechetFrom(source: anytype, comptime T: type, dest: []T, location: T
     }
 
     frechetFromOpenClosedUniforms(T, dest, location, scale, -1 / shape);
+}
+
+fn frechetParametersValid(comptime T: type, location: T, scale: T, shape: T) bool {
+    return std.math.isFinite(location) and
+        scale >= 0 and
+        shape > 0 and
+        std.math.isFinite(scale) and
+        (std.math.isFinite(shape) or shape == std.math.inf(T));
 }
 
 pub fn fillFrechetChecked(rng: Rng, comptime T: type, dest: []T, location: T, scale: T, shape: T) Error!void {
@@ -9733,7 +9746,7 @@ pub fn VectorFrechet(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
             const uniform_vec = Rng.vectorOpenClosedFrom(source, VectorType);
             if (self.shapeValue() == 1) return frechetShapeOneFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
             return frechetFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue(), -1 / self.shapeValue());
@@ -9745,7 +9758,7 @@ pub fn VectorFrechet(comptime VectorType: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.locationValue())));
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
             for (dest) |*item| item.* = self.sampleFrom(source);
@@ -9763,9 +9776,7 @@ pub fn Frechet(comptime T: type) type {
 
         pub fn init(location: T, scale: T, shape: T) Error!Self {
             comptime requireFloat(T);
-            if (!std.math.isFinite(location)) return error.InvalidParameter;
-            if (!(scale >= 0) or !(shape > 0)) return error.InvalidParameter;
-            if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            if (!frechetParametersValid(T, location, scale, shape)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale, .shape = shape };
         }
 
@@ -9782,7 +9793,7 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) ?T {
-            if (self.isDegenerate()) return self.location;
+            if (self.isDegenerate()) return self.degenerateValue();
             if (!(self.shape > 1)) return null;
             return self.location + self.scale * std.math.gamma(T, 1 - 1 / self.shape);
         }
@@ -9797,19 +9808,21 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn medianValue(self: Self) T {
+            if (self.isDegenerate()) return self.degenerateValue();
             return self.location + self.scale * std.math.pow(T, @log(@as(T, 2)), -1 / self.shape);
         }
 
         pub fn modeValue(self: Self) T {
+            if (self.isDegenerate()) return self.degenerateValue();
             return self.location + self.scale * std.math.pow(T, self.shape / (self.shape + 1), 1 / self.shape);
         }
 
         pub fn minValue(self: Self) T {
-            return self.location;
+            return if (self.isDegenerate()) self.degenerateValue() else self.location;
         }
 
         pub fn maxValue(self: Self) ?T {
-            return if (self.isDegenerate()) self.location else null;
+            return if (self.isDegenerate()) self.degenerateValue() else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9817,7 +9830,7 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            if (self.isDegenerate()) return self.location;
+            if (self.isDegenerate()) return self.degenerateValue();
             return frechetFrom(source, T, self.location, self.scale, self.shape);
         }
 
@@ -9827,14 +9840,18 @@ pub fn Frechet(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             if (self.isDegenerate()) {
-                @memset(dest, self.location);
+                @memset(dest, self.degenerateValue());
                 return;
             }
             fillFrechetFrom(source, T, dest, self.location, self.scale, self.shape);
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.scale == 0;
+            return self.scale == 0 or self.shape == std.math.inf(T);
+        }
+
+        fn degenerateValue(self: Self) T {
+            return if (self.shape == std.math.inf(T)) self.location + self.scale else self.location;
         }
     };
 }
@@ -15398,6 +15415,60 @@ test "degenerate frechet helpers do not consume random stream" {
     try std.testing.expectEqual(point, shape_one.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const scale: f64 = 1.5;
+    const infinite_shape_point = point + scale;
+    try std.testing.expectEqual(infinite_shape_point, frechet(rng, f64, point, scale, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, frechetFrom(&engine, f64, point, scale, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, try frechetChecked(rng, f64, point, scale, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, try frechetCheckedFrom(&engine, f64, point, scale, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillFrechet(rng, f64, &scalar_buf, point, scale, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillFrechetFrom(&engine, f64, &scalar_buf, point, scale, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillFrechetChecked(rng, f64, &scalar_buf, point, scale, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillFrechetCheckedFrom(&engine, f64, &scalar_buf, point, scale, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_sampler = try Frechet(f64).init(point, scale, std.math.inf(f64));
+    try std.testing.expectEqual(point, infinite_shape_sampler.locationValue());
+    try std.testing.expectEqual(scale, infinite_shape_sampler.scaleValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_sampler.shapeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_sampler.varianceValue().?);
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.medianValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.modeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.minValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.maxValue().?);
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_sampler.fill(rng, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const vector_point: f32 = 5.5;
     try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vectorFrechetFrom(&engine, @Vector(4, f32), vector_point, 0, 3));
     try std.testing.expectEqual(control.next(), engine.next());
@@ -15429,6 +15500,61 @@ test "degenerate frechet helpers do not consume random stream" {
 
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_scale: f32 = 2.25;
+    const vector_infinite_shape_point = vector_point + vector_scale;
+    const infinite_shape_vec: @Vector(4, f32) = @splat(vector_infinite_shape_point);
+    try std.testing.expectEqual(infinite_shape_vec, vectorFrechet(rng, @Vector(4, f32), vector_point, vector_scale, std.math.inf(f32)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, vectorFrechetFrom(&engine, @Vector(4, f32), vector_point, vector_scale, std.math.inf(f32)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, try vectorFrechetChecked(rng, @Vector(4, f32), vector_point, vector_scale, std.math.inf(f32)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, try vectorFrechetCheckedFrom(&engine, @Vector(4, f32), vector_point, vector_scale, std.math.inf(f32)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorFrechet(rng, @Vector(4, f32), &vector_buf, vector_point, vector_scale, std.math.inf(f32));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorFrechetFrom(&engine, @Vector(4, f32), &vector_buf, vector_point, vector_scale, std.math.inf(f32));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorFrechetChecked(rng, @Vector(4, f32), &vector_buf, vector_point, vector_scale, std.math.inf(f32));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorFrechetCheckedFrom(&engine, @Vector(4, f32), &vector_buf, vector_point, vector_scale, std.math.inf(f32));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_vector_sampler = try VectorFrechet(@Vector(4, f32)).init(vector_point, vector_scale, std.math.inf(f32));
+    try std.testing.expectEqual(vector_point, infinite_shape_vector_sampler.locationValue());
+    try std.testing.expectEqual(vector_scale, infinite_shape_vector_sampler.scaleValue());
+    try std.testing.expectEqual(std.math.inf(f32), infinite_shape_vector_sampler.shapeValue());
+    try std.testing.expectEqual(vector_infinite_shape_point, infinite_shape_vector_sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f32, 0), infinite_shape_vector_sampler.varianceValue().?);
+    try std.testing.expectEqual(vector_infinite_shape_point, infinite_shape_vector_sampler.medianValue());
+    try std.testing.expectEqual(vector_infinite_shape_point, infinite_shape_vector_sampler.modeValue());
+    try std.testing.expectEqual(vector_infinite_shape_point, infinite_shape_vector_sampler.minValue());
+    try std.testing.expectEqual(vector_infinite_shape_point, infinite_shape_vector_sampler.maxValue().?);
+    try std.testing.expectEqual(infinite_shape_vec, infinite_shape_vector_sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, infinite_shape_vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_vector_sampler.fill(rng, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
