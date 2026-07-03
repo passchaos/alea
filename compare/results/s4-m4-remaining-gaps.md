@@ -86,11 +86,16 @@ A candidate that could close S4-M5 should do one of the following:
    comparable non-uniform SIMD normal/exponential Rust row; S4-M5 is therefore
    a product-above-Rust Alea bar rather than a local Rust parity gap.
 
-Current partial S4-M5 evidence: the named vector approximation profiles now
-have stronger `distcheck` coverage with larger-sample mean/variance gates and
-fixed-CDF smoke gates, in addition to snapshot reproducibility and vectorbench
-throughput rows. This evidence does not itself accept those profiles as default
-or general substitutes.
+S4-M5 closure: `s4-m5-approximation-policy.md` accepts the named table and
+approx-log vector profiles as Alea's general throughput-first dense vector
+normal/exponential surface for callers who explicitly choose an
+approximation/output-mapping contract. Exact/default vector normal/exponential
+APIs remain on scalar ziggurat lane-fill.
 
-Until S4-M5 is closed, the long-term objective remains active. Do not call
-`update_goal(status=complete)` based only on S4-M4 closure.
+Raised next bar: S4-M6 should harden the accepted profiles beyond the current
+local Linux policy by adding broader-target and longer distribution-quality
+evidence, while continuing to watch for an exact/default-compatible dense SIMD
+kernel.
+
+The long-term objective remains active. Do not call
+`update_goal(status=complete)` based only on S4-M5 closure.

@@ -25,20 +25,26 @@ complete.
 | S4-M2 longer statistical validation | 128GiB PractRand summary and engine reports | Closed for current bar. |
 | S4-M3 SIMD/vector API design | `bench/vector.zig`, `simd-distribution-kernel-notes.md`, source audit in `core-rand-coverage.md` | Closed for API/prototype bar; performance blocker moved to S4-M4. |
 | S4-M4 targeted performance follow-up | `compare/results/performance-triage.md`, `compare/results/s4-m4-remaining-gaps.md`, `lognormal-codegen-audit.md`, `simd-distribution-kernel-notes.md` | Closed for the current local Linux bar; LogNormal and vector normal/exponential throughput gaps now have documented opt-in coverage. |
-| S4-M5 default/general dense SIMD kernels | `compare/results/s4-m4-remaining-gaps.md`, `compare/results/simd-distribution-kernel-notes.md`, `compare/results/performance-triage.md` | Not complete; the next bar requires default or explicitly versioned dense SIMD normal/exponential kernels, or a documented policy accepting an approximation profile for a default/general API surface. |
+| S4-M5 default/general dense SIMD kernels | `compare/results/s4-m5-approximation-policy.md`, `compare/results/s4-m4-remaining-gaps.md`, `compare/results/simd-distribution-kernel-notes.md`, `compare/results/performance-triage.md` | Closed for the current local Linux policy bar: named table and approx-log vector profiles are accepted as the explicit throughput-first dense vector surface, while exact/default APIs remain scalar ziggurat lane-fill. |
+| S4-M6 accepted profile hardening | `compare/results/s4-m5-approximation-policy.md`, `compare/results/reproducibility-matrix.md`, future broader-target and long-run distribution reports | Not complete; the accepted approximation profiles need broader-target and longer distribution-quality evidence, and exact/default-compatible dense SIMD remains a watch item. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
 
 The active goal cannot be marked complete because the roadmap has deliberately
-raised the bar beyond S4-M4. `s4-m4-remaining-gaps.md` now records S4-M4 as
-closed for the local Linux performance-follow-up bar and defines S4-M5 as the
-next unresolved milestone:
+raised the bar beyond S4-M5. `s4-m5-approximation-policy.md` records S4-M5 as
+closed for the current local Linux policy bar: named table and approx-log vector
+profiles are accepted as the explicit throughput-first dense vector surface for
+callers who choose approximation/output-mapping contracts, while exact/default
+APIs remain scalar ziggurat lane-fill.
 
-1. Default/general dense SIMD normal/exponential kernels have not replaced or
-   versioned scalar ziggurat lane-fill in the real `vectorbench` slice-fill
-   harness, and no policy has accepted the table/approximation opt-ins as a
-   default/general substitute.
+The next unresolved milestone is S4-M6:
+
+1. The accepted approximation profiles have not yet been hardened by broader
+   target execution and longer distribution-quality evidence beyond the current
+   local Linux `distcheck`/snapshot/vectorbench policy package.
+2. No exact/default-compatible dense SIMD normal/exponential kernel has beaten
+   scalar ziggurat lane-fill in the real `vectorbench` slice-fill harness.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
@@ -52,20 +58,20 @@ The SIMD performance gap has narrowed on the vector opt-in side: table-quantile
 normal/exponential and f32 approximate-log exponential vector opt-ins now beat the
 matching ziggurat lane-fill rows for users who accept explicit
 approximation/output-mapping contracts, and distcheck now includes larger-sample
-moment/CDF gates for those approximation profiles. S4-M5 remains unresolved
-because no policy has accepted them as default/general substitutes and default
-normal/exponential kernels remain scalar ziggurat lane-fill.
+moment/CDF gates for those approximation profiles. S4-M5 is closed by policy,
+but S4-M6 remains unresolved because the accepted profiles still need broader
+hardening and exact/default normal/exponential kernels remain scalar ziggurat
+lane-fill.
 
 ## Required Next Work Before Completion
 
 The goal remains active until at least one of these happens:
 
-- a default or explicitly versioned dense SIMD normal/exponential candidate
-  beats scalar lane-fill in the real vector-slice harness while preserving or
+- accepted table/approx-log vector profiles gain broader-target execution and
+  longer distribution-quality evidence sufficient to close S4-M6;
+- or a default/exact-compatible dense SIMD normal/exponential candidate beats
+  scalar lane-fill in the real vector-slice harness while preserving or
   deliberately versioning rejected-lane stream shape;
-- or a documented policy accepts a named approximation profile for a
-  default/general API surface with statistical-quality and reproducibility
-  evidence;
 - or a later roadmap audit raises/reshapes the bar again with explicit rationale.
 
 Until then, do not call `update_goal(status=complete)`.

@@ -128,6 +128,17 @@ are checked to `|mean| <= LogNormalApproxF32.max_abs_mean` and
 `fillLogNormal` whenever bit-identical `@exp` output or wider parameters are
 required.
 
+For throughput-first vector normal/exponential workloads, Alea exposes explicit
+profile names instead of silently changing the exact/default vector APIs. Use
+`VectorStandardNormalTableF32/F64`, `VectorNormalTableF32/F64`,
+`VectorStandardExponentialTableF32/F64`, `VectorExponentialTableF32/F64`, or
+`VectorStandardExponentialApproxLogF32` / `VectorExponentialApproxLogF32` only
+when the caller accepts the documented approximation/output-mapping contract.
+The table profiles are discrete/truncated midpoint-quantile lookups; the f32
+approx-log exponential profile is approximate and f32-only. Exact/default
+`vectorNormal` and `vectorExponential` APIs remain scalar ziggurat lane-fill for
+stable exact-output semantics.
+
 ## Distributions
 
 Single-shot helpers and reusable samplers cover:

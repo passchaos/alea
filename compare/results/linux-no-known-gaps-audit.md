@@ -8,9 +8,11 @@ means that, on the current x86_64 Linux environment and against the locally
 available Rust evidence listed below, there are no known remaining core RNG
 functionality gaps in Alea's current local Linux parity stage. S4-M4 performance
 follow-up is closed for the current bar: LogNormal performance is covered by
-explicit opt-ins while exact defaults remain a stable-output tradeoff. The active
-S4-M5 product-above-Rust watch item is genuinely dense/default-general SIMD
-normal/exponential kernels or a documented approximation-profile policy.
+explicit opt-ins while exact defaults remain a stable-output tradeoff. The S4-M5
+policy bar is closed by `s4-m5-approximation-policy.md`; the active S4-M6 watch
+item is broader-target and longer distribution-quality hardening for accepted
+approximation profiles, plus continued watch for exact/default-compatible dense
+SIMD normal/exponential kernels.
 
 ## Scope
 
@@ -81,9 +83,10 @@ Out of scope for this Linux-first audit:
 
 ## Current Stage 4 Performance Watch Items
 
-These are not functionality gaps. S4-M4 is closed for the current local Linux
-bar, while S4-M5 remains active. The current blocker audit is
-`s4-m4-remaining-gaps.md`. In short:
+These are not functionality gaps. S4-M4 and S4-M5 are closed for the current
+local Linux bars, while S4-M6 remains active. The current blocker and policy
+audits are `s4-m4-remaining-gaps.md` and `s4-m5-approximation-policy.md`. In
+short:
 
 - `LogNormal` exact defaults remain intentionally stable on Zig `@exp` output
   mapping and still trail local Rust single-sample rows, but the S4-M4
@@ -149,6 +152,6 @@ Within this audit's local Linux scope, no known core RNG functionality gap
 remains against the locally available `rand` / `rand_distr` evidence.
 
 This does not close the long-term product goal. Stage 4 remains active for the
-S4-M5 product-above-Rust dense-kernel/policy bar above, and later stages should
-raise the bar to broader platforms and longer validation rather than declaring
-the product permanently finished.
+S4-M6 broader-target and longer distribution-quality hardening bar above, and
+later stages should keep raising the bar rather than declaring the product
+permanently finished.
