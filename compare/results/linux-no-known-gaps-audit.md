@@ -93,8 +93,8 @@ current blocker audit is `s4-m4-remaining-gaps.md`. In short:
   scalar-lane-fill rows, but no genuinely dense SIMD distribution kernel has
   beaten scalar ziggurat lane-fill in the real `vectorbench` harness; the
   repair, block-fallback, all-accepted, flat-slice, lane-local, Marsaglia polar,
-  ratio-of-uniforms, libmvec vector-log, and cached-Rng attempts are recorded in
-  `simd-distribution-kernel-notes.md`,
+  ratio-of-uniforms, inverse-CDF, libmvec vector-log, and cached-Rng attempts
+  are recorded in `simd-distribution-kernel-notes.md`,
   `performance-triage.md`, and `s4-m4-remaining-gaps.md`.
 
 ## Alea Extras Beyond The Local Rust Surface

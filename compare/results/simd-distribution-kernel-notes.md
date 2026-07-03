@@ -61,6 +61,14 @@ repair rows before a real `vectorbench` follow-up.
   per-lane ratio-of-uniforms and 16M/28M for dense-block retry versus direct
   rows around 478M/455M. The rejection plus `log` path is therefore far slower
   than current ziggurat lane-fill, and the output mapping changes.
+- Vectorized inverse-CDF normal approximation kernels are also too slow for a
+  useful opt-in. A real `vectorbench -- 16777216 "StandardNormal f32x8"` /
+  `"StandardNormal f64x4"` run showed Acklam-style inverse-CDF candidates around
+  80M/75M lanes/s, versus same-run direct scalar ziggurat lane-fill around
+  479M/455M. Matching parameterized `fillVectorNormal` rows were likewise around
+  80M/75M versus direct rows around 479M/455M. The vector `log`/`sqrt` plus
+  polynomial-selection cost is far above ziggurat lane-fill, and the output
+  mapping changes.
 - Vector-log exponential kernels are too slow for default use.
 - Platform libmvec vector-log inverse-transform exponential is also not a
   production direction. A scratch x86_64-linux-gnu probe using `_ZGVcN8v_logf`

@@ -31,7 +31,7 @@ LogNormal coverage; the concrete hard blocker is the dense SIMD kernel gap below
 
 | Area | Current evidence | Why not closed |
 | --- | --- | --- |
-| Dense SIMD normal/exponential distribution kernels | Vector APIs and vectorbench coverage are complete, but production vector normal/exponential kernels still use scalar ziggurat lane-fill. f32x8/f64x4 repair, same-candidate repair, all-accepted repair, block-fallback, flat-slice routing, FastPrng repair, Alea4x64 lane-local repair, Marsaglia polar normal, ratio-of-uniforms normal, libmvec vector-log exponential, and f64 direct-next/noinline codegen probes have all trailed or failed to transfer into current direct rows in the real vector-slice harness. | No genuinely dense SIMD candidate has beaten scalar lane-fill while preserving or explicitly versioning rejected-lane stream shape; `simd-distribution-kernel-notes.md` now lists the minimum real-harness vectorbench rows required for any future candidate. |
+| Dense SIMD normal/exponential distribution kernels | Vector APIs and vectorbench coverage are complete, but production vector normal/exponential kernels still use scalar ziggurat lane-fill. f32x8/f64x4 repair, same-candidate repair, all-accepted repair, block-fallback, flat-slice routing, FastPrng repair, Alea4x64 lane-local repair, Marsaglia polar normal, ratio-of-uniforms normal, inverse-CDF normal, libmvec vector-log exponential, and f64 direct-next/noinline codegen probes have all trailed or failed to transfer into current direct rows in the real vector-slice harness. | No genuinely dense SIMD candidate has beaten scalar lane-fill while preserving or explicitly versioning rejected-lane stream shape; `simd-distribution-kernel-notes.md` now lists the minimum real-harness vectorbench rows required for any future candidate. |
 
 ## Recently Closed Or Narrowed Items
 
@@ -58,8 +58,8 @@ See `performance-triage.md` for detailed rows. In summary:
 - SIMD distribution kernels: optimistic repair, correct/same-candidate repair,
   all-accepted fast return, block fallback, mantissa-range block fallback, flat
   scalar-slice routing, FastPrng repair, Alea4x64 lane-local repair, Marsaglia
-  polar normal, ratio-of-uniforms normal, libmvec vector-log exponential, and
-  raw-buffer prefetch without a rejected-lane stream policy.
+  polar normal, ratio-of-uniforms normal, inverse-CDF normal, libmvec vector-log
+  exponential, and raw-buffer prefetch without a rejected-lane stream policy.
 - FastPrng/facade f32 standard fills: cached-`Rng` and Alea4x64 lane cycling.
 
 ## Requirements For The Next Successful Candidate

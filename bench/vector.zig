@@ -292,6 +292,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 marsaglia-polar candidate", lanes / 4, 0xd188, fillStandardNormalF32MarsagliaPolar);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 ratio-uniforms candidate", lanes / 4, 0xd188, fillStandardNormalF32RatioUniforms);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 ratio-uniforms dense-block candidate", lanes / 4, 0xd188, fillStandardNormalF32RatioUniformsDenseBlock);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdf);
     try benchFillVectorStandardNormalF32Repair(io, stdout, "alea fillVectorStandardNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 same-candidate repair", lanes / 4, 0xd188, fillStandardNormalF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 all-accepted repair", lanes / 4, 0xd188, fillStandardNormalF32AllAcceptedRepair);
@@ -309,6 +310,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 marsaglia-polar candidate", lanes / 8, 0xd184, fillStandardNormalF64MarsagliaPolar);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 ratio-uniforms candidate", lanes / 8, 0xd184, fillStandardNormalF64RatioUniforms);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 ratio-uniforms dense-block candidate", lanes / 8, 0xd184, fillStandardNormalF64RatioUniformsDenseBlock);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 inverse-cdf candidate", lanes / 8, 0xd184, fillStandardNormalF64InverseCdf);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillStandardNormalF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 all-accepted repair", lanes / 8, 0xd184, fillStandardNormalF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillStandardNormalF64BlockFallback);
@@ -319,6 +321,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 marsaglia-polar candidate", lanes / 4, 0xd188, fillNormalF32MarsagliaPolar);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 ratio-uniforms candidate", lanes / 4, 0xd188, fillNormalF32RatioUniforms);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 ratio-uniforms dense-block candidate", lanes / 4, 0xd188, fillNormalF32RatioUniformsDenseBlock);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf candidate", lanes / 4, 0xd188, fillNormalF32InverseCdf);
     try benchFillVectorNormalF32Repair(io, stdout, "alea fillVectorNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 same-candidate repair", lanes / 4, 0xd188, fillNormalF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 all-accepted repair", lanes / 4, 0xd188, fillNormalF32AllAcceptedRepair);
@@ -336,6 +339,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 marsaglia-polar candidate", lanes / 8, 0xd184, fillNormalF64MarsagliaPolar);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 ratio-uniforms candidate", lanes / 8, 0xd184, fillNormalF64RatioUniforms);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 ratio-uniforms dense-block candidate", lanes / 8, 0xd184, fillNormalF64RatioUniformsDenseBlock);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 inverse-cdf candidate", lanes / 8, 0xd184, fillNormalF64InverseCdf);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillNormalF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 all-accepted repair", lanes / 8, 0xd184, fillNormalF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillNormalF64BlockFallback);
@@ -2476,6 +2480,10 @@ fn fillStandardNormalF32RatioUniformsDenseBlock(engine: *alea.ScalarPrng, dest: 
     for (dest) |*item| item.* = vectorRatioUniformsNormalF32DenseBlock(engine);
 }
 
+fn fillStandardNormalF32InverseCdf(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorInverseCdfNormalF32(engine);
+}
+
 fn fillStandardNormalF32NativeRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairNativeNormalF32(engine);
 }
@@ -2529,6 +2537,12 @@ fn fillNormalF32RatioUniformsDenseBlock(engine: *alea.ScalarPrng, dest: []@Vecto
     const mean_vec: @Vector(8, f32) = @splat(0);
     const stddev_vec: @Vector(8, f32) = @splat(1);
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRatioUniformsNormalF32DenseBlock(engine);
+}
+
+fn fillNormalF32InverseCdf(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorInverseCdfNormalF32(engine);
 }
 
 fn fillNormalF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -2727,6 +2741,10 @@ fn fillStandardNormalF64RatioUniformsDenseBlock(engine: *alea.ScalarPrng, dest: 
     for (dest) |*item| item.* = vectorRatioUniformsNormalF64DenseBlock(engine);
 }
 
+fn fillStandardNormalF64InverseCdf(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorInverseCdfNormalF64(engine);
+}
+
 fn fillStandardNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorRepairNormalF64SameCandidate(engine);
 }
@@ -2764,6 +2782,11 @@ fn fillNormalF64RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(4, f64))
 fn fillNormalF64RatioUniformsDenseBlock(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     const inverse_rate: @Vector(4, f64) = @splat(1);
     for (dest) |*item| item.* = vectorRatioUniformsNormalF64DenseBlock(engine) * inverse_rate;
+}
+
+fn fillNormalF64InverseCdf(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(1);
+    for (dest) |*item| item.* = vectorInverseCdfNormalF64(engine) * inverse_rate;
 }
 
 fn fillNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
@@ -2954,6 +2977,71 @@ fn ratioUniformsNormalF64(engine: *alea.ScalarPrng) f64 {
         if (q < 0.27597) return v / u;
         if (q <= 0.27846 and v * v <= -4.0 * u * u * @log(u)) return v / u;
     }
+}
+
+fn vectorInverseCdfNormalF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    return @floatCast(inverseCdfNormalVec(@as(@Vector(8, f64), @floatCast(vectorOpenF32Local(engine)))));
+}
+
+fn vectorInverseCdfNormalF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    return inverseCdfNormalVec(vectorOpenF64Local(engine));
+}
+
+fn inverseCdfNormalVec(p: anytype) @TypeOf(p) {
+    const Vec = @TypeOf(p);
+    const info = @typeInfo(Vec).vector;
+    const T = info.child;
+    const p_low: Vec = @splat(0.02425);
+    const p_high: Vec = @splat(0.97575);
+
+    const q_low = @sqrt(@as(Vec, @splat(-2.0)) * @log(p));
+    var low_num: Vec = @splat(-7.784894002430293e-03);
+    low_num = low_num * q_low + @as(Vec, @splat(-3.223964580411365e-01));
+    low_num = low_num * q_low + @as(Vec, @splat(-2.400758277161838e+00));
+    low_num = low_num * q_low + @as(Vec, @splat(-2.549732539343734e+00));
+    low_num = low_num * q_low + @as(Vec, @splat(4.374664141464968e+00));
+    low_num = low_num * q_low + @as(Vec, @splat(2.938163982698783e+00));
+    var low_den: Vec = @splat(7.784695709041462e-03);
+    low_den = low_den * q_low + @as(Vec, @splat(3.224671290700398e-01));
+    low_den = low_den * q_low + @as(Vec, @splat(2.445134137142996e+00));
+    low_den = low_den * q_low + @as(Vec, @splat(3.754408661907416e+00));
+    low_den = low_den * q_low + @as(Vec, @splat(1.0));
+    const low = low_num / low_den;
+
+    const q_mid = p - @as(Vec, @splat(0.5));
+    const r = q_mid * q_mid;
+    var mid_num: Vec = @splat(-3.969683028665376e+01);
+    mid_num = mid_num * r + @as(Vec, @splat(2.209460984245205e+02));
+    mid_num = mid_num * r + @as(Vec, @splat(-2.759285104469687e+02));
+    mid_num = mid_num * r + @as(Vec, @splat(1.383577518672690e+02));
+    mid_num = mid_num * r + @as(Vec, @splat(-3.066479806614716e+01));
+    mid_num = mid_num * r + @as(Vec, @splat(2.506628277459239e+00));
+    mid_num *= q_mid;
+    var mid_den: Vec = @splat(-5.447609879822406e+01);
+    mid_den = mid_den * r + @as(Vec, @splat(1.615858368580409e+02));
+    mid_den = mid_den * r + @as(Vec, @splat(-1.556989798598866e+02));
+    mid_den = mid_den * r + @as(Vec, @splat(6.680131188771972e+01));
+    mid_den = mid_den * r + @as(Vec, @splat(-1.328068155288572e+01));
+    mid_den = mid_den * r + @as(Vec, @splat(1.0));
+    const mid = mid_num / mid_den;
+
+    const q_high = @sqrt(@as(Vec, @splat(-2.0)) * @log(@as(Vec, @splat(1.0)) - p));
+    var high_num: Vec = @splat(-7.784894002430293e-03);
+    high_num = high_num * q_high + @as(Vec, @splat(-3.223964580411365e-01));
+    high_num = high_num * q_high + @as(Vec, @splat(-2.400758277161838e+00));
+    high_num = high_num * q_high + @as(Vec, @splat(-2.549732539343734e+00));
+    high_num = high_num * q_high + @as(Vec, @splat(4.374664141464968e+00));
+    high_num = high_num * q_high + @as(Vec, @splat(2.938163982698783e+00));
+    var high_den: Vec = @splat(7.784695709041462e-03);
+    high_den = high_den * q_high + @as(Vec, @splat(3.224671290700398e-01));
+    high_den = high_den * q_high + @as(Vec, @splat(2.445134137142996e+00));
+    high_den = high_den * q_high + @as(Vec, @splat(3.754408661907416e+00));
+    high_den = high_den * q_high + @as(Vec, @splat(1.0));
+    const high = -(high_num / high_den);
+
+    const low_mask = p < p_low;
+    const high_mask = p > p_high;
+    return @select(T, high_mask, high, @select(T, low_mask, low, mid));
 }
 
 fn vectorF32Local(engine: *alea.ScalarPrng) @Vector(8, f32) {
