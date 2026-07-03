@@ -109,10 +109,14 @@ pub fn main(init: std.process.Init) !void {
     try benchFillBernoulli(io, stdout, "alea fillBernoulli p=0.25", bytes / 8);
     try benchAliasTable(io, stdout, "alea alias table", bytes / 256);
     try benchAliasTableDirect(io, stdout, "alea alias table direct", bytes / 256);
+    try benchAliasTableScalar(io, stdout, "alea alias table scalar direct", bytes / 256);
     try benchAliasTableFillDirect(io, stdout, "alea alias table fill direct", bytes / 256);
+    try benchAliasTableFillScalar(io, stdout, "alea alias table fill scalar direct", bytes / 256);
     try benchAliasTableF64(io, stdout, "alea alias table f64", bytes / 256);
     try benchAliasTableF64Direct(io, stdout, "alea alias table f64 direct", bytes / 256);
+    try benchAliasTableF64Scalar(io, stdout, "alea alias table f64 scalar direct", bytes / 256);
     try benchAliasTableF64FillDirect(io, stdout, "alea alias table f64 fill direct", bytes / 256);
+    try benchAliasTableF64FillScalar(io, stdout, "alea alias table f64 fill scalar direct", bytes / 256);
     try benchWeightedChoice(io, stdout, "alea weighted choice", bytes / 256);
     try benchWeightedChoiceDirect(io, stdout, "alea weighted choice direct", bytes / 256);
     try benchWeightedChoiceFillDirect(io, stdout, "alea weighted choice fill direct", bytes / 256);
@@ -3031,6 +3035,36 @@ fn benchAliasTableDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchAliasTableScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    const weights = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xa11a);
+        var table = try alea.distributions.AliasTable(u32).init(std.heap.smp_allocator, &weights);
+        defer table.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: usize = 0;
+        while (i < count) : (i += 1) {
+            checksum +%= table.sampleFrom(&engine);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchAliasTableFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
@@ -3040,6 +3074,40 @@ fn benchAliasTableFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.FastPrng.init(0xa11a);
+        var table = try alea.distributions.AliasTable(u32).init(std.heap.smp_allocator, &weights);
+        defer table.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: usize = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            table.fillFrom(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchAliasTableFillScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    var out: [1024]usize = undefined;
+    const weights = [_]u32{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xa11a);
         var table = try alea.distributions.AliasTable(u32).init(std.heap.smp_allocator, &weights);
         defer table.deinit();
 
@@ -3126,6 +3194,36 @@ fn benchAliasTableF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchAliasTableF64Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    const weights = [_]f64{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xa11b);
+        var table = try alea.distributions.AliasTable(f64).init(std.heap.smp_allocator, &weights);
+        defer table.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: usize = 0;
+        while (i < count) : (i += 1) {
+            checksum +%= table.sampleFrom(&engine);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchAliasTableF64FillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
@@ -3135,6 +3233,40 @@ fn benchAliasTableF64FillDirect(io: std.Io, stdout: *std.Io.Writer, name: []cons
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.FastPrng.init(0xa11b);
+        var table = try alea.distributions.AliasTable(f64).init(std.heap.smp_allocator, &weights);
+        defer table.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: usize = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            table.fillFrom(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchAliasTableF64FillScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    var out: [1024]usize = undefined;
+    const weights = [_]f64{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xa11b);
         var table = try alea.distributions.AliasTable(f64).init(std.heap.smp_allocator, &weights);
         defer table.deinit();
 
