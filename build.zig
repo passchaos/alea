@@ -710,6 +710,20 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_tests.step);
     test_step.dependOn(&run_apicheck.step);
 
+    const crosscheck_step = b.step("crosscheck", "Compile unit tests for secondary targets without executing them");
+    inline for (cross_compile_targets) |cross_target| {
+        const cross_tests = b.addTest(.{
+            .name = b.fmt("alea-tests-{s}", .{cross_target.name}),
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/root.zig"),
+                .target = b.resolveTargetQuery(cross_target.query),
+                .optimize = optimize,
+            }),
+        });
+        cross_tests.generated_bin = null;
+        crosscheck_step.dependOn(&cross_tests.step);
+    }
+
     const stream_mod = b.createModule(.{
         .root_source_file = b.path("tools/stream.zig"),
         .target = target,
@@ -784,3 +798,33 @@ pub fn build(b: *std.Build) void {
     const repro_step = b.step("repro", "Print deterministic reproducibility snapshots");
     repro_step.dependOn(&run_repro.step);
 }
+
+const CrossCompileTarget = struct {
+    name: []const u8,
+    query: std.Target.Query,
+};
+
+const cross_compile_targets = [_]CrossCompileTarget{
+    .{
+        .name = "wasm32-wasi",
+        .query = .{
+            .cpu_arch = .wasm32,
+            .os_tag = .wasi,
+            .abi = .musl,
+        },
+    },
+    .{
+        .name = "aarch64-linux",
+        .query = .{
+            .cpu_arch = .aarch64,
+            .os_tag = .linux,
+        },
+    },
+    .{
+        .name = "riscv64-linux",
+        .query = .{
+            .cpu_arch = .riscv64,
+            .os_tag = .linux,
+        },
+    },
+};

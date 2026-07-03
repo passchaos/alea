@@ -57,9 +57,11 @@ and no second-platform runtime was available. It was refreshed again on
 locally, and no second-platform runtime was available. A follow-up
 WASI compile-only smoke check, `zig test -target wasm32-wasi -fno-emit-bin
 src/root.zig`, now succeeds after removing a test-only `u64` output-buffer
-assumption that was invalid on 32-bit `usize` targets. Executing the generated
-WASI test binary is still blocked because `wasmtime` / another WASI runner is
-not installed locally.
+assumption that was invalid on 32-bit `usize` targets. The build now exposes a
+repeatable `zig build crosscheck` step which compile-checks the unit tests for
+`wasm32-wasi`, `aarch64-linux`, and `riscv64-linux` without executing them.
+Executing those generated test binaries is still blocked because `wasmtime`,
+QEMU user-mode, or another second-platform runner is not installed locally.
 
 ## Follow-Up
 
@@ -70,7 +72,13 @@ To close S4-M1, provide one of:
 - a Windows runner or Wine setup suitable for Zig 0.16.0 outputs,
 - a WASI runner if the repro and test steps are adapted to the WASI target.
 
-Then run:
+Until a runner is available, keep the cross-target compile smoke green:
+
+```sh
+zig build crosscheck
+```
+
+Then, on the second runtime-capable target, run:
 
 ```sh
 zig build repro
