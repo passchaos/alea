@@ -99,6 +99,15 @@ still below or only near Rust's single-sample rows and not a production default
 replacement. The remaining gap is therefore likely Rust/Zig codegen and loop
 context around the dynamic libm call, not just the choice of libm symbol.
 
+A direct `zig build-exe -dynamic -lc` build of `tools/log_normal_probe.zig`
+confirms that forcing the probe executable itself to be dynamically linked does
+not change this conclusion. The dynamic binary links `libm.so.6` and `libc.so.6`
+(and `libmvec.so.1` because the probe contains libmvec rows), but focused
+`"libc"` rows stay in the same range: about 118M/134M f64 FastPrng/ScalarPrng,
+120M/137M f32, and staged libc fill around 137M/143M f64 and 142M/151M f32.
+Thus executable link mode alone does not reproduce Rust's LogNormal codegen
+advantage.
+
 A follow-up scratch probe checked whether mimicking Rust's f32 `exp` symbol by
 widening f32 log-space samples to f64, calling libc `exp`, and casting back to
 f32 helps. It does not: default-normal rows were about 98.9M FastPrng and
