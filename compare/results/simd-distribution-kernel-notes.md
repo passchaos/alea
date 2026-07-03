@@ -138,6 +138,15 @@ repair rows before a real `vectorbench` follow-up.
   403M/398M exponential versus direct rows around 454M/454M and 469M/468M.
   FastPrng f32x8 block-fallback likewise trailed direct rows at about
   423M/420M normal and 380M/377M exponential.
+- A normal-only integer range-block variant of the block-fallback policy also
+  loses. This candidate replaces the vector floating ratio compare with
+  precomputed mantissa lower/upper bounds before applying the same whole-vector
+  accept-or-fallback policy. A focused `vectorbench -- 16777216 "range-block"`
+  run showed f32x8 standard/parameterized normal around 376M/376M lanes/s and
+  f64x4 standard/parameterized around 373M/366M, below same-host direct
+  scalar-lane rows around 479M/478M f32x8 and 452M/455M f64x4 and below the
+  older ratio-based block-fallback evidence. Mantissa-range checks therefore do
+  not rescue the block policy.
 - An all-accepted fast-return variant of same-candidate repair also loses. It
   returns the vector immediately when every lane hits the ziggurat fast path,
   then falls back to per-lane same-candidate repair only for rejected lanes. A
