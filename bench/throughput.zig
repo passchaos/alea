@@ -129,6 +129,8 @@ pub fn main(init: std.process.Init) !void {
     try benchStandardNormalRawScalar(io, stdout, "alea standard-normal raw scalar direct", bytes / 64);
     try benchStandardNormalScalarF32(io, stdout, "alea standard-normal f32 scalar direct", bytes / 64);
     try benchVectorNormalF32(io, stdout, "alea vector normal f32x8", bytes / 64);
+    try benchVectorNormalF32Direct(io, stdout, "alea vector normal f32x8 direct", bytes / 64);
+    try benchVectorNormalF64Direct(io, stdout, "alea vector normal f64x4 direct", bytes / 64);
     try benchFillStandardNormal(io, stdout, "alea fillStandardNormal", bytes / 64);
     try benchFillStandardNormalScalar(io, stdout, "alea fillStandardNormal scalar direct", bytes / 64);
     try benchFillStandardNormalF32(io, stdout, "alea fillStandardNormal f32", bytes / 64);
@@ -2329,6 +2331,60 @@ fn benchVectorNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, co
         while (i < count) : (i += 8) {
             const value = rng.vectorNormal(@Vector(8, f32), 0, 1);
             inline for (0..8) |lane| checksum += value[lane];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchVectorNormalF32Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xd158);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f32 = 0;
+        while (i < count) : (i += 8) {
+            const value = alea.Rng.vectorNormalFrom(&engine, @Vector(8, f32), 0, 1);
+            inline for (0..8) |lane| checksum += value[lane];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchVectorNormalF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xd154);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 4) {
+            const value = alea.Rng.vectorNormalFrom(&engine, @Vector(4, f64), 0, 1);
+            inline for (0..4) |lane| checksum += value[lane];
         }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /

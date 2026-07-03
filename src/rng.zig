@@ -1451,7 +1451,12 @@ pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vector
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
     if (stddev == 0) return @splat(mean);
-    if (info.child == f32 or info.child == f64) return vectorNormalScalarFrom(source, VectorType, mean, stddev);
+    if (info.child == f32 or info.child == f64) {
+        if (comptime @TypeOf(source) != Rng) {
+            if (mean == 0 and stddev == 1) return vectorStandardNormalFrom(source, VectorType);
+        }
+        return vectorNormalScalarFrom(source, VectorType, mean, stddev);
+    }
     var out: VectorType = undefined;
     var std_random = randomFrom(source);
     inline for (0..info.len) |i| out[i] = mean + stddev * std_random.floatNorm(info.child);
