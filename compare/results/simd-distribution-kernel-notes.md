@@ -77,13 +77,14 @@ repair rows before a real `vectorbench` follow-up.
   a useful opt-in. A focused `vectorbench -- 16777216 "clt"` run reports CLT6
   standard/parameterized around 269M/268M f32x8 lanes/s and CLT12 around
   150M/150M, below ziggurat lane-fill before considering their weak tails.
-- Table-quantile f32 vector normal is useful only as an explicit approximate
+- Table-quantile vector normal is useful only as an explicit approximate
   output-mapping opt-in. A 16384-entry midpoint normal-quantile table produces
-  discrete/truncated f32 outputs with support around `±4.01` and table-grid
-  variance around `0.99992`. Public `VectorStandardNormalTableF32` /
-  `VectorNormalTableF32` rows in `vectorbench -- 16777216 "TableF32"` reach
-  about 1.28-1.30B f32x8 lanes/s, far above ziggurat lane-fill, but this does
-  not replace default normal and does not solve f64/default dense kernels.
+  discrete/truncated outputs with support around `±4.01` and table-grid variance
+  around `0.99992`. Public `VectorStandardNormalTableF32` / `VectorNormalTableF32`
+  rows in `vectorbench -- 16777216 "TableF32"` reach about 1.28-1.30B f32x8
+  lanes/s, and `VectorStandardNormalTableF64` / `VectorNormalTableF64` rows in
+  `vectorbench -- 16777216 "Table"` are also around 1.26-1.28B f64x4 lanes/s, above f64 ziggurat. These
+  profiles do not replace default normal.
 - Vectorized inverse-CDF normal approximation kernels are also too slow for a
   useful opt-in. A real `vectorbench -- 16777216 "StandardNormal f32x8"` /
   `"StandardNormal f64x4"` run showed Acklam-style inverse-CDF candidates around

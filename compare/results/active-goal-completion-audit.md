@@ -44,10 +44,10 @@ LogNormal exact defaults are now documented as a stable-output tradeoff with
 multiple opt-in performance profiles (`BufferedLogNormal`, `LogNormalDlsymExp`,
 `LogNormalLibmvec`, and f32 approximation/native variants) that cover the local
 Rust performance gap without changing the exact default.
-The SIMD blocker has also narrowed on the f32 vector side: table-quantile normal
-and approximate-log exponential vector opt-ins now beat the f32x8 ziggurat
-lane-fill rows for users who accept explicit approximation/output-mapping
-contracts. They do not close the dense SIMD blocker because default/f64
+The SIMD blocker has also narrowed on the vector opt-in side: table-quantile
+normal and f32 approximate-log exponential vector opt-ins now beat the matching
+ziggurat lane-fill rows for users who accept explicit approximation/output-mapping
+contracts. They do not close the dense SIMD blocker because default
 normal/exponential kernels remain unresolved.
 
 ## Required Next Work Before Completion

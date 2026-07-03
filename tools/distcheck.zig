@@ -624,6 +624,11 @@ fn checkVectorDistributions() !void {
     alea.distributions.fillVectorStandardNormalTableF32From(&vector_table_normal_engine, @Vector(8, f32), &table_normal);
     try expectVectorMean(@Vector(8, f32), "vector standard-normal table f32x8", &table_normal, -0.08, 0.08);
 
+    var vector_table_normal_f64_engine = alea.ScalarPrng.init(0x7117);
+    var table_normal_f64: [128]@Vector(4, f64) = undefined;
+    alea.distributions.fillVectorStandardNormalTableF64From(&vector_table_normal_f64_engine, @Vector(4, f64), &table_normal_f64);
+    try expectVectorMean(@Vector(4, f64), "vector standard-normal table f64x4", &table_normal_f64, -0.08, 0.08);
+
     var vector_native_exponential_engine = alea.ScalarPrng.init(0x710e);
     var native_exponential: [128]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorStandardExponentialNativeF32From(&vector_native_exponential_engine, @Vector(8, f32), &native_exponential);
@@ -643,6 +648,11 @@ fn checkVectorDistributions() !void {
     var parameterized_table_normal: [128]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorNormalTableF32From(&vector_parameterized_table_normal_engine, @Vector(8, f32), &parameterized_table_normal, 5, 2);
     try expectVectorMean(@Vector(8, f32), "vector normal table f32x8", &parameterized_table_normal, 4.85, 5.15);
+
+    var vector_parameterized_table_normal_f64_engine = alea.ScalarPrng.init(0x7118);
+    var parameterized_table_normal_f64: [128]@Vector(4, f64) = undefined;
+    alea.distributions.fillVectorNormalTableF64From(&vector_parameterized_table_normal_f64_engine, @Vector(4, f64), &parameterized_table_normal_f64, 5, 2);
+    try expectVectorMean(@Vector(4, f64), "vector normal table f64x4", &parameterized_table_normal_f64, 4.85, 5.15);
 
     var vector_parameterized_native_exponential_engine = alea.ScalarPrng.init(0x7111);
     var parameterized_native_exponential: [128]@Vector(8, f32) = undefined;

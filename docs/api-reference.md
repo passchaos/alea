@@ -174,6 +174,8 @@ Single-shot helpers:
   `fillVectorStandardNormalNativeF32From`,
   `vectorStandardNormalTableF32`, `vectorStandardNormalTableF32From`,
   `fillVectorStandardNormalTableF32`, `fillVectorStandardNormalTableF32From`,
+  `vectorStandardNormalTableF64`, `vectorStandardNormalTableF64From`,
+  `fillVectorStandardNormalTableF64`, `fillVectorStandardNormalTableF64From`,
   `fillStandardNormalFrom`, `vectorStandardNormal`,
   `vectorStandardNormalFrom`, `fillVectorStandardNormal`,
   `fillVectorStandardNormalFrom`, `normal`, `normalFrom`, `normalChecked`,
@@ -190,6 +192,10 @@ Single-shot helpers:
   `vectorNormalTableF32Checked`, `vectorNormalTableF32CheckedFrom`,
   `fillVectorNormalTableF32`, `fillVectorNormalTableF32From`,
   `fillVectorNormalTableF32Checked`, `fillVectorNormalTableF32CheckedFrom`,
+  `vectorNormalTableF64`, `vectorNormalTableF64From`,
+  `vectorNormalTableF64Checked`, `vectorNormalTableF64CheckedFrom`,
+  `fillVectorNormalTableF64`, `fillVectorNormalTableF64From`,
+  `fillVectorNormalTableF64Checked`, `fillVectorNormalTableF64CheckedFrom`,
   `vectorNormal`, `vectorNormalFrom`,
   `vectorNormalChecked`, `vectorNormalCheckedFrom`, `fillVectorNormal`,
   `fillVectorNormalFrom`, `fillVectorNormalChecked`,
@@ -752,6 +758,19 @@ Reusable samplers:
 - `VectorStandardNormalTableF32(VectorType).sampleFrom`
 - `VectorStandardNormalTableF32(VectorType).fill`
 - `VectorStandardNormalTableF32(VectorType).fillFrom`
+- `VectorStandardNormalTableF64(VectorType)`
+- `VectorStandardNormalTableF64(VectorType).meanValue`
+- `VectorStandardNormalTableF64(VectorType).stddevValue`
+- `VectorStandardNormalTableF64(VectorType).expectedValue`
+- `VectorStandardNormalTableF64(VectorType).varianceValue`
+- `VectorStandardNormalTableF64(VectorType).medianValue`
+- `VectorStandardNormalTableF64(VectorType).modeValue`
+- `VectorStandardNormalTableF64(VectorType).minValue`
+- `VectorStandardNormalTableF64(VectorType).maxValue`
+- `VectorStandardNormalTableF64(VectorType).sample`
+- `VectorStandardNormalTableF64(VectorType).sampleFrom`
+- `VectorStandardNormalTableF64(VectorType).fill`
+- `VectorStandardNormalTableF64(VectorType).fillFrom`
 - `Normal(T)`
 - `Normal(T).init`
 - `Normal(T).initMeanCv`
@@ -820,6 +839,23 @@ Reusable samplers:
 - `VectorNormalTableF32(VectorType).sampleFrom`
 - `VectorNormalTableF32(VectorType).fill`
 - `VectorNormalTableF32(VectorType).fillFrom`
+- `VectorNormalTableF64(VectorType)`
+- `VectorNormalTableF64(VectorType).init`
+- `VectorNormalTableF64(VectorType).initMeanCv`
+- `VectorNormalTableF64(VectorType).fromZScore`
+- `VectorNormalTableF64(VectorType).meanValue`
+- `VectorNormalTableF64(VectorType).stddevValue`
+- `VectorNormalTableF64(VectorType).expectedValue`
+- `VectorNormalTableF64(VectorType).varianceValue`
+- `VectorNormalTableF64(VectorType).medianValue`
+- `VectorNormalTableF64(VectorType).modeValue`
+- `VectorNormalTableF64(VectorType).minValue`
+- `VectorNormalTableF64(VectorType).maxValue`
+- `VectorNormalTableF64(VectorType).coefficientOfVariationValue`
+- `VectorNormalTableF64(VectorType).sample`
+- `VectorNormalTableF64(VectorType).sampleFrom`
+- `VectorNormalTableF64(VectorType).fill`
+- `VectorNormalTableF64(VectorType).fillFrom`
 - `VectorStandardNormal(VectorType)`
 - `VectorStandardNormal(VectorType).meanValue`
 - `VectorStandardNormal(VectorType).stddevValue`

@@ -57,6 +57,16 @@ const normal_table_f32 = blk: {
     break :blk out;
 };
 
+const normal_table_f64 = blk: {
+    @setEvalBranchQuota(320_000);
+    var out: [16384]f64 = undefined;
+    for (&out, 0..) |*item, i| {
+        const p = (@as(f64, @floatFromInt(i)) + 0.5) * (1.0 / 16384.0);
+        item.* = inverseCdfNormalInit(p);
+    }
+    break :blk out;
+};
+
 fn inverseCdfNormalInit(p: f64) f64 {
     if (p < 0.02425) {
         const q = @sqrt(-2.0 * @log(p));
@@ -2466,6 +2476,35 @@ pub fn fillVectorStandardNormalTableF32From(source: anytype, comptime VectorType
     for (dest) |*item| item.* = vectorStandardNormalTableF32From(source, VectorType);
 }
 
+pub fn vectorStandardNormalTableF64(rng: Rng, comptime VectorType: type) VectorType {
+    return vectorStandardNormalTableF64From(rng, VectorType);
+}
+
+pub fn vectorStandardNormalTableF64From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("vectorStandardNormalTableF64 expects an f64 vector");
+
+    var out: VectorType = undefined;
+    var bits: u64 = 0;
+    inline for (0..info.len) |lane| {
+        if (lane % 4 == 0) bits = Rng.nextFrom(source);
+        const shift: u6 = @intCast((lane % 4) * 14);
+        const index: usize = @intCast((bits >> shift) & 0x3fff);
+        out[lane] = normal_table_f64[index];
+    }
+    return out;
+}
+
+pub fn fillVectorStandardNormalTableF64(rng: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorStandardNormalTableF64From(rng, VectorType, dest);
+}
+
+pub fn fillVectorStandardNormalTableF64From(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("fillVectorStandardNormalTableF64 expects an f64 vector");
+    for (dest) |*item| item.* = vectorStandardNormalTableF64From(source, VectorType);
+}
+
 fn standardNormalNativeF32Tail(source: anytype, u: f32) f32 {
     var x: f32 = 1;
     var y: f32 = 0;
@@ -2710,6 +2749,58 @@ pub fn fillVectorNormalTableF32CheckedFrom(source: anytype, comptime VectorType:
     fillVectorNormalTableF32From(source, VectorType, dest, mean, stddev);
 }
 
+pub fn vectorNormalTableF64(rng: Rng, comptime VectorType: type, mean: f64, stddev: f64) VectorType {
+    return vectorNormalTableF64From(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorNormalTableF64From(source: anytype, comptime VectorType: type, mean: f64, stddev: f64) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("vectorNormalTableF64 expects an f64 vector");
+    std.debug.assert(std.math.isFinite(mean) and stddev >= 0 and std.math.isFinite(stddev));
+    if (stddev == 0) return @splat(mean);
+    return @as(VectorType, @splat(mean)) + @as(VectorType, @splat(stddev)) * vectorStandardNormalTableF64From(source, VectorType);
+}
+
+pub fn vectorNormalTableF64Checked(rng: Rng, comptime VectorType: type, mean: f64, stddev: f64) Error!VectorType {
+    return vectorNormalTableF64CheckedFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorNormalTableF64CheckedFrom(source: anytype, comptime VectorType: type, mean: f64, stddev: f64) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("vectorNormalTableF64Checked expects an f64 vector");
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    return vectorNormalTableF64From(source, VectorType, mean, stddev);
+}
+
+pub fn fillVectorNormalTableF64(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f64, stddev: f64) void {
+    fillVectorNormalTableF64From(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorNormalTableF64From(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f64, stddev: f64) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("fillVectorNormalTableF64 expects an f64 vector");
+    std.debug.assert(std.math.isFinite(mean) and stddev >= 0 and std.math.isFinite(stddev));
+    if (stddev == 0) {
+        @memset(dest, @as(VectorType, @splat(mean)));
+        return;
+    }
+    const mean_vec: VectorType = @splat(mean);
+    const stddev_vec: VectorType = @splat(stddev);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorStandardNormalTableF64From(source, VectorType);
+}
+
+pub fn fillVectorNormalTableF64Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f64, stddev: f64) Error!void {
+    return fillVectorNormalTableF64CheckedFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorNormalTableF64CheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f64, stddev: f64) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("fillVectorNormalTableF64Checked expects an f64 vector");
+    if (dest.len == 0) return;
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    fillVectorNormalTableF64From(source, VectorType, dest, mean, stddev);
+}
+
 pub fn StandardNormal(comptime T: type) type {
     return struct {
         pub fn meanValue(_: @This()) T {
@@ -2918,6 +3009,61 @@ pub fn VectorStandardNormalTableF32(comptime VectorType: type) type {
 
         pub fn fillFrom(_: @This(), source: anytype, dest: []VectorType) void {
             fillVectorStandardNormalTableF32From(source, VectorType, dest);
+        }
+    };
+}
+
+pub fn VectorStandardNormalTableF64(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f64) @compileError("VectorStandardNormalTableF64 expects an f64 vector");
+
+    return struct {
+        pub fn meanValue(_: @This()) f64 {
+            return 0;
+        }
+
+        pub fn stddevValue(_: @This()) f64 {
+            return 1;
+        }
+
+        pub fn expectedValue(_: @This()) f64 {
+            return 0;
+        }
+
+        pub fn varianceValue(_: @This()) f64 {
+            return 1;
+        }
+
+        pub fn medianValue(_: @This()) f64 {
+            return 0;
+        }
+
+        pub fn modeValue(_: @This()) f64 {
+            return 0;
+        }
+
+        pub fn minValue(_: @This()) f64 {
+            return normal_table_f64[0];
+        }
+
+        pub fn maxValue(_: @This()) f64 {
+            return normal_table_f64[normal_table_f64.len - 1];
+        }
+
+        pub fn sample(_: @This(), rng: Rng) VectorType {
+            return vectorStandardNormalTableF64(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) VectorType {
+            return vectorStandardNormalTableF64From(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: []VectorType) void {
+            fillVectorStandardNormalTableF64(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: []VectorType) void {
+            fillVectorStandardNormalTableF64From(source, VectorType, dest);
         }
     };
 }
@@ -3611,6 +3757,85 @@ pub fn VectorNormalTableF32(comptime VectorType: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             fillVectorNormalTableF32From(source, VectorType, dest, self.mean, self.stddev);
+        }
+    };
+}
+
+pub fn VectorNormalTableF64(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f64) @compileError("VectorNormalTableF64 expects an f64 vector");
+
+    return struct {
+        const Self = @This();
+
+        mean: f64,
+        stddev: f64,
+
+        pub fn init(mean: f64, stddev: f64) Error!Self {
+            if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+            return .{ .mean = mean, .stddev = stddev };
+        }
+
+        pub fn initMeanCv(mean: f64, coefficient_of_variation: f64) Error!Self {
+            if (!(coefficient_of_variation >= 0) or !std.math.isFinite(coefficient_of_variation)) return error.InvalidParameter;
+            return Self.init(mean, @abs(mean) * coefficient_of_variation);
+        }
+
+        pub fn fromZScore(mean: f64, stddev: f64, z_score: f64) Error!Self {
+            if (!std.math.isFinite(z_score)) return error.InvalidParameter;
+            return Self.init(mean + z_score * stddev, stddev);
+        }
+
+        pub fn meanValue(self: Self) f64 {
+            return self.mean;
+        }
+
+        pub fn stddevValue(self: Self) f64 {
+            return self.stddev;
+        }
+
+        pub fn expectedValue(self: Self) f64 {
+            return self.mean;
+        }
+
+        pub fn varianceValue(self: Self) f64 {
+            return self.stddev * self.stddev;
+        }
+
+        pub fn medianValue(self: Self) f64 {
+            return self.mean;
+        }
+
+        pub fn modeValue(self: Self) f64 {
+            return self.mean;
+        }
+
+        pub fn minValue(self: Self) f64 {
+            return self.mean + self.stddev * normal_table_f64[0];
+        }
+
+        pub fn maxValue(self: Self) f64 {
+            return self.mean + self.stddev * normal_table_f64[normal_table_f64.len - 1];
+        }
+
+        pub fn coefficientOfVariationValue(self: Self) ?f64 {
+            return if (self.mean == 0) null else @abs(self.stddev / self.mean);
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorNormalTableF64From(source, VectorType, self.mean, self.stddev);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            fillVectorNormalTableF64From(source, VectorType, dest, self.mean, self.stddev);
         }
     };
 }
@@ -24170,6 +24395,77 @@ test "vector table f32 normal has stable snapshots" {
     var empty: [0]@Vector(8, f32) = .{};
     try fillVectorNormalTableF32CheckedFrom(&empty_engine, @Vector(8, f32), &empty, 0, -1);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "vector table f64 normal has stable snapshots" {
+    const alea = @import("root.zig");
+
+    var standard_engine = alea.ScalarPrng.init(0x3290);
+    const standard_vec = vectorStandardNormalTableF64From(&standard_engine, @Vector(4, f64));
+    const standard_expected = [_]u64{ 0x3fede5a25ed7721b, 0x3ff8ee1d25f136ec, 0xbfe1df8b1fd52468, 0x3f905f42d390e99c };
+    inline for (standard_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u64, @bitCast(standard_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x3d9e8aeba4feba89), standard_engine.next());
+
+    var standard_fill_engine = alea.ScalarPrng.init(0x3290);
+    var standard_buf: [2]@Vector(4, f64) = undefined;
+    fillVectorStandardNormalTableF64From(&standard_fill_engine, @Vector(4, f64), &standard_buf);
+    inline for (standard_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u64, @bitCast(standard_buf[0][lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xa52b67e0cb005c6e), standard_fill_engine.next());
+
+    var standard_sampler_engine = alea.ScalarPrng.init(0x3290);
+    const standard_sampler = VectorStandardNormalTableF64(@Vector(4, f64)){};
+    try std.testing.expectEqual(@as(f64, 0), standard_sampler.meanValue());
+    try std.testing.expectEqual(@as(f64, 1), standard_sampler.stddevValue());
+    try std.testing.expectEqual(@as(f64, 0), standard_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 1), standard_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), standard_sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, 0), standard_sampler.modeValue());
+    try std.testing.expect(standard_sampler.minValue() < -4);
+    try std.testing.expect(standard_sampler.maxValue() > 4);
+    const standard_sampler_vec = standard_sampler.sampleFrom(&standard_sampler_engine);
+    inline for (standard_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u64, @bitCast(standard_sampler_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x3d9e8aeba4feba89), standard_sampler_engine.next());
+
+    var normal_engine = alea.ScalarPrng.init(0x3291);
+    const normal_vec = vectorNormalTableF64From(&normal_engine, @Vector(4, f64), 1, 2);
+    const normal_expected = [_]u64{ 0xbfe5453198efa370, 0x3ff34101dae6634f, 0x3fef6fddf4b1ab7a, 0x400b5eff5b157bd8 };
+    inline for (normal_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u64, @bitCast(normal_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xcf8690fcee7828e0), normal_engine.next());
+
+    var normal_fill_engine = alea.ScalarPrng.init(0x3291);
+    var normal_buf: [2]@Vector(4, f64) = undefined;
+    fillVectorNormalTableF64From(&normal_fill_engine, @Vector(4, f64), &normal_buf, 1, 2);
+    inline for (normal_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u64, @bitCast(normal_buf[0][lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xd0e25e181f184c6e), normal_fill_engine.next());
+
+    var normal_sampler_engine = alea.ScalarPrng.init(0x3291);
+    const normal_sampler = try VectorNormalTableF64(@Vector(4, f64)).init(1, 2);
+    try std.testing.expectEqual(@as(f64, 1), normal_sampler.meanValue());
+    try std.testing.expectEqual(@as(f64, 2), normal_sampler.stddevValue());
+    try std.testing.expectEqual(@as(f64, 4), normal_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f64, 2), normal_sampler.coefficientOfVariationValue().?);
+    const normal_sampler_vec = normal_sampler.sampleFrom(&normal_sampler_engine);
+    inline for (normal_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u64, @bitCast(normal_sampler_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xcf8690fcee7828e0), normal_sampler_engine.next());
+
+    var invalid_engine = alea.ScalarPrng.init(0x3293);
+    var invalid_control = alea.ScalarPrng.init(0x3293);
+    try std.testing.expectError(error.InvalidParameter, vectorNormalTableF64CheckedFrom(&invalid_engine, @Vector(4, f64), 0, -1));
+    var invalid_out: [1]@Vector(4, f64) = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillVectorNormalTableF64CheckedFrom(&invalid_engine, @Vector(4, f64), &invalid_out, 0, -1));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "vector approximate-log f32 exponential has stable snapshots" {

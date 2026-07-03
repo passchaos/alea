@@ -113,6 +113,16 @@ const table_cdf_normal_16384_f32 = blk: {
     break :blk out;
 };
 
+const table_cdf_normal_16384_f64 = blk: {
+    @setEvalBranchQuota(320_000);
+    var out: [16384]f64 = undefined;
+    for (&out, 0..) |*item, i| {
+        const p = (@as(f64, @floatFromInt(i)) + 0.5) * (1.0 / 16384.0);
+        item.* = inverseCdfNormalScalarInit(p);
+    }
+    break :blk out;
+};
+
 fn inverseCdfNormalScalarInit(p: f64) f64 {
     if (p < 0.02425) {
         const q = @sqrt(-2.0 * @log(p));
@@ -237,6 +247,12 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF32x8(io, stdout, "alea distributions.VectorNormalTableF32.fill f32x8", lanes / 4, 0xd18c, fillDistNormalTableSamplerF32);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormal f64x4", lanes / 8, 0xd184, fillDistNormalF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormal f64x4 direct", lanes / 8, 0xd184, fillDistNormalF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorStandardNormalTableF64 f64x4", lanes / 8, 0xd18d, fillDistStandardNormalTableF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorStandardNormalTableF64 f64x4 direct", lanes / 8, 0xd18d, fillDistStandardNormalTableF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorStandardNormalTableF64.fill f64x4", lanes / 8, 0xd18d, fillDistStandardNormalTableSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormalTableF64 f64x4", lanes / 8, 0xd18e, fillDistNormalTableF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormalTableF64 f64x4 direct", lanes / 8, 0xd18e, fillDistNormalTableF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorNormalTableF64.fill f64x4", lanes / 8, 0xd18e, fillDistNormalTableSamplerF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorLogNormal f64x4", lanes / 16, 0xd194, fillDistLogNormalF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorLogNormal f64x4 direct", lanes / 16, 0xd194, fillDistLogNormalF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorLogNormal.fill f64x4", lanes / 16, 0xd194, fillDistLogNormalSamplerF64);
@@ -417,6 +433,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 inverse-cdf tail-only candidate", lanes / 8, 0xd184, fillStandardNormalF64InverseCdfTailOnly);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 inverse-cdf central-mask candidate", lanes / 8, 0xd184, fillStandardNormalF64InverseCdfCentralMask);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 inverse-cdf ziggurat-tail candidate", lanes / 8, 0xd184, fillStandardNormalF64InverseCdfZigguratTail);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 table-cdf candidate", lanes / 8, 0xd184, fillStandardNormalF64TableCdf);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillStandardNormalF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 all-accepted repair", lanes / 8, 0xd184, fillStandardNormalF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillStandardNormalF64BlockFallback);
@@ -468,6 +485,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 inverse-cdf tail-only candidate", lanes / 8, 0xd184, fillNormalF64InverseCdfTailOnly);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 inverse-cdf central-mask candidate", lanes / 8, 0xd184, fillNormalF64InverseCdfCentralMask);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 inverse-cdf ziggurat-tail candidate", lanes / 8, 0xd184, fillNormalF64InverseCdfZigguratTail);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 table-cdf candidate", lanes / 8, 0xd184, fillNormalF64TableCdf);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillNormalF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 all-accepted repair", lanes / 8, 0xd184, fillNormalF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillNormalF64BlockFallback);
@@ -1269,6 +1287,32 @@ fn fillDistNormalF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)
 
 fn fillDistNormalF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
     alea.distributions.fillVectorNormalFrom(engine, @Vector(4, f64), dest, 0, 1);
+}
+
+fn fillDistStandardNormalTableF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorStandardNormalTableF64(rng, @Vector(4, f64), dest);
+}
+
+fn fillDistStandardNormalTableF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorStandardNormalTableF64From(engine, @Vector(4, f64), dest);
+}
+
+fn fillDistStandardNormalTableSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorStandardNormalTableF64(@Vector(4, f64)){};
+    sampler.fill(rng, dest);
+}
+
+fn fillDistNormalTableF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorNormalTableF64(rng, @Vector(4, f64), dest, 0, 1);
+}
+
+fn fillDistNormalTableF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorNormalTableF64From(engine, @Vector(4, f64), dest, 0, 1);
+}
+
+fn fillDistNormalTableSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorNormalTableF64(@Vector(4, f64)).init(0, 1) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 fn fillDistLogNormalF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
@@ -3139,6 +3183,10 @@ fn fillStandardNormalF64InverseCdfZigguratTail(engine: *alea.ScalarPrng, dest: [
     for (dest) |*item| item.* = vectorInverseCdfNormalF64ZigguratTail(engine);
 }
 
+fn fillStandardNormalF64TableCdf(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorTableCdfNormalF64(engine);
+}
+
 fn fillStandardNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorRepairNormalF64SameCandidate(engine);
 }
@@ -3211,6 +3259,11 @@ fn fillNormalF64InverseCdfCentralMask(engine: *alea.ScalarPrng, dest: []@Vector(
 fn fillNormalF64InverseCdfZigguratTail(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     const inverse_rate: @Vector(4, f64) = @splat(1);
     for (dest) |*item| item.* = vectorInverseCdfNormalF64ZigguratTail(engine) * inverse_rate;
+}
+
+fn fillNormalF64TableCdf(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(1);
+    for (dest) |*item| item.* = vectorTableCdfNormalF64(engine) * inverse_rate;
 }
 
 fn fillNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
@@ -3782,6 +3835,18 @@ fn vectorInverseCdfNormalF64ZigguratTail(engine: *alea.ScalarPrng) @Vector(4, f6
     var out = inverseCdfNormalCentralVec(p);
     inline for (0..4) |lane| {
         if (p[lane] < 0.02425 or p[lane] > 0.97575) out[lane] = ratioNormal(engine);
+    }
+    return out;
+}
+
+fn vectorTableCdfNormalF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    var out: @Vector(4, f64) = undefined;
+    var bits: u64 = 0;
+    inline for (0..4) |lane| {
+        if (lane % 4 == 0) bits = engine.next();
+        const shift: u6 = @intCast((lane % 4) * 14);
+        const index: usize = @intCast((bits >> shift) & 0x3fff);
+        out[lane] = table_cdf_normal_16384_f64[index];
     }
     return out;
 }
