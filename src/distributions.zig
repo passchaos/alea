@@ -3240,6 +3240,56 @@ pub fn fillLogNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, me
     dist.fillFrom(source, dest);
 }
 
+pub fn logNormalNativeF32(rng: Rng, mean: f32, stddev: f32) f32 {
+    return logNormalNativeF32From(rng, mean, stddev);
+}
+
+pub fn logNormalNativeF32From(source: anytype, mean: f32, stddev: f32) f32 {
+    std.debug.assert(std.math.isFinite(mean) and stddev >= 0 and std.math.isFinite(stddev));
+    if (stddev == 0) return @exp(mean);
+    const z = standardNormalNativeF32From(source);
+    const log_space = if (mean == 0) stddev * z else mean + stddev * z;
+    return @exp(log_space);
+}
+
+pub fn logNormalNativeF32Checked(rng: Rng, mean: f32, stddev: f32) Error!f32 {
+    return logNormalNativeF32CheckedFrom(rng, mean, stddev);
+}
+
+pub fn logNormalNativeF32CheckedFrom(source: anytype, mean: f32, stddev: f32) Error!f32 {
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    return logNormalNativeF32From(source, mean, stddev);
+}
+
+pub fn fillLogNormalNativeF32(rng: Rng, dest: []f32, mean: f32, stddev: f32) void {
+    fillLogNormalNativeF32From(rng, dest, mean, stddev);
+}
+
+pub fn fillLogNormalNativeF32From(source: anytype, dest: []f32, mean: f32, stddev: f32) void {
+    std.debug.assert(std.math.isFinite(mean) and stddev >= 0 and std.math.isFinite(stddev));
+    if (stddev == 0) {
+        @memset(dest, @exp(mean));
+        return;
+    }
+    fillStandardNormalNativeF32From(source, dest);
+    if (mean == 0) {
+        scaleInPlace(f32, dest, stddev);
+    } else {
+        for (dest) |*item| item.* = mean + stddev * item.*;
+    }
+    expInPlace(f32, dest);
+}
+
+pub fn fillLogNormalNativeF32Checked(rng: Rng, dest: []f32, mean: f32, stddev: f32) Error!void {
+    return fillLogNormalNativeF32CheckedFrom(rng, dest, mean, stddev);
+}
+
+pub fn fillLogNormalNativeF32CheckedFrom(source: anytype, dest: []f32, mean: f32, stddev: f32) Error!void {
+    if (dest.len == 0) return;
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    fillLogNormalNativeF32From(source, dest, mean, stddev);
+}
+
 pub fn vectorLogNormal(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
     return vectorLogNormalFrom(rng, VectorType, mean, stddev);
 }
@@ -3595,6 +3645,42 @@ pub fn LogNormal(comptime T: type) type {
         }
     };
 }
+
+pub const LogNormalNativeF32 = struct {
+    const Self = @This();
+
+    mean: f32,
+    stddev: f32,
+
+    pub fn init(mean: f32, stddev: f32) Error!Self {
+        if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+        return .{ .mean = mean, .stddev = stddev };
+    }
+
+    pub fn meanValue(self: Self) f32 {
+        return self.mean;
+    }
+
+    pub fn stddevValue(self: Self) f32 {
+        return self.stddev;
+    }
+
+    pub fn sample(self: Self, rng: Rng) f32 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Self, source: anytype) f32 {
+        return logNormalNativeF32From(source, self.mean, self.stddev);
+    }
+
+    pub fn fill(self: Self, rng: Rng, dest: []f32) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {
+        fillLogNormalNativeF32From(source, dest, self.mean, self.stddev);
+    }
+};
 
 pub fn VectorLogNormal(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
@@ -21785,6 +21871,47 @@ test "native f32 standard samplers have stable snapshots" {
     try std.testing.expect(exp_sampler.maxValue() == null);
     try std.testing.expectEqual(@as(u32, 0x3f27d993), @as(u32, @bitCast(exp_sampler.sampleFrom(&exp_sampler_engine))));
     try std.testing.expectEqual(@as(u64, 0x1aff4a4ce819a5dc), exp_sampler_engine.next());
+}
+
+test "native f32 log-normal has stable snapshots" {
+    const alea = @import("root.zig");
+
+    var sample_engine = alea.ScalarPrng.init(0x3220);
+    const sample = logNormalNativeF32From(&sample_engine, 0, 0.25);
+    try std.testing.expectEqual(@as(u32, 0x3f48eca8), @as(u32, @bitCast(sample)));
+    try std.testing.expectEqual(@as(u64, 0x6d90858561829116), sample_engine.next());
+
+    var fill_engine = alea.ScalarPrng.init(0x3220);
+    var buf: [4]f32 = undefined;
+    fillLogNormalNativeF32From(&fill_engine, &buf, 0, 0.25);
+    const expected = [_]u32{ 0x3f48eca8, 0x3f5baf10, 0x3fb08788, 0x3f577c69 };
+    inline for (expected, 0..) |bits, i| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(buf[i])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x19b4c678ab733fff), fill_engine.next());
+
+    var checked_engine = alea.ScalarPrng.init(0x3220);
+    const checked = try logNormalNativeF32CheckedFrom(&checked_engine, 0, 0.25);
+    try std.testing.expectEqual(@as(u32, 0x3f48eca8), @as(u32, @bitCast(checked)));
+    try std.testing.expectEqual(@as(u64, 0x6d90858561829116), checked_engine.next());
+
+    var sampler_engine = alea.ScalarPrng.init(0x3220);
+    const sampler = try LogNormalNativeF32.init(0, 0.25);
+    try std.testing.expectEqual(@as(f32, 0), sampler.meanValue());
+    try std.testing.expectEqual(@as(f32, 0.25), sampler.stddevValue());
+    try std.testing.expectEqual(@as(u32, 0x3f48eca8), @as(u32, @bitCast(sampler.sampleFrom(&sampler_engine))));
+    try std.testing.expectEqual(@as(u64, 0x6d90858561829116), sampler_engine.next());
+
+    var invalid_engine = alea.ScalarPrng.init(0x3221);
+    var invalid_control = alea.ScalarPrng.init(0x3221);
+    try std.testing.expectError(error.InvalidParameter, logNormalNativeF32CheckedFrom(&invalid_engine, 0, -1));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x3222);
+    var empty_control = alea.ScalarPrng.init(0x3222);
+    var empty: [0]f32 = .{};
+    try fillLogNormalNativeF32CheckedFrom(&empty_engine, &empty, 0, -1);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 }
 
 test "poisson large lambda has plausible moments" {

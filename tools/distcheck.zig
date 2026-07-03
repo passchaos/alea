@@ -186,6 +186,13 @@ fn checkContinuous() !void {
             return alea.distributions.logNormalApproxF32(r, 0, 0.25);
         }
     }.sample, 1.02, 1.04);
+    var log_normal_native_engine = alea.DefaultPrng.init(0xc0ff_ee43);
+    const log_normal_native_rng = alea.Rng.init(&log_normal_native_engine);
+    try expectContinuousMean("log-normal-native-f32", log_normal_native_rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.logNormalNativeF32(r, 0, 0.25);
+        }
+    }.sample, 1.02, 1.04);
     try expectContinuousMean("half-normal", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.halfNormal(r, f64, 2);

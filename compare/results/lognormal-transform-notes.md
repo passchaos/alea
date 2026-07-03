@@ -266,6 +266,14 @@ Fresh local evidence:
   `LogNormalExp2F32` opt-in uses separate bounds from the exp2 error scans.
 - The public approximations are therefore opt-in bounded-profile paths, not
   replacements for exact `LogNormal(f32)`.
+- `LogNormalNativeF32` is a separate opt-in f32 profile using
+  `StandardNormalNativeF32` plus exact f32 `@exp`. It intentionally changes the
+  normal-source output mapping, unlike default `LogNormal(f32)`, so it is not a
+  default replacement. Focused rows show why it is useful as an explicit
+  throughput profile: about 129M facade and 152M ScalarPrng direct
+  single-sample throughput, plus about 141M facade and 150M ScalarPrng direct
+  fill throughput in the main harness. The default exact LogNormal mapping
+  remains on the f64-backed f32 normal source plus `@exp`.
 - A smaller same-host `log-normal-probe -- 262144` rerun after the point-mass
   cleanup sweep again failed to produce a safe exact default. The short run was
   noisy enough that current production f64 fill rows appeared low in isolation,
