@@ -819,6 +819,24 @@ pub fn build(b: *std.Build) void {
     const distcheck_step = b.step("distcheck", "Run parameter-grid distribution checks");
     distcheck_step.dependOn(&run_distcheck.step);
 
+    const distcheck_libc_mod = b.createModule(.{
+        .root_source_file = b.path("tools/distcheck.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    distcheck_libc_mod.addImport("alea", libc_module);
+
+    const distcheck_libc = b.addExecutable(.{
+        .name = "alea-distcheck-libc",
+        .root_module = distcheck_libc_mod,
+    });
+    const run_distcheck_libc = b.addRunArtifact(distcheck_libc);
+    if (b.args) |args| run_distcheck_libc.addArgs(args);
+
+    const distcheck_libc_step = b.step("distcheck-libc", "Run libc-linked distribution checks");
+    distcheck_libc_step.dependOn(&run_distcheck_libc.step);
+
     const validate_step = b.step("validate", "Run unit, API, statistical, and distribution checks");
     validate_step.dependOn(&run_tests.step);
     validate_step.dependOn(&run_apicheck.step);

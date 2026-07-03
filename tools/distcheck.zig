@@ -219,6 +219,22 @@ fn checkContinuous() !void {
             return dist.sample(r);
         }
     }.sample, 1.02, 1.04);
+    if (builtin.link_libc) {
+        var libmvec_log_normal_engine = alea.DefaultPrng.init(0xc0ff_ee48);
+        const libmvec_log_normal_rng = alea.Rng.init(&libmvec_log_normal_engine);
+        var libmvec_dist = alea.distributions.LogNormalLibmvec(f64, 128).init(0, 0.25) catch |err| switch (err) {
+            error.LibmvecUnavailable => null,
+            else => return err,
+        };
+        if (libmvec_dist) |*dist| {
+            defer dist.deinit();
+            try expectContinuousMeanWithContext(*alea.distributions.LogNormalLibmvec(f64, 128), "log-normal-libmvec", libmvec_log_normal_rng, 20_000, dist, struct {
+                fn sample(ctx: *alea.distributions.LogNormalLibmvec(f64, 128), r: alea.Rng) f64 {
+                    return ctx.sample(r);
+                }
+            }.sample, 1.02, 1.04);
+        }
+    }
     var log_normal_exp2_engine = alea.DefaultPrng.init(0xc0ff_ee32);
     const log_normal_exp2_rng = alea.Rng.init(&log_normal_exp2_engine);
     try expectContinuousMean("log-normal-exp2-f32", log_normal_exp2_rng, 20_000, struct {
@@ -428,6 +444,22 @@ fn expectContinuousMean(comptime label: []const u8, rng: alea.Rng, samples: usiz
     var sum: f64 = 0;
     var i: usize = 0;
     while (i < samples) : (i += 1) sum += sampleFn(rng);
+    try expectFloatBetween(label, sum / @as(f64, @floatFromInt(samples)), min, max);
+}
+
+fn expectContinuousMeanWithContext(
+    comptime Context: type,
+    comptime label: []const u8,
+    rng: alea.Rng,
+    samples: usize,
+    context: Context,
+    sampleFn: *const fn (Context, alea.Rng) f64,
+    min: f64,
+    max: f64,
+) !void {
+    var sum: f64 = 0;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) sum += sampleFn(context, rng);
     try expectFloatBetween(label, sum / @as(f64, @floatFromInt(samples)), min, max);
 }
 
