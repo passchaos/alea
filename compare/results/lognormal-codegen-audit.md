@@ -108,6 +108,12 @@ not change this conclusion. The dynamic binary links `libm.so.6` and `libc.so.6`
 Thus executable link mode alone does not reproduce Rust's LogNormal codegen
 advantage.
 
+A direct `zig build-exe -fno-compiler-rt -lc -lm` experiment failed to link the
+`log-normal-probe` binary because other parts of the Zig/std code still require
+compiler-rt integer helper symbols such as `__floattidf` and `__divti3`. This
+means the exact `@exp` lowering cannot be redirected to system libm by simply
+removing compiler-rt from this executable.
+
 A scratch probe also checked whether a function-pointer or `noinline` boundary around
 Zig `@exp` itself reproduces the dlsym speedup while preserving exact compiler-rt
 outputs. It does not: direct/noinline/function-pointer/inline-wrapper `@exp`
