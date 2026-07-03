@@ -114,6 +114,13 @@ compiler-rt integer helper symbols such as `__floattidf` and `__divti3`. This
 means the exact `@exp` lowering cannot be redirected to system libm by simply
 removing compiler-rt from this executable.
 
+`-fbuiltin` / `-fno-builtin` command-line variants of the libc-linked
+`log-normal-probe` also do not change the conclusion. Focused `"sample current"`
+rows stayed in the same band: `-fbuiltin` around 115.7M/136.2M f64 and
+119.8M/135.6M f32, `-fno-builtin` around 117.4M/134.2M f64 and 121.4M/135.9M
+f32 for FastPrng/ScalarPrng. Builtin function knowledge is not the missing
+exact-default lever.
+
 A scratch probe also checked whether a function-pointer or `noinline` boundary around
 Zig `@exp` itself reproduces the dlsym speedup while preserving exact compiler-rt
 outputs. It does not: direct/noinline/function-pointer/inline-wrapper `@exp`
