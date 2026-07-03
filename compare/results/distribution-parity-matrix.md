@@ -29,9 +29,9 @@ Zig-native way.
 
 | Rust distribution family | Alea status |
 | --- | --- |
-| Normal / StandardNormal | Covered: `standardNormal`, `StandardNormal(T)`, `normal`, `Normal(T)`, including coefficient-of-variation construction/accessor, z-score conversion, and standard-parameter/moment/median/mode/support accessors |
+| Normal / StandardNormal | Covered: `standardNormal`, `StandardNormal(T)`, `normal`, `Normal(T)`, including coefficient-of-variation construction/accessor, z-score conversion, and standard-parameter/moment/median/mode/support accessors; explicit opt-in `StandardNormalNativeF32` provides a separate native-f32 throughput/output profile |
 | LogNormal | Covered: `logNormal`, `LogNormal(T)`, including linear-space mean/coefficient-of-variation construction and accessors, median/mode diagnostics, z-score conversion, log-space, moment, support accessors, f32/f64 benchmark rows, and explicit opt-in f32 approximation paths `LogNormalApproxF32` / `LogNormalExp2F32` |
-| Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)`, including reusable-sampler and standard rate/moment/median/mode/support accessors plus infinite-rate point masses |
+| Exponential / Exp1 | Covered: `standardExponential`, `StandardExponential(T)`, `exponential`, `Exponential(T)`, including reusable-sampler and standard rate/moment/median/mode/support accessors plus infinite-rate point masses; explicit opt-in `StandardExponentialNativeF32` provides a separate native-f32 throughput/output profile |
 | Gamma | Covered: `gamma`, `Gamma(T)`, including shape/scale/moment/mode/support accessors and collapsed `scale == 0` point masses |
 | ChiSquared | Covered: `chiSquared`, `ChiSquared(T)`, including dof/moment/mode/support accessors and collapsed `dof == 0` point masses |
 | FisherF | Covered: `fisherF`, `FisherF(T)`, including d1/d2, finite-moment, support accessors, and both-infinite-dof point masses |

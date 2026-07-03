@@ -1,6 +1,50 @@
 const std = @import("std");
 const Rng = @import("rng.zig");
 const Alea4x64 = @import("engines/alea4x64.zig");
+const std_ziggurat = std.Random.ziggurat;
+
+const native_f32_norm_r: f32 = @floatCast(std_ziggurat.norm_r);
+
+const native_f32_norm_ratio = blk: {
+    var out: [256]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(std_ziggurat.NormDist.x[i + 1] / std_ziggurat.NormDist.x[i]);
+    break :blk out;
+};
+
+const native_f32_norm_x = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(std_ziggurat.NormDist.x[i]);
+    break :blk out;
+};
+
+const native_f32_norm_f = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(std_ziggurat.NormDist.f[i]);
+    break :blk out;
+};
+
+const native_f32_exp_r: f32 = @floatCast(std_ziggurat.exp_r);
+
+const native_f32_exp_threshold = blk: {
+    var out: [256]u32 = undefined;
+    for (&out, 0..) |*item, i| {
+        const ratio = std_ziggurat.ExpDist.x[i + 1] / std_ziggurat.ExpDist.x[i];
+        item.* = @intFromFloat(@ceil(ratio * @as(f64, @floatFromInt(@as(u32, 1) << 23)) - 0.5));
+    }
+    break :blk out;
+};
+
+const native_f32_exp_x = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(std_ziggurat.ExpDist.x[i]);
+    break :blk out;
+};
+
+const native_f32_exp_f = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(std_ziggurat.ExpDist.f[i]);
+    break :blk out;
+};
 
 pub const Error = error{
     EmptyRange,
@@ -2267,6 +2311,49 @@ pub fn fillStandardNormalFrom(source: anytype, comptime T: type, dest: []T) void
     for (dest) |*item| item.* = standardNormalFrom(source, T);
 }
 
+pub fn standardNormalNativeF32(rng: Rng) f32 {
+    return standardNormalNativeF32From(rng);
+}
+
+pub fn standardNormalNativeF32From(source: anytype) f32 {
+    while (true) {
+        const bits: u32 = @truncate(Rng.nextFrom(source));
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 9;
+        const repr = (@as(u32, 0x80) << 23) | mantissa;
+        const u: f32 = @as(f32, @bitCast(repr)) - 3.0;
+
+        if (@abs(u) < native_f32_norm_ratio[i]) {
+            @branchHint(.likely);
+            return u * native_f32_norm_x[i];
+        }
+        const x = u * native_f32_norm_x[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return standardNormalNativeF32Tail(source, u);
+        }
+        if (native_f32_norm_f[i + 1] + (native_f32_norm_f[i] - native_f32_norm_f[i + 1]) * Rng.floatFrom(source, f32) < @exp(-x * x / 2.0)) return x;
+    }
+}
+
+pub fn fillStandardNormalNativeF32(rng: Rng, dest: []f32) void {
+    fillStandardNormalNativeF32From(rng, dest);
+}
+
+pub fn fillStandardNormalNativeF32From(source: anytype, dest: []f32) void {
+    for (dest) |*item| item.* = standardNormalNativeF32From(source);
+}
+
+fn standardNormalNativeF32Tail(source: anytype, u: f32) f32 {
+    var x: f32 = 1;
+    var y: f32 = 0;
+    while (-2.0 * y < x * x) {
+        x = @log(Rng.floatOpenFrom(source, f32)) / native_f32_norm_r;
+        y = @log(Rng.floatOpenFrom(source, f32));
+    }
+    return if (u < 0) x - native_f32_norm_r else native_f32_norm_r - x;
+}
+
 pub fn vectorStandardNormal(rng: Rng, comptime VectorType: type) VectorType {
     return vectorStandardNormalFrom(rng, VectorType);
 }
@@ -2401,6 +2488,56 @@ pub fn StandardNormal(comptime T: type) type {
     };
 }
 
+pub const StandardNormalNativeF32 = struct {
+    pub fn meanValue(_: StandardNormalNativeF32) f32 {
+        return 0;
+    }
+
+    pub fn stddevValue(_: StandardNormalNativeF32) f32 {
+        return 1;
+    }
+
+    pub fn expectedValue(_: StandardNormalNativeF32) f32 {
+        return 0;
+    }
+
+    pub fn varianceValue(_: StandardNormalNativeF32) f32 {
+        return 1;
+    }
+
+    pub fn medianValue(_: StandardNormalNativeF32) f32 {
+        return 0;
+    }
+
+    pub fn modeValue(_: StandardNormalNativeF32) f32 {
+        return 0;
+    }
+
+    pub fn minValue(_: StandardNormalNativeF32) ?f32 {
+        return null;
+    }
+
+    pub fn maxValue(_: StandardNormalNativeF32) ?f32 {
+        return null;
+    }
+
+    pub fn sample(_: StandardNormalNativeF32, rng: Rng) f32 {
+        return standardNormalNativeF32(rng);
+    }
+
+    pub fn sampleFrom(_: StandardNormalNativeF32, source: anytype) f32 {
+        return standardNormalNativeF32From(source);
+    }
+
+    pub fn fill(_: StandardNormalNativeF32, rng: Rng, dest: []f32) void {
+        fillStandardNormalNativeF32(rng, dest);
+    }
+
+    pub fn fillFrom(_: StandardNormalNativeF32, source: anytype, dest: []f32) void {
+        fillStandardNormalNativeF32From(source, dest);
+    }
+};
+
 pub fn VectorStandardNormal(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -2471,6 +2608,39 @@ pub fn fillStandardExponential(rng: Rng, comptime T: type, dest: []T) void {
 pub fn fillStandardExponentialFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireFloat(T);
     for (dest) |*item| item.* = standardExponentialFrom(source, T);
+}
+
+pub fn standardExponentialNativeF32(rng: Rng) f32 {
+    return standardExponentialNativeF32From(rng);
+}
+
+pub fn standardExponentialNativeF32From(source: anytype) f32 {
+    while (true) {
+        const bits: u32 = @truncate(Rng.nextFrom(source));
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 9;
+        const repr = (@as(u32, 0x7f) << 23) | mantissa;
+        const u: f32 = @as(f32, @bitCast(repr)) - (1.0 - std.math.floatEps(f32) / 2.0);
+
+        if (mantissa < native_f32_exp_threshold[i]) {
+            @branchHint(.likely);
+            return u * native_f32_exp_x[i];
+        }
+        const x = u * native_f32_exp_x[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return native_f32_exp_r - @log(Rng.floatOpenFrom(source, f32));
+        }
+        if (native_f32_exp_f[i + 1] + (native_f32_exp_f[i] - native_f32_exp_f[i + 1]) * Rng.floatFrom(source, f32) < @exp(-x)) return x;
+    }
+}
+
+pub fn fillStandardExponentialNativeF32(rng: Rng, dest: []f32) void {
+    fillStandardExponentialNativeF32From(rng, dest);
+}
+
+pub fn fillStandardExponentialNativeF32From(source: anytype, dest: []f32) void {
+    for (dest) |*item| item.* = standardExponentialNativeF32From(source);
 }
 
 pub fn vectorStandardExponential(rng: Rng, comptime VectorType: type) VectorType {
@@ -2765,6 +2935,56 @@ pub fn StandardExponential(comptime T: type) type {
         }
     };
 }
+
+pub const StandardExponentialNativeF32 = struct {
+    pub fn rateValue(_: StandardExponentialNativeF32) f32 {
+        return 1;
+    }
+
+    pub fn inverseRateValue(_: StandardExponentialNativeF32) f32 {
+        return 1;
+    }
+
+    pub fn expectedValue(_: StandardExponentialNativeF32) f32 {
+        return 1;
+    }
+
+    pub fn varianceValue(_: StandardExponentialNativeF32) f32 {
+        return 1;
+    }
+
+    pub fn medianValue(_: StandardExponentialNativeF32) f32 {
+        return @log(@as(f32, 2));
+    }
+
+    pub fn modeValue(_: StandardExponentialNativeF32) f32 {
+        return 0;
+    }
+
+    pub fn minValue(_: StandardExponentialNativeF32) f32 {
+        return 0;
+    }
+
+    pub fn maxValue(_: StandardExponentialNativeF32) ?f32 {
+        return null;
+    }
+
+    pub fn sample(_: StandardExponentialNativeF32, rng: Rng) f32 {
+        return standardExponentialNativeF32(rng);
+    }
+
+    pub fn sampleFrom(_: StandardExponentialNativeF32, source: anytype) f32 {
+        return standardExponentialNativeF32From(source);
+    }
+
+    pub fn fill(_: StandardExponentialNativeF32, rng: Rng, dest: []f32) void {
+        fillStandardExponentialNativeF32(rng, dest);
+    }
+
+    pub fn fillFrom(_: StandardExponentialNativeF32, source: anytype, dest: []f32) void {
+        fillStandardExponentialNativeF32From(source, dest);
+    }
+};
 
 pub fn VectorStandardExponential(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
@@ -21507,6 +21727,64 @@ test "log-normal approximation has stable snapshots" {
     const exp2_sampler_sample = exp2_sampler.sampleFrom(&exp2_sampler_engine);
     try std.testing.expectEqual(@as(u32, 0x3fa987ef), @as(u32, @bitCast(exp2_sampler_sample)));
     try std.testing.expectEqual(@as(u64, 0x8e9892981fa2b6eb), exp2_sampler_engine.next());
+}
+
+test "native f32 standard samplers have stable snapshots" {
+    const alea = @import("root.zig");
+
+    var normal_engine = alea.ScalarPrng.init(0x3210);
+    const normal_sample = standardNormalNativeF32From(&normal_engine);
+    try std.testing.expectEqual(@as(u32, 0xbf835ceb), @as(u32, @bitCast(normal_sample)));
+    try std.testing.expectEqual(@as(u64, 0x279dc1bc8c48d20e), normal_engine.next());
+
+    var normal_fill_engine = alea.ScalarPrng.init(0x3210);
+    var normal_buf: [4]f32 = undefined;
+    fillStandardNormalNativeF32From(&normal_fill_engine, &normal_buf);
+    const normal_expected = [_]u32{ 0xbf835ceb, 0x3e87aab1, 0x3f90b80b, 0xbf9339aa };
+    inline for (normal_expected, 0..) |bits, i| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(normal_buf[i])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x7faeb86410dff2bc), normal_fill_engine.next());
+
+    var normal_sampler_engine = alea.ScalarPrng.init(0x3210);
+    const normal_sampler = StandardNormalNativeF32{};
+    try std.testing.expectEqual(@as(f32, 0), normal_sampler.meanValue());
+    try std.testing.expectEqual(@as(f32, 1), normal_sampler.stddevValue());
+    try std.testing.expectEqual(@as(f32, 0), normal_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f32, 1), normal_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f32, 0), normal_sampler.medianValue());
+    try std.testing.expectEqual(@as(f32, 0), normal_sampler.modeValue());
+    try std.testing.expect(normal_sampler.minValue() == null);
+    try std.testing.expect(normal_sampler.maxValue() == null);
+    try std.testing.expectEqual(@as(u32, 0xbf835ceb), @as(u32, @bitCast(normal_sampler.sampleFrom(&normal_sampler_engine))));
+    try std.testing.expectEqual(@as(u64, 0x279dc1bc8c48d20e), normal_sampler_engine.next());
+
+    var exp_engine = alea.ScalarPrng.init(0x3211);
+    const exp_sample = standardExponentialNativeF32From(&exp_engine);
+    try std.testing.expectEqual(@as(u32, 0x3f27d993), @as(u32, @bitCast(exp_sample)));
+    try std.testing.expectEqual(@as(u64, 0x1aff4a4ce819a5dc), exp_engine.next());
+
+    var exp_fill_engine = alea.ScalarPrng.init(0x3211);
+    var exp_buf: [4]f32 = undefined;
+    fillStandardExponentialNativeF32From(&exp_fill_engine, &exp_buf);
+    const exp_expected = [_]u32{ 0x3f27d993, 0x3f151156, 0x3e3d7d1b, 0x3e86ad11 };
+    inline for (exp_expected, 0..) |bits, i| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_buf[i])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xbe874ab25a89273d), exp_fill_engine.next());
+
+    var exp_sampler_engine = alea.ScalarPrng.init(0x3211);
+    const exp_sampler = StandardExponentialNativeF32{};
+    try std.testing.expectEqual(@as(f32, 1), exp_sampler.rateValue());
+    try std.testing.expectEqual(@as(f32, 1), exp_sampler.inverseRateValue());
+    try std.testing.expectEqual(@as(f32, 1), exp_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f32, 1), exp_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f32, @log(@as(f32, 2))), exp_sampler.medianValue());
+    try std.testing.expectEqual(@as(f32, 0), exp_sampler.modeValue());
+    try std.testing.expectEqual(@as(f32, 0), exp_sampler.minValue());
+    try std.testing.expect(exp_sampler.maxValue() == null);
+    try std.testing.expectEqual(@as(u32, 0x3f27d993), @as(u32, @bitCast(exp_sampler.sampleFrom(&exp_sampler_engine))));
+    try std.testing.expectEqual(@as(u64, 0x1aff4a4ce819a5dc), exp_sampler_engine.next());
 }
 
 test "poisson large lambda has plausible moments" {

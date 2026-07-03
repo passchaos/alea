@@ -167,6 +167,8 @@ Single-shot helpers:
   `fillVectorHypergeometric`, `fillVectorHypergeometricFrom`,
   `fillVectorHypergeometricChecked`, `fillVectorHypergeometricCheckedFrom`
 - `standardNormal`, `standardNormalFrom`, `fillStandardNormal`,
+  `standardNormalNativeF32`, `standardNormalNativeF32From`,
+  `fillStandardNormalNativeF32`, `fillStandardNormalNativeF32From`,
   `fillStandardNormalFrom`, `vectorStandardNormal`,
   `vectorStandardNormalFrom`, `fillVectorStandardNormal`,
   `fillVectorStandardNormalFrom`, `normal`, `normalFrom`, `normalChecked`,
@@ -206,7 +208,10 @@ Single-shot helpers:
   `fillVectorHalfNormalCheckedFrom`, `chi`, `chiFrom`,
   `standardExponential`, `standardExponentialFrom`,
   `fillStandardExponential`, `fillStandardExponentialFrom`,
-  `vectorStandardExponential`, `vectorStandardExponentialFrom`,
+  `standardExponentialNativeF32`, `standardExponentialNativeF32From`,
+  `fillStandardExponentialNativeF32`,
+  `fillStandardExponentialNativeF32From`, `vectorStandardExponential`,
+  `vectorStandardExponentialFrom`,
   `fillVectorStandardExponential`, `fillVectorStandardExponentialFrom`,
   `exponential`, `exponentialFrom`, `exponentialChecked`,
   `exponentialCheckedFrom`, `fillExponential`, `fillExponentialFrom`,
@@ -643,6 +648,19 @@ Reusable samplers:
 - `StandardNormal(T).sampleFrom`
 - `StandardNormal(T).fill`
 - `StandardNormal(T).fillFrom`
+- `StandardNormalNativeF32`
+- `StandardNormalNativeF32.meanValue`
+- `StandardNormalNativeF32.stddevValue`
+- `StandardNormalNativeF32.expectedValue`
+- `StandardNormalNativeF32.varianceValue`
+- `StandardNormalNativeF32.medianValue`
+- `StandardNormalNativeF32.modeValue`
+- `StandardNormalNativeF32.minValue`
+- `StandardNormalNativeF32.maxValue`
+- `StandardNormalNativeF32.sample`
+- `StandardNormalNativeF32.sampleFrom`
+- `StandardNormalNativeF32.fill`
+- `StandardNormalNativeF32.fillFrom`
 - `Normal(T)`
 - `Normal(T).init`
 - `Normal(T).initMeanCv`
@@ -703,6 +721,19 @@ Reusable samplers:
 - `StandardExponential(T).sampleFrom`
 - `StandardExponential(T).fill`
 - `StandardExponential(T).fillFrom`
+- `StandardExponentialNativeF32`
+- `StandardExponentialNativeF32.rateValue`
+- `StandardExponentialNativeF32.inverseRateValue`
+- `StandardExponentialNativeF32.expectedValue`
+- `StandardExponentialNativeF32.varianceValue`
+- `StandardExponentialNativeF32.medianValue`
+- `StandardExponentialNativeF32.modeValue`
+- `StandardExponentialNativeF32.minValue`
+- `StandardExponentialNativeF32.maxValue`
+- `StandardExponentialNativeF32.sample`
+- `StandardExponentialNativeF32.sampleFrom`
+- `StandardExponentialNativeF32.fill`
+- `StandardExponentialNativeF32.fillFrom`
 - `Exponential(T)`
 - `Exponential(T).init`
 - `Exponential(T).rateValue`

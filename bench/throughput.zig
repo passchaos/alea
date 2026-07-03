@@ -128,6 +128,7 @@ pub fn main(init: std.process.Init) !void {
     try benchStandardNormalScalar(io, stdout, "alea standard-normal scalar direct", bytes / 64);
     try benchStandardNormalRawScalar(io, stdout, "alea standard-normal raw scalar direct", bytes / 64);
     try benchStandardNormalScalarF32(io, stdout, "alea standard-normal f32 scalar direct", bytes / 64);
+    try benchStandardNormalNativeF32Scalar(io, stdout, "alea standard-normal native f32 scalar direct", bytes / 64);
     try benchVectorNormalF32(io, stdout, "alea vector normal f32x8", bytes / 64);
     try benchVectorNormalF32Direct(io, stdout, "alea vector normal f32x8 direct", bytes / 64);
     try benchVectorNormalF64Direct(io, stdout, "alea vector normal f64x4 direct", bytes / 64);
@@ -135,6 +136,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillStandardNormalScalar(io, stdout, "alea fillStandardNormal scalar direct", bytes / 64);
     try benchFillStandardNormalF32(io, stdout, "alea fillStandardNormal f32", bytes / 64);
     try benchFillStandardNormalF32Scalar(io, stdout, "alea fillStandardNormal f32 scalar direct", bytes / 64);
+    try benchFillStandardNormalNativeF32Scalar(io, stdout, "alea fillStandardNormalNativeF32 scalar direct", bytes / 64);
     try benchFillNormal(io, stdout, "alea fillNormal", bytes / 64);
     try benchFillNormalScalar(io, stdout, "alea fillNormal scalar direct", bytes / 64);
     try benchNormalSamplerFillScalar(io, stdout, "alea Normal.fillFrom scalar direct", bytes / 64);
@@ -145,6 +147,7 @@ pub fn main(init: std.process.Init) !void {
     try benchStandardExponentialScalar(io, stdout, "alea standard-exponential scalar direct", bytes / 64);
     try benchStandardExponentialRawScalar(io, stdout, "alea standard-exponential raw scalar direct", bytes / 64);
     try benchStandardExponentialScalarF32(io, stdout, "alea standard-exponential f32 scalar direct", bytes / 64);
+    try benchStandardExponentialNativeF32Scalar(io, stdout, "alea standard-exponential native f32 scalar direct", bytes / 64);
     try benchVectorExponentialF32(io, stdout, "alea vector exponential f32x8", bytes / 64);
     try benchVectorStandardExponentialF32Direct(io, stdout, "alea vector standard-exponential f32x8 direct", bytes / 64);
     try benchVectorStandardExponentialF64Direct(io, stdout, "alea vector standard-exponential f64x4 direct", bytes / 64);
@@ -152,6 +155,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillStandardExponentialScalar(io, stdout, "alea fillStandardExponential scalar direct", bytes / 64);
     try benchFillStandardExponentialF32(io, stdout, "alea fillStandardExponential f32", bytes / 64);
     try benchFillStandardExponentialF32Scalar(io, stdout, "alea fillStandardExponential f32 scalar direct", bytes / 64);
+    try benchFillStandardExponentialNativeF32Scalar(io, stdout, "alea fillStandardExponentialNativeF32 scalar direct", bytes / 64);
     try benchFillExponential(io, stdout, "alea fillExponential", bytes / 64);
     try benchFillExponentialScalar(io, stdout, "alea fillExponential scalar direct", bytes / 64);
     try benchExponentialSamplerFillScalar(io, stdout, "alea Exponential.fillFrom scalar direct", bytes / 64);
@@ -2324,6 +2328,31 @@ fn benchStandardNormalScalarF32(io: std.Io, stdout: *std.Io.Writer, name: []cons
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchStandardNormalNativeF32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    const dist = alea.distributions.StandardNormalNativeF32{};
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xd15a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f32 = 0;
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchVectorNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
@@ -2601,6 +2630,37 @@ fn benchNormalSamplerFillScalar(io: std.Io, stdout: *std.Io.Writer, name: []cons
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var remaining = count;
         var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            dist.fillFrom(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillStandardNormalNativeF32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [4096]f32 = undefined;
+    const dist = alea.distributions.StandardNormalNativeF32{};
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xd15a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f32 = 0;
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             dist.fillFrom(&engine, out[0..n]);
@@ -3246,6 +3306,31 @@ fn benchStandardExponentialScalarF32(io: std.Io, stdout: *std.Io.Writer, name: [
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchStandardExponentialNativeF32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    const dist = alea.distributions.StandardExponentialNativeF32{};
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xe15a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f32 = 0;
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchVectorExponentialF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
@@ -3523,6 +3608,37 @@ fn benchExponentialSamplerFillScalar(io: std.Io, stdout: *std.Io.Writer, name: [
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var remaining = count;
         var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            dist.fillFrom(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillStandardExponentialNativeF32Scalar(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [4096]f32 = undefined;
+    const dist = alea.distributions.StandardExponentialNativeF32{};
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0xe15a);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f32 = 0;
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             dist.fillFrom(&engine, out[0..n]);
