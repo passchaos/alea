@@ -51,7 +51,9 @@ Rust performance gap without changing the exact default.
 The SIMD performance gap has narrowed on the vector opt-in side: table-quantile
 normal/exponential and f32 approximate-log exponential vector opt-ins now beat the
 matching ziggurat lane-fill rows for users who accept explicit
-approximation/output-mapping contracts. S4-M5 remains unresolved because default
+approximation/output-mapping contracts, and distcheck now includes larger-sample
+moment/CDF gates for those approximation profiles. S4-M5 remains unresolved
+because no policy has accepted them as default/general substitutes and default
 normal/exponential kernels remain scalar ziggurat lane-fill.
 
 ## Required Next Work Before Completion

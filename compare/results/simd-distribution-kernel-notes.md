@@ -84,13 +84,17 @@ repair rows before a real `vectorbench` follow-up.
   rows in `vectorbench -- 16777216 "TableF32"` reach about 1.24-1.30B f32x8
   lanes/s, and `VectorStandardNormalTableF64` / `VectorNormalTableF64` rows in
   `vectorbench -- 16777216 "Table"` are also around 1.20-1.28B f64x4 lanes/s, above f64 ziggurat. These
-  profiles do not replace default normal.
+  profiles do not replace default normal. `distcheck` now covers the named table
+  profiles with larger-sample moment gates and CDF smoke gates at -2, -1, 0, 1,
+  and 2.
 - Table-quantile vector exponential is also useful only as an explicit approximate
   output-mapping opt-in. A 16384-entry midpoint exponential-quantile table
   produces discrete/truncated outputs. Public `VectorStandardExponentialTableF32`
   / `VectorExponentialTableF32` and f64 counterparts in `vectorbench -- 16777216
   "Table"` are around 1.0-1.30B lanes/s, far above ziggurat lane-fill, but do
-  not replace default exponential.
+  not replace default exponential. `distcheck` now covers the named table
+  profiles with larger-sample moment gates and CDF smoke gates at 0.25, 0.5, 1,
+  2, and 4.
 - Vectorized inverse-CDF normal approximation kernels are also too slow for a
   useful opt-in. A real `vectorbench -- 16777216 "StandardNormal f32x8"` /
   `"StandardNormal f64x4"` run showed Acklam-style inverse-CDF candidates around
@@ -148,8 +152,10 @@ repair rows before a real `vectorbench` follow-up.
   scalar ziggurat lane-fill and is exposed as
   `VectorStandardExponentialApproxLogF32` / `VectorExponentialApproxLogF32`, but
   it intentionally changes the output mapping and has an approximation contract
-  rather than exact ziggurat or exact inverse-transform semantics. It does not
-  solve normal kernels or f64/default exponential dense kernels.
+  rather than exact ziggurat or exact inverse-transform semantics. `distcheck`
+  now covers this profile with larger-sample moment gates and CDF smoke gates at
+  0.25, 0.5, 1, 2, and 4. It does not solve normal kernels or f64/default
+  exponential dense kernels.
 - The same approximate-log transform is not useful for f64x4 exponential. A
   focused `vectorbench -- 16777216 "StandardExponential f64x4"` /
   `"fillVectorExponential f64x4"` run showed f64 approx-log around 386M/382M

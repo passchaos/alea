@@ -83,5 +83,11 @@ A candidate that could close S4-M5 should do one of the following:
 3. Produce new local Rust evidence showing another untracked comparable core
    workload where Alea trails, then add a targeted fix or explicit exclusion.
 
+Current partial S4-M5 evidence: the named vector approximation profiles now
+have stronger `distcheck` coverage with larger-sample mean/variance gates and
+fixed-CDF smoke gates, in addition to snapshot reproducibility and vectorbench
+throughput rows. This evidence does not itself accept those profiles as default
+or general substitutes.
+
 Until S4-M5 is closed, the long-term objective remains active. Do not call
 `update_goal(status=complete)` based only on S4-M4 closure.

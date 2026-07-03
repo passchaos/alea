@@ -619,15 +619,19 @@ fn checkVectorDistributions() !void {
     alea.distributions.fillVectorStandardNormalNativeF32From(&vector_native_normal_engine, @Vector(8, f32), &native_normal);
     try expectVectorMean(@Vector(8, f32), "vector standard-normal native f32x8", &native_normal, -0.08, 0.08);
 
+    const approximation_vectors = 4096;
+
     var vector_table_normal_engine = alea.ScalarPrng.init(0x7115);
-    var table_normal: [128]@Vector(8, f32) = undefined;
+    var table_normal: [approximation_vectors]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorStandardNormalTableF32From(&vector_table_normal_engine, @Vector(8, f32), &table_normal);
-    try expectVectorMean(@Vector(8, f32), "vector standard-normal table f32x8", &table_normal, -0.08, 0.08);
+    try expectVectorMoments(@Vector(8, f32), "vector standard-normal table f32x8", &table_normal, -0.03, 0.03, 0.96, 1.04);
+    try expectStandardNormalCdfGates(@Vector(8, f32), "vector standard-normal table f32x8", &table_normal);
 
     var vector_table_normal_f64_engine = alea.ScalarPrng.init(0x7117);
-    var table_normal_f64: [128]@Vector(4, f64) = undefined;
+    var table_normal_f64: [approximation_vectors]@Vector(4, f64) = undefined;
     alea.distributions.fillVectorStandardNormalTableF64From(&vector_table_normal_f64_engine, @Vector(4, f64), &table_normal_f64);
-    try expectVectorMean(@Vector(4, f64), "vector standard-normal table f64x4", &table_normal_f64, -0.08, 0.08);
+    try expectVectorMoments(@Vector(4, f64), "vector standard-normal table f64x4", &table_normal_f64, -0.03, 0.03, 0.96, 1.04);
+    try expectStandardNormalCdfGates(@Vector(4, f64), "vector standard-normal table f64x4", &table_normal_f64);
 
     var vector_native_exponential_engine = alea.ScalarPrng.init(0x710e);
     var native_exponential: [128]@Vector(8, f32) = undefined;
@@ -635,19 +639,22 @@ fn checkVectorDistributions() !void {
     try expectVectorMean(@Vector(8, f32), "vector standard-exponential native f32x8", &native_exponential, 0.94, 1.06);
 
     var vector_approx_log_exponential_engine = alea.ScalarPrng.init(0x7113);
-    var approx_log_exponential: [128]@Vector(8, f32) = undefined;
+    var approx_log_exponential: [approximation_vectors]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorStandardExponentialApproxLogF32From(&vector_approx_log_exponential_engine, @Vector(8, f32), &approx_log_exponential);
-    try expectVectorMean(@Vector(8, f32), "vector standard-exponential approx-log f32x8", &approx_log_exponential, 0.94, 1.06);
+    try expectVectorMoments(@Vector(8, f32), "vector standard-exponential approx-log f32x8", &approx_log_exponential, 0.96, 1.04, 0.90, 1.10);
+    try expectStandardExponentialCdfGates(@Vector(8, f32), "vector standard-exponential approx-log f32x8", &approx_log_exponential);
 
     var vector_table_exponential_engine = alea.ScalarPrng.init(0x7119);
-    var table_exponential: [128]@Vector(8, f32) = undefined;
+    var table_exponential: [approximation_vectors]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorStandardExponentialTableF32From(&vector_table_exponential_engine, @Vector(8, f32), &table_exponential);
-    try expectVectorMean(@Vector(8, f32), "vector standard-exponential table f32x8", &table_exponential, 0.94, 1.06);
+    try expectVectorMoments(@Vector(8, f32), "vector standard-exponential table f32x8", &table_exponential, 0.96, 1.04, 0.90, 1.10);
+    try expectStandardExponentialCdfGates(@Vector(8, f32), "vector standard-exponential table f32x8", &table_exponential);
 
     var vector_table_exponential_f64_engine = alea.ScalarPrng.init(0x711a);
-    var table_exponential_f64: [128]@Vector(4, f64) = undefined;
+    var table_exponential_f64: [approximation_vectors]@Vector(4, f64) = undefined;
     alea.distributions.fillVectorStandardExponentialTableF64From(&vector_table_exponential_f64_engine, @Vector(4, f64), &table_exponential_f64);
-    try expectVectorMean(@Vector(4, f64), "vector standard-exponential table f64x4", &table_exponential_f64, 0.94, 1.06);
+    try expectVectorMoments(@Vector(4, f64), "vector standard-exponential table f64x4", &table_exponential_f64, 0.96, 1.04, 0.90, 1.10);
+    try expectStandardExponentialCdfGates(@Vector(4, f64), "vector standard-exponential table f64x4", &table_exponential_f64);
 
     var vector_parameterized_native_normal_engine = alea.ScalarPrng.init(0x7110);
     var parameterized_native_normal: [128]@Vector(8, f32) = undefined;
@@ -655,14 +662,14 @@ fn checkVectorDistributions() !void {
     try expectVectorMean(@Vector(8, f32), "vector normal native f32x8", &parameterized_native_normal, 4.85, 5.15);
 
     var vector_parameterized_table_normal_engine = alea.ScalarPrng.init(0x7116);
-    var parameterized_table_normal: [128]@Vector(8, f32) = undefined;
+    var parameterized_table_normal: [approximation_vectors]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorNormalTableF32From(&vector_parameterized_table_normal_engine, @Vector(8, f32), &parameterized_table_normal, 5, 2);
-    try expectVectorMean(@Vector(8, f32), "vector normal table f32x8", &parameterized_table_normal, 4.85, 5.15);
+    try expectVectorMoments(@Vector(8, f32), "vector normal table f32x8", &parameterized_table_normal, 4.94, 5.06, 3.8, 4.2);
 
     var vector_parameterized_table_normal_f64_engine = alea.ScalarPrng.init(0x7118);
-    var parameterized_table_normal_f64: [128]@Vector(4, f64) = undefined;
+    var parameterized_table_normal_f64: [approximation_vectors]@Vector(4, f64) = undefined;
     alea.distributions.fillVectorNormalTableF64From(&vector_parameterized_table_normal_f64_engine, @Vector(4, f64), &parameterized_table_normal_f64, 5, 2);
-    try expectVectorMean(@Vector(4, f64), "vector normal table f64x4", &parameterized_table_normal_f64, 4.85, 5.15);
+    try expectVectorMoments(@Vector(4, f64), "vector normal table f64x4", &parameterized_table_normal_f64, 4.94, 5.06, 3.8, 4.2);
 
     var vector_parameterized_native_exponential_engine = alea.ScalarPrng.init(0x7111);
     var parameterized_native_exponential: [128]@Vector(8, f32) = undefined;
@@ -670,19 +677,19 @@ fn checkVectorDistributions() !void {
     try expectVectorMean(@Vector(8, f32), "vector exponential native f32x8", &parameterized_native_exponential, 0.23, 0.27);
 
     var vector_parameterized_approx_log_exponential_engine = alea.ScalarPrng.init(0x7114);
-    var parameterized_approx_log_exponential: [128]@Vector(8, f32) = undefined;
+    var parameterized_approx_log_exponential: [approximation_vectors]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorExponentialApproxLogF32From(&vector_parameterized_approx_log_exponential_engine, @Vector(8, f32), &parameterized_approx_log_exponential, 4);
-    try expectVectorMean(@Vector(8, f32), "vector exponential approx-log f32x8", &parameterized_approx_log_exponential, 0.23, 0.27);
+    try expectVectorMoments(@Vector(8, f32), "vector exponential approx-log f32x8", &parameterized_approx_log_exponential, 0.24, 0.26, 0.055, 0.075);
 
     var vector_parameterized_table_exponential_engine = alea.ScalarPrng.init(0x711b);
-    var parameterized_table_exponential: [128]@Vector(8, f32) = undefined;
+    var parameterized_table_exponential: [approximation_vectors]@Vector(8, f32) = undefined;
     alea.distributions.fillVectorExponentialTableF32From(&vector_parameterized_table_exponential_engine, @Vector(8, f32), &parameterized_table_exponential, 4);
-    try expectVectorMean(@Vector(8, f32), "vector exponential table f32x8", &parameterized_table_exponential, 0.23, 0.27);
+    try expectVectorMoments(@Vector(8, f32), "vector exponential table f32x8", &parameterized_table_exponential, 0.24, 0.26, 0.055, 0.075);
 
     var vector_parameterized_table_exponential_f64_engine = alea.ScalarPrng.init(0x711c);
-    var parameterized_table_exponential_f64: [128]@Vector(4, f64) = undefined;
+    var parameterized_table_exponential_f64: [approximation_vectors]@Vector(4, f64) = undefined;
     alea.distributions.fillVectorExponentialTableF64From(&vector_parameterized_table_exponential_f64_engine, @Vector(4, f64), &parameterized_table_exponential_f64, 4);
-    try expectVectorMean(@Vector(4, f64), "vector exponential table f64x4", &parameterized_table_exponential_f64, 0.23, 0.27);
+    try expectVectorMoments(@Vector(4, f64), "vector exponential table f64x4", &parameterized_table_exponential_f64, 0.24, 0.26, 0.055, 0.075);
 }
 
 fn expectVectorMean(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType, min: f64, max: f64) !void {
@@ -693,6 +700,53 @@ fn expectVectorMean(comptime VectorType: type, comptime label: []const u8, sampl
     }
     const count = samples.len * info.len;
     try expectFloatBetween(label, sum / @as(f64, @floatFromInt(count)), min, max);
+}
+
+fn expectVectorMoments(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType, min_mean: f64, max_mean: f64, min_variance: f64, max_variance: f64) !void {
+    const info = @typeInfo(VectorType).vector;
+    var sum: f64 = 0;
+    var sum_squares: f64 = 0;
+    for (samples) |sample| {
+        inline for (0..info.len) |lane| {
+            const value: f64 = @floatCast(sample[lane]);
+            sum += value;
+            sum_squares += value * value;
+        }
+    }
+    const count: f64 = @floatFromInt(samples.len * info.len);
+    const mean = sum / count;
+    const variance = sum_squares / count - mean * mean;
+    try expectFloatBetween(label, mean, min_mean, max_mean);
+    try expectFloatBetween(label, variance, min_variance, max_variance);
+}
+
+fn expectStandardNormalCdfGates(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType) !void {
+    try expectVectorCdfAt(VectorType, label ++ " cdf(-2)", samples, -2.0, 0.015, 0.035);
+    try expectVectorCdfAt(VectorType, label ++ " cdf(-1)", samples, -1.0, 0.135, 0.185);
+    try expectVectorCdfAt(VectorType, label ++ " cdf(0)", samples, 0.0, 0.475, 0.525);
+    try expectVectorCdfAt(VectorType, label ++ " cdf(1)", samples, 1.0, 0.815, 0.865);
+    try expectVectorCdfAt(VectorType, label ++ " cdf(2)", samples, 2.0, 0.965, 0.990);
+}
+
+fn expectStandardExponentialCdfGates(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType) !void {
+    try expectVectorCdfAt(VectorType, label ++ " cdf(0.25)", samples, 0.25, 0.195, 0.250);
+    try expectVectorCdfAt(VectorType, label ++ " cdf(0.5)", samples, 0.5, 0.365, 0.425);
+    try expectVectorCdfAt(VectorType, label ++ " cdf(1)", samples, 1.0, 0.605, 0.660);
+    try expectVectorCdfAt(VectorType, label ++ " cdf(2)", samples, 2.0, 0.835, 0.895);
+    try expectVectorCdfAt(VectorType, label ++ " cdf(4)", samples, 4.0, 0.965, 0.995);
+}
+
+fn expectVectorCdfAt(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType, threshold: f64, min: f64, max: f64) !void {
+    const info = @typeInfo(VectorType).vector;
+    var le_count: usize = 0;
+    for (samples) |sample| {
+        inline for (0..info.len) |lane| {
+            const value: f64 = @floatCast(sample[lane]);
+            le_count += @intFromBool(value <= threshold);
+        }
+    }
+    const count: f64 = @floatFromInt(samples.len * info.len);
+    try expectFloatBetween(label, @as(f64, @floatFromInt(le_count)) / count, min, max);
 }
 
 fn expectFloatBetween(comptime label: []const u8, value: f64, min: f64, max: f64) !void {
