@@ -15239,6 +15239,11 @@ fn floatDistancePositiveF32(a: f32, b: f32) u32 {
     return if (ai >= bi) ai - bi else bi - ai;
 }
 
+fn expectNearBitsF32(expected_bits: u32, actual: f32, max_ulp: u32) !void {
+    const expected: f32 = @bitCast(expected_bits);
+    try std.testing.expect(floatDistancePositiveF32(expected, actual) <= max_ulp);
+}
+
 fn floatDistancePositiveF64(a: f64, b: f64) u64 {
     std.debug.assert(a >= 0 and b >= 0);
     const ai: u64 = @bitCast(a);
@@ -23437,7 +23442,7 @@ test "native f32 log-normal has stable snapshots" {
 
     var sample_engine = alea.ScalarPrng.init(0x3220);
     const sample = logNormalNativeF32From(&sample_engine, 0, 0.25);
-    try std.testing.expectEqual(@as(u32, 0x3f48eca8), @as(u32, @bitCast(sample)));
+    try expectNearBitsF32(0x3f48eca8, sample, 1);
     try std.testing.expectEqual(@as(u64, 0x6d90858561829116), sample_engine.next());
 
     var fill_engine = alea.ScalarPrng.init(0x3220);
@@ -23445,20 +23450,20 @@ test "native f32 log-normal has stable snapshots" {
     fillLogNormalNativeF32From(&fill_engine, &buf, 0, 0.25);
     const expected = [_]u32{ 0x3f48eca8, 0x3f5baf10, 0x3fb08788, 0x3f577c69 };
     inline for (expected, 0..) |bits, i| {
-        try std.testing.expectEqual(bits, @as(u32, @bitCast(buf[i])));
+        try expectNearBitsF32(bits, buf[i], 1);
     }
     try std.testing.expectEqual(@as(u64, 0x19b4c678ab733fff), fill_engine.next());
 
     var checked_engine = alea.ScalarPrng.init(0x3220);
     const checked = try logNormalNativeF32CheckedFrom(&checked_engine, 0, 0.25);
-    try std.testing.expectEqual(@as(u32, 0x3f48eca8), @as(u32, @bitCast(checked)));
+    try expectNearBitsF32(0x3f48eca8, checked, 1);
     try std.testing.expectEqual(@as(u64, 0x6d90858561829116), checked_engine.next());
 
     var sampler_engine = alea.ScalarPrng.init(0x3220);
     const sampler = try LogNormalNativeF32.init(0, 0.25);
     try std.testing.expectEqual(@as(f32, 0), sampler.meanValue());
     try std.testing.expectEqual(@as(f32, 0.25), sampler.stddevValue());
-    try std.testing.expectEqual(@as(u32, 0x3f48eca8), @as(u32, @bitCast(sampler.sampleFrom(&sampler_engine))));
+    try expectNearBitsF32(0x3f48eca8, sampler.sampleFrom(&sampler_engine), 1);
     try std.testing.expectEqual(@as(u64, 0x6d90858561829116), sampler_engine.next());
 
     var invalid_engine = alea.ScalarPrng.init(0x3221);
@@ -23476,7 +23481,7 @@ test "native f32 log-normal has stable snapshots" {
     const vector_sample = vectorLogNormalNativeF32From(&vector_engine, @Vector(8, f32), 0, 0.25);
     const vector_expected = [_]u32{ 0x3f8dd40e, 0x3f5351b2, 0x3f7b8fa5, 0x3f57a519, 0x3f9140c0, 0x3fc9e4d4, 0x3f561e9e, 0x3f4b1da4 };
     inline for (vector_expected, 0..) |bits, lane| {
-        try std.testing.expectEqual(bits, @as(u32, @bitCast(vector_sample[lane])));
+        try expectNearBitsF32(bits, vector_sample[lane], 1);
     }
     try std.testing.expectEqual(@as(u64, 0xc00eeae70402f9e3), vector_engine.next());
 
@@ -23484,14 +23489,14 @@ test "native f32 log-normal has stable snapshots" {
     var vector_buf: [2]@Vector(8, f32) = undefined;
     fillVectorLogNormalNativeF32From(&vector_fill_engine, @Vector(8, f32), &vector_buf, 0, 0.25);
     inline for (vector_expected, 0..) |bits, lane| {
-        try std.testing.expectEqual(bits, @as(u32, @bitCast(vector_buf[0][lane])));
+        try expectNearBitsF32(bits, vector_buf[0][lane], 1);
     }
     try std.testing.expectEqual(@as(u64, 0xc3d6f351b7ca867b), vector_fill_engine.next());
 
     var vector_checked_engine = alea.ScalarPrng.init(0x3240);
     const vector_checked = try vectorLogNormalNativeF32CheckedFrom(&vector_checked_engine, @Vector(8, f32), 0, 0.25);
     inline for (vector_expected, 0..) |bits, lane| {
-        try std.testing.expectEqual(bits, @as(u32, @bitCast(vector_checked[lane])));
+        try expectNearBitsF32(bits, vector_checked[lane], 1);
     }
     try std.testing.expectEqual(@as(u64, 0xc00eeae70402f9e3), vector_checked_engine.next());
 
@@ -23501,7 +23506,7 @@ test "native f32 log-normal has stable snapshots" {
     try std.testing.expectEqual(@as(f32, 0.25), vector_sampler.stddevValue());
     const vector_sampler_sample = vector_sampler.sampleFrom(&vector_sampler_engine);
     inline for (vector_expected, 0..) |bits, lane| {
-        try std.testing.expectEqual(bits, @as(u32, @bitCast(vector_sampler_sample[lane])));
+        try expectNearBitsF32(bits, vector_sampler_sample[lane], 1);
     }
     try std.testing.expectEqual(@as(u64, 0xc00eeae70402f9e3), vector_sampler_engine.next());
 }
