@@ -5,7 +5,13 @@ extern "c" fn exp(f64) f64;
 extern "c" fn expf(f32) f32;
 
 const trials = 3;
-const default_count = 8 * 1024 * 1024;
+const default_count: usize = 8 * 1024 * 1024;
+
+var probe_filter: ?[]const u8 = null;
+
+fn shouldRun(name: []const u8) bool {
+    return probe_filter == null or std.mem.indexOf(u8, name, probe_filter.?) != null;
+}
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -16,12 +22,16 @@ pub fn main(init: std.process.Init) !void {
     var args = std.process.Args.Iterator.init(init.minimal.args);
     defer args.deinit();
     _ = args.next();
-    const sample_count = if (args.next()) |arg|
-        std.fmt.parseInt(usize, arg, 10) catch default_count
-    else
-        default_count;
+    var sample_count = default_count;
+    if (args.next()) |arg| {
+        sample_count = std.fmt.parseInt(usize, arg, 10) catch blk: {
+            probe_filter = arg;
+            break :blk sample_count;
+        };
+    }
+    if (args.next()) |arg| probe_filter = arg;
 
-    try stdout.print("log-normal probe count={}\n", .{sample_count});
+    try stdout.print("log-normal probe count={} filter={s}\n", .{ sample_count, probe_filter orelse "<all>" });
     try benchSample(alea.FastPrng, io, stdout, "fast sample current", 0x1060, sample_count, sampleCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast sample standard+scale", 0x1060, sample_count, sampleStandardScale);
     try benchSample(alea.FastPrng, io, stdout, "fast sample mulAdd", 0x1060, sample_count, sampleMulAdd);
@@ -132,6 +142,7 @@ fn benchSample(
     sample_count: usize,
     comptime sampleFn: anytype,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
 
@@ -166,6 +177,7 @@ fn benchFill(
     sample_count: usize,
     comptime fillFn: anytype,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f64 = undefined;
@@ -206,6 +218,7 @@ fn benchFillF32(
     sample_count: usize,
     comptime fillFn: anytype,
 ) !void {
+    if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
     var out: [1024]f32 = undefined;
@@ -629,6 +642,7 @@ fn compareExpm1ErrorF32(
     sample_count: usize,
     stddev: f32,
 ) !void {
+    if (!shouldRun(name)) return;
     var engine = alea.ScalarPrng.init(seed);
     var max_abs: f32 = 0;
     var max_rel: f32 = 0;
@@ -669,6 +683,7 @@ fn compareWidenedExpErrorF32(
     sample_count: usize,
     stddev: f32,
 ) !void {
+    if (!shouldRun(name)) return;
     var engine = alea.ScalarPrng.init(seed);
     var max_abs: f32 = 0;
     var max_rel: f32 = 0;
@@ -710,6 +725,7 @@ fn compareHybridExpm1ErrorF32(
     stddev: f32,
     threshold: f32,
 ) !void {
+    if (!shouldRun(name)) return;
     var engine = alea.ScalarPrng.init(seed);
     var max_abs: f32 = 0;
     var max_rel: f32 = 0;

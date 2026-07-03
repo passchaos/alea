@@ -81,6 +81,16 @@ The exact `LogNormal(f32)` and `fillLogNormal` paths remain unchanged and keep
 
 Fresh local evidence:
 
+- `log-normal-probe` now accepts the same focused shape as the throughput
+  harness: `zig build -Doptimize=ReleaseFast -Dcpu=native log-normal-probe --
+  <count> <filter>`. A same-host 1Mi filtered smoke run verified the filter and
+  rechecked the main exact production shapes without running every rejected
+  candidate: `current fill` was about 125M/134M f64 FastPrng/ScalarPrng and
+  about 140M/146M f32, `standard scale then exp` was about 124M/136M f64 and
+  137M/142M f32, and `staged scalar exp` was about 120M/130M f64 and
+  138M/145M f32. These rows are small-count/noisy, but they preserve the
+  existing conclusion: no filtered exact transform shape is a new
+  no-regression default.
 - `zig build -Doptimize=ReleaseFast -Dcpu=native log-normal-probe -- 1048576`
   on 2026-07-03 still does not reveal a portable exact default replacement.
   Exact f64 current/staged-scalar fill is about 133M/133M FastPrng and
