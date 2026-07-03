@@ -62,7 +62,7 @@ Out of scope for this Linux-first audit:
 
 | Local Rust family | Alea API | Validation |
 | --- | --- | --- |
-| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `exponential`, `Exponential`, plus explicit bounded f32 LogNormal approximation paths | unit tests, `distcheck`, vector `distcheck`, benchmark rows |
+| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `BufferedLogNormal`, `LogNormalLibmvec`, `exponential`, `Exponential`, plus explicit bounded/native f32 LogNormal opt-ins | unit tests, `distcheck`, `distcheck-libc` for libmvec availability, vector `distcheck`, benchmark rows |
 | Gamma, ChiSquared, Beta | `gamma`, `Gamma`, `chiSquared`, `ChiSquared`, `beta`, `Beta` | unit tests, `distcheck`, benchmark rows |
 | FisherF, StudentT | `fisherF`, `FisherF`, `studentT`, `StudentT` | unit tests, `distcheck`, benchmark rows |
 | Poisson, Binomial | `poisson`, `Poisson`, `binomial`, `Binomial` | unit tests, `distcheck`, benchmark rows |
@@ -83,16 +83,19 @@ current blocker audit is `s4-m4-remaining-gaps.md`. In short:
 
 - exact scalar/single-sample `LogNormal` transform/codegen still trails the
   latest local Rust `rand_distr` evidence for comparable exact workloads;
-  exact f32 direct-source bulk fills and vector-slice rows have improved, but
-  exact defaults still remain behind the local Rust f32/f64 single-sample rows.
-  Current evidence and rejected exact transform shapes are recorded in
+  exact f32 direct-source bulk fills and vector-slice rows have improved, and
+  `BufferedLogNormal` / `LogNormalLibmvec` now cover repeated-sample and
+  libc/libmvec opt-in profiles, but exact defaults still remain behind the local
+  Rust f32/f64 single-sample rows. Current evidence and rejected exact transform
+  shapes are recorded in
   `lognormal-transform-notes.md`, `performance-triage.md`, and
   `s4-m4-remaining-gaps.md`.
 - vector normal/exponential APIs have broad Zig-native coverage and strong
   scalar-lane-fill rows, but no genuinely dense SIMD distribution kernel has
   beaten scalar ziggurat lane-fill in the real `vectorbench` harness; the
-  repair, block-fallback, all-accepted, flat-slice, lane-local, and cached-Rng
-  attempts are recorded in `simd-distribution-kernel-notes.md`,
+  repair, block-fallback, all-accepted, flat-slice, lane-local, Marsaglia polar,
+  libmvec vector-log, and cached-Rng attempts are recorded in
+  `simd-distribution-kernel-notes.md`,
   `performance-triage.md`, and `s4-m4-remaining-gaps.md`.
 
 ## Alea Extras Beyond The Local Rust Surface
@@ -115,8 +118,10 @@ The following validation gates are used for the current Linux-first stage:
 ```sh
 zig build test
 zig build -Doptimize=ReleaseFast distcheck
+zig build -Doptimize=ReleaseFast distcheck-libc
 zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
+zig build -Doptimize=ReleaseFast -Dcpu=native bench-libc
 zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench
 zig build crosscheck
 zig build validate-all
