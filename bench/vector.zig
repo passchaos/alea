@@ -206,6 +206,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorStandardNormalF64(io, stdout, "alea fillVectorStandardNormal f64x4", lanes / 8);
     try benchFillVectorStandardNormalF64Direct(io, stdout, "alea fillVectorStandardNormal f64x4 direct", lanes / 8);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 local scalar candidate", lanes / 8, 0xd184, fillStandardNormalF64Local);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillStandardNormalF64SameCandidateRepair);
     try benchFillVectorNormalF32(io, stdout, "alea fillVectorNormal f32x8", lanes / 4);
     try benchFillVectorNormalF32Direct(io, stdout, "alea fillVectorNormal f32x8 direct", lanes / 4);
     try benchFillVectorNormalF32Repair(io, stdout, "alea fillVectorNormal f32x8 repair candidate", lanes / 4);
@@ -216,6 +217,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorNormalF64(io, stdout, "alea fillVectorNormal f64x4", lanes / 8);
     try benchFillVectorNormalF64Direct(io, stdout, "alea fillVectorNormal f64x4 direct", lanes / 8);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 local scalar candidate", lanes / 8, 0xd184, fillNormalF64Local);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillNormalF64SameCandidateRepair);
     try benchFillVectorStandardExponentialF32(io, stdout, "alea fillVectorStandardExponential f32x8", lanes);
     try benchFillVectorStandardExponentialF32Direct(io, stdout, "alea fillVectorStandardExponential f32x8 direct", lanes);
     try benchFillVectorStandardExponentialF32Repair(io, stdout, "alea fillVectorStandardExponential f32x8 repair candidate", lanes);
@@ -226,6 +228,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorStandardExponentialF64(io, stdout, "alea fillVectorStandardExponential f64x4", lanes / 2);
     try benchFillVectorStandardExponentialF64Direct(io, stdout, "alea fillVectorStandardExponential f64x4 direct", lanes / 2);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 local scalar candidate", lanes / 2, 0xe184, fillStandardExponentialF64Local);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 same-candidate repair", lanes / 2, 0xe184, fillStandardExponentialF64SameCandidateRepair);
     try benchFillVectorExponentialF32(io, stdout, "alea fillVectorExponential f32x8", lanes);
     try benchFillVectorExponentialF32Direct(io, stdout, "alea fillVectorExponential f32x8 direct", lanes);
     try benchFillVectorExponentialF32Repair(io, stdout, "alea fillVectorExponential f32x8 repair candidate", lanes);
@@ -236,6 +239,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorExponentialF64(io, stdout, "alea fillVectorExponential f64x4", lanes / 2);
     try benchFillVectorExponentialF64Direct(io, stdout, "alea fillVectorExponential f64x4 direct", lanes / 2);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 local scalar candidate", lanes / 2, 0xe184, fillExponentialF64Local);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 same-candidate repair", lanes / 2, 0xe184, fillExponentialF64SameCandidateRepair);
     try stdout.flush();
 }
 
@@ -2314,17 +2318,36 @@ fn fillStandardNormalF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64))
     for (dest) |*item| item.* = vectorNormalF64Local(engine);
 }
 
+fn fillStandardNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorRepairNormalF64SameCandidate(engine);
+}
+
 fn fillNormalF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorNormalF64Local(engine);
+}
+
+fn fillNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const mean_vec: @Vector(4, f64) = @splat(0);
+    const stddev_vec: @Vector(4, f64) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRepairNormalF64SameCandidate(engine);
 }
 
 fn fillStandardExponentialF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorExponentialF64Local(engine);
 }
 
+fn fillStandardExponentialF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorRepairExponentialF64SameCandidate(engine);
+}
+
 fn fillExponentialF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     const inverse_rate: @Vector(4, f64) = @splat(0.5);
     for (dest) |*item| item.* = vectorExponentialF64Local(engine) * inverse_rate;
+}
+
+fn fillExponentialF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(0.5);
+    for (dest) |*item| item.* = vectorRepairExponentialF64SameCandidate(engine) * inverse_rate;
 }
 
 fn vectorNormalF64Local(engine: *alea.ScalarPrng) @Vector(4, f64) {
@@ -2336,6 +2359,60 @@ fn vectorNormalF64Local(engine: *alea.ScalarPrng) @Vector(4, f64) {
 fn vectorExponentialF64Local(engine: *alea.ScalarPrng) @Vector(4, f64) {
     var out: @Vector(4, f64) = undefined;
     inline for (0..4) |lane| out[lane] = thresholdExponential(engine);
+    return out;
+}
+
+fn vectorRepairNormalF64SameCandidate(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const VecF64 = @Vector(4, f64);
+    const VecU64 = @Vector(4, u64);
+
+    var bits_vec: VecU64 = undefined;
+    inline for (0..4) |lane| bits_vec[lane] = engine.next();
+
+    var ratios: VecF64 = undefined;
+    var out: VecF64 = undefined;
+    inline for (0..4) |lane| {
+        const bits = bits_vec[lane];
+        const i: usize = @as(u8, @truncate(bits));
+        const repr = (@as(u64, 0x400) << 52) | (bits >> 12);
+        const u: f64 = @as(f64, @bitCast(repr)) - 3.0;
+        ratios[lane] = norm_ratio[i];
+        out[lane] = u * ziggurat.NormDist.x[i];
+    }
+
+    const reprs = (@as(VecU64, @splat(@as(u64, 0x400) << 52)) | (bits_vec >> @as(VecU64, @splat(12))));
+    const u_values: VecF64 = @as(VecF64, @bitCast(reprs)) - @as(VecF64, @splat(3.0));
+    const mask = @abs(u_values) < ratios;
+    inline for (0..4) |lane| {
+        if (!mask[lane]) out[lane] = ratioNormalWithInitial(engine, bits_vec[lane]);
+    }
+    return out;
+}
+
+fn vectorRepairExponentialF64SameCandidate(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const VecU64 = @Vector(4, u64);
+
+    var bits_vec: VecU64 = undefined;
+    inline for (0..4) |lane| bits_vec[lane] = engine.next();
+
+    var thresholds: VecU64 = undefined;
+    var mantissas: VecU64 = undefined;
+    var out: @Vector(4, f64) = undefined;
+    inline for (0..4) |lane| {
+        const bits = bits_vec[lane];
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 12;
+        const repr = (@as(u64, 0x3ff) << 52) | mantissa;
+        const u: f64 = @as(f64, @bitCast(repr)) - (1.0 - std.math.floatEps(f64) / 2.0);
+        thresholds[lane] = exp_threshold[i];
+        mantissas[lane] = mantissa;
+        out[lane] = u * ziggurat.ExpDist.x[i];
+    }
+
+    const mask = mantissas < thresholds;
+    inline for (0..4) |lane| {
+        if (!mask[lane]) out[lane] = thresholdExponentialWithInitial(engine, bits_vec[lane]);
+    }
     return out;
 }
 

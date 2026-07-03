@@ -44,6 +44,11 @@ repair rows before a real `vectorbench` follow-up.
 - Vector Box-Muller normal kernels are too slow for default use.
 - Vector-log exponential kernels are too slow for default use.
 - f64x4 ziggurat fast-path plus scalar repair loses to scalar lane-fill.
+  A later real-harness same-candidate f64x4 repair check confirms the
+  isolated-probe result: focused 64Mi-lane `vectorbench` rows are about
+  349M standard-normal, 347M normal, 316M standard-exponential, and 314M
+  exponential lanes/s, below same-run direct rows around 454M/454M normal and
+  468M/468M exponential.
 - Driving f64x4 ziggurat candidates from Alea4x64's four independent lanes does
   not rescue the repair shape. A focused `ziggurat-probe -- 4194304
   "alea4x64-lane"` run with lane-local repair and matching checksums shows
