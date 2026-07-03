@@ -37,21 +37,37 @@ pub fn main(init: std.process.Init) !void {
     try benchSample(alea.FastPrng, io, stdout, "fast sample mulAdd", 0x1060, sample_count, sampleMulAdd);
     try benchSample(alea.FastPrng, io, stdout, "fast sample std.math.exp", 0x1060, sample_count, sampleStdMathExp);
     try benchSample(alea.FastPrng, io, stdout, "fast sample libc exp", 0x1060, sample_count, sampleLibcExp);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample stddev1 current", 0x1068, sample_count, sampleCurrentStddev1);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample stddev1 direct exp", 0x1068, sample_count, sampleDirectExpStddev1);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample stddev1 std.math.exp", 0x1068, sample_count, sampleStdMathExpStddev1);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample stddev1 libc exp", 0x1068, sample_count, sampleLibcExpStddev1);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample current", 0x1061, sample_count, sampleCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample standard+scale", 0x1061, sample_count, sampleStandardScale);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample mulAdd", 0x1061, sample_count, sampleMulAdd);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample std.math.exp", 0x1061, sample_count, sampleStdMathExp);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample libc exp", 0x1061, sample_count, sampleLibcExp);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sample stddev1 current", 0x1069, sample_count, sampleCurrentStddev1);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sample stddev1 direct exp", 0x1069, sample_count, sampleDirectExpStddev1);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sample stddev1 std.math.exp", 0x1069, sample_count, sampleStdMathExpStddev1);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sample stddev1 libc exp", 0x1069, sample_count, sampleLibcExpStddev1);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample current", 0x1066, sample_count, sampleCurrentF32);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample std.math.exp", 0x1066, sample_count, sampleStdMathExpF32);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample libc expf", 0x1066, sample_count, sampleLibcExpF32);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample widened f64 exp", 0x1066, sample_count, sampleWidenedExpF32);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample expm1+1", 0x1066, sample_count, sampleExpm1ExpF32);
+    try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample stddev1 current", 0x106a, sample_count, sampleCurrentStddev1F32);
+    try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample stddev1 direct exp", 0x106a, sample_count, sampleDirectExpStddev1F32);
+    try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample stddev1 std.math.exp", 0x106a, sample_count, sampleStdMathExpStddev1F32);
+    try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample stddev1 libc expf", 0x106a, sample_count, sampleLibcExpStddev1F32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample current", 0x1066, sample_count, sampleCurrentF32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample std.math.exp", 0x1066, sample_count, sampleStdMathExpF32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample libc expf", 0x1066, sample_count, sampleLibcExpF32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample widened f64 exp", 0x1066, sample_count, sampleWidenedExpF32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample expm1+1", 0x1066, sample_count, sampleExpm1ExpF32);
+    try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample stddev1 current", 0x106b, sample_count, sampleCurrentStddev1F32);
+    try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample stddev1 direct exp", 0x106b, sample_count, sampleDirectExpStddev1F32);
+    try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample stddev1 std.math.exp", 0x106b, sample_count, sampleStdMathExpStddev1F32);
+    try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample stddev1 libc expf", 0x106b, sample_count, sampleLibcExpStddev1F32);
     try benchFill(alea.FastPrng, io, stdout, "fast normal-only fill", 0x1062, sample_count, normalOnlyFill);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x1062, sample_count, currentFill);
     try benchFillSized(alea.FastPrng, 256, io, stdout, "fast current fill chunk256", 0x1062, sample_count, currentFill);
@@ -439,6 +455,22 @@ fn sampleLibcExp(source: anytype) f64 {
     return exp(0.25 * alea.Rng.standardNormalFastFrom(source, f64));
 }
 
+fn sampleCurrentStddev1(source: anytype) f64 {
+    return alea.distributions.logNormalFrom(source, f64, 0, 1);
+}
+
+fn sampleDirectExpStddev1(source: anytype) f64 {
+    return @exp(alea.Rng.standardNormalFastFrom(source, f64));
+}
+
+fn sampleStdMathExpStddev1(source: anytype) f64 {
+    return std.math.exp(alea.Rng.standardNormalFastFrom(source, f64));
+}
+
+fn sampleLibcExpStddev1(source: anytype) f64 {
+    return exp(alea.Rng.standardNormalFastFrom(source, f64));
+}
+
 fn sampleCurrentF32(source: anytype) f32 {
     return alea.distributions.logNormalFrom(source, f32, 0, 0.25);
 }
@@ -458,6 +490,22 @@ fn sampleWidenedExpF32(source: anytype) f32 {
 
 fn sampleExpm1ExpF32(source: anytype) f32 {
     return std.math.expm1(0.25 * alea.Rng.standardNormalFastFrom(source, f32)) + 1.0;
+}
+
+fn sampleCurrentStddev1F32(source: anytype) f32 {
+    return alea.distributions.logNormalFrom(source, f32, 0, 1);
+}
+
+fn sampleDirectExpStddev1F32(source: anytype) f32 {
+    return @exp(alea.Rng.standardNormalFastFrom(source, f32));
+}
+
+fn sampleStdMathExpStddev1F32(source: anytype) f32 {
+    return std.math.exp(alea.Rng.standardNormalFastFrom(source, f32));
+}
+
+fn sampleLibcExpStddev1F32(source: anytype) f32 {
+    return expf(alea.Rng.standardNormalFastFrom(source, f32));
 }
 
 fn stagedScalarExp(source: anytype, dest: []f64) void {

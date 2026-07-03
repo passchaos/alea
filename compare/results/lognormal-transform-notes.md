@@ -122,6 +122,10 @@ Fresh local evidence:
   FastPrng f64 row to about 72.9M while tying the other profiles around
   74.4M/76.0M/77.7M. This remains profile-specific evidence, not a default
   replacement for `@exp`.
+- `log-normal-probe -- 1048576 "sample stddev1"` similarly shows no
+  single-sample exact expression escape hatch for wide-spread LogNormal:
+  current/direct-`@exp`/`std.math.exp`/libc rows are all about 58M FastPrng and
+  64M ScalarPrng for f64, and about 56M/61M for f32.
 - A production retry that swapped f64 `expInPlaceScalar` to `std.math.exp`
   likewise stayed tied/noisy rather than producing a durable win in focused
   `bench -- 268435456 "fillLogNormal"` rows. It was reverted and exact f64
