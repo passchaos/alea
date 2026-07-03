@@ -32,6 +32,7 @@ Local Alea evidence:
 - `compare/results/performance-triage.md`
 - `compare/results/simd-distribution-kernel-notes.md`
 - `compare/results/lognormal-transform-notes.md`
+- `compare/results/lognormal-codegen-audit.md`
 - `compare/results/s4-m4-remaining-gaps.md`
 - `compare/results/rust-benchmark-coverage-audit.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`

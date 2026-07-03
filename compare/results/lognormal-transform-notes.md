@@ -2,7 +2,9 @@
 
 This note captures the current evidence for LogNormal performance work. The
 remaining gap is not in normal generation or sampler dispatch; it is in the
-floating-point transform from log-space normal samples to output samples.
+floating-point transform from log-space normal samples to output samples. See
+`lognormal-codegen-audit.md` for the current local compiler-rt/codegen
+observation.
 
 ## Current Baseline
 
