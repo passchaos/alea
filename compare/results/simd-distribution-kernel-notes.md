@@ -46,6 +46,12 @@ repair rows before a real `vectorbench` follow-up.
 ## Rejected Or Deferred Shapes
 
 - Vector Box-Muller normal kernels are too slow for default use.
+- Vectorized Marsaglia polar normal kernels are also too slow for default use.
+  A real `vectorbench -- 16777216 "StandardNormal f32x8"` / `"StandardNormal
+  f64x4"` run showed f32x8/f64x4 Marsaglia-polar candidates around 159M/149M
+  lanes/s versus same-run direct scalar lane-fill around 479M/455M. The
+  rejection sampling plus `log`/`sqrt` transform cost is far above ziggurat
+  lane-fill, so this is not a dense SIMD direction.
 - Vector-log exponential kernels are too slow for default use.
 - Native f32 scalar ziggurat candidates are adopted only as explicit opt-in
   output profiles. A focused `ziggurat-probe -- 4194304 "f32"` run shows native
