@@ -46,7 +46,10 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   regressed the 1GiB harness badly, and a later f64 vector4 production retry
   based on fresh 1Mi probe wins dropped the focused 256Mi f64 ScalarPrng direct
   fill row to about 117M versus surrounding scalar-loop baseline rows around
-  136-141M. Keep the scalar f64 transform loop as the default.
+  136-141M. A follow-up f64 vector8 production retry also regressed focused
+  256Mi rows to about 131M/133M/141M facade/FastPrng/ScalarPrng versus the
+  reverted scalar-loop baseline around 133M/137M/145M. Keep the scalar f64
+  transform loop as the default.
 - Indexing through the destination slice in a `while` loop is mixed and
   regresses the FastPrng f64 profile, so pointer iteration remains the default.
 - Out-of-place exact transforms using a temporary normal buffer are mixed in the
