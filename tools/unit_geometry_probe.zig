@@ -66,6 +66,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit sphere point-loop fill", 0x59e7e, sample_count, pointLoopUnitSphere);
     try benchFill(alea.FastPrng, io, stdout, "fast unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
     try benchFill(alea.FastPrng, io, stdout, "fast unit circle batched candidates", 0xc11c1e, sample_count, batchedUnitCircle);
+    try benchFill(alea.FastPrng, io, stdout, "fast unit circle numerator-fma fill", 0xc11c1e, sample_count, batchedUnitCircleNumeratorFma);
     try benchFill(alea.FastPrng, io, stdout, "fast unit disc current fill", 0xd15c, sample_count, currentUnitDisc);
     try benchFill(alea.FastPrng, io, stdout, "fast unit disc batched candidates", 0xd15c, sample_count, batchedUnitDisc);
     try benchFill3(alea.FastPrng, io, stdout, "fast unit sphere current fill", 0x59e7e, sample_count, currentUnitSphere);
@@ -76,6 +77,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFill3(alea.FastPrng, io, stdout, "fast unit ball batched x2", 0xba11, sample_count, batchedUnitBall2);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar unit circle current fill", 0xc11c1e, sample_count, currentUnitCircle);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar unit circle batched candidates", 0xc11c1e, sample_count, batchedUnitCircle);
+    try benchFill(alea.ScalarPrng, io, stdout, "scalar unit circle numerator-fma fill", 0xc11c1e, sample_count, batchedUnitCircleNumeratorFma);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar unit disc current fill", 0xd15c, sample_count, currentUnitDisc);
     try benchFill(alea.ScalarPrng, io, stdout, "scalar unit disc batched candidates", 0xd15c, sample_count, batchedUnitDisc);
     try benchFill3(alea.ScalarPrng, io, stdout, "scalar unit sphere current fill", 0x59e7e, sample_count, currentUnitSphere);
@@ -584,6 +586,31 @@ fn batchedUnitCircle(source: anytype, dest: [][2]f64) void {
             const sum = x * x + y * y;
             if (sum > 0 and sum < 1) {
                 dest[filled] = .{ (x * x - y * y) / sum, 2 * x * y / sum };
+                filled += 1;
+            }
+        }
+    }
+}
+
+fn batchedUnitCircleNumeratorFma(source: anytype, dest: [][2]f64) void {
+    var x_candidates: [2048]f64 = undefined;
+    var y_candidates: [2048]f64 = undefined;
+
+    var filled: usize = 0;
+    while (filled < dest.len) {
+        const remaining = dest.len - filled;
+        const candidate_count = @min(x_candidates.len, @max(remaining, remaining * 2));
+        fillSignedUnit(source, x_candidates[0..candidate_count]);
+        fillSignedUnit(source, y_candidates[0..candidate_count]);
+
+        var i: usize = 0;
+        while (i < candidate_count and filled < dest.len) : (i += 1) {
+            const x = x_candidates[i];
+            const y = y_candidates[i];
+            const x2 = x * x;
+            const sum = @mulAdd(f64, y, y, x2);
+            if (sum > 0 and sum < 1) {
+                dest[filled] = .{ @mulAdd(f64, -y, y, x2) / sum, @mulAdd(f64, 2 * x, y, 0) / sum };
                 filled += 1;
             }
         }
