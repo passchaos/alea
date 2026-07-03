@@ -190,6 +190,7 @@ Single-shot helpers:
   `fillVectorNormalCheckedFrom`, `logNormal`, `logNormalFrom`,
   `logNormalChecked`, `logNormalCheckedFrom`, `fillLogNormal`,
   `fillLogNormalFrom`, `fillLogNormalChecked`, `fillLogNormalCheckedFrom`,
+  `BufferedLogNormal`,
   `logNormalNativeF32`, `logNormalNativeF32From`,
   `logNormalNativeF32Checked`, `logNormalNativeF32CheckedFrom`,
   `fillLogNormalNativeF32`, `fillLogNormalNativeF32From`,
@@ -929,6 +930,18 @@ Reusable samplers:
 - `LogNormal(T).sampleFrom`
 - `LogNormal(T).fill`
 - `LogNormal(T).fillFrom`
+- `BufferedLogNormal(T, buffer_len)`
+- `BufferedLogNormal(T, buffer_len).capacity`
+- `BufferedLogNormal(T, buffer_len).init`
+- `BufferedLogNormal(T, buffer_len).initMeanCv`
+- `BufferedLogNormal(T, buffer_len).logMeanValue`
+- `BufferedLogNormal(T, buffer_len).logStddevValue`
+- `BufferedLogNormal(T, buffer_len).bufferedValueCount`
+- `BufferedLogNormal(T, buffer_len).reset`
+- `BufferedLogNormal(T, buffer_len).sample`
+- `BufferedLogNormal(T, buffer_len).sampleFrom`
+- `BufferedLogNormal(T, buffer_len).fill`
+- `BufferedLogNormal(T, buffer_len).fillFrom`
 - `LogNormalNativeF32`
 - `LogNormalNativeF32.init`
 - `LogNormalNativeF32.meanValue`

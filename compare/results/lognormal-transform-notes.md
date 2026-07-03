@@ -147,16 +147,18 @@ Fresh local evidence:
   buffers, `log-normal-probe -- 4194304 "sample current"` moves exact f64
   FastPrng/ScalarPrng rows from about 116M/131M to about 131M/136M and exact
   f32 rows from about 120M/136M to about 138M/148M. `"buffered sample
-  stddev1"` reaches about 72M/73M f64 and 78M/80M f32. Libmvec-backed buffered
-  rows are much faster, and a dynamic-loading probe using
-  `std.DynLib.open("libmvec.so.1")` shows a possible no-hard-link opt-in shape:
-  f32 remains around 301M/341M FastPrng/ScalarPrng and f64 around 236M/256M
-  FastPrng/ScalarPrng, close to the linked-libmvec buffered rows while avoiding
-  a build-time libmvec dependency. This confirms that buffering
-  helps one-at-a-time users, but it remains evidence only because it still
-  trails Rust for the primary narrow exact f64/f32 rows and changes the
-  random-consumption contract by refilling in chunks; the libmvec variants also
-  keep their platform/output-mapping caveat.
+  stddev1"` reaches about 72M/73M f64 and 78M/80M f32. The exact buffered shape
+  is now exposed as `BufferedLogNormal(T, buffer_len)`, making the refill/stream
+  contract explicit. Focused production `bench -- 268435456 "BufferedLogNormal"`
+  rows are about 138M/141M f64 FastPrng/ScalarPrng, 136M/139M f32, 76M/77M f64
+  `stddev=1`, and 77M/79M f32 `stddev=1`. Libmvec-backed buffered rows are much
+  faster, and a dynamic-loading probe using `std.DynLib.open("libmvec.so.1")`
+  shows a possible no-hard-link opt-in shape: f32 remains around 301M/341M
+  FastPrng/ScalarPrng and f64 around 236M/256M FastPrng/ScalarPrng, close to the
+  linked-libmvec buffered rows while avoiding a build-time libmvec dependency.
+  This helps one-at-a-time users, but the primary narrow exact f64/f32 rows
+  still trail Rust and the libmvec variants keep their platform/output-mapping
+  caveat.
 - A new Linux/glibc libmvec probe directly calls x86_64 vector math ABI
   symbols (`_ZGVbN2v_exp`, `_ZGVcN4v_exp`, `_ZGVcN8v_expf`) from
   `log-normal-probe` when building for x86_64-linux-gnu. Focused

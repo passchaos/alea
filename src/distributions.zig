@@ -4456,6 +4456,83 @@ pub fn LogNormal(comptime T: type) type {
     };
 }
 
+pub fn BufferedLogNormal(comptime T: type, comptime buffer_len: usize) type {
+    comptime {
+        requireFloat(T);
+        if (buffer_len == 0) @compileError("BufferedLogNormal buffer_len must be greater than zero");
+    }
+
+    return struct {
+        const Self = @This();
+
+        pub const capacity: usize = buffer_len;
+
+        log_mean: T,
+        log_stddev: T,
+        buffer: [buffer_len]T = undefined,
+        index: usize = buffer_len,
+
+        pub fn init(mean: T, stddev: T) Error!Self {
+            const base = try LogNormal(T).init(mean, stddev);
+            return .{
+                .log_mean = base.normal_sampler.mean,
+                .log_stddev = base.normal_sampler.stddev,
+            };
+        }
+
+        pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
+            const base = try LogNormal(T).initMeanCv(mean, coefficient_of_variation);
+            return .{
+                .log_mean = base.normal_sampler.mean,
+                .log_stddev = base.normal_sampler.stddev,
+            };
+        }
+
+        pub fn logMeanValue(self: Self) T {
+            return self.log_mean;
+        }
+
+        pub fn logStddevValue(self: Self) T {
+            return self.log_stddev;
+        }
+
+        pub fn bufferedValueCount(self: Self) usize {
+            return buffer_len - self.index;
+        }
+
+        pub fn reset(self: *Self) void {
+            self.index = buffer_len;
+        }
+
+        pub fn sample(self: *Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: *Self, source: anytype) T {
+            if (self.log_stddev == 0) return @exp(self.log_mean);
+            if (self.index == buffer_len) {
+                fillLogNormalFrom(source, T, self.buffer[0..], self.log_mean, self.log_stddev);
+                self.index = 0;
+            }
+            const value = self.buffer[self.index];
+            self.index += 1;
+            return value;
+        }
+
+        pub fn fill(self: *Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
+            if (self.log_stddev == 0) {
+                @memset(dest, @exp(self.log_mean));
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub const LogNormalNativeF32 = struct {
     const Self = @This();
 
@@ -23266,6 +23343,65 @@ test "native exp2 f32 log-normal has stable snapshots" {
     var vector_empty: [0]@Vector(8, f32) = .{};
     try fillVectorLogNormalNativeExp2F32CheckedFrom(&vector_empty_engine, @Vector(8, f32), &vector_empty, 0, 3);
     try std.testing.expectEqual(vector_empty_control.next(), vector_empty_engine.next());
+}
+
+test "buffered log-normal sampler has explicit refill stream contract" {
+    const alea = @import("root.zig");
+
+    var sample_engine = alea.ScalarPrng.init(0x3290);
+    var sampler = try BufferedLogNormal(f64, 4).init(0, 0.25);
+    try std.testing.expectEqual(@as(usize, 4), @TypeOf(sampler).capacity);
+    try std.testing.expectEqual(@as(f64, 0), sampler.logMeanValue());
+    try std.testing.expectEqual(@as(f64, 0.25), sampler.logStddevValue());
+    try std.testing.expectEqual(@as(usize, 0), sampler.bufferedValueCount());
+
+    const first = sampler.sampleFrom(&sample_engine);
+    try std.testing.expectEqual(@as(u64, 0x3fe8ece848f7947e), @as(u64, @bitCast(first)));
+    try std.testing.expectEqual(@as(usize, 3), sampler.bufferedValueCount());
+    try std.testing.expectEqual(@as(u64, 0xfc39c452554c5a28), sample_engine.next());
+
+    const second = sampler.sampleFrom(&sample_engine);
+    try std.testing.expectEqual(@as(u64, 0x3fea6e60477edde0), @as(u64, @bitCast(second)));
+    try std.testing.expectEqual(@as(usize, 2), sampler.bufferedValueCount());
+    try std.testing.expectEqual(@as(u64, 0x00441874903d9173), sample_engine.next());
+
+    sampler.reset();
+    try std.testing.expectEqual(@as(usize, 0), sampler.bufferedValueCount());
+    const after_reset = sampler.sampleFrom(&sample_engine);
+    try std.testing.expectEqual(@as(u64, 0x3ffc207069cbae56), @as(u64, @bitCast(after_reset)));
+    try std.testing.expectEqual(@as(usize, 3), sampler.bufferedValueCount());
+    try std.testing.expectEqual(@as(u64, 0x30fe30f9cf56f22d), sample_engine.next());
+
+    var fill_engine = alea.ScalarPrng.init(0x3290);
+    var fill_sampler = try BufferedLogNormal(f64, 4).init(0, 0.25);
+    var out: [5]f64 = undefined;
+    fill_sampler.fillFrom(&fill_engine, &out);
+    const expected = [_]u64{
+        0x3fe8ece848f7947e,
+        0x3fea6e60477edde0,
+        0x3ff20c7fc6acadf6,
+        0x3ff5a2553e40c263,
+        0x3ffbda67b6f06eef,
+    };
+    inline for (expected, 0..) |bits, i| {
+        try std.testing.expectEqual(bits, @as(u64, @bitCast(out[i])));
+    }
+    try std.testing.expectEqual(@as(usize, 3), fill_sampler.bufferedValueCount());
+    try std.testing.expectEqual(@as(u64, 0xd29eaba6d95a6028), fill_engine.next());
+
+    var degenerate_engine = alea.ScalarPrng.init(0x3291);
+    var degenerate_control = alea.ScalarPrng.init(0x3291);
+    var degenerate = try BufferedLogNormal(f32, 8).init(0.5, 0);
+    try std.testing.expectEqual(@as(f32, @exp(@as(f32, 0.5))), degenerate.sampleFrom(&degenerate_engine));
+    var degenerate_out: [3]f32 = undefined;
+    degenerate.fillFrom(&degenerate_engine, &degenerate_out);
+    for (degenerate_out) |value| try std.testing.expectEqual(@as(f32, @exp(@as(f32, 0.5))), value);
+    try std.testing.expectEqual(degenerate_control.next(), degenerate_engine.next());
+    try std.testing.expectError(error.InvalidParameter, BufferedLogNormal(f32, 8).init(0, -1));
+
+    var mean_cv = try BufferedLogNormal(f64, 4).initMeanCv(1, 0);
+    try std.testing.expectEqual(@as(f64, 0), mean_cv.logMeanValue());
+    try std.testing.expectEqual(@as(f64, 0), mean_cv.logStddevValue());
 }
 
 test "poisson large lambda has plausible moments" {
