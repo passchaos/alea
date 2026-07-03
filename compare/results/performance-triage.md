@@ -409,7 +409,7 @@ new concrete hypothesis is available:
 - OpenClosed f64: exact endpoint-grid bulk fill now exceeds local Rust evidence
   after the `@mulAdd` raw-word conversion; keep `openclosed-endpoint-notes.md`
   for regression history and future portability checks.
-- SIMD distributions: f32x8 repair is useful evidence, but both standard and
-  parameterized vectorbench slice-fill rows failed to beat current scalar
-  lane-fill defaults; future work needs a genuinely dense SIMD candidate that
-  meets `simd-distribution-kernel-notes.md`.
+- SIMD distributions: f32x8 repair is useful evidence, but standard,
+  parameterized, FastPrng, and Alea4x64 lane-local repair rows all failed to
+  beat current scalar lane-fill defaults; future work needs a genuinely dense
+  SIMD candidate that meets `simd-distribution-kernel-notes.md`.
