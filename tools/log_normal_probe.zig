@@ -183,9 +183,13 @@ pub fn main(init: std.process.Init) !void {
     try compareExp2ErrorF64(io, stdout, "f64 exp2 diff stddev=0.25", 0x1068, sample_count, 0.25);
     try compareExp2ErrorF64(io, stdout, "f64 exp2 diff stddev=1.0", 0x1068, sample_count, 1.0);
     try compareExp2ErrorF64(io, stdout, "f64 exp2 diff stddev=2.0", 0x1068, sample_count, 2.0);
+    try compareExp2ErrorMeanF64(io, stdout, "f64 exp2 diff mean=2 stddev=2", 0x1068, sample_count, 2.0, 2.0);
+    try compareExp2ErrorMeanF64(io, stdout, "f64 exp2 diff mean=-2 stddev=2", 0x1068, sample_count, -2.0, 2.0);
     try compareExp2ErrorF32(io, stdout, "f32 exp2 diff stddev=0.25", 0x1069, sample_count, 0.25);
     try compareExp2ErrorF32(io, stdout, "f32 exp2 diff stddev=1.0", 0x1069, sample_count, 1.0);
     try compareExp2ErrorF32(io, stdout, "f32 exp2 diff stddev=2.0", 0x1069, sample_count, 2.0);
+    try compareExp2ErrorMeanF32(io, stdout, "f32 exp2 diff mean=2 stddev=2", 0x1069, sample_count, 2.0, 2.0);
+    try compareExp2ErrorMeanF32(io, stdout, "f32 exp2 diff mean=-2 stddev=2", 0x1069, sample_count, -2.0, 2.0);
     try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=0.25", 0x1064, sample_count, 0.25);
     try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=1.0", 0x1064, sample_count, 1.0);
     try compareExpm1ErrorF32(io, stdout, "f32 expm1+1 diff stddev=2.0", 0x1064, sample_count, 2.0);
@@ -1027,6 +1031,90 @@ fn compareExp2ErrorF32(
     const start = std.Io.Clock.awake.now(io).nanoseconds;
     while (i < sample_count) : (i += 1) {
         const x = stddev * alea.Rng.standardNormalFastFrom(&engine, f32);
+        const direct = @exp(x);
+        const candidate = @exp2(x * std.math.log2e);
+        if (direct != candidate) {
+            changed += 1;
+            const abs_diff = @abs(candidate - direct);
+            const rel_diff = abs_diff / direct;
+            const ulp_diff = floatDistanceF32(direct, candidate);
+            max_abs = @max(max_abs, abs_diff);
+            max_rel = @max(max_rel, rel_diff);
+            max_ulp = @max(max_ulp, ulp_diff);
+        }
+    }
+    const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+    const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+        (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+
+    try stdout.print(
+        "{s}: {d:.1} M samples/s changed={} max_abs={d:.9} max_rel={d:.9} max_ulp={}\n",
+        .{ name, million_per_s, changed, max_abs, max_rel, max_ulp },
+    );
+}
+
+fn compareExp2ErrorMeanF64(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    mean: f64,
+    stddev: f64,
+) !void {
+    if (!shouldRun(name)) return;
+    var engine = alea.ScalarPrng.init(seed);
+    var max_abs: f64 = 0;
+    var max_rel: f64 = 0;
+    var max_ulp: u64 = 0;
+    var changed: usize = 0;
+    var i: usize = 0;
+
+    const start = std.Io.Clock.awake.now(io).nanoseconds;
+    while (i < sample_count) : (i += 1) {
+        const x = mean + stddev * alea.Rng.standardNormalFastFrom(&engine, f64);
+        const direct = @exp(x);
+        const candidate = @exp2(x * std.math.log2e);
+        if (direct != candidate) {
+            changed += 1;
+            const abs_diff = @abs(candidate - direct);
+            const rel_diff = abs_diff / direct;
+            const ulp_diff = floatDistanceF64(direct, candidate);
+            max_abs = @max(max_abs, abs_diff);
+            max_rel = @max(max_rel, rel_diff);
+            max_ulp = @max(max_ulp, ulp_diff);
+        }
+    }
+    const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+    const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+        (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+
+    try stdout.print(
+        "{s}: {d:.1} M samples/s changed={} max_abs={d:.9} max_rel={d:.9} max_ulp={}\n",
+        .{ name, million_per_s, changed, max_abs, max_rel, max_ulp },
+    );
+}
+
+fn compareExp2ErrorMeanF32(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    mean: f32,
+    stddev: f32,
+) !void {
+    if (!shouldRun(name)) return;
+    var engine = alea.ScalarPrng.init(seed);
+    var max_abs: f32 = 0;
+    var max_rel: f32 = 0;
+    var max_ulp: u32 = 0;
+    var changed: usize = 0;
+    var i: usize = 0;
+
+    const start = std.Io.Clock.awake.now(io).nanoseconds;
+    while (i < sample_count) : (i += 1) {
+        const x = mean + stddev * alea.Rng.standardNormalFastFrom(&engine, f32);
         const direct = @exp(x);
         const candidate = @exp2(x * std.math.log2e);
         if (direct != candidate) {

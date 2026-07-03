@@ -130,9 +130,11 @@ Fresh local evidence:
   FastPrng and 205M ScalarPrng for `stddev=0.25`; f64 staged exp2 remains below
   current exact rows at about 120M/128M. Error scans show changed outputs with
   bounded observed ULP distances in this sample: f64 max ULP about 1/3/7 at
-  `stddev=0.25/1/2`, and f32 max ULP about 1/4/7. Because the checksum/output
-  mapping changes, this can only be considered as a deliberate opt-in
-  approximation, not as exact `LogNormal`.
+  `stddev=0.25/1/2`, and f32 max ULP about 1/4/7. Mean-shift scans at
+  `mean=+/-2,stddev=2` stay in the same range, with f64 max ULP 7 and f32 max
+  ULP 7-8 in the 1Mi sample. Because the checksum/output mapping changes, this
+  can only be considered as a deliberate opt-in approximation, not as exact
+  `LogNormal`.
 - `log-normal-probe -- 1048576 "sample stddev1"` similarly shows no
   single-sample exact expression escape hatch for wide-spread LogNormal:
   current/direct-`@exp`/`std.math.exp`/libc rows are all about 58M FastPrng and
