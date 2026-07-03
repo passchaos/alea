@@ -161,8 +161,9 @@ Fresh local evidence:
   FastPrng/ScalarPrng and f64 around 236M/256M FastPrng/ScalarPrng, close to the
   linked-libmvec buffered rows while avoiding a build-time libmvec dependency.
   The public opt-in is measured through the libc-linked `bench-libc` step:
-  `bench-libc -- 268435456 "LogNormalLibmvec"` reports about 243M/268M f64
-  and 299M/329M f32 FastPrng/ScalarPrng.
+  `bench-libc -- 268435456 "LogNormalLibmvec"` reports sample rows about
+  188M/267M f64 and 296M/329M f32 FastPrng/ScalarPrng, with fill rows about
+  246M/268M f64 and 307M/330M f32.
   `distcheck` now includes independent `buffered-log-normal` and
   `buffered-log-normal-mean-cv` mean gates for this opt-in. This helps
   one-at-a-time users, but the primary narrow exact f64/f32 rows still trail
