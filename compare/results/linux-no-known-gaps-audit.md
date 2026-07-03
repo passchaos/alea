@@ -1,12 +1,14 @@
 # Linux No-Known-Gaps Audit
 
-This audit records the current Linux-first evidence for Stage 3 of
+This audit records the current Linux-first evidence for Stage 4 of
 `core-rand-coverage.md`.
 
 It is not a claim that the long-term product goal is permanently complete. It
 means that, on the current x86_64 Linux environment and against the locally
 available Rust evidence listed below, there are no known remaining core RNG
-functionality gaps in Alea's current roadmap stage.
+functionality gaps in Alea's current roadmap stage. S4-M4 performance follow-up
+is still active: exact scalar LogNormal transform/codegen and genuinely dense
+SIMD normal/exponential kernels remain known performance watch items.
 
 ## Scope
 
@@ -27,13 +29,16 @@ Local Alea evidence:
 - `compare/rand_bench/src/main.rs`
 - `docs/api-reference.md`
 - `compare/results/distribution-parity-matrix.md`
+- `compare/results/performance-triage.md`
+- `compare/results/simd-distribution-kernel-notes.md`
+- `compare/results/lognormal-transform-notes.md`
 
 Out of scope for this Linux-first audit:
 
 - Rust ecosystem mechanisms that are not core RNG functionality in Zig, such as
   Rust traits, serde integration, and crate feature matrices
 - cross-platform reproducibility beyond the documented x86_64 Linux evidence
-- SIMD/vector distribution designs, which should be a later Zig-native milestone
+- broader platform claims beyond the local Linux runner
 - claims about future `rand` / `rand_distr` releases that are not locally
   available in this environment
 
@@ -53,7 +58,7 @@ Out of scope for this Linux-first audit:
 
 | Local Rust family | Alea API | Validation |
 | --- | --- | --- |
-| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `exponential`, `Exponential` | unit tests, `distcheck`, benchmark rows |
+| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `exponential`, `Exponential`, plus explicit bounded f32 LogNormal approximation paths | unit tests, `distcheck`, vector `distcheck`, benchmark rows |
 | Gamma, ChiSquared, Beta | `gamma`, `Gamma`, `chiSquared`, `ChiSquared`, `beta`, `Beta` | unit tests, `distcheck`, benchmark rows |
 | FisherF, StudentT | `fisherF`, `FisherF`, `studentT`, `StudentT` | unit tests, `distcheck`, benchmark rows |
 | Poisson, Binomial | `poisson`, `Poisson`, `binomial`, `Binomial` | unit tests, `distcheck`, benchmark rows |
@@ -66,6 +71,20 @@ Out of scope for this Linux-first audit:
 | Dirichlet | `Dirichlet(T)` | unit tests, `distcheck`, benchmark row |
 | WeightedAliasIndex | `AliasTable(Weight)` | unit tests, benchmark rows for weighted index paths |
 | WeightedTreeIndex | `WeightedTree(Weight)` | unit tests, Zig/Rust update+sample benchmark rows |
+
+## Current Stage 4 Performance Watch Items
+
+These are not functionality gaps, but they remain active S4-M4 work:
+
+- exact scalar/single-sample `LogNormal` transform/codegen still trails the
+  latest local Rust `rand_distr` evidence for comparable exact workloads;
+  current evidence and rejected exact transform shapes are recorded in
+  `lognormal-transform-notes.md` and `performance-triage.md`.
+- vector normal/exponential APIs have broad Zig-native coverage and strong
+  scalar-lane-fill rows, but no genuinely dense SIMD distribution kernel has
+  beaten scalar ziggurat lane-fill in the real `vectorbench` harness; the
+  repair, block-fallback, all-accepted, flat-slice, and lane-local attempts are
+  recorded in `simd-distribution-kernel-notes.md`.
 
 ## Alea Extras Beyond The Local Rust Surface
 
@@ -89,17 +108,20 @@ zig build test
 zig build -Doptimize=ReleaseFast distcheck
 zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench
 RUSTFLAGS='-C target-cpu=native' cargo run --release --manifest-path compare/rand_bench/Cargo.toml
 ```
 
 Prior Linux engine validation is recorded in the PractRand reports under
-`compare/results/`, including 64GiB runs for the Stage 2 engine set.
+`compare/results/`, including 128GiB reports for the current primary-engine
+stage.
 
 ## Current Finding
 
 Within this audit's local Linux scope, no known core RNG functionality gap
 remains against the locally available `rand` / `rand_distr` evidence.
 
-This closes the current Stage 3 Linux-first audit bar. The next roadmap stage
-should raise the bar again rather than declaring the product goal permanently
+This does not close the long-term product goal. Stage 4 remains active for the
+performance watch items above, and later stages should raise the bar to broader
+platforms and longer validation rather than declaring the product permanently
 finished.
