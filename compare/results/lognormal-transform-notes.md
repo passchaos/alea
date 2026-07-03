@@ -116,6 +116,12 @@ Fresh local evidence:
   and exact f32 rows are about 76.7M/77.1M/80.2M. This shows staged bulk fills
   mitigate much of the wide-spread gap, while single-sample exact LogNormal
   remains transform/codegen-bound versus Rust.
+- `log-normal-probe -- 1048576 "stddev1"` splits the wide-spread exact fill
+  transform itself. The current exact shape reaches about 70.5M/74.5M f64
+  FastPrng/ScalarPrng and 75.7M/77.7M f32; `std.math.exp` moves only the
+  FastPrng f64 row to about 72.9M while tying the other profiles around
+  74.4M/76.0M/77.7M. This remains profile-specific evidence, not a default
+  replacement for `@exp`.
 - Fresh 1GiB filtered parity rows with native CPU flags: local Rust
   `rand_distr log-normal` is about 146.2M f64 and 155.3M f32 samples/s.
   Matching Alea scalar rows are about 117.7M facade, 118.5M raw FastPrng,
