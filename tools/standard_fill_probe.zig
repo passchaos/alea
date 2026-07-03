@@ -29,6 +29,10 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(io, stdout, "standard exponential f32 vector8 chunk", 0xe15a, sample_count, vectorExponentialF32Chunk);
     try benchFillF32(io, stdout, "standard normal f32 current fill", 0xd15a, sample_count, currentNormalF32Fill);
     try benchFillF32(io, stdout, "standard normal f32 vector8 chunk", 0xd15a, sample_count, vectorNormalF32Chunk);
+    try benchFillF32Fast(io, stdout, "fast facade standard exponential f32 current fill", 0xe15a, sample_count, currentExponentialF32FillFacade);
+    try benchFillF32Fast(io, stdout, "fast cached-rng standard exponential f32 fill", 0xe15a, sample_count, cachedRngExponentialF32Fill);
+    try benchFillF32Fast(io, stdout, "fast facade standard normal f32 current fill", 0xd15a, sample_count, currentNormalF32FillFacade);
+    try benchFillF32Fast(io, stdout, "fast cached-rng standard normal f32 fill", 0xd15a, sample_count, cachedRngNormalF32Fill);
     try stdout.flush();
 }
 
@@ -110,6 +114,58 @@ fn benchFillF32(
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillF32Fast(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime fillFn: fn (*alea.FastPrng, []f32) void,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [4096]f32 = undefined;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var remaining = sample_count;
+        var checksum: f32 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+const CachedRng = struct {
+    ptr: *anyopaque,
+    nextFn: *const fn (ptr: *anyopaque) u64,
+
+    fn init(rng: alea.Rng) CachedRng {
+        return .{ .ptr = rng.ptr, .nextFn = rng.nextFn };
+    }
+
+    pub fn next(self: CachedRng) u64 {
+        return self.nextFn(self.ptr);
+    }
+};
+
 fn currentExponentialFill(source: *alea.ScalarPrng, dest: []f64) void {
     alea.distributions.fillStandardExponentialFrom(source, f64, dest);
 }
@@ -157,6 +213,17 @@ fn vectorExponentialF32Chunk(source: *alea.ScalarPrng, dest: []f32) void {
     while (i < dest.len) : (i += 1) dest[i] = alea.Rng.standardExponentialFastFrom(source, f32);
 }
 
+fn currentExponentialF32FillFacade(source: *alea.FastPrng, dest: []f32) void {
+    const rng = alea.Rng.init(source);
+    alea.distributions.fillStandardExponential(rng, f32, dest);
+}
+
+fn cachedRngExponentialF32Fill(source: *alea.FastPrng, dest: []f32) void {
+    const rng = alea.Rng.init(source);
+    const cached = CachedRng.init(rng);
+    alea.distributions.fillStandardExponentialFrom(cached, f32, dest);
+}
+
 fn currentNormalF32Fill(source: *alea.ScalarPrng, dest: []f32) void {
     alea.distributions.fillStandardNormalFrom(source, f32, dest);
 }
@@ -168,4 +235,15 @@ fn vectorNormalF32Chunk(source: *alea.ScalarPrng, dest: []f32) void {
         inline for (0..8) |lane| dest[i + lane] = vec[lane];
     }
     while (i < dest.len) : (i += 1) dest[i] = alea.Rng.standardNormalFastFrom(source, f32);
+}
+
+fn currentNormalF32FillFacade(source: *alea.FastPrng, dest: []f32) void {
+    const rng = alea.Rng.init(source);
+    alea.distributions.fillStandardNormal(rng, f32, dest);
+}
+
+fn cachedRngNormalF32Fill(source: *alea.FastPrng, dest: []f32) void {
+    const rng = alea.Rng.init(source);
+    const cached = CachedRng.init(rng);
+    alea.distributions.fillStandardNormalFrom(cached, f32, dest);
 }
