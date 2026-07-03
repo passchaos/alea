@@ -85,6 +85,12 @@ repair rows before a real `vectorbench` follow-up.
   lanes/s, and `VectorStandardNormalTableF64` / `VectorNormalTableF64` rows in
   `vectorbench -- 16777216 "Table"` are also around 1.26-1.28B f64x4 lanes/s, above f64 ziggurat. These
   profiles do not replace default normal.
+- Table-quantile vector exponential is also useful only as an explicit approximate
+  output-mapping opt-in. A 16384-entry midpoint exponential-quantile table
+  produces discrete/truncated outputs. Public `VectorStandardExponentialTableF32`
+  / `VectorExponentialTableF32` and f64 counterparts in `vectorbench -- 16777216
+  "Table"` are around 1.0-1.29B lanes/s, far above ziggurat lane-fill, but do
+  not replace default exponential.
 - Vectorized inverse-CDF normal approximation kernels are also too slow for a
   useful opt-in. A real `vectorbench -- 16777216 "StandardNormal f32x8"` /
   `"StandardNormal f64x4"` run showed Acklam-style inverse-CDF candidates around

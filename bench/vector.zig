@@ -123,6 +123,26 @@ const table_cdf_normal_16384_f64 = blk: {
     break :blk out;
 };
 
+const table_cdf_exp_16384_f32 = blk: {
+    @setEvalBranchQuota(320_000);
+    var out: [16384]f32 = undefined;
+    for (&out, 0..) |*item, i| {
+        const p = (@as(f64, @floatFromInt(i)) + 0.5) * (1.0 / 16384.0);
+        item.* = @floatCast(-@log(1.0 - p));
+    }
+    break :blk out;
+};
+
+const table_cdf_exp_16384_f64 = blk: {
+    @setEvalBranchQuota(320_000);
+    var out: [16384]f64 = undefined;
+    for (&out, 0..) |*item, i| {
+        const p = (@as(f64, @floatFromInt(i)) + 0.5) * (1.0 / 16384.0);
+        item.* = -@log(1.0 - p);
+    }
+    break :blk out;
+};
+
 fn inverseCdfNormalScalarInit(p: f64) f64 {
     if (p < 0.02425) {
         const q = @sqrt(-2.0 * @log(p));
@@ -376,6 +396,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponentialApproxLogF32 f32x8", lanes, 0xe18b, fillDistStandardExponentialApproxLogF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponentialApproxLogF32 f32x8 direct", lanes, 0xe18b, fillDistStandardExponentialApproxLogF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorStandardExponentialApproxLogF32.fill f32x8", lanes, 0xe18b, fillDistStandardExponentialApproxLogSamplerF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponentialTableF32 f32x8", lanes, 0xe18d, fillDistStandardExponentialTableF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponentialTableF32 f32x8 direct", lanes, 0xe18d, fillDistStandardExponentialTableF32Direct);
+    try benchVectorF32x8(io, stdout, "alea distributions.VectorStandardExponentialTableF32.fill f32x8", lanes, 0xe18d, fillDistStandardExponentialTableSamplerF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorExponentialNativeF32 f32x8", lanes, 0xe18a, fillDistExponentialNativeF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorExponentialNativeF32 f32x8 direct", lanes, 0xe18a, fillDistExponentialNativeF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorExponentialNativeF32.fill f32x8", lanes, 0xe18a, fillDistExponentialNativeSamplerF32);
@@ -383,8 +406,17 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorExponentialApproxLogF32 f32x8", lanes, 0xe18c, fillDistExponentialApproxLogF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorExponentialApproxLogF32 f32x8 direct", lanes, 0xe18c, fillDistExponentialApproxLogF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorExponentialApproxLogF32.fill f32x8", lanes, 0xe18c, fillDistExponentialApproxLogSamplerF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorExponentialTableF32 f32x8", lanes, 0xe18e, fillDistExponentialTableF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorExponentialTableF32 f32x8 direct", lanes, 0xe18e, fillDistExponentialTableF32Direct);
+    try benchVectorF32x8(io, stdout, "alea distributions.VectorExponentialTableF32.fill f32x8", lanes, 0xe18e, fillDistExponentialTableSamplerF32);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4 direct", lanes / 2, 0xe184, fillDistExponentialF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorStandardExponentialTableF64 f64x4", lanes / 2, 0xe18f, fillDistStandardExponentialTableF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorStandardExponentialTableF64 f64x4 direct", lanes / 2, 0xe18f, fillDistStandardExponentialTableF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorStandardExponentialTableF64.fill f64x4", lanes / 2, 0xe18f, fillDistStandardExponentialTableSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponentialTableF64 f64x4", lanes / 2, 0xe190, fillDistExponentialTableF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponentialTableF64 f64x4 direct", lanes / 2, 0xe190, fillDistExponentialTableF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorExponentialTableF64.fill f64x4", lanes / 2, 0xe190, fillDistExponentialTableSamplerF64);
     try benchFillVectorStandardNormalF32(io, stdout, "alea fillVectorStandardNormal f32x8", lanes / 4);
     try benchFillVectorStandardNormalF32Direct(io, stdout, "alea fillVectorStandardNormal f32x8 direct", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 native candidate", lanes / 4, 0xd188, fillStandardNormalF32Native);
@@ -495,6 +527,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 native candidate", lanes, 0xe188, fillStandardExponentialF32Native);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 flat-slice candidate", lanes, 0xe188, fillStandardExponentialF32FlatSlice);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 approx-log candidate", lanes, 0xe188, fillStandardExponentialF32ApproxLog);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 table-cdf candidate", lanes, 0xe188, fillStandardExponentialF32TableCdf);
     try benchFillVectorStandardExponentialF32Repair(io, stdout, "alea fillVectorStandardExponential f32x8 repair candidate", lanes);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 same-candidate repair", lanes, 0xe188, fillStandardExponentialF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 all-accepted repair", lanes, 0xe188, fillStandardExponentialF32AllAcceptedRepair);
@@ -511,6 +544,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 approx-log candidate", lanes / 2, 0xe184, fillStandardExponentialF64ApproxLog);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 approx-log-low candidate", lanes / 2, 0xe184, fillStandardExponentialF64ApproxLogLow);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 approx-log-f32 candidate", lanes / 2, 0xe184, fillStandardExponentialF64ApproxLogF32);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 table-cdf candidate", lanes / 2, 0xe184, fillStandardExponentialF64TableCdf);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 same-candidate repair", lanes / 2, 0xe184, fillStandardExponentialF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 all-accepted repair", lanes / 2, 0xe184, fillStandardExponentialF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 block-fallback candidate", lanes / 2, 0xe184, fillStandardExponentialF64BlockFallback);
@@ -519,6 +553,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorExponentialF32Direct(io, stdout, "alea fillVectorExponential f32x8 direct", lanes);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorExponential f32x8 flat-slice candidate", lanes, 0xe188, fillExponentialF32FlatSlice);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorExponential f32x8 approx-log candidate", lanes, 0xe188, fillExponentialF32ApproxLog);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorExponential f32x8 table-cdf candidate", lanes, 0xe188, fillExponentialF32TableCdf);
     try benchFillVectorExponentialF32Repair(io, stdout, "alea fillVectorExponential f32x8 repair candidate", lanes);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorExponential f32x8 same-candidate repair", lanes, 0xe188, fillExponentialF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorExponential f32x8 all-accepted repair", lanes, 0xe188, fillExponentialF32AllAcceptedRepair);
@@ -535,6 +570,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 approx-log candidate", lanes / 2, 0xe184, fillExponentialF64ApproxLog);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 approx-log-low candidate", lanes / 2, 0xe184, fillExponentialF64ApproxLogLow);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 approx-log-f32 candidate", lanes / 2, 0xe184, fillExponentialF64ApproxLogF32);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 table-cdf candidate", lanes / 2, 0xe184, fillExponentialF64TableCdf);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 same-candidate repair", lanes / 2, 0xe184, fillExponentialF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 all-accepted repair", lanes / 2, 0xe184, fillExponentialF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 block-fallback candidate", lanes / 2, 0xe184, fillExponentialF64BlockFallback);
@@ -1843,6 +1879,19 @@ fn fillDistStandardExponentialApproxLogSamplerF32(_: *alea.ScalarPrng, rng: alea
     sampler.fill(rng, dest);
 }
 
+fn fillDistStandardExponentialTableF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorStandardExponentialTableF32(rng, @Vector(8, f32), dest);
+}
+
+fn fillDistStandardExponentialTableF32Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorStandardExponentialTableF32From(engine, @Vector(8, f32), dest);
+}
+
+fn fillDistStandardExponentialTableSamplerF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    const sampler = alea.distributions.VectorStandardExponentialTableF32(@Vector(8, f32)){};
+    sampler.fill(rng, dest);
+}
+
 fn fillDistExponentialNativeF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
     alea.distributions.fillVectorExponentialNativeF32(rng, @Vector(8, f32), dest, 2);
 }
@@ -1869,12 +1918,51 @@ fn fillDistExponentialApproxLogSamplerF32(_: *alea.ScalarPrng, rng: alea.Rng, de
     sampler.fill(rng, dest);
 }
 
+fn fillDistExponentialTableF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorExponentialTableF32(rng, @Vector(8, f32), dest, 2);
+}
+
+fn fillDistExponentialTableF32Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorExponentialTableF32From(engine, @Vector(8, f32), dest, 2);
+}
+
+fn fillDistExponentialTableSamplerF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    const sampler = alea.distributions.VectorExponentialTableF32(@Vector(8, f32)).init(2) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
 fn fillDistExponentialF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     alea.distributions.fillVectorExponential(rng, @Vector(4, f64), dest, 2);
 }
 
 fn fillDistExponentialF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
     alea.distributions.fillVectorExponentialFrom(engine, @Vector(4, f64), dest, 2);
+}
+
+fn fillDistStandardExponentialTableF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorStandardExponentialTableF64(rng, @Vector(4, f64), dest);
+}
+
+fn fillDistStandardExponentialTableF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorStandardExponentialTableF64From(engine, @Vector(4, f64), dest);
+}
+
+fn fillDistStandardExponentialTableSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorStandardExponentialTableF64(@Vector(4, f64)){};
+    sampler.fill(rng, dest);
+}
+
+fn fillDistExponentialTableF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorExponentialTableF64(rng, @Vector(4, f64), dest, 2);
+}
+
+fn fillDistExponentialTableF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorExponentialTableF64From(engine, @Vector(4, f64), dest, 2);
+}
+
+fn fillDistExponentialTableSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorExponentialTableF64(@Vector(4, f64)).init(2) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 fn benchFillVectorStandardNormalF32(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
@@ -2978,6 +3066,10 @@ fn fillStandardExponentialF32ApproxLog(engine: *alea.ScalarPrng, dest: []@Vector
     for (dest) |*item| item.* = vectorApproxLogExponentialF32(engine);
 }
 
+fn fillStandardExponentialF32TableCdf(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorTableCdfExponentialF32(engine);
+}
+
 fn fillStandardExponentialF32Native(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
     alea.distributions.fillStandardExponentialNativeF32From(engine, scalars);
@@ -3016,6 +3108,11 @@ fn fillExponentialF32FlatSlice(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)
 fn fillExponentialF32ApproxLog(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     const inverse_rate: @Vector(8, f32) = @splat(0.5);
     for (dest) |*item| item.* = vectorApproxLogExponentialF32(engine) * inverse_rate;
+}
+
+fn fillExponentialF32TableCdf(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const inverse_rate: @Vector(8, f32) = @splat(0.5);
+    for (dest) |*item| item.* = vectorTableCdfExponentialF32(engine) * inverse_rate;
 }
 
 fn fillExponentialF32NativeRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -3306,6 +3403,10 @@ fn fillStandardExponentialF64ApproxLogF32(engine: *alea.ScalarPrng, dest: []@Vec
     for (dest) |*item| item.* = vectorApproxLogF32ExponentialF64(engine);
 }
 
+fn fillStandardExponentialF64TableCdf(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorTableCdfExponentialF64(engine);
+}
+
 fn fillStandardExponentialF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorRepairExponentialF64SameCandidate(engine);
 }
@@ -3340,6 +3441,11 @@ fn fillExponentialF64ApproxLogLow(engine: *alea.ScalarPrng, dest: []@Vector(4, f
 fn fillExponentialF64ApproxLogF32(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     const inverse_rate: @Vector(4, f64) = @splat(0.5);
     for (dest) |*item| item.* = vectorApproxLogF32ExponentialF64(engine) * inverse_rate;
+}
+
+fn fillExponentialF64TableCdf(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(0.5);
+    for (dest) |*item| item.* = vectorTableCdfExponentialF64(engine) * inverse_rate;
 }
 
 fn fillExponentialF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
@@ -3396,6 +3502,30 @@ fn vectorApproxLogF32ExponentialF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
     const f32_values = approxNegLogF32(vectorOpenF32Local(engine));
     var out: @Vector(4, f64) = undefined;
     inline for (0..4) |lane| out[lane] = @floatCast(f32_values[lane]);
+    return out;
+}
+
+fn vectorTableCdfExponentialF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    var out: @Vector(8, f32) = undefined;
+    var bits: u64 = 0;
+    inline for (0..8) |lane| {
+        if (lane % 4 == 0) bits = engine.next();
+        const shift: u6 = @intCast((lane % 4) * 14);
+        const index: usize = @intCast((bits >> shift) & 0x3fff);
+        out[lane] = table_cdf_exp_16384_f32[index];
+    }
+    return out;
+}
+
+fn vectorTableCdfExponentialF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    var out: @Vector(4, f64) = undefined;
+    var bits: u64 = 0;
+    inline for (0..4) |lane| {
+        if (lane % 4 == 0) bits = engine.next();
+        const shift: u6 = @intCast((lane % 4) * 14);
+        const index: usize = @intCast((bits >> shift) & 0x3fff);
+        out[lane] = table_cdf_exp_16384_f64[index];
+    }
     return out;
 }
 

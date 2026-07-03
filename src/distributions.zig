@@ -67,6 +67,26 @@ const normal_table_f64 = blk: {
     break :blk out;
 };
 
+const exp_table_f32 = blk: {
+    @setEvalBranchQuota(320_000);
+    var out: [16384]f32 = undefined;
+    for (&out, 0..) |*item, i| {
+        const p = (@as(f64, @floatFromInt(i)) + 0.5) * (1.0 / 16384.0);
+        item.* = @floatCast(-@log(1.0 - p));
+    }
+    break :blk out;
+};
+
+const exp_table_f64 = blk: {
+    @setEvalBranchQuota(320_000);
+    var out: [16384]f64 = undefined;
+    for (&out, 0..) |*item, i| {
+        const p = (@as(f64, @floatFromInt(i)) + 0.5) * (1.0 / 16384.0);
+        item.* = -@log(1.0 - p);
+    }
+    break :blk out;
+};
+
 fn inverseCdfNormalInit(p: f64) f64 {
     if (p < 0.02425) {
         const q = @sqrt(-2.0 * @log(p));
@@ -3200,6 +3220,46 @@ pub fn fillVectorStandardExponentialNativeF32From(source: anytype, comptime Vect
     fillStandardExponentialNativeF32From(source, scalars);
 }
 
+pub fn vectorStandardExponentialTableF32(rng: Rng, comptime VectorType: type) VectorType {
+    return vectorStandardExponentialTableF32From(rng, VectorType);
+}
+
+pub fn vectorStandardExponentialTableF32From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorStandardExponentialTableF32 expects an f32 vector");
+    return vectorExpTableFrom(source, VectorType, exp_table_f32);
+}
+
+pub fn fillVectorStandardExponentialTableF32(rng: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorStandardExponentialTableF32From(rng, VectorType, dest);
+}
+
+pub fn fillVectorStandardExponentialTableF32From(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorStandardExponentialTableF32 expects an f32 vector");
+    for (dest) |*item| item.* = vectorStandardExponentialTableF32From(source, VectorType);
+}
+
+pub fn vectorStandardExponentialTableF64(rng: Rng, comptime VectorType: type) VectorType {
+    return vectorStandardExponentialTableF64From(rng, VectorType);
+}
+
+pub fn vectorStandardExponentialTableF64From(source: anytype, comptime VectorType: type) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("vectorStandardExponentialTableF64 expects an f64 vector");
+    return vectorExpTableFrom(source, VectorType, exp_table_f64);
+}
+
+pub fn fillVectorStandardExponentialTableF64(rng: Rng, comptime VectorType: type, dest: []VectorType) void {
+    fillVectorStandardExponentialTableF64From(rng, VectorType, dest);
+}
+
+pub fn fillVectorStandardExponentialTableF64From(source: anytype, comptime VectorType: type, dest: []VectorType) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("fillVectorStandardExponentialTableF64 expects an f64 vector");
+    for (dest) |*item| item.* = vectorStandardExponentialTableF64From(source, VectorType);
+}
+
 pub fn vectorStandardExponential(rng: Rng, comptime VectorType: type) VectorType {
     return vectorStandardExponentialFrom(rng, VectorType);
 }
@@ -3377,6 +3437,108 @@ pub fn fillVectorExponentialNativeF32CheckedFrom(source: anytype, comptime Vecto
     if (dest.len == 0) return;
     if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
     fillVectorExponentialNativeF32From(source, VectorType, dest, rate);
+}
+
+pub fn vectorExponentialTableF32(rng: Rng, comptime VectorType: type, rate: f32) VectorType {
+    return vectorExponentialTableF32From(rng, VectorType, rate);
+}
+
+pub fn vectorExponentialTableF32From(source: anytype, comptime VectorType: type, rate: f32) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorExponentialTableF32 expects an f32 vector");
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    if (rate == std.math.inf(f32)) return @splat(0);
+    return vectorStandardExponentialTableF32From(source, VectorType) * @as(VectorType, @splat(1 / rate));
+}
+
+pub fn vectorExponentialTableF32Checked(rng: Rng, comptime VectorType: type, rate: f32) Error!VectorType {
+    return vectorExponentialTableF32CheckedFrom(rng, VectorType, rate);
+}
+
+pub fn vectorExponentialTableF32CheckedFrom(source: anytype, comptime VectorType: type, rate: f32) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorExponentialTableF32Checked expects an f32 vector");
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    return vectorExponentialTableF32From(source, VectorType, rate);
+}
+
+pub fn fillVectorExponentialTableF32(rng: Rng, comptime VectorType: type, dest: []VectorType, rate: f32) void {
+    fillVectorExponentialTableF32From(rng, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialTableF32From(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f32) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorExponentialTableF32 expects an f32 vector");
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    if (rate == std.math.inf(f32)) {
+        @memset(dest, @as(VectorType, @splat(0)));
+        return;
+    }
+    const inverse_rate_vec: VectorType = @splat(1 / rate);
+    for (dest) |*item| item.* = vectorStandardExponentialTableF32From(source, VectorType) * inverse_rate_vec;
+}
+
+pub fn fillVectorExponentialTableF32Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, rate: f32) Error!void {
+    return fillVectorExponentialTableF32CheckedFrom(rng, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialTableF32CheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f32) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorExponentialTableF32Checked expects an f32 vector");
+    if (dest.len == 0) return;
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    fillVectorExponentialTableF32From(source, VectorType, dest, rate);
+}
+
+pub fn vectorExponentialTableF64(rng: Rng, comptime VectorType: type, rate: f64) VectorType {
+    return vectorExponentialTableF64From(rng, VectorType, rate);
+}
+
+pub fn vectorExponentialTableF64From(source: anytype, comptime VectorType: type, rate: f64) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("vectorExponentialTableF64 expects an f64 vector");
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f64)));
+    if (rate == std.math.inf(f64)) return @splat(0);
+    return vectorStandardExponentialTableF64From(source, VectorType) * @as(VectorType, @splat(1 / rate));
+}
+
+pub fn vectorExponentialTableF64Checked(rng: Rng, comptime VectorType: type, rate: f64) Error!VectorType {
+    return vectorExponentialTableF64CheckedFrom(rng, VectorType, rate);
+}
+
+pub fn vectorExponentialTableF64CheckedFrom(source: anytype, comptime VectorType: type, rate: f64) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("vectorExponentialTableF64Checked expects an f64 vector");
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f64))) return error.InvalidParameter;
+    return vectorExponentialTableF64From(source, VectorType, rate);
+}
+
+pub fn fillVectorExponentialTableF64(rng: Rng, comptime VectorType: type, dest: []VectorType, rate: f64) void {
+    fillVectorExponentialTableF64From(rng, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialTableF64From(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f64) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("fillVectorExponentialTableF64 expects an f64 vector");
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f64)));
+    if (rate == std.math.inf(f64)) {
+        @memset(dest, @as(VectorType, @splat(0)));
+        return;
+    }
+    const inverse_rate_vec: VectorType = @splat(1 / rate);
+    for (dest) |*item| item.* = vectorStandardExponentialTableF64From(source, VectorType) * inverse_rate_vec;
+}
+
+pub fn fillVectorExponentialTableF64Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, rate: f64) Error!void {
+    return fillVectorExponentialTableF64CheckedFrom(rng, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialTableF64CheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f64) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f64) @compileError("fillVectorExponentialTableF64Checked expects an f64 vector");
+    if (dest.len == 0) return;
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f64))) return error.InvalidParameter;
+    fillVectorExponentialTableF64From(source, VectorType, dest, rate);
 }
 
 pub fn vectorStandardExponentialApproxLogF32(rng: Rng, comptime VectorType: type) VectorType {
@@ -4132,6 +4294,116 @@ pub fn VectorStandardExponentialApproxLogF32(comptime VectorType: type) type {
     };
 }
 
+pub fn VectorStandardExponentialTableF32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorStandardExponentialTableF32 expects an f32 vector");
+
+    return struct {
+        pub fn rateValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn inverseRateValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn expectedValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn varianceValue(_: @This()) f32 {
+            return 1;
+        }
+
+        pub fn medianValue(_: @This()) f32 {
+            return @log(@as(f32, 2));
+        }
+
+        pub fn modeValue(_: @This()) f32 {
+            return 0;
+        }
+
+        pub fn minValue(_: @This()) f32 {
+            return exp_table_f32[0];
+        }
+
+        pub fn maxValue(_: @This()) f32 {
+            return exp_table_f32[exp_table_f32.len - 1];
+        }
+
+        pub fn sample(_: @This(), rng: Rng) VectorType {
+            return vectorStandardExponentialTableF32(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) VectorType {
+            return vectorStandardExponentialTableF32From(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: []VectorType) void {
+            fillVectorStandardExponentialTableF32(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: []VectorType) void {
+            fillVectorStandardExponentialTableF32From(source, VectorType, dest);
+        }
+    };
+}
+
+pub fn VectorStandardExponentialTableF64(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f64) @compileError("VectorStandardExponentialTableF64 expects an f64 vector");
+
+    return struct {
+        pub fn rateValue(_: @This()) f64 {
+            return 1;
+        }
+
+        pub fn inverseRateValue(_: @This()) f64 {
+            return 1;
+        }
+
+        pub fn expectedValue(_: @This()) f64 {
+            return 1;
+        }
+
+        pub fn varianceValue(_: @This()) f64 {
+            return 1;
+        }
+
+        pub fn medianValue(_: @This()) f64 {
+            return @log(@as(f64, 2));
+        }
+
+        pub fn modeValue(_: @This()) f64 {
+            return 0;
+        }
+
+        pub fn minValue(_: @This()) f64 {
+            return exp_table_f64[0];
+        }
+
+        pub fn maxValue(_: @This()) f64 {
+            return exp_table_f64[exp_table_f64.len - 1];
+        }
+
+        pub fn sample(_: @This(), rng: Rng) VectorType {
+            return vectorStandardExponentialTableF64(rng, VectorType);
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) VectorType {
+            return vectorStandardExponentialTableF64From(source, VectorType);
+        }
+
+        pub fn fill(_: @This(), rng: Rng, dest: []VectorType) void {
+            fillVectorStandardExponentialTableF64(rng, VectorType, dest);
+        }
+
+        pub fn fillFrom(_: @This(), source: anytype, dest: []VectorType) void {
+            fillVectorStandardExponentialTableF64From(source, VectorType, dest);
+        }
+    };
+}
+
 pub fn VectorStandardExponential(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -4462,6 +4734,148 @@ pub fn VectorExponentialApproxLogF32(comptime VectorType: type) type {
             }
             fillVectorStandardExponentialApproxLogF32From(source, VectorType, dest);
             const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+            for (scalars) |*item| item.* *= self.inverse_rate;
+        }
+    };
+}
+
+pub fn VectorExponentialTableF32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorExponentialTableF32 expects an f32 vector");
+
+    return struct {
+        const Self = @This();
+
+        inverse_rate: f32,
+
+        pub fn init(rate: f32) Error!Self {
+            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+            return .{ .inverse_rate = 1 / rate };
+        }
+
+        pub fn rateValue(self: Self) f32 {
+            return 1 / self.inverse_rate;
+        }
+
+        pub fn inverseRateValue(self: Self) f32 {
+            return self.inverse_rate;
+        }
+
+        pub fn expectedValue(self: Self) f32 {
+            return self.inverse_rate;
+        }
+
+        pub fn varianceValue(self: Self) f32 {
+            return self.inverse_rate * self.inverse_rate;
+        }
+
+        pub fn medianValue(self: Self) f32 {
+            return @log(@as(f32, 2)) * self.inverse_rate;
+        }
+
+        pub fn modeValue(_: Self) f32 {
+            return 0;
+        }
+
+        pub fn minValue(_: Self) f32 {
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) f32 {
+            return exp_table_f32[exp_table_f32.len - 1] * self.inverse_rate;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.inverse_rate == 0) return @splat(0);
+            return vectorStandardExponentialTableF32From(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.inverse_rate == 0) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            fillVectorStandardExponentialTableF32From(source, VectorType, dest);
+            const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+            for (scalars) |*item| item.* *= self.inverse_rate;
+        }
+    };
+}
+
+pub fn VectorExponentialTableF64(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f64) @compileError("VectorExponentialTableF64 expects an f64 vector");
+
+    return struct {
+        const Self = @This();
+
+        inverse_rate: f64,
+
+        pub fn init(rate: f64) Error!Self {
+            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f64))) return error.InvalidParameter;
+            return .{ .inverse_rate = 1 / rate };
+        }
+
+        pub fn rateValue(self: Self) f64 {
+            return 1 / self.inverse_rate;
+        }
+
+        pub fn inverseRateValue(self: Self) f64 {
+            return self.inverse_rate;
+        }
+
+        pub fn expectedValue(self: Self) f64 {
+            return self.inverse_rate;
+        }
+
+        pub fn varianceValue(self: Self) f64 {
+            return self.inverse_rate * self.inverse_rate;
+        }
+
+        pub fn medianValue(self: Self) f64 {
+            return @log(@as(f64, 2)) * self.inverse_rate;
+        }
+
+        pub fn modeValue(_: Self) f64 {
+            return 0;
+        }
+
+        pub fn minValue(_: Self) f64 {
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) f64 {
+            return exp_table_f64[exp_table_f64.len - 1] * self.inverse_rate;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.inverse_rate == 0) return @splat(0);
+            return vectorStandardExponentialTableF64From(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.inverse_rate == 0) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            fillVectorStandardExponentialTableF64From(source, VectorType, dest);
+            const scalars = std.mem.bytesAsSlice(f64, std.mem.sliceAsBytes(dest));
             for (scalars) |*item| item.* *= self.inverse_rate;
         }
     };
@@ -15891,6 +16305,19 @@ fn vectorOpenMidpointF32From(source: anytype, comptime VectorType: type) VectorT
     return out;
 }
 
+fn vectorExpTableFrom(source: anytype, comptime VectorType: type, comptime table: anytype) VectorType {
+    const info = vectorInfo(VectorType);
+    var out: VectorType = undefined;
+    var bits: u64 = 0;
+    inline for (0..info.len) |lane| {
+        if (lane % 4 == 0) bits = Rng.nextFrom(source);
+        const shift: u6 = @intCast((lane % 4) * 14);
+        const index: usize = @intCast((bits >> shift) & 0x3fff);
+        out[lane] = table[index];
+    }
+    return out;
+}
+
 fn approxNegLogF32Vector(u: anytype) @TypeOf(u) {
     const Vec = @TypeOf(u);
     const info = vectorInfo(Vec);
@@ -24549,6 +24976,63 @@ test "vector approximate-log f32 exponential has stable snapshots" {
     var empty: [0]@Vector(8, f32) = .{};
     try fillVectorExponentialApproxLogF32CheckedFrom(&empty_engine, @Vector(8, f32), &empty, 0);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "vector table exponential has stable snapshots" {
+    const alea = @import("root.zig");
+
+    var standard_f32_engine = alea.ScalarPrng.init(0x3295);
+    const standard_f32 = vectorStandardExponentialTableF32From(&standard_f32_engine, @Vector(8, f32));
+    const standard_f32_expected = [_]u32{ 0x3fab9130, 0x3fa1a2ad, 0x3f039a7b, 0x4046cc85, 0x3f1c7f99, 0x3f8172e4, 0x3f3bba40, 0x3eb400f4 };
+    inline for (standard_f32_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(standard_f32[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x4e44d72ed3b69c60), standard_f32_engine.next());
+
+    var standard_f32_fill_engine = alea.ScalarPrng.init(0x3295);
+    var standard_f32_buf: [2]@Vector(8, f32) = undefined;
+    fillVectorStandardExponentialTableF32From(&standard_f32_fill_engine, @Vector(8, f32), &standard_f32_buf);
+    inline for (standard_f32_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(standard_f32_buf[0][lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x536ddef16c1b38f0), standard_f32_fill_engine.next());
+
+    var exp_f32_engine = alea.ScalarPrng.init(0x3296);
+    const exp_f32 = vectorExponentialTableF32From(&exp_f32_engine, @Vector(8, f32), 2);
+    const exp_f32_expected = [_]u32{ 0x3e4f3b28, 0x4007375b, 0x3fa03574, 0x3eaeb1e4, 0x3e068e9f, 0x3cf2ac85, 0x3ed9aed0, 0x3cd51275 };
+    inline for (exp_f32_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_f32[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x7ae045b047bfbc0d), exp_f32_engine.next());
+
+    var standard_f64_engine = alea.ScalarPrng.init(0x3297);
+    const standard_f64 = vectorStandardExponentialTableF64From(&standard_f64_engine, @Vector(4, f64));
+    const standard_f64_expected = [_]u64{ 0x3fcea074f4b0bd53, 0x3fc7c216fea9238c, 0x3fd4138b5debe83d, 0x3fd394c4bc35bdd4 };
+    inline for (standard_f64_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u64, @bitCast(standard_f64[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x9780124b6a04101c), standard_f64_engine.next());
+
+    var exp_f64_engine = alea.ScalarPrng.init(0x3298);
+    const exp_f64 = vectorExponentialTableF64From(&exp_f64_engine, @Vector(4, f64), 2);
+    const exp_f64_expected = [_]u64{ 0x3fea7f449ab0f2f0, 0x3fe19d8d60f6c23a, 0x3fe127bb761ab1a5, 0x3fe137d572d7d64a };
+    inline for (exp_f64_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u64, @bitCast(exp_f64[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xc946e3608f87b690), exp_f64_engine.next());
+
+    var invalid_f64_engine = alea.ScalarPrng.init(0x3299);
+    var invalid_f64_control = alea.ScalarPrng.init(0x3299);
+    try std.testing.expectError(error.InvalidParameter, vectorExponentialTableF64CheckedFrom(&invalid_f64_engine, @Vector(4, f64), 0));
+    var invalid_f64_out: [1]@Vector(4, f64) = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillVectorExponentialTableF64CheckedFrom(&invalid_f64_engine, @Vector(4, f64), &invalid_f64_out, 0));
+    try std.testing.expectEqual(invalid_f64_control.next(), invalid_f64_engine.next());
+
+    var empty_f32_engine = alea.ScalarPrng.init(0x329a);
+    var empty_f32_control = alea.ScalarPrng.init(0x329a);
+    var empty_f32: [0]@Vector(8, f32) = .{};
+    try fillVectorExponentialTableF32CheckedFrom(&empty_f32_engine, @Vector(8, f32), &empty_f32, 0);
+    try std.testing.expectEqual(empty_f32_control.next(), empty_f32_engine.next());
 }
 
 test "native f32 log-normal has stable snapshots" {

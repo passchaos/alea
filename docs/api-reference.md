@@ -260,6 +260,12 @@ Single-shot helpers:
   `vectorStandardExponentialNativeF32From`,
   `fillVectorStandardExponentialNativeF32`,
   `fillVectorStandardExponentialNativeF32From`,
+  `vectorStandardExponentialTableF32`, `vectorStandardExponentialTableF32From`,
+  `fillVectorStandardExponentialTableF32`,
+  `fillVectorStandardExponentialTableF32From`,
+  `vectorStandardExponentialTableF64`, `vectorStandardExponentialTableF64From`,
+  `fillVectorStandardExponentialTableF64`,
+  `fillVectorStandardExponentialTableF64From`,
   `vectorStandardExponentialApproxLogF32`,
   `vectorStandardExponentialApproxLogF32From`,
   `fillVectorStandardExponentialApproxLogF32`,
@@ -280,6 +286,16 @@ Single-shot helpers:
   `fillVectorExponentialNativeF32`, `fillVectorExponentialNativeF32From`,
   `fillVectorExponentialNativeF32Checked`,
   `fillVectorExponentialNativeF32CheckedFrom`,
+  `vectorExponentialTableF32`, `vectorExponentialTableF32From`,
+  `vectorExponentialTableF32Checked`, `vectorExponentialTableF32CheckedFrom`,
+  `fillVectorExponentialTableF32`, `fillVectorExponentialTableF32From`,
+  `fillVectorExponentialTableF32Checked`,
+  `fillVectorExponentialTableF32CheckedFrom`,
+  `vectorExponentialTableF64`, `vectorExponentialTableF64From`,
+  `vectorExponentialTableF64Checked`, `vectorExponentialTableF64CheckedFrom`,
+  `fillVectorExponentialTableF64`, `fillVectorExponentialTableF64From`,
+  `fillVectorExponentialTableF64Checked`,
+  `fillVectorExponentialTableF64CheckedFrom`,
   `vectorExponentialApproxLogF32`, `vectorExponentialApproxLogF32From`,
   `vectorExponentialApproxLogF32Checked`,
   `vectorExponentialApproxLogF32CheckedFrom`,
@@ -925,6 +941,32 @@ Reusable samplers:
 - `VectorStandardExponentialNativeF32(VectorType).sampleFrom`
 - `VectorStandardExponentialNativeF32(VectorType).fill`
 - `VectorStandardExponentialNativeF32(VectorType).fillFrom`
+- `VectorStandardExponentialTableF32(VectorType)`
+- `VectorStandardExponentialTableF32(VectorType).rateValue`
+- `VectorStandardExponentialTableF32(VectorType).inverseRateValue`
+- `VectorStandardExponentialTableF32(VectorType).expectedValue`
+- `VectorStandardExponentialTableF32(VectorType).varianceValue`
+- `VectorStandardExponentialTableF32(VectorType).medianValue`
+- `VectorStandardExponentialTableF32(VectorType).modeValue`
+- `VectorStandardExponentialTableF32(VectorType).minValue`
+- `VectorStandardExponentialTableF32(VectorType).maxValue`
+- `VectorStandardExponentialTableF32(VectorType).sample`
+- `VectorStandardExponentialTableF32(VectorType).sampleFrom`
+- `VectorStandardExponentialTableF32(VectorType).fill`
+- `VectorStandardExponentialTableF32(VectorType).fillFrom`
+- `VectorStandardExponentialTableF64(VectorType)`
+- `VectorStandardExponentialTableF64(VectorType).rateValue`
+- `VectorStandardExponentialTableF64(VectorType).inverseRateValue`
+- `VectorStandardExponentialTableF64(VectorType).expectedValue`
+- `VectorStandardExponentialTableF64(VectorType).varianceValue`
+- `VectorStandardExponentialTableF64(VectorType).medianValue`
+- `VectorStandardExponentialTableF64(VectorType).modeValue`
+- `VectorStandardExponentialTableF64(VectorType).minValue`
+- `VectorStandardExponentialTableF64(VectorType).maxValue`
+- `VectorStandardExponentialTableF64(VectorType).sample`
+- `VectorStandardExponentialTableF64(VectorType).sampleFrom`
+- `VectorStandardExponentialTableF64(VectorType).fill`
+- `VectorStandardExponentialTableF64(VectorType).fillFrom`
 - `VectorStandardExponentialApproxLogF32(VectorType)`
 - `VectorStandardExponentialApproxLogF32(VectorType).rateValue`
 - `VectorStandardExponentialApproxLogF32(VectorType).inverseRateValue`
@@ -980,6 +1022,34 @@ Reusable samplers:
 - `VectorExponentialNativeF32(VectorType).sampleFrom`
 - `VectorExponentialNativeF32(VectorType).fill`
 - `VectorExponentialNativeF32(VectorType).fillFrom`
+- `VectorExponentialTableF32(VectorType)`
+- `VectorExponentialTableF32(VectorType).init`
+- `VectorExponentialTableF32(VectorType).rateValue`
+- `VectorExponentialTableF32(VectorType).inverseRateValue`
+- `VectorExponentialTableF32(VectorType).expectedValue`
+- `VectorExponentialTableF32(VectorType).varianceValue`
+- `VectorExponentialTableF32(VectorType).medianValue`
+- `VectorExponentialTableF32(VectorType).modeValue`
+- `VectorExponentialTableF32(VectorType).minValue`
+- `VectorExponentialTableF32(VectorType).maxValue`
+- `VectorExponentialTableF32(VectorType).sample`
+- `VectorExponentialTableF32(VectorType).sampleFrom`
+- `VectorExponentialTableF32(VectorType).fill`
+- `VectorExponentialTableF32(VectorType).fillFrom`
+- `VectorExponentialTableF64(VectorType)`
+- `VectorExponentialTableF64(VectorType).init`
+- `VectorExponentialTableF64(VectorType).rateValue`
+- `VectorExponentialTableF64(VectorType).inverseRateValue`
+- `VectorExponentialTableF64(VectorType).expectedValue`
+- `VectorExponentialTableF64(VectorType).varianceValue`
+- `VectorExponentialTableF64(VectorType).medianValue`
+- `VectorExponentialTableF64(VectorType).modeValue`
+- `VectorExponentialTableF64(VectorType).minValue`
+- `VectorExponentialTableF64(VectorType).maxValue`
+- `VectorExponentialTableF64(VectorType).sample`
+- `VectorExponentialTableF64(VectorType).sampleFrom`
+- `VectorExponentialTableF64(VectorType).fill`
+- `VectorExponentialTableF64(VectorType).fillFrom`
 - `VectorExponentialApproxLogF32(VectorType)`
 - `VectorExponentialApproxLogF32(VectorType).init`
 - `VectorExponentialApproxLogF32(VectorType).rateValue`

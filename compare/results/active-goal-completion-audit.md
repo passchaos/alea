@@ -45,7 +45,7 @@ multiple opt-in performance profiles (`BufferedLogNormal`, `LogNormalDlsymExp`,
 `LogNormalLibmvec`, and f32 approximation/native variants) that cover the local
 Rust performance gap without changing the exact default.
 The SIMD blocker has also narrowed on the vector opt-in side: table-quantile
-normal and f32 approximate-log exponential vector opt-ins now beat the matching
+normal/exponential and f32 approximate-log exponential vector opt-ins now beat the matching
 ziggurat lane-fill rows for users who accept explicit approximation/output-mapping
 contracts. They do not close the dense SIMD blocker because default
 normal/exponential kernels remain unresolved.
