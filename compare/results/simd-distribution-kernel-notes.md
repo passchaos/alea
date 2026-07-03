@@ -76,6 +76,10 @@ repair rows before a real `vectorbench` follow-up.
   80M/75M versus direct rows around 479M/455M. The vector `log`/`sqrt` plus
   polynomial-selection cost is far above ziggurat lane-fill, and the output
   mapping changes.
+- Keeping the inverse-CDF approximation entirely in f32 vector math does not
+  rescue it. A focused `vectorbench -- 16777216 "inverse-cdf f32"` run reports
+  f32x8 standard/parameterized rows around 100M/100M lanes/s, still far below
+  direct scalar ziggurat lane-fill around 479M.
 - Vector-log exponential kernels are too slow for default use.
 - Approx-log f32 vector exponential is useful only as an explicit output-mapping
   opt-in, not as a default dense kernel. A vector-only midpoint-uniform plus
