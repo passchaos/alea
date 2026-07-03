@@ -524,6 +524,12 @@ pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []
         return;
     }
     if (info.child == f32 or info.child == f64) {
+        if (comptime @TypeOf(source) != Rng) {
+            if (mean == 0 and stddev == 1) {
+                fillVectorStandardNormalFrom(source, VectorType, dest);
+                return;
+            }
+        }
         fillVectorNormalScalarFrom(source, VectorType, dest, mean, stddev);
         return;
     }

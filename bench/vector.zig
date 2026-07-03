@@ -200,6 +200,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorStandardNormal f32x8 fast repair candidate", lanes / 4, 0xd188, fillStandardNormalF32FastRepair);
     try benchFillVectorStandardNormalF64(io, stdout, "alea fillVectorStandardNormal f64x4", lanes / 8);
     try benchFillVectorStandardNormalF64Direct(io, stdout, "alea fillVectorStandardNormal f64x4 direct", lanes / 8);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 local scalar candidate", lanes / 8, 0xd184, fillStandardNormalF64Local);
     try benchFillVectorNormalF32(io, stdout, "alea fillVectorNormal f32x8", lanes / 4);
     try benchFillVectorNormalF32Direct(io, stdout, "alea fillVectorNormal f32x8 direct", lanes / 4);
     try benchFillVectorNormalF32Repair(io, stdout, "alea fillVectorNormal f32x8 repair candidate", lanes / 4);
@@ -207,6 +208,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorNormal f32x8 fast repair candidate", lanes / 4, 0xd188, fillNormalF32FastRepair);
     try benchFillVectorNormalF64(io, stdout, "alea fillVectorNormal f64x4", lanes / 8);
     try benchFillVectorNormalF64Direct(io, stdout, "alea fillVectorNormal f64x4 direct", lanes / 8);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 local scalar candidate", lanes / 8, 0xd184, fillNormalF64Local);
     try benchFillVectorStandardExponentialF32(io, stdout, "alea fillVectorStandardExponential f32x8", lanes);
     try benchFillVectorStandardExponentialF32Direct(io, stdout, "alea fillVectorStandardExponential f32x8 direct", lanes);
     try benchFillVectorStandardExponentialF32Repair(io, stdout, "alea fillVectorStandardExponential f32x8 repair candidate", lanes);
@@ -214,6 +216,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorStandardExponential f32x8 fast repair candidate", lanes, 0xe188, fillStandardExponentialF32FastRepair);
     try benchFillVectorStandardExponentialF64(io, stdout, "alea fillVectorStandardExponential f64x4", lanes / 2);
     try benchFillVectorStandardExponentialF64Direct(io, stdout, "alea fillVectorStandardExponential f64x4 direct", lanes / 2);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 local scalar candidate", lanes / 2, 0xe184, fillStandardExponentialF64Local);
     try benchFillVectorExponentialF32(io, stdout, "alea fillVectorExponential f32x8", lanes);
     try benchFillVectorExponentialF32Direct(io, stdout, "alea fillVectorExponential f32x8 direct", lanes);
     try benchFillVectorExponentialF32Repair(io, stdout, "alea fillVectorExponential f32x8 repair candidate", lanes);
@@ -221,6 +224,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Fast(io, stdout, "alea fillVectorExponential f32x8 fast repair candidate", lanes, 0xe188, fillExponentialF32FastRepair);
     try benchFillVectorExponentialF64(io, stdout, "alea fillVectorExponential f64x4", lanes / 2);
     try benchFillVectorExponentialF64Direct(io, stdout, "alea fillVectorExponential f64x4 direct", lanes / 2);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorExponential f64x4 local scalar candidate", lanes / 2, 0xe184, fillExponentialF64Local);
     try stdout.flush();
 }
 
@@ -1513,6 +1517,45 @@ fn benchFillVectorF32x8Fast(
     try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillVectorF64x4Local(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    lanes: usize,
+    comptime seed: u64,
+    comptime fillFn: fn (*alea.ScalarPrng, []@Vector(4, f64)) void,
+) !void {
+    if (!shouldRun(name)) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [256]@Vector(4, f64) = undefined;
+    const vector_count = lanes / 4;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = vector_count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, out[0..n]);
+            checksum += checksumVectorsF64(&out, n);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(vector_count * 4)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M lanes/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn benchFillVectorStandardNormalF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, lanes: usize) !void {
     if (!shouldRun(name)) return;
     var best_million_per_s: f64 = 0;
@@ -2164,6 +2207,35 @@ fn fillExponentialF32FastDirect(engine: *alea.FastPrng, dest: []@Vector(8, f32))
 fn fillExponentialF32FastRepair(engine: *alea.FastPrng, dest: []@Vector(8, f32)) void {
     const inverse_rate: @Vector(8, f32) = @splat(0.5);
     for (dest) |*item| item.* = vectorRepairExponentialF32FastCorrect(engine) * inverse_rate;
+}
+
+fn fillStandardNormalF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorNormalF64Local(engine);
+}
+
+fn fillNormalF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorNormalF64Local(engine);
+}
+
+fn fillStandardExponentialF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorExponentialF64Local(engine);
+}
+
+fn fillExponentialF64Local(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(0.5);
+    for (dest) |*item| item.* = vectorExponentialF64Local(engine) * inverse_rate;
+}
+
+fn vectorNormalF64Local(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    var out: @Vector(4, f64) = undefined;
+    inline for (0..4) |lane| out[lane] = ratioNormal(engine);
+    return out;
+}
+
+fn vectorExponentialF64Local(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    var out: @Vector(4, f64) = undefined;
+    inline for (0..4) |lane| out[lane] = thresholdExponential(engine);
+    return out;
 }
 
 fn vectorRepairNormalF32Correct(engine: *alea.ScalarPrng) @Vector(8, f32) {
