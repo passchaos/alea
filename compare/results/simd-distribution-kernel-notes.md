@@ -175,6 +175,13 @@ repair rows before a real `vectorbench` follow-up.
   scalar-lane rows around 479M/478M f32x8 and 452M/455M f64x4 and below the
   older ratio-based block-fallback evidence. Mantissa-range checks therefore do
   not rescue the block policy.
+- A mask-redraw exponential policy also loses. This stream-versioned candidate
+  keeps accepted lanes and redraws only unfilled lanes at vector granularity,
+  discarding rejected and slow-path candidates. A focused `vectorbench --
+  16777216 "mask-redraw"` run showed f32x8 standard/parameterized exponential
+  around 293M/292M lanes/s and f64x4 around 355M/352M, below direct scalar
+  ziggurat lane-fill around 470M f32x8 and 466-469M f64x4. Keeping accepted
+  lanes is not enough to offset loop/control-flow cost and discarded candidates.
 - An all-accepted fast-return variant of same-candidate repair also loses. It
   returns the vector immediately when every lane hits the ziggurat fast path,
   then falls back to per-lane same-candidate repair only for rejected lanes. A
