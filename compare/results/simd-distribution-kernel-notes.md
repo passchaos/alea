@@ -160,6 +160,16 @@ repair rows before a real `vectorbench` follow-up.
   same-host scalar f32 raw rows around 583M normal and 556M exponential. The
   filtered rows confirm the filter works and keep the same conclusion: isolated
   repair rows are candidate-discovery evidence only, not a production switch.
+- A later native-f32 repair probe checked whether explicit f32 ziggurat tables
+  give dense repair a new direction. `ziggurat-probe -- 4194304
+  "native vector-repair"` reports about 588.9M normal and 580.2M exponential
+  lanes/s for ScalarPrng, and about 481.1M/477.5M for FastPrng. The matching
+  real `vectorbench -- 268435456 "NativeF32 f32x8"` rows remain the relevant
+  production evidence: native standard-normal f32x8 direct is about 512.9M,
+  native normal f32x8 direct about 514.1M, native standard-exponential f32x8
+  direct about 503.1M, and native exponential f32x8 direct about 459.8M. The
+  probe is therefore candidate-discovery evidence only; do not treat it as a
+  dense SIMD default without a real-harness candidate that beats these rows.
 
 ## Requirements For The Next Candidate
 
