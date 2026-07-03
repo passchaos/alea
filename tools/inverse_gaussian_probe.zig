@@ -21,10 +21,12 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("inverse-gaussian probe count={}\n", .{sample_count});
     try benchSample(alea.FastPrng, io, stdout, "fast sample current", 0x164a, sample_count, sampleCurrent);
     try benchSample(alea.FastPrng, io, stdout, "fast sample cached", 0x164a, sample_count, sampleCached);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample four-shape cache", 0x164a, sample_count, sampleFourShapeCache);
     try benchSample(alea.FastPrng, io, stdout, "fast sample local sampler", 0x164a, sample_count, sampleLocalSampler);
     try benchSample(alea.FastPrng, io, stdout, "fast sample uniform first", 0x164a, sample_count, sampleUniformFirst);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample current", 0x164b, sample_count, sampleCurrent);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample cached", 0x164b, sample_count, sampleCached);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sample four-shape cache", 0x164b, sample_count, sampleFourShapeCache);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample local sampler", 0x164b, sample_count, sampleLocalSampler);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample uniform first", 0x164b, sample_count, sampleUniformFirst);
     try benchFill(alea.FastPrng, io, stdout, "fast current fill", 0x164a, sample_count, currentFill);
@@ -115,6 +117,13 @@ fn currentFill(source: anytype, dest: []f64) void {
 }
 
 const cached_inverse_gaussian = alea.distributions.InverseGaussian(f64).init(1, 2) catch unreachable;
+const cached_four_shape_inverse_gaussian = InverseGaussianFourShapeCache{
+    .mean = 1,
+    .shape = 2,
+    .mean_over_2shape = 0.25,
+    .mean_squared = 1,
+    .four_shape = 8,
+};
 
 fn sampleCurrent(source: anytype) f64 {
     return alea.distributions.inverseGaussianFrom(source, f64, 1, 2);
@@ -124,10 +133,31 @@ fn sampleCached(source: anytype) f64 {
     return cached_inverse_gaussian.sampleFrom(source);
 }
 
+fn sampleFourShapeCache(source: anytype) f64 {
+    return cached_four_shape_inverse_gaussian.sampleFrom(source);
+}
+
 fn sampleLocalSampler(source: anytype) f64 {
     const dist = alea.distributions.InverseGaussian(f64).init(1, 2) catch unreachable;
     return dist.sampleFrom(source);
 }
+
+const InverseGaussianFourShapeCache = struct {
+    mean: f64,
+    shape: f64,
+    mean_over_2shape: f64,
+    mean_squared: f64,
+    four_shape: f64,
+
+    fn sampleFrom(self: @This(), source: anytype) f64 {
+        if (self.mean == 0 or self.shape == std.math.inf(f64)) return self.mean;
+        const z = alea.Rng.normalFastFrom(source, f64, 0, 1);
+        const y = self.mean * z * z;
+        const x = self.mean + self.mean_over_2shape * (y - @sqrt(self.four_shape * y + y * y));
+        if (alea.Rng.floatFrom(source, f64) <= self.mean / (self.mean + x)) return x;
+        return self.mean_squared / x;
+    }
+};
 
 fn sampleUniformFirst(source: anytype) f64 {
     const z = alea.Rng.normalFastFrom(source, f64, 0, 1);
