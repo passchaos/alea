@@ -234,6 +234,20 @@ fn checkContinuous() !void {
                 }
             }.sample, 1.02, 1.04);
         }
+        var libmvec_log_normal_f32_engine = alea.DefaultPrng.init(0xc0ff_ee50);
+        const libmvec_log_normal_f32_rng = alea.Rng.init(&libmvec_log_normal_f32_engine);
+        var libmvec_f32_dist = alea.distributions.LogNormalLibmvec(f32, 128).init(0, 0.25) catch |err| switch (err) {
+            error.LibmvecUnavailable => null,
+            else => return err,
+        };
+        if (libmvec_f32_dist) |*dist| {
+            defer dist.deinit();
+            try expectContinuousMeanWithContext(*alea.distributions.LogNormalLibmvec(f32, 128), "log-normal-libmvec-f32", libmvec_log_normal_f32_rng, 20_000, dist, struct {
+                fn sample(ctx: *alea.distributions.LogNormalLibmvec(f32, 128), r: alea.Rng) f64 {
+                    return ctx.sample(r);
+                }
+            }.sample, 1.02, 1.04);
+        }
         var dlsym_log_normal_engine = alea.DefaultPrng.init(0xc0ff_ee49);
         const dlsym_log_normal_rng = alea.Rng.init(&dlsym_log_normal_engine);
         var dlsym_dist = alea.distributions.LogNormalDlsymExp(f64, 128).init(0, 0.25) catch |err| switch (err) {
@@ -244,6 +258,20 @@ fn checkContinuous() !void {
             defer dist.deinit();
             try expectContinuousMeanWithContext(*alea.distributions.LogNormalDlsymExp(f64, 128), "log-normal-dlsym-exp", dlsym_log_normal_rng, 20_000, dist, struct {
                 fn sample(ctx: *alea.distributions.LogNormalDlsymExp(f64, 128), r: alea.Rng) f64 {
+                    return ctx.sample(r);
+                }
+            }.sample, 1.02, 1.04);
+        }
+        var dlsym_log_normal_f32_engine = alea.DefaultPrng.init(0xc0ff_ee51);
+        const dlsym_log_normal_f32_rng = alea.Rng.init(&dlsym_log_normal_f32_engine);
+        var dlsym_f32_dist = alea.distributions.LogNormalDlsymExp(f32, 128).init(0, 0.25) catch |err| switch (err) {
+            error.LibmUnavailable => null,
+            else => return err,
+        };
+        if (dlsym_f32_dist) |*dist| {
+            defer dist.deinit();
+            try expectContinuousMeanWithContext(*alea.distributions.LogNormalDlsymExp(f32, 128), "log-normal-dlsym-exp-f32", dlsym_log_normal_f32_rng, 20_000, dist, struct {
+                fn sample(ctx: *alea.distributions.LogNormalDlsymExp(f32, 128), r: alea.Rng) f64 {
                     return ctx.sample(r);
                 }
             }.sample, 1.02, 1.04);

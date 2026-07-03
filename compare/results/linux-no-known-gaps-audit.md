@@ -62,7 +62,7 @@ Out of scope for this Linux-first audit:
 
 | Local Rust family | Alea API | Validation |
 | --- | --- | --- |
-| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `BufferedLogNormal`, `LogNormalDlsymExp`, `LogNormalLibmvec`, `exponential`, `Exponential`, plus explicit bounded/native f32 LogNormal opt-ins | unit tests, `distcheck`, `distcheck-libc` for libmvec availability, vector `distcheck`, benchmark rows |
+| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `BufferedLogNormal`, `LogNormalDlsymExp`, `LogNormalLibmvec`, `exponential`, `Exponential`, plus explicit bounded/native f32 LogNormal opt-ins | unit tests, `distcheck`, `distcheck-libc` for f64/f32 libmvec/dlsym availability, vector `distcheck`, benchmark rows |
 | Gamma, ChiSquared, Beta | `gamma`, `Gamma`, `chiSquared`, `ChiSquared`, `beta`, `Beta` | unit tests, `distcheck`, benchmark rows |
 | FisherF, StudentT | `fisherF`, `FisherF`, `studentT`, `StudentT` | unit tests, `distcheck`, benchmark rows |
 | Poisson, Binomial | `poisson`, `Poisson`, `binomial`, `Binomial` | unit tests, `distcheck`, benchmark rows |
