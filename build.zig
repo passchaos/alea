@@ -59,6 +59,31 @@ pub fn build(b: *std.Build) void {
     const bench_step = b.step("bench", "Run the alea throughput benchmark");
     bench_step.dependOn(&run_bench.step);
 
+    const libc_module = b.createModule(.{
+        .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+
+    const bench_libc_mod = b.createModule(.{
+        .root_source_file = b.path("bench/throughput.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    bench_libc_mod.addImport("alea", libc_module);
+
+    const bench_libc = b.addExecutable(.{
+        .name = "alea-throughput-libc",
+        .root_module = bench_libc_mod,
+    });
+    const run_bench_libc = b.addRunArtifact(bench_libc);
+    if (b.args) |args| run_bench_libc.addArgs(args);
+
+    const bench_libc_step = b.step("bench-libc", "Run the libc-linked alea throughput benchmark");
+    bench_libc_step.dependOn(&run_bench_libc.step);
+
     const vectorbench_mod = b.createModule(.{
         .root_source_file = b.path("bench/vector.zig"),
         .target = target,
