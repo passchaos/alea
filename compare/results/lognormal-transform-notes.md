@@ -39,6 +39,11 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   single-sample rows regressed badly, and newer staged-fill rows are
   non-bit-identical even when they are faster.
 - `std.math.exp` is tied with `@exp`.
+- Moving the exact `@exp` transform loop behind a `noinline` boundary is mixed
+  and does not beat the current production fill shape across f64/f32. A
+  same-host 4Mi rerun had current fill around 134.9M/139.1M f64
+  FastPrng/ScalarPrng and 135.1M/141.2M f32, while staged noinline was about
+  131.5M/138.0M f64 and 136.5M/142.6M f32.
 - libc `exp` / `expf` can help one engine/type profile in the probe but
   regresses another and requires linking libc, so it is not a generic default.
 - Manual unrolling of the exact `@exp` transform loop is mixed: it can provide
@@ -245,6 +250,10 @@ Fresh local evidence:
   transform rows were effectively tied with matching checksums across f64/f32
   and FastPrng/ScalarPrng, so alias annotations are not the missing exact
   transform/codegen escape hatch.
+- A noinline transform-loop probe likewise did not produce a safe exact
+  default. `log-normal-probe -- 4194304 "noinline"` was mixed against the
+  same-host `current fill` run: it trailed f64 current fill and moved only f32
+  rows slightly upward, so it remains evidence rather than a production change.
 - The same `expm1(x)+1` probe reports max 1 ULP at `stddev=0.25`, but max
   51 ULP at `stddev=1.0` and 8028 ULP at `stddev=2.0`, which is why
   `LogNormalApproxF32` is parameter-bounded to the narrow profile. The
