@@ -100,6 +100,16 @@ repair rows before a real `vectorbench` follow-up.
   403M/398M exponential versus direct rows around 454M/454M and 469M/468M.
   FastPrng f32x8 block-fallback likewise trailed direct rows at about
   423M/420M normal and 380M/377M exponential.
+- An all-accepted fast-return variant of same-candidate repair also loses. It
+  returns the vector immediately when every lane hits the ziggurat fast path,
+  then falls back to per-lane same-candidate repair only for rejected lanes. A
+  focused 64Mi-lane `vectorbench` run showed f32x8 ScalarPrng all-accepted
+  repair around 370M/370M standard/parameterized normal and 330M/330M
+  standard/parameterized exponential lanes/s versus direct rows around
+  499M/499M normal and 472M/471M exponential. f64x4 all-accepted repair was
+  about 362M/354M normal and 332M/328M exponential versus direct rows around
+  455M/455M and 469M/466M. FastPrng f32x8 all-accepted rows likewise trailed
+  direct defaults at about 338M/336M normal and 315M/312M exponential.
 - Raw-buffer prefetch repair is invalid without a stream-shape design for
   rejected lanes: prefetching candidates changes how repair consumes randomness.
 - Reinterpreting packed f64 vector slices as scalar slices and routing them
