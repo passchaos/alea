@@ -92,6 +92,11 @@ repair rows before a real `vectorbench` follow-up.
   -- 16777216 "inverse-cdf tail-repair"` run shows f32x8 standard/parameterized
   rows around 245M/245M and f64x4 around 207M/207M, still well below scalar
   ziggurat lane-fill.
+- A tail-only inverse-CDF repair branch is the strongest valid inverse-CDF row
+  so far but still loses. Repairing known low/high tail lanes with only the
+  matching tail rational expression reaches about 388M/385M f32x8 and
+  295M/297M f64x4 lanes/s in `vectorbench -- 16777216 "inverse-cdf tail-only"`,
+  still below scalar ziggurat lane-fill.
 - A central-only inverse-CDF diagnostic probe is fast but invalid. Applying the
   central rational approximation to every f32 lane reaches about 662M/652M
   f32x8 lanes/s, but it uses the central approximation outside its tail-domain
