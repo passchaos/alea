@@ -117,6 +117,11 @@ repair rows before a real `vectorbench` follow-up.
   some facade/distribution rows in a same-host `vectorbench` run, but it
   regressed direct standard/parameterized f64 vector rows while checksums
   matched, so scalar lane-fill remains the baseline.
+- The same flat-slice routing check also loses for f32x8 in the real harness.
+  A focused 64Mi-lane `vectorbench` run preserves checksums but reports about
+  464M/463M standard/parameterized normal lanes/s versus direct rows around
+  498M/498M, and about 448M/444M standard/parameterized exponential lanes/s
+  versus direct rows around 470M/469M.
 - Forcing `Rng.next` itself inline does not solve the vector facade/context
   gap: a same-host 2026-07-03 full `vectorbench` run with that probe tied or
   regressed the target facade normal/exponential rows while direct rows stayed
