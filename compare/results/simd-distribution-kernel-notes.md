@@ -85,6 +85,11 @@ repair rows before a real `vectorbench` follow-up.
   it intentionally changes the output mapping and has an approximation contract
   rather than exact ziggurat or exact inverse-transform semantics. It does not
   solve normal kernels or f64/default exponential dense kernels.
+- The same approximate-log transform is not useful for f64x4 exponential. A
+  focused `vectorbench -- 16777216 "StandardExponential f64x4"` /
+  `"fillVectorExponential f64x4"` run showed f64 approx-log around 386M/382M
+  lanes/s versus direct scalar ziggurat lane-fill around 469M/466M. Keep the
+  public ApproxLog profile restricted to f32 vectors.
 - Platform libmvec vector-log inverse-transform exponential is also not a
   production direction. A scratch x86_64-linux-gnu probe using `_ZGVcN8v_logf`
   / `_ZGVcN4v_log` reached about 427M f32 and 216M f64 lanes/s for
