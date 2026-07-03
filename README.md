@@ -95,6 +95,7 @@ pub fn main() !void {
 zig build test
 zig build apicheck
 zig build validate
+zig build validate-all
 zig build crosscheck
 zig build test-wasi
 zig build wasi-report

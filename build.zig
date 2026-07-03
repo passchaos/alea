@@ -797,6 +797,12 @@ pub fn build(b: *std.Build) void {
     validate_step.dependOn(&run_statcheck.step);
     validate_step.dependOn(&run_distcheck.step);
 
+    const validate_all_step = b.step("validate-all", "Run native validation plus cross-target and WASI runtime checks");
+    validate_all_step.dependOn(validate_step);
+    validate_all_step.dependOn(crosscheck_step);
+    validate_all_step.dependOn(wasi_test_step);
+    validate_all_step.dependOn(wasi_report_step);
+
     const hypergeo_h2pe_probe_mod = b.createModule(.{
         .root_source_file = b.path("tools/hypergeo_h2pe_probe.zig"),
         .target = target,

@@ -2114,6 +2114,7 @@ Build steps:
 - `zig build run-basic`
 - `zig build apicheck`
 - `zig build validate`
+- `zig build validate-all`
 - `zig build statcheck`
 - `zig build distcheck`
 - `zig build crosscheck`
