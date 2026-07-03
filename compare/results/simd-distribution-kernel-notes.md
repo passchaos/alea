@@ -174,5 +174,27 @@ replace scalar lane-fill:
 5. Pass the existing vector checked-fill stream-shape tests and normal
    distribution statistical smoke checks.
 
+### Minimum Real-Harness Benchmark Set
+
+A future dense candidate should be measured with the following focused rows
+before any production switch is considered:
+
+```sh
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 268435456 "StandardNormal f32x8"
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 268435456 "fillVectorNormal f32x8"
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 268435456 "StandardExponential f32x8"
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 268435456 "fillVectorExponential f32x8"
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 268435456 "StandardNormal f64x4"
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 268435456 "fillVectorNormal f64x4"
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 268435456 "StandardExponential f64x4"
+zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 268435456 "fillVectorExponential f64x4"
+```
+
+For each row, compare same-run facade/direct/reusable rows where they exist and
+record checksums. A candidate that only wins `ziggurat-probe` but loses any of
+these real vector-slice rows is evidence only, not a production default. If the
+stream shape changes, document the versioned mapping and add snapshot/statistical
+evidence before exposing it as a named opt-in API.
+
 Until a candidate meets those requirements, keep scalar ziggurat lane-fill as
 the production default.
