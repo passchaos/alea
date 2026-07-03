@@ -38,7 +38,7 @@ Zig-native way.
 | StudentT | Covered: `studentT`, `StudentT(T)`, including dof/finite-moment and support accessors |
 | Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment/median/mode/support accessors and collapsed `scale == 0` point masses |
 | Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape, finite-moment, median/mode, and support accessors |
-| SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter/moment/support accessors |
+| SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including parameter/moment/support accessors and collapsed `scale == 0` point masses |
 | Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, range-builder constructors, builder diagnostics, and parameter/moment accessors |
 | UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)`, including geometry, coordinate-moment, and radial-moment accessors |
 | UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)`, including geometry, coordinate-moment, and radial-moment accessors |

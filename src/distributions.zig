@@ -9571,7 +9571,8 @@ pub fn skewNormalCheckedFrom(source: anytype, comptime T: type, location: T, sca
 
 pub inline fn skewNormalFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(shape));
+    std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    if (scale == 0) return location;
 
     const z1 = Rng.normalFastFrom(source, T, 0, 1);
     if (shape == 0) return location + scale * z1;
@@ -9594,7 +9595,11 @@ pub fn fillSkewNormal(rng: Rng, comptime T: type, dest: []T, location: T, scale:
 
 pub fn fillSkewNormalFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale > 0 and std.math.isFinite(shape));
+    std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    if (scale == 0) {
+        @memset(dest, location);
+        return;
+    }
     if (shape == 0) {
         for (dest) |*item| item.* = location + scale * Rng.normalFastFrom(source, T, 0, 1);
         return;
@@ -9737,6 +9742,7 @@ pub fn VectorSkewNormal(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
             const z1 = vectorStandardNormalFrom(source, VectorType);
             if (self.shapeValue() == 0) {
                 const location_vec: VectorType = @splat(self.locationValue());
@@ -9752,6 +9758,10 @@ pub fn VectorSkewNormal(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.locationValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -9768,7 +9778,7 @@ pub fn SkewNormal(comptime T: type) type {
         pub fn init(location: T, scale: T, shape: T) Error!Self {
             comptime requireFloat(T);
             if (!std.math.isFinite(location)) return error.InvalidParameter;
-            if (!(scale > 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             if (!std.math.isFinite(shape)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale, .shape = shape };
         }
@@ -9797,13 +9807,11 @@ pub fn SkewNormal(comptime T: type) type {
         }
 
         pub fn minValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.location else null;
         }
 
         pub fn maxValue(self: Self) ?T {
-            _ = self;
-            return null;
+            return if (self.isDegenerate()) self.location else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9811,6 +9819,7 @@ pub fn SkewNormal(comptime T: type) type {
         }
 
         pub inline fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return self.location;
             return skewNormalFrom(source, T, self.location, self.scale, self.shape);
         }
 
@@ -9819,7 +9828,15 @@ pub fn SkewNormal(comptime T: type) type {
         }
 
         pub inline fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, self.location);
+                return;
+            }
             fillSkewNormalFrom(source, T, dest, self.location, self.scale, self.shape);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.scale == 0;
         }
     };
 }
@@ -14576,6 +14593,79 @@ test "degenerate log-logistic helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "degenerate skew-normal helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d176);
+    var control = alea.ScalarPrng.init(0x5150_d176);
+    const rng = Rng.init(&engine);
+
+    const point: f64 = -3.25;
+    try std.testing.expectEqual(point, skewNormalFrom(&engine, f64, point, 0, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(point, try skewNormalChecked(rng, f64, point, 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillSkewNormalFrom(&engine, f64, &scalar_buf, point, 0, -1);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillSkewNormalChecked(rng, f64, &scalar_buf, point, 0, 1);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try SkewNormal(f64).init(point, 0, 2);
+    try std.testing.expectEqual(point, sampler.locationValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.scaleValue());
+    try std.testing.expectEqual(@as(f64, 2), sampler.shapeValue());
+    try std.testing.expectEqual(point, sampler.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+    try std.testing.expectEqual(point, sampler.minValue().?);
+    try std.testing.expectEqual(point, sampler.maxValue().?);
+    try std.testing.expectEqual(point, sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const symmetric = try SkewNormal(f64).init(point, 0, 0);
+    try std.testing.expectEqual(point, symmetric.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_point: f32 = 4.5;
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vectorSkewNormalFrom(&engine, @Vector(4, f32), vector_point, 0, 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), try vectorSkewNormalChecked(rng, @Vector(4, f32), vector_point, 0, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f32) = undefined;
+    fillVectorSkewNormalFrom(&engine, @Vector(4, f32), &vector_buf, vector_point, 0, -1);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorSkewNormalChecked(rng, @Vector(4, f32), &vector_buf, vector_point, 0, 1);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorSkewNormal(@Vector(4, f32)).init(vector_point, 0, 2);
+    try std.testing.expectEqual(vector_point, vector_sampler.locationValue());
+    try std.testing.expectEqual(@as(f32, 0), vector_sampler.scaleValue());
+    try std.testing.expectEqual(@as(f32, 2), vector_sampler.shapeValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f32, 0), vector_sampler.varianceValue());
+    try std.testing.expectEqual(vector_point, vector_sampler.minValue().?);
+    try std.testing.expectEqual(vector_point, vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "degenerate half-normal helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d1e6);
@@ -17261,7 +17351,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorFrechetCheckedFrom(&engine, @Vector(4, f64), 0, 2, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, vectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), 0, 0, 2));
+    try std.testing.expectError(error.InvalidParameter, vectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, vectorPertCheckedFrom(&engine, @Vector(4, f64), 0, 11, 10, 4));
@@ -17365,7 +17455,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 0, 2));
+    try std.testing.expectError(error.InvalidParameter, fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1, 2));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorPertCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, 4, 10, -1));
@@ -17497,7 +17587,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorFrechetCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 0, 2);
+    try fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &empty, 0, -1, 2);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorPertCheckedFrom(&engine, @Vector(4, f64), &empty, 0, 11, 10, 4);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17565,7 +17655,7 @@ test "zero-length distribution vector fills do not validate or consume random st
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorFrechetChecked(rng, @Vector(4, f64), &empty, 0, 0, 3);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillVectorSkewNormalChecked(rng, @Vector(4, f64), &empty, 0, 0, 2);
+    try fillVectorSkewNormalChecked(rng, @Vector(4, f64), &empty, 0, -1, 2);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorPertChecked(rng, @Vector(4, f64), &empty, 0, 11, 10, 4);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -17730,7 +17820,7 @@ test "invalid distribution facade tail scalars do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, frechetChecked(rng, f64, 0, 1, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, skewNormalChecked(rng, f64, 0, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, skewNormalChecked(rng, f64, 0, -1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, pertChecked(rng, f64, 0, 2, 1, 4));
@@ -17831,7 +17921,7 @@ test "invalid distribution facade tail fills do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillFrechetChecked(rng, f64, &out, 0, 0, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillSkewNormalChecked(rng, f64, &out, 0, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, fillSkewNormalChecked(rng, f64, &out, 0, -1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillPertChecked(rng, f64, &out, 1, 0, 2, 4));
@@ -18178,7 +18268,7 @@ test "invalid remaining tail scalar helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, frechetCheckedFrom(&engine, f64, 0, 1, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, skewNormalCheckedFrom(&engine, f64, 0, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, skewNormalCheckedFrom(&engine, f64, 0, -1, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, pertCheckedFrom(&engine, f64, 0, 2, 1, 4));
@@ -18295,17 +18385,17 @@ test "zero-length skew and pert fills do not validate or consume random stream" 
 
     var out: [0]f64 = .{};
 
-    try fillSkewNormalCheckedFrom(&engine, f64, &out, 0, 0, 1);
+    try fillSkewNormalCheckedFrom(&engine, f64, &out, 0, -1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillPertCheckedFrom(&engine, f64, &out, 1, 0, 2, 4);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillSkewNormalChecked(rng, f64, &out, 0, 0, 1);
+    try fillSkewNormalChecked(rng, f64, &out, 0, -1, 1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillPertChecked(rng, f64, &out, 1, 0, 2, 4);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var one: [1]f64 = undefined;
-    try std.testing.expectError(error.InvalidParameter, fillSkewNormalCheckedFrom(&engine, f64, &one, 0, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, fillSkewNormalCheckedFrom(&engine, f64, &one, 0, -1, 1));
 }
 
 test "zero-length inverse and zeta distribution fills do not validate or consume random stream" {
@@ -19781,7 +19871,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
     try fillSkewNormalCheckedFrom(&direct_engine, f64, &direct_skew_normal_buf, 0, 1, 1);
     for (direct_skew_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
-    try std.testing.expectError(error.InvalidParameter, fillSkewNormalCheckedFrom(&direct_engine, f64, &direct_skew_normal_buf, 0, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, fillSkewNormalCheckedFrom(&direct_engine, f64, &direct_skew_normal_buf, 0, -1, 1));
     const skew_normal_sampler = try SkewNormal(f64).init(0, 1, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 0), skew_normal_sampler.locationValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 1), skew_normal_sampler.scaleValue(), 0);
@@ -19962,7 +20052,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Weibull(f64).init(-1, 1));
     try std.testing.expectError(error.InvalidParameter, Gumbel(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Frechet(f64).init(0, 1, 0));
-    try std.testing.expectError(error.InvalidParameter, SkewNormal(f64).init(0, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, SkewNormal(f64).init(0, -1, 1));
     try std.testing.expectError(error.InvalidParameter, Pert(f64).init(0, 2, 1, 4));
     try std.testing.expectError(error.InvalidParameter, InverseGaussian(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, NormalInverseGaussian(f64).init(1, 1));
@@ -20274,7 +20364,7 @@ test "extreme-value and shape samplers have plausible means" {
 
     var direct_engine = alea.ScalarPrng.init(172);
     try std.testing.expect(std.math.isFinite(try skewNormalCheckedFrom(&direct_engine, f64, 0, 1, 1)));
-    try std.testing.expectError(error.InvalidParameter, skewNormalCheckedFrom(&direct_engine, f64, 0, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, skewNormalCheckedFrom(&direct_engine, f64, 0, -1, 1));
     const direct_checked_pert = try pertCheckedFrom(&direct_engine, f64, -1, 0.5, 2, 4);
     try std.testing.expect(direct_checked_pert >= -1 and direct_checked_pert <= 2);
     try std.testing.expectError(error.InvalidParameter, pertCheckedFrom(&direct_engine, f64, 0, 2, 1, 4));
