@@ -3044,8 +3044,14 @@ pub fn fillVectorLogNormal(rng: Rng, comptime VectorType: type, dest: []VectorTy
 }
 
 pub fn fillVectorLogNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    const info = vectorInfo(VectorType);
     if (stddev == 0) {
         @memset(dest, @as(VectorType, @splat(@exp(mean))));
+        return;
+    }
+    if (info.child == f32 or info.child == f64) {
+        const scalars = std.mem.bytesAsSlice(info.child, std.mem.sliceAsBytes(dest));
+        fillLogNormalFrom(source, info.child, scalars, mean, stddev);
         return;
     }
     fillVectorNormalFrom(source, VectorType, dest, mean, stddev);
