@@ -62,7 +62,7 @@ Out of scope for this Linux-first audit:
 
 | Local Rust family | Alea API | Validation |
 | --- | --- | --- |
-| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `BufferedLogNormal`, `LogNormalLibmvec`, `exponential`, `Exponential`, plus explicit bounded/native f32 LogNormal opt-ins | unit tests, `distcheck`, `distcheck-libc` for libmvec availability, vector `distcheck`, benchmark rows |
+| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `BufferedLogNormal`, `LogNormalDlsymExp`, `LogNormalLibmvec`, `exponential`, `Exponential`, plus explicit bounded/native f32 LogNormal opt-ins | unit tests, `distcheck`, `distcheck-libc` for libmvec availability, vector `distcheck`, benchmark rows |
 | Gamma, ChiSquared, Beta | `gamma`, `Gamma`, `chiSquared`, `ChiSquared`, `beta`, `Beta` | unit tests, `distcheck`, benchmark rows |
 | FisherF, StudentT | `fisherF`, `FisherF`, `studentT`, `StudentT` | unit tests, `distcheck`, benchmark rows |
 | Poisson, Binomial | `poisson`, `Poisson`, `binomial`, `Binomial` | unit tests, `distcheck`, benchmark rows |
@@ -84,8 +84,8 @@ current blocker audit is `s4-m4-remaining-gaps.md`. In short:
 - exact scalar/single-sample `LogNormal` transform/codegen still trails the
   latest local Rust `rand_distr` evidence for comparable exact workloads;
   exact f32 direct-source bulk fills and vector-slice rows have improved, and
-  `BufferedLogNormal` / `LogNormalLibmvec` now cover repeated-sample and
-  libc/libmvec opt-in profiles, but exact defaults still remain behind the local
+  `BufferedLogNormal` / `LogNormalDlsymExp` / `LogNormalLibmvec` now cover
+  repeated-sample, scalar-libm, and libc/libmvec opt-in profiles, but exact defaults still remain behind the local
   Rust f32/f64 single-sample rows. Current evidence and rejected exact transform
   shapes are recorded in
   `lognormal-transform-notes.md`, `performance-triage.md`, and

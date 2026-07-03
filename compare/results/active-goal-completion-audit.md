@@ -55,8 +55,8 @@ The goal remains active until at least one of these happens:
 - or a clearly named opt-in LogNormal profile is added with a documented
   accuracy/reproducibility contract that covers a gap not already served by the
   existing opt-ins (`LogNormalApproxF32`, `LogNormalExp2F32`,
-  `LogNormalNativeF32`, `LogNormalNativeExp2F32`, `BufferedLogNormal`, and
-  `LogNormalLibmvec`);
+  `LogNormalNativeF32`, `LogNormalNativeExp2F32`, `BufferedLogNormal`,
+  `LogNormalDlsymExp`, and `LogNormalLibmvec`);
 - and a dense SIMD normal/exponential candidate beats scalar lane-fill in the
   real vector-slice harness while preserving or explicitly versioning rejected
   lane stream shape;

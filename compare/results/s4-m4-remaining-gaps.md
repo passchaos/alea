@@ -70,7 +70,7 @@ A candidate that could close S4-M4 should do one of the following:
    a clearly named opt-in profile with documented accuracy/reproducibility
    tradeoffs that covers a gap not already served by `LogNormalApproxF32`,
    `LogNormalExp2F32`, `LogNormalNativeF32`, `LogNormalNativeExp2F32`,
-   `BufferedLogNormal`, or `LogNormalLibmvec`.
+   `BufferedLogNormal`, `LogNormalDlsymExp`, or `LogNormalLibmvec`.
 2. Provide a dense SIMD normal/exponential kernel that runs in the real
    vector-slice harness, preserves or explicitly versions rejected-lane stream
    shape, and beats current direct standard and parameterized vectorbench rows.
