@@ -33,6 +33,7 @@ Local Alea evidence:
 - `compare/results/simd-distribution-kernel-notes.md`
 - `compare/results/lognormal-transform-notes.md`
 - `compare/results/s4-m4-remaining-gaps.md`
+- `compare/results/rust-benchmark-coverage-audit.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
