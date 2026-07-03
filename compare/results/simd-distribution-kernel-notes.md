@@ -68,6 +68,10 @@ repair rows before a real `vectorbench` follow-up.
   per-lane ratio-of-uniforms and 16M/28M for dense-block retry versus direct
   rows around 478M/455M. The rejection plus `log` path is therefore far slower
   than current ziggurat lane-fill, and the output mapping changes.
+- CLT/summed-uniform approximate normal kernels are too slow and low-quality for
+  a useful opt-in. A focused `vectorbench -- 16777216 "clt"` run reports CLT6
+  standard/parameterized around 269M/268M f32x8 lanes/s and CLT12 around
+  150M/150M, below ziggurat lane-fill before considering their weak tails.
 - Vectorized inverse-CDF normal approximation kernels are also too slow for a
   useful opt-in. A real `vectorbench -- 16777216 "StandardNormal f32x8"` /
   `"StandardNormal f64x4"` run showed Acklam-style inverse-CDF candidates around
