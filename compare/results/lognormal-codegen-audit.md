@@ -99,6 +99,14 @@ still below or only near Rust's single-sample rows and not a production default
 replacement. The remaining gap is therefore likely Rust/Zig codegen and loop
 context around the dynamic libm call, not just the choice of libm symbol.
 
+A follow-up scratch probe checked whether mimicking Rust's f32 `exp` symbol by
+widening f32 log-space samples to f64, calling libc `exp`, and casting back to
+f32 helps. It does not: default-normal rows were about 98.9M FastPrng and
+108.7M ScalarPrng, while native-normal rows were about 105.5M and 117.8M. This
+is below current exact f32 rows and far below Rust f32 around 159M, so the Rust
+f32 `exp@GLIBC_2.29` observation is not by itself a production direction for
+Alea.
+
 ## Libmvec Follow-up
 
 A later Linux-local probe linked `log-normal-probe` to glibc `libmvec` on
