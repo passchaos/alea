@@ -269,6 +269,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 native candidate", lanes / 4, 0xd188, fillStandardNormalF32Native);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 flat-slice candidate", lanes / 4, 0xd188, fillStandardNormalF32FlatSlice);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 marsaglia-polar candidate", lanes / 4, 0xd188, fillStandardNormalF32MarsagliaPolar);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 ratio-uniforms candidate", lanes / 4, 0xd188, fillStandardNormalF32RatioUniforms);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 ratio-uniforms dense-block candidate", lanes / 4, 0xd188, fillStandardNormalF32RatioUniformsDenseBlock);
     try benchFillVectorStandardNormalF32Repair(io, stdout, "alea fillVectorStandardNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 same-candidate repair", lanes / 4, 0xd188, fillStandardNormalF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 all-accepted repair", lanes / 4, 0xd188, fillStandardNormalF32AllAcceptedRepair);
@@ -283,6 +285,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 local scalar candidate", lanes / 8, 0xd184, fillStandardNormalF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 noinline local candidate", lanes / 8, 0xd184, fillStandardNormalF64NoInlineLocal);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 marsaglia-polar candidate", lanes / 8, 0xd184, fillStandardNormalF64MarsagliaPolar);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 ratio-uniforms candidate", lanes / 8, 0xd184, fillStandardNormalF64RatioUniforms);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 ratio-uniforms dense-block candidate", lanes / 8, 0xd184, fillStandardNormalF64RatioUniformsDenseBlock);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillStandardNormalF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 all-accepted repair", lanes / 8, 0xd184, fillStandardNormalF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillStandardNormalF64BlockFallback);
@@ -290,6 +294,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorNormalF32Direct(io, stdout, "alea fillVectorNormal f32x8 direct", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 flat-slice candidate", lanes / 4, 0xd188, fillNormalF32FlatSlice);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 marsaglia-polar candidate", lanes / 4, 0xd188, fillNormalF32MarsagliaPolar);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 ratio-uniforms candidate", lanes / 4, 0xd188, fillNormalF32RatioUniforms);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 ratio-uniforms dense-block candidate", lanes / 4, 0xd188, fillNormalF32RatioUniformsDenseBlock);
     try benchFillVectorNormalF32Repair(io, stdout, "alea fillVectorNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 same-candidate repair", lanes / 4, 0xd188, fillNormalF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 all-accepted repair", lanes / 4, 0xd188, fillNormalF32AllAcceptedRepair);
@@ -304,6 +310,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 local scalar candidate", lanes / 8, 0xd184, fillNormalF64Local);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 noinline local candidate", lanes / 8, 0xd184, fillNormalF64NoInlineLocal);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 marsaglia-polar candidate", lanes / 8, 0xd184, fillNormalF64MarsagliaPolar);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 ratio-uniforms candidate", lanes / 8, 0xd184, fillNormalF64RatioUniforms);
+    try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 ratio-uniforms dense-block candidate", lanes / 8, 0xd184, fillNormalF64RatioUniformsDenseBlock);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 same-candidate repair", lanes / 8, 0xd184, fillNormalF64SameCandidateRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 all-accepted repair", lanes / 8, 0xd184, fillNormalF64AllAcceptedRepair);
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillNormalF64BlockFallback);
@@ -2435,6 +2443,14 @@ fn fillStandardNormalF32MarsagliaPolar(engine: *alea.ScalarPrng, dest: []@Vector
     for (dest) |*item| item.* = vectorMarsagliaPolarNormalF32(engine);
 }
 
+fn fillStandardNormalF32RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorRatioUniformsNormalF32(engine);
+}
+
+fn fillStandardNormalF32RatioUniformsDenseBlock(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorRatioUniformsNormalF32DenseBlock(engine);
+}
+
 fn fillStandardNormalF32NativeRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairNativeNormalF32(engine);
 }
@@ -2472,6 +2488,18 @@ fn fillNormalF32MarsagliaPolar(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)
     const mean_vec: @Vector(8, f32) = @splat(0);
     const stddev_vec: @Vector(8, f32) = @splat(1);
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorMarsagliaPolarNormalF32(engine);
+}
+
+fn fillNormalF32RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRatioUniformsNormalF32(engine);
+}
+
+fn fillNormalF32RatioUniformsDenseBlock(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRatioUniformsNormalF32DenseBlock(engine);
 }
 
 fn fillNormalF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -2656,6 +2684,14 @@ fn fillStandardNormalF64MarsagliaPolar(engine: *alea.ScalarPrng, dest: []@Vector
     for (dest) |*item| item.* = vectorMarsagliaPolarNormalF64(engine);
 }
 
+fn fillStandardNormalF64RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorRatioUniformsNormalF64(engine);
+}
+
+fn fillStandardNormalF64RatioUniformsDenseBlock(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| item.* = vectorRatioUniformsNormalF64DenseBlock(engine);
+}
+
 fn fillStandardNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     for (dest) |*item| item.* = vectorRepairNormalF64SameCandidate(engine);
 }
@@ -2679,6 +2715,16 @@ fn fillNormalF64NoInlineLocal(engine: *alea.ScalarPrng, dest: []@Vector(4, f64))
 fn fillNormalF64MarsagliaPolar(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
     const inverse_rate: @Vector(4, f64) = @splat(1);
     for (dest) |*item| item.* = vectorMarsagliaPolarNormalF64(engine) * inverse_rate;
+}
+
+fn fillNormalF64RatioUniforms(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(1);
+    for (dest) |*item| item.* = vectorRatioUniformsNormalF64(engine) * inverse_rate;
+}
+
+fn fillNormalF64RatioUniformsDenseBlock(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
+    const inverse_rate: @Vector(4, f64) = @splat(1);
+    for (dest) |*item| item.* = vectorRatioUniformsNormalF64DenseBlock(engine) * inverse_rate;
 }
 
 fn fillNormalF64SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(4, f64)) void {
@@ -2789,6 +2835,126 @@ fn vectorMarsagliaPolarNormalF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
         }
     }
     return out;
+}
+
+fn vectorRatioUniformsNormalF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    var out: @Vector(8, f32) = undefined;
+    inline for (0..8) |lane| out[lane] = @floatCast(ratioUniformsNormalF64(engine));
+    return out;
+}
+
+fn vectorRatioUniformsNormalF32DenseBlock(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    const Vec = @Vector(8, f32);
+    while (true) {
+        const u = vectorOpenF32Local(engine);
+        const v = @as(Vec, @splat(1.7156)) * (vectorF32Local(engine) - @as(Vec, @splat(0.5)));
+        const x = u - @as(Vec, @splat(0.449871));
+        const y = @abs(v) + @as(Vec, @splat(0.386595));
+        const q = x * x + y * (@as(Vec, @splat(0.196)) * y - @as(Vec, @splat(0.25472)) * x);
+        const immediate = q < @as(Vec, @splat(0.27597));
+        var all_immediate = true;
+        inline for (0..8) |lane| all_immediate = all_immediate and immediate[lane];
+        if (all_immediate) return v / u;
+        const possible = q <= @as(Vec, @splat(0.27846));
+        var any_possible = false;
+        inline for (0..8) |lane| any_possible = any_possible or possible[lane];
+        if (any_possible) {
+            const log_limit = @as(Vec, @splat(-4.0)) * u * u * @log(u);
+            const exact = v * v <= log_limit;
+            var all_exact = true;
+            inline for (0..8) |lane| all_exact = all_exact and (immediate[lane] or (possible[lane] and exact[lane]));
+            if (all_exact) return v / u;
+        }
+    }
+}
+
+fn vectorRatioUniformsNormalF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    var out: @Vector(4, f64) = undefined;
+    inline for (0..4) |lane| out[lane] = ratioUniformsNormalF64(engine);
+    return out;
+}
+
+fn vectorRatioUniformsNormalF64DenseBlock(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const Vec = @Vector(4, f64);
+    while (true) {
+        const u = vectorOpenF64Local(engine);
+        const v = @as(Vec, @splat(1.7156)) * (vectorF64Local(engine) - @as(Vec, @splat(0.5)));
+        const x = u - @as(Vec, @splat(0.449871));
+        const y = @abs(v) + @as(Vec, @splat(0.386595));
+        const q = x * x + y * (@as(Vec, @splat(0.196)) * y - @as(Vec, @splat(0.25472)) * x);
+        const immediate = q < @as(Vec, @splat(0.27597));
+        var all_immediate = true;
+        inline for (0..4) |lane| all_immediate = all_immediate and immediate[lane];
+        if (all_immediate) return v / u;
+        const possible = q <= @as(Vec, @splat(0.27846));
+        var any_possible = false;
+        inline for (0..4) |lane| any_possible = any_possible or possible[lane];
+        if (any_possible) {
+            const log_limit = @as(Vec, @splat(-4.0)) * u * u * @log(u);
+            const exact = v * v <= log_limit;
+            var all_exact = true;
+            inline for (0..4) |lane| all_exact = all_exact and (immediate[lane] or (possible[lane] and exact[lane]));
+            if (all_exact) return v / u;
+        }
+    }
+}
+
+fn ratioUniformsNormalF64(engine: *alea.ScalarPrng) f64 {
+    while (true) {
+        const u = alea.Rng.floatOpenFrom(engine, f64);
+        const v = 1.7156 * (alea.Rng.floatFrom(engine, f64) - 0.5);
+        const x = u - 0.449871;
+        const y = @abs(v) + 0.386595;
+        const q = x * x + y * (0.196 * y - 0.25472 * x);
+        if (q < 0.27597) return v / u;
+        if (q <= 0.27846 and v * v <= -4.0 * u * u * @log(u)) return v / u;
+    }
+}
+
+fn vectorF32Local(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    var out: @Vector(8, f32) = undefined;
+    var bits: u64 = 0;
+    inline for (0..8) |lane| {
+        if (lane % 2 == 0) bits = engine.next();
+        out[lane] = if (lane % 2 == 0)
+            f32FromBitsLocal(@truncate(bits >> 40))
+        else
+            f32FromBitsLocal(@truncate(bits >> 16));
+    }
+    return out;
+}
+
+fn vectorOpenF32Local(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    var out: @Vector(8, f32) = undefined;
+    var bits: u64 = 0;
+    inline for (0..8) |lane| {
+        if (lane % 2 == 0) bits = engine.next();
+        const raw: u24 = if (lane % 2 == 0)
+            @truncate(bits >> 40)
+        else
+            @truncate(bits >> 16);
+        out[lane] = (@as(f32, @floatFromInt(raw)) + 0.5) * (1.0 / 16777216.0);
+    }
+    return out;
+}
+
+fn vectorF64Local(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const VecU64 = @Vector(4, u64);
+    var raw: VecU64 = undefined;
+    inline for (0..4) |lane| raw[lane] = ((engine.next() >> 12) | (@as(u64, 0x3ff) << 52));
+    return @as(@Vector(4, f64), @bitCast(raw)) - @as(@Vector(4, f64), @splat(1.0));
+}
+
+fn vectorOpenF64Local(engine: *alea.ScalarPrng) @Vector(4, f64) {
+    const VecU64 = @Vector(4, u64);
+    var raw: VecU64 = undefined;
+    inline for (0..4) |lane| raw[lane] = ((engine.next() >> 12) | (@as(u64, 0x3ff) << 52));
+    return @as(@Vector(4, f64), @bitCast(raw)) - @as(@Vector(4, f64), @splat(1.0 - std.math.floatEps(f64) / 2.0));
+}
+
+fn f32FromBitsLocal(bits: u24) f32 {
+    const repr = (@as(u32, 0x7f) << 23) | @as(u32, bits >> 1);
+    return (@as(f32, @bitCast(repr)) - 1.0) + @as(f32, @floatFromInt(bits & 1)) * (1.0 / 16777216.0);
 }
 
 fn vectorRepairNormalF64SameCandidate(engine: *alea.ScalarPrng) @Vector(4, f64) {

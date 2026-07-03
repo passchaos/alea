@@ -52,6 +52,15 @@ repair rows before a real `vectorbench` follow-up.
   lanes/s versus same-run direct scalar lane-fill around 479M/455M. The
   rejection sampling plus `log`/`sqrt` transform cost is far above ziggurat
   lane-fill, so this is not a dense SIMD direction.
+- Vectorized ratio-of-uniforms normal kernels are also too slow for default use.
+  A real `vectorbench -- 16777216 "StandardNormal f32x8"` / `"StandardNormal
+  f64x4"` run showed Leva-style ratio-of-uniforms candidates around 98M/100M
+  lanes/s, and whole-block dense accept/retry variants around 16M/28M, versus
+  same-run direct scalar ziggurat lane-fill around 479M/452M. Matching
+  parameterized `fillVectorNormal` rows were likewise around 97M/100M for
+  per-lane ratio-of-uniforms and 16M/28M for dense-block retry versus direct
+  rows around 478M/455M. The rejection plus `log` path is therefore far slower
+  than current ziggurat lane-fill, and the output mapping changes.
 - Vector-log exponential kernels are too slow for default use.
 - Platform libmvec vector-log inverse-transform exponential is also not a
   production direction. A scratch x86_64-linux-gnu probe using `_ZGVcN8v_logf`
