@@ -47,8 +47,10 @@ repair rows before a real `vectorbench` follow-up.
   output profiles. A focused `ziggurat-probe -- 4194304 "f32"` run shows native
   f32 normal around 680M and native f32 exponential around 656M samples/s versus
   current f64-cast f32 rows around 571M and 566M, but checksums/output mappings
-  differ. `StandardNormalNativeF32` and `StandardExponentialNativeF32` expose the
-  faster profile without changing current f32 default reproducibility contracts.
+  differ. `StandardNormalNativeF32` / `NormalNativeF32` and
+  `StandardExponentialNativeF32` / `ExponentialNativeF32`, including their
+  vector sampler variants, expose the faster profile without changing current
+  f32 default reproducibility contracts.
 - f64x4 ziggurat fast-path plus scalar repair loses to scalar lane-fill.
   A later real-harness same-candidate f64x4 repair check confirms the
   isolated-probe result: focused 64Mi-lane `vectorbench` rows are about

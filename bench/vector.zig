@@ -88,6 +88,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardNormalNativeF32 f32x8", lanes / 4, 0xd189, fillDistStandardNormalNativeF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardNormalNativeF32 f32x8 direct", lanes / 4, 0xd189, fillDistStandardNormalNativeF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorStandardNormalNativeF32.fill f32x8", lanes / 4, 0xd189, fillDistStandardNormalNativeSamplerF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorNormalNativeF32 f32x8", lanes / 4, 0xd18a, fillDistNormalNativeF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorNormalNativeF32 f32x8 direct", lanes / 4, 0xd18a, fillDistNormalNativeF32Direct);
+    try benchVectorF32x8(io, stdout, "alea distributions.VectorNormalNativeF32.fill f32x8", lanes / 4, 0xd18a, fillDistNormalNativeSamplerF32);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormal f64x4", lanes / 8, 0xd184, fillDistNormalF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormal f64x4 direct", lanes / 8, 0xd184, fillDistNormalF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorLogNormal f64x4", lanes / 16, 0xd194, fillDistLogNormalF64);
@@ -206,6 +209,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponentialNativeF32 f32x8", lanes, 0xe189, fillDistStandardExponentialNativeF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponentialNativeF32 f32x8 direct", lanes, 0xe189, fillDistStandardExponentialNativeF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorStandardExponentialNativeF32.fill f32x8", lanes, 0xe189, fillDistStandardExponentialNativeSamplerF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorExponentialNativeF32 f32x8", lanes, 0xe18a, fillDistExponentialNativeF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorExponentialNativeF32 f32x8 direct", lanes, 0xe18a, fillDistExponentialNativeF32Direct);
+    try benchVectorF32x8(io, stdout, "alea distributions.VectorExponentialNativeF32.fill f32x8", lanes, 0xe18a, fillDistExponentialNativeSamplerF32);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4 direct", lanes / 2, 0xe184, fillDistExponentialF64Direct);
     try benchFillVectorStandardNormalF32(io, stdout, "alea fillVectorStandardNormal f32x8", lanes / 4);
@@ -985,6 +991,19 @@ fn fillDistStandardNormalNativeSamplerF32(_: *alea.ScalarPrng, rng: alea.Rng, de
     sampler.fill(rng, dest);
 }
 
+fn fillDistNormalNativeF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorNormalNativeF32(rng, @Vector(8, f32), dest, 0, 1);
+}
+
+fn fillDistNormalNativeF32Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorNormalNativeF32From(engine, @Vector(8, f32), dest, 0, 1);
+}
+
+fn fillDistNormalNativeSamplerF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    const sampler = alea.distributions.VectorNormalNativeF32(@Vector(8, f32)).init(0, 1) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
 fn fillDistNormalF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     alea.distributions.fillVectorNormal(rng, @Vector(4, f64), dest, 0, 1);
 }
@@ -1492,6 +1511,19 @@ fn fillDistStandardExponentialNativeF32Direct(engine: *alea.ScalarPrng, _: alea.
 
 fn fillDistStandardExponentialNativeSamplerF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
     const sampler = alea.distributions.VectorStandardExponentialNativeF32(@Vector(8, f32)){};
+    sampler.fill(rng, dest);
+}
+
+fn fillDistExponentialNativeF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorExponentialNativeF32(rng, @Vector(8, f32), dest, 2);
+}
+
+fn fillDistExponentialNativeF32Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorExponentialNativeF32From(engine, @Vector(8, f32), dest, 2);
+}
+
+fn fillDistExponentialNativeSamplerF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    const sampler = alea.distributions.VectorExponentialNativeF32(@Vector(8, f32)).init(2) catch unreachable;
     sampler.fill(rng, dest);
 }
 

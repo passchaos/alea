@@ -2506,6 +2506,59 @@ pub fn fillVectorNormalCheckedFrom(source: anytype, comptime VectorType: type, d
     return Rng.fillVectorNormalCheckedFrom(source, VectorType, dest, mean, stddev);
 }
 
+pub fn vectorNormalNativeF32(rng: Rng, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+    return vectorNormalNativeF32From(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorNormalNativeF32From(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorNormalNativeF32 expects an f32 vector");
+    std.debug.assert(std.math.isFinite(mean) and stddev >= 0 and std.math.isFinite(stddev));
+    if (stddev == 0) return @splat(mean);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = normalNativeF32From(source, mean, stddev);
+    return out;
+}
+
+pub fn vectorNormalNativeF32Checked(rng: Rng, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
+    return vectorNormalNativeF32CheckedFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorNormalNativeF32CheckedFrom(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorNormalNativeF32Checked expects an f32 vector");
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    return vectorNormalNativeF32From(source, VectorType, mean, stddev);
+}
+
+pub fn fillVectorNormalNativeF32(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
+    fillVectorNormalNativeF32From(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorNormalNativeF32From(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorNormalNativeF32 expects an f32 vector");
+    std.debug.assert(std.math.isFinite(mean) and stddev >= 0 and std.math.isFinite(stddev));
+    if (stddev == 0) {
+        @memset(dest, @as(VectorType, @splat(mean)));
+        return;
+    }
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    fillNormalNativeF32From(source, scalars, mean, stddev);
+}
+
+pub fn fillVectorNormalNativeF32Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) Error!void {
+    return fillVectorNormalNativeF32CheckedFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorNormalNativeF32CheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorNormalNativeF32Checked expects an f32 vector");
+    if (dest.len == 0) return;
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    fillVectorNormalNativeF32From(source, VectorType, dest, mean, stddev);
+}
+
 pub fn StandardNormal(comptime T: type) type {
     return struct {
         pub fn meanValue(_: @This()) T {
@@ -2917,6 +2970,59 @@ pub fn fillVectorExponentialCheckedFrom(source: anytype, comptime VectorType: ty
     return Rng.fillVectorExponentialCheckedFrom(source, VectorType, dest, rate);
 }
 
+pub fn vectorExponentialNativeF32(rng: Rng, comptime VectorType: type, rate: f32) VectorType {
+    return vectorExponentialNativeF32From(rng, VectorType, rate);
+}
+
+pub fn vectorExponentialNativeF32From(source: anytype, comptime VectorType: type, rate: f32) VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorExponentialNativeF32 expects an f32 vector");
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    if (rate == std.math.inf(f32)) return @splat(0);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = exponentialNativeF32From(source, rate);
+    return out;
+}
+
+pub fn vectorExponentialNativeF32Checked(rng: Rng, comptime VectorType: type, rate: f32) Error!VectorType {
+    return vectorExponentialNativeF32CheckedFrom(rng, VectorType, rate);
+}
+
+pub fn vectorExponentialNativeF32CheckedFrom(source: anytype, comptime VectorType: type, rate: f32) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("vectorExponentialNativeF32Checked expects an f32 vector");
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    return vectorExponentialNativeF32From(source, VectorType, rate);
+}
+
+pub fn fillVectorExponentialNativeF32(rng: Rng, comptime VectorType: type, dest: []VectorType, rate: f32) void {
+    fillVectorExponentialNativeF32From(rng, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialNativeF32From(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f32) void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorExponentialNativeF32 expects an f32 vector");
+    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    if (rate == std.math.inf(f32)) {
+        @memset(dest, @as(VectorType, @splat(0)));
+        return;
+    }
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    fillExponentialNativeF32From(source, scalars, rate);
+}
+
+pub fn fillVectorExponentialNativeF32Checked(rng: Rng, comptime VectorType: type, dest: []VectorType, rate: f32) Error!void {
+    return fillVectorExponentialNativeF32CheckedFrom(rng, VectorType, dest, rate);
+}
+
+pub fn fillVectorExponentialNativeF32CheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f32) Error!void {
+    const info = vectorInfo(VectorType);
+    if (info.child != f32) @compileError("fillVectorExponentialNativeF32Checked expects an f32 vector");
+    if (dest.len == 0) return;
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    fillVectorExponentialNativeF32From(source, VectorType, dest, rate);
+}
+
 pub fn Normal(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -3069,6 +3175,85 @@ pub const NormalNativeF32 = struct {
         fillNormalNativeF32From(source, dest, self.mean, self.stddev);
     }
 };
+
+pub fn VectorNormalNativeF32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorNormalNativeF32 expects an f32 vector");
+
+    return struct {
+        const Self = @This();
+
+        mean: f32,
+        stddev: f32,
+
+        pub fn init(mean: f32, stddev: f32) Error!Self {
+            if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+            return .{ .mean = mean, .stddev = stddev };
+        }
+
+        pub fn initMeanCv(mean: f32, coefficient_of_variation: f32) Error!Self {
+            if (!(coefficient_of_variation >= 0) or !std.math.isFinite(coefficient_of_variation)) return error.InvalidParameter;
+            return Self.init(mean, @abs(mean) * coefficient_of_variation);
+        }
+
+        pub fn fromZScore(self: Self, z_score: f32) f32 {
+            return self.mean + self.stddev * z_score;
+        }
+
+        pub fn meanValue(self: Self) f32 {
+            return self.mean;
+        }
+
+        pub fn stddevValue(self: Self) f32 {
+            return self.stddev;
+        }
+
+        pub fn expectedValue(self: Self) f32 {
+            return self.mean;
+        }
+
+        pub fn varianceValue(self: Self) f32 {
+            return self.stddev * self.stddev;
+        }
+
+        pub fn medianValue(self: Self) f32 {
+            return self.mean;
+        }
+
+        pub fn modeValue(self: Self) f32 {
+            return self.mean;
+        }
+
+        pub fn minValue(self: Self) ?f32 {
+            return if (self.stddev == 0) self.mean else null;
+        }
+
+        pub fn maxValue(self: Self) ?f32 {
+            return if (self.stddev == 0) self.mean else null;
+        }
+
+        pub fn coefficientOfVariationValue(self: Self) ?f32 {
+            if (self.mean == 0) return null;
+            return self.stddev / @abs(self.mean);
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorNormalNativeF32From(source, VectorType, self.mean, self.stddev);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            fillVectorNormalNativeF32From(source, VectorType, dest, self.mean, self.stddev);
+        }
+    };
+}
 
 pub fn VectorNormal(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
@@ -3499,6 +3684,77 @@ pub const ExponentialNativeF32 = struct {
         for (dest) |*item| item.* *= self.inverse_rate;
     }
 };
+
+pub fn VectorExponentialNativeF32(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    if (Child != f32) @compileError("VectorExponentialNativeF32 expects an f32 vector");
+
+    return struct {
+        const Self = @This();
+
+        inverse_rate: f32,
+
+        pub fn init(rate: f32) Error!Self {
+            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+            return .{ .inverse_rate = 1 / rate };
+        }
+
+        pub fn rateValue(self: Self) f32 {
+            return 1 / self.inverse_rate;
+        }
+
+        pub fn inverseRateValue(self: Self) f32 {
+            return self.inverse_rate;
+        }
+
+        pub fn expectedValue(self: Self) f32 {
+            return self.inverse_rate;
+        }
+
+        pub fn varianceValue(self: Self) f32 {
+            return self.inverse_rate * self.inverse_rate;
+        }
+
+        pub fn medianValue(self: Self) f32 {
+            return @log(@as(f32, 2)) * self.inverse_rate;
+        }
+
+        pub fn modeValue(_: Self) f32 {
+            return 0;
+        }
+
+        pub fn minValue(_: Self) f32 {
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?f32 {
+            return if (self.inverse_rate == 0) 0 else null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.inverse_rate == 0) return @splat(0);
+            return vectorStandardExponentialNativeF32From(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.inverse_rate == 0) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            fillVectorStandardExponentialNativeF32From(source, VectorType, dest);
+            const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+            for (scalars) |*item| item.* *= self.inverse_rate;
+        }
+    };
+}
 
 pub fn VectorExponential(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
@@ -22450,6 +22706,79 @@ test "native f32 parameterized samplers have stable snapshots" {
     var empty: [0]f32 = .{};
     try fillNormalNativeF32CheckedFrom(&empty_engine, &empty, 0, -1);
     try fillExponentialNativeF32CheckedFrom(&empty_engine, &empty, 0);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "vector native f32 parameterized samplers have stable snapshots" {
+    const alea = @import("root.zig");
+
+    var normal_engine = alea.ScalarPrng.init(0x3260);
+    const normal_vec = vectorNormalNativeF32From(&normal_engine, @Vector(8, f32), 1, 2);
+    const normal_expected = [_]u32{ 0xbf99534a, 0x3fd42247, 0x40424b54, 0xc0917dbd, 0x405f49b9, 0x3f97e276, 0x40341ff0, 0x40244702 };
+    inline for (normal_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(normal_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x1875b5f61fe0accd), normal_engine.next());
+
+    var normal_fill_engine = alea.ScalarPrng.init(0x3260);
+    var normal_buf: [2]@Vector(8, f32) = undefined;
+    fillVectorNormalNativeF32From(&normal_fill_engine, @Vector(8, f32), &normal_buf, 1, 2);
+    inline for (normal_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(normal_buf[0][lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xc1bf117fd499a77f), normal_fill_engine.next());
+
+    var normal_sampler_engine = alea.ScalarPrng.init(0x3260);
+    const normal_sampler = try VectorNormalNativeF32(@Vector(8, f32)).init(1, 2);
+    try std.testing.expectEqual(@as(f32, 1), normal_sampler.meanValue());
+    try std.testing.expectEqual(@as(f32, 2), normal_sampler.stddevValue());
+    try std.testing.expectEqual(@as(f32, 4), normal_sampler.varianceValue());
+    try std.testing.expectEqual(@as(f32, 2), normal_sampler.coefficientOfVariationValue().?);
+    const normal_sampler_vec = normal_sampler.sampleFrom(&normal_sampler_engine);
+    inline for (normal_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(normal_sampler_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x1875b5f61fe0accd), normal_sampler_engine.next());
+
+    var exp_engine = alea.ScalarPrng.init(0x3261);
+    const exp_vec = vectorExponentialNativeF32From(&exp_engine, @Vector(8, f32), 2);
+    const exp_expected = [_]u32{ 0x3e22d9b3, 0x3f5570cd, 0x3eae9722, 0x3fc8b613, 0x3daff408, 0x3d463518, 0x3ed34910, 0x3e96be28 };
+    inline for (exp_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x1f1a13a7815f777c), exp_engine.next());
+
+    var exp_fill_engine = alea.ScalarPrng.init(0x3261);
+    var exp_buf: [2]@Vector(8, f32) = undefined;
+    fillVectorExponentialNativeF32From(&exp_fill_engine, @Vector(8, f32), &exp_buf, 2);
+    inline for (exp_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_buf[0][lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x9a6560db7084913a), exp_fill_engine.next());
+
+    var exp_sampler_engine = alea.ScalarPrng.init(0x3261);
+    const exp_sampler = try VectorExponentialNativeF32(@Vector(8, f32)).init(2);
+    try std.testing.expectEqual(@as(f32, 2), exp_sampler.rateValue());
+    try std.testing.expectEqual(@as(f32, 0.5), exp_sampler.inverseRateValue());
+    try std.testing.expectEqual(@as(f32, 0.5), exp_sampler.expectedValue());
+    try std.testing.expectEqual(@as(f32, 0.25), exp_sampler.varianceValue());
+    const exp_sampler_vec = exp_sampler.sampleFrom(&exp_sampler_engine);
+    inline for (exp_expected, 0..) |bits, lane| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_sampler_vec[lane])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x1f1a13a7815f777c), exp_sampler_engine.next());
+
+    var invalid_engine = alea.ScalarPrng.init(0x3262);
+    var invalid_control = alea.ScalarPrng.init(0x3262);
+    try std.testing.expectError(error.InvalidParameter, vectorNormalNativeF32CheckedFrom(&invalid_engine, @Vector(8, f32), 0, -1));
+    try std.testing.expectError(error.InvalidParameter, vectorExponentialNativeF32CheckedFrom(&invalid_engine, @Vector(8, f32), 0));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x3263);
+    var empty_control = alea.ScalarPrng.init(0x3263);
+    var empty: [0]@Vector(8, f32) = .{};
+    try fillVectorNormalNativeF32CheckedFrom(&empty_engine, @Vector(8, f32), &empty, 0, -1);
+    try fillVectorExponentialNativeF32CheckedFrom(&empty_engine, @Vector(8, f32), &empty, 0);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 }
 
