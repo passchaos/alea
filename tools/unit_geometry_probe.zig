@@ -22,6 +22,7 @@ pub fn main(init: std.process.Init) !void {
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
     try benchAlea4x64Sample2(io, stdout, "fast unit circle point lane-pair", 0xc11c1e, sample_count, sampleUnitCircleLanePair);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point fma", 0xc11c1e, sample_count, sampleUnitCircleFma);
+    try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point alt formula", 0xc11c1e, sample_count, sampleUnitCircleAltFormula);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point pair", 0xc11c1e, sample_count, sampleUnitCirclePair);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point range", 0xc11c1e, sample_count, sampleUnitCircleRange);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit disc point current", 0xd15c, sample_count, sampleUnitDiscCurrent);
@@ -39,6 +40,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFill3(alea.FastPrng, io, stdout, "fast unit sphere point-loop fill", 0x59e7e, sample_count, pointLoopUnitSphere);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point fma", 0xc11c1e, sample_count, sampleUnitCircleFma);
+    try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point alt formula", 0xc11c1e, sample_count, sampleUnitCircleAltFormula);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point pair", 0xc11c1e, sample_count, sampleUnitCirclePair);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point range", 0xc11c1e, sample_count, sampleUnitCircleRange);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit disc point current", 0xd15c, sample_count, sampleUnitDiscCurrent);
@@ -349,6 +351,17 @@ fn sampleUnitCircleFma(source: anytype) [2]f64 {
         const sum = @mulAdd(f64, y, y, x2);
         if (!(sum > 0 and sum < 1)) continue;
         return .{ (x2 - y2) / sum, 2 * x * y / sum };
+    }
+}
+
+fn sampleUnitCircleAltFormula(source: anytype) [2]f64 {
+    while (true) {
+        const x = signedUnitFloat(source);
+        const y = signedUnitFloat(source);
+        const x2 = x * x;
+        const sum = @mulAdd(f64, y, y, x2);
+        if (!(sum > 0 and sum < 1)) continue;
+        return .{ 2 * x2 / sum - 1, 2 * x * y / sum };
     }
 }
 
