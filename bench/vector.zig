@@ -198,6 +198,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4 direct", lanes / 2, 0xe184, fillDistExponentialF64Direct);
     try benchFillVectorStandardNormalF32(io, stdout, "alea fillVectorStandardNormal f32x8", lanes / 4);
     try benchFillVectorStandardNormalF32Direct(io, stdout, "alea fillVectorStandardNormal f32x8 direct", lanes / 4);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 flat-slice candidate", lanes / 4, 0xd188, fillStandardNormalF32FlatSlice);
     try benchFillVectorStandardNormalF32Repair(io, stdout, "alea fillVectorStandardNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 same-candidate repair", lanes / 4, 0xd188, fillStandardNormalF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 all-accepted repair", lanes / 4, 0xd188, fillStandardNormalF32AllAcceptedRepair);
@@ -215,6 +216,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillStandardNormalF64BlockFallback);
     try benchFillVectorNormalF32(io, stdout, "alea fillVectorNormal f32x8", lanes / 4);
     try benchFillVectorNormalF32Direct(io, stdout, "alea fillVectorNormal f32x8 direct", lanes / 4);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 flat-slice candidate", lanes / 4, 0xd188, fillNormalF32FlatSlice);
     try benchFillVectorNormalF32Repair(io, stdout, "alea fillVectorNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 same-candidate repair", lanes / 4, 0xd188, fillNormalF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 all-accepted repair", lanes / 4, 0xd188, fillNormalF32AllAcceptedRepair);
@@ -232,6 +234,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorNormal f64x4 block-fallback candidate", lanes / 8, 0xd184, fillNormalF64BlockFallback);
     try benchFillVectorStandardExponentialF32(io, stdout, "alea fillVectorStandardExponential f32x8", lanes);
     try benchFillVectorStandardExponentialF32Direct(io, stdout, "alea fillVectorStandardExponential f32x8 direct", lanes);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 flat-slice candidate", lanes, 0xe188, fillStandardExponentialF32FlatSlice);
     try benchFillVectorStandardExponentialF32Repair(io, stdout, "alea fillVectorStandardExponential f32x8 repair candidate", lanes);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 same-candidate repair", lanes, 0xe188, fillStandardExponentialF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardExponential f32x8 all-accepted repair", lanes, 0xe188, fillStandardExponentialF32AllAcceptedRepair);
@@ -249,6 +252,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF64x4Local(io, stdout, "alea fillVectorStandardExponential f64x4 block-fallback candidate", lanes / 2, 0xe184, fillStandardExponentialF64BlockFallback);
     try benchFillVectorExponentialF32(io, stdout, "alea fillVectorExponential f32x8", lanes);
     try benchFillVectorExponentialF32Direct(io, stdout, "alea fillVectorExponential f32x8 direct", lanes);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorExponential f32x8 flat-slice candidate", lanes, 0xe188, fillExponentialF32FlatSlice);
     try benchFillVectorExponentialF32Repair(io, stdout, "alea fillVectorExponential f32x8 repair candidate", lanes);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorExponential f32x8 same-candidate repair", lanes, 0xe188, fillExponentialF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorExponential f32x8 all-accepted repair", lanes, 0xe188, fillExponentialF32AllAcceptedRepair);
@@ -2250,6 +2254,11 @@ fn fillStandardNormalF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)
     for (dest) |*item| item.* = vectorRepairNormalF32Correct(engine);
 }
 
+fn fillStandardNormalF32FlatSlice(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    alea.Rng.fillNormalFrom(engine, f32, scalars, 0, 1);
+}
+
 fn fillStandardNormalF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairNormalF32SameCandidate(engine);
 }
@@ -2266,6 +2275,11 @@ fn fillNormalF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32), mean: 
     const mean_vec: @Vector(8, f32) = @splat(mean);
     const stddev_vec: @Vector(8, f32) = @splat(stddev);
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRepairNormalF32Correct(engine);
+}
+
+fn fillNormalF32FlatSlice(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    alea.Rng.fillNormalFrom(engine, f32, scalars, 0, 1);
 }
 
 fn fillNormalF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -2290,6 +2304,11 @@ fn fillStandardExponentialF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8,
     for (dest) |*item| item.* = vectorRepairExponentialF32Correct(engine);
 }
 
+fn fillStandardExponentialF32FlatSlice(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    alea.Rng.fillExponentialFrom(engine, f32, scalars, 1);
+}
+
 fn fillStandardExponentialF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairExponentialF32SameCandidate(engine);
 }
@@ -2305,6 +2324,11 @@ fn fillStandardExponentialF32BlockFallback(engine: *alea.ScalarPrng, dest: []@Ve
 fn fillExponentialF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32), rate: f32) void {
     const inverse_rate: @Vector(8, f32) = @splat(1 / rate);
     for (dest) |*item| item.* = vectorRepairExponentialF32Correct(engine) * inverse_rate;
+}
+
+fn fillExponentialF32FlatSlice(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+    alea.Rng.fillExponentialFrom(engine, f32, scalars, 2);
 }
 
 fn fillExponentialF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
