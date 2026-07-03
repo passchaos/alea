@@ -186,6 +186,11 @@ Single-shot helpers:
   `logNormalNativeF32Checked`, `logNormalNativeF32CheckedFrom`,
   `fillLogNormalNativeF32`, `fillLogNormalNativeF32From`,
   `fillLogNormalNativeF32Checked`, `fillLogNormalNativeF32CheckedFrom`,
+  `vectorLogNormalNativeF32`, `vectorLogNormalNativeF32From`,
+  `vectorLogNormalNativeF32Checked`, `vectorLogNormalNativeF32CheckedFrom`,
+  `fillVectorLogNormalNativeF32`, `fillVectorLogNormalNativeF32From`,
+  `fillVectorLogNormalNativeF32Checked`,
+  `fillVectorLogNormalNativeF32CheckedFrom`,
   `vectorLogNormal`, `vectorLogNormalFrom`, `vectorLogNormalChecked`,
   `vectorLogNormalCheckedFrom`, `fillVectorLogNormal`,
   `fillVectorLogNormalFrom`, `fillVectorLogNormalChecked`,
@@ -840,6 +845,14 @@ Reusable samplers:
 - `LogNormalNativeF32.sampleFrom`
 - `LogNormalNativeF32.fill`
 - `LogNormalNativeF32.fillFrom`
+- `VectorLogNormalNativeF32(VectorType)`
+- `VectorLogNormalNativeF32(VectorType).init`
+- `VectorLogNormalNativeF32(VectorType).meanValue`
+- `VectorLogNormalNativeF32(VectorType).stddevValue`
+- `VectorLogNormalNativeF32(VectorType).sample`
+- `VectorLogNormalNativeF32(VectorType).sampleFrom`
+- `VectorLogNormalNativeF32(VectorType).fill`
+- `VectorLogNormalNativeF32(VectorType).fillFrom`
 - `VectorLogNormal(VectorType)`
 - `VectorLogNormal(VectorType).init`
 - `VectorLogNormal(VectorType).meanValue`
