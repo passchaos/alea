@@ -54,7 +54,12 @@ blocker was refreshed on 2026-07-02 with `command -v qemu-aarch64`,
 and no second-platform runtime was available. It was refreshed again on
 2026-07-03 with the same runtime checks, plus `zig build repro`,
 `zig build test`, and `zig build -Doptimize=ReleaseFast statcheck`; all passed
-locally, and no second-platform runtime was available.
+locally, and no second-platform runtime was available. A follow-up
+WASI compile-only smoke check, `zig test -target wasm32-wasi -fno-emit-bin
+src/root.zig`, now succeeds after removing a test-only `u64` output-buffer
+assumption that was invalid on 32-bit `usize` targets. Executing the generated
+WASI test binary is still blocked because `wasmtime` / another WASI runner is
+not installed locally.
 
 ## Follow-Up
 

@@ -16214,7 +16214,8 @@ test "invalid checked distribution helpers do not consume random stream" {
 
     var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0 });
     defer int_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &u64_buf));
+    var usize_buf: [4]usize = undefined;
+    try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &usize_buf));
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
 }
 
