@@ -3064,6 +3064,8 @@ pub fn fillVectorLogNormalCheckedFrom(source: anytype, comptime VectorType: type
 
 const log_normal_approx_f32_max_abs_mean: f32 = 0.25;
 const log_normal_approx_f32_max_stddev: f32 = 0.25;
+const log_normal_exp2_f32_max_abs_mean: f32 = 2;
+const log_normal_exp2_f32_max_stddev: f32 = 2;
 
 pub fn logNormalApproxF32(rng: Rng, mean: f32, stddev: f32) f32 {
     return logNormalApproxF32From(rng, mean, stddev);
@@ -3108,6 +3110,51 @@ pub fn fillLogNormalApproxF32CheckedFrom(source: anytype, dest: []f32, mean: f32
     if (dest.len == 0) return;
     if (!logNormalApproxF32ParametersValid(mean, stddev)) return error.InvalidParameter;
     fillLogNormalApproxF32From(source, dest, mean, stddev);
+}
+
+pub fn logNormalExp2F32(rng: Rng, mean: f32, stddev: f32) f32 {
+    return logNormalExp2F32From(rng, mean, stddev);
+}
+
+pub fn logNormalExp2F32From(source: anytype, mean: f32, stddev: f32) f32 {
+    std.debug.assert(logNormalExp2F32ParametersValid(mean, stddev));
+    if (stddev == 0) return exp2ApproxPositiveF32(mean);
+    const z = Rng.standardNormalFastFrom(source, f32);
+    const log_space = if (mean == 0) stddev * z else mean + stddev * z;
+    return exp2ApproxPositiveF32(log_space);
+}
+
+pub fn logNormalExp2F32Checked(rng: Rng, mean: f32, stddev: f32) Error!f32 {
+    return logNormalExp2F32CheckedFrom(rng, mean, stddev);
+}
+
+pub fn logNormalExp2F32CheckedFrom(source: anytype, mean: f32, stddev: f32) Error!f32 {
+    if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+    return logNormalExp2F32From(source, mean, stddev);
+}
+
+pub fn fillLogNormalExp2F32(rng: Rng, dest: []f32, mean: f32, stddev: f32) void {
+    fillLogNormalExp2F32From(rng, dest, mean, stddev);
+}
+
+pub fn fillLogNormalExp2F32From(source: anytype, dest: []f32, mean: f32, stddev: f32) void {
+    std.debug.assert(logNormalExp2F32ParametersValid(mean, stddev));
+    if (stddev == 0) {
+        @memset(dest, exp2ApproxPositiveF32(mean));
+        return;
+    }
+    Rng.fillNormalFrom(source, f32, dest, mean, stddev);
+    exp2ApproxPositiveInPlaceF32(dest);
+}
+
+pub fn fillLogNormalExp2F32Checked(rng: Rng, dest: []f32, mean: f32, stddev: f32) Error!void {
+    return fillLogNormalExp2F32CheckedFrom(rng, dest, mean, stddev);
+}
+
+pub fn fillLogNormalExp2F32CheckedFrom(source: anytype, dest: []f32, mean: f32, stddev: f32) Error!void {
+    if (dest.len == 0) return;
+    if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+    fillLogNormalExp2F32From(source, dest, mean, stddev);
 }
 
 pub fn vectorLogNormalApproxF32(rng: Rng, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
@@ -3351,6 +3398,53 @@ pub const LogNormalApproxF32 = struct {
 
     pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {
         fillLogNormalApproxF32From(source, dest, self.mean, self.stddev);
+    }
+};
+
+pub const LogNormalExp2F32 = struct {
+    const Self = @This();
+
+    pub const max_abs_mean: f32 = log_normal_exp2_f32_max_abs_mean;
+    pub const max_stddev: f32 = log_normal_exp2_f32_max_stddev;
+
+    mean: f32,
+    stddev: f32,
+
+    pub fn init(mean: f32, stddev: f32) Error!Self {
+        if (!logNormalExp2F32ParametersValid(mean, stddev)) return error.InvalidParameter;
+        return .{ .mean = mean, .stddev = stddev };
+    }
+
+    pub fn meanValue(self: Self) f32 {
+        return self.mean;
+    }
+
+    pub fn stddevValue(self: Self) f32 {
+        return self.stddev;
+    }
+
+    pub fn maxAbsMeanValue(_: Self) f32 {
+        return max_abs_mean;
+    }
+
+    pub fn maxStddevValue(_: Self) f32 {
+        return max_stddev;
+    }
+
+    pub fn sample(self: Self, rng: Rng) f32 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Self, source: anytype) f32 {
+        return logNormalExp2F32From(source, self.mean, self.stddev);
+    }
+
+    pub fn fill(self: Self, rng: Rng, dest: []f32) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {
+        fillLogNormalExp2F32From(source, dest, self.mean, self.stddev);
     }
 };
 
@@ -13379,12 +13473,28 @@ fn logNormalApproxF32ParametersValid(mean: f32, stddev: f32) bool {
         stddev <= log_normal_approx_f32_max_stddev;
 }
 
+fn logNormalExp2F32ParametersValid(mean: f32, stddev: f32) bool {
+    return std.math.isFinite(mean) and
+        std.math.isFinite(stddev) and
+        stddev >= 0 and
+        @abs(mean) <= log_normal_exp2_f32_max_abs_mean and
+        stddev <= log_normal_exp2_f32_max_stddev;
+}
+
 fn expm1ApproxPositiveF32(value: f32) f32 {
     return std.math.expm1(value) + 1.0;
 }
 
 fn expm1ApproxPositiveInPlaceF32(dest: []f32) void {
     for (dest) |*item| item.* = expm1ApproxPositiveF32(item.*);
+}
+
+fn exp2ApproxPositiveF32(value: f32) f32 {
+    return @exp2(value * std.math.log2e);
+}
+
+fn exp2ApproxPositiveInPlaceF32(dest: []f32) void {
+    for (dest) |*item| item.* = exp2ApproxPositiveF32(item.*);
 }
 
 fn floatDistancePositiveF32(a: f32, b: f32) u32 {
@@ -20213,6 +20323,9 @@ test "invalid distribution facade fill helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillLogNormalApproxF32Checked(rng, &floats32, 0, 0.5));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, fillLogNormalExp2F32Checked(rng, &floats32, 0, 2.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, fillHalfNormalChecked(rng, f64, &floats, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -20621,6 +20734,12 @@ test "invalid remaining tail scalar helpers do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, pertCheckedFrom(&engine, f64, 0, 2, 1, 4));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, logNormalExp2F32CheckedFrom(&engine, 0, 2.5));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, LogNormalExp2F32.init(2.5, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "invalid inverse and rank scalar helpers do not consume random stream" {
@@ -20827,6 +20946,8 @@ test "zero-length derived distribution fills do not validate or consume random s
     try std.testing.expectEqual(control.next(), engine.next());
     try fillLogNormalApproxF32CheckedFrom(&engine, &out32, 0, 0.5);
     try std.testing.expectEqual(control.next(), engine.next());
+    try fillLogNormalExp2F32CheckedFrom(&engine, &out32, 0, 2.5);
+    try std.testing.expectEqual(control.next(), engine.next());
     try fillHalfNormalCheckedFrom(&engine, f64, &out, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillTriangularCheckedFrom(&engine, f64, &out, 1, 0, 2);
@@ -20841,6 +20962,8 @@ test "zero-length derived distribution fills do not validate or consume random s
     try fillLogNormalChecked(rng, f64, &out, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillLogNormalApproxF32Checked(rng, &out32, 0, 0.5);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillLogNormalExp2F32Checked(rng, &out32, 0, 2.5);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillTriangularChecked(rng, f64, &out, 1, 0, 2);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -21217,6 +21340,38 @@ test "log-normal approximation has stable snapshots" {
     const sampler_sample = sampler.sampleFrom(&sampler_engine);
     try std.testing.expectEqual(@as(u32, 0x3fa987ee), @as(u32, @bitCast(sampler_sample)));
     try std.testing.expectEqual(@as(u64, 0x8e9892981fa2b6eb), sampler_engine.next());
+
+    var exp2_sample_engine = alea.ScalarPrng.init(0x1064);
+    const exp2_sample = logNormalExp2F32From(&exp2_sample_engine, 0, 0.25);
+    try std.testing.expectEqual(@as(u32, 0x3fa987ef), @as(u32, @bitCast(exp2_sample)));
+    try std.testing.expectEqual(@as(u64, 0x8e9892981fa2b6eb), exp2_sample_engine.next());
+
+    var exp2_checked_engine = alea.ScalarPrng.init(0x1064);
+    const exp2_checked = try logNormalExp2F32CheckedFrom(&exp2_checked_engine, 0, 0.25);
+    try std.testing.expectEqual(@as(u32, 0x3fa987ef), @as(u32, @bitCast(exp2_checked)));
+    try std.testing.expectEqual(@as(u64, 0x8e9892981fa2b6eb), exp2_checked_engine.next());
+
+    var exp2_fill_engine = alea.ScalarPrng.init(0x1064);
+    var exp2_buf: [6]f32 = undefined;
+    fillLogNormalExp2F32From(&exp2_fill_engine, &exp2_buf, 0, 0.25);
+    const exp2_expected_bits = [_]u32{
+        0x3fa987ef,
+        0x3f829519,
+        0x3f276bee,
+        0x3f653a10,
+        0x3f4bfc87,
+        0x3f58edbd,
+    };
+    inline for (exp2_expected_bits, 0..) |bits, i| {
+        try std.testing.expectEqual(bits, @as(u32, @bitCast(exp2_buf[i])));
+    }
+    try std.testing.expectEqual(@as(u64, 0x96f2d6a8eb67add4), exp2_fill_engine.next());
+
+    var exp2_sampler_engine = alea.ScalarPrng.init(0x1064);
+    const exp2_sampler = try LogNormalExp2F32.init(0, 0.25);
+    const exp2_sampler_sample = exp2_sampler.sampleFrom(&exp2_sampler_engine);
+    try std.testing.expectEqual(@as(u32, 0x3fa987ef), @as(u32, @bitCast(exp2_sampler_sample)));
+    try std.testing.expectEqual(@as(u64, 0x8e9892981fa2b6eb), exp2_sampler_engine.next());
 }
 
 test "poisson large lambda has plausible moments" {

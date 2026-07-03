@@ -97,14 +97,17 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
   143M/143M/142M ScalarPrng. These are not a no-regression improvement over the
   existing 1024-element staging buffer.
 
-## Adopted Opt-In Approximation
+## Adopted Opt-In Approximations
 
 `LogNormalApproxF32` and the matching `logNormalApproxF32*` /
 `fillLogNormalApproxF32*` helpers intentionally use `expm1(x) + 1` for the
 final transform. They are limited to `|mean| <= 0.25` and `stddev <= 0.25` so
 callers must explicitly choose the narrow f32 profile measured in the probe.
-The exact `LogNormal(f32)` and `fillLogNormal` paths remain unchanged and keep
-`@exp` output semantics.
+`LogNormalExp2F32` and the matching `logNormalExp2F32*` /
+`fillLogNormalExp2F32*` helpers intentionally use `exp2(x * log2e)` for a
+broader but still bounded f32 profile, currently limited to `|mean| <= 2` and
+`stddev <= 2` based on the observed error scans. The exact `LogNormal(f32)` and
+`fillLogNormal` paths remain unchanged and keep `@exp` output semantics.
 
 Fresh local evidence:
 
@@ -133,8 +136,13 @@ Fresh local evidence:
   `stddev=0.25/1/2`, and f32 max ULP about 1/4/7. Mean-shift scans at
   `mean=+/-2,stddev=2` stay in the same range, with f64 max ULP 7 and f32 max
   ULP 7-8 in the 1Mi sample. Because the checksum/output mapping changes, this
-  can only be considered as a deliberate opt-in approximation, not as exact
-  `LogNormal`.
+  is exposed only through the explicit `LogNormalExp2F32` / `logNormalExp2F32*`
+  opt-in approximation APIs, not as exact `LogNormal`.
+- Focused throughput rows for the new exp2 opt-in show why it is useful as a
+  named approximation: `bench -- 268435456 "exp2 f32"` reports about 163M
+  facade and 183M ScalarPrng direct single-sample throughput, while
+  `bench -- 268435456 "Exp2F32"` reports fill rows around 191M facade, 193M
+  FastPrng direct, and 212M ScalarPrng direct.
 - `log-normal-probe -- 1048576 "sample stddev1"` similarly shows no
   single-sample exact expression escape hatch for wide-spread LogNormal:
   current/direct-`@exp`/`std.math.exp`/libc rows are all about 58M FastPrng and
@@ -224,11 +232,12 @@ Fresh local evidence:
   around 135M/135M/142M to about 131M/132M/140M facade/FastPrng/ScalarPrng;
   f32 improved to about 136M/136M/144M versus about 133M/133M/141M, but the
   cross-type result is mixed and not a safe exact default.
-- The same probe reports max 1 ULP at `stddev=0.25`, but max 51 ULP at
-  `stddev=1.0` and 8028 ULP at `stddev=2.0`, which is why the public
-  approximation is parameter-bounded.
-- The public approximation is therefore still an opt-in narrow-profile path,
-  not a replacement for exact `LogNormal(f32)`.
+- The same `expm1(x)+1` probe reports max 1 ULP at `stddev=0.25`, but max
+  51 ULP at `stddev=1.0` and 8028 ULP at `stddev=2.0`, which is why
+  `LogNormalApproxF32` is parameter-bounded to the narrow profile. The
+  `LogNormalExp2F32` opt-in uses separate bounds from the exp2 error scans.
+- The public approximations are therefore opt-in bounded-profile paths, not
+  replacements for exact `LogNormal(f32)`.
 - A smaller same-host `log-normal-probe -- 262144` rerun after the point-mass
   cleanup sweep again failed to produce a safe exact default. The short run was
   noisy enough that current production f64 fill rows appeared low in isolation,
