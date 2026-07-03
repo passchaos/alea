@@ -168,8 +168,13 @@ repair rows before a real `vectorbench` follow-up.
   production evidence: native standard-normal f32x8 direct is about 512.9M,
   native normal f32x8 direct about 514.1M, native standard-exponential f32x8
   direct about 503.1M, and native exponential f32x8 direct about 459.8M. The
-  probe is therefore candidate-discovery evidence only; do not treat it as a
-  dense SIMD default without a real-harness candidate that beats these rows.
+  candidate has now been moved into the real vector-slice harness. A focused
+  `vectorbench -- 268435456 "NativeF32 f32x8"` run with matching checksums
+  reports repair-candidate rows of about 464.9M standard-normal, 462.9M normal,
+  450.8M standard-exponential, and 445.0M exponential lanes/s versus same-run
+  direct rows around 513.4M, 511.5M, 499.2M, and 462.5M. The native-f32 repair
+  shape is therefore rejected as a vector-slice default/opt-in kernel; keep the
+  existing native-f32 scalar lane-fill profile.
 
 ## Requirements For The Next Candidate
 

@@ -10,6 +10,26 @@ const norm_ratio = blk: {
     break :blk out;
 };
 
+const native_norm_ratio_f32 = blk: {
+    var out: [256]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(ziggurat.NormDist.x[i + 1] / ziggurat.NormDist.x[i]);
+    break :blk out;
+};
+
+const native_norm_x_f32 = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(ziggurat.NormDist.x[i]);
+    break :blk out;
+};
+
+const native_norm_f_f32 = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(ziggurat.NormDist.f[i]);
+    break :blk out;
+};
+
+const native_norm_r_f32: f32 = @floatCast(ziggurat.norm_r);
+
 const exp_threshold = blk: {
     var out: [256]u64 = undefined;
     for (&out, 0..) |*item, i| {
@@ -18,6 +38,29 @@ const exp_threshold = blk: {
     }
     break :blk out;
 };
+
+const native_exp_threshold_f32 = blk: {
+    var out: [256]u32 = undefined;
+    for (&out, 0..) |*item, i| {
+        const threshold_ratio = ziggurat.ExpDist.x[i + 1] / ziggurat.ExpDist.x[i];
+        item.* = @intFromFloat(@ceil(threshold_ratio * @as(f64, @floatFromInt(@as(u32, 1) << 23)) - 0.5));
+    }
+    break :blk out;
+};
+
+const native_exp_x_f32 = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(ziggurat.ExpDist.x[i]);
+    break :blk out;
+};
+
+const native_exp_f_f32 = blk: {
+    var out: [257]f32 = undefined;
+    for (&out, 0..) |*item, i| item.* = @floatCast(ziggurat.ExpDist.f[i]);
+    break :blk out;
+};
+
+const native_exp_r_f32: f32 = @floatCast(ziggurat.exp_r);
 
 var bench_filter: ?[]const u8 = null;
 
@@ -88,9 +131,11 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardNormalNativeF32 f32x8", lanes / 4, 0xd189, fillDistStandardNormalNativeF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardNormalNativeF32 f32x8 direct", lanes / 4, 0xd189, fillDistStandardNormalNativeF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorStandardNormalNativeF32.fill f32x8", lanes / 4, 0xd189, fillDistStandardNormalNativeSamplerF32);
+    try benchFillVectorF32x8Local(io, stdout, "alea distributions.fillVectorStandardNormalNativeF32 f32x8 repair candidate", lanes / 4, 0xd189, fillStandardNormalF32NativeRepair);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorNormalNativeF32 f32x8", lanes / 4, 0xd18a, fillDistNormalNativeF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorNormalNativeF32 f32x8 direct", lanes / 4, 0xd18a, fillDistNormalNativeF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorNormalNativeF32.fill f32x8", lanes / 4, 0xd18a, fillDistNormalNativeSamplerF32);
+    try benchFillVectorF32x8Local(io, stdout, "alea distributions.fillVectorNormalNativeF32 f32x8 repair candidate", lanes / 4, 0xd18a, fillNormalF32NativeRepair);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormal f64x4", lanes / 8, 0xd184, fillDistNormalF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorNormal f64x4 direct", lanes / 8, 0xd184, fillDistNormalF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorLogNormal f64x4", lanes / 16, 0xd194, fillDistLogNormalF64);
@@ -212,9 +257,11 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponentialNativeF32 f32x8", lanes, 0xe189, fillDistStandardExponentialNativeF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorStandardExponentialNativeF32 f32x8 direct", lanes, 0xe189, fillDistStandardExponentialNativeF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorStandardExponentialNativeF32.fill f32x8", lanes, 0xe189, fillDistStandardExponentialNativeSamplerF32);
+    try benchFillVectorF32x8Local(io, stdout, "alea distributions.fillVectorStandardExponentialNativeF32 f32x8 repair candidate", lanes, 0xe189, fillStandardExponentialF32NativeRepair);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorExponentialNativeF32 f32x8", lanes, 0xe18a, fillDistExponentialNativeF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorExponentialNativeF32 f32x8 direct", lanes, 0xe18a, fillDistExponentialNativeF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorExponentialNativeF32.fill f32x8", lanes, 0xe18a, fillDistExponentialNativeSamplerF32);
+    try benchFillVectorF32x8Local(io, stdout, "alea distributions.fillVectorExponentialNativeF32 f32x8 repair candidate", lanes, 0xe18a, fillExponentialF32NativeRepair);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4", lanes / 2, 0xe184, fillDistExponentialF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorExponential f64x4 direct", lanes / 2, 0xe184, fillDistExponentialF64Direct);
     try benchFillVectorStandardNormalF32(io, stdout, "alea fillVectorStandardNormal f32x8", lanes / 4);
@@ -2378,6 +2425,10 @@ fn fillStandardNormalF32Native(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)
     alea.distributions.fillStandardNormalNativeF32From(engine, scalars);
 }
 
+fn fillStandardNormalF32NativeRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorRepairNativeNormalF32(engine);
+}
+
 fn fillStandardNormalF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairNormalF32SameCandidate(engine);
 }
@@ -2399,6 +2450,12 @@ fn fillNormalF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32), mean: 
 fn fillNormalF32FlatSlice(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
     alea.Rng.fillNormalFrom(engine, f32, scalars, 0, 1);
+}
+
+fn fillNormalF32NativeRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorRepairNativeNormalF32(engine);
 }
 
 fn fillNormalF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -2433,6 +2490,10 @@ fn fillStandardExponentialF32Native(engine: *alea.ScalarPrng, dest: []@Vector(8,
     alea.distributions.fillStandardExponentialNativeF32From(engine, scalars);
 }
 
+fn fillStandardExponentialF32NativeRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorRepairNativeExponentialF32(engine);
+}
+
 fn fillStandardExponentialF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairExponentialF32SameCandidate(engine);
 }
@@ -2453,6 +2514,11 @@ fn fillExponentialF32Repair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32), r
 fn fillExponentialF32FlatSlice(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
     alea.Rng.fillExponentialFrom(engine, f32, scalars, 2);
+}
+
+fn fillExponentialF32NativeRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const inverse_rate: @Vector(8, f32) = @splat(0.5);
+    for (dest) |*item| item.* = vectorRepairNativeExponentialF32(engine) * inverse_rate;
 }
 
 fn fillExponentialF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -2903,6 +2969,24 @@ fn vectorRepairNormalF32BlockFallback(engine: *alea.ScalarPrng) @Vector(8, f32) 
     return if (all_accepted) out else vectorRepairNormalF32Correct(engine);
 }
 
+fn vectorRepairNativeNormalF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    var out: @Vector(8, f32) = undefined;
+
+    inline for (0..8) |lane| {
+        const bits: u32 = @truncate(engine.next());
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 9;
+        const repr = (@as(u32, 0x80) << 23) | mantissa;
+        const u: f32 = @as(f32, @bitCast(repr)) - 3.0;
+
+        out[lane] = u * native_norm_x_f32[i];
+        if (!(@abs(u) < native_norm_ratio_f32[i])) {
+            out[lane] = nativeNormalF32WithInitial(engine, bits);
+        }
+    }
+    return out;
+}
+
 fn vectorRepairExponentialF32Correct(engine: *alea.ScalarPrng) @Vector(8, f32) {
     var out: @Vector(8, f32) = undefined;
     inline for (0..8) |lane| out[lane] = @floatCast(thresholdExponential(engine));
@@ -2990,6 +3074,24 @@ fn vectorRepairExponentialF32BlockFallback(engine: *alea.ScalarPrng) @Vector(8, 
     var all_accepted = true;
     inline for (0..8) |lane| all_accepted = all_accepted and mask[lane];
     return if (all_accepted) out else vectorRepairExponentialF32Correct(engine);
+}
+
+fn vectorRepairNativeExponentialF32(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    var out: @Vector(8, f32) = undefined;
+
+    inline for (0..8) |lane| {
+        const bits: u32 = @truncate(engine.next());
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 9;
+        const repr = (@as(u32, 0x7f) << 23) | mantissa;
+        const u: f32 = @as(f32, @bitCast(repr)) - (1.0 - std.math.floatEps(f32) / 2.0);
+
+        out[lane] = u * native_exp_x_f32[i];
+        if (!(mantissa < native_exp_threshold_f32[i])) {
+            out[lane] = nativeExponentialF32WithInitial(engine, bits);
+        }
+    }
+    return out;
 }
 
 fn vectorRepairNormalF32FastCorrect(engine: *alea.FastPrng) @Vector(8, f32) {
@@ -3205,6 +3307,38 @@ fn normalTail(engine: *alea.ScalarPrng, u: f64) f64 {
     return if (u < 0) x - ziggurat.norm_r else ziggurat.norm_r - x;
 }
 
+fn nativeNormalF32WithInitial(engine: *alea.ScalarPrng, initial_bits: u32) f32 {
+    var bits = initial_bits;
+    while (true) {
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 9;
+        const repr = (@as(u32, 0x80) << 23) | mantissa;
+        const u: f32 = @as(f32, @bitCast(repr)) - 3.0;
+
+        if (@abs(u) < native_norm_ratio_f32[i]) {
+            @branchHint(.likely);
+            return u * native_norm_x_f32[i];
+        }
+        const x = u * native_norm_x_f32[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return nativeNormalF32Tail(engine, u);
+        }
+        if (native_norm_f_f32[i + 1] + (native_norm_f_f32[i] - native_norm_f_f32[i + 1]) * alea.Rng.floatFrom(engine, f32) < @exp(-x * x / 2.0)) return x;
+        bits = @truncate(engine.next());
+    }
+}
+
+fn nativeNormalF32Tail(engine: *alea.ScalarPrng, u: f32) f32 {
+    var x: f32 = 1;
+    var y: f32 = 0;
+    while (-2.0 * y < x * x) {
+        x = @log(alea.Rng.floatOpenFrom(engine, f32)) / native_norm_r_f32;
+        y = @log(alea.Rng.floatOpenFrom(engine, f32));
+    }
+    return if (u < 0) x - native_norm_r_f32 else native_norm_r_f32 - x;
+}
+
 fn thresholdExponential(engine: *alea.ScalarPrng) f64 {
     return thresholdExponentialWithInitial(engine, engine.next());
 }
@@ -3228,6 +3362,28 @@ fn thresholdExponentialWithInitial(engine: *alea.ScalarPrng, initial_bits: u64) 
         }
         if (ziggurat.ExpDist.f[i + 1] + (ziggurat.ExpDist.f[i] - ziggurat.ExpDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x)) return x;
         bits = engine.next();
+    }
+}
+
+fn nativeExponentialF32WithInitial(engine: *alea.ScalarPrng, initial_bits: u32) f32 {
+    var bits = initial_bits;
+    while (true) {
+        const i: usize = @as(u8, @truncate(bits));
+        const mantissa = bits >> 9;
+        const repr = (@as(u32, 0x7f) << 23) | mantissa;
+        const u: f32 = @as(f32, @bitCast(repr)) - (1.0 - std.math.floatEps(f32) / 2.0);
+
+        if (mantissa < native_exp_threshold_f32[i]) {
+            @branchHint(.likely);
+            return u * native_exp_x_f32[i];
+        }
+        const x = u * native_exp_x_f32[i];
+        if (i == 0) {
+            @branchHint(.unlikely);
+            return native_exp_r_f32 - @log(alea.Rng.floatOpenFrom(engine, f32));
+        }
+        if (native_exp_f_f32[i + 1] + (native_exp_f_f32[i] - native_exp_f_f32[i + 1]) * alea.Rng.floatFrom(engine, f32) < @exp(-x)) return x;
+        bits = @truncate(engine.next());
     }
 }
 
