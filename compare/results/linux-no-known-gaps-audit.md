@@ -120,6 +120,7 @@ zig build test
 zig build -Doptimize=ReleaseFast distcheck
 zig build -Doptimize=ReleaseFast distcheck-libc
 zig build -Doptimize=ReleaseFast statcheck
+# zig build validate now includes distcheck-libc on native builds
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
 zig build -Doptimize=ReleaseFast -Dcpu=native bench-libc
 zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench

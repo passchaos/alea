@@ -842,6 +842,7 @@ pub fn build(b: *std.Build) void {
     validate_step.dependOn(&run_apicheck.step);
     validate_step.dependOn(&run_statcheck.step);
     validate_step.dependOn(&run_distcheck.step);
+    validate_step.dependOn(&run_distcheck_libc.step);
 
     const validate_all_step = b.step("validate-all", "Run native validation plus cross-target and WASI runtime checks");
     validate_all_step.dependOn(validate_step);
