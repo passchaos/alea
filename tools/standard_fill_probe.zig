@@ -21,8 +21,14 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("standard fill probe count={}\n", .{sample_count});
     try benchFill(io, stdout, "standard exponential current fill", 0xe15a, sample_count, currentExponentialFill);
     try benchFill(io, stdout, "standard exponential direct loop", 0xe15a, sample_count, directExponentialLoop);
+    try benchFill(io, stdout, "standard exponential vector4 chunk", 0xe15a, sample_count, vectorExponential4Chunk);
     try benchFill(io, stdout, "standard normal current fill", 0xd15a, sample_count, currentNormalFill);
     try benchFill(io, stdout, "standard normal direct loop", 0xd15a, sample_count, directNormalLoop);
+    try benchFill(io, stdout, "standard normal vector4 chunk", 0xd15a, sample_count, vectorNormal4Chunk);
+    try benchFillF32(io, stdout, "standard exponential f32 current fill", 0xe15a, sample_count, currentExponentialF32Fill);
+    try benchFillF32(io, stdout, "standard exponential f32 vector8 chunk", 0xe15a, sample_count, vectorExponentialF32Chunk);
+    try benchFillF32(io, stdout, "standard normal f32 current fill", 0xd15a, sample_count, currentNormalF32Fill);
+    try benchFillF32(io, stdout, "standard normal f32 vector8 chunk", 0xd15a, sample_count, vectorNormalF32Chunk);
     try stdout.flush();
 }
 
@@ -65,6 +71,45 @@ fn benchFill(
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
+fn benchFillF32(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    comptime name: []const u8,
+    seed: u64,
+    sample_count: usize,
+    comptime fillFn: fn (*alea.ScalarPrng, []f32) void,
+) !void {
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f32 = 0;
+    var out: [4096]f32 = undefined;
+
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+
+        var remaining = sample_count;
+        var checksum: f32 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            fillFn(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
 fn currentExponentialFill(source: *alea.ScalarPrng, dest: []f64) void {
     alea.distributions.fillStandardExponentialFrom(source, f64, dest);
 }
@@ -73,10 +118,54 @@ fn directExponentialLoop(source: *alea.ScalarPrng, dest: []f64) void {
     for (dest) |*item| item.* = alea.Rng.standardExponentialFastFrom(source, f64);
 }
 
+fn vectorExponential4Chunk(source: *alea.ScalarPrng, dest: []f64) void {
+    var i: usize = 0;
+    while (i + 4 <= dest.len) : (i += 4) {
+        const vec = alea.Rng.vectorStandardExponentialFrom(source, @Vector(4, f64));
+        inline for (0..4) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = alea.Rng.standardExponentialFastFrom(source, f64);
+}
+
 fn currentNormalFill(source: *alea.ScalarPrng, dest: []f64) void {
     alea.distributions.fillStandardNormalFrom(source, f64, dest);
 }
 
 fn directNormalLoop(source: *alea.ScalarPrng, dest: []f64) void {
     for (dest) |*item| item.* = alea.Rng.standardNormalFastFrom(source, f64);
+}
+
+fn vectorNormal4Chunk(source: *alea.ScalarPrng, dest: []f64) void {
+    var i: usize = 0;
+    while (i + 4 <= dest.len) : (i += 4) {
+        const vec = alea.Rng.vectorStandardNormalFrom(source, @Vector(4, f64));
+        inline for (0..4) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = alea.Rng.standardNormalFastFrom(source, f64);
+}
+
+fn currentExponentialF32Fill(source: *alea.ScalarPrng, dest: []f32) void {
+    alea.distributions.fillStandardExponentialFrom(source, f32, dest);
+}
+
+fn vectorExponentialF32Chunk(source: *alea.ScalarPrng, dest: []f32) void {
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec = alea.Rng.vectorStandardExponentialFrom(source, @Vector(8, f32));
+        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = alea.Rng.standardExponentialFastFrom(source, f32);
+}
+
+fn currentNormalF32Fill(source: *alea.ScalarPrng, dest: []f32) void {
+    alea.distributions.fillStandardNormalFrom(source, f32, dest);
+}
+
+fn vectorNormalF32Chunk(source: *alea.ScalarPrng, dest: []f32) void {
+    var i: usize = 0;
+    while (i + 8 <= dest.len) : (i += 8) {
+        const vec = alea.Rng.vectorStandardNormalFrom(source, @Vector(8, f32));
+        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = alea.Rng.standardNormalFastFrom(source, f32);
 }

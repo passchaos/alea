@@ -2308,6 +2308,10 @@ pub fn fillStandardNormal(rng: Rng, comptime T: type, dest: []T) void {
 
 pub fn fillStandardNormalFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireFloat(T);
+    if (T == f32) {
+        fillStandardNormalF32VectorChunksFrom(source, dest);
+        return;
+    }
     for (dest) |*item| item.* = standardNormalFrom(source, T);
 }
 
@@ -2785,6 +2789,10 @@ pub fn fillStandardExponential(rng: Rng, comptime T: type, dest: []T) void {
 
 pub fn fillStandardExponentialFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireFloat(T);
+    if (T == f32) {
+        fillStandardExponentialF32VectorChunksFrom(source, dest);
+        return;
+    }
     for (dest) |*item| item.* = standardExponentialFrom(source, T);
 }
 
@@ -14790,6 +14798,28 @@ fn scaleInPlace(comptime T: type, dest: []T, scale: T) void {
     }
 }
 
+fn fillStandardNormalF32VectorChunksFrom(source: anytype, dest: []f32) void {
+    const VectorType = @Vector(8, f32);
+    const len = @typeInfo(VectorType).vector.len;
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        const vec = vectorStandardNormalFrom(source, VectorType);
+        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = standardNormalFrom(source, f32);
+}
+
+fn fillStandardExponentialF32VectorChunksFrom(source: anytype, dest: []f32) void {
+    const VectorType = @Vector(8, f32);
+    const len = @typeInfo(VectorType).vector.len;
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        const vec = vectorStandardExponentialFrom(source, VectorType);
+        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+    }
+    while (i < dest.len) : (i += 1) dest[i] = standardExponentialFrom(source, f32);
+}
+
 fn scaleInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T) void {
     const len = @typeInfo(VectorType).vector.len;
     const scale_vec: VectorType = @splat(scale);
@@ -22843,6 +22873,68 @@ test "native f32 standard samplers have stable snapshots" {
         try std.testing.expectEqual(bits, @as(u32, @bitCast(exp_vec_buf[0][lane])));
     }
     try std.testing.expectEqual(@as(u64, 0x1571c35ce5d0ed07), exp_vec_sampler_engine.next());
+}
+
+test "standard f32 fills preserve scalar stream shape" {
+    const alea = @import("root.zig");
+
+    var scalar_normal_fill = alea.ScalarPrng.init(0xd15a);
+    var scalar_normal_control = alea.ScalarPrng.init(0xd15a);
+    var scalar_normal_buf: [17]f32 = undefined;
+    fillStandardNormalFrom(&scalar_normal_fill, f32, &scalar_normal_buf);
+    for (scalar_normal_buf) |sample| {
+        try std.testing.expectEqual(standardNormalFrom(&scalar_normal_control, f32), sample);
+    }
+    try std.testing.expectEqual(scalar_normal_control.next(), scalar_normal_fill.next());
+
+    var fast_normal_fill = alea.FastPrng.init(0xd15a);
+    var fast_normal_control = alea.FastPrng.init(0xd15a);
+    var fast_normal_buf: [17]f32 = undefined;
+    fillStandardNormalFrom(&fast_normal_fill, f32, &fast_normal_buf);
+    for (fast_normal_buf) |sample| {
+        try std.testing.expectEqual(standardNormalFrom(&fast_normal_control, f32), sample);
+    }
+    try std.testing.expectEqual(fast_normal_control.next(), fast_normal_fill.next());
+
+    var facade_normal_fill = alea.FastPrng.init(0xd15a);
+    var facade_normal_control = alea.FastPrng.init(0xd15a);
+    const facade_normal_rng = Rng.init(&facade_normal_fill);
+    const facade_normal_control_rng = Rng.init(&facade_normal_control);
+    var facade_normal_buf: [17]f32 = undefined;
+    fillStandardNormal(facade_normal_rng, f32, &facade_normal_buf);
+    for (facade_normal_buf) |sample| {
+        try std.testing.expectEqual(standardNormal(facade_normal_control_rng, f32), sample);
+    }
+    try std.testing.expectEqual(facade_normal_control.next(), facade_normal_fill.next());
+
+    var scalar_exp_fill = alea.ScalarPrng.init(0xe15a);
+    var scalar_exp_control = alea.ScalarPrng.init(0xe15a);
+    var scalar_exp_buf: [17]f32 = undefined;
+    fillStandardExponentialFrom(&scalar_exp_fill, f32, &scalar_exp_buf);
+    for (scalar_exp_buf) |sample| {
+        try std.testing.expectEqual(standardExponentialFrom(&scalar_exp_control, f32), sample);
+    }
+    try std.testing.expectEqual(scalar_exp_control.next(), scalar_exp_fill.next());
+
+    var fast_exp_fill = alea.FastPrng.init(0xe15a);
+    var fast_exp_control = alea.FastPrng.init(0xe15a);
+    var fast_exp_buf: [17]f32 = undefined;
+    fillStandardExponentialFrom(&fast_exp_fill, f32, &fast_exp_buf);
+    for (fast_exp_buf) |sample| {
+        try std.testing.expectEqual(standardExponentialFrom(&fast_exp_control, f32), sample);
+    }
+    try std.testing.expectEqual(fast_exp_control.next(), fast_exp_fill.next());
+
+    var facade_exp_fill = alea.FastPrng.init(0xe15a);
+    var facade_exp_control = alea.FastPrng.init(0xe15a);
+    const facade_exp_rng = Rng.init(&facade_exp_fill);
+    const facade_exp_control_rng = Rng.init(&facade_exp_control);
+    var facade_exp_buf: [17]f32 = undefined;
+    fillStandardExponential(facade_exp_rng, f32, &facade_exp_buf);
+    for (facade_exp_buf) |sample| {
+        try std.testing.expectEqual(standardExponential(facade_exp_control_rng, f32), sample);
+    }
+    try std.testing.expectEqual(facade_exp_control.next(), facade_exp_fill.next());
 }
 
 test "native f32 parameterized samplers have stable snapshots" {
