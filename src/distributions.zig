@@ -8842,8 +8842,8 @@ pub fn paretoCheckedFrom(source: anytype, comptime T: type, scale: T, shape: T) 
 
 pub fn paretoFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
-    if (scale == 0) return 0;
+    std.debug.assert(paretoParametersValid(T, scale, shape));
+    if (scale == 0 or shape == std.math.inf(T)) return scale;
 
     return scale / std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / shape);
 }
@@ -8854,9 +8854,9 @@ pub fn fillPareto(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) voi
 
 pub fn fillParetoFrom(source: anytype, comptime T: type, dest: []T, scale: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(scale >= 0 and shape > 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
-    if (scale == 0) {
-        @memset(dest, 0);
+    std.debug.assert(paretoParametersValid(T, scale, shape));
+    if (scale == 0 or shape == std.math.inf(T)) {
+        @memset(dest, scale);
         return;
     }
     if (shape == 1) {
@@ -8867,6 +8867,12 @@ pub fn fillParetoFrom(source: anytype, comptime T: type, dest: []T, scale: T, sh
 
     Rng.fillOpenFrom(source, T, dest);
     paretoFromOpenUniforms(T, dest, scale, 1 / shape);
+}
+
+fn paretoParametersValid(comptime T: type, scale: T, shape: T) bool {
+    return scale >= 0 and shape > 0 and
+        std.math.isFinite(scale) and
+        (std.math.isFinite(shape) or shape == std.math.inf(T));
 }
 
 pub fn fillParetoChecked(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) Error!void {
@@ -8972,7 +8978,7 @@ pub fn VectorPareto(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
             const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
             if (self.shapeValue() == 1) return @as(VectorType, @splat(self.scaleValue())) / uniform_vec;
             return paretoFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
@@ -8984,7 +8990,7 @@ pub fn VectorPareto(comptime VectorType: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
             for (dest) |*item| item.* = self.sampleFrom(source);
@@ -9001,8 +9007,7 @@ pub fn Pareto(comptime T: type) type {
 
         pub fn init(scale: T, shape: T) Error!Self {
             comptime requireFloat(T);
-            if (!(scale >= 0) or !(shape > 0)) return error.InvalidParameter;
-            if (!std.math.isFinite(scale) or !std.math.isFinite(shape)) return error.InvalidParameter;
+            if (!paretoParametersValid(T, scale, shape)) return error.InvalidParameter;
             return .{ .scale = scale, .shape = shape };
         }
 
@@ -9015,7 +9020,7 @@ pub fn Pareto(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) ?T {
-            if (self.isDegenerate()) return 0;
+            if (self.isDegenerate()) return self.degenerateValue();
             if (self.shape <= 1) return null;
             return self.scale * self.shape / (self.shape - 1);
         }
@@ -9040,7 +9045,7 @@ pub fn Pareto(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            return if (self.isDegenerate()) 0 else null;
+            return if (self.isDegenerate()) self.degenerateValue() else null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -9048,7 +9053,7 @@ pub fn Pareto(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            if (self.isDegenerate()) return 0;
+            if (self.isDegenerate()) return self.degenerateValue();
             return paretoFrom(source, T, self.scale, self.shape);
         }
 
@@ -9058,14 +9063,18 @@ pub fn Pareto(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             if (self.isDegenerate()) {
-                @memset(dest, 0);
+                @memset(dest, self.degenerateValue());
                 return;
             }
             fillParetoFrom(source, T, dest, self.scale, self.shape);
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.scale == 0;
+            return self.scale == 0 or self.shape == std.math.inf(T);
+        }
+
+        fn degenerateValue(self: Self) T {
+            return self.scale;
         }
     };
 }
@@ -15332,6 +15341,58 @@ test "degenerate pareto helpers do not consume random stream" {
     try std.testing.expectEqual(@as(f64, 0), shape_one.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const infinite_shape_point: f64 = 4.25;
+    try std.testing.expectEqual(infinite_shape_point, pareto(rng, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, paretoFrom(&engine, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, try paretoChecked(rng, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, try paretoCheckedFrom(&engine, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillPareto(rng, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillParetoFrom(&engine, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillParetoChecked(rng, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillParetoCheckedFrom(&engine, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_sampler = try Pareto(f64).init(infinite_shape_point, std.math.inf(f64));
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.scaleValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_sampler.shapeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_sampler.varianceValue().?);
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.medianValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.modeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.minValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.maxValue().?);
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_sampler.fill(rng, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorParetoFrom(&engine, @Vector(4, f64), 0, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -15361,6 +15422,58 @@ test "degenerate pareto helpers do not consume random stream" {
 
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_vec: @Vector(4, f64) = @splat(infinite_shape_point);
+    try std.testing.expectEqual(infinite_shape_vec, vectorPareto(rng, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, vectorParetoFrom(&engine, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, try vectorParetoChecked(rng, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, try vectorParetoCheckedFrom(&engine, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorPareto(rng, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorParetoFrom(&engine, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorParetoChecked(rng, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorParetoCheckedFrom(&engine, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_vector_sampler = try VectorPareto(@Vector(4, f64)).init(infinite_shape_point, std.math.inf(f64));
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.scaleValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_vector_sampler.shapeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.expectedValue().?);
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_vector_sampler.varianceValue().?);
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.medianValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.modeValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.minValue());
+    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.maxValue().?);
+    try std.testing.expectEqual(infinite_shape_vec, infinite_shape_vector_sampler.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(infinite_shape_vec, infinite_shape_vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_vector_sampler.fill(rng, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape_vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(infinite_shape_vec, sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
