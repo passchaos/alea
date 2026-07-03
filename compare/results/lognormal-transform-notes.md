@@ -52,7 +52,11 @@ Local `rand_distr 0.6.0` uses the same high-level algorithm:
 - Out-of-place exact transforms using a temporary normal buffer are mixed in the
   isolated probe and only produce small wins in some ScalarPrng rows while tying
   or trailing current rows elsewhere; the added copy/buffer shape is not a
-  durable production default.
+  durable production default. A real production retry for `dest.len <= 1024`
+  likewise failed the focused harness: exact f64 facade/FastPrng/ScalarPrng
+  rows were about 131M/132M/140M versus the reverted in-place baseline around
+  135M/135M/142M, while f32 moved about 136M/136M/144M versus 133M/133M/141M.
+  This mixed profile is not a no-regression default.
 - Prefetching ahead in the exact `@exp` transform loop is mixed in the isolated
   probe and does not survive a production `fillLogNormal` retry as a durable
   no-regression win, so no prefetching is used in the default transform loops.
@@ -174,6 +178,12 @@ Fresh local evidence:
   140M to 142M, f32 FastPrng moved about 138M to 139M, and f32 ScalarPrng moved
   about 145M to 146M; this is not enough to justify replacing the simpler
   in-place production transform without a real-harness no-regression result.
+- A follow-up production retry of out-of-place transforms for chunks up to 1024
+  samples confirmed that caveat in the main `bench -- 268435456
+  "fillLogNormal"` harness. f64 regressed from the reverted in-place baseline
+  around 135M/135M/142M to about 131M/132M/140M facade/FastPrng/ScalarPrng;
+  f32 improved to about 136M/136M/144M versus about 133M/133M/141M, but the
+  cross-type result is mixed and not a safe exact default.
 - The same probe reports max 1 ULP at `stddev=0.25`, but max 51 ULP at
   `stddev=1.0` and 8028 ULP at `stddev=2.0`, which is why the public
   approximation is parameter-bounded.
