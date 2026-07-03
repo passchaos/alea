@@ -93,6 +93,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorLogNormalApproxF32 f32x8", lanes / 16, 0xd195, fillDistLogNormalApproxF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorLogNormalApproxF32 f32x8 direct", lanes / 16, 0xd195, fillDistLogNormalApproxF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorLogNormalApproxF32.fill f32x8", lanes / 16, 0xd195, fillDistLogNormalApproxSamplerF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorLogNormalExp2F32 f32x8", lanes / 16, 0xd196, fillDistLogNormalExp2F32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorLogNormalExp2F32 f32x8 direct", lanes / 16, 0xd196, fillDistLogNormalExp2F32Direct);
+    try benchVectorF32x8(io, stdout, "alea distributions.VectorLogNormalExp2F32.fill f32x8", lanes / 16, 0xd196, fillDistLogNormalExp2SamplerF32);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorHalfNormal f64x4", lanes / 8, 0xd1a4, fillDistHalfNormalF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorHalfNormal f64x4 direct", lanes / 8, 0xd1a4, fillDistHalfNormalF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorHalfNormal.fill f64x4", lanes / 8, 0xd1a4, fillDistHalfNormalSamplerF64);
@@ -946,6 +949,19 @@ fn fillDistLogNormalApproxF32Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest:
 
 fn fillDistLogNormalApproxSamplerF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
     const sampler = alea.distributions.VectorLogNormalApproxF32(@Vector(8, f32)).init(0, 0.25) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistLogNormalExp2F32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorLogNormalExp2F32(rng, @Vector(8, f32), dest, 0, 0.25);
+}
+
+fn fillDistLogNormalExp2F32Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorLogNormalExp2F32From(engine, @Vector(8, f32), dest, 0, 0.25);
+}
+
+fn fillDistLogNormalExp2SamplerF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    const sampler = alea.distributions.VectorLogNormalExp2F32(@Vector(8, f32)).init(0, 0.25) catch unreachable;
     sampler.fill(rng, dest);
 }
 

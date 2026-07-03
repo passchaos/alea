@@ -142,7 +142,9 @@ Fresh local evidence:
   named approximation: `bench -- 268435456 "exp2 f32"` reports about 163M
   facade and 183M ScalarPrng direct single-sample throughput, while
   `bench -- 268435456 "Exp2F32"` reports fill rows around 191M facade, 193M
-  FastPrng direct, and 212M ScalarPrng direct.
+  FastPrng direct, and 212M ScalarPrng direct. Vector-slice rows are tracked in
+  `vectorbench`; a focused 64Mi-lane run reports about 147M f32x8
+  facade/reusable and 188M direct lanes/s.
 - `log-normal-probe -- 1048576 "sample stddev1"` similarly shows no
   single-sample exact expression escape hatch for wide-spread LogNormal:
   current/direct-`@exp`/`std.math.exp`/libc rows are all about 58M FastPrng and
