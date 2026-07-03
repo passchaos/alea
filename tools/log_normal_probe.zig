@@ -52,6 +52,7 @@ pub fn main(init: std.process.Init) !void {
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample stddev1 libc exp", 0x1069, sample_count, sampleLibcExpStddev1);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample current", 0x1066, sample_count, sampleCurrentF32);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample native-normal exp", 0x1066, sample_count, sampleNativeNormalExpF32);
+    try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample native-normal expm1+1", 0x1066, sample_count, sampleNativeNormalExpm1F32);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample std.math.exp", 0x1066, sample_count, sampleStdMathExpF32);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample libc expf", 0x1066, sample_count, sampleLibcExpF32);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample widened f64 exp", 0x1066, sample_count, sampleWidenedExpF32);
@@ -62,6 +63,7 @@ pub fn main(init: std.process.Init) !void {
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample stddev1 libc expf", 0x106a, sample_count, sampleLibcExpStddev1F32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample current", 0x1066, sample_count, sampleCurrentF32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample native-normal exp", 0x1066, sample_count, sampleNativeNormalExpF32);
+    try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample native-normal expm1+1", 0x1066, sample_count, sampleNativeNormalExpm1F32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample std.math.exp", 0x1066, sample_count, sampleStdMathExpF32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample libc expf", 0x1066, sample_count, sampleLibcExpF32);
     try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample widened f64 exp", 0x1066, sample_count, sampleWidenedExpF32);
@@ -131,6 +133,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 current fill", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.FastPrng, io, stdout, "fast f32 native-normal fill", 0x1063, sample_count, nativeNormalFillF32);
+    try benchFillF32(alea.FastPrng, io, stdout, "fast f32 native-normal expm1 fill", 0x1063, sample_count, nativeNormalExpm1FillF32);
     try benchFillF32Sized(alea.FastPrng, 256, io, stdout, "fast f32 current fill chunk256", 0x1063, sample_count, currentFillF32);
     try benchFillF32Sized(alea.FastPrng, 4096, io, stdout, "fast f32 current fill chunk4096", 0x1063, sample_count, currentFillF32);
     try benchFillF32Sized(alea.FastPrng, 16384, io, stdout, "fast f32 current fill chunk16384", 0x1063, sample_count, currentFillF32);
@@ -165,6 +168,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 normal-only fill", 0x1063, sample_count, normalOnlyFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 current fill", 0x1063, sample_count, currentFillF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 native-normal fill", 0x1063, sample_count, nativeNormalFillF32);
+    try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 native-normal expm1 fill", 0x1063, sample_count, nativeNormalExpm1FillF32);
     try benchFillF32Sized(alea.ScalarPrng, 256, io, stdout, "scalar f32 current fill chunk256", 0x1063, sample_count, currentFillF32);
     try benchFillF32Sized(alea.ScalarPrng, 4096, io, stdout, "scalar f32 current fill chunk4096", 0x1063, sample_count, currentFillF32);
     try benchFillF32Sized(alea.ScalarPrng, 16384, io, stdout, "scalar f32 current fill chunk16384", 0x1063, sample_count, currentFillF32);
@@ -551,6 +555,12 @@ fn nativeNormalFillF32(source: anytype, dest: []f32) void {
     expScalarF32(dest);
 }
 
+fn nativeNormalExpm1FillF32(source: anytype, dest: []f32) void {
+    alea.distributions.fillStandardNormalNativeF32From(source, dest);
+    scaleOnlyF32(dest, 0.25);
+    expm1PlusOneF32(dest);
+}
+
 fn normalOnlyFillF32(source: anytype, dest: []f32) void {
     alea.Rng.fillNormalFrom(source, f32, dest, 0, 0.25);
 }
@@ -597,6 +607,10 @@ fn sampleCurrentF32(source: anytype) f32 {
 
 fn sampleNativeNormalExpF32(source: anytype) f32 {
     return @exp(0.25 * alea.distributions.standardNormalNativeF32From(source));
+}
+
+fn sampleNativeNormalExpm1F32(source: anytype) f32 {
+    return std.math.expm1(0.25 * alea.distributions.standardNormalNativeF32From(source)) + 1.0;
 }
 
 fn sampleStdMathExpF32(source: anytype) f32 {

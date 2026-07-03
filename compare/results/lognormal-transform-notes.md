@@ -169,6 +169,14 @@ Fresh local evidence:
   "LogNormalNativeExp2F32"` reports fill around 201M facade/FastPrng direct and
   217M ScalarPrng direct, and `vectorbench -- 268435456 "NativeExp2F32"`
   reports about 213M facade, 219M direct, and 220M reusable f32x8 lanes/s.
+- Native-f32 normal plus `expm1(x)+1` was checked as a possible combined
+  narrow-profile opt-in. It moves native-normal fill rows slightly upward versus
+  native-normal exact `@exp`, around 143M/149M FastPrng/ScalarPrng versus
+  139M/145M in `log-normal-probe -- 4194304 "native-normal"`, but
+  single-sample rows regress to about 121M/137M versus native-normal exact
+  around 126M/147M and the already-adopted `LogNormalNativeExp2F32` remains much
+  faster for direct/fill/vector throughput. It is therefore rejected as another
+  public opt-in profile.
 - `log-normal-probe -- 1048576 "sample stddev1"` similarly shows no
   single-sample exact expression escape hatch for wide-spread LogNormal:
   current/direct-`@exp`/`std.math.exp`/libc rows are all about 58M FastPrng and
