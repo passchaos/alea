@@ -63,6 +63,7 @@ fn main() {
     bench_alphanumeric("rand alphanumeric", bytes / 8);
     bench_weighted_index("rand weighted index", bytes / 256);
     bench_weighted_tree("rand_distr weighted tree update+sample", bytes / 256);
+    bench_weighted_tree_f64("rand_distr weighted tree f64 update+sample", bytes / 256);
     bench_distr_standard_normal("rand_distr standard-normal", bytes / 64);
     bench_distr_normal("rand_distr normal", bytes / 64);
     bench_distr_exp1("rand_distr exp1", bytes / 64);
@@ -486,6 +487,37 @@ fn bench_weighted_tree(name: &str, count: usize) {
         for i in 0..count {
             let index = i & 7;
             dist.update(index, ((i % 17) + 1) as u32).unwrap();
+            checksum = checksum.wrapping_add(dist.sample(&mut rng));
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M ops/s checksum={best_checksum}");
+}
+
+fn bench_weighted_tree_f64(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
+    let initial = [1.0f64, 2.0, 3.0, 0.0, 5.0, 8.0, 13.0, 21.0];
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0usize;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0x77ed);
+        let mut dist = rand_distr::weighted::WeightedTreeIndex::new(initial).unwrap();
+        let start = Instant::now();
+        let mut checksum: usize = 0;
+
+        for i in 0..count {
+            let index = i & 7;
+            dist.update(index, ((i % 17) + 1) as f64).unwrap();
             checksum = checksum.wrapping_add(dist.sample(&mut rng));
         }
 

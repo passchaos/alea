@@ -116,6 +116,9 @@ pub fn main(init: std.process.Init) !void {
     try benchWeightedTree(io, stdout, "alea weighted tree update+sample", bytes / 256);
     try benchWeightedTreeDirect(io, stdout, "alea weighted tree direct update+sample", bytes / 256);
     try benchWeightedTreeFillDirect(io, stdout, "alea weighted tree fill direct", bytes / 256);
+    try benchWeightedTreeF64(io, stdout, "alea weighted tree f64 update+sample", bytes / 256);
+    try benchWeightedTreeF64Direct(io, stdout, "alea weighted tree f64 direct update+sample", bytes / 256);
+    try benchWeightedTreeF64FillDirect(io, stdout, "alea weighted tree f64 fill direct", bytes / 256);
     try benchWeightedIntTree(io, stdout, "alea weighted int tree update+sample", bytes / 256);
     try benchWeightedIntTreeDirect(io, stdout, "alea weighted int tree direct update+sample", bytes / 256);
     try benchWeightedIntTreeFillDirect(io, stdout, "alea weighted int tree fill direct", bytes / 256);
@@ -3232,6 +3235,105 @@ fn benchWeightedTreeFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const
     while (trial < trials) : (trial += 1) {
         var engine = alea.FastPrng.init(0x77ee);
         var tree = try alea.distributions.WeightedTree(u32).init(std.heap.smp_allocator, &initial);
+        defer tree.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: usize = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            tree.fillFrom(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchWeightedTreeF64(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    const initial = [_]f64{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x77ed);
+        const rng = alea.Rng.init(&engine);
+        var tree = try alea.distributions.WeightedTree(f64).init(std.heap.smp_allocator, &initial);
+        defer tree.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: usize = 0;
+        while (i < count) : (i += 1) {
+            const index = i & 7;
+            try tree.update(index, @floatFromInt((i % 17) + 1));
+            checksum +%= tree.sample(rng);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M ops/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchWeightedTreeF64Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    const initial = [_]f64{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x77ed);
+        var tree = try alea.distributions.WeightedTree(f64).init(std.heap.smp_allocator, &initial);
+        defer tree.deinit();
+
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: usize = 0;
+        while (i < count) : (i += 1) {
+            const index = i & 7;
+            try tree.update(index, @floatFromInt((i % 17) + 1));
+            checksum +%= tree.sampleFrom(&engine);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M ops/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchWeightedTreeF64FillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: usize = 0;
+    var out: [1024]usize = undefined;
+    const initial = [_]f64{ 1, 2, 3, 0, 5, 8, 13, 21 };
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x77ed);
+        var tree = try alea.distributions.WeightedTree(f64).init(std.heap.smp_allocator, &initial);
         defer tree.deinit();
 
         const start = std.Io.Clock.awake.now(io).nanoseconds;
