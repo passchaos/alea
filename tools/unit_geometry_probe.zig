@@ -21,6 +21,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("unit geometry probe count={}\n", .{sample_count});
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
     try benchAlea4x64Sample2(io, stdout, "fast unit circle point lane-pair", 0xc11c1e, sample_count, sampleUnitCircleLanePair);
+    try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point trig", 0xc11c1e, sample_count, sampleUnitCircleTrig);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point fma", 0xc11c1e, sample_count, sampleUnitCircleFma);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point reciprocal", 0xc11c1e, sample_count, sampleUnitCircleReciprocal);
     try benchSample2(alea.FastPrng, io, stdout, "fast unit circle point alt formula", 0xc11c1e, sample_count, sampleUnitCircleAltFormula);
@@ -40,6 +41,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFill(alea.FastPrng, io, stdout, "fast unit disc point-loop fill", 0xd15c, sample_count, pointLoopUnitDisc);
     try benchFill3(alea.FastPrng, io, stdout, "fast unit sphere point-loop fill", 0x59e7e, sample_count, pointLoopUnitSphere);
     try benchSample3(alea.ScalarPrng, io, stdout, "scalar unit circle point current", 0xc11c1e, sample_count, sampleUnitCircleCurrent);
+    try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point trig", 0xc11c1e, sample_count, sampleUnitCircleTrig);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point fma", 0xc11c1e, sample_count, sampleUnitCircleFma);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point reciprocal", 0xc11c1e, sample_count, sampleUnitCircleReciprocal);
     try benchSample2(alea.ScalarPrng, io, stdout, "scalar unit circle point alt formula", 0xc11c1e, sample_count, sampleUnitCircleAltFormula);
@@ -342,6 +344,11 @@ fn sampleUnitBallCurrent(source: anytype) [3]f64 {
 fn signedUnitFloat(source: anytype) f64 {
     const repr = (@as(u64, 0x400) << 52) | (alea.Rng.nextFrom(source) >> 12);
     return @as(f64, @bitCast(repr)) - 3.0;
+}
+
+fn sampleUnitCircleTrig(source: anytype) [2]f64 {
+    const angle = 2.0 * std.math.pi * alea.Rng.floatFrom(source, f64);
+    return .{ @cos(angle), @sin(angle) };
 }
 
 fn sampleUnitCircleFma(source: anytype) [2]f64 {
