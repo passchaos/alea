@@ -33,25 +33,18 @@ pub fn jump(self: *Xoshiro256PlusPlus) void {
 
 pub fn fill(self: *Xoshiro256PlusPlus, buf: []u8) void {
     var i: usize = 0;
-    const prefix_len = std.mem.alignForward(usize, @intFromPtr(buf.ptr), @alignOf(u64)) - @intFromPtr(buf.ptr);
-    const prefix = @min(prefix_len, buf.len);
-    while (i < prefix) : (i += 1) {
-        const n = self.next();
-        buf[i] = @truncate(n);
-    }
+    const aligned_len = buf.len - (buf.len & 7);
 
-    const words = std.mem.bytesAsSlice(u64, buf[i .. buf.len - ((buf.len - i) & 7)]);
-    for (words) |*word| {
-        word.* = if (comptime @import("builtin").target.cpu.arch.endian() == .little) self.next() else @byteSwap(self.next());
+    while (i < aligned_len) : (i += 8) {
+        var bytes: [8]u8 = undefined;
+        std.mem.writeInt(u64, &bytes, self.next(), .little);
+        @memcpy(buf[i..][0..8], &bytes);
     }
-    i += words.len * 8;
 
     if (i < buf.len) {
-        var n = self.next();
-        while (i < buf.len) : (i += 1) {
-            buf[i] = @truncate(n);
-            n >>= 8;
-        }
+        var bytes: [8]u8 = undefined;
+        std.mem.writeInt(u64, &bytes, self.next(), .little);
+        @memcpy(buf[i..], bytes[0 .. buf.len - i]);
     }
 }
 
@@ -103,8 +96,8 @@ test "xoshiro256++ fill has stable byte snapshot" {
     var buf: [24]u8 = undefined;
     rng.fill(&buf);
     try std.testing.expectEqualSlices(u8, &.{
-        0xd6, 0x21, 0xbc, 0x83, 0xf8, 0x9f, 0x8b, 0x13,
-        0x80, 0x7c, 0x21, 0xfc, 0x00, 0xd0, 0xe9, 0x4f,
-        0xc0, 0x03, 0x9c, 0xab, 0x5c, 0x58, 0x75, 0x33,
+        0xd6, 0x1b, 0x7a, 0xa9, 0x07, 0x76, 0x4f, 0x4d,
+        0x21, 0xd0, 0x10, 0x69, 0xc7, 0x27, 0xa0, 0x9b,
+        0xbc, 0xe0, 0x3a, 0x15, 0x62, 0xb0, 0xad, 0x87,
     }, &buf);
 }

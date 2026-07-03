@@ -59,9 +59,16 @@ WASI compile-only smoke check, `zig test -target wasm32-wasi -fno-emit-bin
 src/root.zig`, now succeeds after removing a test-only `u64` output-buffer
 assumption that was invalid on 32-bit `usize` targets. The build now exposes a
 repeatable `zig build crosscheck` step which compile-checks the unit tests for
-`wasm32-wasi`, `aarch64-linux`, and `riscv64-linux` without executing them.
-Executing those generated test binaries is still blocked because `wasmtime`,
-QEMU user-mode, or another second-platform runner is not installed locally.
+`wasm32-wasi`, `aarch64-linux`, and `riscv64-linux` without executing them. The
+local Node.js WASI runtime can execute the wasm32-wasi unit test binary through
+`zig build test-wasi`; this exercises the checked-in stable snapshot and
+stream-shape unit tests on a 32-bit `usize` WASI target. Enabling that runtime
+check required making ASCII charset bounded draws target-width independent and
+making `Xoshiro256PlusPlus.fill` use explicit little-endian word writes instead
+of pointer-alignment-dependent word casting. A full S4-M1 close is still blocked
+because the repro/statcheck/distcheck command suite has not yet been adapted
+into a second-target runtime report, and no QEMU/Wine/native second-OS runner is
+installed locally.
 
 ## Follow-Up
 
@@ -70,15 +77,17 @@ To close S4-M1, provide one of:
 - a second physical or virtual runner with Zig 0.16.0,
 - a working QEMU user-mode runner for a non-x86_64 Linux target,
 - a Windows runner or Wine setup suitable for Zig 0.16.0 outputs,
-- a WASI runner if the repro and test steps are adapted to the WASI target.
+- a WASI runner plus repro/statcheck/distcheck adaptations for the WASI target.
 
-Until a runner is available, keep the cross-target compile smoke green:
+Until a full second-target report is available, keep the compile and WASI unit
+smoke checks green:
 
 ```sh
 zig build crosscheck
+zig build test-wasi
 ```
 
-Then, on the second runtime-capable target, run:
+Then, on the second runtime-capable target or adapted WASI report flow, run:
 
 ```sh
 zig build repro

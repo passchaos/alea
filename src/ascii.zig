@@ -78,6 +78,11 @@ pub const Charset = struct {
 
     pub fn sampleFrom(self: Charset, source: anytype) u8 {
         if (self.bytes.len == 1) return self.bytes[0];
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const byte_count: u64 = @intCast(self.bytes.len);
+            const index = Rng.uintLessThanFrom(source, u64, byte_count);
+            return self.bytes[@intCast(index)];
+        }
         return self.bytes[Rng.uintLessThanFrom(source, usize, self.bytes.len)];
     }
 

@@ -9,7 +9,6 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-
     const lib = b.addLibrary(.{
         .name = "alea",
         .root_module = module,
@@ -724,6 +723,26 @@ pub fn build(b: *std.Build) void {
         crosscheck_step.dependOn(&cross_tests.step);
     }
 
+    const wasi_test_step = b.step("test-wasi", "Run wasm32-wasi unit tests through Node's WASI runtime");
+    if (b.findProgram(&.{"node"}, &.{})) |node_path| {
+        const wasi_tests = b.addTest(.{
+            .name = "alea-tests-wasm32-wasi-node",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/root.zig"),
+                .target = b.resolveTargetQuery(wasi_test_target),
+                .optimize = optimize,
+            }),
+        });
+        wasi_tests.setExecCmd(&.{ node_path, "--no-warnings", "tools/run_wasi_test.js", null });
+
+        const run_wasi_tests = b.addRunArtifact(wasi_tests);
+        run_wasi_tests.addFileInput(b.path("tools/run_wasi_test.js"));
+        wasi_test_step.dependOn(&run_wasi_tests.step);
+    } else |_| {
+        const node_missing = b.addFail("zig build test-wasi requires node with node:wasi support");
+        wasi_test_step.dependOn(&node_missing.step);
+    }
+
     const stream_mod = b.createModule(.{
         .root_source_file = b.path("tools/stream.zig"),
         .target = target,
@@ -804,14 +823,16 @@ const CrossCompileTarget = struct {
     query: std.Target.Query,
 };
 
+const wasi_test_target: std.Target.Query = .{
+    .cpu_arch = .wasm32,
+    .os_tag = .wasi,
+    .abi = .musl,
+};
+
 const cross_compile_targets = [_]CrossCompileTarget{
     .{
         .name = "wasm32-wasi",
-        .query = .{
-            .cpu_arch = .wasm32,
-            .os_tag = .wasi,
-            .abi = .musl,
-        },
+        .query = wasi_test_target,
     },
     .{
         .name = "aarch64-linux",
