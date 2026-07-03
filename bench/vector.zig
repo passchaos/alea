@@ -303,6 +303,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf f32 candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfF32);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf central candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfCentral);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf tail-repair candidate", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfTailRepair);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 inverse-cdf central-only probe", lanes / 4, 0xd188, fillStandardNormalF32InverseCdfCentralOnly);
     try benchFillVectorStandardNormalF32Repair(io, stdout, "alea fillVectorStandardNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 same-candidate repair", lanes / 4, 0xd188, fillStandardNormalF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorStandardNormal f32x8 all-accepted repair", lanes / 4, 0xd188, fillStandardNormalF32AllAcceptedRepair);
@@ -339,6 +340,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf f32 candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfF32);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf central candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfCentral);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf tail-repair candidate", lanes / 4, 0xd188, fillNormalF32InverseCdfTailRepair);
+    try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 inverse-cdf central-only probe", lanes / 4, 0xd188, fillNormalF32InverseCdfCentralOnly);
     try benchFillVectorNormalF32Repair(io, stdout, "alea fillVectorNormal f32x8 repair candidate", lanes / 4);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 same-candidate repair", lanes / 4, 0xd188, fillNormalF32SameCandidateRepair);
     try benchFillVectorF32x8Local(io, stdout, "alea fillVectorNormal f32x8 all-accepted repair", lanes / 4, 0xd188, fillNormalF32AllAcceptedRepair);
@@ -2554,6 +2556,10 @@ fn fillStandardNormalF32InverseCdfTailRepair(engine: *alea.ScalarPrng, dest: []@
     for (dest) |*item| item.* = vectorInverseCdfNormalF32TailRepair(engine);
 }
 
+fn fillStandardNormalF32InverseCdfCentralOnly(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    for (dest) |*item| item.* = vectorInverseCdfNormalF32CentralOnly(engine);
+}
+
 fn fillStandardNormalF32NativeRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
     for (dest) |*item| item.* = vectorRepairNativeNormalF32(engine);
 }
@@ -2637,6 +2643,12 @@ fn fillNormalF32InverseCdfTailRepair(engine: *alea.ScalarPrng, dest: []@Vector(8
     const mean_vec: @Vector(8, f32) = @splat(0);
     const stddev_vec: @Vector(8, f32) = @splat(1);
     for (dest) |*item| item.* = mean_vec + stddev_vec * vectorInverseCdfNormalF32TailRepair(engine);
+}
+
+fn fillNormalF32InverseCdfCentralOnly(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
+    const mean_vec: @Vector(8, f32) = @splat(0);
+    const stddev_vec: @Vector(8, f32) = @splat(1);
+    for (dest) |*item| item.* = mean_vec + stddev_vec * vectorInverseCdfNormalF32CentralOnly(engine);
 }
 
 fn fillNormalF32SameCandidateRepair(engine: *alea.ScalarPrng, dest: []@Vector(8, f32)) void {
@@ -3253,6 +3265,10 @@ fn vectorInverseCdfNormalF32TailRepair(engine: *alea.ScalarPrng) @Vector(8, f32)
         if (p[lane] < 0.02425 or p[lane] > 0.97575) out[lane] = inverseCdfNormalScalarF32(p[lane]);
     }
     return out;
+}
+
+fn vectorInverseCdfNormalF32CentralOnly(engine: *alea.ScalarPrng) @Vector(8, f32) {
+    return inverseCdfNormalF32CentralVec(vectorF32Local(engine));
 }
 
 fn vectorInverseCdfNormalF64(engine: *alea.ScalarPrng) @Vector(4, f64) {
