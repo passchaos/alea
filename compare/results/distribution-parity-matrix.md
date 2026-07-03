@@ -61,7 +61,7 @@ toolkit functionality and reduce reliance on companion crates:
 
 | Alea distribution | Status |
 | --- | --- |
-| Beta | Covered: `beta`, `Beta(T)`, including alpha/beta/moment/mode/support accessors |
+| Beta | Covered: `beta`, `Beta(T)`, including alpha/beta/moment/mode/support accessors and infinite-shape boundary point masses |
 | Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max/moment/median accessors and collapsed `min == mode == max` point masses |
 | Arcsine | Covered: `arcsine`, `Arcsine(T)`, including min/max/moment/median accessors and collapsed `min == max` point masses |
 | Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/mode/scale, undefined-moment, support accessors, and collapsed `scale == 0` point masses |
