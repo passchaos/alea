@@ -891,4 +891,25 @@ const cross_compile_targets = [_]CrossCompileTarget{
             .os_tag = .linux,
         },
     },
+    .{
+        .name = "x86_64-windows",
+        .query = .{
+            .cpu_arch = .x86_64,
+            .os_tag = .windows,
+        },
+    },
+    .{
+        .name = "x86_64-macos",
+        .query = .{
+            .cpu_arch = .x86_64,
+            .os_tag = .macos,
+        },
+    },
+    .{
+        .name = "aarch64-macos",
+        .query = .{
+            .cpu_arch = .aarch64,
+            .os_tag = .macos,
+        },
+    },
 };

@@ -64,7 +64,7 @@ WASI compile-only smoke check, `zig test -target wasm32-wasi -fno-emit-bin
 src/root.zig`, now succeeds after removing a test-only `u64` output-buffer
 assumption that was invalid on 32-bit `usize` targets. The build now exposes a
 repeatable `zig build crosscheck` step which compile-checks the unit tests for
-`wasm32-wasi`, `aarch64-linux`, and `riscv64-linux` without executing them. The
+`wasm32-wasi`, `aarch64-linux`, `riscv64-linux`, `x86_64-windows`, `x86_64-macos`, and `aarch64-macos` without executing them. The
 local Node.js WASI runtime can execute the wasm32-wasi unit test binary through
 `zig build test-wasi`; this exercises the checked-in stable snapshot and
 stream-shape unit tests on a 32-bit `usize` WASI target. Enabling that runtime
