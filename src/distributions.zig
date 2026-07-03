@@ -7757,7 +7757,9 @@ pub fn kumaraswamyCheckedFrom(source: anytype, comptime T: type, alpha: T, beta_
 
 pub fn kumaraswamyFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
-    std.debug.assert(alpha > 0 and beta_param > 0 and std.math.isFinite(alpha) and std.math.isFinite(beta_param));
+    std.debug.assert(kumaraswamyParametersValid(T, alpha, beta_param));
+    if (alpha == std.math.inf(T)) return 1;
+    if (beta_param == std.math.inf(T)) return 0;
 
     if (alpha == 2 and beta_param == 1) return @sqrt(Rng.floatOpenFrom(source, T));
     if (beta_param == 1) return std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / alpha);
@@ -7773,7 +7775,15 @@ pub fn fillKumaraswamy(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_par
 
 pub fn fillKumaraswamyFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
     comptime requireFloat(T);
-    std.debug.assert(alpha > 0 and beta_param > 0 and std.math.isFinite(alpha) and std.math.isFinite(beta_param));
+    std.debug.assert(kumaraswamyParametersValid(T, alpha, beta_param));
+    if (alpha == std.math.inf(T)) {
+        @memset(dest, 1);
+        return;
+    }
+    if (beta_param == std.math.inf(T)) {
+        @memset(dest, 0);
+        return;
+    }
     if (alpha == 2 and beta_param == 1) {
         Rng.fillOpenFrom(source, T, dest);
         for (dest) |*item| item.* = @sqrt(item.*);
@@ -7793,6 +7803,13 @@ pub fn fillKumaraswamyFrom(source: anytype, comptime T: type, dest: []T, alpha: 
     }
 
     for (dest) |*item| item.* = kumaraswamyFrom(source, T, alpha, beta_param);
+}
+
+fn kumaraswamyParametersValid(comptime T: type, alpha: T, beta_param: T) bool {
+    return alpha > 0 and beta_param > 0 and
+        (std.math.isFinite(alpha) or alpha == std.math.inf(T)) and
+        (std.math.isFinite(beta_param) or beta_param == std.math.inf(T)) and
+        !(alpha == std.math.inf(T) and beta_param == std.math.inf(T));
 }
 
 pub fn fillKumaraswamyChecked(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
@@ -7910,6 +7927,7 @@ pub fn VectorKumaraswamy(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
             const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
             if (self.sampler.method == .beta_one_sqrt) return @sqrt(uniform_vec);
             if (self.sampler.method == .beta_one) return kumaraswamyBetaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue());
@@ -7922,6 +7940,10 @@ pub fn VectorKumaraswamy(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -7930,7 +7952,7 @@ pub fn VectorKumaraswamy(comptime VectorType: type) type {
 pub fn Kumaraswamy(comptime T: type) type {
     return struct {
         const Self = @This();
-        const Method = enum { generic, alpha_one, beta_one, beta_one_sqrt };
+        const Method = enum { generic, alpha_one, beta_one, beta_one_sqrt, point_zero, point_one };
 
         inverse_alpha: T,
         inverse_beta: T,
@@ -7938,12 +7960,15 @@ pub fn Kumaraswamy(comptime T: type) type {
 
         pub fn init(alpha: T, beta_param: T) Error!Self {
             comptime requireFloat(T);
-            if (!(alpha > 0) or !(beta_param > 0)) return error.InvalidParameter;
-            if (!std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return error.InvalidParameter;
+            if (!kumaraswamyParametersValid(T, alpha, beta_param)) return error.InvalidParameter;
             return .{
-                .inverse_alpha = 1 / alpha,
-                .inverse_beta = 1 / beta_param,
-                .method = if (alpha == 2 and beta_param == 1)
+                .inverse_alpha = if (alpha == std.math.inf(T)) 0 else 1 / alpha,
+                .inverse_beta = if (beta_param == std.math.inf(T)) 0 else 1 / beta_param,
+                .method = if (alpha == std.math.inf(T))
+                    .point_one
+                else if (beta_param == std.math.inf(T))
+                    .point_zero
+                else if (alpha == 2 and beta_param == 1)
                     .beta_one_sqrt
                 else if (beta_param == 1)
                     .beta_one
@@ -7963,16 +7988,21 @@ pub fn Kumaraswamy(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) T {
+            if (self.method == .point_one) return 1;
+            if (self.method == .point_zero) return 0;
             return self.momentValue(1);
         }
 
         pub fn varianceValue(self: Self) T {
+            if (self.isDegenerate()) return 0;
             const first_moment = self.momentValue(1);
             const second_moment = self.momentValue(2);
             return second_moment - first_moment * first_moment;
         }
 
         pub fn modeValue(self: Self) ?T {
+            if (self.method == .point_one) return 1;
+            if (self.method == .point_zero) return 0;
             const alpha = self.alphaValue();
             const beta_param = self.betaValue();
             if (alpha > 1 and alpha * beta_param > 1) {
@@ -7985,17 +8015,17 @@ pub fn Kumaraswamy(comptime T: type) type {
         }
 
         pub fn medianValue(self: Self) T {
+            if (self.method == .point_one) return 1;
+            if (self.method == .point_zero) return 0;
             return std.math.pow(T, 1 - std.math.pow(T, 0.5, self.inverse_beta), self.inverse_alpha);
         }
 
         pub fn minValue(self: Self) T {
-            _ = self;
-            return 0;
+            return if (self.method == .point_one) 1 else 0;
         }
 
         pub fn maxValue(self: Self) T {
-            _ = self;
-            return 1;
+            return if (self.method == .point_zero) 0 else 1;
         }
 
         fn momentValue(self: Self, order: T) T {
@@ -8010,6 +8040,8 @@ pub fn Kumaraswamy(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             switch (self.method) {
+                .point_zero => return 0,
+                .point_one => return 1,
                 .beta_one_sqrt => return @sqrt(Rng.floatOpenFrom(source, T)),
                 .beta_one => return std.math.pow(T, Rng.floatOpenFrom(source, T), self.inverse_alpha),
                 .alpha_one => return 1 - std.math.pow(T, 1 - Rng.floatOpenFrom(source, T), self.inverse_beta),
@@ -8026,6 +8058,14 @@ pub fn Kumaraswamy(comptime T: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             switch (self.method) {
+                .point_zero => {
+                    @memset(dest, 0);
+                    return;
+                },
+                .point_one => {
+                    @memset(dest, 1);
+                    return;
+                },
                 .beta_one_sqrt => {
                     Rng.fillOpenFrom(source, T, dest);
                     for (dest) |*item| item.* = @sqrt(item.*);
@@ -8045,6 +8085,14 @@ pub fn Kumaraswamy(comptime T: type) type {
             }
 
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.method == .point_zero or self.method == .point_one;
+        }
+
+        fn degenerateValue(self: Self) T {
+            return if (self.method == .point_one) 1 else 0;
         }
     };
 }
@@ -16208,6 +16256,136 @@ test "degenerate weibull helpers do not consume random stream" {
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate kumaraswamy helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1e7);
+    var control = alea.ScalarPrng.init(0x5150_d1e7);
+    const rng = Rng.init(&engine);
+
+    inline for (.{
+        .{ .alpha = std.math.inf(f64), .beta_param = 2.5, .point = 1.0 },
+        .{ .alpha = 3.5, .beta_param = std.math.inf(f64), .point = 0.0 },
+    }) |params| {
+        const alpha: f64 = params.alpha;
+        const beta_param: f64 = params.beta_param;
+        const point: f64 = params.point;
+        const point_vec: @Vector(4, f64) = @splat(point);
+
+        try std.testing.expectEqual(point, kumaraswamy(rng, f64, alpha, beta_param));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try std.testing.expectEqual(point, kumaraswamyFrom(&engine, f64, alpha, beta_param));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try std.testing.expectEqual(point, try kumaraswamyChecked(rng, f64, alpha, beta_param));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try std.testing.expectEqual(point, try kumaraswamyCheckedFrom(&engine, f64, alpha, beta_param));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        var scalar_buf: [5]f64 = undefined;
+        fillKumaraswamy(rng, f64, &scalar_buf, alpha, beta_param);
+        for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        fillKumaraswamyFrom(&engine, f64, &scalar_buf, alpha, beta_param);
+        for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillKumaraswamyChecked(rng, f64, &scalar_buf, alpha, beta_param);
+        for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillKumaraswamyCheckedFrom(&engine, f64, &scalar_buf, alpha, beta_param);
+        for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        const sampler = try Kumaraswamy(f64).init(alpha, beta_param);
+        try std.testing.expectEqual(alpha, sampler.alphaValue());
+        try std.testing.expectEqual(beta_param, sampler.betaValue());
+        try std.testing.expectEqual(point, sampler.expectedValue());
+        try std.testing.expectEqual(@as(f64, 0), sampler.varianceValue());
+        try std.testing.expectEqual(point, sampler.modeValue().?);
+        try std.testing.expectEqual(point, sampler.medianValue());
+        try std.testing.expectEqual(point, sampler.minValue());
+        try std.testing.expectEqual(point, sampler.maxValue());
+        try std.testing.expectEqual(point, sampler.sample(rng));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try std.testing.expectEqual(point, sampler.sampleFrom(&engine));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        sampler.fill(rng, &scalar_buf);
+        for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        sampler.fillFrom(&engine, &scalar_buf);
+        for (scalar_buf) |sample| try std.testing.expectEqual(point, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try std.testing.expectEqual(point_vec, vectorKumaraswamy(rng, @Vector(4, f64), alpha, beta_param));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try std.testing.expectEqual(point_vec, vectorKumaraswamyFrom(&engine, @Vector(4, f64), alpha, beta_param));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try std.testing.expectEqual(point_vec, try vectorKumaraswamyChecked(rng, @Vector(4, f64), alpha, beta_param));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try std.testing.expectEqual(point_vec, try vectorKumaraswamyCheckedFrom(&engine, @Vector(4, f64), alpha, beta_param));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        var vector_buf: [3]@Vector(4, f64) = undefined;
+        fillVectorKumaraswamy(rng, @Vector(4, f64), &vector_buf, alpha, beta_param);
+        for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        fillVectorKumaraswamyFrom(&engine, @Vector(4, f64), &vector_buf, alpha, beta_param);
+        for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillVectorKumaraswamyChecked(rng, @Vector(4, f64), &vector_buf, alpha, beta_param);
+        for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillVectorKumaraswamyCheckedFrom(&engine, @Vector(4, f64), &vector_buf, alpha, beta_param);
+        for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        const vector_sampler = try VectorKumaraswamy(@Vector(4, f64)).init(alpha, beta_param);
+        try std.testing.expectEqual(alpha, vector_sampler.alphaValue());
+        try std.testing.expectEqual(beta_param, vector_sampler.betaValue());
+        try std.testing.expectEqual(point, vector_sampler.expectedValue());
+        try std.testing.expectEqual(@as(f64, 0), vector_sampler.varianceValue());
+        try std.testing.expectEqual(point, vector_sampler.modeValue().?);
+        try std.testing.expectEqual(point, vector_sampler.medianValue());
+        try std.testing.expectEqual(point, vector_sampler.minValue());
+        try std.testing.expectEqual(point, vector_sampler.maxValue());
+        try std.testing.expectEqual(point_vec, vector_sampler.sample(rng));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try std.testing.expectEqual(point_vec, vector_sampler.sampleFrom(&engine));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        vector_sampler.fill(rng, &vector_buf);
+        for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        vector_sampler.fillFrom(&engine, &vector_buf);
+        for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
+        try std.testing.expectEqual(control.next(), engine.next());
+    }
+
+    try std.testing.expectError(error.InvalidParameter, kumaraswamyCheckedFrom(&engine, f64, std.math.inf(f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, vectorKumaraswamyCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, Kumaraswamy(f64).init(std.math.inf(f64), std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidParameter, VectorKumaraswamy(@Vector(4, f64)).init(std.math.inf(f64), std.math.inf(f64)));
 }
 
 test "degenerate power-function helpers do not consume random stream" {
