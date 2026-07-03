@@ -317,6 +317,10 @@ pub fn main(init: std.process.Init) !void {
         try benchFillLogNormalLibmvec(f64, alea.ScalarPrng, io, stdout, "alea LogNormalLibmvec.fill f64 scalar direct", bytes / 128, 0x1061, 0.25);
         try benchFillLogNormalLibmvec(f32, alea.FastPrng, io, stdout, "alea LogNormalLibmvec.fill f32 fast direct", bytes / 128, 0x1066, 0.25);
         try benchFillLogNormalLibmvec(f32, alea.ScalarPrng, io, stdout, "alea LogNormalLibmvec.fill f32 scalar direct", bytes / 128, 0x1066, 0.25);
+        try benchLogNormalDlsymExp(f64, alea.FastPrng, io, stdout, "alea LogNormalDlsymExp f64 fast direct", bytes / 128, 0x1060, 0.25);
+        try benchLogNormalDlsymExp(f64, alea.ScalarPrng, io, stdout, "alea LogNormalDlsymExp f64 scalar direct", bytes / 128, 0x1061, 0.25);
+        try benchLogNormalDlsymExp(f32, alea.FastPrng, io, stdout, "alea LogNormalDlsymExp f32 fast direct", bytes / 128, 0x1066, 0.25);
+        try benchLogNormalDlsymExp(f32, alea.ScalarPrng, io, stdout, "alea LogNormalDlsymExp f32 scalar direct", bytes / 128, 0x1066, 0.25);
     }
     try benchLogNormalStddev1Scalar(io, stdout, "alea log-normal stddev=1 scalar direct", bytes / 128);
     try benchLogNormalRawStddev1(alea.ScalarPrng, io, stdout, "alea log-normal stddev=1 raw scalar direct", bytes / 128, 0x1061);
@@ -7827,6 +7831,44 @@ fn benchLogNormalLibmvec(
     while (trial < trials) : (trial += 1) {
         var engine = Source.init(seed);
         var dist = alea.distributions.LogNormalLibmvec(T, 1024).init(0, stddev) catch |err| {
+            try stdout.print("{s}: unavailable ({})\n", .{ name, err });
+            return;
+        };
+        defer dist.deinit();
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += @floatCast(dist.sampleFrom(&engine));
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchLogNormalDlsymExp(
+    comptime T: type,
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    count: usize,
+    seed: u64,
+    stddev: T,
+) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        var dist = alea.distributions.LogNormalDlsymExp(T, 1024).init(0, stddev) catch |err| {
             try stdout.print("{s}: unavailable ({})\n", .{ name, err });
             return;
         };

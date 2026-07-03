@@ -167,9 +167,10 @@ Fresh local evidence:
   `distcheck` now includes independent `buffered-log-normal` and
   `buffered-log-normal-mean-cv` mean gates for this opt-in. This helps
   one-at-a-time users, but the primary narrow exact f64/f32 rows still trail
-  Rust. `LogNormalLibmvec(T, buffer_len)` provides the fast
-  platform/output-mapping-changing path only when libc-linked libmvec is
-  available, leaving exact defaults unchanged.
+  Rust. `LogNormalDlsymExp(T, buffer_len)` provides a scalar-libm, max-observed-1-ULP
+  opt-in with `distcheck-libc` coverage, while `LogNormalLibmvec(T, buffer_len)`
+  provides the fastest platform/output-mapping-changing path when libc-linked
+  libmvec is available. Exact defaults remain unchanged.
 - A new Linux/glibc libmvec probe directly calls x86_64 vector math ABI
   symbols (`_ZGVbN2v_exp`, `_ZGVcN4v_exp`, `_ZGVcN8v_expf`) from
   `log-normal-probe` when building for x86_64-linux-gnu. Focused

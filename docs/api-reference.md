@@ -190,7 +190,7 @@ Single-shot helpers:
   `fillVectorNormalCheckedFrom`, `logNormal`, `logNormalFrom`,
   `logNormalChecked`, `logNormalCheckedFrom`, `fillLogNormal`,
   `fillLogNormalFrom`, `fillLogNormalChecked`, `fillLogNormalCheckedFrom`,
-  `BufferedLogNormal`, `LogNormalLibmvec`,
+  `BufferedLogNormal`, `LogNormalLibmvec`, `LogNormalDlsymExp`,
   `logNormalNativeF32`, `logNormalNativeF32From`,
   `logNormalNativeF32Checked`, `logNormalNativeF32CheckedFrom`,
   `fillLogNormalNativeF32`, `fillLogNormalNativeF32From`,
@@ -965,6 +965,19 @@ Reusable samplers:
 - `LogNormalLibmvec(T, buffer_len).sampleFrom`
 - `LogNormalLibmvec(T, buffer_len).fill`
 - `LogNormalLibmvec(T, buffer_len).fillFrom`
+- `LogNormalDlsymExp(T, buffer_len)`
+- `LogNormalDlsymExp(T, buffer_len).capacity`
+- `LogNormalDlsymExp(T, buffer_len).init`
+- `LogNormalDlsymExp(T, buffer_len).initMeanCv`
+- `LogNormalDlsymExp(T, buffer_len).deinit`
+- `LogNormalDlsymExp(T, buffer_len).logMeanValue`
+- `LogNormalDlsymExp(T, buffer_len).logStddevValue`
+- `LogNormalDlsymExp(T, buffer_len).bufferedValueCount`
+- `LogNormalDlsymExp(T, buffer_len).reset`
+- `LogNormalDlsymExp(T, buffer_len).sample`
+- `LogNormalDlsymExp(T, buffer_len).sampleFrom`
+- `LogNormalDlsymExp(T, buffer_len).fill`
+- `LogNormalDlsymExp(T, buffer_len).fillFrom`
 - `LogNormalNativeF32`
 - `LogNormalNativeF32.init`
 - `LogNormalNativeF32.meanValue`

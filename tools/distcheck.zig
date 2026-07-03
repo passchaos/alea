@@ -234,6 +234,20 @@ fn checkContinuous() !void {
                 }
             }.sample, 1.02, 1.04);
         }
+        var dlsym_log_normal_engine = alea.DefaultPrng.init(0xc0ff_ee49);
+        const dlsym_log_normal_rng = alea.Rng.init(&dlsym_log_normal_engine);
+        var dlsym_dist = alea.distributions.LogNormalDlsymExp(f64, 128).init(0, 0.25) catch |err| switch (err) {
+            error.LibmUnavailable => null,
+            else => return err,
+        };
+        if (dlsym_dist) |*dist| {
+            defer dist.deinit();
+            try expectContinuousMeanWithContext(*alea.distributions.LogNormalDlsymExp(f64, 128), "log-normal-dlsym-exp", dlsym_log_normal_rng, 20_000, dist, struct {
+                fn sample(ctx: *alea.distributions.LogNormalDlsymExp(f64, 128), r: alea.Rng) f64 {
+                    return ctx.sample(r);
+                }
+            }.sample, 1.02, 1.04);
+        }
     }
     var log_normal_exp2_engine = alea.DefaultPrng.init(0xc0ff_ee32);
     const log_normal_exp2_rng = alea.Rng.init(&log_normal_exp2_engine);
