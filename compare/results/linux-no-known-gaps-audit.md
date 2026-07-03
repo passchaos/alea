@@ -71,7 +71,7 @@ Out of scope for this Linux-first audit:
 | Zipf, Zeta | `zipf`, `Zipf`, `zeta`, `Zeta` | unit tests, `distcheck`, benchmark rows |
 | UnitCircle, UnitDisc, UnitSphere, UnitBall | `unitCircle`, `UnitCircle`, `unitDisc`, `UnitDisc`, `unitSphere`, `UnitSphere`, `unitBall`, `UnitBall` | unit tests, `distcheck`, benchmark rows |
 | Dirichlet | `Dirichlet(T)` | unit tests, `distcheck`, benchmark row |
-| WeightedAliasIndex | `AliasTable(Weight)` | unit tests, benchmark rows for weighted index paths; f64 `WeightedAliasIndex` row is covered by `AliasTable(f64)` facade/direct evidence |
+| WeightedAliasIndex | `AliasTable(Weight)` | unit tests, benchmark rows for weighted index paths; f64 `WeightedAliasIndex` row is exceeded by `AliasTable(f64)`, while u32 remains a small S4-M4 throughput watch |
 | WeightedTreeIndex | `WeightedTree(Weight)`, `WeightedIntTree(Weight)` | unit tests, Zig/Rust update+sample benchmark rows for integer and f64 weights |
 
 ## Current Stage 4 Performance Watch Items

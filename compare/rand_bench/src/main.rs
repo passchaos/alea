@@ -62,7 +62,8 @@ fn main() {
     bench_bool("rand random_bool", bytes / 8);
     bench_alphanumeric("rand alphanumeric", bytes / 8);
     bench_weighted_index("rand weighted index", bytes / 256);
-    bench_weighted_alias("rand_distr weighted alias f64", bytes / 256);
+    bench_weighted_alias_u32("rand_distr weighted alias u32", bytes / 256);
+    bench_weighted_alias_f64("rand_distr weighted alias f64", bytes / 256);
     bench_weighted_tree("rand_distr weighted tree update+sample", bytes / 256);
     bench_weighted_tree_f64("rand_distr weighted tree f64 update+sample", bytes / 256);
     bench_distr_standard_normal("rand_distr standard-normal", bytes / 64);
@@ -472,7 +473,36 @@ fn bench_weighted_index(name: &str, count: usize) {
     println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
 }
 
-fn bench_weighted_alias(name: &str, count: usize) {
+fn bench_weighted_alias_u32(name: &str, count: usize) {
+    if !include_bench(name) {
+        return;
+    }
+    let weights = vec![1u32, 2, 3, 0, 5, 8, 13, 21];
+    let mut best_million_per_s = 0.0;
+    let mut best_checksum = 0usize;
+    for _ in 0..TRIALS {
+        let mut rng = SmallRng::seed_from_u64(0xa11a);
+        let dist = rand_distr::weighted::WeightedAliasIndex::new(weights.clone()).unwrap();
+        let start = Instant::now();
+        let mut checksum: usize = 0;
+
+        for _ in 0..count {
+            checksum = checksum.wrapping_add(dist.sample(&mut rng));
+        }
+
+        let seconds = start.elapsed().as_secs_f64();
+        let million_per_s = (count as f64 / 1_000_000.0) / seconds;
+        if million_per_s > best_million_per_s {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    black_box(best_checksum);
+    println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
+}
+
+fn bench_weighted_alias_f64(name: &str, count: usize) {
     if !include_bench(name) {
         return;
     }

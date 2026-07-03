@@ -13938,6 +13938,7 @@ pub fn AliasTable(comptime Weight: type) type {
         const Self = @This();
 
         prob: []f64,
+        prob_threshold: []u64,
         alias: []usize,
         total: f64,
         constant_index: ?usize = null,
@@ -13948,6 +13949,8 @@ pub fn AliasTable(comptime Weight: type) type {
 
             const prob = try allocator.alloc(f64, input_weights.len);
             errdefer allocator.free(prob);
+            const prob_threshold = try allocator.alloc(u64, input_weights.len);
+            errdefer allocator.free(prob_threshold);
             const alias = try allocator.alloc(usize, input_weights.len);
             errdefer allocator.free(alias);
 
@@ -14011,8 +14014,13 @@ pub fn AliasTable(comptime Weight: type) type {
                 alias[more] = more;
             }
 
+            for (prob, prob_threshold) |probability, *threshold| {
+                threshold.* = aliasProbabilityThreshold(probability);
+            }
+
             return .{
                 .prob = prob,
+                .prob_threshold = prob_threshold,
                 .alias = alias,
                 .total = total,
                 .constant_index = if (positive_count == 1) positive_index else null,
@@ -14022,6 +14030,7 @@ pub fn AliasTable(comptime Weight: type) type {
 
         pub fn deinit(self: *Self) void {
             self.allocator.free(self.prob);
+            self.allocator.free(self.prob_threshold);
             self.allocator.free(self.alias);
             self.* = undefined;
         }
@@ -14031,8 +14040,10 @@ pub fn AliasTable(comptime Weight: type) type {
 
             const next = try Self.init(self.allocator, input_weights);
             self.allocator.free(self.prob);
+            self.allocator.free(self.prob_threshold);
             self.allocator.free(self.alias);
             self.prob = next.prob;
+            self.prob_threshold = next.prob_threshold;
             self.alias = next.alias;
             self.total = next.total;
             self.constant_index = next.constant_index;
@@ -14107,8 +14118,7 @@ pub fn AliasTable(comptime Weight: type) type {
             if (aliasTableCanSampleWithOneWord(self.prob.len)) {
                 const raw = Rng.nextFrom(source);
                 const column = @as(usize, @intCast(raw & @as(u64, @intCast(self.prob.len - 1))));
-                const unit = @as(f64, @floatFromInt(raw >> 11)) * (1.0 / 9007199254740992.0);
-                return if (unit < self.prob[column]) column else self.alias[column];
+                return if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column];
             }
             const column = Rng.uintLessThanFrom(source, usize, self.prob.len);
             return if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column];
@@ -14130,6 +14140,13 @@ pub fn AliasTable(comptime Weight: type) type {
 
 fn aliasTableCanSampleWithOneWord(len: usize) bool {
     return len > 1 and len <= 2048 and std.math.isPowerOfTwo(len);
+}
+
+fn aliasProbabilityThreshold(probability: f64) u64 {
+    const scale = 9007199254740992.0;
+    if (probability <= 0) return 0;
+    if (probability >= 1) return @as(u64, 1) << 53;
+    return @intFromFloat(@ceil(probability * scale));
 }
 
 pub fn WeightedTree(comptime Weight: type) type {

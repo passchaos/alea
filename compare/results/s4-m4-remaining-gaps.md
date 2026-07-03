@@ -13,13 +13,14 @@ focuses on genuinely new hypotheses instead of repeating rejected probes.
 | --- | --- | --- |
 | Exact LogNormal transform/codegen | Focused f64 single-sample rows remain around 118M for facade/FastPrng/raw versus local Rust f64 around 146M. Exact f32 rows improved: `fillLogNormal f32` is about 138.5M facade, 144.2M FastPrng direct, and 148.9M ScalarPrng direct after the direct-source f32 standard-fill refinement, but Rust f32 evidence is about 155.3M. Wider `stddev=1` rows are still much slower, around 65M f64 and 60-64M f32 single-sample versus Rust around 80M/79M. | Exact `@exp` transform/codegen is still the bottleneck. The useful f32/native/exp2 paths are opt-in because they change output mapping or accuracy contract. |
 | Dense SIMD normal/exponential distribution kernels | Vector APIs and vectorbench coverage are complete, but production vector normal/exponential kernels still use scalar ziggurat lane-fill. f32x8/f64x4 repair, same-candidate repair, all-accepted repair, block-fallback, flat-slice routing, FastPrng repair, and Alea4x64 lane-local repair have all trailed the current direct rows in the real vector-slice harness. | No genuinely dense SIMD candidate has beaten scalar lane-fill while preserving or explicitly versioning rejected-lane stream shape. |
+| Static weighted alias u32 throughput | Fresh local Rust `rand_distr::WeightedAliasIndex<u32>` evidence is about 180.5M samples/s, while Alea `AliasTable(u32)` is about 168.4M facade, 174.0M direct, and 167.3M direct fill after the one-word threshold fast path. | This is a small remaining throughput gap for a comparable static weighted sampler. The f64 row is closed; u32 alias-cache and u32-column-only attempts were rejected. |
 
 ## Recently Closed Or Narrowed Items
 
 | Area | Current status |
 | --- | --- |
 | Hypergeometric H2PE coverage | HIN `(100, 30, 10)`, balanced large H2PE `(5000, 2500, 500)`, and skewed large H2PE `(10000, 1000, 2000)` now have local Rust comparison rows plus `distcheck` mean gates. |
-| Weighted dynamic/static sampling | Integer dynamic weights are covered by `WeightedIntTree`; generic `WeightedTree(f64)` now has matching local Rust f64 evidence and exceeds it in focused update+sample rows. Static `AliasTable(f64)` now has explicit local Rust `WeightedAliasIndex<f64>` evidence and facade/direct f64 alias sampling is at the Rust boundary after the power-of-two one-word fast path. |
+| Weighted dynamic/static sampling | Integer dynamic weights are covered by `WeightedIntTree`; generic `WeightedTree(f64)` now has matching local Rust f64 evidence and exceeds it in focused update+sample rows. Static `AliasTable(f64)` now has explicit local Rust `WeightedAliasIndex<f64>` evidence and exceeds it after the power-of-two one-word threshold fast path; static `AliasTable(u32)` remains a small watch listed above. |
 | Unit geometry point rows | Direct f64 point rows are at or above local Rust evidence after the FMA and UnitCircle numerator-FMA work; facade UnitCircle remains near the Rust boundary but not a hard standalone blocker. |
 | Standard f32 fills | Default f32 standard normal/exponential fills now use the stream-preserving vector8 chunk path, improving ScalarPrng direct rows above focused Rust evidence and narrowing FastPrng/facade rows. Cached-`Rng`, lane-local Alea4x64, generic `Rng.fillNormal`, and parameterized `fillExponential` transfers were rejected. |
 | OpenClosed f64 bulk | Exact `(0, 1]` f64 endpoint-grid bulk fill now exceeds local Rust evidence after the raw-word `@mulAdd` conversion; keep `openclosed-endpoint-notes.md` for regression history. |
@@ -52,7 +53,10 @@ A candidate that could close S4-M4 should do one of the following:
 2. Provide a dense SIMD normal/exponential kernel that runs in the real
    vector-slice harness, preserves or explicitly versions rejected-lane stream
    shape, and beats current direct standard and parameterized vectorbench rows.
-3. Produce new local Rust evidence showing another untracked comparable core
+3. Improve static `AliasTable(u32)` sampling enough to match the new local Rust
+   `WeightedAliasIndex<u32>` evidence, or document a Zig-native tradeoff that
+   justifies the small remaining gap.
+4. Produce new local Rust evidence showing another untracked comparable core
    workload where Alea trails, then add a targeted fix or explicit exclusion.
 
 Until one of these is available, S4-M4 remains in progress and the long-term
