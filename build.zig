@@ -263,6 +263,23 @@ pub fn build(b: *std.Build) void {
     const continuous_distributions_example_step = b.step("run-continuous-distributions", "Run the continuous distributions alea example");
     continuous_distributions_example_step.dependOn(&run_continuous_distributions_example.step);
 
+    const advanced_continuous_distributions_example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/advanced_continuous_distributions.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    advanced_continuous_distributions_example_mod.addImport("alea", module);
+
+    const advanced_continuous_distributions_example = b.addExecutable(.{
+        .name = "alea-advanced-continuous-distributions",
+        .root_module = advanced_continuous_distributions_example_mod,
+    });
+    const run_advanced_continuous_distributions_example = b.addRunArtifact(advanced_continuous_distributions_example);
+    if (b.args) |args| run_advanced_continuous_distributions_example.addArgs(args);
+
+    const advanced_continuous_distributions_example_step = b.step("run-advanced-continuous-distributions", "Run the advanced continuous distributions alea example");
+    advanced_continuous_distributions_example_step.dependOn(&run_advanced_continuous_distributions_example.step);
+
     const examples_step = b.step("examples", "Run all alea examples");
     examples_step.dependOn(&run_example.step);
     examples_step.dependOn(&run_vector_profiles_example.step);
@@ -278,6 +295,7 @@ pub fn build(b: *std.Build) void {
     examples_step.dependOn(&run_range_sampling_example.step);
     examples_step.dependOn(&run_discrete_distributions_example.step);
     examples_step.dependOn(&run_continuous_distributions_example.step);
+    examples_step.dependOn(&run_advanced_continuous_distributions_example.step);
 
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/throughput.zig"),

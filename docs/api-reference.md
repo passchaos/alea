@@ -2355,6 +2355,7 @@ Build steps:
 - `zig build run-range-sampling`
 - `zig build run-discrete-distributions`
 - `zig build run-continuous-distributions`
+- `zig build run-advanced-continuous-distributions`
 - `zig build examples`
 - `zig build apicheck`
 - `zig build validate`
