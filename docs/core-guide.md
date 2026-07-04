@@ -528,6 +528,7 @@ Use:
   `Choice.sampleIndexU32From`, `Choice.fillValuesFrom` / `fillFrom`,
   `Choice.valuesFrom` / `ptrsFrom`, `Choice.fillIndicesFrom`,
   `Choice.fillIndicesU32From`, `Choice.indicesFrom`, `Choice.indicesU32From`,
+  and fixed-size `Choice.indexArrayFrom` / `indexArrayU32From`,
   `WeightedChoice.initBy` / `updateBy`, `WeightedChoice.initByIndex` / `updateByIndex`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
   `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /

@@ -6543,6 +6543,34 @@ pub fn Choice(comptime T: type) type {
             return out;
         }
 
+        pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
+            return self.indexArrayFrom(rng, N);
+        }
+
+        pub fn indexArrayFrom(self: Self, source: anytype, comptime N: usize) [N]usize {
+            var out: [N]usize = undefined;
+            self.fillIndicesFrom(source, &out);
+            return out;
+        }
+
+        pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
+            return self.indexArrayU32From(rng, N);
+        }
+
+        pub fn indexArrayU32Checked(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
+            return self.indexArrayU32CheckedFrom(rng, N);
+        }
+
+        pub fn indexArrayU32From(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
+            return self.indexArrayU32CheckedFrom(source, N);
+        }
+
+        pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
+            var out: [N]u32 = undefined;
+            try self.fillIndicesU32From(source, &out);
+            return out;
+        }
+
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
             return rng.sampleIter(*const T, self);
         }
@@ -13547,10 +13575,96 @@ test "choice sampler repeatedly samples slice references" {
     defer std.testing.allocator.free(owned_values);
     try std.testing.expectEqual(@as(usize, 8), owned_values.len);
     for (owned_values) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
+    var fill_engine = alea.ScalarPrng.init(0x5150_c0e0);
+    var array_engine = alea.ScalarPrng.init(0x5150_c0e0);
+    var index_fill: [6]usize = undefined;
+    choice.fillIndicesFrom(&fill_engine, &index_fill);
+    const index_array = choice.indexArrayFrom(&array_engine, 6);
+    try std.testing.expectEqualSlices(usize, &index_fill, &index_array);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+    fill_engine = alea.ScalarPrng.init(0x5150_c0e1);
+    array_engine = alea.ScalarPrng.init(0x5150_c0e1);
+    var index_fill_u32: [6]u32 = undefined;
+    try choice.fillIndicesU32From(&fill_engine, &index_fill_u32);
+    const index_array_u32 = try choice.indexArrayU32From(&array_engine, 6);
+    try std.testing.expectEqualSlices(u32, &index_fill_u32, &index_array_u32);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+    var facade_engine = alea.ScalarPrng.init(0x5150_c0e2);
+    var direct_engine = alea.ScalarPrng.init(0x5150_c0e2);
+    const array_rng = Rng.init(&facade_engine);
+    const facade_array = choice.indexArray(array_rng, 4);
+    const direct_array = choice.indexArrayFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(usize, &direct_array, &facade_array);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    facade_engine = alea.ScalarPrng.init(0x5150_c0e3);
+    direct_engine = alea.ScalarPrng.init(0x5150_c0e3);
+    const u32_rng = Rng.init(&facade_engine);
+    const facade_u32_array = try choice.indexArrayU32(u32_rng, 4);
+    const direct_u32_array = try choice.indexArrayU32CheckedFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(u32, &direct_u32_array, &facade_u32_array);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     try std.testing.expect(chooseIter(rng, u8, &.{}) == null);
     try std.testing.expect(chooseIterFrom(&engine, u8, &.{}) == null);
     try std.testing.expectError(error.EmptyInput, chooseIterChecked(rng, u8, &.{}));
     try std.testing.expectError(error.EmptyInput, chooseIterCheckedFrom(&engine, u8, &.{}));
+}
+
+test "Choice index arrays mirror fills" {
+    const alea = @import("root.zig");
+    const values = [_]u8{ 2, 4, 6, 8 };
+    const choice = Choice(u8).init(&values).?;
+
+    var fill_engine = alea.ScalarPrng.init(0x5150_c0e4);
+    var array_engine = alea.ScalarPrng.init(0x5150_c0e4);
+    var fill_out: [6]usize = undefined;
+    choice.fillIndicesFrom(&fill_engine, &fill_out);
+    const array_out = choice.indexArrayFrom(&array_engine, 6);
+    try std.testing.expectEqualSlices(usize, &fill_out, &array_out);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+
+    fill_engine = alea.ScalarPrng.init(0x5150_c0e5);
+    array_engine = alea.ScalarPrng.init(0x5150_c0e5);
+    var fill_u32: [6]u32 = undefined;
+    try choice.fillIndicesU32From(&fill_engine, &fill_u32);
+    const array_u32 = try choice.indexArrayU32From(&array_engine, 6);
+    try std.testing.expectEqualSlices(u32, &fill_u32, &array_u32);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_c0e6);
+    var direct_engine = alea.ScalarPrng.init(0x5150_c0e6);
+    const rng = Rng.init(&facade_engine);
+    const facade_array = choice.indexArray(rng, 4);
+    const direct_array = choice.indexArrayFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(usize, &direct_array, &facade_array);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    facade_engine = alea.ScalarPrng.init(0x5150_c0e7);
+    direct_engine = alea.ScalarPrng.init(0x5150_c0e7);
+    const u32_rng = Rng.init(&facade_engine);
+    const facade_u32_array = try choice.indexArrayU32Checked(u32_rng, 4);
+    const direct_u32_array = try choice.indexArrayU32CheckedFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(u32, &direct_u32_array, &facade_u32_array);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var zero_engine = alea.ScalarPrng.init(0x5150_c0e8);
+    var zero_control = alea.ScalarPrng.init(0x5150_c0e8);
+    const zero_array = choice.indexArrayFrom(&zero_engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), zero_array.len);
+    try std.testing.expectEqual(zero_control.next(), zero_engine.next());
+    const zero_u32_array = try choice.indexArrayU32CheckedFrom(&zero_engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), zero_u32_array.len);
+    try std.testing.expectEqual(zero_control.next(), zero_engine.next());
+
+    const single_values = [_]u8{42};
+    const single_choice = Choice(u8).init(&single_values).?;
+    var single_engine = alea.ScalarPrng.init(0x5150_c0e9);
+    var single_control = alea.ScalarPrng.init(0x5150_c0e9);
+    const single_array = single_choice.indexArrayFrom(&single_engine, 4);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0, 0 }, &single_array);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_u32_array = try single_choice.indexArrayU32From(&single_engine, 4);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0, 0 }, &single_u32_array);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 
 test "zero-length choice fills do not consume random stream" {
@@ -13571,6 +13685,12 @@ test "zero-length choice fills do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
     var index_u32_buf: [0]u32 = .{};
     try choice.fillIndicesU32From(&engine, &index_u32_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+    const index_array = choice.indexArrayFrom(&engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), index_array.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+    const index_array_u32 = try choice.indexArrayU32CheckedFrom(&engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), index_array_u32.len);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const labels = [_][]const u8{ "never", "rare", "often" };
@@ -13648,6 +13768,14 @@ test "single-item choice sampler does not consume random stream" {
     const owned_indices_u32 = try choice.indicesU32From(std.testing.allocator, &engine, 4);
     defer std.testing.allocator.free(owned_indices_u32);
     for (owned_indices_u32) |index| try std.testing.expectEqual(@as(u32, 0), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const index_array = choice.indexArrayFrom(&engine, 4);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0, 0 }, &index_array);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const index_array_u32 = try choice.indexArrayU32From(&engine, 4);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0, 0 }, &index_array_u32);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var iter = choice.iterFrom(&engine);
