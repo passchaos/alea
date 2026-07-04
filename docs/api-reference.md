@@ -2272,7 +2272,9 @@ Dynamic weighted helpers:
 - Index vectors: `IndexVec.len`, `IndexVec.isEmpty`, `IndexVec.at`,
   `IndexVec.indexOf`, `IndexVec.contains`, `IndexVec.validateItems`,
   `IndexVec.copyInto`, `IndexVec.toOwnedSlice`, `IndexVec.values`,
-  `IndexVec.valuesChecked`, `IndexVec.ptrs`, `IndexVec.ptrsChecked`,
+  `IndexVec.valuesChecked`, `IndexVec.valuesInto`,
+  `IndexVec.valuesIntoChecked`, `IndexVec.ptrs`, `IndexVec.ptrsChecked`,
+  `IndexVec.ptrsInto`, `IndexVec.ptrsIntoChecked`,
   `IndexVec.iter`, `IndexVec.Iterator.next`, `IndexVec.Iterator.remaining`,
   `IndexVec.ValueIterator.remaining`, `PtrIterator`, `PtrIterator.next`,
   `PtrIterator.remaining`, `IndexVec.deinit`

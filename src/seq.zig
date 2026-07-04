@@ -126,6 +126,28 @@ pub const IndexVec = union(enum) {
         return self.ptrs(T, items);
     }
 
+    pub fn valuesInto(self: IndexVec, comptime T: type, items: []const T, out: []T) Error!void {
+        if (out.len != self.len()) return error.LengthMismatch;
+        var index: usize = 0;
+        while (index < self.len()) : (index += 1) out[index] = items[self.at(index)];
+    }
+
+    pub fn valuesIntoChecked(self: IndexVec, comptime T: type, items: []const T, out: []T) Error!void {
+        try self.validateItems(items.len);
+        try self.valuesInto(T, items, out);
+    }
+
+    pub fn ptrsInto(self: IndexVec, comptime T: type, items: []const T, out: []*const T) Error!void {
+        if (out.len != self.len()) return error.LengthMismatch;
+        var index: usize = 0;
+        while (index < self.len()) : (index += 1) out[index] = &items[self.at(index)];
+    }
+
+    pub fn ptrsIntoChecked(self: IndexVec, comptime T: type, items: []const T, out: []*const T) Error!void {
+        try self.validateItems(items.len);
+        try self.ptrsInto(T, items, out);
+    }
+
     pub fn iter(self: IndexVec) Iterator {
         return .{ .index_vec = self };
     }
@@ -2125,12 +2147,40 @@ test "index vec maps sampled indexes to slice items" {
     try std.testing.expectEqualStrings("ant", compact_values.next().?);
     try std.testing.expectEqualStrings("cat", compact_values.next().?);
     try std.testing.expectEqualStrings("dog", compact_values.next().?);
+    var compact_mapped_values: [3][]const u8 = undefined;
+    try compact.valuesIntoChecked([]const u8, &labels, &compact_mapped_values);
+    try std.testing.expectEqualStrings("ant", compact_mapped_values[0]);
+    try std.testing.expectEqualStrings("cat", compact_mapped_values[1]);
+    try std.testing.expectEqualStrings("dog", compact_mapped_values[2]);
+    var compact_mapped_ptrs: [3]*const []const u8 = undefined;
+    try compact.ptrsIntoChecked([]const u8, &labels, &compact_mapped_ptrs);
+    try std.testing.expectEqualStrings("ant", compact_mapped_ptrs[0].*);
+    try std.testing.expectEqualStrings("cat", compact_mapped_ptrs[1].*);
+    try std.testing.expectEqualStrings("dog", compact_mapped_ptrs[2].*);
+
+    var mapped_values: [3][]const u8 = undefined;
+    try index_vec.valuesIntoChecked([]const u8, &labels, &mapped_values);
+    try std.testing.expectEqualStrings("eel", mapped_values[0]);
+    try std.testing.expectEqualStrings("bee", mapped_values[1]);
+    try std.testing.expectEqualStrings("fox", mapped_values[2]);
+    var short_values: [2][]const u8 = undefined;
+    try std.testing.expectError(error.LengthMismatch, index_vec.valuesInto([]const u8, &labels, &short_values));
+
+    var mapped_ptrs: [3]*const []const u8 = undefined;
+    try index_vec.ptrsIntoChecked([]const u8, &labels, &mapped_ptrs);
+    try std.testing.expectEqualStrings("eel", mapped_ptrs[0].*);
+    try std.testing.expectEqualStrings("bee", mapped_ptrs[1].*);
+    try std.testing.expectEqualStrings("fox", mapped_ptrs[2].*);
+    var short_ptrs: [2]*const []const u8 = undefined;
+    try std.testing.expectError(error.LengthMismatch, index_vec.ptrsInto([]const u8, &labels, &short_ptrs));
 
     var invalid_backing = [_]usize{ 1, labels.len };
     const invalid = IndexVec{ .usize = &invalid_backing };
     try std.testing.expectError(error.InvalidParameter, invalid.validateItems(labels.len));
     try std.testing.expectError(error.InvalidParameter, invalid.valuesChecked([]const u8, &labels));
     try std.testing.expectError(error.InvalidParameter, invalid.ptrsChecked([]const u8, &labels));
+    try std.testing.expectError(error.InvalidParameter, invalid.valuesIntoChecked([]const u8, &labels, mapped_values[0..2]));
+    try std.testing.expectError(error.InvalidParameter, invalid.ptrsIntoChecked([]const u8, &labels, mapped_ptrs[0..2]));
 }
 
 test "index vec keeps compact backing for u32 lengths" {

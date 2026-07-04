@@ -64,6 +64,12 @@ pub fn main(init: std.process.Init) !void {
     const mapped1 = item_values.next().?;
     const mapped2 = item_values.next().?;
     try stdout.print("IndexVec.values: {s}, {s}, {s}\n", .{ mapped0, mapped1, mapped2 });
+    var mapped_into: [3][]const u8 = undefined;
+    try item_index_vec.valuesIntoChecked([]const u8, &items, &mapped_into);
+    try stdout.print("IndexVec.valuesInto: {s}, {s}, {s}\n", .{ mapped_into[0], mapped_into[1], mapped_into[2] });
+    var mapped_ptrs: [3]*const []const u8 = undefined;
+    try item_index_vec.ptrsIntoChecked([]const u8, &items, &mapped_ptrs);
+    try stdout.print("IndexVec.ptrsInto: {s}, {s}, {s}\n", .{ mapped_ptrs[0].*, mapped_ptrs[1].*, mapped_ptrs[2].* });
 
     var choose_engine = alea.ScalarPrng.init(0x5e11_0003);
     const chosen = try alea.seq.chooseMultipleFrom(allocator, &choose_engine, []const u8, &items, 3);
