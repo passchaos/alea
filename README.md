@@ -22,7 +22,7 @@ The current Linux-first roadmap is intentionally broad:
   wrappers and reusable vector samplers, `fillNormal`, `fillExponential`, and unit geometry fill APIs for
   high-volume sampling without iterator ceremony
 - deterministic seed derivation with named streams and system-entropy helpers
-- scalar helpers for integers, floats, durations, ranges, booleans, and bytes
+- scalar helpers for integers, floats, durations, ranges, booleans, caller-owned bytes, and allocation-returning byte buffers
 - collection helpers for one-shot usize/u32 index choice, `choose`, const/mutable pointer choice, `shuffle`, fixed-size u32 index and item/pointer arrays, allocation-returning and caller-owned item/pointer subsets, partial shuffle selected/rest splits, compact `IndexVec` index samples with lazy/caller-owned/allocation-returning value and pointer mapping plus u32 export mapping, f64 usize/u32 and generic usize/u32 weighted indexes, compact weighted IndexVec samples, allocation-returning weighted u32 index slices, fixed-size weighted u32 index arrays, caller-owned weighted u32 index buffers,
   repeated choice iterators with value/pointer/index samples, fills, and owned value/pointer/index batches, one-shot weighted item/const-pointer/mutable-pointer helpers, weighted choice samplers with value/pointer/index samples, fills, and owned value/pointer/index batches, weighted fixed-size pointer arrays, allocation-returning weighted pointer subsets, caller-owned weighted pointer buffers, caller-owned pointer adoption examples, weighted sampling without
   replacement, iterator and weighted iterator sampling with and without
@@ -69,6 +69,8 @@ pub fn main() !void {
     const tuple = rng.value(struct { u16, bool, f32 });
     var rolls = rng.sampleIter(u8, try alea.distributions.Uniform(u8).initInclusive(1, 6));
     const next_roll = rolls.next().?;
+    const random_bytes = try rng.bytesAlloc(std.heap.smp_allocator, 8);
+    defer std.heap.smp_allocator.free(random_bytes);
     const random_words = try rng.valueBatch(u16, std.heap.smp_allocator, 4);
     defer std.heap.smp_allocator.free(random_words);
     const token = try alea.ascii.Alphanumeric.alloc(std.heap.smp_allocator, rng, 16);
@@ -89,6 +91,7 @@ pub fn main() !void {
     _ = outages;
     _ = tuple;
     _ = next_roll;
+    _ = random_bytes;
     _ = random_words;
     _ = token;
     _ = utf8_capacity;

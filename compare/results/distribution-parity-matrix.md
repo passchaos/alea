@@ -14,7 +14,7 @@ Zig-native way.
 
 | Rust `rand` area | Alea status |
 | --- | --- |
-| `StandardUniform` integers/floats/bools | Covered by `Rng.value`, scalar helpers, `float`, `boolean` |
+| `StandardUniform` integers/floats/bools/bytes | Covered by `Rng.value`, scalar helpers, `float`, `boolean`, caller-owned bytes, and allocation-returning `bytesAlloc` |
 | `StandardUniform` arrays/tuples | Covered by `Rng.value` arrays and tuples plus allocation-returning `Rng.valueBatch` / `Rng.valueBatchChecked` repeated samples |
 | `StandardUniform` char | Covered by explicit `Rng.unicodeScalar` and Unicode UTF-8 helpers, including caller-owned-buffer UTF-8 output |
 | `Uniform` integer/float ranges | Covered by `Uniform(T)`, `Open01`, `OpenClosed01`, and range helpers, including endpoint/inclusivity and range/strict-interval moment accessors |

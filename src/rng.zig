@@ -241,6 +241,17 @@ pub fn bytes(self: Rng, buf: []u8) void {
     self.fillFn(self.ptr, buf);
 }
 
+pub fn bytesAlloc(self: Rng, allocator: std.mem.Allocator, count: usize) ![]u8 {
+    return bytesAllocFrom(self, allocator, count);
+}
+
+pub fn bytesAllocFrom(source: anytype, allocator: std.mem.Allocator, count: usize) ![]u8 {
+    const out = try allocator.alloc(u8, count);
+    errdefer allocator.free(out);
+    fillBytesFrom(source, out);
+    return out;
+}
+
 pub fn fill(self: Rng, comptime T: type, dest: []T) void {
     fillFrom(self, T, dest);
 }
@@ -3980,6 +3991,13 @@ test "value and iterator helpers preserve direct stream shape" {
         try std.testing.expectEqualSlices(u8, &facade_bytes, &direct_bytes);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+        const owned_bytes = try rng.bytesAlloc(std.testing.allocator, 16);
+        defer std.testing.allocator.free(owned_bytes);
+        const direct_owned_bytes = try bytesAllocFrom(&direct_engine, std.testing.allocator, 16);
+        defer std.testing.allocator.free(direct_owned_bytes);
+        try std.testing.expectEqualSlices(u8, owned_bytes, direct_owned_bytes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         var facade_vectors: [4]@Vector(4, u16) = undefined;
         var direct_vectors: [4]@Vector(4, u16) = undefined;
         rng.fill(@Vector(4, u16), &facade_vectors);
@@ -4025,6 +4043,30 @@ test "value and iterator helpers preserve direct stream shape" {
         try std.testing.expectEqualSlices(u8, owned_rolls, direct_owned_rolls);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
+}
+
+test "owned byte buffers allocate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba86);
+    var control = alea.ScalarPrng.init(0x5150_ba86);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.bytesAlloc(empty_alloc.allocator(), 0);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var facade_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.bytesAlloc(facade_alloc.allocator(), 16));
+    try std.testing.expect(facade_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var direct_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, bytesAllocFrom(&engine, direct_alloc.allocator(), 16));
+    try std.testing.expect(direct_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "owned value and sampler batches allocate before consuming random stream" {

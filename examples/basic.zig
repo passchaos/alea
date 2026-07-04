@@ -23,6 +23,8 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(token);
     const unicode = try alea.ascii.unicodeUtf8Alloc(init.gpa, rng, 6);
     defer init.gpa.free(unicode);
+    const random_bytes = try rng.bytesAlloc(init.gpa, 8);
+    defer init.gpa.free(random_bytes);
     const random_words = try rng.valueBatch(u16, init.gpa, 4);
     defer init.gpa.free(random_words);
 
@@ -62,6 +64,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("weighted index: {}\n", .{weighted});
     try stdout.print("token: {s}\n", .{token});
     try stdout.print("unicode scalars: {s}\n", .{unicode});
+    try stdout.print("bytesAlloc: {any}\n", .{random_bytes});
     try stdout.print("valueBatch u16: {any}\n", .{random_words});
     try stdout.print("dirichlet: {any}\n", .{proportions});
     try stdout.print("partial shuffle hand: {any}\n", .{hand});
