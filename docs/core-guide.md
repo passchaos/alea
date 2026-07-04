@@ -162,6 +162,8 @@ profiles.
 Single-shot helpers and reusable samplers cover:
 
 - uniform, Bernoulli, binomial, negative-binomial, vector Bernoulli/binomial/binomial-approx/negative-binomial
+Run `zig build run-continuous-distributions` for a runnable comparison of core
+continuous reusable samplers, diagnostics, fill APIs, and vector lane batches.
 - standard normal, normal, exact/vector log-normal plus opt-in bounded f32
   approximate log-normal/vector approximate log-normal, half-normal/vector half-normal, standard exponential,
   exponential

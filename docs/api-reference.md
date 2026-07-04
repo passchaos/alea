@@ -2354,6 +2354,7 @@ Build steps:
 - `zig build run-reproducible-streams`
 - `zig build run-range-sampling`
 - `zig build run-discrete-distributions`
+- `zig build run-continuous-distributions`
 - `zig build examples`
 - `zig build apicheck`
 - `zig build validate`
