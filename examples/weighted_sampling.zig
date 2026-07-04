@@ -300,6 +300,35 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_mut_ptrs_into) |score| score.* += 5;
     try stdout.print("weighted mut ptrs into scores: {any}\n", .{weighted_scores_into});
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy and sampleWeightedBy/PtrsBy/MutPtrsBy when weights live inside item records, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
+    var weighted_by_indices_into_engine = alea.ScalarPrng.init(0x717a);
+    var weighted_by_indices_into: [3]usize = undefined;
+    var weighted_by_indices_keys: [3]f64 = undefined;
+    _ = try alea.seq.sampleWeightedIndicesByIntoFrom(&weighted_by_indices_into_engine, WeightedRecord, u32, &weighted_records, &weighted_by_indices_into, &weighted_by_indices_keys, WeightedRecord.weightOf);
+    try stdout.print("weighted by indices into: {any}\n", .{weighted_by_indices_into});
+
+    var weighted_by_values_into_engine = alea.ScalarPrng.init(0x717b);
+    var weighted_by_values_into: [3]WeightedRecord = undefined;
+    var weighted_by_values_indices: [3]usize = undefined;
+    var weighted_by_values_keys: [3]f64 = undefined;
+    _ = try alea.seq.sampleWeightedByIntoFrom(&weighted_by_values_into_engine, WeightedRecord, u32, &weighted_records, &weighted_by_values_into, &weighted_by_values_indices, &weighted_by_values_keys, WeightedRecord.weightOf);
+    try stdout.print("weighted by values into: [{s}, {s}, {s}]\n", .{ weighted_by_values_into[0].label, weighted_by_values_into[1].label, weighted_by_values_into[2].label });
+
+    var weighted_by_ptrs_into_engine = alea.ScalarPrng.init(0x717c);
+    var weighted_by_ptrs_into: [3]*const WeightedRecord = undefined;
+    var weighted_by_ptrs_indices: [3]usize = undefined;
+    var weighted_by_ptrs_keys: [3]f64 = undefined;
+    _ = try alea.seq.sampleWeightedPtrsByIntoFrom(&weighted_by_ptrs_into_engine, WeightedRecord, u32, &weighted_records, &weighted_by_ptrs_into, &weighted_by_ptrs_indices, &weighted_by_ptrs_keys, WeightedRecord.weightOf);
+    try stdout.print("weighted by ptrs into: [{s}, {s}, {s}]\n", .{ weighted_by_ptrs_into[0].label, weighted_by_ptrs_into[1].label, weighted_by_ptrs_into[2].label });
+
+    var weighted_by_mut_ptrs_into_engine = alea.ScalarPrng.init(0x717d);
+    var weighted_by_mut_records_into = weighted_records;
+    var weighted_by_mut_ptrs_into: [3]*WeightedRecord = undefined;
+    var weighted_by_mut_ptrs_indices: [3]usize = undefined;
+    var weighted_by_mut_ptrs_keys: [3]f64 = undefined;
+    _ = try alea.seq.sampleWeightedMutPtrsByIntoFrom(&weighted_by_mut_ptrs_into_engine, WeightedRecord, u32, &weighted_by_mut_records_into, &weighted_by_mut_ptrs_into, &weighted_by_mut_ptrs_indices, &weighted_by_mut_ptrs_keys, WeightedRecord.weightOf);
+    for (weighted_by_mut_ptrs_into) |record| record.score += 20;
+    try stdout.print("weighted by mut ptrs into scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_records_into[0].score, weighted_by_mut_records_into[1].score, weighted_by_mut_records_into[2].score, weighted_by_mut_records_into[3].score });
+
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy and sampleWeightedBy/PtrsBy/MutPtrsBy when weights live inside item records, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }

@@ -373,6 +373,12 @@ Use:
   `seq.sampleWeightedPtrsIntoFrom`, `seq.sampleWeightedPtrsIntoCheckedFrom`,
   `seq.sampleWeightedMutPtrsIntoFrom`,
   `seq.sampleWeightedMutPtrsIntoCheckedFrom`,
+  accessor-based caller-owned `seq.sampleWeightedIndicesByIntoFrom`,
+  `seq.sampleWeightedIndicesByIntoCheckedFrom`,
+  `seq.sampleWeightedByIntoFrom`, `seq.sampleWeightedByIntoCheckedFrom`,
+  `seq.sampleWeightedPtrsByIntoFrom`, `seq.sampleWeightedPtrsByIntoCheckedFrom`,
+  `seq.sampleWeightedMutPtrsByIntoFrom`, and
+  `seq.sampleWeightedMutPtrsByIntoCheckedFrom`,
   `seq.sampleWeightedArrayFrom`, `seq.sampleWeightedArrayCheckedFrom`,
   `seq.sampleWeightedPtrArrayFrom`, `seq.sampleWeightedPtrArrayCheckedFrom`,
   `seq.sampleWeightedMutPtrArrayFrom`,

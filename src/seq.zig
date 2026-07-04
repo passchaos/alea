@@ -1961,6 +1961,78 @@ pub fn sampleWeightedIndicesU32IntoCheckedFrom(source: anytype, comptime Weight:
     sampleWeightedIndicesU32IntoExactFrom(source, Weight, weights, out, scratch_keys[0..out.len]);
 }
 
+pub fn sampleWeightedIndicesByInto(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) Error!usize {
+    return sampleWeightedIndicesByIntoFrom(rng, T, Weight, items, out, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedIndicesByIntoFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) Error!usize {
+    if (out.len == 0) return 0;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (items.len == 0) return error.EmptyInput;
+
+    const positive = try countPositiveItemsBy(T, Weight, items, weightFn);
+    const count = @min(out.len, positive);
+    if (count == 0) return 0;
+    if (positive == 1) {
+        out[0] = (try singlePositiveItemIndexBy(T, Weight, items, weightFn)).?;
+        return 1;
+    }
+
+    sampleWeightedIndicesByIntoExactFrom(source, T, Weight, items, out[0..count], scratch_keys[0..count], weightFn);
+    return count;
+}
+
+pub fn sampleWeightedIndicesByIntoChecked(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) Error!void {
+    return sampleWeightedIndicesByIntoCheckedFrom(rng, T, Weight, items, out, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedIndicesByIntoCheckedFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) Error!void {
+    if (out.len == 0) return;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (out.len > items.len) return error.InvalidParameter;
+
+    const positive = try countPositiveItemsBy(T, Weight, items, weightFn);
+    if (positive < out.len) return error.InvalidParameter;
+    if (positive == 1) {
+        out[0] = (try singlePositiveItemIndexBy(T, Weight, items, weightFn)).?;
+        return;
+    }
+
+    sampleWeightedIndicesByIntoExactFrom(source, T, Weight, items, out, scratch_keys[0..out.len], weightFn);
+}
+
 pub fn sampleWeightedIndexArray(rng: Rng, comptime Weight: type, comptime N: usize, weights: []const Weight) Error!?[N]usize {
     return sampleWeightedIndexArrayFrom(rng, Weight, N, weights);
 }
@@ -2639,6 +2711,67 @@ pub fn sampleWeightedIntoCheckedFrom(source: anytype, comptime T: type, comptime
     for (scratch_indices[0..out.len], out) |index, *slot| slot.* = items[index];
 }
 
+pub fn sampleWeightedByInto(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !usize {
+    return sampleWeightedByIntoFrom(rng, T, Weight, items, out, scratch_indices, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedByIntoFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !usize {
+    if (out.len == 0) return 0;
+    if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
+
+    const count = try sampleWeightedIndicesByIntoFrom(source, T, Weight, items, scratch_indices[0..out.len], scratch_keys[0..out.len], weightFn);
+    for (scratch_indices[0..count], out[0..count]) |index, *slot| slot.* = items[index];
+    return count;
+}
+
+pub fn sampleWeightedByIntoChecked(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !void {
+    return sampleWeightedByIntoCheckedFrom(rng, T, Weight, items, out, scratch_indices, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedByIntoCheckedFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !void {
+    if (out.len == 0) return;
+    if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
+
+    try sampleWeightedIndicesByIntoCheckedFrom(source, T, Weight, items, scratch_indices[0..out.len], scratch_keys[0..out.len], weightFn);
+    for (scratch_indices[0..out.len], out) |index, *slot| slot.* = items[index];
+}
+
 pub fn sampleWeightedPtrsInto(rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, out: []*const T, scratch_indices: []usize, scratch_keys: []f64) !usize {
     return sampleWeightedPtrsIntoFrom(rng, T, Weight, items, weights, out, scratch_indices, scratch_keys);
 }
@@ -2666,6 +2799,67 @@ pub fn sampleWeightedPtrsIntoCheckedFrom(source: anytype, comptime T: type, comp
     for (scratch_indices[0..out.len], out) |index, *slot| slot.* = &items[index];
 }
 
+pub fn sampleWeightedPtrsByInto(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []*const T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !usize {
+    return sampleWeightedPtrsByIntoFrom(rng, T, Weight, items, out, scratch_indices, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedPtrsByIntoFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []*const T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !usize {
+    if (out.len == 0) return 0;
+    if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
+
+    const count = try sampleWeightedIndicesByIntoFrom(source, T, Weight, items, scratch_indices[0..out.len], scratch_keys[0..out.len], weightFn);
+    for (scratch_indices[0..count], out[0..count]) |index, *slot| slot.* = &items[index];
+    return count;
+}
+
+pub fn sampleWeightedPtrsByIntoChecked(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []*const T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !void {
+    return sampleWeightedPtrsByIntoCheckedFrom(rng, T, Weight, items, out, scratch_indices, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedPtrsByIntoCheckedFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []*const T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !void {
+    if (out.len == 0) return;
+    if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
+
+    try sampleWeightedIndicesByIntoCheckedFrom(source, T, Weight, items, scratch_indices[0..out.len], scratch_keys[0..out.len], weightFn);
+    for (scratch_indices[0..out.len], out) |index, *slot| slot.* = &items[index];
+}
+
 pub fn sampleWeightedMutPtrsInto(rng: Rng, comptime T: type, comptime Weight: type, items: []T, weights: []const Weight, out: []*T, scratch_indices: []usize, scratch_keys: []f64) !usize {
     return sampleWeightedMutPtrsIntoFrom(rng, T, Weight, items, weights, out, scratch_indices, scratch_keys);
 }
@@ -2690,6 +2884,67 @@ pub fn sampleWeightedMutPtrsIntoCheckedFrom(source: anytype, comptime T: type, c
     if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
 
     try sampleWeightedIndicesIntoCheckedFrom(source, Weight, weights, scratch_indices[0..out.len], scratch_keys[0..out.len]);
+    for (scratch_indices[0..out.len], out) |index, *slot| slot.* = &items[index];
+}
+
+pub fn sampleWeightedMutPtrsByInto(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    out: []*T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !usize {
+    return sampleWeightedMutPtrsByIntoFrom(rng, T, Weight, items, out, scratch_indices, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedMutPtrsByIntoFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    out: []*T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !usize {
+    if (out.len == 0) return 0;
+    if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
+
+    const count = try sampleWeightedIndicesByIntoFrom(source, T, Weight, items, scratch_indices[0..out.len], scratch_keys[0..out.len], weightFn);
+    for (scratch_indices[0..count], out[0..count]) |index, *slot| slot.* = &items[index];
+    return count;
+}
+
+pub fn sampleWeightedMutPtrsByIntoChecked(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    out: []*T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !void {
+    return sampleWeightedMutPtrsByIntoCheckedFrom(rng, T, Weight, items, out, scratch_indices, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedMutPtrsByIntoCheckedFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    out: []*T,
+    scratch_indices: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) !void {
+    if (out.len == 0) return;
+    if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
+
+    try sampleWeightedIndicesByIntoCheckedFrom(source, T, Weight, items, scratch_indices[0..out.len], scratch_keys[0..out.len], weightFn);
     for (scratch_indices[0..out.len], out) |index, *slot| slot.* = &items[index];
 }
 
@@ -7787,6 +8042,296 @@ test "accessor weighted no-replacement samples preserve stream shape and invalid
     var indices_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
     try std.testing.expectError(error.OutOfMemory, sampleWeightedByFrom(indices_alloc.allocator(), &invalid_engine, Entry, f64, &entries, 3, Entry.weightOf));
     try std.testing.expect(indices_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "accessor weighted caller-owned buffers fill values indexes and pointers" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        value: u8,
+        weight: u32,
+
+        fn weightOf(item: *const @This()) u32 {
+            return item.weight;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .value = 10, .weight = 0 },
+        .{ .value = 20, .weight = 1 },
+        .{ .value = 30, .weight = 5 },
+        .{ .value = 40, .weight = 0 },
+        .{ .value = 50, .weight = 9 },
+    };
+
+    var index_engine = alea.ScalarPrng.init(0x5150_c731);
+    var indexes: [5]usize = undefined;
+    var index_keys: [5]f64 = undefined;
+    const index_count = try sampleWeightedIndicesByIntoFrom(&index_engine, Entry, u32, &entries, &indexes, &index_keys, Entry.weightOf);
+    try std.testing.expectEqual(@as(usize, 3), index_count);
+    for (indexes[0..index_count]) |index| {
+        try std.testing.expect(index == 1 or index == 2 or index == 4);
+        try std.testing.expect(entries[index].weight > 0);
+    }
+
+    var checked_index_engine = alea.ScalarPrng.init(0x5150_c732);
+    var checked_indexes: [3]usize = undefined;
+    var checked_index_keys: [3]f64 = undefined;
+    try sampleWeightedIndicesByIntoCheckedFrom(&checked_index_engine, Entry, u32, &entries, &checked_indexes, &checked_index_keys, Entry.weightOf);
+    for (checked_indexes[0..]) |index| {
+        try std.testing.expect(index == 1 or index == 2 or index == 4);
+        try std.testing.expect(entries[index].weight > 0);
+    }
+
+    var value_engine = alea.ScalarPrng.init(0x5150_c733);
+    var values: [5]Entry = undefined;
+    var value_indexes: [5]usize = undefined;
+    var value_keys: [5]f64 = undefined;
+    const value_count = try sampleWeightedByIntoFrom(&value_engine, Entry, u32, &entries, &values, &value_indexes, &value_keys, Entry.weightOf);
+    try std.testing.expectEqual(@as(usize, 3), value_count);
+    for (values[0..value_count]) |item| try std.testing.expect(item.weight > 0);
+
+    var checked_value_engine = alea.ScalarPrng.init(0x5150_c734);
+    var checked_values: [3]Entry = undefined;
+    var checked_value_indexes: [3]usize = undefined;
+    var checked_value_keys: [3]f64 = undefined;
+    try sampleWeightedByIntoCheckedFrom(&checked_value_engine, Entry, u32, &entries, &checked_values, &checked_value_indexes, &checked_value_keys, Entry.weightOf);
+    for (checked_values[0..]) |item| try std.testing.expect(item.weight > 0);
+
+    var ptr_engine = alea.ScalarPrng.init(0x5150_c735);
+    var ptrs: [5]*const Entry = undefined;
+    var ptr_indexes: [5]usize = undefined;
+    var ptr_keys: [5]f64 = undefined;
+    const ptr_count = try sampleWeightedPtrsByIntoFrom(&ptr_engine, Entry, u32, &entries, &ptrs, &ptr_indexes, &ptr_keys, Entry.weightOf);
+    try std.testing.expectEqual(@as(usize, 3), ptr_count);
+    for (ptr_indexes[0..ptr_count], ptrs[0..ptr_count]) |index, ptr| {
+        try std.testing.expect(index == 1 or index == 2 or index == 4);
+        try std.testing.expectEqual(&entries[index], ptr);
+    }
+
+    var checked_ptr_engine = alea.ScalarPrng.init(0x5150_c736);
+    var checked_ptrs: [3]*const Entry = undefined;
+    var checked_ptr_indexes: [3]usize = undefined;
+    var checked_ptr_keys: [3]f64 = undefined;
+    try sampleWeightedPtrsByIntoCheckedFrom(&checked_ptr_engine, Entry, u32, &entries, &checked_ptrs, &checked_ptr_indexes, &checked_ptr_keys, Entry.weightOf);
+    for (checked_ptr_indexes[0..], checked_ptrs[0..]) |index, ptr| {
+        try std.testing.expect(index == 1 or index == 2 or index == 4);
+        try std.testing.expectEqual(&entries[index], ptr);
+    }
+
+    var mutable_entries = entries;
+    var mut_engine = alea.ScalarPrng.init(0x5150_c737);
+    var mut_ptrs: [3]*Entry = undefined;
+    var mut_indexes: [3]usize = undefined;
+    var mut_keys: [3]f64 = undefined;
+    try sampleWeightedMutPtrsByIntoCheckedFrom(&mut_engine, Entry, u32, &mutable_entries, &mut_ptrs, &mut_indexes, &mut_keys, Entry.weightOf);
+    for (mut_indexes[0..], mut_ptrs[0..]) |index, ptr| {
+        try std.testing.expect(index == 1 or index == 2 or index == 4);
+        try std.testing.expectEqual(&mutable_entries[index], ptr);
+        ptr.value += 1;
+    }
+    for (mutable_entries, entries) |after, before| {
+        if (before.weight > 0) {
+            try std.testing.expectEqual(before.value + 1, after.value);
+        } else {
+            try std.testing.expectEqual(before.value, after.value);
+        }
+    }
+
+    const SingleEntry = struct {
+        value: u8,
+        weight: u32,
+
+        fn weightOf(item: *const @This()) u32 {
+            return item.weight;
+        }
+    };
+    const single_entries = [_]SingleEntry{
+        .{ .value = 1, .weight = 0 },
+        .{ .value = 2, .weight = 7 },
+        .{ .value = 3, .weight = 0 },
+    };
+    var single_engine = alea.ScalarPrng.init(0x5150_c738);
+    var single_control = alea.ScalarPrng.init(0x5150_c738);
+    var single_out: [3]SingleEntry = undefined;
+    var single_indices: [3]usize = undefined;
+    var single_keys: [3]f64 = undefined;
+    const single_count = try sampleWeightedByIntoFrom(&single_engine, SingleEntry, u32, &single_entries, &single_out, &single_indices, &single_keys, SingleEntry.weightOf);
+    try std.testing.expectEqual(@as(usize, 1), single_count);
+    try std.testing.expectEqual(@as(usize, 1), single_indices[0]);
+    try std.testing.expectEqual(@as(u8, 2), single_out[0].value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_c739);
+    var empty_control = alea.ScalarPrng.init(0x5150_c739);
+    const EmptyEntry = struct {
+        value: u8,
+        weight: f64,
+
+        fn weightOf(item: *const @This()) f64 {
+            return item.weight;
+        }
+    };
+    var empty_values: [0]EmptyEntry = .{};
+    var empty_indexes: [0]usize = .{};
+    var empty_keys: [0]f64 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedByIntoFrom(&empty_engine, EmptyEntry, f64, &.{.{ .value = 1, .weight = std.math.nan(f64) }}, &empty_values, &empty_indexes, &empty_keys, EmptyEntry.weightOf));
+    try sampleWeightedByIntoCheckedFrom(&empty_engine, EmptyEntry, f64, &.{.{ .value = 1, .weight = std.math.nan(f64) }}, &empty_values, &empty_indexes, &empty_keys, EmptyEntry.weightOf);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "accessor weighted caller-owned buffers preserve stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        value: u8,
+        weight: f64,
+
+        fn weightOf(item: *const @This()) f64 {
+            return item.weight;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .value = 10, .weight = 1 },
+        .{ .value = 20, .weight = 2 },
+        .{ .value = 30, .weight = 6 },
+        .{ .value = 40, .weight = 3 },
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c73a);
+        var direct_engine = Engine.init(0x5150_c73a);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_indexes: [3]usize = undefined;
+        var direct_indexes: [3]usize = undefined;
+        var facade_index_keys: [3]f64 = undefined;
+        var direct_index_keys: [3]f64 = undefined;
+        try std.testing.expectEqual(try sampleWeightedIndicesByInto(rng, Entry, f64, &entries, &facade_indexes, &facade_index_keys, Entry.weightOf), try sampleWeightedIndicesByIntoFrom(&direct_engine, Entry, f64, &entries, &direct_indexes, &direct_index_keys, Entry.weightOf));
+        try std.testing.expectEqualSlices(usize, &facade_indexes, &direct_indexes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_indexes: [3]usize = undefined;
+        var checked_direct_indexes: [3]usize = undefined;
+        var checked_facade_index_keys: [3]f64 = undefined;
+        var checked_direct_index_keys: [3]f64 = undefined;
+        try sampleWeightedIndicesByIntoChecked(rng, Entry, f64, &entries, &checked_facade_indexes, &checked_facade_index_keys, Entry.weightOf);
+        try sampleWeightedIndicesByIntoCheckedFrom(&direct_engine, Entry, f64, &entries, &checked_direct_indexes, &checked_direct_index_keys, Entry.weightOf);
+        try std.testing.expectEqualSlices(usize, &checked_facade_indexes, &checked_direct_indexes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_values: [3]Entry = undefined;
+        var direct_values: [3]Entry = undefined;
+        var facade_value_indexes: [3]usize = undefined;
+        var direct_value_indexes: [3]usize = undefined;
+        var facade_value_keys: [3]f64 = undefined;
+        var direct_value_keys: [3]f64 = undefined;
+        try std.testing.expectEqual(try sampleWeightedByInto(rng, Entry, f64, &entries, &facade_values, &facade_value_indexes, &facade_value_keys, Entry.weightOf), try sampleWeightedByIntoFrom(&direct_engine, Entry, f64, &entries, &direct_values, &direct_value_indexes, &direct_value_keys, Entry.weightOf));
+        for (facade_values, direct_values) |facade_item, direct_item| try std.testing.expectEqual(facade_item.value, direct_item.value);
+        try std.testing.expectEqualSlices(usize, &facade_value_indexes, &direct_value_indexes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_values: [3]Entry = undefined;
+        var checked_direct_values: [3]Entry = undefined;
+        var checked_facade_value_indexes: [3]usize = undefined;
+        var checked_direct_value_indexes: [3]usize = undefined;
+        var checked_facade_value_keys: [3]f64 = undefined;
+        var checked_direct_value_keys: [3]f64 = undefined;
+        try sampleWeightedByIntoChecked(rng, Entry, f64, &entries, &checked_facade_values, &checked_facade_value_indexes, &checked_facade_value_keys, Entry.weightOf);
+        try sampleWeightedByIntoCheckedFrom(&direct_engine, Entry, f64, &entries, &checked_direct_values, &checked_direct_value_indexes, &checked_direct_value_keys, Entry.weightOf);
+        for (checked_facade_values, checked_direct_values) |facade_item, direct_item| try std.testing.expectEqual(facade_item.value, direct_item.value);
+        try std.testing.expectEqualSlices(usize, &checked_facade_value_indexes, &checked_direct_value_indexes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_ptrs: [3]*const Entry = undefined;
+        var direct_ptrs: [3]*const Entry = undefined;
+        var facade_ptr_indexes: [3]usize = undefined;
+        var direct_ptr_indexes: [3]usize = undefined;
+        var facade_ptr_keys: [3]f64 = undefined;
+        var direct_ptr_keys: [3]f64 = undefined;
+        try std.testing.expectEqual(try sampleWeightedPtrsByInto(rng, Entry, f64, &entries, &facade_ptrs, &facade_ptr_indexes, &facade_ptr_keys, Entry.weightOf), try sampleWeightedPtrsByIntoFrom(&direct_engine, Entry, f64, &entries, &direct_ptrs, &direct_ptr_indexes, &direct_ptr_keys, Entry.weightOf));
+        for (facade_ptrs, direct_ptrs) |facade_ptr, direct_ptr| {
+            try std.testing.expectEqual(@intFromPtr(facade_ptr) - @intFromPtr(&entries[0]), @intFromPtr(direct_ptr) - @intFromPtr(&entries[0]));
+        }
+        try std.testing.expectEqualSlices(usize, &facade_ptr_indexes, &direct_ptr_indexes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_ptrs: [3]*const Entry = undefined;
+        var checked_direct_ptrs: [3]*const Entry = undefined;
+        var checked_facade_ptr_indexes: [3]usize = undefined;
+        var checked_direct_ptr_indexes: [3]usize = undefined;
+        var checked_facade_ptr_keys: [3]f64 = undefined;
+        var checked_direct_ptr_keys: [3]f64 = undefined;
+        try sampleWeightedPtrsByIntoChecked(rng, Entry, f64, &entries, &checked_facade_ptrs, &checked_facade_ptr_indexes, &checked_facade_ptr_keys, Entry.weightOf);
+        try sampleWeightedPtrsByIntoCheckedFrom(&direct_engine, Entry, f64, &entries, &checked_direct_ptrs, &checked_direct_ptr_indexes, &checked_direct_ptr_keys, Entry.weightOf);
+        for (checked_facade_ptrs, checked_direct_ptrs) |facade_ptr, direct_ptr| {
+            try std.testing.expectEqual(@intFromPtr(facade_ptr) - @intFromPtr(&entries[0]), @intFromPtr(direct_ptr) - @intFromPtr(&entries[0]));
+        }
+        try std.testing.expectEqualSlices(usize, &checked_facade_ptr_indexes, &checked_direct_ptr_indexes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_mutable = entries;
+        var direct_mutable = entries;
+        var facade_mut_ptrs: [3]*Entry = undefined;
+        var direct_mut_ptrs: [3]*Entry = undefined;
+        var facade_mut_indexes: [3]usize = undefined;
+        var direct_mut_indexes: [3]usize = undefined;
+        var facade_mut_keys: [3]f64 = undefined;
+        var direct_mut_keys: [3]f64 = undefined;
+        try std.testing.expectEqual(try sampleWeightedMutPtrsByInto(rng, Entry, f64, &facade_mutable, &facade_mut_ptrs, &facade_mut_indexes, &facade_mut_keys, Entry.weightOf), try sampleWeightedMutPtrsByIntoFrom(&direct_engine, Entry, f64, &direct_mutable, &direct_mut_ptrs, &direct_mut_indexes, &direct_mut_keys, Entry.weightOf));
+        for (facade_mut_ptrs, direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            try std.testing.expectEqual(@intFromPtr(facade_ptr) - @intFromPtr(&facade_mutable[0]), @intFromPtr(direct_ptr) - @intFromPtr(&direct_mutable[0]));
+        }
+        try std.testing.expectEqualSlices(usize, &facade_mut_indexes, &direct_mut_indexes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_mutable = entries;
+        var checked_direct_mutable = entries;
+        var checked_facade_mut_ptrs: [3]*Entry = undefined;
+        var checked_direct_mut_ptrs: [3]*Entry = undefined;
+        var checked_facade_mut_indexes: [3]usize = undefined;
+        var checked_direct_mut_indexes: [3]usize = undefined;
+        var checked_facade_mut_keys: [3]f64 = undefined;
+        var checked_direct_mut_keys: [3]f64 = undefined;
+        try sampleWeightedMutPtrsByIntoChecked(rng, Entry, f64, &checked_facade_mutable, &checked_facade_mut_ptrs, &checked_facade_mut_indexes, &checked_facade_mut_keys, Entry.weightOf);
+        try sampleWeightedMutPtrsByIntoCheckedFrom(&direct_engine, Entry, f64, &checked_direct_mutable, &checked_direct_mut_ptrs, &checked_direct_mut_indexes, &checked_direct_mut_keys, Entry.weightOf);
+        for (checked_facade_mut_ptrs, checked_direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            try std.testing.expectEqual(@intFromPtr(facade_ptr) - @intFromPtr(&checked_facade_mutable[0]), @intFromPtr(direct_ptr) - @intFromPtr(&checked_direct_mutable[0]));
+        }
+        try std.testing.expectEqualSlices(usize, &checked_facade_mut_indexes, &checked_direct_mut_indexes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    const BadEntry = struct {
+        value: u8,
+        weight: f64,
+
+        fn weightOf(item: *const @This()) f64 {
+            return item.weight;
+        }
+    };
+    const empty_entries = [_]BadEntry{};
+    const bad_entries = [_]BadEntry{
+        .{ .value = 1, .weight = 1 },
+        .{ .value = 2, .weight = std.math.nan(f64) },
+    };
+    var invalid_engine = alea.ScalarPrng.init(0x5150_c73b);
+    var invalid_control = alea.ScalarPrng.init(0x5150_c73b);
+    var out: [2]Entry = undefined;
+    var bad_out: [2]BadEntry = undefined;
+    var out_ptrs: [2]*const BadEntry = undefined;
+    var out_mut_ptrs: [2]*BadEntry = undefined;
+    var indexes: [2]usize = undefined;
+    var keys: [2]f64 = undefined;
+    var short_indexes: [1]usize = undefined;
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedByIntoFrom(&invalid_engine, Entry, f64, &entries, &out, &short_indexes, &keys, Entry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesByIntoFrom(&invalid_engine, BadEntry, f64, &empty_entries, &indexes, &keys, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedByIntoFrom(&invalid_engine, BadEntry, f64, &bad_entries, &bad_out, &indexes, &keys, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedPtrsByIntoCheckedFrom(&invalid_engine, BadEntry, f64, &bad_entries, &out_ptrs, &indexes, &keys, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var bad_mutable = bad_entries;
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedMutPtrsByIntoCheckedFrom(&invalid_engine, BadEntry, f64, &bad_mutable, &out_mut_ptrs, &indexes, &keys, BadEntry.weightOf));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
