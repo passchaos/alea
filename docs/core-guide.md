@@ -240,7 +240,8 @@ Use:
   `iter` with `remaining`
 - `seq.sampleArray`, `seq.sampleArrayFrom`, `seq.sampleArrayCheckedFrom`
 - `seq.chooseMultiple`, `seq.chooseMultipleFrom`,
-  `seq.chooseMultipleCheckedFrom`
+  `seq.chooseMultipleCheckedFrom`, `seq.chooseArray`,
+  `seq.chooseArrayFrom`, `seq.chooseArrayCheckedFrom`
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`,
   `seq.chooseIteratorCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`,
   `seq.sampleIteratorCheckedFrom`

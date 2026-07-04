@@ -21,7 +21,7 @@ The current Linux-first roadmap is intentionally broad:
   high-volume sampling without iterator ceremony
 - deterministic seed derivation with named streams and system-entropy helpers
 - scalar helpers for integers, floats, durations, ranges, booleans, and bytes
-- collection helpers for `choose`, `shuffle`, partial shuffle, weighted indexes,
+- collection helpers for `choose`, `shuffle`, fixed-size item arrays, partial shuffle, weighted indexes,
   repeated choice iterators, weighted choice samplers, weighted sampling without
   replacement, iterator and weighted iterator sampling with and without
   replacement, reservoir sampling, adaptive index sampling, and checked

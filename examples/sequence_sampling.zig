@@ -51,6 +51,10 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(chosen);
     try stdout.print("chooseMultiple items: {s}, {s}, {s}\n", .{ chosen[0], chosen[1], chosen[2] });
 
+    var choose_array_engine = alea.ScalarPrng.init(0x5e11_000a);
+    const chosen_array = alea.seq.chooseArrayFrom(&choose_array_engine, []const u8, 3, &items).?;
+    try stdout.print("chooseArray items: {s}, {s}, {s}\n", .{ chosen_array[0], chosen_array[1], chosen_array[2] });
+
     var swr_engine = alea.ScalarPrng.init(0x5e11_0004);
     const sample = try alea.Rng.sampleWithoutReplacementFrom(&swr_engine, []const u8, allocator, &items, 3);
     defer allocator.free(sample);
@@ -83,6 +87,6 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(stream_sample);
     try stdout.print("sampleIteratorFrom counter[0..20): {any}\n", .{stream_sample});
 
-    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseMultiple or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample for streams, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample for streams, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }

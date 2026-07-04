@@ -261,6 +261,26 @@ pub fn chooseMultipleFrom(allocator: std.mem.Allocator, source: anytype, comptim
     return out;
 }
 
+pub fn chooseArray(rng: Rng, comptime T: type, comptime N: usize, items: []const T) ?[N]T {
+    return chooseArrayFrom(rng, T, N, items);
+}
+
+pub fn chooseArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
+    return chooseArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn chooseArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
+    if (N > items.len) return error.InvalidParameter;
+    return chooseArrayFrom(source, T, N, items).?;
+}
+
+pub fn chooseArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) ?[N]T {
+    const indices = sampleArrayFrom(source, N, items.len) orelse return null;
+    var out: [N]T = undefined;
+    inline for (0..N) |i| out[i] = items[indices[i]];
+    return out;
+}
+
 pub fn chooseIterator(rng: Rng, comptime T: type, iterator: anytype) ?T {
     return chooseIteratorFrom(rng, T, iterator);
 }
@@ -1475,6 +1495,9 @@ test "invalid facade collection helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, chooseMultipleChecked(std.testing.allocator, rng, u8, &.{ 1, 2 }, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, chooseArrayChecked(rng, u8, 3, &.{ 1, 2 }));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var tiny_items = [_]u8{ 1, 2 };
     try std.testing.expectError(error.InvalidParameter, partialShuffleChecked(rng, u8, &tiny_items, 3));
     try std.testing.expectEqual(control.next(), engine.next());
@@ -2263,6 +2286,44 @@ test "partial shuffle and reservoir sample respect counts" {
     try std.testing.expectEqual(@as(usize, 3), checked_multiple.len);
 }
 
+test "chooseArray returns fixed-size item samples" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+
+    var optional_engine = alea.ScalarPrng.init(0x5150_a001);
+    const optional = chooseArrayFrom(&optional_engine, u8, 3, &items).?;
+    try std.testing.expectEqual(@as(usize, 3), optional.len);
+    for (optional) |item| try std.testing.expect(std.mem.indexOfScalar(u8, &items, item) != null);
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_a002);
+    const checked = try chooseArrayCheckedFrom(&checked_engine, u8, 4, &items);
+    try std.testing.expectEqual(@as(usize, 4), checked.len);
+    for (checked) |item| try std.testing.expect(std.mem.indexOfScalar(u8, &items, item) != null);
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_a003);
+    const rng = Rng.init(&facade_engine);
+    const facade = chooseArray(rng, u8, 2, &items).?;
+    try std.testing.expectEqual(@as(usize, 2), facade.len);
+
+    const empty = chooseArrayFrom(&facade_engine, u8, 0, &items).?;
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(chooseArrayFrom(&facade_engine, u8, 9, &items) == null);
+    try std.testing.expectError(error.InvalidParameter, chooseArrayCheckedFrom(&facade_engine, u8, 9, &items));
+}
+
+test "invalid chooseArray helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a004);
+    var control = alea.ScalarPrng.init(0x5150_a004);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, chooseArrayChecked(rng, u8, 4, &.{ 1, 2, 3 }));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, chooseArrayCheckedFrom(&engine, u8, 4, &.{ 1, 2, 3 }));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "collection sequence helpers preserve direct stream shape" {
     const alea = @import("root.zig");
     const items = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
@@ -2292,6 +2353,11 @@ test "collection sequence helpers preserve direct stream shape" {
         const direct_multiple = try chooseMultipleFrom(std.testing.allocator, &direct_engine, u8, &items, 3);
         defer std.testing.allocator.free(direct_multiple);
         try std.testing.expectEqualSlices(u8, multiple, direct_multiple);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const array = chooseArray(rng, u8, 3, &items).?;
+        const direct_array = chooseArrayFrom(&direct_engine, u8, 3, &items).?;
+        try std.testing.expectEqualSlices(u8, &array, &direct_array);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 }

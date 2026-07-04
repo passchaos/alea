@@ -2279,7 +2279,8 @@ Dynamic weighted helpers:
   `sampleArray`, `sampleArrayFrom`, `sampleArrayChecked`,
   `sampleArrayCheckedFrom`
 - Collections: `chooseMultiple`, `chooseMultipleFrom`,
-  `chooseMultipleChecked`, `chooseMultipleCheckedFrom`, `partialShuffle`,
+  `chooseMultipleChecked`, `chooseMultipleCheckedFrom`, `chooseArray`,
+  `chooseArrayFrom`, `chooseArrayChecked`, `chooseArrayCheckedFrom`, `partialShuffle`,
   `partialShuffleFrom`, `partialShuffleChecked`, `partialShuffleCheckedFrom`,
   `reservoirSample`, `reservoirSampleFrom`, `reservoirSampleChecked`,
   `reservoirSampleCheckedFrom`
