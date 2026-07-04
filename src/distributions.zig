@@ -15549,6 +15549,17 @@ pub fn AliasTable(comptime Weight: type) type {
             return Self.init(allocator, input_weights);
         }
 
+        pub fn initBy(
+            allocator: std.mem.Allocator,
+            comptime T: type,
+            items: []const T,
+            comptime weightFn: fn (*const T) Weight,
+        ) !Self {
+            const input_weights = try weightsFromItems(allocator, T, items, weightFn);
+            defer allocator.free(input_weights);
+            return Self.init(allocator, input_weights);
+        }
+
         pub fn deinit(self: *Self) void {
             self.allocator.free(self.prob);
             self.allocator.free(self.prob_threshold);
@@ -15572,6 +15583,18 @@ pub fn AliasTable(comptime Weight: type) type {
 
         pub fn updateByIndex(self: *Self, comptime weightFn: fn (usize) Weight) !void {
             const input_weights = try weightsFromIndices(self.allocator, self.prob.len, weightFn);
+            defer self.allocator.free(input_weights);
+            try self.update(input_weights);
+        }
+
+        pub fn updateBy(
+            self: *Self,
+            comptime T: type,
+            items: []const T,
+            comptime weightFn: fn (*const T) Weight,
+        ) !void {
+            if (items.len != self.prob.len) return error.InvalidParameter;
+            const input_weights = try weightsFromItems(self.allocator, T, items, weightFn);
             defer self.allocator.free(input_weights);
             try self.update(input_weights);
         }
@@ -15817,6 +15840,18 @@ pub fn AliasTable(comptime Weight: type) type {
             const out = try allocator.alloc(Weight, length);
             errdefer allocator.free(out);
             for (out, 0..) |*slot, index| slot.* = weightFn(index);
+            return out;
+        }
+
+        fn weightsFromItems(
+            allocator: std.mem.Allocator,
+            comptime T: type,
+            items: []const T,
+            comptime weightFn: fn (*const T) Weight,
+        ) ![]Weight {
+            const out = try allocator.alloc(Weight, items.len);
+            errdefer allocator.free(out);
+            for (items, out) |*item, *slot| slot.* = weightFn(item);
             return out;
         }
     };
@@ -18270,6 +18305,73 @@ test "alias table index accessors initialize and update tables" {
 
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, AliasTable(u32).initByIndex(failing.allocator(), 4, IndexWeight.weight));
+    try std.testing.expect(failing.has_induced_failure);
+}
+
+test "alias table item accessors initialize and update tables" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        label: []const u8,
+        weight_value: u32,
+        float_weight: f64,
+
+        fn weight(item: *const @This()) u32 {
+            return item.weight_value;
+        }
+
+        fn updated(item: *const @This()) u32 {
+            return if (std.mem.eql(u8, item.label, "rare")) 9 else 0;
+        }
+
+        fn floatWeight(item: *const @This()) f64 {
+            return item.float_weight;
+        }
+
+        fn invalid(item: *const @This()) f64 {
+            return if (std.mem.eql(u8, item.label, "often")) std.math.nan(f64) else item.float_weight;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .label = "never", .weight_value = 1, .float_weight = 1 },
+        .{ .label = "rare", .weight_value = 0, .float_weight = 0 },
+        .{ .label = "often", .weight_value = 5, .float_weight = 5 },
+        .{ .label = "bonus", .weight_value = 3, .float_weight = 3 },
+    };
+
+    var table = try AliasTable(u32).initBy(std.testing.allocator, Entry, &entries, Entry.weight);
+    defer table.deinit();
+    try std.testing.expectEqual(@as(usize, 4), table.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 9), table.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try table.weightAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try table.weightAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), try table.weightAt(2), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), try table.weightAt(3), 1e-12);
+
+    var engine = alea.ScalarPrng.init(0x5150_a133);
+    var saw_often = false;
+    var i: usize = 0;
+    while (i < 32) : (i += 1) {
+        const index = table.sampleFrom(&engine);
+        try std.testing.expect(index == 0 or index == 2 or index == 3);
+        saw_often = saw_often or index == 2;
+    }
+    try std.testing.expect(saw_often);
+
+    try table.updateBy(Entry, &entries, Entry.updated);
+    try std.testing.expectEqual(@as(?usize, 1), table.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 9), table.totalWeight(), 1e-12);
+    try std.testing.expectEqual(@as(usize, 1), table.sampleFrom(&engine));
+
+    try std.testing.expectError(error.InvalidWeight, AliasTable(f64).initBy(std.testing.allocator, Entry, &entries, Entry.invalid));
+    var float_table = try AliasTable(f64).initBy(std.testing.allocator, Entry, &entries, Entry.floatWeight);
+    defer float_table.deinit();
+    try std.testing.expectError(error.InvalidWeight, float_table.updateBy(Entry, &entries, Entry.invalid));
+    try std.testing.expectApproxEqAbs(@as(f64, 9), float_table.totalWeight(), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, table.updateBy(Entry, entries[0..3], Entry.updated));
+    try std.testing.expectEqual(@as(?usize, 1), table.constantIndex());
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, AliasTable(u32).initBy(failing.allocator(), Entry, &entries, Entry.weight));
     try std.testing.expect(failing.has_induced_failure);
 }
 

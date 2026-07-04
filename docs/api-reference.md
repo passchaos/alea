@@ -2318,8 +2318,10 @@ Alias helpers:
 - `aliasTable(T)`
 - `AliasTable.init`
 - `AliasTable.initByIndex`
+- `AliasTable.initBy`
 - `AliasTable.update`
 - `AliasTable.updateByIndex`
+- `AliasTable.updateBy`
 - `AliasTable.len`
 - `AliasTable.isEmpty`
 - `AliasTable.totalWeight`
