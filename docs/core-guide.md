@@ -178,6 +178,9 @@ families.
 - gumbel/vector gumbel, frechet/vector frechet, skew-normal/vector skew-normal, PERT/vector PERT
 - inverse Gaussian/vector inverse Gaussian, normal-inverse Gaussian/vector normal-inverse Gaussian, Zipf/vector Zipf, Zeta/vector Zeta
 - unit circle/vector unit circle, unit disc/vector unit disc, unit sphere/vector unit sphere, and unit ball/vector unit ball geometry samplers
+Run `zig build run-rank-distributions` for a runnable comparison of finite
+`Zipf`, unbounded `Zeta`, vector rank samplers, and degenerate infinite-exponent
+rank-one behavior.
 - dirichlet
 
 Reusable samplers expose `sample(rng)`, and direct-source samplers expose
