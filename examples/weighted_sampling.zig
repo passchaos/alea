@@ -336,10 +336,13 @@ pub fn main(init: std.process.Init) !void {
     var tree_owned_engine = alea.ScalarPrng.init(0x71b6);
     const tree_owned_indices = try tree.indicesCheckedFrom(allocator, &tree_owned_engine, 6);
     defer allocator.free(tree_owned_indices);
+    var tree_array_engine = alea.ScalarPrng.init(0x71c3);
+    const tree_array_u32 = try tree.indexArrayU32CheckedFrom(&tree_array_engine, 4);
     try stdout.print("dynamic tree probabilities after update/push: {any}\n", .{tree_probs});
     try stdout.print("dynamic tree sample indices: {any}\n", .{tree_samples});
     try stdout.print("dynamic tree sample u32 index: {}\n", .{tree_sample_u32});
     try stdout.print("dynamic tree owned indices: {any}\n", .{tree_owned_indices});
+    try stdout.print("dynamic tree u32 index array: {any}\n", .{tree_array_u32});
     var tree_alias_engine = alea.ScalarPrng.init(0x71b8);
     const tree_alias_index = try tree.sampleIndexCheckedFrom(&tree_alias_engine);
     try stdout.print("dynamic tree sampleIndex alias: {}\n", .{tree_alias_index});
@@ -359,10 +362,13 @@ pub fn main(init: std.process.Init) !void {
     var int_tree_owned_u32_engine = alea.ScalarPrng.init(0x71b7);
     const int_tree_owned_u32 = try int_tree.indicesU32CheckedFrom(allocator, &int_tree_owned_u32_engine, 6);
     defer allocator.free(int_tree_owned_u32);
+    var int_tree_array_engine = alea.ScalarPrng.init(0x71c4);
+    const int_tree_array_u32 = try int_tree.indexArrayU32CheckedFrom(&int_tree_array_engine, 4);
     try stdout.print("integer tree total weight: {}\n", .{int_tree.totalWeight()});
     try stdout.print("integer tree sample indices: {any}\n", .{int_tree_samples});
     try stdout.print("integer tree u32 sample indices: {any}\n", .{int_tree_u32_samples});
     try stdout.print("integer tree owned u32 indices: {any}\n", .{int_tree_owned_u32});
+    try stdout.print("integer tree u32 index array: {any}\n", .{int_tree_array_u32});
     var int_tree_alias_engine = alea.ScalarPrng.init(0x71b9);
     var int_tree_alias_fill: [6]usize = undefined;
     try int_tree.fillIndicesCheckedFrom(&int_tree_alias_engine, &int_tree_alias_fill);
@@ -685,6 +691,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_by_mut_ptrs_into) |record| record.score += 20;
     try stdout.print("weighted by mut ptrs into scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_records_into[0].score, weighted_by_mut_records_into[1].score, weighted_by_mut_records_into[2].score, weighted_by_mut_records_into[3].score });
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, weightedIndexByIndex/weightedIndexU32ByIndex plus fillWeightedIndexByIndex/fillWeightedIndexU32ByIndex, weightedIndexBatchByIndex/weightedIndexU32BatchByIndex, chooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, fillChooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, and chooseWeightedBatchByIndex/ConstPtrBatchByIndex/PtrBatchByIndex for length/index-weight accessors, weightedIndexBy/weightedIndexU32By plus fillWeightedIndexBy/fillWeightedIndexU32By and weightedIndexBatchBy/weightedIndexU32BatchBy when weights live inside item records, chooseWeightedBy/ConstPtrBy/PtrBy, fillChooseWeightedBy/ConstPtrBy/PtrBy, and chooseWeightedBatchBy/ConstPtrBatchBy/PtrBatchBy for accessor-weighted item choices, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight no-replacement workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including compact sampleU32/fillU32 index output, owned indices/indicesU32 or value/pointer/index batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, iter/iterU32 repeated streams, initBy/updateBy construction from item weight accessors, and initByIndex/updateByIndex construction from index weights, WeightedTree/WeightedIntTree for dynamic updates including initBy/updateAllBy construction from item weight accessors, initByIndex/updateAllByIndex construction from index weights, compact sampleU32/fillU32 index output, owned indices/indicesU32 batches, sampleIndex/fillIndices aliases, and iter/iterU32 repeated index streams, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, weightedIndexByIndex/weightedIndexU32ByIndex plus fillWeightedIndexByIndex/fillWeightedIndexU32ByIndex, weightedIndexBatchByIndex/weightedIndexU32BatchByIndex, chooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, fillChooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, and chooseWeightedBatchByIndex/ConstPtrBatchByIndex/PtrBatchByIndex for length/index-weight accessors, weightedIndexBy/weightedIndexU32By plus fillWeightedIndexBy/fillWeightedIndexU32By and weightedIndexBatchBy/weightedIndexU32BatchBy when weights live inside item records, chooseWeightedBy/ConstPtrBy/PtrBy, fillChooseWeightedBy/ConstPtrBy/PtrBy, and chooseWeightedBatchBy/ConstPtrBatchBy/PtrBatchBy for accessor-weighted item choices, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight no-replacement workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including compact sampleU32/fillU32 index output, owned indices/indicesU32 or value/pointer/index batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, iter/iterU32 repeated streams, initBy/updateBy construction from item weight accessors, and initByIndex/updateByIndex construction from index weights, WeightedTree/WeightedIntTree for dynamic updates including initBy/updateAllBy construction from item weight accessors, initByIndex/updateAllByIndex construction from index weights, compact sampleU32/fillU32 index output, owned indices/indicesU32 batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, and iter/iterU32 repeated index streams, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }

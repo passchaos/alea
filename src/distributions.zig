@@ -16275,6 +16275,44 @@ pub fn WeightedTree(comptime Weight: type) type {
             return out;
         }
 
+        pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
+            return self.indexArrayFrom(rng, N);
+        }
+
+        pub fn indexArrayFrom(self: Self, source: anytype, comptime N: usize) [N]usize {
+            var out: [N]usize = undefined;
+            self.fillFrom(source, &out);
+            return out;
+        }
+
+        pub fn indexArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]usize {
+            return self.indexArrayCheckedFrom(rng, N);
+        }
+
+        pub fn indexArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]usize {
+            var out: [N]usize = undefined;
+            try self.fillCheckedFrom(source, &out);
+            return out;
+        }
+
+        pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) [N]u32 {
+            return self.indexArrayU32Checked(rng, N) catch unreachable;
+        }
+
+        pub fn indexArrayU32Checked(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
+            return self.indexArrayU32CheckedFrom(rng, N);
+        }
+
+        pub fn indexArrayU32From(self: Self, source: anytype, comptime N: usize) [N]u32 {
+            return self.indexArrayU32CheckedFrom(source, N) catch unreachable;
+        }
+
+        pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
+            var out: [N]u32 = undefined;
+            try self.fillU32CheckedFrom(source, &out);
+            return out;
+        }
+
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, usize) {
             return rng.sampleIter(usize, self);
         }
@@ -16827,6 +16865,44 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillU32CheckedFrom(source, out);
+            return out;
+        }
+
+        pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
+            return self.indexArrayFrom(rng, N);
+        }
+
+        pub fn indexArrayFrom(self: Self, source: anytype, comptime N: usize) [N]usize {
+            var out: [N]usize = undefined;
+            self.fillFrom(source, &out);
+            return out;
+        }
+
+        pub fn indexArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]usize {
+            return self.indexArrayCheckedFrom(rng, N);
+        }
+
+        pub fn indexArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]usize {
+            var out: [N]usize = undefined;
+            try self.fillCheckedFrom(source, &out);
+            return out;
+        }
+
+        pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) [N]u32 {
+            return self.indexArrayU32Checked(rng, N) catch unreachable;
+        }
+
+        pub fn indexArrayU32Checked(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
+            return self.indexArrayU32CheckedFrom(rng, N);
+        }
+
+        pub fn indexArrayU32From(self: Self, source: anytype, comptime N: usize) [N]u32 {
+            return self.indexArrayU32CheckedFrom(source, N) catch unreachable;
+        }
+
+        pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
+            var out: [N]u32 = undefined;
+            try self.fillU32CheckedFrom(source, &out);
             return out;
         }
 
@@ -19340,6 +19416,73 @@ test "weighted tree iterators produce repeated indices" {
     single_u32_iter.fill(&single_u32_out);
     try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, &single_u32_out);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "weighted tree fixed index arrays mirror fills" {
+    const alea = @import("root.zig");
+
+    var fill_engine = alea.ScalarPrng.init(0x5150_d521);
+    var array_engine = alea.ScalarPrng.init(0x5150_d521);
+    var tree = try WeightedTree(f64).init(std.testing.allocator, &.{ 1, 0, 7, 3 });
+    defer tree.deinit();
+    var fill_out: [6]usize = undefined;
+    tree.fillFrom(&fill_engine, &fill_out);
+    const array_out = tree.indexArrayFrom(&array_engine, 6);
+    try std.testing.expectEqualSlices(usize, &fill_out, &array_out);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+
+    fill_engine = alea.ScalarPrng.init(0x5150_d522);
+    array_engine = alea.ScalarPrng.init(0x5150_d522);
+    var fill_u32: [6]u32 = undefined;
+    try tree.fillU32CheckedFrom(&fill_engine, &fill_u32);
+    const array_u32 = try tree.indexArrayU32CheckedFrom(&array_engine, 6);
+    try std.testing.expectEqualSlices(u32, &fill_u32, &array_u32);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_d523);
+    var direct_engine = alea.ScalarPrng.init(0x5150_d523);
+    const rng = Rng.init(&facade_engine);
+    const facade_array = try tree.indexArrayChecked(rng, 4);
+    const direct_array = try tree.indexArrayCheckedFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(usize, &direct_array, &facade_array);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const empty_array = try tree.indexArrayCheckedFrom(&direct_engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_array.len);
+    const empty_u32_array = try tree.indexArrayU32CheckedFrom(&direct_engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_u32_array.len);
+
+    var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 2, 0, 0, 6 });
+    defer int_tree.deinit();
+    fill_engine = alea.ScalarPrng.init(0x5150_d524);
+    array_engine = alea.ScalarPrng.init(0x5150_d524);
+    int_tree.fillFrom(&fill_engine, &fill_out);
+    const int_array = int_tree.indexArrayFrom(&array_engine, 6);
+    try std.testing.expectEqualSlices(usize, &fill_out, &int_array);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+
+    fill_engine = alea.ScalarPrng.init(0x5150_d525);
+    array_engine = alea.ScalarPrng.init(0x5150_d525);
+    try int_tree.fillU32CheckedFrom(&fill_engine, &fill_u32);
+    const int_array_u32 = try int_tree.indexArrayU32CheckedFrom(&array_engine, 6);
+    try std.testing.expectEqualSlices(u32, &fill_u32, &int_array_u32);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+
+    var single_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0, 9 });
+    defer single_tree.deinit();
+    var single_engine = alea.ScalarPrng.init(0x5150_d526);
+    var single_control = alea.ScalarPrng.init(0x5150_d526);
+    const single_array = single_tree.indexArrayFrom(&single_engine, 4);
+    try std.testing.expectEqualSlices(usize, &.{ 2, 2, 2, 2 }, &single_array);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_u32_array = try single_tree.indexArrayU32CheckedFrom(&single_engine, 4);
+    try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, &single_u32_array);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var invalid_tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 0, 0 });
+    defer invalid_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, invalid_tree.indexArrayCheckedFrom(&single_engine, 1));
+    try std.testing.expectError(error.InvalidWeight, invalid_tree.indexArrayU32CheckedFrom(&single_engine, 1));
 }
 
 test "zero-length weighted tree fills do not validate or consume random stream" {
