@@ -103,6 +103,7 @@ Local Alea evidence:
 - `compare/results/s4-m63-choose-index.md`
 - `compare/results/s4-m64-generic-weighted-index.md`
 - `compare/results/s4-m65-example-output-check.md`
+- `compare/results/s4-m66-s4-m11-blockercheck.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -251,5 +252,6 @@ weighted pointer subset sampling, and S4-M60 adds allocation-returning reservoir
 pointer sampling, and S4-M61 adds caller-owned reservoir pointer sampling, and S4-M62 refreshes
 the caller-owned pointer adoption example, and S4-M63 adds one-shot index choice,
 and S4-M64 adds generic one-shot weighted index choice, and S4-M65 hardens
-example content drift checks, but later stages should keep raising the bar rather
-than declaring the product permanently finished.
+example content drift checks, and S4-M66 hardens S4-M11 blocker audit drift
+checks, but later stages should keep raising the bar rather than declaring the
+product permanently finished.

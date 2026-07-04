@@ -61,6 +61,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M63", .path = "compare/results/s4-m63-choose-index.md" },
     .{ .milestone = "S4-M64", .path = "compare/results/s4-m64-generic-weighted-index.md" },
     .{ .milestone = "S4-M65", .path = "compare/results/s4-m65-example-output-check.md" },
+    .{ .milestone = "S4-M66", .path = "compare/results/s4-m66-s4-m11-blockercheck.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -68,8 +69,19 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M66",
+    "S4-M67",
     "No proxy signal is accepted as whole-goal completion",
+};
+
+const blocker_tokens = [_][]const u8{
+    "exact/default-compatible dense SIMD",
+    "qemu-aarch64",
+    "qemu-riscv64",
+    "wine",
+    "wasmtime",
+    "wasmer",
+    "no SIMD non-uniform implementation",
+    "Do not call `update_goal(status=complete)`",
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -95,6 +107,8 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(readme);
     const build = try readFile(io, allocator, "build.zig");
     defer allocator.free(build);
+    const blocker = try readFile(io, allocator, "compare/results/s4-m11-blocker-audit.md");
+    defer allocator.free(blocker);
 
     var missing: usize = 0;
 
@@ -129,12 +143,19 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M66 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M66 next-gap row\n", .{});
+    inline for (blocker_tokens) |token| {
+        if (std.mem.indexOf(u8, blocker, token) == null) {
+            try stderr.print("roadmapcheck: s4-m11-blocker-audit.md missing blocker token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+
+    if (std.mem.indexOf(u8, roadmap, "| S4-M67 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M67 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M66 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M66 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M67 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M67 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
