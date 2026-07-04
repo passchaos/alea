@@ -147,15 +147,29 @@ pub fn main(init: std.process.Init) !void {
     const chosen_array = alea.seq.chooseArrayFrom(&choose_array_engine, []const u8, 3, &items).?;
     try stdout.print("chooseArray items: {s}, {s}, {s}\n", .{ chosen_array[0], chosen_array[1], chosen_array[2] });
 
+    var sample_items_array_engine = alea.ScalarPrng.init(0x5e11_001d);
+    const sampled_items_array = alea.seq.sampleItemsArrayFrom(&sample_items_array_engine, []const u8, 3, &items).?;
+    try stdout.print("sampleItemsArrayFrom items: {s}, {s}, {s}\n", .{ sampled_items_array[0], sampled_items_array[1], sampled_items_array[2] });
+
     var choose_ptr_array_engine = alea.ScalarPrng.init(0x5e11_0017);
     const chosen_ptr_array = alea.seq.choosePtrArrayFrom(&choose_ptr_array_engine, []const u8, 3, &items).?;
     try stdout.print("choosePtrArray items: {s}, {s}, {s}\n", .{ chosen_ptr_array[0].*, chosen_ptr_array[1].*, chosen_ptr_array[2].* });
+
+    var sample_ptr_array_engine = alea.ScalarPrng.init(0x5e11_001e);
+    const sampled_ptr_array = alea.seq.samplePtrArrayFrom(&sample_ptr_array_engine, []const u8, 3, &items).?;
+    try stdout.print("samplePtrArrayFrom items: {s}, {s}, {s}\n", .{ sampled_ptr_array[0].*, sampled_ptr_array[1].*, sampled_ptr_array[2].* });
 
     var choose_mut_ptr_array_engine = alea.ScalarPrng.init(0x5e11_0018);
     var mutable_array_scores = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
     const chosen_mut_ptr_array = alea.seq.chooseMutPtrArrayFrom(&choose_mut_ptr_array_engine, u8, 3, &mutable_array_scores).?;
     for (chosen_mut_ptr_array) |score| score.* += 3;
     try stdout.print("chooseMutPtrArray updated scores: {any}\n", .{mutable_array_scores});
+
+    var sample_mut_ptr_array_engine = alea.ScalarPrng.init(0x5e11_001f);
+    var mutable_sample_array_scores = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+    const sampled_mut_ptr_array = alea.seq.sampleMutPtrArrayFrom(&sample_mut_ptr_array_engine, u8, 3, &mutable_sample_array_scores).?;
+    for (sampled_mut_ptr_array) |score| score.* += 4;
+    try stdout.print("sampleMutPtrArrayFrom updated scores: {any}\n", .{mutable_sample_array_scores});
 
     var swr_engine = alea.ScalarPrng.init(0x5e11_0004);
     const sample = try alea.Rng.sampleWithoutReplacementFrom(&swr_engine, []const u8, allocator, &items, 3);
@@ -289,6 +303,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, sampleArrayU32 for compact fixed-size index arrays, chooseArray/choosePtrArray for fixed-size item/pointer arrays, chooseMultiple/sampleItems plus chooseMultipleInto/sampleItemsInto and pointer variants for allocation-returning and caller-owned item/pointer subsets, sampleWithoutReplacement for Rng-owned subset sampling, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable value/pointer/index batches or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, sampleArrayU32 for compact fixed-size index arrays, chooseArray/sampleItemsArray and choosePtrArray/samplePtrArray for fixed-size item/pointer arrays, chooseMultiple/sampleItems plus chooseMultipleInto/sampleItemsInto and pointer variants for allocation-returning and caller-owned item/pointer subsets, sampleWithoutReplacement for Rng-owned subset sampling, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable value/pointer/index batches or streaming choices.\n", .{});
     try stdout.flush();
 }

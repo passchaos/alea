@@ -779,8 +779,24 @@ pub fn chooseArray(rng: Rng, comptime T: type, comptime N: usize, items: []const
     return chooseArrayFrom(rng, T, N, items);
 }
 
+pub fn sampleItemsArray(rng: Rng, comptime T: type, comptime N: usize, items: []const T) ?[N]T {
+    return sampleItemsArrayFrom(rng, T, N, items);
+}
+
+pub fn sampleItemsArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) ?[N]T {
+    return chooseArrayFrom(source, T, N, items);
+}
+
 pub fn chooseArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
     return chooseArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn sampleItemsArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
+    return sampleItemsArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn sampleItemsArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
+    return chooseArrayCheckedFrom(source, T, N, items);
 }
 
 pub fn chooseArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
@@ -799,8 +815,24 @@ pub fn choosePtrArray(rng: Rng, comptime T: type, comptime N: usize, items: []co
     return choosePtrArrayFrom(rng, T, N, items);
 }
 
+pub fn samplePtrArray(rng: Rng, comptime T: type, comptime N: usize, items: []const T) ?[N]*const T {
+    return samplePtrArrayFrom(rng, T, N, items);
+}
+
+pub fn samplePtrArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) ?[N]*const T {
+    return choosePtrArrayFrom(source, T, N, items);
+}
+
 pub fn choosePtrArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []const T) Error![N]*const T {
     return choosePtrArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn samplePtrArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []const T) Error![N]*const T {
+    return samplePtrArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn samplePtrArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]*const T {
+    return choosePtrArrayCheckedFrom(source, T, N, items);
 }
 
 pub fn choosePtrArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]*const T {
@@ -819,8 +851,24 @@ pub fn chooseMutPtrArray(rng: Rng, comptime T: type, comptime N: usize, items: [
     return chooseMutPtrArrayFrom(rng, T, N, items);
 }
 
+pub fn sampleMutPtrArray(rng: Rng, comptime T: type, comptime N: usize, items: []T) ?[N]*T {
+    return sampleMutPtrArrayFrom(rng, T, N, items);
+}
+
+pub fn sampleMutPtrArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []T) ?[N]*T {
+    return chooseMutPtrArrayFrom(source, T, N, items);
+}
+
 pub fn chooseMutPtrArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []T) Error![N]*T {
     return chooseMutPtrArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn sampleMutPtrArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []T) Error![N]*T {
+    return sampleMutPtrArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn sampleMutPtrArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []T) Error![N]*T {
+    return chooseMutPtrArrayCheckedFrom(source, T, N, items);
 }
 
 pub fn chooseMutPtrArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []T) Error![N]*T {
@@ -7394,6 +7442,66 @@ test "choose pointer arrays return fixed-size pointer samples" {
     try std.testing.expectError(error.InvalidParameter, choosePtrArrayCheckedFrom(&facade_engine, u8, 9, &items));
     try std.testing.expect(chooseMutPtrArrayFrom(&facade_engine, u8, 9, &mutable) == null);
     try std.testing.expectError(error.InvalidParameter, chooseMutPtrArrayCheckedFrom(&facade_engine, u8, 9, &mutable));
+}
+
+test "fixed-size slice sample aliases mirror chooseArray workflows" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_a105);
+        var direct_engine = Engine.init(0x5150_a105);
+        const rng = Rng.init(&facade_engine);
+
+        const facade = sampleItemsArray(rng, u8, 3, &items).?;
+        const direct = chooseArrayFrom(&direct_engine, u8, 3, &items).?;
+        try std.testing.expectEqualSlices(u8, &direct, &facade);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_ptrs = samplePtrArray(rng, u8, 3, &items).?;
+        const direct_ptrs = choosePtrArrayFrom(&direct_engine, u8, 3, &items).?;
+        for (facade_ptrs, direct_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_items = items;
+        var direct_items = items;
+        const facade_mut_ptrs = sampleMutPtrArray(rng, u8, 3, &facade_items).?;
+        const direct_mut_ptrs = chooseMutPtrArrayFrom(&direct_engine, u8, 3, &direct_items).?;
+        for (facade_mut_ptrs, direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_a106);
+    const checked = try sampleItemsArrayCheckedFrom(&checked_engine, u8, 4, &items);
+    try std.testing.expectEqual(@as(usize, 4), checked.len);
+    const checked_ptrs = try samplePtrArrayCheckedFrom(&checked_engine, u8, 4, &items);
+    try std.testing.expectEqual(@as(usize, 4), checked_ptrs.len);
+    var mutable = items;
+    const checked_mut_ptrs = try sampleMutPtrArrayCheckedFrom(&checked_engine, u8, 4, &mutable);
+    try std.testing.expectEqual(@as(usize, 4), checked_mut_ptrs.len);
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_a107);
+    var invalid_control = alea.ScalarPrng.init(0x5150_a107);
+    try std.testing.expect(sampleItemsArrayFrom(&invalid_engine, u8, 9, &items) == null);
+    try std.testing.expect(samplePtrArrayFrom(&invalid_engine, u8, 9, &items) == null);
+    try std.testing.expect(sampleMutPtrArrayFrom(&invalid_engine, u8, 9, &mutable) == null);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, sampleItemsArrayCheckedFrom(&invalid_engine, u8, 9, &items));
+    try std.testing.expectError(error.InvalidParameter, samplePtrArrayCheckedFrom(&invalid_engine, u8, 9, &items));
+    try std.testing.expectError(error.InvalidParameter, sampleMutPtrArrayCheckedFrom(&invalid_engine, u8, 9, &mutable));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    const empty = sampleItemsArrayFrom(&invalid_engine, u8, 0, &items).?;
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "reservoir pointer slices allocate reservoir pointer samples" {

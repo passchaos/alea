@@ -318,9 +318,12 @@ Use:
   `seq.chooseMultipleMutPtrsIntoFrom`,
   `seq.chooseMultipleMutPtrsIntoCheckedFrom`, `seq.sampleMutPtrsIntoFrom` /
   `seq.sampleMutPtrsIntoCheckedFrom`, `seq.chooseArray`,
-  `seq.chooseArrayFrom`, `seq.chooseArrayCheckedFrom`,
+  `seq.chooseArrayFrom`, `seq.chooseArrayCheckedFrom`, sample-array aliases
+  `seq.sampleItemsArrayFrom` / `seq.sampleItemsArrayCheckedFrom`,
   `seq.choosePtrArrayFrom`, `seq.choosePtrArrayCheckedFrom`,
-  `seq.chooseMutPtrArrayFrom`, `seq.chooseMutPtrArrayCheckedFrom`
+  `seq.samplePtrArrayFrom` / `seq.samplePtrArrayCheckedFrom`,
+  `seq.chooseMutPtrArrayFrom`, `seq.chooseMutPtrArrayCheckedFrom`,
+  `seq.sampleMutPtrArrayFrom` / `seq.sampleMutPtrArrayCheckedFrom`
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`,
   `seq.chooseIteratorCheckedFrom`, stable aliases `seq.chooseIteratorStableFrom`
   and `seq.chooseIteratorStableCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`,
