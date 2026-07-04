@@ -77,8 +77,9 @@ normal/exponential surface, while preserving exact/default APIs on scalar
 ziggurat lane-fill.
 
 The long-term objective remains active. S4-M6 has since hardened this decision
-with native and WASI `profilecheck` evidence, and S4-M7 added native and WASI
-8Mi-lane tail-focused gates. The next roadmap bar should add multi-seed stress
-or another non-WASI executed target, keep exact/default dense SIMD candidates
-under watch, and add new Rust comparison rows if the local Rust surface gains
-SIMD non-uniform distributions.
+with native and WASI `profilecheck` evidence, S4-M7 added native and WASI
+8Mi-lane tail-focused gates, and S4-M8 added native and WASI deterministic
+multi-seed stress gates. The next roadmap bar should add another non-WASI
+executed target or materially longer stress evidence, keep exact/default dense
+SIMD candidates under watch, and add new Rust comparison rows if the local Rust
+surface gains SIMD non-uniform distributions.

@@ -778,11 +778,13 @@ pub fn build(b: *std.Build) void {
         const wasi_distcheck = addWasiTool(b, optimize, node_path, wasi_alea_mod, "distcheck", "tools/distcheck.zig");
         const wasi_profilecheck = addWasiTool(b, optimize, node_path, wasi_alea_mod, "profilecheck", "tools/profilecheck.zig");
         const wasi_profiletailcheck = addWasiTool(b, optimize, node_path, wasi_alea_mod, "profiletailcheck", "tools/profiletailcheck.zig");
+        const wasi_profilestresscheck = addWasiTool(b, optimize, node_path, wasi_alea_mod, "profilestresscheck", "tools/profilestresscheck.zig");
         wasi_statcheck.step.dependOn(&wasi_repro.step);
         wasi_distcheck.step.dependOn(&wasi_statcheck.step);
         wasi_profilecheck.step.dependOn(&wasi_distcheck.step);
         wasi_profiletailcheck.step.dependOn(&wasi_profilecheck.step);
-        wasi_report_step.dependOn(&wasi_profiletailcheck.step);
+        wasi_profilestresscheck.step.dependOn(&wasi_profiletailcheck.step);
+        wasi_report_step.dependOn(&wasi_profilestresscheck.step);
     } else |_| {
         const node_missing = b.addFail("zig build test-wasi and zig build wasi-report require node with node:wasi support");
         wasi_test_step.dependOn(&node_missing.step);
@@ -874,6 +876,23 @@ pub fn build(b: *std.Build) void {
 
     const profiletailcheck_step = b.step("profilecheck-tail", "Run accepted vector profile tail checks");
     profiletailcheck_step.dependOn(&run_profiletailcheck.step);
+
+    const profilestresscheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/profilestresscheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    profilestresscheck_mod.addImport("alea", module);
+
+    const profilestresscheck = b.addExecutable(.{
+        .name = "alea-profilestresscheck",
+        .root_module = profilestresscheck_mod,
+    });
+    const run_profilestresscheck = b.addRunArtifact(profilestresscheck);
+    if (b.args) |args| run_profilestresscheck.addArgs(args);
+
+    const profilestresscheck_step = b.step("profilecheck-stress", "Run accepted vector profile multi-seed stress checks");
+    profilestresscheck_step.dependOn(&run_profilestresscheck.step);
 
     const validate_step = b.step("validate", "Run unit, API, statistical, and distribution checks");
     validate_step.dependOn(&run_tests.step);
