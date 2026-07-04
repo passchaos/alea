@@ -376,9 +376,15 @@ Use:
   plus accessor-based `seq.chooseWeightedByFrom`,
   `seq.chooseWeightedByCheckedFrom`, `seq.chooseWeightedConstPtrByFrom`,
   `seq.chooseWeightedConstPtrByCheckedFrom`, `seq.chooseWeightedPtrByFrom`,
-  and `seq.chooseWeightedPtrByCheckedFrom` for Zig-native versions of Rust
-  `choose_weighted` / `choose_weighted_mut` when weights are fields or derived
-  from items instead of parallel slices
+  `seq.chooseWeightedPtrByCheckedFrom`, plus caller-owned
+  `seq.fillChooseWeightedByFrom`, `seq.fillChooseWeightedByCheckedFrom`,
+  `seq.fillChooseWeightedConstPtrByFrom`,
+  `seq.fillChooseWeightedConstPtrByCheckedFrom`,
+  `seq.fillChooseWeightedPtrByFrom`, and
+  `seq.fillChooseWeightedPtrByCheckedFrom` for Zig-native versions of Rust
+  `choose_weighted`, `choose_weighted_mut`, and
+  `choose_weighted_iter(...).take(n)` when weights are fields or derived from
+  items instead of parallel slices
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeightedIndicesU32From`,
   `seq.sampleWeightedIndicesU32CheckedFrom`, `seq.sampleWeightedIndexVecFrom`,

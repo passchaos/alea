@@ -135,6 +135,23 @@ pub fn main(init: std.process.Init) !void {
     weighted_by_mut_ptr.score += 1;
     try stdout.print("weighted by mut ptr score: {}\n", .{weighted_by_mut_ptr.score});
 
+    var weighted_by_fill_engine = alea.ScalarPrng.init(0x7194);
+    var weighted_by_fill_values: [6]?WeightedRecord = undefined;
+    try alea.seq.fillChooseWeightedByFrom(&weighted_by_fill_engine, WeightedRecord, u32, &weighted_by_fill_values, &weighted_records, WeightedRecord.weightOf);
+    try stdout.print("weighted by value fill: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_by_fill_values[0].?.label, weighted_by_fill_values[1].?.label, weighted_by_fill_values[2].?.label, weighted_by_fill_values[3].?.label, weighted_by_fill_values[4].?.label, weighted_by_fill_values[5].?.label });
+
+    var weighted_by_ptr_fill_engine = alea.ScalarPrng.init(0x7195);
+    var weighted_by_ptr_fill: [6]?*const WeightedRecord = undefined;
+    try alea.seq.fillChooseWeightedConstPtrByFrom(&weighted_by_ptr_fill_engine, WeightedRecord, u32, &weighted_by_ptr_fill, &weighted_records, WeightedRecord.weightOf);
+    try stdout.print("weighted by const ptr fill: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_by_ptr_fill[0].?.label, weighted_by_ptr_fill[1].?.label, weighted_by_ptr_fill[2].?.label, weighted_by_ptr_fill[3].?.label, weighted_by_ptr_fill[4].?.label, weighted_by_ptr_fill[5].?.label });
+
+    var weighted_by_mut_fill_records = weighted_records;
+    var weighted_by_mut_fill_engine = alea.ScalarPrng.init(0x7196);
+    var weighted_by_mut_fill: [6]?*WeightedRecord = undefined;
+    try alea.seq.fillChooseWeightedPtrByFrom(&weighted_by_mut_fill_engine, WeightedRecord, u32, &weighted_by_mut_fill, &weighted_by_mut_fill_records, WeightedRecord.weightOf);
+    for (weighted_by_mut_fill) |record| record.?.score += 1;
+    try stdout.print("weighted by mut ptr fill scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_fill_records[0].score, weighted_by_mut_fill_records[1].score, weighted_by_mut_fill_records[2].score, weighted_by_mut_fill_records[3].score });
+
     var alias = try alea.distributions.AliasTable(f64).init(allocator, &float_weights);
     defer alias.deinit();
     var alias_probs: [items.len]f64 = undefined;
@@ -436,6 +453,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_by_mut_ptrs_into) |record| record.score += 20;
     try stdout.print("weighted by mut ptrs into scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_records_into[0].score, weighted_by_mut_records_into[1].score, weighted_by_mut_records_into[2].score, weighted_by_mut_records_into[3].score });
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy and sampleWeightedBy/PtrsBy/MutPtrsBy when weights live inside item records, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy and fillChooseWeightedBy/ConstPtrBy/PtrBy when weights live inside item records, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }
