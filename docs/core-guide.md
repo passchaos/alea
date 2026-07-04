@@ -337,7 +337,8 @@ Use:
   `seq.weightedIndexBatchFrom`, `seq.weightedIndexU32From`,
   `seq.weightedIndexU32CheckedFrom`, `seq.fillWeightedIndexU32From`,
   `seq.weightedIndexU32BatchFrom`, `seq.fillChooseWeightedFrom`,
-  `seq.chooseWeightedBatchFrom`
+  `seq.chooseWeightedBatchFrom`, `seq.fillChooseWeightedConstPtrFrom`,
+  `seq.chooseWeightedConstPtrBatchFrom`
 - `seq.chooseWeighted`, `seq.chooseWeightedFrom`,
   `seq.chooseWeightedCheckedFrom`, `seq.chooseWeightedConstPtrFrom`,
   `seq.chooseWeightedConstPtrCheckedFrom`, `seq.chooseWeightedPtr`,

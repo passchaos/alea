@@ -80,6 +80,11 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(weighted_const_ptr_batch);
     try stdout.print("weighted const ptr batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_const_ptr_batch[0].*, weighted_const_ptr_batch[1].*, weighted_const_ptr_batch[2].*, weighted_const_ptr_batch[3].*, weighted_const_ptr_batch[4].*, weighted_const_ptr_batch[5].* });
 
+    var generic_const_ptr_batch_engine = alea.ScalarPrng.init(0x7172);
+    const generic_const_ptr_batch = try alea.seq.chooseWeightedConstPtrBatchCheckedFrom(allocator, &generic_const_ptr_batch_engine, []const u8, u32, 6, &items, &int_weights);
+    defer allocator.free(generic_const_ptr_batch);
+    try stdout.print("generic weighted const ptr batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ generic_const_ptr_batch[0].*, generic_const_ptr_batch[1].*, generic_const_ptr_batch[2].*, generic_const_ptr_batch[3].*, generic_const_ptr_batch[4].*, generic_const_ptr_batch[5].* });
+
     var weighted_mut_ptr_batch_engine = alea.ScalarPrng.init(0x716e);
     var weighted_mut_scores_batch = [_]u8{ 10, 20, 30, 40 };
     const weighted_mut_ptr_batch = try alea.Rng.chooseWeightedPtrBatchCheckedFrom(&weighted_mut_ptr_batch_engine, u8, allocator, 6, &weighted_mut_scores_batch, &float_weights);
