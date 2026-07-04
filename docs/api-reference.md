@@ -2350,6 +2350,7 @@ Build steps:
 - `zig build run-sequence-sampling`
 - `zig build run-string-generation`
 - `zig build run-unit-geometry`
+- `zig build run-distribution-diagnostics`
 - `zig build examples`
 - `zig build apicheck`
 - `zig build validate`

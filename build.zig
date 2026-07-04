@@ -178,6 +178,23 @@ pub fn build(b: *std.Build) void {
     const unit_geometry_example_step = b.step("run-unit-geometry", "Run the unit geometry alea example");
     unit_geometry_example_step.dependOn(&run_unit_geometry_example.step);
 
+    const distribution_diagnostics_example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/distribution_diagnostics.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    distribution_diagnostics_example_mod.addImport("alea", module);
+
+    const distribution_diagnostics_example = b.addExecutable(.{
+        .name = "alea-distribution-diagnostics",
+        .root_module = distribution_diagnostics_example_mod,
+    });
+    const run_distribution_diagnostics_example = b.addRunArtifact(distribution_diagnostics_example);
+    if (b.args) |args| run_distribution_diagnostics_example.addArgs(args);
+
+    const distribution_diagnostics_example_step = b.step("run-distribution-diagnostics", "Run the distribution diagnostics alea example");
+    distribution_diagnostics_example_step.dependOn(&run_distribution_diagnostics_example.step);
+
     const examples_step = b.step("examples", "Run all alea examples");
     examples_step.dependOn(&run_example.step);
     examples_step.dependOn(&run_vector_profiles_example.step);
@@ -188,6 +205,7 @@ pub fn build(b: *std.Build) void {
     examples_step.dependOn(&run_sequence_sampling_example.step);
     examples_step.dependOn(&run_string_generation_example.step);
     examples_step.dependOn(&run_unit_geometry_example.step);
+    examples_step.dependOn(&run_distribution_diagnostics_example.step);
 
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/throughput.zig"),

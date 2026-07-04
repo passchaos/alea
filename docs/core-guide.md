@@ -191,6 +191,9 @@ without requiring users to hand-convert to log-space parameters; both samplers
 also expose z-score conversion helpers for correlated draws. `Pert(T).initRange`
 offers a builder-style range-first constructor with `withShape`, `withMode`,
 and `withMean` for workflows that choose range before mode/mean. Unit geometry samplers also
+Run `zig build run-distribution-diagnostics` for a runnable tour of
+constructor/accessor diagnostics such as moments, support, mean/CV constructors,
+z-score conversion, and PERT range-first builders.
 expose `fill` / `fillFrom`, and the module-level `fillUnitCircle`,
 `fillUnitDisc`, `fillUnitSphere`, and `fillUnitBall` helpers fill slices of
 fixed-size point arrays.
