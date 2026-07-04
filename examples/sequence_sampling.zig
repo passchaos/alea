@@ -98,6 +98,23 @@ pub fn main(init: std.process.Init) !void {
     _ = alea.seq.sampleIteratorIntoFrom(&iter_into_engine, u32, &into_stream, &stream_into);
     try stdout.print("sampleIteratorIntoFrom counter[0..20): {any}\n", .{stream_into});
 
-    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample/reservoirSampleInto for slices, sampleIterator/sampleIteratorInto for streams, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    const WeightedEntry = struct { item: u32, weight: f64 };
+    const WeightedCounter = struct {
+        next_value: u32 = 0,
+        limit: u32,
+
+        pub fn next(self: *@This()) ?WeightedEntry {
+            if (self.next_value >= self.limit) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return .{ .item = value, .weight = @floatFromInt(value + 1) };
+        }
+    };
+    var weighted_iter_engine = alea.ScalarPrng.init(0x5e11_000d);
+    var weighted_stream = WeightedCounter{ .limit = 20 };
+    const weighted_stream_array = (try alea.seq.sampleIteratorWeightedArrayFrom(&weighted_iter_engine, u32, 5, &weighted_stream)).?;
+    try stdout.print("sampleIteratorWeightedArrayFrom counter[0..20): {any}\n", .{weighted_stream_array});
+
+    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample/reservoirSampleInto for slices, sampleIterator/sampleIteratorInto for streams, weighted iterator arrays, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }

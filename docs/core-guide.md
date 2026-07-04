@@ -249,7 +249,9 @@ Use:
   `seq.sampleIteratorIntoFrom`, `seq.sampleIteratorIntoCheckedFrom`
 - `seq.chooseIteratorWeighted`, `seq.chooseIteratorWeightedFrom`,
   `seq.chooseIteratorWeightedCheckedFrom`, `seq.sampleIteratorWeighted`,
-  `seq.sampleIteratorWeightedFrom`, `seq.sampleIteratorWeightedCheckedFrom`
+  `seq.sampleIteratorWeightedFrom`, `seq.sampleIteratorWeightedCheckedFrom`,
+  `seq.sampleIteratorWeightedArrayFrom`,
+  `seq.sampleIteratorWeightedArrayCheckedFrom`
 - `seq.chooseWeighted`, `seq.chooseWeightedFrom`,
   `seq.chooseWeightedCheckedFrom`, `seq.chooseWeightedPtr`,
   `seq.chooseWeightedPtrFrom`, `seq.chooseWeightedPtrCheckedFrom`

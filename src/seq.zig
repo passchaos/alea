@@ -614,6 +614,84 @@ pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype,
     return out;
 }
 
+pub fn sampleIteratorWeightedArray(rng: Rng, comptime T: type, comptime N: usize, iterator: anytype) !?[N]T {
+    return sampleIteratorWeightedArrayFrom(rng, T, N, iterator);
+}
+
+pub fn sampleIteratorWeightedArrayFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) !?[N]T {
+    const candidates = (try sampleIteratorWeightedCandidateArrayFrom(source, T, N, iterator)) orelse return null;
+    var out: [N]T = undefined;
+    inline for (0..N) |i| out[i] = candidates[i].item;
+    return out;
+}
+
+pub fn sampleIteratorWeightedArrayChecked(rng: Rng, comptime T: type, comptime N: usize, iterator: anytype) ![N]T {
+    return sampleIteratorWeightedArrayCheckedFrom(rng, T, N, iterator);
+}
+
+pub fn sampleIteratorWeightedArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) ![N]T {
+    const candidates = (try sampleIteratorWeightedCandidateArrayFrom(source, T, N, iterator)) orelse return error.InvalidParameter;
+    var out: [N]T = undefined;
+    inline for (0..N) |i| out[i] = candidates[i].item;
+    return out;
+}
+
+fn sampleIteratorWeightedCandidateArrayFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) !?[N]WeightedIteratorCandidate(T) {
+    if (comptime N == 0) return .{};
+    const Pending = struct {
+        item: T,
+        weight: f64,
+    };
+
+    var candidates: [N]WeightedIteratorCandidate(T) = undefined;
+    var count: usize = 0;
+    var pending: ?Pending = null;
+
+    while (iterator.next()) |entry| {
+        const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        if (weight == 0) continue;
+
+        if (pending == null and count == 0) {
+            pending = .{ .item = entry.item, .weight = weight };
+            continue;
+        }
+
+        if (pending) |first| {
+            candidates[0] = .{
+                .item = first.item,
+                .key = weightedSelectionKeyFrom(source, first.weight),
+            };
+            count = 1;
+            pending = null;
+        }
+
+        const candidate = WeightedIteratorCandidate(T){
+            .item = entry.item,
+            .key = weightedSelectionKeyFrom(source, weight),
+        };
+        if (count < N) {
+            candidates[count] = candidate;
+            count += 1;
+        } else {
+            const min_index = minWeightedIteratorCandidateIndex(T, candidates[0..]);
+            if (compareWeightedIteratorCandidate(T)({}, candidate, candidates[min_index]) == .gt) {
+                candidates[min_index] = candidate;
+            }
+        }
+    }
+
+    if (pending) |only| {
+        if (comptime N == 1) {
+            return .{.{ .item = only.item, .key = 0 }};
+        }
+        return null;
+    }
+    if (count < N) return null;
+    sortWeightedIteratorCandidates(T, candidates[0..]);
+    return candidates;
+}
+
 pub fn sampleWeightedIndices(allocator: std.mem.Allocator, rng: Rng, comptime Weight: type, weights: []const Weight, amount: usize) ![]usize {
     return sampleWeightedIndicesFrom(allocator, rng, Weight, weights, amount);
 }
@@ -1353,6 +1431,27 @@ fn compareWeightedIteratorCandidate(comptime T: type) fn (void, WeightedIterator
             return std.math.order(a.key, b.key);
         }
     }.compare;
+}
+
+fn minWeightedIteratorCandidateIndex(comptime T: type, candidates: []const WeightedIteratorCandidate(T)) usize {
+    std.debug.assert(candidates.len > 0);
+    const compare = compareWeightedIteratorCandidate(T);
+    var min_index: usize = 0;
+    for (candidates[1..], 1..) |candidate, index| {
+        if (compare({}, candidate, candidates[min_index]) == .lt) min_index = index;
+    }
+    return min_index;
+}
+
+fn sortWeightedIteratorCandidates(comptime T: type, candidates: []WeightedIteratorCandidate(T)) void {
+    const compare = compareWeightedIteratorCandidate(T);
+    var i: usize = 1;
+    while (i < candidates.len) : (i += 1) {
+        var j = i;
+        while (j > 0 and compare({}, candidates[j], candidates[j - 1]) == .lt) : (j -= 1) {
+            std.mem.swap(WeightedIteratorCandidate(T), &candidates[j], &candidates[j - 1]);
+        }
+    }
 }
 
 fn weightAsF64(comptime Weight: type, weight: Weight) f64 {
@@ -3411,6 +3510,114 @@ test "weighted iterator choice works without collecting first" {
 
     var short_weighted_iter = WeightedIter{ .items = entries[0..1] };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &short_weighted_iter, 2));
+}
+
+test "sampleIteratorWeightedArray returns fixed-size weighted iterator samples" {
+    const alea = @import("root.zig");
+
+    const Entry = struct { item: u8, weight: f64 };
+    const WeightedIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .item = 10, .weight = 0 },
+        .{ .item = 20, .weight = 1 },
+        .{ .item = 30, .weight = 5 },
+        .{ .item = 40, .weight = 9 },
+    };
+
+    var optional_engine = alea.ScalarPrng.init(0x5150_ba21);
+    var optional_iter = WeightedIter{ .items = &entries };
+    const optional = (try sampleIteratorWeightedArrayFrom(&optional_engine, u8, 2, &optional_iter)).?;
+    try std.testing.expectEqual(@as(usize, 2), optional.len);
+    for (optional) |item| try std.testing.expect(item == 20 or item == 30 or item == 40);
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_ba22);
+    var checked_iter = WeightedIter{ .items = &entries };
+    const checked = try sampleIteratorWeightedArrayCheckedFrom(&checked_engine, u8, 3, &checked_iter);
+    try std.testing.expectEqual(@as(usize, 3), checked.len);
+    for (checked) |item| try std.testing.expect(item == 20 or item == 30 or item == 40);
+
+    var single_engine = alea.ScalarPrng.init(0x5150_ba23);
+    var single_control = alea.ScalarPrng.init(0x5150_ba23);
+    var single_iter = WeightedIter{ .items = &.{ .{ .item = 7, .weight = 0 }, .{ .item = 8, .weight = 5 } } };
+    const single = (try sampleIteratorWeightedArrayFrom(&single_engine, u8, 1, &single_iter)).?;
+    try std.testing.expectEqual(@as(u8, 8), single[0]);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_ba24);
+    var empty_control = alea.ScalarPrng.init(0x5150_ba24);
+    var empty_iter = WeightedIter{ .items = &entries };
+    const empty = try sampleIteratorWeightedArrayFrom(&empty_engine, u8, 0, &empty_iter);
+    try std.testing.expectEqual(@as(usize, 0), empty.?.len);
+    try std.testing.expectEqual(@as(usize, 0), empty_iter.index);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var short_iter = WeightedIter{ .items = &entries };
+    try std.testing.expect((try sampleIteratorWeightedArrayFrom(&empty_engine, u8, 4, &short_iter)) == null);
+    var short_checked_iter = WeightedIter{ .items = &entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedArrayCheckedFrom(&empty_engine, u8, 4, &short_checked_iter));
+}
+
+test "sampleIteratorWeightedArray preserves facade/direct stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+
+    const Entry = struct { item: u8, weight: f64 };
+    const WeightedIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .item = 10, .weight = 1 },
+        .{ .item = 20, .weight = 2 },
+        .{ .item = 30, .weight = 6 },
+        .{ .item = 40, .weight = 3 },
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_ba25);
+        var direct_engine = Engine.init(0x5150_ba25);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_iter = WeightedIter{ .items = &entries };
+        var direct_iter = WeightedIter{ .items = &entries };
+        const facade = (try sampleIteratorWeightedArray(rng, u8, 2, &facade_iter)).?;
+        const direct = (try sampleIteratorWeightedArrayFrom(&direct_engine, u8, 2, &direct_iter)).?;
+        try std.testing.expectEqualSlices(u8, &facade, &direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_iter = WeightedIter{ .items = &entries };
+        var checked_direct_iter = WeightedIter{ .items = &entries };
+        const checked_facade = try sampleIteratorWeightedArrayChecked(rng, u8, 2, &checked_facade_iter);
+        const checked_direct = try sampleIteratorWeightedArrayCheckedFrom(&direct_engine, u8, 2, &checked_direct_iter);
+        try std.testing.expectEqualSlices(u8, &checked_facade, &checked_direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    const bad_entries = [_]Entry{
+        .{ .item = 10, .weight = 1 },
+        .{ .item = 20, .weight = std.math.nan(f64) },
+    };
+    var invalid_engine = alea.ScalarPrng.init(0x5150_ba26);
+    var invalid_control = alea.ScalarPrng.init(0x5150_ba26);
+    var invalid_iter = WeightedIter{ .items = &bad_entries };
+    try std.testing.expectError(error.InvalidWeight, sampleIteratorWeightedArrayCheckedFrom(&invalid_engine, u8, 1, &invalid_iter));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "iterator sampling preserves direct stream shape" {
