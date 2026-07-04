@@ -75,6 +75,7 @@ Local Alea evidence:
 - `compare/results/s4-m35-reservoir-into.md`
 - `compare/results/s4-m36-iterator-into.md`
 - `compare/results/s4-m37-weighted-array.md`
+- `compare/results/s4-m38-weighted-index-array.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -96,7 +97,7 @@ Out of scope for this Linux-first audit:
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost` |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
 | choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `seq` module, `chooseArray`, `reservoirSampleInto`, Rust sequence benchmark row |
-| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `seq.chooseWeighted`, `seq.chooseWeightedPtr`, `seq.sampleWeightedArray`, `AliasTable`, `WeightedTree`, benchmark rows |
+| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `seq.chooseWeighted`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedArray`, `AliasTable`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface
 
@@ -207,6 +208,6 @@ build/tooling catalog drift checking, S4-M31 adds README/doccheck discovery
 validation, S4-M32 adds roadmap/audit drift checking, S4-M33 adds fixed-size
 item array sequence sampling, S4-M34 adds one-shot weighted item/pointer choice,
 S4-M35 adds caller-owned reservoir sampling, S4-M36 adds caller-owned iterator
-reservoir sampling, and S4-M37 adds fixed-size weighted array sampling, but later
-stages should keep raising the bar rather than declaring the product permanently
-finished.
+reservoir sampling, and S4-M37 adds fixed-size weighted item array sampling, and S4-M38 adds fixed-size
+weighted index array sampling, but later stages should keep raising the bar
+rather than declaring the product permanently finished.

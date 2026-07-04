@@ -58,7 +58,8 @@ complete.
 | S4-M35 caller-owned reservoir sampling | `src/seq.zig`, `examples/sequence_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m35-reservoir-into.md` | Closed for the current bar: reservoir samples can now fill caller-owned buffers with checked no-consume behavior. |
 | S4-M36 caller-owned iterator reservoir sampling | `src/seq.zig`, `examples/sequence_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m36-iterator-into.md` | Closed for the current bar: streaming iterator samples can now fill caller-owned buffers with optional partial-fill and checked exact-fill forms. |
 | S4-M37 fixed-size weighted array sampling | `src/seq.zig`, `examples/weighted_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m37-weighted-array.md` | Closed for the current bar: fixed-size weighted no-replacement item arrays are available without heap allocation. |
-| S4-M38 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M38 fixed-size weighted index array sampling | `src/seq.zig`, `examples/weighted_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m38-weighted-index-array.md` | Closed for the current bar: fixed-size weighted no-replacement index arrays are available without heap allocation. |
+| S4-M39 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -94,8 +95,9 @@ S4-M29 adds an example catalog drift checker, S4-M30 adds a build/tooling
 catalog drift checker, S4-M31 adds README/doccheck discovery validation, and
 S4-M32 adds roadmap/audit drift checking, S4-M33 adds fixed-size item array
 sequence sampling, S4-M34 adds one-shot weighted item/pointer choice, and S4-M35 adds caller-owned reservoir sampling, S4-M36 adds caller-owned iterator
-reservoir sampling, and S4-M37 adds fixed-size weighted array sampling, but they
-do not resolve S4-M11 or complete the long-term objective.
+reservoir sampling, and S4-M37 adds fixed-size weighted item array sampling, and S4-M38 adds fixed-size
+weighted index array sampling, but they do not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

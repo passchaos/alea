@@ -81,6 +81,10 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(no_replace_indices);
     try stdout.print("weighted no-replacement indices: {any}\n", .{no_replace_indices});
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/no-replacement and fixed-size array workflows.\n", .{});
+    var index_array_engine = alea.ScalarPrng.init(0x715a);
+    const weighted_index_array = (try alea.seq.sampleWeightedIndexArrayFrom(&index_array_engine, f64, 3, &float_weights)).?;
+    try stdout.print("weighted index array: {any}\n", .{weighted_index_array});
+
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/index no-replacement and fixed-size array workflows.\n", .{});
     try stdout.flush();
 }

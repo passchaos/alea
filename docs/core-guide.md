@@ -254,7 +254,8 @@ Use:
   `seq.chooseWeightedCheckedFrom`, `seq.chooseWeightedPtr`,
   `seq.chooseWeightedPtrFrom`, `seq.chooseWeightedPtrCheckedFrom`
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
-  `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeighted`,
+  `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeightedIndexArrayFrom`,
+  `seq.sampleWeightedIndexArrayCheckedFrom`, `seq.sampleWeighted`,
   `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`,
   `seq.sampleWeightedArrayFrom`, `seq.sampleWeightedArrayCheckedFrom`
   (`*Checked*` variants require enough positive-weight entries for the

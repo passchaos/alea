@@ -2324,7 +2324,9 @@ Dynamic weighted helpers:
   `chooseWeightedPtrCheckedFrom`
 - Weighted no-replacement: `sampleWeightedIndices`,
   `sampleWeightedIndicesFrom`, `sampleWeightedIndicesChecked`,
-  `sampleWeightedIndicesCheckedFrom`, `sampleWeighted`, `sampleWeightedFrom`,
+  `sampleWeightedIndicesCheckedFrom`, `sampleWeightedIndexArray`,
+  `sampleWeightedIndexArrayFrom`, `sampleWeightedIndexArrayChecked`,
+  `sampleWeightedIndexArrayCheckedFrom`, `sampleWeighted`, `sampleWeightedFrom`,
   `sampleWeightedChecked`, `sampleWeightedCheckedFrom`,
   `sampleWeightedArray`, `sampleWeightedArrayFrom`,
   `sampleWeightedArrayChecked`, `sampleWeightedArrayCheckedFrom`
