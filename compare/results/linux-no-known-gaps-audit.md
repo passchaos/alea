@@ -96,6 +96,7 @@ Local Alea evidence:
 - `compare/results/s4-m56-choose-const-ptr.md`
 - `compare/results/s4-m57-choose-weighted-const-ptr.md`
 - `compare/results/s4-m58-choose-multiple-ptrs.md`
+- `compare/results/s4-m59-weighted-ptrs.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -117,7 +118,7 @@ Out of scope for this Linux-first audit:
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost` |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
 | choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseConstPtr`, `seq` module, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `reservoirSampleInto`, `IndexVec` value/const-pointer/mutable-pointer mapping, Rust sequence benchmark row |
-| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedTree`, benchmark rows |
+| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface
 
@@ -239,5 +240,6 @@ caller-owned pointer subset sampling, and S4-M53 adds fixed-size pointer array
 sampling, and S4-M54 adds fixed-size weighted pointer array sampling, and S4-M55 adds
 caller-owned weighted pointer subset sampling, and S4-M56 adds const-pointer
 single choice, and S4-M57 adds weighted const-pointer single choice, and S4-M58 adds
-allocation-returning pointer subset sampling, but later stages should keep
-raising the bar rather than declaring the product permanently finished.
+allocation-returning pointer subset sampling, and S4-M59 adds allocation-returning
+weighted pointer subset sampling, but later stages should keep raising the bar
+rather than declaring the product permanently finished.

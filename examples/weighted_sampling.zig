@@ -75,6 +75,18 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(no_replace);
     try printStringSlice(stdout, "weighted no-replacement sample", no_replace);
 
+    var no_replace_ptrs_engine = alea.ScalarPrng.init(0x7164);
+    const no_replace_ptrs = try alea.seq.sampleWeightedPtrsFrom(allocator, &no_replace_ptrs_engine, []const u8, f64, &items, &float_weights, 3);
+    defer allocator.free(no_replace_ptrs);
+    try stdout.print("weighted no-replacement ptrs: [{s}, {s}, {s}]\n", .{ no_replace_ptrs[0].*, no_replace_ptrs[1].*, no_replace_ptrs[2].* });
+
+    var no_replace_mut_ptrs_engine = alea.ScalarPrng.init(0x7165);
+    var weighted_alloc_scores = [_]u8{ 10, 20, 30, 40 };
+    const no_replace_mut_ptrs = try alea.seq.sampleWeightedMutPtrsFrom(allocator, &no_replace_mut_ptrs_engine, u8, f64, &weighted_alloc_scores, &float_weights, 3);
+    defer allocator.free(no_replace_mut_ptrs);
+    for (no_replace_mut_ptrs) |score| score.* += 7;
+    try stdout.print("weighted no-replacement mut ptr scores: {any}\n", .{weighted_alloc_scores});
+
     var weighted_array_engine = alea.ScalarPrng.init(0x7159);
     const weighted_array = (try alea.seq.sampleWeightedArrayFrom(&weighted_array_engine, []const u8, f64, 3, &items, &float_weights)).?;
     try stdout.print("weighted array sample: [{s}, {s}, {s}]\n", .{ weighted_array[0], weighted_array[1], weighted_array[2] });
@@ -127,6 +139,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_mut_ptrs_into) |score| score.* += 5;
     try stdout.print("weighted mut ptrs into scores: {any}\n", .{weighted_scores_into});
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/index/pointer no-replacement, caller-owned index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }

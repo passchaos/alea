@@ -279,6 +279,8 @@ Use:
   `seq.sampleWeightedIndicesIntoCheckedFrom`, `seq.sampleWeightedIndexArrayFrom`,
   `seq.sampleWeightedIndexArrayCheckedFrom`, `seq.sampleWeighted`,
   `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`,
+  `seq.sampleWeightedPtrsFrom`, `seq.sampleWeightedPtrsCheckedFrom`,
+  `seq.sampleWeightedMutPtrsFrom`, `seq.sampleWeightedMutPtrsCheckedFrom`,
   `seq.sampleWeightedIntoFrom`, `seq.sampleWeightedIntoCheckedFrom`,
   `seq.sampleWeightedPtrsIntoFrom`, `seq.sampleWeightedPtrsIntoCheckedFrom`,
   `seq.sampleWeightedMutPtrsIntoFrom`,
