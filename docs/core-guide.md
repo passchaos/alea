@@ -251,7 +251,9 @@ Use:
   `seq.chooseMultiplePtrsIntoCheckedFrom`,
   `seq.chooseMultipleMutPtrsIntoFrom`,
   `seq.chooseMultipleMutPtrsIntoCheckedFrom`, `seq.chooseArray`,
-  `seq.chooseArrayFrom`, `seq.chooseArrayCheckedFrom`
+  `seq.chooseArrayFrom`, `seq.chooseArrayCheckedFrom`,
+  `seq.choosePtrArrayFrom`, `seq.choosePtrArrayCheckedFrom`,
+  `seq.chooseMutPtrArrayFrom`, `seq.chooseMutPtrArrayCheckedFrom`
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`,
   `seq.chooseIteratorCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`,
   `seq.sampleIteratorCheckedFrom`, `seq.sampleIteratorArrayFrom`,

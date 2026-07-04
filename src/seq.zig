@@ -554,6 +554,46 @@ pub fn chooseArrayFrom(source: anytype, comptime T: type, comptime N: usize, ite
     return out;
 }
 
+pub fn choosePtrArray(rng: Rng, comptime T: type, comptime N: usize, items: []const T) ?[N]*const T {
+    return choosePtrArrayFrom(rng, T, N, items);
+}
+
+pub fn choosePtrArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []const T) Error![N]*const T {
+    return choosePtrArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn choosePtrArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]*const T {
+    if (N > items.len) return error.InvalidParameter;
+    return choosePtrArrayFrom(source, T, N, items).?;
+}
+
+pub fn choosePtrArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) ?[N]*const T {
+    const indices = sampleArrayFrom(source, N, items.len) orelse return null;
+    var out: [N]*const T = undefined;
+    inline for (0..N) |i| out[i] = &items[indices[i]];
+    return out;
+}
+
+pub fn chooseMutPtrArray(rng: Rng, comptime T: type, comptime N: usize, items: []T) ?[N]*T {
+    return chooseMutPtrArrayFrom(rng, T, N, items);
+}
+
+pub fn chooseMutPtrArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []T) Error![N]*T {
+    return chooseMutPtrArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn chooseMutPtrArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []T) Error![N]*T {
+    if (N > items.len) return error.InvalidParameter;
+    return chooseMutPtrArrayFrom(source, T, N, items).?;
+}
+
+pub fn chooseMutPtrArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []T) ?[N]*T {
+    const indices = sampleArrayFrom(source, N, items.len) orelse return null;
+    var out: [N]*T = undefined;
+    inline for (0..N) |i| out[i] = &items[indices[i]];
+    return out;
+}
+
 pub fn chooseWeighted(rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !?T {
     return chooseWeightedFrom(rng, T, Weight, items, weights);
 }
@@ -3509,6 +3549,55 @@ test "chooseArray returns fixed-size item samples" {
     try std.testing.expectError(error.InvalidParameter, chooseArrayCheckedFrom(&facade_engine, u8, 9, &items));
 }
 
+test "choose pointer arrays return fixed-size pointer samples" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+
+    var optional_engine = alea.ScalarPrng.init(0x5150_a101);
+    const optional = choosePtrArrayFrom(&optional_engine, u8, 3, &items).?;
+    try std.testing.expectEqual(@as(usize, 3), optional.len);
+    for (optional) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+        try std.testing.expect(index < items.len);
+        try std.testing.expectEqual(&items[index], ptr);
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_a102);
+    const checked = try choosePtrArrayCheckedFrom(&checked_engine, u8, 4, &items);
+    try std.testing.expectEqual(@as(usize, 4), checked.len);
+    for (checked) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+        try std.testing.expect(index < items.len);
+        try std.testing.expectEqual(&items[index], ptr);
+    }
+
+    var mutable = items;
+    var mut_engine = alea.ScalarPrng.init(0x5150_a103);
+    const mut_ptrs = try chooseMutPtrArrayCheckedFrom(&mut_engine, u8, 4, &mutable);
+    try std.testing.expectEqual(@as(usize, 4), mut_ptrs.len);
+    var expected = items;
+    for (mut_ptrs) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&mutable[0]), @sizeOf(u8));
+        try std.testing.expect(index < mutable.len);
+        try std.testing.expectEqual(&mutable[index], ptr);
+        ptr.* += 1;
+        expected[index] += 1;
+    }
+    try std.testing.expectEqualSlices(u8, &expected, &mutable);
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_a104);
+    const rng = Rng.init(&facade_engine);
+    const facade = choosePtrArray(rng, u8, 2, &items).?;
+    try std.testing.expectEqual(@as(usize, 2), facade.len);
+
+    const empty = choosePtrArrayFrom(&facade_engine, u8, 0, &items).?;
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(choosePtrArrayFrom(&facade_engine, u8, 9, &items) == null);
+    try std.testing.expectError(error.InvalidParameter, choosePtrArrayCheckedFrom(&facade_engine, u8, 9, &items));
+    try std.testing.expect(chooseMutPtrArrayFrom(&facade_engine, u8, 9, &mutable) == null);
+    try std.testing.expectError(error.InvalidParameter, chooseMutPtrArrayCheckedFrom(&facade_engine, u8, 9, &mutable));
+}
+
 test "chooseMultipleInto fills caller-owned item buffers" {
     const alea = @import("root.zig");
     const items = [_]u8{ 10, 20, 30, 40, 50 };
@@ -3676,6 +3765,19 @@ test "invalid chooseArray helpers do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, chooseArrayCheckedFrom(&engine, u8, 4, &.{ 1, 2, 3 }));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, choosePtrArrayChecked(rng, u8, 4, &.{ 1, 2, 3 }));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, choosePtrArrayCheckedFrom(&engine, u8, 4, &.{ 1, 2, 3 }));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var mutable = [_]u8{ 1, 2, 3 };
+    try std.testing.expectError(error.InvalidParameter, chooseMutPtrArrayChecked(rng, u8, 4, &mutable));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, chooseMutPtrArrayCheckedFrom(&engine, u8, 4, &mutable));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "chooseWeighted selects values and mutable pointers" {
@@ -3790,6 +3892,30 @@ test "collection sequence helpers preserve direct stream shape" {
         const array = chooseArray(rng, u8, 3, &items).?;
         const direct_array = chooseArrayFrom(&direct_engine, u8, 3, &items).?;
         try std.testing.expectEqualSlices(u8, &array, &direct_array);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const ptr_array = choosePtrArray(rng, u8, 3, &items).?;
+        const direct_ptr_array = choosePtrArrayFrom(&direct_engine, u8, 3, &items).?;
+        for (ptr_array, direct_ptr_array) |ptr, direct_ptr| {
+            const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(index, direct_index);
+            try std.testing.expectEqual(&items[index], ptr);
+            try std.testing.expectEqual(&items[direct_index], direct_ptr);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var mutable_items = items;
+        var direct_mutable_items = items;
+        const mut_ptr_array = chooseMutPtrArray(rng, u8, 3, &mutable_items).?;
+        const direct_mut_ptr_array = chooseMutPtrArrayFrom(&direct_engine, u8, 3, &direct_mutable_items).?;
+        for (mut_ptr_array, direct_mut_ptr_array) |ptr, direct_ptr| {
+            const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&mutable_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_mutable_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(index, direct_index);
+            try std.testing.expectEqual(&mutable_items[index], ptr);
+            try std.testing.expectEqual(&direct_mutable_items[direct_index], direct_ptr);
+        }
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         const RangeIter = struct {
