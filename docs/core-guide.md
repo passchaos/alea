@@ -261,6 +261,7 @@ Use:
   `seq.sampleWeightedIndicesIntoCheckedFrom`, `seq.sampleWeightedIndexArrayFrom`,
   `seq.sampleWeightedIndexArrayCheckedFrom`, `seq.sampleWeighted`,
   `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`,
+  `seq.sampleWeightedIntoFrom`, `seq.sampleWeightedIntoCheckedFrom`,
   `seq.sampleWeightedArrayFrom`, `seq.sampleWeightedArrayCheckedFrom`
   (`*Checked*` variants require enough positive-weight entries for the
   requested amount; requesting zero samples returns an empty result before

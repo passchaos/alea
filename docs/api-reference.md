@@ -2334,6 +2334,8 @@ Dynamic weighted helpers:
   `sampleWeightedIndexArrayFrom`, `sampleWeightedIndexArrayChecked`,
   `sampleWeightedIndexArrayCheckedFrom`, `sampleWeighted`, `sampleWeightedFrom`,
   `sampleWeightedChecked`, `sampleWeightedCheckedFrom`,
+  `sampleWeightedInto`, `sampleWeightedIntoFrom`,
+  `sampleWeightedIntoChecked`, `sampleWeightedIntoCheckedFrom`,
   `sampleWeightedArray`, `sampleWeightedArrayFrom`,
   `sampleWeightedArrayChecked`, `sampleWeightedArrayCheckedFrom`
 

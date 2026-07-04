@@ -91,6 +91,13 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleWeightedIndicesIntoFrom(&indices_into_engine, f64, &float_weights, &weighted_indices_into, &weighted_indices_keys);
     try stdout.print("weighted indices into: {any}\n", .{weighted_indices_into});
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/index no-replacement, caller-owned index buffers, and fixed-size array workflows.\n", .{});
+    var weighted_into_engine = alea.ScalarPrng.init(0x715c);
+    var weighted_into_values: [3][]const u8 = undefined;
+    var weighted_into_indices: [3]usize = undefined;
+    var weighted_into_keys: [3]f64 = undefined;
+    _ = try alea.seq.sampleWeightedIntoFrom(&weighted_into_engine, []const u8, f64, &items, &float_weights, &weighted_into_values, &weighted_into_indices, &weighted_into_keys);
+    try printStringSlice(stdout, "weighted values into", &weighted_into_values);
+
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/index no-replacement, caller-owned index/value buffers, and fixed-size array workflows.\n", .{});
     try stdout.flush();
 }
