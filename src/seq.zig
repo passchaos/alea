@@ -22,6 +22,38 @@ pub const IndexVec = union(enum) {
         }
     };
 
+    pub fn ValueIterator(comptime T: type) type {
+        return struct {
+            index_iter: Iterator,
+            items: []const T,
+
+            pub fn next(self: *@This()) ?T {
+                const index = self.index_iter.next() orelse return null;
+                return self.items[index];
+            }
+
+            pub fn remaining(self: @This()) usize {
+                return self.index_iter.remaining();
+            }
+        };
+    }
+
+    pub fn PtrIterator(comptime T: type) type {
+        return struct {
+            index_iter: Iterator,
+            items: []const T,
+
+            pub fn next(self: *@This()) ?*const T {
+                const index = self.index_iter.next() orelse return null;
+                return &self.items[index];
+            }
+
+            pub fn remaining(self: @This()) usize {
+                return self.index_iter.remaining();
+            }
+        };
+    }
+
     pub fn len(self: IndexVec) usize {
         return switch (self) {
             .u32 => |items| items.len,
@@ -52,6 +84,13 @@ pub const IndexVec = union(enum) {
         return self.indexOf(value) != null;
     }
 
+    pub fn validateItems(self: IndexVec, item_len: usize) Error!void {
+        var index: usize = 0;
+        while (index < self.len()) : (index += 1) {
+            if (self.at(index) >= item_len) return error.InvalidParameter;
+        }
+    }
+
     pub fn copyInto(self: IndexVec, out: []usize) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
         switch (self) {
@@ -67,6 +106,24 @@ pub const IndexVec = union(enum) {
         errdefer allocator.free(out);
         try self.copyInto(out);
         return out;
+    }
+
+    pub fn values(self: IndexVec, comptime T: type, items: []const T) ValueIterator(T) {
+        return .{ .index_iter = self.iter(), .items = items };
+    }
+
+    pub fn valuesChecked(self: IndexVec, comptime T: type, items: []const T) Error!ValueIterator(T) {
+        try self.validateItems(items.len);
+        return self.values(T, items);
+    }
+
+    pub fn ptrs(self: IndexVec, comptime T: type, items: []const T) PtrIterator(T) {
+        return .{ .index_iter = self.iter(), .items = items };
+    }
+
+    pub fn ptrsChecked(self: IndexVec, comptime T: type, items: []const T) Error!PtrIterator(T) {
+        try self.validateItems(items.len);
+        return self.ptrs(T, items);
     }
 
     pub fn iter(self: IndexVec) Iterator {
@@ -2042,6 +2099,38 @@ test "index vec conversion supports native backing" {
     const owned = try index_vec.toOwnedSlice(std.testing.allocator);
     defer std.testing.allocator.free(owned);
     try std.testing.expectEqualSlices(usize, &backing, owned);
+}
+
+test "index vec maps sampled indexes to slice items" {
+    const labels = [_][]const u8{ "ant", "bee", "cat", "dog", "eel", "fox" };
+    var backing = [_]usize{ 4, 1, 5 };
+    const index_vec = IndexVec{ .usize = &backing };
+
+    var values = index_vec.values([]const u8, &labels);
+    try std.testing.expectEqual(@as(usize, 3), values.remaining());
+    try std.testing.expectEqualStrings("eel", values.next().?);
+    try std.testing.expectEqualStrings("bee", values.next().?);
+    try std.testing.expectEqualStrings("fox", values.next().?);
+    try std.testing.expectEqual(@as(?[]const u8, null), values.next());
+
+    var ptrs = try index_vec.ptrsChecked([]const u8, &labels);
+    try std.testing.expectEqualStrings("eel", ptrs.next().?.*);
+    try std.testing.expectEqualStrings("bee", ptrs.next().?.*);
+    try std.testing.expectEqualStrings("fox", ptrs.next().?.*);
+    try std.testing.expectEqual(@as(?*const []const u8, null), ptrs.next());
+
+    var compact_backing = [_]u32{ 0, 2, 3 };
+    const compact = IndexVec{ .u32 = &compact_backing };
+    var compact_values = try compact.valuesChecked([]const u8, &labels);
+    try std.testing.expectEqualStrings("ant", compact_values.next().?);
+    try std.testing.expectEqualStrings("cat", compact_values.next().?);
+    try std.testing.expectEqualStrings("dog", compact_values.next().?);
+
+    var invalid_backing = [_]usize{ 1, labels.len };
+    const invalid = IndexVec{ .usize = &invalid_backing };
+    try std.testing.expectError(error.InvalidParameter, invalid.validateItems(labels.len));
+    try std.testing.expectError(error.InvalidParameter, invalid.valuesChecked([]const u8, &labels));
+    try std.testing.expectError(error.InvalidParameter, invalid.ptrsChecked([]const u8, &labels));
 }
 
 test "index vec keeps compact backing for u32 lengths" {
