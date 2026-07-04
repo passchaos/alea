@@ -31,6 +31,10 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(chance_flags);
     const ratio_flags = try rng.ratioBatch(init.gpa, 8, 3, 8);
     defer init.gpa.free(ratio_flags);
+    const vector_chance_flags = try rng.vectorChanceBatch(@Vector(8, bool), init.gpa, 2, 0.25);
+    defer init.gpa.free(vector_chance_flags);
+    const vector_ratio_flags = try rng.vectorRatioBatch(@Vector(8, bool), init.gpa, 2, 3, 8);
+    defer init.gpa.free(vector_ratio_flags);
     const normal_batch = try rng.normalBatch(f64, init.gpa, 4, 10, 2.5);
     defer init.gpa.free(normal_batch);
     const exponential_batch = try rng.exponentialBatch(f64, init.gpa, 4, 4);
@@ -76,6 +80,8 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("valueBatch u16: {any}\n", .{random_words});
     try stdout.print("chanceBatch p=.25: {any}\n", .{chance_flags});
     try stdout.print("ratioBatch 3/8: {any}\n", .{ratio_flags});
+    try stdout.print("vectorChanceBatch boolx8 p=.25: {any}\n", .{vector_chance_flags});
+    try stdout.print("vectorRatioBatch boolx8 3/8: {any}\n", .{vector_ratio_flags});
     try stdout.print("normalBatch: {any}\n", .{normal_batch});
     try stdout.print("exponentialBatch: {any}\n", .{exponential_batch});
     try stdout.print("dirichlet: {any}\n", .{proportions});

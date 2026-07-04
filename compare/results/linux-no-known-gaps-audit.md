@@ -131,6 +131,7 @@ Local Alea evidence:
 - `compare/results/s4-m91-rng-owned-durations.md`
 - `compare/results/s4-m92-rng-owned-vector-ranges.md`
 - `compare/results/s4-m93-rng-owned-vector-strict-intervals.md`
+- `compare/results/s4-m94-rng-owned-vector-probabilities.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -146,7 +147,7 @@ Out of scope for this Linux-first audit:
 
 | Rust area | Alea status | Evidence |
 | --- | --- | --- |
-| integer, float, bool, range, owned scalar/vector range, scalar/vector strict-interval, probability, and duration batches, ratio/chance, caller-owned and allocation-returning bytes | Covered | `Rng`, `Rng.rangeBatch`, `Rng.vectorRangeBatch`, `Rng.openBatch`, `Rng.openClosedBatch`, `Rng.vectorOpenBatch`, `Rng.vectorOpenClosedBatch`, `Rng.chanceBatch`, `Rng.ratioBatch`, `Rng.bytesAlloc`, unit tests, Zig/Rust benchmark rows |
+| integer, float, bool, range, owned scalar/vector range, scalar/vector strict-interval, scalar/vector probability, and duration batches, ratio/chance, caller-owned and allocation-returning bytes | Covered | `Rng`, `Rng.rangeBatch`, `Rng.vectorRangeBatch`, `Rng.openBatch`, `Rng.openClosedBatch`, `Rng.vectorOpenBatch`, `Rng.vectorOpenClosedBatch`, `Rng.chanceBatch`, `Rng.ratioBatch`, `Rng.vectorChanceBatch`, `Rng.vectorRatioBatch`, `Rng.bytesAlloc`, unit tests, Zig/Rust benchmark rows |
 | arrays, tuples, enums | Covered | `Rng.value(T)`, `Rng.valueBatch(T)`, and checked empty-enum tests |
 | Unicode scalar / char-like sampling | Covered in Zig form | `Rng.unicodeScalar`, `ascii.unicodeUtf8Alloc`, `ascii.unicodeUtf8Into` |
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost`, and owned duration range batches |
@@ -295,6 +296,6 @@ S4-M85 adds Rng owned repeated value/sample batches, S4-M86 adds Rng owned
 byte buffers, S4-M87 adds Rng owned scalar range batches, and S4-M88 adds
 Rng owned strict-interval float batches, and S4-M89 adds Rng owned probability
 bool batches, and S4-M90 adds Rng owned normal/exponential batches, S4-M91 adds Rng owned duration range batches, S4-M92 adds Rng owned vector
-range batches, and S4-M93 adds Rng owned vector strict-interval batches, but
-later stages should keep raising the bar rather than declaring the product
-permanently finished.
+range batches, S4-M93 adds Rng owned vector strict-interval batches, and S4-M94 adds Rng owned
+vector probability bool batches, but later stages should keep raising the bar
+rather than declaring the product permanently finished.

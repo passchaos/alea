@@ -10,7 +10,7 @@ const examples = [_]Example{
     .{
         .path = "examples/basic.zig",
         .step = "zig build run-basic",
-        .source_tokens = &.{ "bytesAlloc", "valueBatch u16", "chanceBatch p=.25", "ratioBatch 3/8", "normalBatch", "exponentialBatch", "sampleBatch dice", "index choice", "u32 index choice", "const pointer choice" },
+        .source_tokens = &.{ "bytesAlloc", "valueBatch u16", "chanceBatch p=.25", "ratioBatch 3/8", "vectorChanceBatch boolx8", "vectorRatioBatch boolx8", "normalBatch", "exponentialBatch", "sampleBatch dice", "index choice", "u32 index choice", "const pointer choice" },
     },
     .{ .path = "examples/reproducible_streams.zig", .step = "zig build run-reproducible-streams" },
     .{ .path = "examples/range_sampling.zig", .step = "zig build run-range-sampling", .source_tokens = &.{ "rangeBatch u16", "rangeBatchChecked f64", "durationRangeAtMostBatch", "vectorRangeBatch f32x4", "vectorOpenBatch f32x4", "vectorOpenClosedBatch f32x4", "openBatch f32", "openClosedBatch f32" } },

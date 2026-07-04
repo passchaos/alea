@@ -76,8 +76,11 @@ selection.
   `durationRangeAtMostBatchFrom`, `durationRangeAtMostBatchChecked`,
   `durationRangeAtMostBatchCheckedFrom`, `vectorRangeBatch`,
   `vectorRangeBatchFrom`, `vectorRangeBatchChecked`, `vectorRangeBatchCheckedFrom`,
-  `vectorOpenBatch`, `vectorOpenBatchFrom`, `vectorOpenClosedBatch`, and
-  `vectorOpenClosedBatchFrom` allocate owned slices after validating no-consume
+  `vectorOpenBatch`, `vectorOpenBatchFrom`, `vectorOpenClosedBatch`,
+  `vectorOpenClosedBatchFrom`, `vectorChanceBatch`, `vectorChanceBatchFrom`,
+  `vectorChanceBatchChecked`, `vectorChanceBatchCheckedFrom`,
+  `vectorRatioBatch`, `vectorRatioBatchFrom`, `vectorRatioBatchChecked`, and
+  `vectorRatioBatchCheckedFrom` allocate owned slices after validating no-consume
   checked cases; use these when an owned result is more ergonomic than a caller
   buffer or iterator loop
 - owned byte buffers: `bytesAlloc` / `bytesAllocFrom` allocate random byte slices after allocation succeeds; use `bytes` or `fill(u8, ...)` for caller-owned buffers

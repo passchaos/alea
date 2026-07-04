@@ -628,6 +628,17 @@ pub fn fillVectorChance(self: Rng, comptime VectorType: type, dest: []VectorType
     fillVectorChanceFrom(self, VectorType, dest, p);
 }
 
+pub fn vectorChanceBatch(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, p: f64) ![]VectorType {
+    return vectorChanceBatchFrom(self, VectorType, allocator, count, p);
+}
+
+pub fn vectorChanceBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, p: f64) ![]VectorType {
+    const out = try allocator.alloc(VectorType, count);
+    errdefer allocator.free(out);
+    fillVectorChanceFrom(source, VectorType, out, p);
+    return out;
+}
+
 pub fn fillVectorChanceFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) void {
     const info = vectorInfo(VectorType);
     if (info.child != bool) @compileError("Rng.fillVectorChance expects a bool vector");
@@ -647,6 +658,18 @@ pub fn fillVectorChanceChecked(self: Rng, comptime VectorType: type, dest: []Vec
     return fillVectorChanceCheckedFrom(self, VectorType, dest, p);
 }
 
+pub fn vectorChanceBatchChecked(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, p: f64) ![]VectorType {
+    return vectorChanceBatchCheckedFrom(self, VectorType, allocator, count, p);
+}
+
+pub fn vectorChanceBatchCheckedFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, p: f64) ![]VectorType {
+    if (count == 0) return allocator.alloc(VectorType, 0);
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("Rng.vectorChanceBatchChecked expects a bool vector");
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+    return vectorChanceBatchFrom(source, VectorType, allocator, count, p);
+}
+
 pub fn fillVectorChanceCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
     const info = vectorInfo(VectorType);
     if (info.child != bool) @compileError("Rng.fillVectorChanceChecked expects a bool vector");
@@ -657,6 +680,17 @@ pub fn fillVectorChanceCheckedFrom(source: anytype, comptime VectorType: type, d
 
 pub fn fillVectorRatio(self: Rng, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) void {
     fillVectorRatioFrom(self, VectorType, dest, numerator, denominator);
+}
+
+pub fn vectorRatioBatch(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]VectorType {
+    return vectorRatioBatchFrom(self, VectorType, allocator, count, numerator, denominator);
+}
+
+pub fn vectorRatioBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]VectorType {
+    const out = try allocator.alloc(VectorType, count);
+    errdefer allocator.free(out);
+    fillVectorRatioFrom(source, VectorType, out, numerator, denominator);
+    return out;
 }
 
 pub fn fillVectorRatioFrom(source: anytype, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) void {
@@ -676,6 +710,18 @@ pub fn fillVectorRatioFrom(source: anytype, comptime VectorType: type, dest: []V
 
 pub fn fillVectorRatioChecked(self: Rng, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) Error!void {
     return fillVectorRatioCheckedFrom(self, VectorType, dest, numerator, denominator);
+}
+
+pub fn vectorRatioBatchChecked(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]VectorType {
+    return vectorRatioBatchCheckedFrom(self, VectorType, allocator, count, numerator, denominator);
+}
+
+pub fn vectorRatioBatchCheckedFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]VectorType {
+    if (count == 0) return allocator.alloc(VectorType, 0);
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("Rng.vectorRatioBatchChecked expects a bool vector");
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
+    return vectorRatioBatchFrom(source, VectorType, allocator, count, numerator, denominator);
 }
 
 pub fn fillVectorRatioCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) Error!void {
@@ -3535,11 +3581,25 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(@Vector(8, bool), &vector_chance_unchecked, &vector_chance_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        const vector_chance_owned = try vectorChanceBatchFrom(&unchecked, @Vector(8, bool), std.testing.allocator, 4, 0.25);
+        defer std.testing.allocator.free(vector_chance_owned);
+        const vector_chance_checked_owned = try vectorChanceBatchCheckedFrom(&checked, @Vector(8, bool), std.testing.allocator, 4, 0.25);
+        defer std.testing.allocator.free(vector_chance_checked_owned);
+        try std.testing.expectEqualSlices(@Vector(8, bool), vector_chance_owned, vector_chance_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var vector_ratio_unchecked: [4]@Vector(8, bool) = undefined;
         var vector_ratio_checked: [4]@Vector(8, bool) = undefined;
         fillVectorRatioFrom(&unchecked, @Vector(8, bool), &vector_ratio_unchecked, 3, 8);
         try fillVectorRatioCheckedFrom(&checked, @Vector(8, bool), &vector_ratio_checked, 3, 8);
         try std.testing.expectEqualSlices(@Vector(8, bool), &vector_ratio_unchecked, &vector_ratio_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const vector_ratio_owned = try vectorRatioBatchFrom(&unchecked, @Vector(8, bool), std.testing.allocator, 4, 3, 8);
+        defer std.testing.allocator.free(vector_ratio_owned);
+        const vector_ratio_checked_owned = try vectorRatioBatchCheckedFrom(&checked, @Vector(8, bool), std.testing.allocator, 4, 3, 8);
+        defer std.testing.allocator.free(vector_ratio_checked_owned);
+        try std.testing.expectEqualSlices(@Vector(8, bool), vector_ratio_owned, vector_ratio_checked_owned);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var vector_normal_unchecked: [4]@Vector(8, f32) = undefined;
@@ -4366,6 +4426,40 @@ test "owned probability batches allocate and validate before consuming random st
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "owned vector probability batches allocate and validate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_94a0);
+    var control = alea.ScalarPrng.init(0x5150_94a0);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.vectorChanceBatchChecked(@Vector(8, bool), empty_alloc.allocator(), 0, -0.1);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_chance_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, rng.vectorChanceBatchChecked(@Vector(8, bool), invalid_chance_alloc.allocator(), 4, -0.1));
+    try std.testing.expect(!invalid_chance_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_ratio_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, vectorRatioBatchCheckedFrom(&engine, @Vector(8, bool), invalid_ratio_alloc.allocator(), 4, 2, 1));
+    try std.testing.expect(!invalid_ratio_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var chance_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.vectorChanceBatchChecked(@Vector(8, bool), chance_alloc.allocator(), 4, 0.25));
+    try std.testing.expect(chance_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var ratio_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, vectorRatioBatchFrom(&engine, @Vector(8, bool), ratio_alloc.allocator(), 4, 3, 8));
+    try std.testing.expect(ratio_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "degenerate owned probability batches do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_89a1);
@@ -4390,6 +4484,33 @@ test "degenerate owned probability batches do not consume random stream" {
     const ratio_true = try ratioBatchCheckedFrom(&engine, std.testing.allocator, 8, 7, 7);
     defer std.testing.allocator.free(ratio_true);
     for (ratio_true) |sample| try std.testing.expect(sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate owned vector probability batches do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_94a1);
+    var control = alea.ScalarPrng.init(0x5150_94a1);
+    const rng = Rng.init(&engine);
+
+    const all_false = try rng.vectorChanceBatchChecked(@Vector(8, bool), std.testing.allocator, 4, 0);
+    defer std.testing.allocator.free(all_false);
+    for (all_false) |sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(false)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const all_true = try vectorChanceBatchCheckedFrom(&engine, @Vector(8, bool), std.testing.allocator, 4, 1);
+    defer std.testing.allocator.free(all_true);
+    for (all_true) |sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const ratio_false = try rng.vectorRatioBatchChecked(@Vector(8, bool), std.testing.allocator, 4, 0, 7);
+    defer std.testing.allocator.free(ratio_false);
+    for (ratio_false) |sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(false)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const ratio_true = try vectorRatioBatchCheckedFrom(&engine, @Vector(8, bool), std.testing.allocator, 4, 7, 7);
+    defer std.testing.allocator.free(ratio_true);
+    for (ratio_true) |sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
