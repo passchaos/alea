@@ -320,6 +320,8 @@ zig build crosscheck
 zig build test-wasi
 zig build wasi-report
 zig build -Doptimize=ReleaseFast statcheck
+zig build -Doptimize=ReleaseFast profilecheck
+zig build -Doptimize=ReleaseFast wasi-profilecheck
 zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/alea.bin
 sh tools/practrand.sh fast 1073741824
 ```

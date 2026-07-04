@@ -8,9 +8,9 @@ means that, on the current x86_64 Linux environment and against the locally
 available Rust evidence listed below, there are no known remaining core RNG
 functionality gaps in Alea's current local Linux parity stage. S4-M4 performance
 follow-up is closed for the current bar: LogNormal performance is covered by
-explicit opt-ins while exact defaults remain a stable-output tradeoff. The S4-M5
-policy bar is closed by `s4-m5-approximation-policy.md`; the active S4-M6 watch
-item is broader-target and longer distribution-quality hardening for accepted
+explicit opt-ins while exact defaults remain a stable-output tradeoff. The S4-M5 policy bar is closed by `s4-m5-approximation-policy.md`, and the S4-M6
+hardening bar is closed by `2026-07-04-s4-m6-profilecheck.md`; the active S4-M7
+watch item is longer/adversarial tail-focused validation for accepted
 approximation profiles, plus continued watch for exact/default-compatible dense
 SIMD normal/exponential kernels.
 
@@ -40,6 +40,8 @@ Local Alea evidence:
 - `compare/results/s4-m4-remaining-gaps.md`
 - `compare/results/rust-benchmark-coverage-audit.md`
 - `compare/results/s4-m5-rand-simd-audit.md`
+- `compare/results/s4-m5-approximation-policy.md`
+- `compare/results/2026-07-04-s4-m6-profilecheck.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -83,10 +85,10 @@ Out of scope for this Linux-first audit:
 
 ## Current Stage 4 Performance Watch Items
 
-These are not functionality gaps. S4-M4 and S4-M5 are closed for the current
-local Linux bars, while S4-M6 remains active. The current blocker and policy
-audits are `s4-m4-remaining-gaps.md` and `s4-m5-approximation-policy.md`. In
-short:
+These are not functionality gaps. S4-M4, S4-M5, and S4-M6 are closed for the
+current bars, while S4-M7 remains active. The current blocker and policy audits
+are `s4-m4-remaining-gaps.md`, `s4-m5-approximation-policy.md`, and
+`2026-07-04-s4-m6-profilecheck.md`. In short:
 
 - `LogNormal` exact defaults remain intentionally stable on Zig `@exp` output
   mapping and still trail local Rust single-sample rows, but the S4-M4
@@ -152,6 +154,5 @@ Within this audit's local Linux scope, no known core RNG functionality gap
 remains against the locally available `rand` / `rand_distr` evidence.
 
 This does not close the long-term product goal. Stage 4 remains active for the
-S4-M6 broader-target and longer distribution-quality hardening bar above, and
-later stages should keep raising the bar rather than declaring the product
-permanently finished.
+S4-M7 longer/tail-focused profile-validation bar above, and later stages should
+keep raising the bar rather than declaring the product permanently finished.

@@ -149,6 +149,18 @@ const can_try_libmvec = builtin.target.cpu.arch == .x86_64 and
 const can_try_libm = builtin.target.os.tag == .linux and
     builtin.target.abi.isGnu() and
     builtin.link_libc;
+const can_try_dynamic_lib = can_try_libmvec or can_try_libm;
+const ProfileDynLib = if (can_try_dynamic_lib) std.DynLib else struct {
+    fn close(self: *@This()) void {
+        _ = self;
+    }
+
+    fn lookup(self: *@This(), comptime T: type, name: [:0]const u8) ?T {
+        _ = self;
+        _ = name;
+        return null;
+    }
+};
 
 pub fn uniform(rng: Rng, comptime T: type, min: T, max: T) T {
     return uniformFrom(rng, T, min, max);
@@ -5730,11 +5742,12 @@ pub fn LogNormalLibmvec(comptime T: type, comptime buffer_len: usize) type {
         log_stddev: T,
         buffer: [buffer_len]T = undefined,
         index: usize = buffer_len,
-        lib: std.DynLib,
+        lib: ProfileDynLib,
         exp_f64x4: if (T == f64) LibmvecExpF64x4 else void,
         exp_f32x8: if (T == f32) LibmvecExpF32x8 else void,
 
         pub fn init(mean: T, stddev: T) Error!Self {
+            if (comptime !can_try_libmvec) return error.LibmvecUnavailable;
             const base = try LogNormal(T).init(mean, stddev);
             var lib = openLibmvec() catch return error.LibmvecUnavailable;
             errdefer lib.close();
@@ -5748,6 +5761,7 @@ pub fn LogNormalLibmvec(comptime T: type, comptime buffer_len: usize) type {
         }
 
         pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
+            if (comptime !can_try_libmvec) return error.LibmvecUnavailable;
             const base = try LogNormal(T).initMeanCv(mean, coefficient_of_variation);
             var lib = openLibmvec() catch return error.LibmvecUnavailable;
             errdefer lib.close();
@@ -5852,10 +5866,11 @@ pub fn LogNormalDlsymExp(comptime T: type, comptime buffer_len: usize) type {
         log_stddev: T,
         buffer: [buffer_len]T = undefined,
         index: usize = buffer_len,
-        lib: std.DynLib,
+        lib: ProfileDynLib,
         exp_fn: LibmExpF64,
 
         pub fn init(mean: T, stddev: T) Error!Self {
+            if (comptime !can_try_libm) return error.LibmUnavailable;
             const base = try LogNormal(T).init(mean, stddev);
             var lib = openLibm() catch return error.LibmUnavailable;
             errdefer lib.close();
@@ -5868,6 +5883,7 @@ pub fn LogNormalDlsymExp(comptime T: type, comptime buffer_len: usize) type {
         }
 
         pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
+            if (comptime !can_try_libm) return error.LibmUnavailable;
             const base = try LogNormal(T).initMeanCv(mean, coefficient_of_variation);
             var lib = openLibm() catch return error.LibmUnavailable;
             errdefer lib.close();

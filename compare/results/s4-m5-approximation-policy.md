@@ -64,7 +64,7 @@ Not accepted:
 | --- | --- |
 | Named API surface exists | `src/distributions.zig`, `docs/api-reference.md`, and `compare/results/distribution-parity-matrix.md` list the table and approx-log vector normal/exponential profiles. |
 | Reproducibility snapshots exist | `src/distributions.zig` contains stable snapshot tests for table normal f32/f64, table exponential f32/f64, and approx-log f32 exponential profiles; `compare/results/reproducibility-matrix.md` classifies them as versioned-stable output mappings. |
-| Statistical-quality gates exist | `tools/distcheck.zig` now uses larger vector samples for these profiles, with mean/variance gates plus fixed-CDF smoke gates for standard normal (`-2`, `-1`, `0`, `1`, `2`) and standard exponential (`0.25`, `0.5`, `1`, `2`, `4`). Parameterized profiles have scaled mean/variance gates. |
+| Statistical-quality gates exist | `tools/distcheck.zig` uses vector samples with mean/variance gates plus fixed-CDF smoke gates, and `tools/profilecheck.zig` now extends accepted profiles to 1,048,576-lane mean/variance/CDF checks for standard normal (`-3` through `3`) and standard exponential (`0.1` through `6`). Parameterized profiles have scaled mean/variance gates in `distcheck`. |
 | Throughput wins in real harness | `compare/results/performance-triage.md` records public `vectorbench -- 16777216 "Table"` rows around 1.0-1.30B lanes/s for table normal/exponential f32/f64, above current default scalar ziggurat lane-fill rows around 454-477M lanes/s; approx-log f32 exponential also beats default f32 ziggurat lane-fill as a smaller table-free profile. |
 | Rejected exact/default alternatives are documented | `compare/results/simd-distribution-kernel-notes.md` and `compare/results/performance-triage.md` list rejected ziggurat repair, block fallback, mask-redraw, Marsaglia polar, ratio-of-uniforms, inverse-CDF, CLT, libmvec vector-log, f64 approx-log, and lane-local candidates. |
 | Local Rust comparison scope is clear | `compare/results/s4-m5-rand-simd-audit.md` confirms local `rand` SIMD support covers uniform/integer/wide values only, and local `rand_distr 0.6.0` normal/exponential remain scalar ziggurat implementations with no SIMD non-uniform row. |
@@ -76,8 +76,9 @@ named vector approximation profiles as the general throughput-first dense vector
 normal/exponential surface, while preserving exact/default APIs on scalar
 ziggurat lane-fill.
 
-The long-term objective remains active. The next roadmap bar should harden this
-decision rather than declare the product done: validate the accepted profiles on
-broader targets and longer distribution-quality runs, keep exact/default dense
+The long-term objective remains active. S4-M6 has since hardened this decision
+with native and WASI `profilecheck` evidence. The next roadmap bar should go
+beyond 1Mi-lane smoke checks: add longer/adversarial tail-focused validation,
+execute another non-WASI runtime target when available, keep exact/default dense
 SIMD candidates under watch, and add new Rust comparison rows if the local Rust
 surface gains SIMD non-uniform distributions.
