@@ -16,9 +16,9 @@ Zig-native way.
 | --- | --- |
 | `StandardUniform` integers/floats/bools/bytes | Covered by `Rng.value`, scalar helpers, `float`, `boolean`, caller-owned bytes, and allocation-returning `bytesAlloc` |
 | `StandardUniform` arrays/tuples | Covered by `Rng.value` arrays and tuples plus allocation-returning `Rng.valueBatch` / `Rng.valueBatchChecked` repeated samples |
-| `StandardUniform` char | Covered by explicit `Rng.unicodeScalar`, caller-owned `fillUnicodeScalar`, owned `unicodeScalarBatch`, and Unicode UTF-8 helpers, including caller-owned-buffer UTF-8 output |
+| `StandardUniform` char | Covered by explicit `Rng.unicodeScalar`, caller-owned `fillUnicodeScalar`, owned `unicodeScalarBatch`, range helpers, and Unicode UTF-8 helpers, including caller-owned-buffer UTF-8 output |
 | `Uniform` integer/float ranges | Covered by `Uniform(T)`, `Open01`, `OpenClosed01`, scalar/vector range helpers, caller-owned range/strict-interval fills, owned `Rng.rangeBatch` / `vectorRangeBatch` / `openBatch` / `openClosedBatch` / `vectorOpenBatch` / `vectorOpenClosedBatch` batches, endpoint/inclusivity, and range/strict-interval moment accessors |
-| `UniformChar` | Covered by `unicodeScalar` / `fillUnicodeScalar` / `unicodeScalarBatch`; explicit char-range sampler is not needed because Zig has no native `char` type |
+| `UniformChar` | Covered by `unicodeScalarRangeLessThan` / `unicodeScalarRangeAtMost`, caller-owned `fillUnicodeScalarRangeLessThan` / `fillUnicodeScalarRangeAtMost`, and owned `unicodeScalarRangeLessThanBatch` / `unicodeScalarRangeAtMostBatch`; Zig uses `u21` scalar values instead of a native `char` type |
 | `UniformDuration` | Covered by `durationRangeLessThan`, `durationRangeAtMost`, and owned duration range batches for `std.Io.Duration` |
 | `Bernoulli` | Covered by `Bernoulli`, `chance`, `ratio`, checked variants, caller-owned and allocation-returning scalar/vector chance/ratio batches, and probability/moment/mode/support accessors |
 | `Alphanumeric`, `Alphabetic` | Covered by ASCII charsets and `Charset`, including charset byte/emptiness/membership/probability diagnostics |

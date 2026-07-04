@@ -57,7 +57,10 @@ selection.
   `durationRangeLessThanBatch`, and `durationRangeAtMostBatch`
 - Unicode scalar values: `unicodeScalar`, `unicodeScalarFrom`,
   `fillUnicodeScalar`, `fillUnicodeScalarFrom`, `unicodeScalarBatch`, and
-  `unicodeScalarBatchFrom`
+  `unicodeScalarBatchFrom`, plus `unicodeScalarRangeLessThan*`,
+  `unicodeScalarRangeAtMost*`, `fillUnicodeScalarRangeLessThan*`,
+  `fillUnicodeScalarRangeAtMost*`, `unicodeScalarRangeLessThanBatch*`, and
+  `unicodeScalarRangeAtMostBatch*` for bounded Unicode scalar ranges
 - structured values: `value(T)` / `valueFrom(source, T)` for bools, ints,
   floats, vectors, enums, arrays, and tuples; use `valueChecked` /
   `valueCheckedFrom` or `enumValueChecked` / `enumValueCheckedFrom` when an
@@ -451,9 +454,12 @@ already consumed randomness for earlier accepted candidates.
 `Uppercase`, `Digits`, custom `Charset`, and Unicode scalar UTF-8 string
 generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
 `Charset.allocFrom`, `charFrom`, `stringFrom`, `unicodeScalarFrom`,
-`fillUnicodeScalarFrom`, `unicodeScalarBatchFrom`, `unicodeUtf8AllocFrom`,
-`unicodeUtf8Capacity`, and `unicodeUtf8IntoFrom` when the engine type is
-comptime-known. Use
+`unicodeScalarRangeLessThanFrom`, `unicodeScalarRangeAtMostFrom`,
+`fillUnicodeScalarFrom`, `fillUnicodeScalarRangeLessThanFrom`,
+`fillUnicodeScalarRangeAtMostFrom`, `unicodeScalarBatchFrom`,
+`unicodeScalarRangeLessThanBatchFrom`, `unicodeScalarRangeAtMostBatchFrom`,
+`unicodeUtf8AllocFrom`, `unicodeUtf8Capacity`, and `unicodeUtf8IntoFrom` when
+the engine type is comptime-known. Use
 `Charset.sampleChecked`, `Charset.sampleCheckedFrom`, `Charset.fillChecked`,
 `Charset.fillCheckedFrom`, `Charset.allocChecked`, and
 `Charset.allocCheckedFrom` when a manually constructed charset may be empty;
@@ -464,10 +470,12 @@ advance a deterministic stream. `unicodeUtf8Into` / `unicodeUtf8IntoFrom` let
 callers use a caller-owned buffer sized via `unicodeUtf8Capacity`; too-small
 buffers fail before drawing. Use `fillUnicodeScalar*` for caller-owned `u21`
 buffers and `unicodeScalarBatch*` for owned repeated scalar values when callers
-want codepoint-level batches instead of UTF-8 strings.
+want codepoint-level batches instead of UTF-8 strings; use the range variants
+when you need a bounded Unicode scalar interval while still skipping UTF-16
+surrogate code points.
 Run `zig build run-string-generation` for a runnable comparison of predefined
 ASCII charsets, custom `Charset` diagnostics, allocation-returning strings,
-Unicode scalar batches, and caller-owned UTF-8 buffers.
+Unicode scalar batches and range batches, and caller-owned UTF-8 buffers.
 
 ## Validation
 

@@ -1967,12 +1967,60 @@ pub fn unicodeScalar(self: Rng) u21 {
     return unicodeScalarFrom(self);
 }
 
+pub fn unicodeScalarRangeLessThan(self: Rng, min: u21, less_than: u21) u21 {
+    return unicodeScalarRangeLessThanFrom(self, min, less_than);
+}
+
+pub fn unicodeScalarRangeAtMost(self: Rng, min: u21, at_most: u21) u21 {
+    return unicodeScalarRangeAtMostFrom(self, min, at_most);
+}
+
+pub fn unicodeScalarRangeLessThanChecked(self: Rng, min: u21, less_than: u21) Error!u21 {
+    return unicodeScalarRangeLessThanCheckedFrom(self, min, less_than);
+}
+
+pub fn unicodeScalarRangeAtMostChecked(self: Rng, min: u21, at_most: u21) Error!u21 {
+    return unicodeScalarRangeAtMostCheckedFrom(self, min, at_most);
+}
+
 pub fn fillUnicodeScalar(self: Rng, dest: []u21) void {
     fillUnicodeScalarFrom(self, dest);
 }
 
+pub fn fillUnicodeScalarRangeLessThan(self: Rng, dest: []u21, min: u21, less_than: u21) void {
+    fillUnicodeScalarRangeLessThanFrom(self, dest, min, less_than);
+}
+
+pub fn fillUnicodeScalarRangeAtMost(self: Rng, dest: []u21, min: u21, at_most: u21) void {
+    fillUnicodeScalarRangeAtMostFrom(self, dest, min, at_most);
+}
+
+pub fn fillUnicodeScalarRangeLessThanChecked(self: Rng, dest: []u21, min: u21, less_than: u21) Error!void {
+    return fillUnicodeScalarRangeLessThanCheckedFrom(self, dest, min, less_than);
+}
+
+pub fn fillUnicodeScalarRangeAtMostChecked(self: Rng, dest: []u21, min: u21, at_most: u21) Error!void {
+    return fillUnicodeScalarRangeAtMostCheckedFrom(self, dest, min, at_most);
+}
+
 pub fn unicodeScalarBatch(self: Rng, allocator: std.mem.Allocator, count: usize) ![]u21 {
     return unicodeScalarBatchFrom(self, allocator, count);
+}
+
+pub fn unicodeScalarRangeLessThanBatch(self: Rng, allocator: std.mem.Allocator, count: usize, min: u21, less_than: u21) ![]u21 {
+    return unicodeScalarRangeLessThanBatchFrom(self, allocator, count, min, less_than);
+}
+
+pub fn unicodeScalarRangeAtMostBatch(self: Rng, allocator: std.mem.Allocator, count: usize, min: u21, at_most: u21) ![]u21 {
+    return unicodeScalarRangeAtMostBatchFrom(self, allocator, count, min, at_most);
+}
+
+pub fn unicodeScalarRangeLessThanBatchChecked(self: Rng, allocator: std.mem.Allocator, count: usize, min: u21, less_than: u21) ![]u21 {
+    return unicodeScalarRangeLessThanBatchCheckedFrom(self, allocator, count, min, less_than);
+}
+
+pub fn unicodeScalarRangeAtMostBatchChecked(self: Rng, allocator: std.mem.Allocator, count: usize, min: u21, at_most: u21) ![]u21 {
+    return unicodeScalarRangeAtMostBatchCheckedFrom(self, allocator, count, min, at_most);
 }
 
 pub fn unicodeScalarBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize) ![]u21 {
@@ -1982,6 +2030,32 @@ pub fn unicodeScalarBatchFrom(source: anytype, allocator: std.mem.Allocator, cou
     return out;
 }
 
+pub fn unicodeScalarRangeLessThanBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: u21, less_than: u21) ![]u21 {
+    const out = try allocator.alloc(u21, count);
+    errdefer allocator.free(out);
+    fillUnicodeScalarRangeLessThanFrom(source, out, min, less_than);
+    return out;
+}
+
+pub fn unicodeScalarRangeAtMostBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: u21, at_most: u21) ![]u21 {
+    const out = try allocator.alloc(u21, count);
+    errdefer allocator.free(out);
+    fillUnicodeScalarRangeAtMostFrom(source, out, min, at_most);
+    return out;
+}
+
+pub fn unicodeScalarRangeLessThanBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: u21, less_than: u21) ![]u21 {
+    if (count == 0) return allocator.alloc(u21, 0);
+    _ = try unicodeScalarExclusiveRange(min, less_than);
+    return unicodeScalarRangeLessThanBatchFrom(source, allocator, count, min, less_than);
+}
+
+pub fn unicodeScalarRangeAtMostBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: u21, at_most: u21) ![]u21 {
+    if (count == 0) return allocator.alloc(u21, 0);
+    _ = try unicodeScalarInclusiveRange(min, at_most);
+    return unicodeScalarRangeAtMostBatchFrom(source, allocator, count, min, at_most);
+}
+
 pub fn unicodeScalarFrom(source: anytype) u21 {
     const gap_size = 0xDFFF - 0xD800 + 1;
     var scalar = intRangeLessThanFrom(source, u21, gap_size, 0x11_0000);
@@ -1989,8 +2063,104 @@ pub fn unicodeScalarFrom(source: anytype) u21 {
     return scalar;
 }
 
+pub fn unicodeScalarRangeLessThanFrom(source: anytype, min: u21, less_than: u21) u21 {
+    const range = unicodeScalarExclusiveRange(min, less_than) catch unreachable;
+    if (exclusiveIntRangeHasSingleValue(u21, range.min, range.end)) return unicodeScalarFromCompressed(range.min);
+    return unicodeScalarFromCompressed(intRangeLessThanFrom(source, u21, range.min, range.end));
+}
+
+pub fn unicodeScalarRangeAtMostFrom(source: anytype, min: u21, at_most: u21) u21 {
+    const range = unicodeScalarInclusiveRange(min, at_most) catch unreachable;
+    if (range.min == range.max) return unicodeScalarFromCompressed(range.min);
+    return unicodeScalarFromCompressed(intRangeAtMostFrom(source, u21, range.min, range.max));
+}
+
+pub fn unicodeScalarRangeLessThanCheckedFrom(source: anytype, min: u21, less_than: u21) Error!u21 {
+    _ = try unicodeScalarExclusiveRange(min, less_than);
+    return unicodeScalarRangeLessThanFrom(source, min, less_than);
+}
+
+pub fn unicodeScalarRangeAtMostCheckedFrom(source: anytype, min: u21, at_most: u21) Error!u21 {
+    _ = try unicodeScalarInclusiveRange(min, at_most);
+    return unicodeScalarRangeAtMostFrom(source, min, at_most);
+}
+
 pub fn fillUnicodeScalarFrom(source: anytype, dest: []u21) void {
     for (dest) |*item| item.* = unicodeScalarFrom(source);
+}
+
+pub fn fillUnicodeScalarRangeLessThanFrom(source: anytype, dest: []u21, min: u21, less_than: u21) void {
+    const range = unicodeScalarExclusiveRange(min, less_than) catch unreachable;
+    if (exclusiveIntRangeHasSingleValue(u21, range.min, range.end)) {
+        @memset(dest, unicodeScalarFromCompressed(range.min));
+        return;
+    }
+    for (dest) |*item| item.* = unicodeScalarFromCompressed(intRangeLessThanFrom(source, u21, range.min, range.end));
+}
+
+pub fn fillUnicodeScalarRangeAtMostFrom(source: anytype, dest: []u21, min: u21, at_most: u21) void {
+    const range = unicodeScalarInclusiveRange(min, at_most) catch unreachable;
+    if (range.min == range.max) {
+        @memset(dest, unicodeScalarFromCompressed(range.min));
+        return;
+    }
+    for (dest) |*item| item.* = unicodeScalarFromCompressed(intRangeAtMostFrom(source, u21, range.min, range.max));
+}
+
+pub fn fillUnicodeScalarRangeLessThanCheckedFrom(source: anytype, dest: []u21, min: u21, less_than: u21) Error!void {
+    if (dest.len == 0) return;
+    _ = try unicodeScalarExclusiveRange(min, less_than);
+    fillUnicodeScalarRangeLessThanFrom(source, dest, min, less_than);
+}
+
+pub fn fillUnicodeScalarRangeAtMostCheckedFrom(source: anytype, dest: []u21, min: u21, at_most: u21) Error!void {
+    if (dest.len == 0) return;
+    _ = try unicodeScalarInclusiveRange(min, at_most);
+    fillUnicodeScalarRangeAtMostFrom(source, dest, min, at_most);
+}
+
+const UnicodeScalarExclusiveRange = struct {
+    min: u21,
+    end: u21,
+};
+
+const UnicodeScalarInclusiveRange = struct {
+    min: u21,
+    max: u21,
+};
+
+fn unicodeScalarExclusiveRange(min: u21, less_than: u21) Error!UnicodeScalarExclusiveRange {
+    const compressed_min = try unicodeScalarToCompressed(min);
+    const compressed_end = try unicodeScalarExclusiveEndToCompressed(less_than);
+    if (compressed_min >= compressed_end) return error.EmptyRange;
+    return .{ .min = compressed_min, .end = compressed_end };
+}
+
+fn unicodeScalarInclusiveRange(min: u21, at_most: u21) Error!UnicodeScalarInclusiveRange {
+    const compressed_min = try unicodeScalarToCompressed(min);
+    const compressed_max = try unicodeScalarToCompressed(at_most);
+    if (compressed_min > compressed_max) return error.EmptyRange;
+    return .{ .min = compressed_min, .max = compressed_max };
+}
+
+fn unicodeScalarToCompressed(scalar: u21) Error!u21 {
+    if (!isUnicodeScalar(scalar)) return error.InvalidParameter;
+    return if (scalar >= 0xE000) scalar - 0x800 else scalar;
+}
+
+fn unicodeScalarExclusiveEndToCompressed(scalar: u21) Error!u21 {
+    if (scalar > 0x11_0000) return error.InvalidParameter;
+    if (scalar == 0x11_0000) return 0x11_0000 - 0x800;
+    return unicodeScalarToCompressed(scalar);
+}
+
+fn unicodeScalarFromCompressed(compressed: u21) u21 {
+    std.debug.assert(compressed < 0x11_0000 - 0x800);
+    return if (compressed >= 0xD800) compressed + 0x800 else compressed;
+}
+
+fn isUnicodeScalar(scalar: u21) bool {
+    return scalar < 0x11_0000 and !(scalar >= 0xD800 and scalar <= 0xDFFF);
 }
 
 pub fn normal(self: Rng, comptime T: type, mean: T, stddev: T) T {
@@ -2893,6 +3063,21 @@ test "rng facade covers scalar APIs" {
         try std.testing.expect(item < 0x11_0000);
     }
 
+    const ranged_scalar = try rng.unicodeScalarRangeLessThanChecked(0xD7F0, 0xE010);
+    try std.testing.expect(ranged_scalar >= 0xD7F0 and ranged_scalar < 0xE010);
+    try std.testing.expect(isUnicodeScalar(ranged_scalar));
+
+    var ranged_unicode_scalar_buf: [8]u21 = undefined;
+    try rng.fillUnicodeScalarRangeAtMostChecked(&ranged_unicode_scalar_buf, 0x41, 0x5A);
+    for (ranged_unicode_scalar_buf) |item| try std.testing.expect(item >= 0x41 and item <= 0x5A);
+
+    const ranged_unicode_scalar_owned = try Rng.unicodeScalarRangeLessThanBatchCheckedFrom(&engine, std.testing.allocator, 8, 0xD7F0, 0xE010);
+    defer std.testing.allocator.free(ranged_unicode_scalar_owned);
+    for (ranged_unicode_scalar_owned) |item| {
+        try std.testing.expect(item >= 0xD7F0 and item < 0xE010);
+        try std.testing.expect(isUnicodeScalar(item));
+    }
+
     var buf: [16]u16 = undefined;
     rng.fill(u16, &buf);
     var any_non_zero = false;
@@ -3580,6 +3765,98 @@ test "unicode scalar fills and batches preserve scalar stream shape" {
         try std.testing.expectEqualSlices(u21, &owned_manual_buf, owned_buf);
         try std.testing.expectEqual(owned_manual.next(), owned.next());
     }
+}
+
+test "unicode scalar range helpers preserve checked stream shape" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var unchecked = Engine.init(0x5150_98a0);
+        var checked = Engine.init(0x5150_98a0);
+
+        var less_than_unchecked: [16]u21 = undefined;
+        var less_than_checked: [16]u21 = undefined;
+        fillUnicodeScalarRangeLessThanFrom(&unchecked, &less_than_unchecked, 0xD7F0, 0xE010);
+        try fillUnicodeScalarRangeLessThanCheckedFrom(&checked, &less_than_checked, 0xD7F0, 0xE010);
+        try std.testing.expectEqualSlices(u21, &less_than_unchecked, &less_than_checked);
+        for (less_than_unchecked) |sample| {
+            try std.testing.expect(sample >= 0xD7F0 and sample < 0xE010);
+            try std.testing.expect(sample < 0xD800 or sample > 0xDFFF);
+        }
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const less_than_owned = try unicodeScalarRangeLessThanBatchFrom(&unchecked, std.testing.allocator, 16, 0xD7F0, 0xE010);
+        defer std.testing.allocator.free(less_than_owned);
+        const less_than_checked_owned = try unicodeScalarRangeLessThanBatchCheckedFrom(&checked, std.testing.allocator, 16, 0xD7F0, 0xE010);
+        defer std.testing.allocator.free(less_than_checked_owned);
+        try std.testing.expectEqualSlices(u21, less_than_owned, less_than_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var at_most_unchecked: [16]u21 = undefined;
+        var at_most_checked: [16]u21 = undefined;
+        fillUnicodeScalarRangeAtMostFrom(&unchecked, &at_most_unchecked, 0x41, 0x5A);
+        try fillUnicodeScalarRangeAtMostCheckedFrom(&checked, &at_most_checked, 0x41, 0x5A);
+        try std.testing.expectEqualSlices(u21, &at_most_unchecked, &at_most_checked);
+        for (at_most_unchecked) |sample| try std.testing.expect(sample >= 0x41 and sample <= 0x5A);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const at_most_owned = try unicodeScalarRangeAtMostBatchFrom(&unchecked, std.testing.allocator, 16, 0x41, 0x5A);
+        defer std.testing.allocator.free(at_most_owned);
+        const at_most_checked_owned = try unicodeScalarRangeAtMostBatchCheckedFrom(&checked, std.testing.allocator, 16, 0x41, 0x5A);
+        defer std.testing.allocator.free(at_most_checked_owned);
+        try std.testing.expectEqualSlices(u21, at_most_owned, at_most_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+    }
+}
+
+test "unicode scalar ranges handle surrogate gap and degenerate ranges" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_98a2);
+    var control = alea.ScalarPrng.init(0x5150_98a2);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(u21, 0x41), rng.unicodeScalarRangeLessThan(0x41, 0x42));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u21, 0xE000), try unicodeScalarRangeAtMostCheckedFrom(&engine, 0xE000, 0xE000));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var gap_engine = alea.ScalarPrng.init(0x5150_98a4);
+    const gap_rng = Rng.init(&gap_engine);
+    var gap_crossing: [64]u21 = undefined;
+    gap_rng.fillUnicodeScalarRangeLessThan(&gap_crossing, 0xD7F0, 0xE010);
+    for (gap_crossing) |sample| {
+        try std.testing.expect(sample >= 0xD7F0 and sample < 0xE010);
+        try std.testing.expect(isUnicodeScalar(sample));
+    }
+
+    var degenerate: [5]u21 = undefined;
+    try fillUnicodeScalarRangeAtMostCheckedFrom(&engine, &degenerate, 0x10FFFF, 0x10FFFF);
+    for (degenerate) |sample| try std.testing.expectEqual(@as(u21, 0x10FFFF), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "invalid unicode scalar ranges do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_98a3);
+    var control = alea.ScalarPrng.init(0x5150_98a3);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, rng.unicodeScalarRangeLessThanChecked(0xD800, 0xE000));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, unicodeScalarRangeLessThanCheckedFrom(&engine, 0x41, 0x41));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, rng.unicodeScalarRangeAtMostChecked(0x41, 0xD800));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [4]u21 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillUnicodeScalarRangeLessThanCheckedFrom(&engine, &out, 0xD800, 0xE000));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.fillUnicodeScalarRangeAtMostChecked(&out, 0x5A, 0x41));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "duration range sampling has stable snapshots" {
@@ -4973,6 +5250,8 @@ test "zero-length checked fills do not validate or consume random stream" {
     try rng.fillVectorNormalChecked(@Vector(8, f32), &vec_f32, 0, -1);
     try std.testing.expectEqual(control.next(), engine.next());
     try fillVectorExponentialCheckedFrom(&engine, @Vector(8, f32), &vec_f32, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillUnicodeScalarRangeLessThanCheckedFrom(&engine, @as([]u21, &.{}), 0xD800, 0xE000);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var one_int: [1]u32 = undefined;

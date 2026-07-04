@@ -37,8 +37,8 @@ The current Linux-first roadmap is intentionally broad:
   workloads
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, direct-source charset
   helpers, checked charset methods for fallible custom charsets, and Unicode
-  scalar fill/owned batches plus string generation with allocation-returning and
-  caller-owned-buffer UTF-8 helpers
+  scalar fill/owned/range batches plus string generation with
+  allocation-returning and caller-owned-buffer UTF-8 helpers
 - distributions: uniform, bernoulli, binomial, negative-binomial,
   hypergeometric, standard normal, normal, log-normal, half-normal, standard exponential,
   exponential, poisson, gamma,
