@@ -255,7 +255,8 @@ Use:
   `seq.chooseWeightedPtrFrom`, `seq.chooseWeightedPtrCheckedFrom`
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeighted`,
-  `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`
+  `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`,
+  `seq.sampleWeightedArrayFrom`, `seq.sampleWeightedArrayCheckedFrom`
   (`*Checked*` variants require enough positive-weight entries for the
   requested amount; requesting zero samples returns an empty result before
   validating weights; facade and direct-source checked calls validate before

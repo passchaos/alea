@@ -16,7 +16,7 @@ focused `zig build run-*` step for quick adoption checks.
 | `zig build run-vector-profiles` | `examples/vector_profiles.zig` | Exact/default vector normal/exponential versus explicit throughput-first `Table` and `ApproxLog` opt-ins. |
 | `zig build run-native-f32-profiles` | `examples/native_f32_profiles.zig` | Exact/default f64-backed f32 outputs versus f32-native normal/exponential throughput profiles. |
 | `zig build run-lognormal-profiles` | `examples/lognormal_profiles.zig` | Exact LogNormal, buffered exact, native-f32, exp2, native-exp2, and libc-backed platform opt-ins when available. |
-| `zig build run-weighted-sampling` | `examples/weighted_sampling.zig` | One-shot weighted indexes and values, static alias tables, dynamic weighted trees, weighted choices, and weighted no-replacement workflows. |
+| `zig build run-weighted-sampling` | `examples/weighted_sampling.zig` | One-shot weighted indexes and values, static alias tables, dynamic weighted trees, weighted choices, weighted no-replacement, and fixed-size weighted array workflows. |
 | `zig build run-sequence-sampling` | `examples/sequence_sampling.zig` | Index sampling, fixed-size item arrays, item subsets, partial shuffle, allocated/caller-owned reservoir sampling, reusable choices, and allocation-returning/caller-owned streaming iterator helpers. |
 | `zig build run-multivariate-sampling` | `examples/multivariate_sampling.zig` | Multinomial and Dirichlet allocation-returning samples, caller-owned buffers, flat batched outputs, and degenerate vertices. |
 | `zig build run-string-generation` | `examples/string_generation.zig` | Predefined ASCII charsets, custom `Charset` diagnostics, allocation-returning strings, Unicode scalar generation, and caller-owned UTF-8 buffers. |

@@ -2325,7 +2325,9 @@ Dynamic weighted helpers:
 - Weighted no-replacement: `sampleWeightedIndices`,
   `sampleWeightedIndicesFrom`, `sampleWeightedIndicesChecked`,
   `sampleWeightedIndicesCheckedFrom`, `sampleWeighted`, `sampleWeightedFrom`,
-  `sampleWeightedChecked`, `sampleWeightedCheckedFrom`
+  `sampleWeightedChecked`, `sampleWeightedCheckedFrom`,
+  `sampleWeightedArray`, `sampleWeightedArrayFrom`,
+  `sampleWeightedArrayChecked`, `sampleWeightedArrayCheckedFrom`
 
 ## ASCII And Unicode
 
