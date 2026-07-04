@@ -248,6 +248,12 @@ pub fn main(init: std.process.Init) !void {
     _ = alea.seq.sampleIteratorIntoFrom(&iter_into_engine, u32, &into_stream, &stream_into);
     try stdout.print("sampleIteratorIntoFrom counter[0..20): {any}\n", .{stream_into});
 
+    var fill_engine = alea.ScalarPrng.init(0x5e11_0018);
+    var fill_stream = Counter{ .limit = 20 };
+    var fill_out: [5]u32 = undefined;
+    _ = alea.seq.sampleIteratorFillFrom(&fill_engine, u32, &fill_stream, &fill_out);
+    try stdout.print("sampleIteratorFillFrom counter[0..20): {any}\n", .{fill_out});
+
     const WeightedEntry = struct { item: u32, weight: f64 };
     const WeightedCounter = struct {
         next_value: u32 = 0,

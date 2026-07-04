@@ -320,7 +320,8 @@ Use:
   and `seq.chooseIteratorStableCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`,
   `seq.sampleIteratorCheckedFrom`, `seq.sampleIteratorArrayFrom`,
   `seq.sampleIteratorArrayCheckedFrom`, `seq.sampleIteratorInto`,
-  `seq.sampleIteratorIntoFrom`, `seq.sampleIteratorIntoCheckedFrom`
+  `seq.sampleIteratorIntoFrom`, `seq.sampleIteratorIntoCheckedFrom`,
+  `seq.sampleIteratorFillFrom`, `seq.sampleIteratorFillCheckedFrom`
 - `seq.chooseIteratorWeighted`, `seq.chooseIteratorWeightedFrom`,
   `seq.chooseIteratorWeightedCheckedFrom`, `seq.sampleIteratorWeighted`,
   `seq.sampleIteratorWeightedFrom`, `seq.sampleIteratorWeightedCheckedFrom`,

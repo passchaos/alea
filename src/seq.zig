@@ -1443,6 +1443,14 @@ pub fn sampleIteratorInto(rng: Rng, comptime T: type, iterator: anytype, out: []
     return sampleIteratorIntoFrom(rng, T, iterator, out);
 }
 
+pub fn sampleIteratorFill(rng: Rng, comptime T: type, iterator: anytype, out: []T) usize {
+    return sampleIteratorFillFrom(rng, T, iterator, out);
+}
+
+pub fn sampleIteratorFillFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) usize {
+    return sampleIteratorIntoFrom(source, T, iterator, out);
+}
+
 pub fn sampleIteratorIntoFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) usize {
     if (out.len == 0) return 0;
 
@@ -1463,6 +1471,14 @@ pub fn sampleIteratorIntoFrom(source: anytype, comptime T: type, iterator: anyty
 
 pub fn sampleIteratorIntoChecked(rng: Rng, comptime T: type, iterator: anytype, out: []T) Error!void {
     return sampleIteratorIntoCheckedFrom(rng, T, iterator, out);
+}
+
+pub fn sampleIteratorFillChecked(rng: Rng, comptime T: type, iterator: anytype, out: []T) Error!void {
+    return sampleIteratorFillCheckedFrom(rng, T, iterator, out);
+}
+
+pub fn sampleIteratorFillCheckedFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) Error!void {
+    return sampleIteratorIntoCheckedFrom(source, T, iterator, out);
 }
 
 pub fn sampleIteratorIntoCheckedFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) Error!void {
@@ -6039,6 +6055,56 @@ test "short checked iterator samples do not consume past source" {
     defer std.testing.allocator.free(empty);
     try std.testing.expectEqual(@as(usize, 0), empty.len);
     try std.testing.expectEqual(@as(u64, 0x176d099d72bcd05c), engine.next());
+}
+
+test "sampleIteratorFill aliases caller-owned iterator reservoirs" {
+    const alea = @import("root.zig");
+
+    const RangeIter = struct {
+        next_value: u8 = 0,
+        end: u8,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c911);
+        var direct_engine = Engine.init(0x5150_c911);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_iter = RangeIter{ .end = 20 };
+        var direct_iter = RangeIter{ .end = 20 };
+        var facade_out: [5]u8 = undefined;
+        var direct_out: [5]u8 = undefined;
+        try std.testing.expectEqual(sampleIteratorFill(rng, u8, &facade_iter, &facade_out), sampleIteratorIntoFrom(&direct_engine, u8, &direct_iter, &direct_out));
+        try std.testing.expectEqualSlices(u8, &facade_out, &direct_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_iter = RangeIter{ .end = 20 };
+        var checked_direct_iter = RangeIter{ .end = 20 };
+        var checked_facade_out: [5]u8 = undefined;
+        var checked_direct_out: [5]u8 = undefined;
+        try sampleIteratorFillChecked(rng, u8, &checked_facade_iter, &checked_facade_out);
+        try sampleIteratorIntoCheckedFrom(&direct_engine, u8, &checked_direct_iter, &checked_direct_out);
+        try std.testing.expectEqualSlices(u8, &checked_facade_out, &checked_direct_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var short_engine = alea.ScalarPrng.init(0x5150_c912);
+    var short_control = alea.ScalarPrng.init(0x5150_c912);
+    var short_iter = RangeIter{ .end = 2 };
+    var short_out: [5]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), sampleIteratorFillFrom(&short_engine, u8, &short_iter, &short_out));
+    try std.testing.expectEqual(short_control.next(), short_engine.next());
+
+    var invalid_iter = RangeIter{ .end = 2 };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorFillCheckedFrom(&short_engine, u8, &invalid_iter, &short_out));
+    try std.testing.expectEqual(short_control.next(), short_engine.next());
 }
 
 test "sampleIteratorInto fills caller-owned reservoirs" {
