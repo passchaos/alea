@@ -553,6 +553,60 @@ pub fn fillChoosePtrCheckedFrom(source: anytype, comptime T: type, dest: []*T, i
     fillChoosePtrFrom(source, T, dest, items);
 }
 
+pub fn chooseBatch(allocator: std.mem.Allocator, rng: Rng, comptime T: type, count: usize, items: []const T) ![]T {
+    return chooseBatchFrom(allocator, rng, T, count, items);
+}
+
+pub fn chooseBatchFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, count: usize, items: []const T) ![]T {
+    return Rng.chooseBatchFrom(source, T, allocator, count, items);
+}
+
+pub fn chooseBatchChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, count: usize, items: []const T) ![]T {
+    return chooseBatchCheckedFrom(allocator, rng, T, count, items);
+}
+
+pub fn chooseBatchCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, count: usize, items: []const T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (items.len == 0) return error.EmptyInput;
+    return chooseBatchFrom(allocator, source, T, count, items);
+}
+
+pub fn chooseConstPtrBatch(allocator: std.mem.Allocator, rng: Rng, comptime T: type, count: usize, items: []const T) ![]*const T {
+    return chooseConstPtrBatchFrom(allocator, rng, T, count, items);
+}
+
+pub fn chooseConstPtrBatchFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, count: usize, items: []const T) ![]*const T {
+    return Rng.chooseConstPtrBatchFrom(source, T, allocator, count, items);
+}
+
+pub fn chooseConstPtrBatchChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, count: usize, items: []const T) ![]*const T {
+    return chooseConstPtrBatchCheckedFrom(allocator, rng, T, count, items);
+}
+
+pub fn chooseConstPtrBatchCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, count: usize, items: []const T) ![]*const T {
+    if (count == 0) return allocator.alloc(*const T, 0);
+    if (items.len == 0) return error.EmptyInput;
+    return chooseConstPtrBatchFrom(allocator, source, T, count, items);
+}
+
+pub fn choosePtrBatch(allocator: std.mem.Allocator, rng: Rng, comptime T: type, count: usize, items: []T) ![]*T {
+    return choosePtrBatchFrom(allocator, rng, T, count, items);
+}
+
+pub fn choosePtrBatchFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, count: usize, items: []T) ![]*T {
+    return Rng.choosePtrBatchFrom(source, T, allocator, count, items);
+}
+
+pub fn choosePtrBatchChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, count: usize, items: []T) ![]*T {
+    return choosePtrBatchCheckedFrom(allocator, rng, T, count, items);
+}
+
+pub fn choosePtrBatchCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, count: usize, items: []T) ![]*T {
+    if (count == 0) return allocator.alloc(*T, 0);
+    if (items.len == 0) return error.EmptyInput;
+    return choosePtrBatchFrom(allocator, source, T, count, items);
+}
+
 pub fn sampleArray(rng: Rng, comptime N: usize, length: usize) ?[N]usize {
     return sampleArrayFrom(rng, N, length);
 }
@@ -7743,6 +7797,81 @@ test "seq choice fill aliases mirror Rng fill helpers" {
     fillChooseFrom(&single_engine, u8, &single_values, &single_items);
     try std.testing.expectEqualSlices(u8, &.{ 77, 77, 77, 77 }, &single_values);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "seq choice batch aliases mirror Rng batch helpers" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_0c21);
+        var direct_engine = Engine.init(0x5150_0c21);
+        const rng = Rng.init(&facade_engine);
+
+        const facade_values = try chooseBatch(std.testing.allocator, rng, u8, 6, &items);
+        defer std.testing.allocator.free(facade_values);
+        const direct_values = try Rng.chooseBatchFrom(&direct_engine, u8, std.testing.allocator, 6, &items);
+        defer std.testing.allocator.free(direct_values);
+        try std.testing.expectEqualSlices(u8, direct_values, facade_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_ptrs = try chooseConstPtrBatch(std.testing.allocator, rng, u8, 6, &items);
+        defer std.testing.allocator.free(facade_ptrs);
+        const direct_ptrs = try Rng.chooseConstPtrBatchFrom(&direct_engine, u8, std.testing.allocator, 6, &items);
+        defer std.testing.allocator.free(direct_ptrs);
+        for (facade_ptrs, direct_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_items = items;
+        var direct_items = items;
+        const facade_mut_ptrs = try choosePtrBatch(std.testing.allocator, rng, u8, 6, &facade_items);
+        defer std.testing.allocator.free(facade_mut_ptrs);
+        const direct_mut_ptrs = try Rng.choosePtrBatchFrom(&direct_engine, u8, std.testing.allocator, 6, &direct_items);
+        defer std.testing.allocator.free(direct_mut_ptrs);
+        for (facade_mut_ptrs, direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_0c22);
+    const checked_values = try chooseBatchCheckedFrom(std.testing.allocator, &checked_engine, u8, 4, &items);
+    defer std.testing.allocator.free(checked_values);
+    for (checked_values) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &items, value) != null);
+    const checked_ptrs = try chooseConstPtrBatchCheckedFrom(std.testing.allocator, &checked_engine, u8, 4, &items);
+    defer std.testing.allocator.free(checked_ptrs);
+    var mutable_items = items;
+    const checked_mut_ptrs = try choosePtrBatchCheckedFrom(std.testing.allocator, &checked_engine, u8, 4, &mutable_items);
+    defer std.testing.allocator.free(checked_mut_ptrs);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_0c23);
+    var empty_control = alea.ScalarPrng.init(0x5150_0c23);
+    const empty_values = try chooseBatchCheckedFrom(std.testing.allocator, &empty_engine, u8, 0, &.{});
+    defer std.testing.allocator.free(empty_values);
+    try std.testing.expectEqual(@as(usize, 0), empty_values.len);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseBatchCheckedFrom(std.testing.allocator, &empty_engine, u8, 4, &.{}));
+    try std.testing.expectError(error.EmptyInput, chooseConstPtrBatchCheckedFrom(std.testing.allocator, &empty_engine, u8, 4, &.{}));
+    var empty_mutable: [0]u8 = .{};
+    try std.testing.expectError(error.EmptyInput, choosePtrBatchCheckedFrom(std.testing.allocator, &empty_engine, u8, 4, &empty_mutable));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var single_engine = alea.ScalarPrng.init(0x5150_0c24);
+    var single_control = alea.ScalarPrng.init(0x5150_0c24);
+    const single_items = [_]u8{77};
+    const single_values = try chooseBatchCheckedFrom(std.testing.allocator, &single_engine, u8, 4, &single_items);
+    defer std.testing.allocator.free(single_values);
+    try std.testing.expectEqualSlices(u8, &.{ 77, 77, 77, 77 }, single_values);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, chooseBatchCheckedFrom(failing.allocator(), &single_engine, u8, 4, &items));
 }
 
 test "chooseArray returns fixed-size item samples" {

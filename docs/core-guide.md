@@ -311,7 +311,10 @@ Use:
   `seq.choosePtrFrom`, `seq.choosePtrCheckedFrom`,
   `seq.fillChooseFrom`, `seq.fillChooseCheckedFrom`,
   `seq.fillChooseConstPtrFrom`, `seq.fillChooseConstPtrCheckedFrom`,
-  `seq.fillChoosePtrFrom`, `seq.fillChoosePtrCheckedFrom`, `seq.chooseMultiple`,
+  `seq.fillChoosePtrFrom`, `seq.fillChoosePtrCheckedFrom`,
+  `seq.chooseBatchFrom`, `seq.chooseBatchCheckedFrom`,
+  `seq.chooseConstPtrBatchFrom`, `seq.chooseConstPtrBatchCheckedFrom`,
+  `seq.choosePtrBatchFrom`, `seq.choosePtrBatchCheckedFrom`, `seq.chooseMultiple`,
   `seq.chooseMultipleFrom`,
   `seq.chooseMultipleCheckedFrom`, sample aliases `seq.sampleItemsFrom` /
   `seq.sampleItemsCheckedFrom`, `seq.chooseMultiplePtrsFrom`,

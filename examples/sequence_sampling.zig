@@ -119,6 +119,16 @@ pub fn main(init: std.process.Init) !void {
     alea.seq.fillChooseConstPtrFrom(&fill_choice_ptr_engine, []const u8, &filled_choice_ptrs, &items);
     try stdout.print("seq.fillChooseConstPtrFrom items: {s}, {s}, {s}, {s}, {s}\n", .{ filled_choice_ptrs[0].*, filled_choice_ptrs[1].*, filled_choice_ptrs[2].*, filled_choice_ptrs[3].*, filled_choice_ptrs[4].* });
 
+    var choice_batch_engine = alea.ScalarPrng.init(0x5e11_0027);
+    const choice_batch = try alea.seq.chooseBatchFrom(allocator, &choice_batch_engine, []const u8, 5, &items);
+    defer allocator.free(choice_batch);
+    try stdout.print("seq.chooseBatchFrom items: {s}, {s}, {s}, {s}, {s}\n", .{ choice_batch[0], choice_batch[1], choice_batch[2], choice_batch[3], choice_batch[4] });
+
+    var choice_ptr_batch_engine = alea.ScalarPrng.init(0x5e11_0028);
+    const choice_ptr_batch = try alea.seq.chooseConstPtrBatchFrom(allocator, &choice_ptr_batch_engine, []const u8, 5, &items);
+    defer allocator.free(choice_ptr_batch);
+    try stdout.print("seq.chooseConstPtrBatchFrom items: {s}, {s}, {s}, {s}, {s}\n", .{ choice_ptr_batch[0].*, choice_ptr_batch[1].*, choice_ptr_batch[2].*, choice_ptr_batch[3].*, choice_ptr_batch[4].* });
+
     var choose_engine = alea.ScalarPrng.init(0x5e11_0003);
     const chosen = try alea.seq.chooseMultipleFrom(allocator, &choose_engine, []const u8, &items, 3);
     defer allocator.free(chosen);
