@@ -19,6 +19,7 @@ const examples = [_]Example{
     .{ .path = "examples/lognormal_profiles.zig", .step = "zig build run-lognormal-profiles" },
     .{ .path = "examples/weighted_sampling.zig", .step = "zig build run-weighted-sampling" },
     .{ .path = "examples/sequence_sampling.zig", .step = "zig build run-sequence-sampling" },
+    .{ .path = "examples/caller_owned_sampling.zig", .step = "zig build run-caller-owned-sampling" },
     .{ .path = "examples/multivariate_sampling.zig", .step = "zig build run-multivariate-sampling" },
     .{ .path = "examples/string_generation.zig", .step = "zig build run-string-generation" },
     .{ .path = "examples/unit_geometry.zig", .step = "zig build run-unit-geometry" },

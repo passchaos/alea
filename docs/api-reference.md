@@ -2379,6 +2379,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build run-weighted-sampling`
 - `zig build run-multivariate-sampling`
 - `zig build run-sequence-sampling`
+- `zig build run-caller-owned-sampling`
 - `zig build run-string-generation`
 - `zig build run-unit-geometry`
 - `zig build run-distribution-diagnostics`

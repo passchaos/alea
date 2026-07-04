@@ -298,7 +298,9 @@ Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput index
 sampling. Use `sampleIndices` when a `[]usize` result is more convenient.
 Run `zig build run-sequence-sampling` for a runnable comparison of index
 sampling, item subsets, partial shuffles, reservoir samples, reusable `Choice`,
-and streaming iterator choices.
+and streaming iterator choices. Run `zig build run-caller-owned-sampling` for a
+focused tour of caller-owned index, item, iterator, weighted, and scratch-buffer
+workflows.
 Exact-capacity Floyd-style index samplers return their owned buffers without a
 post-sampling shrink allocation.
 In-place index samplers prepare their returned output before drawing, so output

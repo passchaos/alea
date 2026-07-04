@@ -144,6 +144,23 @@ pub fn build(b: *std.Build) void {
     const sequence_sampling_example_step = b.step("run-sequence-sampling", "Run the sequence sampling alea example");
     sequence_sampling_example_step.dependOn(&run_sequence_sampling_example.step);
 
+    const caller_owned_sampling_example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/caller_owned_sampling.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    caller_owned_sampling_example_mod.addImport("alea", module);
+
+    const caller_owned_sampling_example = b.addExecutable(.{
+        .name = "alea-caller-owned-sampling",
+        .root_module = caller_owned_sampling_example_mod,
+    });
+    const run_caller_owned_sampling_example = b.addRunArtifact(caller_owned_sampling_example);
+    if (b.args) |args| run_caller_owned_sampling_example.addArgs(args);
+
+    const caller_owned_sampling_example_step = b.step("run-caller-owned-sampling", "Run the caller-owned sampling alea example");
+    caller_owned_sampling_example_step.dependOn(&run_caller_owned_sampling_example.step);
+
     const string_generation_example_mod = b.createModule(.{
         .root_source_file = b.path("examples/string_generation.zig"),
         .target = target,
@@ -305,6 +322,7 @@ pub fn build(b: *std.Build) void {
     examples_step.dependOn(&run_weighted_sampling_example.step);
     examples_step.dependOn(&run_multivariate_sampling_example.step);
     examples_step.dependOn(&run_sequence_sampling_example.step);
+    examples_step.dependOn(&run_caller_owned_sampling_example.step);
     examples_step.dependOn(&run_string_generation_example.step);
     examples_step.dependOn(&run_unit_geometry_example.step);
     examples_step.dependOn(&run_distribution_diagnostics_example.step);

@@ -18,6 +18,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "run-weighted-sampling", .build_token = "b.step(\"run-weighted-sampling\"" },
     .{ .name = "run-multivariate-sampling", .build_token = "b.step(\"run-multivariate-sampling\"" },
     .{ .name = "run-sequence-sampling", .build_token = "b.step(\"run-sequence-sampling\"" },
+    .{ .name = "run-caller-owned-sampling", .build_token = "b.step(\"run-caller-owned-sampling\"" },
     .{ .name = "run-string-generation", .build_token = "b.step(\"run-string-generation\"" },
     .{ .name = "run-unit-geometry", .build_token = "b.step(\"run-unit-geometry\"" },
     .{ .name = "run-distribution-diagnostics", .build_token = "b.step(\"run-distribution-diagnostics\"" },

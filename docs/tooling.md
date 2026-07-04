@@ -57,6 +57,7 @@ example steps are:
 | `zig build run-lognormal-profiles` | `examples/lognormal_profiles.zig` |
 | `zig build run-weighted-sampling` | `examples/weighted_sampling.zig` |
 | `zig build run-sequence-sampling` | `examples/sequence_sampling.zig` |
+| `zig build run-caller-owned-sampling` | `examples/caller_owned_sampling.zig` |
 | `zig build run-multivariate-sampling` | `examples/multivariate_sampling.zig` |
 | `zig build run-string-generation` | `examples/string_generation.zig` |
 | `zig build run-unit-geometry` | `examples/unit_geometry.zig` |
