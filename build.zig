@@ -1006,6 +1006,22 @@ pub fn build(b: *std.Build) void {
     const apicheck_step = b.step("apicheck", "Check public API reference coverage");
     apicheck_step.dependOn(&run_apicheck.step);
 
+    const examplecheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/examplecheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const examplecheck = b.addExecutable(.{
+        .name = "alea-examplecheck",
+        .root_module = examplecheck_mod,
+    });
+    const run_examplecheck = b.addRunArtifact(examplecheck);
+    if (b.args) |args| run_examplecheck.addArgs(args);
+
+    const examplecheck_step = b.step("examplecheck", "Check runnable examples catalog coverage");
+    examplecheck_step.dependOn(&run_examplecheck.step);
+
     const test_step = b.step("test", "Run alea unit tests and API reference checks");
     test_step.dependOn(&run_tests.step);
     test_step.dependOn(&run_apicheck.step);
@@ -1189,6 +1205,7 @@ pub fn build(b: *std.Build) void {
     const validate_step = b.step("validate", "Run unit, API, statistical, and distribution checks");
     validate_step.dependOn(&run_tests.step);
     validate_step.dependOn(examples_step);
+    validate_step.dependOn(&run_examplecheck.step);
     validate_step.dependOn(&run_apicheck.step);
     validate_step.dependOn(&run_statcheck.step);
     validate_step.dependOn(&run_distcheck.step);

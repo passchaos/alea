@@ -2358,6 +2358,7 @@ Build steps:
 - `zig build run-advanced-continuous-distributions`
 - `zig build run-rank-distributions`
 - `zig build examples`
+- `zig build examplecheck`
 - `zig build apicheck`
 - `zig build validate`
 - `zig build validate-all`

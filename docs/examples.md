@@ -25,5 +25,7 @@ focused `zig build run-*` step for quick adoption checks.
 ## Validation
 
 `zig build validate` depends on `zig build examples`, so these examples are part
-of the normal local validation gate. Keep example output deterministic and small;
-use benchmarks or profile checks for large throughput/statistical evidence.
+of the normal local validation gate. `zig build examplecheck` verifies that this
+catalog mentions every checked-in example source and focused run step. Keep
+example output deterministic and small; use benchmarks or profile checks for
+large throughput/statistical evidence.
