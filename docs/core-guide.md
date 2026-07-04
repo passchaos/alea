@@ -240,6 +240,9 @@ Use:
   accepted only when each value fits the `u64` accumulator
   (failed push/update operations preserve the previous tree totals, and
   zero-length checked fills return before validating totals)
+Run `zig build run-weighted-sampling` for a runnable comparison of one-shot
+weighted indexes, static alias tables, dynamic weighted trees, weighted choices,
+and weighted no-replacement helpers.
 
 Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput index
 sampling. Use `sampleIndices` when a `[]usize` result is more convenient.
