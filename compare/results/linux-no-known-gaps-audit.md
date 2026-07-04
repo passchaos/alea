@@ -69,6 +69,7 @@ Local Alea evidence:
 - `compare/results/s4-m29-examplecheck.md`
 - `compare/results/s4-m30-toolingcheck.md`
 - `compare/results/s4-m31-readme-doccheck.md`
+- `compare/results/s4-m32-roadmapcheck.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -197,6 +198,7 @@ adoption guidance, S4-M24 adds discrete-distribution adoption guidance, S4-M25
 adds continuous-distribution adoption guidance, S4-M26 adds advanced-continuous
 adoption guidance, S4-M27 adds rank-distribution adoption guidance, S4-M28 adds
 a central examples catalog, S4-M29 adds catalog drift checking, S4-M30 adds
-build/tooling catalog drift checking, and S4-M31 adds README/doccheck discovery
-validation, but later stages should keep raising the bar rather than declaring
-the product permanently finished.
+build/tooling catalog drift checking, S4-M31 adds README/doccheck discovery
+validation, and S4-M32 adds roadmap/audit drift checking, but later stages
+should keep raising the bar rather than declaring the product permanently
+finished.

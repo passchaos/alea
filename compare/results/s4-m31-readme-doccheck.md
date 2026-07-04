@@ -42,8 +42,8 @@ Added aggregate documentation gate:
 zig build doccheck
 ```
 
-`doccheck` depends on `apicheck`, `examplecheck`, `toolingcheck`, and
-`readmecheck`. `zig build test` now runs unit tests plus `doccheck`, while
+`doccheck` depends on `apicheck`, `examplecheck`, `toolingcheck`,
+`readmecheck`, and `roadmapcheck`. `zig build test` now runs unit tests plus `doccheck`, while
 `zig build validate` depends on `doccheck` instead of hand-wiring each
 individual documentation checker.
 
@@ -61,14 +61,14 @@ zig build doccheck
 zig build -Doptimize=ReleaseFast validate
 ```
 
-Result: passed. `readmecheck` prints `readmecheck ok`; `doccheck` runs the four
-documentation/catalog checkers successfully.
+Result: passed. `readmecheck` prints `readmecheck ok`; `doccheck` runs the five
+documentation/catalog/roadmap checkers successfully.
 
 ## S4-M31 Decision
 
 S4-M31 is closed for the current README/discovery and documentation-gate bar:
 first-contact docs now point to the examples/tooling catalogs and a single
-`doccheck` aggregate validates API, examples, tooling, and README discovery.
+`doccheck` aggregate validates API, examples, tooling, README discovery, and roadmap/audit evidence.
 
 This does not close S4-M11's exact/default dense-kernel or future-runner blocker,
 and it does not close the long-term product objective.

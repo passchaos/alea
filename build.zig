@@ -1054,11 +1054,28 @@ pub fn build(b: *std.Build) void {
     const readmecheck_step = b.step("readmecheck", "Check README discovery coverage");
     readmecheck_step.dependOn(&run_readmecheck.step);
 
-    const doccheck_step = b.step("doccheck", "Run documentation and catalog coverage checks");
+    const roadmapcheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/roadmapcheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const roadmapcheck = b.addExecutable(.{
+        .name = "alea-roadmapcheck",
+        .root_module = roadmapcheck_mod,
+    });
+    const run_roadmapcheck = b.addRunArtifact(roadmapcheck);
+    if (b.args) |args| run_roadmapcheck.addArgs(args);
+
+    const roadmapcheck_step = b.step("roadmapcheck", "Check roadmap and audit evidence coverage");
+    roadmapcheck_step.dependOn(&run_roadmapcheck.step);
+
+    const doccheck_step = b.step("doccheck", "Run documentation, catalog, and roadmap coverage checks");
     doccheck_step.dependOn(&run_apicheck.step);
     doccheck_step.dependOn(&run_examplecheck.step);
     doccheck_step.dependOn(&run_toolingcheck.step);
     doccheck_step.dependOn(&run_readmecheck.step);
+    doccheck_step.dependOn(&run_roadmapcheck.step);
 
     const test_step = b.step("test", "Run alea unit tests and documentation checks");
     test_step.dependOn(&run_tests.step);

@@ -17,6 +17,7 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build examplecheck", .reason = "examples catalog checker command" },
     .{ .token = "zig build toolingcheck", .reason = "tooling catalog checker command" },
     .{ .token = "zig build readmecheck", .reason = "README discovery checker command" },
+    .{ .token = "zig build roadmapcheck", .reason = "roadmap/audit checker command" },
     .{ .token = "zig build doccheck", .reason = "aggregate documentation checker command" },
     .{ .token = "zig build validate", .reason = "native validation command" },
     .{ .token = "zig build validate-all", .reason = "broad validation command" },

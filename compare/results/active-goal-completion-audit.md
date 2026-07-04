@@ -51,8 +51,9 @@ complete.
 | S4-M28 examples catalog | `docs/examples.md`, `zig build examples`, `zig build apicheck`, `compare/results/s4-m28-examples-catalog.md` | Closed for the current bar: all focused runnable examples are discoverable from a central catalog and remain under local validation. |
 | S4-M29 example catalog drift check | `tools/examplecheck.zig`, `zig build examplecheck`, `zig build validate`, `docs/examples.md`, `compare/results/s4-m29-examplecheck.md` | Closed for the current bar: example source and focused run-step coverage in `docs/examples.md` is verified and included in local validation. |
 | S4-M30 build/tooling catalog drift check | `docs/tooling.md`, `tools/toolingcheck.zig`, `zig build toolingcheck`, `zig build validate`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m30-toolingcheck.md` | Closed for the current bar: project build steps and checked-in tool files have a central catalog and validator included in local validation. |
-| S4-M31 README discovery and doccheck aggregate | `README.md`, `tools/readmecheck.zig`, `zig build readmecheck`, `zig build doccheck`, `zig build test`, `zig build validate`, `compare/results/s4-m31-readme-doccheck.md` | Closed for the current bar: README discovery is verified and API/example/tooling/README checks run through one documentation gate. |
-| S4-M32 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M31 README discovery and doccheck aggregate | `README.md`, `tools/readmecheck.zig`, `zig build readmecheck`, `zig build doccheck`, `zig build test`, `zig build validate`, `compare/results/s4-m31-readme-doccheck.md` | Closed for the current bar: README discovery is verified and API/example/tooling/README/roadmap checks run through one documentation gate. |
+| S4-M32 roadmap and active-audit drift check | `tools/roadmapcheck.zig`, `zig build roadmapcheck`, `zig build doccheck`, `zig build test`, `zig build validate`, `compare/results/core-rand-coverage.md`, `compare/results/active-goal-completion-audit.md`, `compare/results/linux-no-known-gaps-audit.md`, `compare/results/s4-m32-roadmapcheck.md` | Closed for the current bar: closed S4 evidence files, next-gap continuity, S4-M11 blocker visibility, and non-completion audit language are verified. |
+| S4-M33 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -85,8 +86,9 @@ distribution adoption guidance, S4-M25 adds continuous-distribution adoption
 guidance, S4-M26 adds advanced-continuous adoption guidance, S4-M27 adds
 rank-distribution adoption guidance, S4-M28 adds a central examples catalog,
 S4-M29 adds an example catalog drift checker, S4-M30 adds a build/tooling
-catalog drift checker, and S4-M31 adds README/doccheck discovery validation, but
-they do not resolve S4-M11 or complete the long-term objective.
+catalog drift checker, S4-M31 adds README/doccheck discovery validation, and
+S4-M32 adds roadmap/audit drift checking, but they do not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

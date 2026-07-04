@@ -365,6 +365,7 @@ zig build apicheck
 zig build examplecheck
 zig build toolingcheck
 zig build readmecheck
+zig build roadmapcheck
 zig build doccheck
 zig build validate
 zig build validate-all
