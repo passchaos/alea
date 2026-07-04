@@ -2314,7 +2314,11 @@ Dynamic weighted helpers:
   `PartialShuffleSplit(T)`, `partialShuffleSplit`, `partialShuffleSplitFrom`,
   `partialShuffleSplitChecked`, `partialShuffleSplitCheckedFrom`,
   `reservoirSample`, `reservoirSampleFrom`, `reservoirSampleChecked`,
-  `reservoirSampleCheckedFrom`, `reservoirSampleInto`,
+  `reservoirSampleCheckedFrom`, `reservoirSamplePtrs`,
+  `reservoirSamplePtrsFrom`, `reservoirSamplePtrsChecked`,
+  `reservoirSamplePtrsCheckedFrom`, `reservoirSampleMutPtrs`,
+  `reservoirSampleMutPtrsFrom`, `reservoirSampleMutPtrsChecked`,
+  `reservoirSampleMutPtrsCheckedFrom`, `reservoirSampleInto`,
   `reservoirSampleIntoFrom`
 - Iterators: `chooseIterator`, `chooseIteratorFrom`, `chooseIteratorChecked`,
   `chooseIteratorCheckedFrom`, `sampleIterator`, `sampleIteratorFrom`,

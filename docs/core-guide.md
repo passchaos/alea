@@ -235,7 +235,9 @@ Use:
   `seq.partialShuffleCheckedFrom`, `seq.partialShuffleSplitFrom`,
   `seq.partialShuffleSplitCheckedFrom`
 - `seq.reservoirSample`, `seq.reservoirSampleFrom`,
-  `seq.reservoirSampleCheckedFrom`, `seq.reservoirSampleInto`,
+  `seq.reservoirSampleCheckedFrom`, `seq.reservoirSamplePtrsFrom`,
+  `seq.reservoirSamplePtrsCheckedFrom`, `seq.reservoirSampleMutPtrsFrom`,
+  `seq.reservoirSampleMutPtrsCheckedFrom`, `seq.reservoirSampleInto`,
   `seq.reservoirSampleIntoFrom`
 - `seq.sampleIndices`, `seq.sampleIndicesCheckedFrom`,
   `seq.sampleIndicesIntoFrom`, `seq.sampleIndicesIntoCheckedFrom`,

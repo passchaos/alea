@@ -147,6 +147,18 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(reservoir);
     try stdout.print("reservoirSample: {s}, {s}, {s}, {s}\n", .{ reservoir[0], reservoir[1], reservoir[2], reservoir[3] });
 
+    var reservoir_ptrs_engine = alea.ScalarPrng.init(0x5e11_001b);
+    const reservoir_ptrs = try alea.seq.reservoirSamplePtrsFrom(allocator, &reservoir_ptrs_engine, []const u8, &items, 4);
+    defer allocator.free(reservoir_ptrs);
+    try stdout.print("reservoirSamplePtrs: {s}, {s}, {s}, {s}\n", .{ reservoir_ptrs[0].*, reservoir_ptrs[1].*, reservoir_ptrs[2].*, reservoir_ptrs[3].* });
+
+    var reservoir_mut_ptrs_engine = alea.ScalarPrng.init(0x5e11_001c);
+    var mutable_reservoir_scores = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+    const reservoir_mut_ptrs = try alea.seq.reservoirSampleMutPtrsFrom(allocator, &reservoir_mut_ptrs_engine, u8, &mutable_reservoir_scores, 4);
+    defer allocator.free(reservoir_mut_ptrs);
+    for (reservoir_mut_ptrs) |score| score.* += 8;
+    try stdout.print("reservoirSampleMutPtrs updated scores: {any}\n", .{mutable_reservoir_scores});
+
     var reservoir_into_engine = alea.ScalarPrng.init(0x5e11_000b);
     var reservoir_into: [4][]const u8 = undefined;
     try alea.seq.reservoirSampleIntoFrom(&reservoir_into_engine, []const u8, &items, &reservoir_into);
@@ -204,6 +216,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and value/const-pointer/mutable-pointer mapping, chooseArray/choosePtrArray for fixed-size arrays, chooseMultiple/chooseMultipleInto/chooseMultiplePtrsInto or sampleWithoutReplacement for allocation-returning and caller-owned item/pointer subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSampleInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and value/const-pointer/mutable-pointer mapping, chooseArray/choosePtrArray for fixed-size arrays, chooseMultiple/chooseMultipleInto/chooseMultiplePtrsInto or sampleWithoutReplacement for allocation-returning and caller-owned item/pointer subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSamplePtrs/reservoirSampleInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }

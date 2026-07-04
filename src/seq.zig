@@ -2050,6 +2050,48 @@ pub fn reservoirSampleFrom(allocator: std.mem.Allocator, source: anytype, compti
     return out;
 }
 
+pub fn reservoirSamplePtrs(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    return reservoirSamplePtrsFrom(allocator, rng, T, items, amount);
+}
+
+pub fn reservoirSamplePtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    return reservoirSamplePtrsCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn reservoirSamplePtrsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    if (amount > items.len) return error.InvalidParameter;
+    return reservoirSamplePtrsFrom(allocator, source, T, items, amount);
+}
+
+pub fn reservoirSamplePtrsFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    const count = @min(amount, items.len);
+    const out = try allocator.alloc(*const T, count);
+    errdefer allocator.free(out);
+    reservoirSamplePtrsFillFrom(source, T, items, out);
+    return out;
+}
+
+pub fn reservoirSampleMutPtrs(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []T, amount: usize) ![]*T {
+    return reservoirSampleMutPtrsFrom(allocator, rng, T, items, amount);
+}
+
+pub fn reservoirSampleMutPtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []T, amount: usize) ![]*T {
+    return reservoirSampleMutPtrsCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn reservoirSampleMutPtrsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []T, amount: usize) ![]*T {
+    if (amount > items.len) return error.InvalidParameter;
+    return reservoirSampleMutPtrsFrom(allocator, source, T, items, amount);
+}
+
+pub fn reservoirSampleMutPtrsFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []T, amount: usize) ![]*T {
+    const count = @min(amount, items.len);
+    const out = try allocator.alloc(*T, count);
+    errdefer allocator.free(out);
+    reservoirSampleMutPtrsFillFrom(source, T, items, out);
+    return out;
+}
+
 pub fn reservoirSampleInto(rng: Rng, comptime T: type, items: []const T, out: []T) Error!void {
     return reservoirSampleIntoFrom(rng, T, items, out);
 }
@@ -2063,6 +2105,28 @@ pub fn reservoirSampleIntoFrom(source: anytype, comptime T: type, items: []const
     while (i < items.len) : (i += 1) {
         const j = Rng.uintAtMostFrom(source, usize, i);
         if (j < out.len) out[j] = items[i];
+    }
+}
+
+fn reservoirSamplePtrsFillFrom(source: anytype, comptime T: type, items: []const T, out: []*const T) void {
+    if (out.len == 0) return;
+
+    for (items[0..out.len], out) |*item, *slot| slot.* = item;
+    var i = out.len;
+    while (i < items.len) : (i += 1) {
+        const j = Rng.uintAtMostFrom(source, usize, i);
+        if (j < out.len) out[j] = &items[i];
+    }
+}
+
+fn reservoirSampleMutPtrsFillFrom(source: anytype, comptime T: type, items: []T, out: []*T) void {
+    if (out.len == 0) return;
+
+    for (items[0..out.len], out) |*item, *slot| slot.* = item;
+    var i = out.len;
+    while (i < items.len) : (i += 1) {
+        const j = Rng.uintAtMostFrom(source, usize, i);
+        if (j < out.len) out[j] = &items[i];
     }
 }
 
@@ -3880,6 +3944,101 @@ test "choose pointer arrays return fixed-size pointer samples" {
     try std.testing.expectError(error.InvalidParameter, choosePtrArrayCheckedFrom(&facade_engine, u8, 9, &items));
     try std.testing.expect(chooseMutPtrArrayFrom(&facade_engine, u8, 9, &mutable) == null);
     try std.testing.expectError(error.InvalidParameter, chooseMutPtrArrayCheckedFrom(&facade_engine, u8, 9, &mutable));
+}
+
+test "reservoir pointer slices allocate reservoir pointer samples" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+
+    var optional_engine = alea.ScalarPrng.init(0x5150_d101);
+    const optional = try reservoirSamplePtrsFrom(std.testing.allocator, &optional_engine, u8, &items, 10);
+    defer std.testing.allocator.free(optional);
+    try std.testing.expectEqual(@as(usize, items.len), optional.len);
+    for (optional) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+        try std.testing.expect(index < items.len);
+        try std.testing.expectEqual(&items[index], ptr);
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_d102);
+    const checked = try reservoirSamplePtrsCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 4);
+    defer std.testing.allocator.free(checked);
+    try std.testing.expectEqual(@as(usize, 4), checked.len);
+    for (checked) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+        try std.testing.expect(index < items.len);
+        try std.testing.expectEqual(&items[index], ptr);
+    }
+
+    var mutable = items;
+    var mut_engine = alea.ScalarPrng.init(0x5150_d103);
+    const mut_ptrs = try reservoirSampleMutPtrsCheckedFrom(std.testing.allocator, &mut_engine, u8, &mutable, 4);
+    defer std.testing.allocator.free(mut_ptrs);
+    var expected = items;
+    for (mut_ptrs) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&mutable[0]), @sizeOf(u8));
+        try std.testing.expect(index < mutable.len);
+        try std.testing.expectEqual(&mutable[index], ptr);
+        ptr.* += 1;
+        expected[index] += 1;
+    }
+    try std.testing.expectEqualSlices(u8, &expected, &mutable);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_d104);
+    var empty_control = alea.ScalarPrng.init(0x5150_d104);
+    const empty = try reservoirSamplePtrsFrom(std.testing.allocator, &empty_engine, u8, &items, 0);
+    defer std.testing.allocator.free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "reservoir pointer slices preserve stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_d105);
+        var direct_engine = Engine.init(0x5150_d105);
+        const rng = Rng.init(&facade_engine);
+
+        const facade = try reservoirSamplePtrs(std.testing.allocator, rng, u8, &items, 4);
+        defer std.testing.allocator.free(facade);
+        const direct = try reservoirSamplePtrsFrom(std.testing.allocator, &direct_engine, u8, &items, 4);
+        defer std.testing.allocator.free(direct);
+        for (facade, direct) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(facade_index, direct_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_items = items;
+        var direct_items = items;
+        const facade_mut = try reservoirSampleMutPtrs(std.testing.allocator, rng, u8, &facade_items, 4);
+        defer std.testing.allocator.free(facade_mut);
+        const direct_mut = try reservoirSampleMutPtrsFrom(std.testing.allocator, &direct_engine, u8, &direct_items, 4);
+        defer std.testing.allocator.free(direct_mut);
+        for (facade_mut, direct_mut) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(facade_index, direct_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_d106);
+    var invalid_control = alea.ScalarPrng.init(0x5150_d106);
+    try std.testing.expectError(error.InvalidParameter, reservoirSamplePtrsCheckedFrom(std.testing.allocator, &invalid_engine, u8, &items, 9));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var mutable_items = items;
+    try std.testing.expectError(error.InvalidParameter, reservoirSampleMutPtrsCheckedFrom(std.testing.allocator, &invalid_engine, u8, &mutable_items, 9));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, reservoirSamplePtrsFrom(failing.allocator(), &invalid_engine, u8, &items, 4));
+    try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "chooseMultiple pointer slices allocate pointer subsets" {
