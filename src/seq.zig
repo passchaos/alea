@@ -1395,6 +1395,120 @@ pub fn weightedIndexU32ByIndexCheckedFrom(
     return (try weightedIndexU32ByIndexFrom(source, Weight, length, weightFn)) orelse error.EmptyInput;
 }
 
+pub fn fillWeightedIndexByIndex(
+    rng: Rng,
+    comptime Weight: type,
+    dest: []?usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    return fillWeightedIndexByIndexFrom(rng, Weight, dest, length, weightFn);
+}
+
+pub fn fillWeightedIndexByIndexFrom(
+    source: anytype,
+    comptime Weight: type,
+    dest: []?usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    if (dest.len == 0) return;
+    const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, length, weightFn);
+    if (validation.total == 0) {
+        @memset(dest, null);
+        return;
+    }
+    if (validation.single_positive) |index| {
+        @memset(dest, @as(?usize, index));
+        return;
+    }
+    for (dest) |*index| index.* = weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total);
+}
+
+pub fn fillWeightedIndexByIndexChecked(
+    rng: Rng,
+    comptime Weight: type,
+    dest: []usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    return fillWeightedIndexByIndexCheckedFrom(rng, Weight, dest, length, weightFn);
+}
+
+pub fn fillWeightedIndexByIndexCheckedFrom(
+    source: anytype,
+    comptime Weight: type,
+    dest: []usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    if (dest.len == 0) return;
+    const validation = try validateWeightedIndexByIndex(Weight, length, weightFn);
+    if (validation.single_positive) |index| {
+        @memset(dest, index);
+        return;
+    }
+    for (dest) |*index| index.* = weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total);
+}
+
+pub fn fillWeightedIndexU32ByIndex(
+    rng: Rng,
+    comptime Weight: type,
+    dest: []?u32,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    return fillWeightedIndexU32ByIndexFrom(rng, Weight, dest, length, weightFn);
+}
+
+pub fn fillWeightedIndexU32ByIndexFrom(
+    source: anytype,
+    comptime Weight: type,
+    dest: []?u32,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    if (length > std.math.maxInt(u32)) return error.InvalidParameter;
+    if (dest.len == 0) return;
+    const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, length, weightFn);
+    if (validation.total == 0) {
+        @memset(dest, null);
+        return;
+    }
+    if (validation.single_positive) |index| {
+        @memset(dest, @as(?u32, @intCast(index)));
+        return;
+    }
+    for (dest) |*index| index.* = @intCast(weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total));
+}
+
+pub fn fillWeightedIndexU32ByIndexChecked(
+    rng: Rng,
+    comptime Weight: type,
+    dest: []u32,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    return fillWeightedIndexU32ByIndexCheckedFrom(rng, Weight, dest, length, weightFn);
+}
+
+pub fn fillWeightedIndexU32ByIndexCheckedFrom(
+    source: anytype,
+    comptime Weight: type,
+    dest: []u32,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    if (dest.len == 0) return;
+    if (length > std.math.maxInt(u32)) return error.InvalidParameter;
+    const validation = try validateWeightedIndexByIndex(Weight, length, weightFn);
+    if (validation.single_positive) |index| {
+        @memset(dest, @intCast(index));
+        return;
+    }
+    for (dest) |*index| index.* = @intCast(weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total));
+}
+
 pub fn weightedIndexBy(
     rng: Rng,
     comptime T: type,
@@ -10249,6 +10363,157 @@ test "index-weighted weightedIndexByIndex preserves stream shape and invalid pat
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32ByIndexCheckedFrom(&invalid_engine, f64, 8, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidParameter, weightedIndexU32ByIndexFrom(&invalid_engine, u32, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "index-weighted fillWeightedIndexByIndex fills caller-owned buffers" {
+    const alea = @import("root.zig");
+    const IndexWeight = struct {
+        fn weightOf(index: usize) u32 {
+            return switch (index) {
+                1 => 1,
+                3 => 9,
+                6 => 4,
+                else => 0,
+            };
+        }
+    };
+
+    var fill_engine = alea.ScalarPrng.init(0x5150_f147);
+    var indexes: [8]?usize = undefined;
+    try fillWeightedIndexByIndexFrom(&fill_engine, u32, &indexes, 8, IndexWeight.weightOf);
+    for (indexes) |index| {
+        try std.testing.expect(index != null);
+        try std.testing.expect(index.? == 1 or index.? == 3 or index.? == 6);
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_f148);
+    var checked_indexes: [8]usize = undefined;
+    try fillWeightedIndexByIndexCheckedFrom(&checked_engine, u32, &checked_indexes, 8, IndexWeight.weightOf);
+    for (checked_indexes) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+
+    var fill_u32_engine = alea.ScalarPrng.init(0x5150_f149);
+    var indexes_u32: [8]?u32 = undefined;
+    try fillWeightedIndexU32ByIndexFrom(&fill_u32_engine, u32, &indexes_u32, 8, IndexWeight.weightOf);
+    for (indexes_u32) |index| {
+        try std.testing.expect(index != null);
+        try std.testing.expect(index.? == 1 or index.? == 3 or index.? == 6);
+    }
+
+    var checked_u32_engine = alea.ScalarPrng.init(0x5150_f14a);
+    var checked_indexes_u32: [8]u32 = undefined;
+    try fillWeightedIndexU32ByIndexCheckedFrom(&checked_u32_engine, u32, &checked_indexes_u32, 8, IndexWeight.weightOf);
+    for (checked_indexes_u32) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+}
+
+test "index-weighted fillWeightedIndexByIndex preserves stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const IndexWeight = struct {
+        fn weightOf(index: usize) f64 {
+            return switch (index) {
+                1 => 1,
+                3 => 9,
+                6 => 4,
+                else => 0,
+            };
+        }
+
+        fn single(index: usize) u32 {
+            return if (index == 4) 7 else 0;
+        }
+
+        fn zero(_: usize) u32 {
+            return 0;
+        }
+
+        fn invalid(index: usize) f64 {
+            return if (index == 2) std.math.nan(f64) else 1;
+        }
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_f14b);
+        var direct_engine = Engine.init(0x5150_f14b);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_indexes: [8]?usize = undefined;
+        var direct_indexes: [8]usize = undefined;
+        try fillWeightedIndexByIndex(rng, f64, &facade_indexes, 8, IndexWeight.weightOf);
+        try fillWeightedIndexByIndexCheckedFrom(&direct_engine, f64, &direct_indexes, 8, IndexWeight.weightOf);
+        for (facade_indexes, direct_indexes) |facade, direct| try std.testing.expectEqual(facade.?, direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_indexes: [8]usize = undefined;
+        var checked_direct_indexes: [8]usize = undefined;
+        try fillWeightedIndexByIndexChecked(rng, f64, &checked_facade_indexes, 8, IndexWeight.weightOf);
+        try fillWeightedIndexByIndexCheckedFrom(&direct_engine, f64, &checked_direct_indexes, 8, IndexWeight.weightOf);
+        try std.testing.expectEqualSlices(usize, &checked_facade_indexes, &checked_direct_indexes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_indexes_u32: [8]?u32 = undefined;
+        var direct_indexes_u32: [8]u32 = undefined;
+        try fillWeightedIndexU32ByIndex(rng, f64, &facade_indexes_u32, 8, IndexWeight.weightOf);
+        try fillWeightedIndexU32ByIndexCheckedFrom(&direct_engine, f64, &direct_indexes_u32, 8, IndexWeight.weightOf);
+        for (facade_indexes_u32, direct_indexes_u32) |facade, direct| try std.testing.expectEqual(facade.?, direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_indexes_u32: [8]u32 = undefined;
+        var checked_direct_indexes_u32: [8]u32 = undefined;
+        try fillWeightedIndexU32ByIndexChecked(rng, f64, &checked_facade_indexes_u32, 8, IndexWeight.weightOf);
+        try fillWeightedIndexU32ByIndexCheckedFrom(&direct_engine, f64, &checked_direct_indexes_u32, 8, IndexWeight.weightOf);
+        try std.testing.expectEqualSlices(u32, &checked_facade_indexes_u32, &checked_direct_indexes_u32);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var single_engine = alea.ScalarPrng.init(0x5150_f14c);
+    var single_control = alea.ScalarPrng.init(0x5150_f14c);
+    var single_indexes: [4]?usize = undefined;
+    try fillWeightedIndexByIndexFrom(&single_engine, u32, &single_indexes, 8, IndexWeight.single);
+    for (single_indexes) |index| try std.testing.expectEqual(@as(?usize, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    var single_checked_indexes: [4]usize = undefined;
+    try fillWeightedIndexByIndexCheckedFrom(&single_engine, u32, &single_checked_indexes, 8, IndexWeight.single);
+    for (single_checked_indexes) |index| try std.testing.expectEqual(@as(usize, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    var single_indexes_u32: [4]?u32 = undefined;
+    try fillWeightedIndexU32ByIndexFrom(&single_engine, u32, &single_indexes_u32, 8, IndexWeight.single);
+    for (single_indexes_u32) |index| try std.testing.expectEqual(@as(?u32, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    var single_checked_indexes_u32: [4]u32 = undefined;
+    try fillWeightedIndexU32ByIndexCheckedFrom(&single_engine, u32, &single_checked_indexes_u32, 8, IndexWeight.single);
+    for (single_checked_indexes_u32) |index| try std.testing.expectEqual(@as(u32, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_f14d);
+    var invalid_control = alea.ScalarPrng.init(0x5150_f14d);
+    var zero_len: [0]?usize = .{};
+    try fillWeightedIndexByIndexFrom(&invalid_engine, f64, &zero_len, 8, IndexWeight.invalid);
+    var zero_len_checked: [0]usize = .{};
+    try fillWeightedIndexByIndexCheckedFrom(&invalid_engine, f64, &zero_len_checked, 8, IndexWeight.invalid);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var optional_empty: [3]?usize = undefined;
+    try fillWeightedIndexByIndexFrom(&invalid_engine, u32, &optional_empty, 0, IndexWeight.single);
+    for (optional_empty) |index| try std.testing.expect(index == null);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var optional_zero_u32: [3]?u32 = undefined;
+    try fillWeightedIndexU32ByIndexFrom(&invalid_engine, u32, &optional_zero_u32, 8, IndexWeight.zero);
+    for (optional_zero_u32) |index| try std.testing.expect(index == null);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var checked_empty: [3]usize = undefined;
+    try std.testing.expectError(error.EmptyInput, fillWeightedIndexByIndexCheckedFrom(&invalid_engine, u32, &checked_empty, 0, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var checked_zero_u32: [3]u32 = undefined;
+    try std.testing.expectError(error.EmptyInput, fillWeightedIndexU32ByIndexCheckedFrom(&invalid_engine, u32, &checked_zero_u32, 8, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var bad_indexes: [3]?usize = undefined;
+    try std.testing.expectError(error.InvalidWeight, fillWeightedIndexByIndexFrom(&invalid_engine, f64, &bad_indexes, 8, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var bad_indexes_u32: [3]u32 = undefined;
+    try std.testing.expectError(error.InvalidWeight, fillWeightedIndexU32ByIndexCheckedFrom(&invalid_engine, f64, &bad_indexes_u32, 8, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32ByIndexFrom(&invalid_engine, u32, &optional_zero_u32, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
