@@ -25,6 +25,11 @@ pub fn main(init: std.process.Init) !void {
     const one_shot = alea.Rng.weightedIndexFrom(&one_shot_engine, &float_weights).?;
     try stdout.print("one-shot weighted index: {} ({s})\n", .{ one_shot, items[one_shot] });
 
+    var batch_weighted_engine = alea.ScalarPrng.init(0x7152);
+    const weighted_index_batch = try alea.Rng.weightedIndexBatchCheckedFrom(&batch_weighted_engine, allocator, 6, &float_weights);
+    defer allocator.free(weighted_index_batch);
+    try stdout.print("weighted index batch: {any}\n", .{weighted_index_batch});
+
     var one_shot_u32_engine = alea.ScalarPrng.init(0x716c);
     const one_shot_u32 = (try alea.Rng.weightedIndexU32From(&one_shot_u32_engine, &float_weights)).?;
     try stdout.print("one-shot weighted u32 index: {} ({s})\n", .{ one_shot_u32, items[one_shot_u32] });
