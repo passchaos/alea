@@ -1,8 +1,8 @@
 # Alea API Reference
 
 This reference lists the public API surface by module. See `docs/core-guide.md`
-for usage guidance and `compare/results/reproducibility-matrix.md` for stability
-expectations.
+for usage guidance, `docs/examples.md` for runnable examples, and
+`compare/results/reproducibility-matrix.md` for stability expectations.
 
 ## Root Module
 

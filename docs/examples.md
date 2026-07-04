@@ -1,0 +1,29 @@
+# Alea Examples Catalog
+
+All examples are runnable through `zig build examples`; each row also has a
+focused `zig build run-*` step for quick adoption checks.
+
+| Build step | Source | Use when you want to learn |
+| --- | --- | --- |
+| `zig build run-basic` | `examples/basic.zig` | A broad first tour: engines, `Rng`, distributions, strings, sequence helpers, and child streams. |
+| `zig build run-reproducible-streams` | `examples/reproducible_streams.zig` | Stable named seeds, substreams, engine aliases, split/jump, and PCG stream selection. |
+| `zig build run-range-sampling` | `examples/range_sampling.zig` | Integer ranges, strict float endpoint semantics, duration ranges, reusable `Uniform`, vector ranges, point masses, and checked errors. |
+| `zig build run-discrete-distributions` | `examples/discrete_distributions.zig` | Bernoulli, Binomial, NegativeBinomial, Poisson, Geometric trial/failure semantics, Hypergeometric, vector discrete samplers, and checked errors. |
+| `zig build run-continuous-distributions` | `examples/continuous_distributions.zig` | Core continuous reusable samplers and diagnostics: Gamma, Beta, FisherF, StudentT, Triangular, Arcsine, Cauchy, Laplace, Logistic, Rayleigh, Pareto, and Weibull. |
+| `zig build run-advanced-continuous-distributions` | `examples/advanced_continuous_distributions.zig` | Advanced continuous shape/tail families: HalfNormal, ChiSquared, Chi, Erlang, Maxwell, LogLogistic, Kumaraswamy, PowerFunction, Gumbel, Frechet, SkewNormal, InverseGaussian, and NormalInverseGaussian. |
+| `zig build run-rank-distributions` | `examples/rank_distributions.zig` | Finite Zipf, unbounded Zeta, vector rank samplers, infinite-exponent rank-one degeneracy, and checked invalid parameters. |
+| `zig build run-distribution-diagnostics` | `examples/distribution_diagnostics.zig` | Constructor/accessor diagnostics: moments, support, mean/CV constructors, z-score conversion, and PERT range-first builders. |
+| `zig build run-vector-profiles` | `examples/vector_profiles.zig` | Exact/default vector normal/exponential versus explicit throughput-first `Table` and `ApproxLog` opt-ins. |
+| `zig build run-native-f32-profiles` | `examples/native_f32_profiles.zig` | Exact/default f64-backed f32 outputs versus f32-native normal/exponential throughput profiles. |
+| `zig build run-lognormal-profiles` | `examples/lognormal_profiles.zig` | Exact LogNormal, buffered exact, native-f32, exp2, native-exp2, and libc-backed platform opt-ins when available. |
+| `zig build run-weighted-sampling` | `examples/weighted_sampling.zig` | One-shot weighted indexes, static alias tables, dynamic weighted trees, weighted choices, and weighted no-replacement workflows. |
+| `zig build run-sequence-sampling` | `examples/sequence_sampling.zig` | Index sampling, item subsets, partial shuffle, reservoir sampling, reusable choices, and streaming iterator helpers. |
+| `zig build run-multivariate-sampling` | `examples/multivariate_sampling.zig` | Multinomial and Dirichlet allocation-returning samples, caller-owned buffers, flat batched outputs, and degenerate vertices. |
+| `zig build run-string-generation` | `examples/string_generation.zig` | Predefined ASCII charsets, custom `Charset` diagnostics, allocation-returning strings, Unicode scalar generation, and caller-owned UTF-8 buffers. |
+| `zig build run-unit-geometry` | `examples/unit_geometry.zig` | Unit circle/disc/sphere/ball scalar points, fills, reusable diagnostics, and vector-lane batches. |
+
+## Validation
+
+`zig build validate` depends on `zig build examples`, so these examples are part
+of the normal local validation gate. Keep example output deterministic and small;
+use benchmarks or profile checks for large throughput/statistical evidence.

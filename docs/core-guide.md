@@ -4,6 +4,9 @@ This guide summarizes the core random-number functionality expected by
 `AGENTS.md`. It is intentionally Zig-native rather than a port of Rust `rand`
 traits.
 
+See `docs/examples.md` for a catalog of runnable examples and focused
+`zig build run-*` adoption checks.
+
 ## Engines
 
 - `DefaultPrng = Xoshiro256`: deterministic default for reproducible work.
