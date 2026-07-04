@@ -11,7 +11,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | --- | --- |
 | `zig build test` | Run unit tests and API reference coverage checks. |
 | `zig build apicheck` | Verify public symbols are covered by `docs/api-reference.md`. |
-| `zig build examplecheck` | Verify `docs/examples.md` covers every checked-in runnable example and focused `run-*` step. |
+| `zig build examplecheck` | Verify `docs/examples.md` covers every checked-in runnable example/focused `run-*` step and that key examples still contain expected adoption-output tokens. |
 | `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step and checked-in tool file. |
 | `zig build readmecheck` | Verify README discovery links and core validation commands stay visible. |
 | `zig build roadmapcheck` | Verify roadmap and active-audit milestone evidence stays synchronized. |
@@ -149,7 +149,7 @@ new helpers that need documentation.
 | `tools/chi_probe.zig` | Chi performance probe. |
 | `tools/distcheck.zig` | Distribution parameter-grid checker. |
 | `tools/erlang_probe.zig` | Erlang performance probe. |
-| `tools/examplecheck.zig` | Examples catalog checker. |
+| `tools/examplecheck.zig` | Examples catalog and key-output-token checker. |
 | `tools/exponential_rate_probe.zig` | Exponential-rate performance probe. |
 | `tools/fisher_f_probe.zig` | Fisher-F special-case performance probe. |
 | `tools/frechet_probe.zig` | Frechet performance probe. |

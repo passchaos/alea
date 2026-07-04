@@ -3,10 +3,15 @@ const std = @import("std");
 const Example = struct {
     path: []const u8,
     step: []const u8,
+    source_tokens: []const []const u8 = &.{},
 };
 
 const examples = [_]Example{
-    .{ .path = "examples/basic.zig", .step = "zig build run-basic" },
+    .{
+        .path = "examples/basic.zig",
+        .step = "zig build run-basic",
+        .source_tokens = &.{ "index choice", "const pointer choice" },
+    },
     .{ .path = "examples/reproducible_streams.zig", .step = "zig build run-reproducible-streams" },
     .{ .path = "examples/range_sampling.zig", .step = "zig build run-range-sampling" },
     .{ .path = "examples/discrete_distributions.zig", .step = "zig build run-discrete-distributions" },
@@ -17,9 +22,21 @@ const examples = [_]Example{
     .{ .path = "examples/vector_profiles.zig", .step = "zig build run-vector-profiles" },
     .{ .path = "examples/native_f32_profiles.zig", .step = "zig build run-native-f32-profiles" },
     .{ .path = "examples/lognormal_profiles.zig", .step = "zig build run-lognormal-profiles" },
-    .{ .path = "examples/weighted_sampling.zig", .step = "zig build run-weighted-sampling" },
-    .{ .path = "examples/sequence_sampling.zig", .step = "zig build run-sequence-sampling" },
-    .{ .path = "examples/caller_owned_sampling.zig", .step = "zig build run-caller-owned-sampling" },
+    .{
+        .path = "examples/weighted_sampling.zig",
+        .step = "zig build run-weighted-sampling",
+        .source_tokens = &.{ "generic weighted index", "weighted ptrs into", "weighted no-replacement ptrs" },
+    },
+    .{
+        .path = "examples/sequence_sampling.zig",
+        .step = "zig build run-sequence-sampling",
+        .source_tokens = &.{ "IndexVec.valuesInto", "chooseMultiplePtrs", "reservoirSamplePtrsInto" },
+    },
+    .{
+        .path = "examples/caller_owned_sampling.zig",
+        .step = "zig build run-caller-owned-sampling",
+        .source_tokens = &.{ "chooseMultiplePtrsInto", "reservoirSamplePtrsInto", "weighted ptrs into" },
+    },
     .{ .path = "examples/multivariate_sampling.zig", .step = "zig build run-multivariate-sampling" },
     .{ .path = "examples/string_generation.zig", .step = "zig build run-string-generation" },
     .{ .path = "examples/unit_geometry.zig", .step = "zig build run-unit-geometry" },
@@ -46,6 +63,14 @@ pub fn main(init: std.process.Init) !void {
             missing += 1;
             return;
         };
+        const source = try std.Io.Dir.cwd().readFileAlloc(io, example.path, allocator, .limited(1024 * 1024));
+        defer allocator.free(source);
+        for (example.source_tokens) |token| {
+            if (std.mem.indexOf(u8, source, token) == null) {
+                try stderr.print("examplecheck: source {s} missing expected token `{s}`\n", .{ example.path, token });
+                missing += 1;
+            }
+        }
         if (std.mem.indexOf(u8, docs, example.path) == null) {
             try stderr.print("examplecheck: docs/examples.md missing source `{s}`\n", .{example.path});
             missing += 1;
