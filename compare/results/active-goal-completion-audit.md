@@ -50,7 +50,8 @@ complete.
 | S4-M27 rank distributions adoption example | `examples/rank_distributions.zig`, `zig build run-rank-distributions`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m27-rank-distributions-example.md` | Closed for the current bar: a runnable example demonstrates finite Zipf, unbounded Zeta, vector rank samplers, degenerate infinite-exponent behavior, and checked errors. |
 | S4-M28 examples catalog | `docs/examples.md`, `zig build examples`, `zig build apicheck`, `compare/results/s4-m28-examples-catalog.md` | Closed for the current bar: all focused runnable examples are discoverable from a central catalog and remain under local validation. |
 | S4-M29 example catalog drift check | `tools/examplecheck.zig`, `zig build examplecheck`, `zig build validate`, `docs/examples.md`, `compare/results/s4-m29-examplecheck.md` | Closed for the current bar: example source and focused run-step coverage in `docs/examples.md` is verified and included in local validation. |
-| S4-M30 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M30 build/tooling catalog drift check | `docs/tooling.md`, `tools/toolingcheck.zig`, `zig build toolingcheck`, `zig build validate`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m30-toolingcheck.md` | Closed for the current bar: project build steps and checked-in tool files have a central catalog and validator included in local validation. |
+| S4-M31 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -81,9 +82,10 @@ diagnostics adoption guidance, S4-M22 adds reproducible-stream adoption
 guidance, S4-M23 adds range/uniform adoption guidance, S4-M24 adds discrete
 distribution adoption guidance, S4-M25 adds continuous-distribution adoption
 guidance, S4-M26 adds advanced-continuous adoption guidance, S4-M27 adds
-rank-distribution adoption guidance, S4-M28 adds a central examples catalog, and
-S4-M29 adds an example catalog drift checker, but they do not resolve S4-M11 or
-complete the long-term objective.
+rank-distribution adoption guidance, S4-M28 adds a central examples catalog,
+S4-M29 adds an example catalog drift checker, and S4-M30 adds a build/tooling
+catalog drift checker, but they do not resolve S4-M11 or complete the long-term
+objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

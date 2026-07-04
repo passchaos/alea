@@ -67,6 +67,7 @@ Local Alea evidence:
 - `compare/results/s4-m27-rank-distributions-example.md`
 - `compare/results/s4-m28-examples-catalog.md`
 - `compare/results/s4-m29-examplecheck.md`
+- `compare/results/s4-m30-toolingcheck.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -194,6 +195,6 @@ S4-M22 adds reproducible-stream adoption guidance, S4-M23 adds range/uniform
 adoption guidance, S4-M24 adds discrete-distribution adoption guidance, S4-M25
 adds continuous-distribution adoption guidance, S4-M26 adds advanced-continuous
 adoption guidance, S4-M27 adds rank-distribution adoption guidance, S4-M28 adds
-a central examples catalog, and S4-M29 adds catalog drift checking, but later
-stages should keep raising the bar rather than declaring the product permanently
-finished.
+a central examples catalog, S4-M29 adds catalog drift checking, and S4-M30 adds
+build/tooling catalog drift checking, but later stages should keep raising the
+bar rather than declaring the product permanently finished.

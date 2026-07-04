@@ -1,8 +1,9 @@
 # Alea API Reference
 
 This reference lists the public API surface by module. See `docs/core-guide.md`
-for usage guidance, `docs/examples.md` for runnable examples, and
-`compare/results/reproducibility-matrix.md` for stability expectations.
+for usage guidance, `docs/examples.md` for runnable examples, `docs/tooling.md`
+for build/tool catalogs, and `compare/results/reproducibility-matrix.md` for
+stability expectations.
 
 ## Root Module
 
@@ -2338,7 +2339,7 @@ Dynamic weighted helpers:
 
 ## Validation And Tooling
 
-Build steps:
+Selected build steps (see `docs/tooling.md` for the complete catalog):
 
 - `zig build test`
 - `zig build run-basic`
@@ -2359,6 +2360,7 @@ Build steps:
 - `zig build run-rank-distributions`
 - `zig build examples`
 - `zig build examplecheck`
+- `zig build toolingcheck`
 - `zig build apicheck`
 - `zig build validate`
 - `zig build validate-all`
@@ -2374,13 +2376,17 @@ Build steps:
 - `zig build -Doptimize=ReleaseFast -Dcpu=native ziggurat-probe`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native cauchy-probe`
 
+See `docs/tooling.md` for the complete build-step and checked-tool catalog.
+
 Tools:
 
 - `tools/statcheck.zig`
+- `docs/tooling.md`
 - `tools/apicheck.zig`
 - `tools/distcheck.zig`
 - `tools/stream.zig`
 - `tools/ziggurat_probe.zig`
 - `tools/cauchy_probe.zig`
 - `tools/repro.zig`
+- `tools/toolingcheck.zig`
 - `tools/practrand.sh`

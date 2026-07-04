@@ -5,7 +5,8 @@ This guide summarizes the core random-number functionality expected by
 traits.
 
 See `docs/examples.md` for a catalog of runnable examples and focused
-`zig build run-*` adoption checks.
+`zig build run-*` adoption checks. See `docs/tooling.md` for the build-step
+and checked-tool catalog maintained by `zig build toolingcheck`.
 
 ## Engines
 
@@ -361,6 +362,8 @@ Run:
 ```sh
 zig build test
 zig build apicheck
+zig build examplecheck
+zig build toolingcheck
 zig build validate
 zig build validate-all
 zig build crosscheck

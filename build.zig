@@ -1022,6 +1022,22 @@ pub fn build(b: *std.Build) void {
     const examplecheck_step = b.step("examplecheck", "Check runnable examples catalog coverage");
     examplecheck_step.dependOn(&run_examplecheck.step);
 
+    const toolingcheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/toolingcheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const toolingcheck = b.addExecutable(.{
+        .name = "alea-toolingcheck",
+        .root_module = toolingcheck_mod,
+    });
+    const run_toolingcheck = b.addRunArtifact(toolingcheck);
+    if (b.args) |args| run_toolingcheck.addArgs(args);
+
+    const toolingcheck_step = b.step("toolingcheck", "Check build/tooling catalog coverage");
+    toolingcheck_step.dependOn(&run_toolingcheck.step);
+
     const test_step = b.step("test", "Run alea unit tests and API reference checks");
     test_step.dependOn(&run_tests.step);
     test_step.dependOn(&run_apicheck.step);
@@ -1206,6 +1222,7 @@ pub fn build(b: *std.Build) void {
     validate_step.dependOn(&run_tests.step);
     validate_step.dependOn(examples_step);
     validate_step.dependOn(&run_examplecheck.step);
+    validate_step.dependOn(&run_toolingcheck.step);
     validate_step.dependOn(&run_apicheck.step);
     validate_step.dependOn(&run_statcheck.step);
     validate_step.dependOn(&run_distcheck.step);
