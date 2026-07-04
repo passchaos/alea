@@ -234,7 +234,9 @@ Use:
 - `seq.reservoirSample`, `seq.reservoirSampleFrom`,
   `seq.reservoirSampleCheckedFrom`, `seq.reservoirSampleInto`,
   `seq.reservoirSampleIntoFrom`
-- `seq.sampleIndices`, `seq.sampleIndicesCheckedFrom`, `seq.sampleIndexVec`,
+- `seq.sampleIndices`, `seq.sampleIndicesCheckedFrom`,
+  `seq.sampleIndicesIntoFrom`, `seq.sampleIndicesIntoCheckedFrom`,
+  `seq.sampleIndexVec`,
   `seq.sampleIndexVecCheckedFrom`, `seq.sampleIndicesU32`,
   `seq.sampleIndicesU32CheckedFrom`; compact `IndexVec` results expose
   `len`, `isEmpty`, `at`, `copyInto`, `toOwnedSlice`, and an exact-size

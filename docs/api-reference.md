@@ -2275,6 +2275,8 @@ Dynamic weighted helpers:
   `IndexVec.Iterator.next`, `IndexVec.Iterator.remaining`, `IndexVec.deinit`
 - Indices: `sampleIndexVec`, `sampleIndexVecFrom`, `sampleIndices`,
   `sampleIndexVecCheckedFrom`, `sampleIndicesFrom`, `sampleIndicesCheckedFrom`,
+  `sampleIndicesInto`, `sampleIndicesIntoFrom`, `sampleIndicesIntoChecked`,
+  `sampleIndicesIntoCheckedFrom`,
   `sampleIndicesU32`, `sampleIndicesU32From`, `sampleIndicesU32CheckedFrom`,
   `sampleArray`, `sampleArrayFrom`, `sampleArrayChecked`,
   `sampleArrayCheckedFrom`

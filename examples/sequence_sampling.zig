@@ -39,6 +39,11 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(indices);
     try stdout.print("sampleIndices: {any}\n", .{indices});
 
+    var indices_into_engine = alea.ScalarPrng.init(0x5e11_0010);
+    var indices_into: [4]usize = undefined;
+    try alea.seq.sampleIndicesIntoCheckedFrom(&indices_into_engine, items.len, &indices_into);
+    try stdout.print("sampleIndicesInto: {any}\n", .{indices_into});
+
     var index_vec_engine = alea.ScalarPrng.init(0x5e11_0002);
     const index_vec = try alea.seq.sampleIndexVecFrom(allocator, &index_vec_engine, 10_000, 6);
     defer index_vec.deinit(allocator);

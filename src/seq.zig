@@ -129,6 +129,42 @@ pub fn sampleIndicesFrom(allocator: std.mem.Allocator, source: anytype, length: 
     return sampleRejection(allocator, source, length, amount);
 }
 
+pub fn sampleIndicesInto(rng: Rng, length: usize, out: []usize) Error!void {
+    return sampleIndicesIntoCheckedFrom(rng, length, out);
+}
+
+pub fn sampleIndicesIntoChecked(rng: Rng, length: usize, out: []usize) Error!void {
+    return sampleIndicesIntoCheckedFrom(rng, length, out);
+}
+
+pub fn sampleIndicesIntoCheckedFrom(source: anytype, length: usize, out: []usize) Error!void {
+    if (out.len > length) return error.InvalidParameter;
+    sampleIndicesIntoFrom(source, length, out);
+}
+
+pub fn sampleIndicesIntoFrom(source: anytype, length: usize, out: []usize) void {
+    std.debug.assert(out.len <= length);
+    if (out.len == 0) return;
+
+    var i: usize = 0;
+    var j = length - out.len;
+    while (j < length) : ({
+        j += 1;
+        i += 1;
+    }) {
+        const t = Rng.uintAtMostFrom(source, usize, j);
+        var found: ?usize = null;
+        for (out[0..i], 0..) |existing, pos| {
+            if (existing == t) {
+                found = pos;
+                break;
+            }
+        }
+        if (found) |pos| out[pos] = j;
+        out[i] = t;
+    }
+}
+
 pub fn sampleIndicesU32(allocator: std.mem.Allocator, rng: Rng, length: u32, amount: u32) ![]u32 {
     return sampleIndicesU32CheckedFrom(allocator, rng, length, amount);
 }
@@ -1971,6 +2007,45 @@ test "checked index sampling preserves valid-parameter stream shape" {
         }
         try std.testing.expectEqual(unchecked.next(), checked.next());
     }
+}
+
+test "sampleIndicesInto fills caller-owned index buffers" {
+    const alea = @import("root.zig");
+
+    var engine = alea.ScalarPrng.init(0x5150_7901);
+    var out: [6]usize = undefined;
+    try sampleIndicesIntoCheckedFrom(&engine, 10_000, &out);
+    for (out) |index| try std.testing.expect(index < 10_000);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_7902);
+    var empty_control = alea.ScalarPrng.init(0x5150_7902);
+    var empty_out: [0]usize = .{};
+    try sampleIndicesIntoCheckedFrom(&empty_engine, 10_000, &empty_out);
+    sampleIndicesIntoFrom(&empty_engine, 10_000, &empty_out);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "sampleIndicesInto preserves facade/direct stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_7903);
+        var direct_engine = Engine.init(0x5150_7903);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_out: [8]usize = undefined;
+        var direct_out: [8]usize = undefined;
+        try sampleIndicesInto(rng, 10_000, &facade_out);
+        try sampleIndicesIntoCheckedFrom(&direct_engine, 10_000, &direct_out);
+        try std.testing.expectEqualSlices(usize, &facade_out, &direct_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_7904);
+    var invalid_control = alea.ScalarPrng.init(0x5150_7904);
+    var invalid_out: [4]usize = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesIntoCheckedFrom(&invalid_engine, 3, &invalid_out));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "in-place index output allocation failures do not consume random stream" {

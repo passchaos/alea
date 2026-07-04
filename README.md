@@ -24,7 +24,7 @@ The current Linux-first roadmap is intentionally broad:
 - collection helpers for `choose`, `shuffle`, fixed-size item arrays, partial shuffle, weighted indexes,
   repeated choice iterators, one-shot weighted item/pointer helpers, weighted choice samplers, weighted sampling without
   replacement, iterator and weighted iterator sampling with and without
-  replacement, fixed-size and caller-owned iterator sampling, allocated and caller-owned reservoir sampling, adaptive index sampling, and checked
+  replacement, fixed-size and caller-owned iterator sampling, allocated and caller-owned reservoir sampling, adaptive and caller-owned index sampling, and checked
   variants for fallible user-supplied counts or empty inputs
 - reusable uniform, Bernoulli, non-uniform distribution, opt-in bounded f32
   LogNormal approximation, and alias-table samplers
