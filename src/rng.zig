@@ -1667,6 +1667,24 @@ pub fn chooseFrom(source: anytype, comptime T: type, items: []const T) ?T {
     return items[uintLessThanFrom(source, usize, items.len)];
 }
 
+pub fn chooseIndex(self: Rng, length: usize) ?usize {
+    return chooseIndexFrom(self, length);
+}
+
+pub fn chooseIndexChecked(self: Rng, length: usize) Error!usize {
+    return chooseIndexCheckedFrom(self, length);
+}
+
+pub fn chooseIndexCheckedFrom(source: anytype, length: usize) Error!usize {
+    return chooseIndexFrom(source, length) orelse error.EmptyRange;
+}
+
+pub fn chooseIndexFrom(source: anytype, length: usize) ?usize {
+    if (length == 0) return null;
+    if (length == 1) return 0;
+    return uintLessThanFrom(source, usize, length);
+}
+
 pub fn chooseConstPtr(self: Rng, comptime T: type, items: []const T) ?*const T {
     return chooseConstPtrFrom(self, T, items);
 }
@@ -2912,6 +2930,11 @@ test "shuffle and sampling keep item set" {
     const checked_chosen = try Rng.chooseCheckedFrom(&engine, u8, &values);
     try std.testing.expect(checked_chosen >= 1 and checked_chosen <= 5);
 
+    const chosen_index = Rng.chooseIndexFrom(&engine, values.len).?;
+    try std.testing.expect(chosen_index < values.len);
+    const checked_chosen_index = try Rng.chooseIndexCheckedFrom(&engine, values.len);
+    try std.testing.expect(checked_chosen_index < values.len);
+
     const chosen_const_ptr = Rng.chooseConstPtrFrom(&engine, u8, &values).?;
     try std.testing.expect(chosen_const_ptr.* >= 1 and chosen_const_ptr.* <= 5);
     const checked_chosen_const_ptr = try Rng.chooseConstPtrCheckedFrom(&engine, u8, &values);
@@ -3738,6 +3761,12 @@ test "single-item choice helpers do not consume random stream" {
     var control = alea.ScalarPrng.init(0x5150_ba4c);
     const rng = Rng.init(&engine);
 
+    try std.testing.expectEqual(@as(?usize, 0), chooseIndexFrom(&engine, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(usize, 0), try rng.chooseIndexChecked(1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const items = [_]u8{42};
     try std.testing.expectEqual(@as(?u8, 42), chooseFrom(&engine, u8, &items));
     try std.testing.expectEqual(control.next(), engine.next());
@@ -3759,6 +3788,22 @@ test "single-item choice helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "empty index choice helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba4d);
+    var control = alea.ScalarPrng.init(0x5150_ba4d);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(@as(?usize, null), chooseIndexFrom(&engine, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, chooseIndexCheckedFrom(&engine, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.chooseIndexChecked(0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "collection helpers preserve direct stream shape" {
     const alea = @import("root.zig");
     const items = [_]u8{ 10, 20, 30, 40, 50 };
@@ -3767,6 +3812,11 @@ test "collection helpers preserve direct stream shape" {
         var facade_engine = Engine.init(0x5150_c011);
         var direct_engine = Engine.init(0x5150_c011);
         const rng = Rng.init(&facade_engine);
+
+        try std.testing.expectEqual(rng.chooseIndex(items.len), Rng.chooseIndexFrom(&direct_engine, items.len));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        try std.testing.expectEqual(try rng.chooseIndexChecked(items.len), try Rng.chooseIndexCheckedFrom(&direct_engine, items.len));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         try std.testing.expectEqual(rng.choose(u8, &items), Rng.chooseFrom(&direct_engine, u8, &items));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());

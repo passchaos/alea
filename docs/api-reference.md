@@ -75,7 +75,9 @@ stability expectations.
   `standardExponentialFastFrom`, `normalFastFrom`, `exponentialFastFrom`
 - Enums and collections: `enumValue`, `enumValueFrom`, `enumValueChecked`,
   `enumValueCheckedFrom`, `shuffle`, `shuffleFrom`, `choose`,
-  `chooseFrom`, `chooseChecked`, `chooseCheckedFrom`, `chooseConstPtr`,
+  `chooseFrom`, `chooseChecked`, `chooseCheckedFrom`, `chooseIndex`,
+  `chooseIndexFrom`, `chooseIndexChecked`, `chooseIndexCheckedFrom`,
+  `chooseConstPtr`,
   `chooseConstPtrFrom`, `chooseConstPtrChecked`,
   `chooseConstPtrCheckedFrom`, `choosePtr`, `choosePtrFrom`,
   `choosePtrChecked`, `choosePtrCheckedFrom`, `weightedIndex`,
