@@ -32,6 +32,8 @@ complete.
 | S4-M9 longer stress sweep | `compare/results/2026-07-04-s4-m9-profilelongcheck.md`, `tools/profilelongcheck.zig`, `zig build -Doptimize=ReleaseFast profilecheck-long`, `zig build -Doptimize=ReleaseFast wasi-profilelongcheck` | Closed for the current long-sweep bar: accepted profiles now have 8Mi-lane/profile long stress gates on native Linux and WASI. |
 | S4-M10 additional non-WASI runtime | `compare/results/2026-07-04-s4-m10-profilelong-musl.md`, `zig build -Dtarget=x86_64-linux-musl -Doptimize=ReleaseFast profilecheck-long` | Closed for the current bar: accepted profiles execute the long sweep on x86_64-linux-musl in addition to native glibc and WASI. |
 | S4-M11 exact/default dense-kernel breakthrough or new external gap | `compare/results/s4-m11-blocker-audit.md`, `core-rand-coverage.md`, future dense SIMD evidence, future architecture/runtime reports, future local Rust audits | Blocked in this session; no exact/default-compatible dense SIMD winner is known, no additional runtime runner is installed, and no new local Rust core gap has been identified. |
+| S4-M12 accepted vector profile adoption example | `examples/vector_profiles.zig`, `zig build run-vector-profiles`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m12-vector-profile-example.md` | Closed for the current bar: a runnable example demonstrates exact/default vectors versus explicit `Table`/`ApproxLog` opt-ins. |
+| S4-M13 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -43,7 +45,7 @@ profiles are accepted as the explicit throughput-first dense vector surface for
 callers who choose approximation/output-mapping contracts, while exact/default
 APIs remain scalar ziggurat lane-fill.
 
-The next unresolved milestone is S4-M11, currently blocked in this session:
+The next unresolved blocked milestone remains S4-M11:
 
 1. Accepted approximation profiles have native glibc, x86_64-linux-musl, and WASI
    long-sweep evidence, but no exact/default-compatible dense SIMD
@@ -52,6 +54,9 @@ The next unresolved milestone is S4-M11, currently blocked in this session:
 2. No additional architecture/runtime runner is installed here (`qemu-*`,
    `wine*`, `wasmtime`, and `wasmer` are absent), and no new local `rand` /
    `rand_distr` core gap has been identified.
+
+S4-M12 is closed as an unblocked adoption/documentation improvement, but it does
+not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

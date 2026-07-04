@@ -42,6 +42,23 @@ pub fn build(b: *std.Build) void {
     const example_step = b.step("run-basic", "Run the basic alea example");
     example_step.dependOn(&run_example.step);
 
+    const vector_profiles_example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/vector_profiles.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    vector_profiles_example_mod.addImport("alea", module);
+
+    const vector_profiles_example = b.addExecutable(.{
+        .name = "alea-vector-profiles",
+        .root_module = vector_profiles_example_mod,
+    });
+    const run_vector_profiles_example = b.addRunArtifact(vector_profiles_example);
+    if (b.args) |args| run_vector_profiles_example.addArgs(args);
+
+    const vector_profiles_example_step = b.step("run-vector-profiles", "Run the vector profile alea example");
+    vector_profiles_example_step.dependOn(&run_vector_profiles_example.step);
+
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/throughput.zig"),
         .target = target,

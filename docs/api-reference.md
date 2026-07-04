@@ -2342,6 +2342,7 @@ Build steps:
 
 - `zig build test`
 - `zig build run-basic`
+- `zig build run-vector-profiles`
 - `zig build apicheck`
 - `zig build validate`
 - `zig build validate-all`

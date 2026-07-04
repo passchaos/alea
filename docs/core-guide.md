@@ -137,7 +137,9 @@ when the caller accepts the documented approximation/output-mapping contract.
 The table profiles are discrete/truncated midpoint-quantile lookups; the f32
 approx-log exponential profile is approximate and f32-only. Exact/default
 `vectorNormal` and `vectorExponential` APIs remain scalar ziggurat lane-fill for
-stable exact-output semantics.
+stable exact-output semantics. Run `zig build run-vector-profiles` for a small
+executable example comparing exact/default vectors with the accepted throughput
+profiles.
 
 ## Distributions
 
