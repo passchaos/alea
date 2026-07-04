@@ -393,6 +393,37 @@ pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptim
     return reservoir.toOwnedSliceAssert();
 }
 
+pub fn sampleIteratorArray(rng: Rng, comptime T: type, comptime N: usize, iterator: anytype) ?[N]T {
+    return sampleIteratorArrayFrom(rng, T, N, iterator);
+}
+
+pub fn sampleIteratorArrayFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) ?[N]T {
+    var out: [N]T = undefined;
+    if (comptime N == 0) return out;
+
+    var filled: usize = 0;
+    while (filled < N) : (filled += 1) {
+        out[filled] = iterator.next() orelse return null;
+    }
+
+    var seen = N;
+    while (iterator.next()) |item| {
+        seen += 1;
+        const index = Rng.uintLessThanFrom(source, usize, seen);
+        if (index < N) out[index] = item;
+    }
+
+    return out;
+}
+
+pub fn sampleIteratorArrayChecked(rng: Rng, comptime T: type, comptime N: usize, iterator: anytype) Error![N]T {
+    return sampleIteratorArrayCheckedFrom(rng, T, N, iterator);
+}
+
+pub fn sampleIteratorArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) Error![N]T {
+    return sampleIteratorArrayFrom(source, T, N, iterator) orelse error.InvalidParameter;
+}
+
 pub fn sampleIteratorInto(rng: Rng, comptime T: type, iterator: anytype, out: []T) usize {
     return sampleIteratorIntoFrom(rng, T, iterator, out);
 }
@@ -2463,6 +2494,90 @@ test "sampleIteratorInto checked short streams do not consume randomness" {
     var out: [5]u8 = undefined;
     try std.testing.expectError(error.InvalidParameter, sampleIteratorIntoCheckedFrom(&engine, u8, &iter, &out));
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "sampleIteratorArray returns fixed-size iterator samples" {
+    const alea = @import("root.zig");
+
+    const RangeIter = struct {
+        next_value: u8 = 0,
+        end: u8,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+
+    var optional_engine = alea.ScalarPrng.init(0x5150_7830);
+    var optional_iter = RangeIter{ .end = 20 };
+    const optional = sampleIteratorArrayFrom(&optional_engine, u8, 5, &optional_iter).?;
+    try std.testing.expectEqual(@as(usize, 5), optional.len);
+    for (optional) |item| try std.testing.expect(item < 20);
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_7831);
+    var checked_iter = RangeIter{ .end = 20 };
+    const checked = try sampleIteratorArrayCheckedFrom(&checked_engine, u8, 5, &checked_iter);
+    try std.testing.expectEqual(@as(usize, 5), checked.len);
+    for (checked) |item| try std.testing.expect(item < 20);
+
+    var short_engine = alea.ScalarPrng.init(0x5150_7832);
+    var short_control = alea.ScalarPrng.init(0x5150_7832);
+    var short_iter = RangeIter{ .end = 2 };
+    try std.testing.expect(sampleIteratorArrayFrom(&short_engine, u8, 5, &short_iter) == null);
+    try std.testing.expectEqual(short_control.next(), short_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_7833);
+    var empty_control = alea.ScalarPrng.init(0x5150_7833);
+    var empty_iter = RangeIter{ .end = 20 };
+    const empty = sampleIteratorArrayFrom(&empty_engine, u8, 0, &empty_iter).?;
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(@as(usize, 0), empty_iter.next_value);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "sampleIteratorArray preserves facade/direct stream shape and checked short streams do not consume" {
+    const alea = @import("root.zig");
+
+    const RangeIter = struct {
+        next_value: u8 = 0,
+        end: u8,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_7834);
+        var direct_engine = Engine.init(0x5150_7834);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_iter = RangeIter{ .end = 20 };
+        var direct_iter = RangeIter{ .end = 20 };
+        const facade = sampleIteratorArray(rng, u8, 5, &facade_iter).?;
+        const direct = sampleIteratorArrayFrom(&direct_engine, u8, 5, &direct_iter).?;
+        try std.testing.expectEqualSlices(u8, &facade, &direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_iter = RangeIter{ .end = 20 };
+        var checked_direct_iter = RangeIter{ .end = 20 };
+        const checked_facade = try sampleIteratorArrayChecked(rng, u8, 5, &checked_facade_iter);
+        const checked_direct = try sampleIteratorArrayCheckedFrom(&direct_engine, u8, 5, &checked_direct_iter);
+        try std.testing.expectEqualSlices(u8, &checked_facade, &checked_direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var short_engine = alea.ScalarPrng.init(0x5150_7835);
+    var short_control = alea.ScalarPrng.init(0x5150_7835);
+    var short_iter = RangeIter{ .end = 2 };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorArrayCheckedFrom(&short_engine, u8, 5, &short_iter));
+    try std.testing.expectEqual(short_control.next(), short_engine.next());
 }
 
 test "zero-count partial shuffle does not mutate or consume random stream" {

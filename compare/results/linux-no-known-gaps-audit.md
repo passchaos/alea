@@ -77,6 +77,7 @@ Local Alea evidence:
 - `compare/results/s4-m37-weighted-array.md`
 - `compare/results/s4-m38-weighted-index-array.md`
 - `compare/results/s4-m39-weighted-iterator-array.md`
+- `compare/results/s4-m40-iterator-array.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -210,6 +211,7 @@ validation, S4-M32 adds roadmap/audit drift checking, S4-M33 adds fixed-size
 item array sequence sampling, S4-M34 adds one-shot weighted item/pointer choice,
 S4-M35 adds caller-owned reservoir sampling, S4-M36 adds caller-owned iterator
 reservoir sampling, and S4-M37 adds fixed-size weighted item array sampling, S4-M38 adds fixed-size
-weighted index array sampling, and S4-M39 adds fixed-size weighted iterator array
-sampling, but later stages should keep raising the bar rather than declaring the
-product permanently finished.
+weighted index array sampling, S4-M39 adds fixed-size weighted iterator array
+sampling, and S4-M40 adds fixed-size iterator array sampling, but later stages
+should keep raising the bar rather than declaring the product permanently
+finished.

@@ -86,6 +86,11 @@ pub fn main(init: std.process.Init) !void {
     const picked = alea.seq.chooseIteratorFrom(&iter_choice_engine, u32, &stream).?;
     try stdout.print("chooseIteratorFrom counter[0..20): {}\n", .{picked});
 
+    var iter_array_engine = alea.ScalarPrng.init(0x5e11_000e);
+    var array_stream = Counter{ .limit = 20 };
+    const stream_array = alea.seq.sampleIteratorArrayFrom(&iter_array_engine, u32, 5, &array_stream).?;
+    try stdout.print("sampleIteratorArrayFrom counter[0..20): {any}\n", .{stream_array});
+
     var iter_sample_engine = alea.ScalarPrng.init(0x5e11_0009);
     var sample_stream = Counter{ .limit = 20 };
     const stream_sample = try alea.seq.sampleIteratorFrom(allocator, &iter_sample_engine, u32, &sample_stream, 5);
@@ -115,6 +120,6 @@ pub fn main(init: std.process.Init) !void {
     const weighted_stream_array = (try alea.seq.sampleIteratorWeightedArrayFrom(&weighted_iter_engine, u32, 5, &weighted_stream)).?;
     try stdout.print("sampleIteratorWeightedArrayFrom counter[0..20): {any}\n", .{weighted_stream_array});
 
-    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample/reservoirSampleInto for slices, sampleIterator/sampleIteratorInto for streams, weighted iterator arrays, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample/reservoirSampleInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }

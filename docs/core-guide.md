@@ -245,7 +245,8 @@ Use:
   `seq.chooseArrayFrom`, `seq.chooseArrayCheckedFrom`
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`,
   `seq.chooseIteratorCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`,
-  `seq.sampleIteratorCheckedFrom`, `seq.sampleIteratorInto`,
+  `seq.sampleIteratorCheckedFrom`, `seq.sampleIteratorArrayFrom`,
+  `seq.sampleIteratorArrayCheckedFrom`, `seq.sampleIteratorInto`,
   `seq.sampleIteratorIntoFrom`, `seq.sampleIteratorIntoCheckedFrom`
 - `seq.chooseIteratorWeighted`, `seq.chooseIteratorWeightedFrom`,
   `seq.chooseIteratorWeightedCheckedFrom`, `seq.sampleIteratorWeighted`,
