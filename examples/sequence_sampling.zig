@@ -109,6 +109,16 @@ pub fn main(init: std.process.Init) !void {
     one_choice_mut_ptr.* += 5;
     try stdout.print("seq.choosePtrFrom updated scores: {any}\n", .{one_choice_scores});
 
+    var fill_choice_engine = alea.ScalarPrng.init(0x5e11_0025);
+    var filled_choices: [5][]const u8 = undefined;
+    alea.seq.fillChooseFrom(&fill_choice_engine, []const u8, &filled_choices, &items);
+    try stdout.print("seq.fillChooseFrom items: {s}, {s}, {s}, {s}, {s}\n", .{ filled_choices[0], filled_choices[1], filled_choices[2], filled_choices[3], filled_choices[4] });
+
+    var fill_choice_ptr_engine = alea.ScalarPrng.init(0x5e11_0026);
+    var filled_choice_ptrs: [5]*const []const u8 = undefined;
+    alea.seq.fillChooseConstPtrFrom(&fill_choice_ptr_engine, []const u8, &filled_choice_ptrs, &items);
+    try stdout.print("seq.fillChooseConstPtrFrom items: {s}, {s}, {s}, {s}, {s}\n", .{ filled_choice_ptrs[0].*, filled_choice_ptrs[1].*, filled_choice_ptrs[2].*, filled_choice_ptrs[3].*, filled_choice_ptrs[4].* });
+
     var choose_engine = alea.ScalarPrng.init(0x5e11_0003);
     const chosen = try alea.seq.chooseMultipleFrom(allocator, &choose_engine, []const u8, &items, 3);
     defer allocator.free(chosen);

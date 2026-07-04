@@ -499,6 +499,60 @@ pub fn choosePtrCheckedFrom(source: anytype, comptime T: type, items: []T) Error
     return choosePtrFrom(source, T, items) orelse error.EmptyInput;
 }
 
+pub fn fillChoose(rng: Rng, comptime T: type, dest: []T, items: []const T) void {
+    fillChooseFrom(rng, T, dest, items);
+}
+
+pub fn fillChooseFrom(source: anytype, comptime T: type, dest: []T, items: []const T) void {
+    Rng.fillChooseFrom(source, T, dest, items);
+}
+
+pub fn fillChooseChecked(rng: Rng, comptime T: type, dest: []T, items: []const T) Error!void {
+    return fillChooseCheckedFrom(rng, T, dest, items);
+}
+
+pub fn fillChooseCheckedFrom(source: anytype, comptime T: type, dest: []T, items: []const T) Error!void {
+    if (dest.len == 0) return;
+    if (items.len == 0) return error.EmptyInput;
+    fillChooseFrom(source, T, dest, items);
+}
+
+pub fn fillChooseConstPtr(rng: Rng, comptime T: type, dest: []*const T, items: []const T) void {
+    fillChooseConstPtrFrom(rng, T, dest, items);
+}
+
+pub fn fillChooseConstPtrFrom(source: anytype, comptime T: type, dest: []*const T, items: []const T) void {
+    Rng.fillChooseConstPtrFrom(source, T, dest, items);
+}
+
+pub fn fillChooseConstPtrChecked(rng: Rng, comptime T: type, dest: []*const T, items: []const T) Error!void {
+    return fillChooseConstPtrCheckedFrom(rng, T, dest, items);
+}
+
+pub fn fillChooseConstPtrCheckedFrom(source: anytype, comptime T: type, dest: []*const T, items: []const T) Error!void {
+    if (dest.len == 0) return;
+    if (items.len == 0) return error.EmptyInput;
+    fillChooseConstPtrFrom(source, T, dest, items);
+}
+
+pub fn fillChoosePtr(rng: Rng, comptime T: type, dest: []*T, items: []T) void {
+    fillChoosePtrFrom(rng, T, dest, items);
+}
+
+pub fn fillChoosePtrFrom(source: anytype, comptime T: type, dest: []*T, items: []T) void {
+    Rng.fillChoosePtrFrom(source, T, dest, items);
+}
+
+pub fn fillChoosePtrChecked(rng: Rng, comptime T: type, dest: []*T, items: []T) Error!void {
+    return fillChoosePtrCheckedFrom(rng, T, dest, items);
+}
+
+pub fn fillChoosePtrCheckedFrom(source: anytype, comptime T: type, dest: []*T, items: []T) Error!void {
+    if (dest.len == 0) return;
+    if (items.len == 0) return error.EmptyInput;
+    fillChoosePtrFrom(source, T, dest, items);
+}
+
 pub fn sampleArray(rng: Rng, comptime N: usize, length: usize) ?[N]usize {
     return sampleArrayFrom(rng, N, length);
 }
@@ -7614,6 +7668,80 @@ test "seq one-shot choice aliases mirror Rng choice helpers" {
     var single = [_]u8{99};
     try std.testing.expectEqual(@as(?u8, 99), chooseFrom(&single_engine, u8, &single));
     try std.testing.expectEqual(@as(u8, 99), choosePtrFrom(&single_engine, u8, &single).?.*);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "seq choice fill aliases mirror Rng fill helpers" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_0c11);
+        var direct_engine = Engine.init(0x5150_0c11);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_values: [6]u8 = undefined;
+        var direct_values: [6]u8 = undefined;
+        fillChoose(rng, u8, &facade_values, &items);
+        Rng.fillChooseFrom(&direct_engine, u8, &direct_values, &items);
+        try std.testing.expectEqualSlices(u8, &direct_values, &facade_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_ptrs: [6]*const u8 = undefined;
+        var direct_ptrs: [6]*const u8 = undefined;
+        fillChooseConstPtr(rng, u8, &facade_ptrs, &items);
+        Rng.fillChooseConstPtrFrom(&direct_engine, u8, &direct_ptrs, &items);
+        for (facade_ptrs, direct_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_items = items;
+        var direct_items = items;
+        var facade_mut_ptrs: [6]*u8 = undefined;
+        var direct_mut_ptrs: [6]*u8 = undefined;
+        fillChoosePtr(rng, u8, &facade_mut_ptrs, &facade_items);
+        Rng.fillChoosePtrFrom(&direct_engine, u8, &direct_mut_ptrs, &direct_items);
+        for (facade_mut_ptrs, direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_0c12);
+    var checked_values: [4]u8 = undefined;
+    try fillChooseCheckedFrom(&checked_engine, u8, &checked_values, &items);
+    for (checked_values) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &items, value) != null);
+    var checked_const_ptrs: [4]*const u8 = undefined;
+    try fillChooseConstPtrCheckedFrom(&checked_engine, u8, &checked_const_ptrs, &items);
+    var mutable_items = items;
+    var checked_mut_ptrs: [4]*u8 = undefined;
+    try fillChoosePtrCheckedFrom(&checked_engine, u8, &checked_mut_ptrs, &mutable_items);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_0c13);
+    var empty_control = alea.ScalarPrng.init(0x5150_0c13);
+    var empty_values: [0]u8 = .{};
+    try fillChooseCheckedFrom(&empty_engine, u8, &empty_values, &.{});
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    var one_value: [1]u8 = undefined;
+    try std.testing.expectError(error.EmptyInput, fillChooseCheckedFrom(&empty_engine, u8, &one_value, &.{}));
+    var empty_ptrs: [1]*const u8 = undefined;
+    try std.testing.expectError(error.EmptyInput, fillChooseConstPtrCheckedFrom(&empty_engine, u8, &empty_ptrs, &.{}));
+    var empty_mutable: [0]u8 = .{};
+    var empty_mut_ptrs: [1]*u8 = undefined;
+    try std.testing.expectError(error.EmptyInput, fillChoosePtrCheckedFrom(&empty_engine, u8, &empty_mut_ptrs, &empty_mutable));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var single_engine = alea.ScalarPrng.init(0x5150_0c14);
+    var single_control = alea.ScalarPrng.init(0x5150_0c14);
+    const single_items = [_]u8{77};
+    var single_values: [4]u8 = undefined;
+    fillChooseFrom(&single_engine, u8, &single_values, &single_items);
+    try std.testing.expectEqualSlices(u8, &.{ 77, 77, 77, 77 }, &single_values);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 

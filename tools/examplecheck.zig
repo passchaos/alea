@@ -30,7 +30,7 @@ const examples = [_]Example{
     .{
         .path = "examples/sequence_sampling.zig",
         .step = "zig build run-sequence-sampling",
-        .source_tokens = &.{ "IndexVec.valuesInto", "IndexVec.valuesOwned", "IndexVec.ptrsOwned", "IndexVec.mutPtrsOwned", "IndexVec.toOwnedU32Slice", "Choice.sampleIndexFrom", "Choice.valuesFrom", "Choice.ptrsFrom", "Choice.indicesU32From", "Choice.fillIndicesU32From", "chooseIteratorStableFrom", "sampleIteratorFillFrom", "sampleArrayU32", "chooseFrom", "chooseConstPtrFrom", "choosePtrFrom", "sampleItemsFrom", "sampleItemsIntoFrom", "sampleItemsArrayFrom", "samplePtrArrayFrom", "sampleMutPtrArrayFrom", "shuffleFrom", "partialShuffleTailSplitFrom", "chooseMultiplePtrs", "reservoirSamplePtrsInto" },
+        .source_tokens = &.{ "IndexVec.valuesInto", "IndexVec.valuesOwned", "IndexVec.ptrsOwned", "IndexVec.mutPtrsOwned", "IndexVec.toOwnedU32Slice", "Choice.sampleIndexFrom", "Choice.valuesFrom", "Choice.ptrsFrom", "Choice.indicesU32From", "Choice.fillIndicesU32From", "chooseIteratorStableFrom", "sampleIteratorFillFrom", "sampleArrayU32", "chooseFrom", "chooseConstPtrFrom", "choosePtrFrom", "fillChooseFrom", "fillChooseConstPtrFrom", "sampleItemsFrom", "sampleItemsIntoFrom", "sampleItemsArrayFrom", "samplePtrArrayFrom", "sampleMutPtrArrayFrom", "shuffleFrom", "partialShuffleTailSplitFrom", "chooseMultiplePtrs", "reservoirSamplePtrsInto" },
     },
     .{
         .path = "examples/caller_owned_sampling.zig",
