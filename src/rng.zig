@@ -282,6 +282,55 @@ pub fn fillRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
     fillRangeFrom(self, T, dest, min, max);
 }
 
+pub fn fillRangeAtMost(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
+    fillRangeAtMostFrom(self, T, dest, min, max);
+}
+
+pub fn rangeAtMostBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    return rangeAtMostBatchFrom(self, T, allocator, count, min, max);
+}
+
+pub fn rangeAtMostBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillRangeAtMostFrom(source, T, out, min, max);
+    return out;
+}
+
+pub fn rangeAtMostBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    return rangeAtMostBatchCheckedFrom(self, T, allocator, count, min, max);
+}
+
+pub fn rangeAtMostBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    try validateRangeAtMostParams(T, min, max);
+    return rangeAtMostBatchFrom(source, T, allocator, count, min, max);
+}
+
+pub fn fillRangeAtMostFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
+    switch (@typeInfo(T)) {
+        .int => {
+            std.debug.assert(min <= max);
+            if (min == max) {
+                @memset(dest, min);
+                return;
+            }
+            for (dest) |*item| item.* = intRangeAtMostFrom(source, T, min, max);
+        },
+        else => @compileError("alea.Rng.fillRangeAtMostFrom supports integer slices"),
+    }
+}
+
+pub fn fillRangeAtMostChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    return fillRangeAtMostCheckedFrom(self, T, dest, min, max);
+}
+
+pub fn fillRangeAtMostCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
+    if (dest.len == 0) return;
+    try validateRangeAtMostParams(T, min, max);
+    fillRangeAtMostFrom(source, T, dest, min, max);
+}
+
 pub fn fillUintLessThan(self: Rng, comptime T: type, dest: []T, less_than: T) void {
     fillUintLessThanFrom(self, T, dest, less_than);
 }
@@ -419,6 +468,15 @@ fn validateRangeParams(comptime T: type, min: T, max: T) Error!void {
             if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
         },
         else => @compileError("alea.Rng.fillRangeChecked supports integer and floating-point slices"),
+    }
+}
+
+fn validateRangeAtMostParams(comptime T: type, min: T, max: T) Error!void {
+    switch (@typeInfo(T)) {
+        .int => {
+            if (min > max) return error.EmptyRange;
+        },
+        else => @compileError("alea.Rng.fillRangeAtMostChecked supports integer slices"),
     }
 }
 
@@ -4091,6 +4149,20 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(u32, range_owned, range_checked_owned);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        var range_at_most_unchecked: [8]i32 = undefined;
+        var range_at_most_checked: [8]i32 = undefined;
+        fillRangeAtMostFrom(&unchecked, i32, &range_at_most_unchecked, -5, 5);
+        try fillRangeAtMostCheckedFrom(&checked, i32, &range_at_most_checked, -5, 5);
+        try std.testing.expectEqualSlices(i32, &range_at_most_unchecked, &range_at_most_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const range_at_most_owned = try rangeAtMostBatchFrom(&unchecked, i32, std.testing.allocator, 8, -5, 5);
+        defer std.testing.allocator.free(range_at_most_owned);
+        const range_at_most_checked_owned = try rangeAtMostBatchCheckedFrom(&checked, i32, std.testing.allocator, 8, -5, 5);
+        defer std.testing.allocator.free(range_at_most_checked_owned);
+        try std.testing.expectEqualSlices(i32, range_at_most_owned, range_at_most_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var uint_less_unchecked: [8]u32 = undefined;
         var uint_less_checked: [8]u32 = undefined;
         fillUintLessThanFrom(&unchecked, u32, &uint_less_unchecked, 1000);
@@ -4710,12 +4782,29 @@ test "owned range batches allocate and validate before consuming random stream" 
     try std.testing.expect(!invalid_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var empty_inclusive_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty_inclusive = try rng.rangeAtMostBatchChecked(u32, empty_inclusive_alloc.allocator(), 0, 4, 3);
+    defer empty_inclusive_alloc.allocator().free(empty_inclusive);
+    try std.testing.expectEqual(@as(usize, 0), empty_inclusive.len);
+    try std.testing.expect(!empty_inclusive_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_inclusive_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.rangeAtMostBatchChecked(u32, invalid_inclusive_alloc.allocator(), 4, 4, 3));
+    try std.testing.expect(!invalid_inclusive_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.EmptyRange, rangeBatchCheckedFrom(&engine, f64, std.testing.allocator, 4, std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, rng.rangeBatchChecked(u16, alloc.allocator(), 4, 10, 20));
     try std.testing.expect(alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var inclusive_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rangeAtMostBatchCheckedFrom(&engine, i32, inclusive_alloc.allocator(), 4, -10, 20));
+    try std.testing.expect(inclusive_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -4819,6 +4908,16 @@ test "degenerate range helpers do not consume random stream" {
     var signed_ints: [5]i32 = undefined;
     try rng.fillRangeChecked(i32, &signed_ints, -12, -11);
     for (signed_ints) |sample| try std.testing.expectEqual(@as(i32, -12), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var inclusive_signed_ints: [5]i32 = undefined;
+    rng.fillRangeAtMost(i32, &inclusive_signed_ints, -12, -12);
+    for (inclusive_signed_ints) |sample| try std.testing.expectEqual(@as(i32, -12), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_inclusive_signed_ints = try rangeAtMostBatchCheckedFrom(&engine, i32, std.testing.allocator, 5, -12, -12);
+    defer std.testing.allocator.free(owned_inclusive_signed_ints);
+    for (owned_inclusive_signed_ints) |sample| try std.testing.expectEqual(@as(i32, -12), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var floats: [5]f64 = undefined;

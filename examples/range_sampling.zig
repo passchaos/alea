@@ -41,6 +41,8 @@ pub fn main(init: std.process.Init) !void {
     var batch_engine = alea.ScalarPrng.init(0x7261_6e67_69);
     const owned_ints = try alea.Rng.rangeBatchFrom(&batch_engine, u16, allocator, 6, 100, 200);
     defer allocator.free(owned_ints);
+    const owned_inclusive_ints = try alea.Rng.rangeAtMostBatchCheckedFrom(&batch_engine, i16, allocator, 6, -50, 50);
+    defer allocator.free(owned_inclusive_ints);
     const owned_floats = try alea.Rng.rangeBatchCheckedFrom(&batch_engine, f64, allocator, 6, -5, 5);
     defer allocator.free(owned_floats);
     const owned_open = try alea.Rng.openBatchFrom(&batch_engine, f32, allocator, 6);
@@ -48,6 +50,7 @@ pub fn main(init: std.process.Init) !void {
     const owned_open_closed = try alea.Rng.openClosedBatchFrom(&batch_engine, f32, allocator, 6);
     defer allocator.free(owned_open_closed);
     try stdout.print("rangeBatch u16 [100,200): {any}\n", .{owned_ints});
+    try stdout.print("rangeAtMostBatchChecked i16 [-50,50]: {any}\n", .{owned_inclusive_ints});
     try stdout.print("rangeBatchChecked f64 [-5,5): {any}\n", .{owned_floats});
     try stdout.print("openBatch f32 (0,1): {any}\n", .{owned_open});
     try stdout.print("openClosedBatch f32 (0,1]: {any}\n", .{owned_open_closed});
