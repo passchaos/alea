@@ -393,6 +393,48 @@ pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptim
     return reservoir.toOwnedSliceAssert();
 }
 
+pub fn sampleIteratorInto(rng: Rng, comptime T: type, iterator: anytype, out: []T) usize {
+    return sampleIteratorIntoFrom(rng, T, iterator, out);
+}
+
+pub fn sampleIteratorIntoFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) usize {
+    if (out.len == 0) return 0;
+
+    var filled: usize = 0;
+    while (filled < out.len) : (filled += 1) {
+        out[filled] = iterator.next() orelse return filled;
+    }
+
+    var seen = out.len;
+    while (iterator.next()) |item| {
+        seen += 1;
+        const index = Rng.uintLessThanFrom(source, usize, seen);
+        if (index < out.len) out[index] = item;
+    }
+
+    return out.len;
+}
+
+pub fn sampleIteratorIntoChecked(rng: Rng, comptime T: type, iterator: anytype, out: []T) Error!void {
+    return sampleIteratorIntoCheckedFrom(rng, T, iterator, out);
+}
+
+pub fn sampleIteratorIntoCheckedFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) Error!void {
+    if (out.len == 0) return;
+
+    var filled: usize = 0;
+    while (filled < out.len) : (filled += 1) {
+        out[filled] = iterator.next() orelse return error.InvalidParameter;
+    }
+
+    var seen = out.len;
+    while (iterator.next()) |item| {
+        seen += 1;
+        const index = Rng.uintLessThanFrom(source, usize, seen);
+        if (index < out.len) out[index] = item;
+    }
+}
+
 pub fn chooseIteratorWeighted(rng: Rng, comptime T: type, iterator: anytype) !?T {
     return chooseIteratorWeightedFrom(rng, T, iterator);
 }
@@ -2149,6 +2191,75 @@ test "short checked iterator samples do not consume past source" {
     try std.testing.expectEqual(@as(u64, 0x176d099d72bcd05c), engine.next());
 }
 
+test "sampleIteratorInto fills caller-owned reservoirs" {
+    const alea = @import("root.zig");
+
+    const RangeIter = struct {
+        next_value: u8 = 0,
+        end: u8,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+
+    var optional_engine = alea.ScalarPrng.init(0x5150_7820);
+    var optional_iter = RangeIter{ .end = 20 };
+    var optional_out: [5]u8 = undefined;
+    const filled = sampleIteratorIntoFrom(&optional_engine, u8, &optional_iter, &optional_out);
+    try std.testing.expectEqual(@as(usize, 5), filled);
+    for (optional_out) |item| try std.testing.expect(item < 20);
+
+    var short_engine = alea.ScalarPrng.init(0x5150_7821);
+    var short_control = alea.ScalarPrng.init(0x5150_7821);
+    var short_iter = RangeIter{ .end = 2 };
+    var short_out: [5]u8 = undefined;
+    const short_filled = sampleIteratorIntoFrom(&short_engine, u8, &short_iter, &short_out);
+    try std.testing.expectEqual(@as(usize, 2), short_filled);
+    try std.testing.expectEqualSlices(u8, &.{ 0, 1 }, short_out[0..short_filled]);
+    try std.testing.expectEqual(short_control.next(), short_engine.next());
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_7822);
+    var checked_iter = RangeIter{ .end = 20 };
+    var checked_out: [5]u8 = undefined;
+    try sampleIteratorIntoCheckedFrom(&checked_engine, u8, &checked_iter, &checked_out);
+    for (checked_out) |item| try std.testing.expect(item < 20);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_7823);
+    var empty_control = alea.ScalarPrng.init(0x5150_7823);
+    var empty_iter = RangeIter{ .end = 20 };
+    var empty_out: [0]u8 = .{};
+    try std.testing.expectEqual(@as(usize, 0), sampleIteratorIntoFrom(&empty_engine, u8, &empty_iter, &empty_out));
+    try sampleIteratorIntoCheckedFrom(&empty_engine, u8, &empty_iter, &empty_out);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "sampleIteratorInto checked short streams do not consume randomness" {
+    const alea = @import("root.zig");
+
+    const RangeIter = struct {
+        next_value: u8 = 0,
+        end: u8,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+
+    var engine = alea.ScalarPrng.init(0x5150_7824);
+    var control = alea.ScalarPrng.init(0x5150_7824);
+    var iter = RangeIter{ .end = 2 };
+    var out: [5]u8 = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorIntoCheckedFrom(&engine, u8, &iter, &out));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "zero-count partial shuffle does not mutate or consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_7719);
@@ -2517,6 +2628,25 @@ test "collection sequence helpers preserve direct stream shape" {
         const array = chooseArray(rng, u8, 3, &items).?;
         const direct_array = chooseArrayFrom(&direct_engine, u8, 3, &items).?;
         try std.testing.expectEqualSlices(u8, &array, &direct_array);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const RangeIter = struct {
+            next_value: u8 = 0,
+            end: u8,
+
+            fn next(self: *@This()) ?u8 {
+                if (self.next_value >= self.end) return null;
+                const value = self.next_value;
+                self.next_value += 1;
+                return value;
+            }
+        };
+        var facade_iter = RangeIter{ .end = 20 };
+        var direct_iter = RangeIter{ .end = 20 };
+        var iterator_into: [5]u8 = undefined;
+        var direct_iterator_into: [5]u8 = undefined;
+        try std.testing.expectEqual(sampleIteratorInto(rng, u8, &facade_iter, &iterator_into), sampleIteratorIntoFrom(&direct_engine, u8, &direct_iter, &direct_iterator_into));
+        try std.testing.expectEqualSlices(u8, &iterator_into, &direct_iterator_into);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 }

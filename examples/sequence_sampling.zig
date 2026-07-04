@@ -92,6 +92,12 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(stream_sample);
     try stdout.print("sampleIteratorFrom counter[0..20): {any}\n", .{stream_sample});
 
-    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample/reservoirSampleInto for streams, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    var iter_into_engine = alea.ScalarPrng.init(0x5e11_000c);
+    var into_stream = Counter{ .limit = 20 };
+    var stream_into: [5]u32 = undefined;
+    _ = alea.seq.sampleIteratorIntoFrom(&iter_into_engine, u32, &into_stream, &stream_into);
+    try stdout.print("sampleIteratorIntoFrom counter[0..20): {any}\n", .{stream_into});
+
+    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample/reservoirSampleInto for slices, sampleIterator/sampleIteratorInto for streams, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }
