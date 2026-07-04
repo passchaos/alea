@@ -36,7 +36,8 @@ The current Linux-first roadmap is intentionally broad:
 - reusable uniform, Bernoulli, non-uniform distribution, opt-in bounded f32
   LogNormal approximation, and alias-table samplers
 - dynamic weighted trees for frequent update/push/pop/sample/fill weighted
-  workloads
+  workloads, including item- and index-accessor construction/full-refresh
+  helpers
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, direct-source charset
   helpers, checked charset methods for fallible custom charsets, and Unicode
   scalar fill/owned/range batches plus string generation with

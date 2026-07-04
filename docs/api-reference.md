@@ -2338,6 +2338,7 @@ Dynamic weighted helpers:
 
 - `WeightedTree.init`
 - `WeightedTree.initByIndex`
+- `WeightedTree.initBy`
 - `WeightedTree.len`
 - `WeightedTree.isEmpty`
 - `WeightedTree.push`
@@ -2345,6 +2346,7 @@ Dynamic weighted helpers:
 - `WeightedTree.update`
 - `WeightedTree.updateAll`
 - `WeightedTree.updateAllByIndex`
+- `WeightedTree.updateAllBy`
 - `WeightedTree.get`
 - `WeightedTree.weightAt`
 - `WeightedTree.probabilityAt`
@@ -2367,6 +2369,7 @@ Dynamic weighted helpers:
   update/push/pop/sample throughput is the priority.
 - `WeightedIntTree.init`
 - `WeightedIntTree.initByIndex`
+- `WeightedIntTree.initBy`
 - `WeightedIntTree.len`
 - `WeightedIntTree.isEmpty`
 - `WeightedIntTree.push`
@@ -2374,6 +2377,7 @@ Dynamic weighted helpers:
 - `WeightedIntTree.update`
 - `WeightedIntTree.updateAll`
 - `WeightedIntTree.updateAllByIndex`
+- `WeightedIntTree.updateAllBy`
 - `WeightedIntTree.get`
 - `WeightedIntTree.weightAt`
 - `WeightedIntTree.probabilityAt`
