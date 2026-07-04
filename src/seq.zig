@@ -2444,6 +2444,143 @@ pub fn sampleWeightedIndicesU32IntoCheckedFrom(source: anytype, comptime Weight:
     sampleWeightedIndicesU32IntoExactFrom(source, Weight, weights, out, scratch_keys[0..out.len]);
 }
 
+pub fn sampleWeightedIndicesByIndexInto(
+    rng: Rng,
+    comptime Weight: type,
+    length: usize,
+    out: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (usize) Weight,
+) Error!usize {
+    return sampleWeightedIndicesByIndexIntoFrom(rng, Weight, length, out, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedIndicesByIndexIntoFrom(
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    out: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (usize) Weight,
+) Error!usize {
+    if (out.len == 0) return 0;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (length == 0) return error.EmptyInput;
+
+    const positive = try countPositiveIndicesBy(Weight, length, weightFn);
+    const count = @min(out.len, positive);
+    if (count == 0) return 0;
+    if (positive == 1) {
+        out[0] = (try singlePositiveIndexBy(Weight, length, weightFn)).?;
+        return 1;
+    }
+
+    sampleWeightedIndicesByIndexIntoExactFrom(source, Weight, length, out[0..count], scratch_keys[0..count], weightFn);
+    return count;
+}
+
+pub fn sampleWeightedIndicesByIndexIntoChecked(
+    rng: Rng,
+    comptime Weight: type,
+    length: usize,
+    out: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    return sampleWeightedIndicesByIndexIntoCheckedFrom(rng, Weight, length, out, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedIndicesByIndexIntoCheckedFrom(
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    out: []usize,
+    scratch_keys: []f64,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    if (out.len == 0) return;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (out.len > length) return error.InvalidParameter;
+
+    const positive = try countPositiveIndicesBy(Weight, length, weightFn);
+    if (positive < out.len) return error.InvalidParameter;
+    if (positive == 1) {
+        out[0] = (try singlePositiveIndexBy(Weight, length, weightFn)).?;
+        return;
+    }
+
+    sampleWeightedIndicesByIndexIntoExactFrom(source, Weight, length, out, scratch_keys[0..out.len], weightFn);
+}
+
+pub fn sampleWeightedIndicesU32ByIndexInto(
+    rng: Rng,
+    comptime Weight: type,
+    length: usize,
+    out: []u32,
+    scratch_keys: []f64,
+    comptime weightFn: fn (usize) Weight,
+) Error!usize {
+    return sampleWeightedIndicesU32ByIndexIntoFrom(rng, Weight, length, out, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedIndicesU32ByIndexIntoFrom(
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    out: []u32,
+    scratch_keys: []f64,
+    comptime weightFn: fn (usize) Weight,
+) Error!usize {
+    if (out.len == 0) return 0;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (length == 0) return error.EmptyInput;
+    if (length > std.math.maxInt(u32)) return error.InvalidParameter;
+
+    const positive = try countPositiveIndicesBy(Weight, length, weightFn);
+    const count = @min(out.len, positive);
+    if (count == 0) return 0;
+    if (positive == 1) {
+        out[0] = @intCast((try singlePositiveIndexBy(Weight, length, weightFn)).?);
+        return 1;
+    }
+
+    sampleWeightedIndicesU32ByIndexIntoExactFrom(source, Weight, length, out[0..count], scratch_keys[0..count], weightFn);
+    return count;
+}
+
+pub fn sampleWeightedIndicesU32ByIndexIntoChecked(
+    rng: Rng,
+    comptime Weight: type,
+    length: usize,
+    out: []u32,
+    scratch_keys: []f64,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    return sampleWeightedIndicesU32ByIndexIntoCheckedFrom(rng, Weight, length, out, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedIndicesU32ByIndexIntoCheckedFrom(
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    out: []u32,
+    scratch_keys: []f64,
+    comptime weightFn: fn (usize) Weight,
+) Error!void {
+    if (out.len == 0) return;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (out.len > length or length > std.math.maxInt(u32)) return error.InvalidParameter;
+
+    const positive = try countPositiveIndicesBy(Weight, length, weightFn);
+    if (positive < out.len) return error.InvalidParameter;
+    if (positive == 1) {
+        out[0] = @intCast((try singlePositiveIndexBy(Weight, length, weightFn)).?);
+        return;
+    }
+
+    sampleWeightedIndicesU32ByIndexIntoExactFrom(source, Weight, length, out, scratch_keys[0..out.len], weightFn);
+}
+
 pub fn sampleWeightedIndicesByInto(
     rng: Rng,
     comptime T: type,
@@ -9305,6 +9442,28 @@ test "index-weighted no-replacement samples support length weight functions" {
     defer checked_index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 2), checked_index_vec.len());
 
+    var into: [4]usize = undefined;
+    var into_keys: [4]f64 = undefined;
+    const into_count = try sampleWeightedIndicesByIndexIntoFrom(&engine, f64, 8, &into, &into_keys, IndexWeight.weightOf);
+    try std.testing.expectEqual(@as(usize, 3), into_count);
+    for (into[0..into_count]) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+
+    var checked_into: [2]usize = undefined;
+    var checked_into_keys: [2]f64 = undefined;
+    try sampleWeightedIndicesByIndexIntoCheckedFrom(&engine, f64, 8, &checked_into, &checked_into_keys, IndexWeight.weightOf);
+    for (checked_into[0..]) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+
+    var into_u32: [4]u32 = undefined;
+    var into_u32_keys: [4]f64 = undefined;
+    const into_u32_count = try sampleWeightedIndicesU32ByIndexIntoFrom(&engine, f64, 8, &into_u32, &into_u32_keys, IndexWeight.weightOf);
+    try std.testing.expectEqual(@as(usize, 3), into_u32_count);
+    for (into_u32[0..into_u32_count]) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+
+    var checked_into_u32: [2]u32 = undefined;
+    var checked_into_u32_keys: [2]f64 = undefined;
+    try sampleWeightedIndicesU32ByIndexIntoCheckedFrom(&engine, f64, 8, &checked_into_u32, &checked_into_u32_keys, IndexWeight.weightOf);
+    for (checked_into_u32[0..]) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+
     var no_consume_engine = alea.ScalarPrng.init(0x5150_f127);
     var no_consume_control = alea.ScalarPrng.init(0x5150_f127);
 
@@ -9329,13 +9488,50 @@ test "index-weighted no-replacement samples support length weight functions" {
     try std.testing.expectEqual(@as(usize, 0), empty.len);
     try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
 
+    var empty_into: [0]usize = .{};
+    var empty_keys: [0]f64 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesByIndexIntoFrom(&no_consume_engine, f64, 8, &empty_into, &empty_keys, IndexWeight.invalid));
+    try sampleWeightedIndicesByIndexIntoCheckedFrom(&no_consume_engine, f64, 8, &empty_into, &empty_keys, IndexWeight.invalid);
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+
+    var empty_u32_into: [0]u32 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesU32ByIndexIntoFrom(&no_consume_engine, f64, 8, &empty_u32_into, &empty_keys, IndexWeight.invalid));
+    try sampleWeightedIndicesU32ByIndexIntoCheckedFrom(&no_consume_engine, f64, 8, &empty_u32_into, &empty_keys, IndexWeight.invalid);
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+
+    var single_into: [2]usize = undefined;
+    var single_keys: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 1), try sampleWeightedIndicesByIndexIntoFrom(&no_consume_engine, u32, 8, &single_into, &single_keys, IndexWeight.single));
+    try std.testing.expectEqual(@as(usize, 4), single_into[0]);
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+
+    var single_u32_into: [1]u32 = undefined;
+    var single_u32_keys: [1]f64 = undefined;
+    try sampleWeightedIndicesU32ByIndexIntoCheckedFrom(&no_consume_engine, u32, 8, &single_u32_into, &single_u32_keys, IndexWeight.single);
+    try std.testing.expectEqual(@as(u32, 4), single_u32_into[0]);
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesByIndexFrom(std.testing.allocator, &no_consume_engine, u32, 0, 1, IndexWeight.single));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesByIndexIntoFrom(&no_consume_engine, u32, 0, single_into[0..1], single_keys[0..1], IndexWeight.single));
     try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexCheckedFrom(std.testing.allocator, &no_consume_engine, u32, 2, 3, IndexWeight.single));
     try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    var too_many_into: [3]usize = undefined;
+    var too_many_keys: [3]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexIntoCheckedFrom(&no_consume_engine, u32, 2, &too_many_into, &too_many_keys, IndexWeight.single));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexCheckedFrom(std.testing.allocator, &no_consume_engine, u32, 8, 2, IndexWeight.sparse));
     try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexIntoCheckedFrom(&no_consume_engine, u32, 8, single_into[0..2], single_keys[0..2], IndexWeight.sparse));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexIntoFrom(&no_consume_engine, u32, @as(usize, std.math.maxInt(u32)) + 1, single_u32_into[0..1], single_u32_keys[0..1], IndexWeight.single));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesByIndexFrom(std.testing.allocator, &no_consume_engine, f64, 8, 2, IndexWeight.invalid));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesByIndexIntoFrom(&no_consume_engine, f64, 8, single_into[0..2], single_keys[0..2], IndexWeight.invalid));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedIndicesByIndexIntoFrom(&no_consume_engine, u32, 8, single_into[0..2], single_keys[0..1], IndexWeight.single));
     try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
 }
 
@@ -9381,6 +9577,28 @@ test "index-weighted no-replacement samples preserve direct stream shape" {
         while (index < facade_vec.len()) : (index += 1) {
             try std.testing.expectEqual(direct_vec.at(index), facade_vec.at(index));
         }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_out: [3]usize = undefined;
+        var direct_out: [3]usize = undefined;
+        var facade_keys: [3]f64 = undefined;
+        var direct_keys: [3]f64 = undefined;
+        try std.testing.expectEqual(
+            try sampleWeightedIndicesByIndexInto(rng, u32, 8, &facade_out, &facade_keys, IndexWeight.weightOf),
+            try sampleWeightedIndicesByIndexIntoFrom(&direct_engine, u32, 8, &direct_out, &direct_keys, IndexWeight.weightOf),
+        );
+        try std.testing.expectEqualSlices(usize, &direct_out, &facade_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_out_u32: [3]u32 = undefined;
+        var direct_out_u32: [3]u32 = undefined;
+        var facade_u32_keys: [3]f64 = undefined;
+        var direct_u32_keys: [3]f64 = undefined;
+        try std.testing.expectEqual(
+            try sampleWeightedIndicesU32ByIndexInto(rng, u32, 8, &facade_out_u32, &facade_u32_keys, IndexWeight.weightOf),
+            try sampleWeightedIndicesU32ByIndexIntoFrom(&direct_engine, u32, 8, &direct_out_u32, &direct_u32_keys, IndexWeight.weightOf),
+        );
+        try std.testing.expectEqualSlices(u32, &direct_out_u32, &facade_out_u32);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 }

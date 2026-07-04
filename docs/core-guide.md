@@ -368,7 +368,11 @@ Use:
   `seq.sampleWeightedIndicesU32ByIndexCheckedFrom`,
   `seq.sampleWeightedIndexVecByIndexFrom`, and
   `seq.sampleWeightedIndexVecByIndexCheckedFrom` for Rust
-  `index::sample_weighted(rng, length, |index| ...)`-style workflows,
+  `index::sample_weighted(rng, length, |index| ...)`-style workflows, plus
+  caller-owned `seq.sampleWeightedIndicesByIndexIntoFrom`,
+  `seq.sampleWeightedIndicesByIndexIntoCheckedFrom`,
+  `seq.sampleWeightedIndicesU32ByIndexIntoFrom`, and
+  `seq.sampleWeightedIndicesU32ByIndexIntoCheckedFrom`,
   item accessor-based
   `seq.sampleWeightedIndicesByFrom`, `seq.sampleWeightedIndicesByCheckedFrom`,
   `seq.sampleWeightedIndicesU32ByFrom`,
