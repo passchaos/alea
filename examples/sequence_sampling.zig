@@ -197,6 +197,8 @@ pub fn main(init: std.process.Init) !void {
 
     const choice = alea.seq.Choice([]const u8).init(&items).?;
     var choice_engine = alea.ScalarPrng.init(0x5e11_0007);
+    const choice_index = choice.sampleIndexFrom(&choice_engine);
+    try stdout.print("Choice.sampleIndexFrom: {}\n", .{choice_index});
     var choice_values: [5][]const u8 = undefined;
     choice.fillValuesFrom(&choice_engine, &choice_values);
     try stdout.print("Choice.fillValuesFrom: {s}, {s}, {s}, {s}, {s}\n", .{ choice_values[0], choice_values[1], choice_values[2], choice_values[3], choice_values[4] });

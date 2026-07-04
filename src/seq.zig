@@ -2173,8 +2173,26 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) *const T {
-            if (self.items.len == 1) return &self.items[0];
-            return &self.items[Rng.uintLessThanFrom(source, usize, self.items.len)];
+            return &self.items[self.sampleIndexFrom(source)];
+        }
+
+        pub fn sampleIndex(self: Self, rng: Rng) usize {
+            return self.sampleIndexFrom(rng);
+        }
+
+        pub fn sampleIndexFrom(self: Self, source: anytype) usize {
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(source, usize, self.items.len);
+        }
+
+        pub fn sampleIndexU32(self: Self, rng: Rng) Error!u32 {
+            return self.sampleIndexU32From(rng);
+        }
+
+        pub fn sampleIndexU32From(self: Self, source: anytype) Error!u32 {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(source, u32, @intCast(self.items.len));
         }
 
         pub fn sampleValue(self: Self, rng: Rng) T {
@@ -2346,7 +2364,24 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) *const T {
-            return &self.items[self.table.sampleFrom(source)];
+            return &self.items[self.sampleIndexFrom(source)];
+        }
+
+        pub fn sampleIndex(self: Self, rng: Rng) usize {
+            return self.sampleIndexFrom(rng);
+        }
+
+        pub fn sampleIndexFrom(self: Self, source: anytype) usize {
+            return self.table.sampleFrom(source);
+        }
+
+        pub fn sampleIndexU32(self: Self, rng: Rng) Error!u32 {
+            return self.sampleIndexU32From(rng);
+        }
+
+        pub fn sampleIndexU32From(self: Self, source: anytype) Error!u32 {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            return @intCast(self.sampleIndexFrom(source));
         }
 
         pub fn sampleValue(self: Self, rng: Rng) T {
@@ -5405,6 +5440,12 @@ test "single-item choice sampler does not consume random stream" {
     try std.testing.expectEqual(&values[0], choice.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectEqual(@as(usize, 0), choice.sampleIndexFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u32, 0), try choice.sampleIndexU32From(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(u8, 42), choice.sampleValueFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -5493,6 +5534,10 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expect(saw_often);
     const direct_item = choice.sampleFrom(&engine);
     try std.testing.expect(!std.mem.eql(u8, direct_item.*, "never"));
+    const direct_index = choice.sampleIndexFrom(&engine);
+    try std.testing.expect(direct_index == 1 or direct_index == 2);
+    const direct_index_u32 = try choice.sampleIndexU32From(&engine);
+    try std.testing.expect(direct_index_u32 == 1 or direct_index_u32 == 2);
     const direct_value = choice.sampleValueFrom(&engine);
     try std.testing.expect(!std.mem.eql(u8, direct_value, "never"));
     var pointer_buf: [8]*const []const u8 = undefined;
@@ -5557,6 +5602,12 @@ test "single-positive weighted choice does not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(u8, 20), choice.sampleValueFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(usize, 1), choice.sampleIndexFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u32, 1), try choice.sampleIndexU32From(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 
     var pointer_buf: [4]*const u8 = undefined;

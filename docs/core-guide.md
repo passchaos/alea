@@ -314,11 +314,13 @@ Use:
   validating weights; facade and direct-source checked calls validate before
   drawing)
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
-  `seq.WeightedChoice`, including `Choice.iterFrom`, `Choice.fillIndicesFrom`,
+  `seq.WeightedChoice`, including `Choice.iterFrom`, `Choice.sampleIndexFrom`,
+  `Choice.sampleIndexU32From`, `Choice.fillIndicesFrom`,
   `Choice.fillIndicesU32From`, `WeightedChoice.update`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
-  `WeightedChoice.weightAt` / `weightsInto`, and `WeightedChoice.fillIndicesFrom`
-  / `fillIndicesU32From`
+  `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
+  `sampleIndexU32From`, and `WeightedChoice.fillIndicesFrom` /
+  `fillIndicesU32From`
 - `distributions.AliasTable` for O(1) repeated weighted index sampling,
   including `len`, `totalWeight`, and allocation-returning or caller-buffer
   `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted

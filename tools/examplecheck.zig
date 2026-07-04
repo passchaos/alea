@@ -25,12 +25,12 @@ const examples = [_]Example{
     .{
         .path = "examples/weighted_sampling.zig",
         .step = "zig build run-weighted-sampling",
-        .source_tokens = &.{ "one-shot weighted u32 index", "generic weighted index", "generic weighted u32 index", "weighted choice u32 indices", "weighted ptrs into", "weighted no-replacement ptrs", "weighted u32 no-replacement indices", "weighted IndexVec", "weighted u32 index array", "weighted u32 indices into" },
+        .source_tokens = &.{ "one-shot weighted u32 index", "generic weighted index", "generic weighted u32 index", "weighted choice sample u32 index", "weighted choice u32 indices", "weighted ptrs into", "weighted no-replacement ptrs", "weighted u32 no-replacement indices", "weighted IndexVec", "weighted u32 index array", "weighted u32 indices into" },
     },
     .{
         .path = "examples/sequence_sampling.zig",
         .step = "zig build run-sequence-sampling",
-        .source_tokens = &.{ "IndexVec.valuesInto", "IndexVec.valuesOwned", "IndexVec.ptrsOwned", "IndexVec.mutPtrsOwned", "IndexVec.toOwnedU32Slice", "Choice.fillIndicesU32From", "sampleArrayU32", "chooseMultiplePtrs", "reservoirSamplePtrsInto" },
+        .source_tokens = &.{ "IndexVec.valuesInto", "IndexVec.valuesOwned", "IndexVec.ptrsOwned", "IndexVec.mutPtrsOwned", "IndexVec.toOwnedU32Slice", "Choice.sampleIndexFrom", "Choice.fillIndicesU32From", "sampleArrayU32", "chooseMultiplePtrs", "reservoirSamplePtrsInto" },
     },
     .{
         .path = "examples/caller_owned_sampling.zig",
