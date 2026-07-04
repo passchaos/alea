@@ -28,6 +28,9 @@ pub fn main(init: std.process.Init) !void {
     var weighted_choice_engine = alea.ScalarPrng.init(0x7158);
     const weighted_value = (try alea.seq.chooseWeightedFrom(&weighted_choice_engine, []const u8, f64, &items, &float_weights)).?;
     try stdout.print("one-shot weighted value: {s}\n", .{weighted_value});
+    var weighted_const_ptr_engine = alea.ScalarPrng.init(0x7163);
+    const weighted_const_ptr = (try alea.seq.chooseWeightedConstPtrFrom(&weighted_const_ptr_engine, []const u8, f64, &items, &float_weights)).?;
+    try stdout.print("one-shot weighted const ptr: {s}\n", .{weighted_const_ptr.*});
 
     var alias = try alea.distributions.AliasTable(f64).init(allocator, &float_weights);
     defer alias.deinit();

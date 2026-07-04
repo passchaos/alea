@@ -612,6 +612,24 @@ pub fn chooseWeightedFrom(source: anytype, comptime T: type, comptime Weight: ty
     return items[index];
 }
 
+pub fn chooseWeightedConstPtr(rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !?*const T {
+    return chooseWeightedConstPtrFrom(rng, T, Weight, items, weights);
+}
+
+pub fn chooseWeightedConstPtrChecked(rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !*const T {
+    return chooseWeightedConstPtrCheckedFrom(rng, T, Weight, items, weights);
+}
+
+pub fn chooseWeightedConstPtrCheckedFrom(source: anytype, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !*const T {
+    return (try chooseWeightedConstPtrFrom(source, T, Weight, items, weights)) orelse error.EmptyInput;
+}
+
+pub fn chooseWeightedConstPtrFrom(source: anytype, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !?*const T {
+    if (items.len != weights.len) return error.LengthMismatch;
+    const index = (try weightedIndexGenericFrom(source, Weight, weights)) orelse return null;
+    return &items[index];
+}
+
 pub fn chooseWeightedPtr(rng: Rng, comptime T: type, comptime Weight: type, items: []T, weights: []const Weight) !?*T {
     return chooseWeightedPtrFrom(rng, T, Weight, items, weights);
 }
@@ -3907,6 +3925,13 @@ test "chooseWeighted selects values and mutable pointers" {
     const checked = try chooseWeightedCheckedFrom(&checked_engine, u8, u32, &items, &weights);
     try std.testing.expect(std.mem.indexOfScalar(u8, &items, checked) != null);
 
+    var const_ptr_engine = alea.ScalarPrng.init(0x5150_b008);
+    const const_ptr = (try chooseWeightedConstPtrFrom(&const_ptr_engine, u8, u32, &items, &weights)).?;
+    try std.testing.expect(std.mem.indexOfScalar(u8, &items, const_ptr.*) != null);
+    var checked_const_ptr_engine = alea.ScalarPrng.init(0x5150_b009);
+    const checked_const_ptr = try chooseWeightedConstPtrCheckedFrom(&checked_const_ptr_engine, u8, u32, &items, &weights);
+    try std.testing.expect(std.mem.indexOfScalar(u8, &items, checked_const_ptr.*) != null);
+
     var mutable = items;
     var ptr_engine = alea.ScalarPrng.init(0x5150_b003);
     const ptr = (try chooseWeightedPtrFrom(&ptr_engine, u8, u32, &mutable, &weights)).?;
@@ -3916,12 +3941,16 @@ test "chooseWeighted selects values and mutable pointers" {
     var single_engine = alea.ScalarPrng.init(0x5150_b004);
     var single_control = alea.ScalarPrng.init(0x5150_b004);
     try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedFrom(&single_engine, u8, u32, &items, &.{ 0, 0, 5, 0 })).?);
+    try std.testing.expectEqual(&items[2], (try chooseWeightedConstPtrFrom(&single_engine, u8, u32, &items, &.{ 0, 0, 5, 0 })).?);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 
     var empty_engine = alea.ScalarPrng.init(0x5150_b005);
     try std.testing.expect((try chooseWeightedFrom(&empty_engine, u8, u32, &.{}, &.{})) == null);
+    try std.testing.expect((try chooseWeightedConstPtrFrom(&empty_engine, u8, u32, &.{}, &.{})) == null);
     try std.testing.expect((try chooseWeightedFrom(&empty_engine, u8, u32, &items, &.{ 0, 0, 0, 0 })) == null);
+    try std.testing.expect((try chooseWeightedConstPtrFrom(&empty_engine, u8, u32, &items, &.{ 0, 0, 0, 0 })) == null);
     try std.testing.expectError(error.EmptyInput, chooseWeightedCheckedFrom(&empty_engine, u8, u32, &items, &.{ 0, 0, 0, 0 }));
+    try std.testing.expectError(error.EmptyInput, chooseWeightedConstPtrCheckedFrom(&empty_engine, u8, u32, &items, &.{ 0, 0, 0, 0 }));
 }
 
 test "chooseWeighted preserves facade/direct stream shape and invalid paths do not consume" {
@@ -3939,6 +3968,16 @@ test "chooseWeighted preserves facade/direct stream shape and invalid paths do n
         try std.testing.expectEqual(facade, direct);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+        const facade_const_ptr = (try chooseWeightedConstPtr(rng, u8, f64, &items, &weights)).?;
+        const direct_const_ptr = (try chooseWeightedConstPtrFrom(&direct_engine, u8, f64, &items, &weights)).?;
+        try std.testing.expectEqual(@intFromPtr(facade_const_ptr) - @intFromPtr(&items[0]), @intFromPtr(direct_const_ptr) - @intFromPtr(&items[0]));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_const_ptr = try chooseWeightedConstPtrChecked(rng, u8, f64, &items, &weights);
+        const checked_direct_const_ptr = try chooseWeightedConstPtrCheckedFrom(&direct_engine, u8, f64, &items, &weights);
+        try std.testing.expectEqual(@intFromPtr(checked_facade_const_ptr) - @intFromPtr(&items[0]), @intFromPtr(checked_direct_const_ptr) - @intFromPtr(&items[0]));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         var facade_mutable = items;
         var direct_mutable = items;
         const facade_ptr = (try chooseWeightedPtr(rng, u8, f64, &facade_mutable, &weights)).?;
@@ -3952,7 +3991,11 @@ test "chooseWeighted preserves facade/direct stream shape and invalid paths do n
     const invalid_rng = Rng.init(&invalid_engine);
     try std.testing.expectError(error.LengthMismatch, chooseWeighted(invalid_rng, u8, u32, &items, &.{ 1, 2 }));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.LengthMismatch, chooseWeightedConstPtr(invalid_rng, u8, u32, &items, &.{ 1, 2 }));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrFrom(&invalid_engine, u8, f64, @constCast(&items), &.{ 1.0, std.math.inf(f64), 2.0, 3.0 }));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedConstPtrFrom(&invalid_engine, u8, f64, &items, &.{ 1.0, std.math.inf(f64), 2.0, 3.0 }));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
