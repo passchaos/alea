@@ -451,6 +451,54 @@ fn sampleIndicesLarge(allocator: std.mem.Allocator, source: anytype, length: usi
     return sampleRejection(allocator, source, length, amount);
 }
 
+pub fn choose(rng: Rng, comptime T: type, items: []const T) ?T {
+    return chooseFrom(rng, T, items);
+}
+
+pub fn chooseFrom(source: anytype, comptime T: type, items: []const T) ?T {
+    return Rng.chooseFrom(source, T, items);
+}
+
+pub fn chooseChecked(rng: Rng, comptime T: type, items: []const T) Error!T {
+    return chooseCheckedFrom(rng, T, items);
+}
+
+pub fn chooseCheckedFrom(source: anytype, comptime T: type, items: []const T) Error!T {
+    return chooseFrom(source, T, items) orelse error.EmptyInput;
+}
+
+pub fn chooseConstPtr(rng: Rng, comptime T: type, items: []const T) ?*const T {
+    return chooseConstPtrFrom(rng, T, items);
+}
+
+pub fn chooseConstPtrFrom(source: anytype, comptime T: type, items: []const T) ?*const T {
+    return Rng.chooseConstPtrFrom(source, T, items);
+}
+
+pub fn chooseConstPtrChecked(rng: Rng, comptime T: type, items: []const T) Error!*const T {
+    return chooseConstPtrCheckedFrom(rng, T, items);
+}
+
+pub fn chooseConstPtrCheckedFrom(source: anytype, comptime T: type, items: []const T) Error!*const T {
+    return chooseConstPtrFrom(source, T, items) orelse error.EmptyInput;
+}
+
+pub fn choosePtr(rng: Rng, comptime T: type, items: []T) ?*T {
+    return choosePtrFrom(rng, T, items);
+}
+
+pub fn choosePtrFrom(source: anytype, comptime T: type, items: []T) ?*T {
+    return Rng.choosePtrFrom(source, T, items);
+}
+
+pub fn choosePtrChecked(rng: Rng, comptime T: type, items: []T) Error!*T {
+    return choosePtrCheckedFrom(rng, T, items);
+}
+
+pub fn choosePtrCheckedFrom(source: anytype, comptime T: type, items: []T) Error!*T {
+    return choosePtrFrom(source, T, items) orelse error.EmptyInput;
+}
+
 pub fn sampleArray(rng: Rng, comptime N: usize, length: usize) ?[N]usize {
     return sampleArrayFrom(rng, N, length);
 }
@@ -7506,6 +7554,67 @@ test "seq shuffle aliases mirror Rng.shuffleFrom" {
     shuffleFrom(&engine, u8, &singleton);
     try std.testing.expectEqualSlices(u8, &.{42}, &singleton);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "seq one-shot choice aliases mirror Rng choice helpers" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_0c01);
+        var direct_engine = Engine.init(0x5150_0c01);
+        const rng = Rng.init(&facade_engine);
+
+        try std.testing.expectEqual(
+            Rng.chooseFrom(&direct_engine, u8, &items),
+            choose(rng, u8, &items),
+        );
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_const = chooseConstPtr(rng, u8, &items).?;
+        const direct_const = Rng.chooseConstPtrFrom(&direct_engine, u8, &items).?;
+        const facade_const_index = @divExact(@intFromPtr(facade_const) - @intFromPtr(&items[0]), @sizeOf(u8));
+        const direct_const_index = @divExact(@intFromPtr(direct_const) - @intFromPtr(&items[0]), @sizeOf(u8));
+        try std.testing.expectEqual(direct_const_index, facade_const_index);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_items = items;
+        var direct_items = items;
+        const facade_ptr = choosePtr(rng, u8, &facade_items).?;
+        const direct_ptr = Rng.choosePtrFrom(&direct_engine, u8, &direct_items).?;
+        const facade_ptr_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+        const direct_ptr_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+        try std.testing.expectEqual(direct_ptr_index, facade_ptr_index);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_0c02);
+    const checked_value = try chooseCheckedFrom(&checked_engine, u8, &items);
+    try std.testing.expect(std.mem.indexOfScalar(u8, &items, checked_value) != null);
+    const checked_const_ptr = try chooseConstPtrCheckedFrom(&checked_engine, u8, &items);
+    try std.testing.expect(@intFromPtr(checked_const_ptr) >= @intFromPtr(&items[0]));
+    var mutable_items = items;
+    const checked_mut_ptr = try choosePtrCheckedFrom(&checked_engine, u8, &mutable_items);
+    checked_mut_ptr.* += 1;
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_0c03);
+    var empty_control = alea.ScalarPrng.init(0x5150_0c03);
+    try std.testing.expect(chooseFrom(&empty_engine, u8, &.{}) == null);
+    try std.testing.expect(chooseConstPtrFrom(&empty_engine, u8, &.{}) == null);
+    var empty_mutable: [0]u8 = .{};
+    try std.testing.expect(choosePtrFrom(&empty_engine, u8, &empty_mutable) == null);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseCheckedFrom(&empty_engine, u8, &.{}));
+    try std.testing.expectError(error.EmptyInput, chooseConstPtrCheckedFrom(&empty_engine, u8, &.{}));
+    try std.testing.expectError(error.EmptyInput, choosePtrCheckedFrom(&empty_engine, u8, &empty_mutable));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var single_engine = alea.ScalarPrng.init(0x5150_0c04);
+    var single_control = alea.ScalarPrng.init(0x5150_0c04);
+    var single = [_]u8{99};
+    try std.testing.expectEqual(@as(?u8, 99), chooseFrom(&single_engine, u8, &single));
+    try std.testing.expectEqual(@as(u8, 99), choosePtrFrom(&single_engine, u8, &single).?.*);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 
 test "chooseArray returns fixed-size item samples" {

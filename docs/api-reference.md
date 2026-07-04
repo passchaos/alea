@@ -2417,6 +2417,10 @@ Dynamic weighted helpers:
   `sampleArrayCheckedFrom`, `sampleArrayU32`, `sampleArrayU32From`,
   `sampleArrayU32Checked`, `sampleArrayU32CheckedFrom`
 - Collections: `chooseMultiple`, `chooseMultipleFrom`,
+  `choose`, `chooseFrom`, `chooseChecked`, `chooseCheckedFrom`,
+  `chooseConstPtr`, `chooseConstPtrFrom`, `chooseConstPtrChecked`,
+  `chooseConstPtrCheckedFrom`, `choosePtr`, `choosePtrFrom`,
+  `choosePtrChecked`, `choosePtrCheckedFrom`,
   `chooseMultipleChecked`, `chooseMultipleCheckedFrom`,
   `sampleItems`, `sampleItemsFrom`, `sampleItemsChecked`,
   `sampleItemsCheckedFrom`,

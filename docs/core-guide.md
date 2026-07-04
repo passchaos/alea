@@ -306,7 +306,10 @@ Use:
 - `seq.sampleArray`, `seq.sampleArrayFrom`, `seq.sampleArrayCheckedFrom`,
   `seq.sampleArrayU32`, `seq.sampleArrayU32From`,
   `seq.sampleArrayU32CheckedFrom`
-- `seq.chooseMultiple`, `seq.chooseMultipleFrom`,
+- `seq.choose`, `seq.chooseFrom`, `seq.chooseCheckedFrom`,
+  `seq.chooseConstPtrFrom`, `seq.chooseConstPtrCheckedFrom`,
+  `seq.choosePtrFrom`, `seq.choosePtrCheckedFrom`, `seq.chooseMultiple`,
+  `seq.chooseMultipleFrom`,
   `seq.chooseMultipleCheckedFrom`, sample aliases `seq.sampleItemsFrom` /
   `seq.sampleItemsCheckedFrom`, `seq.chooseMultiplePtrsFrom`,
   `seq.chooseMultiplePtrsCheckedFrom`, `seq.samplePtrsFrom` /

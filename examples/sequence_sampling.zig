@@ -95,6 +95,20 @@ pub fn main(init: std.process.Init) !void {
     for (mapped_owned_mut_ptrs) |score| score.* += 1;
     try stdout.print("IndexVec.mutPtrsOwned updated scores: {any}\n", .{mutable_scores});
 
+    var one_choice_engine = alea.ScalarPrng.init(0x5e11_0022);
+    const one_choice = alea.seq.chooseFrom(&one_choice_engine, []const u8, &items).?;
+    try stdout.print("seq.chooseFrom item: {s}\n", .{one_choice});
+
+    var one_choice_ptr_engine = alea.ScalarPrng.init(0x5e11_0023);
+    const one_choice_ptr = alea.seq.chooseConstPtrFrom(&one_choice_ptr_engine, []const u8, &items).?;
+    try stdout.print("seq.chooseConstPtrFrom item: {s}\n", .{one_choice_ptr.*});
+
+    var one_choice_mut_engine = alea.ScalarPrng.init(0x5e11_0024);
+    var one_choice_scores = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+    const one_choice_mut_ptr = alea.seq.choosePtrFrom(&one_choice_mut_engine, u8, &one_choice_scores).?;
+    one_choice_mut_ptr.* += 5;
+    try stdout.print("seq.choosePtrFrom updated scores: {any}\n", .{one_choice_scores});
+
     var choose_engine = alea.ScalarPrng.init(0x5e11_0003);
     const chosen = try alea.seq.chooseMultipleFrom(allocator, &choose_engine, []const u8, &items, 3);
     defer allocator.free(chosen);
