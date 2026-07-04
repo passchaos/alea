@@ -543,14 +543,17 @@ Use:
   and sampling workloads with weights accumulated as `f64`, including
   `initBy` / `updateAllBy` from item weight accessors,
   `initByIndex` / `updateAllByIndex` from index-weight accessors, and bulk
-  `weights` / `weightsInto` export for diagnostics
+  `weights` / `weightsInto` export for diagnostics; use `sampleU32` /
+  `fillU32` variants when population indexes fit `u32` and compact output is
+  desired
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
   update/push/pop/sample throughput matters, including `initBy` /
   `updateAllBy` from item weight accessors and `initByIndex` /
   `updateAllByIndex` from index-weight accessors; weights wider than `u64` are
   accepted only when each value fits the `u64` accumulator
-  (failed push/update operations preserve the previous tree totals, and
-  zero-length checked fills return before validating totals)
+  (failed push/update operations preserve the previous tree totals, `sampleU32`
+  / `fillU32` variants mirror compact index output, and zero-length checked
+  fills return before validating totals)
 Run `zig build run-weighted-sampling` for a runnable comparison of one-shot
 weighted indexes, static alias tables, dynamic weighted trees, weighted choices,
 and weighted no-replacement helpers.

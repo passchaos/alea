@@ -37,7 +37,7 @@ The current Linux-first roadmap is intentionally broad:
   LogNormal approximation, and alias-table samplers
 - dynamic weighted trees for frequent update/push/pop/sample/fill weighted
   workloads, including item- and index-accessor construction/full-refresh
-  helpers
+  helpers and compact `u32` index sampling/fills
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, direct-source charset
   helpers, checked charset methods for fallible custom charsets, and Unicode
   scalar fill/owned/range batches plus string generation with
