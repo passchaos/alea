@@ -317,6 +317,12 @@ Use:
   `seq.fillChoosePtrFrom`, `seq.fillChoosePtrCheckedFrom`,
   `seq.fillChooseIndexFrom`, `seq.fillChooseIndexCheckedFrom`,
   `seq.fillChooseIndexU32From`, `seq.fillChooseIndexU32CheckedFrom`,
+  `seq.chooseRepeatedValueArrayFrom`,
+  `seq.chooseRepeatedValueArrayCheckedFrom`,
+  `seq.chooseRepeatedConstPtrArrayFrom`,
+  `seq.chooseRepeatedConstPtrArrayCheckedFrom`,
+  `seq.chooseRepeatedPtrArrayFrom`,
+  `seq.chooseRepeatedPtrArrayCheckedFrom`,
   `seq.chooseBatchFrom`, `seq.chooseBatchCheckedFrom`,
   `seq.chooseConstPtrBatchFrom`, `seq.chooseConstPtrBatchCheckedFrom`,
   `seq.choosePtrBatchFrom`, `seq.choosePtrBatchCheckedFrom`,
@@ -343,6 +349,9 @@ Use:
   `seq.samplePtrArrayFrom` / `seq.samplePtrArrayCheckedFrom`,
   `seq.chooseMutPtrArrayFrom`, `seq.chooseMutPtrArrayCheckedFrom`,
   `seq.sampleMutPtrArrayFrom` / `seq.sampleMutPtrArrayCheckedFrom`
+  (`chooseRepeated*Array` is with-replacement; `chooseArray` /
+  `choosePtrArray` / `chooseMutPtrArray` and `sample*Array` are
+  no-replacement)
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`,
   `seq.chooseIteratorCheckedFrom`, stable aliases `seq.chooseIteratorStableFrom`
   and `seq.chooseIteratorStableCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`,

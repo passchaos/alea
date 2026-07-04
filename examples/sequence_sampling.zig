@@ -143,6 +143,20 @@ pub fn main(init: std.process.Init) !void {
     const index_choice_array_u32 = alea.seq.chooseIndexArrayU32From(&index_choice_array_u32_engine, 5, @intCast(items.len)).?;
     try stdout.print("seq.chooseIndexArrayU32From indices: {any}\n", .{index_choice_array_u32});
 
+    var repeated_value_array_engine = alea.ScalarPrng.init(0x5e11_0031);
+    const repeated_value_array = alea.seq.chooseRepeatedValueArrayFrom(&repeated_value_array_engine, []const u8, 5, &items).?;
+    try stdout.print("seq.chooseRepeatedValueArrayFrom items: {s}, {s}, {s}, {s}, {s}\n", .{ repeated_value_array[0], repeated_value_array[1], repeated_value_array[2], repeated_value_array[3], repeated_value_array[4] });
+
+    var repeated_const_ptr_array_engine = alea.ScalarPrng.init(0x5e11_0032);
+    const repeated_const_ptr_array = alea.seq.chooseRepeatedConstPtrArrayFrom(&repeated_const_ptr_array_engine, []const u8, 5, &items).?;
+    try stdout.print("seq.chooseRepeatedConstPtrArrayFrom items: {s}, {s}, {s}, {s}, {s}\n", .{ repeated_const_ptr_array[0].*, repeated_const_ptr_array[1].*, repeated_const_ptr_array[2].*, repeated_const_ptr_array[3].*, repeated_const_ptr_array[4].* });
+
+    var repeated_ptr_array_engine = alea.ScalarPrng.init(0x5e11_0033);
+    var repeated_ptr_scores = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+    const repeated_ptr_array = alea.seq.chooseRepeatedPtrArrayFrom(&repeated_ptr_array_engine, u8, 5, &repeated_ptr_scores).?;
+    for (repeated_ptr_array) |score| score.* += 1;
+    try stdout.print("seq.chooseRepeatedPtrArrayFrom updated scores: {any}\n", .{repeated_ptr_scores});
+
     var choice_batch_engine = alea.ScalarPrng.init(0x5e11_0027);
     const choice_batch = try alea.seq.chooseBatchFrom(allocator, &choice_batch_engine, []const u8, 5, &items);
     defer allocator.free(choice_batch);
@@ -389,6 +403,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, seq.chooseIndex/fillChooseIndex/chooseIndexBatch for with-replacement index choices, sampleArrayU32 for compact fixed-size index arrays, chooseArray/sampleItemsArray and choosePtrArray/samplePtrArray for fixed-size item/pointer arrays, chooseMultiple/sampleItems plus chooseMultipleInto/sampleItemsInto and pointer variants for allocation-returning and caller-owned item/pointer subsets, sampleWithoutReplacement for Rng-owned subset sampling, shuffleFrom for full in-place shuffles, partialShuffle/partialShuffleSplit for head-selected in-place subsets, partialShuffleTail/partialShuffleTailSplit for Rust-style tail-selected subsets, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable value/pointer/index batches, fixed-size value/pointer/index arrays, or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, seq.chooseIndex/fillChooseIndex/chooseIndexBatch for with-replacement index choices, sampleArrayU32 for compact fixed-size index arrays, chooseRepeatedValueArray/ConstPtrArray/PtrArray for fixed-size repeated with-replacement value/pointer choices, chooseArray/sampleItemsArray and choosePtrArray/samplePtrArray for fixed-size no-replacement item/pointer arrays, chooseMultiple/sampleItems plus chooseMultipleInto/sampleItemsInto and pointer variants for allocation-returning and caller-owned item/pointer subsets, sampleWithoutReplacement for Rng-owned subset sampling, shuffleFrom for full in-place shuffles, partialShuffle/partialShuffleSplit for head-selected in-place subsets, partialShuffleTail/partialShuffleTailSplit for Rust-style tail-selected subsets, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable value/pointer/index batches, fixed-size value/pointer/index arrays, or streaming choices.\n", .{});
     try stdout.flush();
 }

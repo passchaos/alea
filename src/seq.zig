@@ -499,6 +499,66 @@ pub fn choosePtrCheckedFrom(source: anytype, comptime T: type, items: []T) Error
     return choosePtrFrom(source, T, items) orelse error.EmptyInput;
 }
 
+pub fn chooseRepeatedValueArray(rng: Rng, comptime T: type, comptime N: usize, items: []const T) ?[N]T {
+    return chooseRepeatedValueArrayFrom(rng, T, N, items);
+}
+
+pub fn chooseRepeatedValueArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) ?[N]T {
+    var out: [N]T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return null;
+    fillChooseFrom(source, T, &out, items);
+    return out;
+}
+
+pub fn chooseRepeatedValueArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
+    return chooseRepeatedValueArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn chooseRepeatedValueArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
+    return chooseRepeatedValueArrayFrom(source, T, N, items) orelse error.EmptyInput;
+}
+
+pub fn chooseRepeatedConstPtrArray(rng: Rng, comptime T: type, comptime N: usize, items: []const T) ?[N]*const T {
+    return chooseRepeatedConstPtrArrayFrom(rng, T, N, items);
+}
+
+pub fn chooseRepeatedConstPtrArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) ?[N]*const T {
+    var out: [N]*const T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return null;
+    fillChooseConstPtrFrom(source, T, &out, items);
+    return out;
+}
+
+pub fn chooseRepeatedConstPtrArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []const T) Error![N]*const T {
+    return chooseRepeatedConstPtrArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn chooseRepeatedConstPtrArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]*const T {
+    return chooseRepeatedConstPtrArrayFrom(source, T, N, items) orelse error.EmptyInput;
+}
+
+pub fn chooseRepeatedPtrArray(rng: Rng, comptime T: type, comptime N: usize, items: []T) ?[N]*T {
+    return chooseRepeatedPtrArrayFrom(rng, T, N, items);
+}
+
+pub fn chooseRepeatedPtrArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []T) ?[N]*T {
+    var out: [N]*T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return null;
+    fillChoosePtrFrom(source, T, &out, items);
+    return out;
+}
+
+pub fn chooseRepeatedPtrArrayChecked(rng: Rng, comptime T: type, comptime N: usize, items: []T) Error![N]*T {
+    return chooseRepeatedPtrArrayCheckedFrom(rng, T, N, items);
+}
+
+pub fn chooseRepeatedPtrArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []T) Error![N]*T {
+    return chooseRepeatedPtrArrayFrom(source, T, N, items) orelse error.EmptyInput;
+}
+
 pub fn fillChoose(rng: Rng, comptime T: type, dest: []T, items: []const T) void {
     fillChooseFrom(rng, T, dest, items);
 }
@@ -10485,6 +10545,111 @@ test "seq choice fill aliases mirror Rng fill helpers" {
     var single_values: [4]u8 = undefined;
     fillChooseFrom(&single_engine, u8, &single_values, &single_items);
     try std.testing.expectEqualSlices(u8, &.{ 77, 77, 77, 77 }, &single_values);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "seq repeated choice arrays mirror Rng fixed choice arrays" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_0c31);
+        var direct_engine = Engine.init(0x5150_0c31);
+        const rng = Rng.init(&facade_engine);
+
+        const facade_values = chooseRepeatedValueArray(rng, u8, 8, &items).?;
+        const direct_values = Rng.chooseValueArrayFrom(&direct_engine, u8, 8, &items).?;
+        try std.testing.expectEqualSlices(u8, &direct_values, &facade_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_values = try chooseRepeatedValueArrayChecked(rng, u8, 8, &items);
+        const checked_direct_values = try Rng.chooseValueArrayCheckedFrom(&direct_engine, u8, 8, &items);
+        try std.testing.expectEqualSlices(u8, &checked_direct_values, &checked_facade_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_ptrs = chooseRepeatedConstPtrArray(rng, u8, 8, &items).?;
+        const direct_ptrs = Rng.chooseConstPtrArrayFrom(&direct_engine, u8, 8, &items).?;
+        for (facade_ptrs, direct_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_ptrs = try chooseRepeatedConstPtrArrayChecked(rng, u8, 8, &items);
+        const checked_direct_ptrs = try Rng.chooseConstPtrArrayCheckedFrom(&direct_engine, u8, 8, &items);
+        for (checked_facade_ptrs, checked_direct_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_items = items;
+        var direct_items = items;
+        const facade_mut_ptrs = chooseRepeatedPtrArray(rng, u8, 8, &facade_items).?;
+        const direct_mut_ptrs = Rng.choosePtrArrayFrom(&direct_engine, u8, 8, &direct_items).?;
+        for (facade_mut_ptrs, direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_mut_ptrs = try chooseRepeatedPtrArrayChecked(rng, u8, 8, &facade_items);
+        const checked_direct_mut_ptrs = try Rng.choosePtrArrayCheckedFrom(&direct_engine, u8, 8, &direct_items);
+        for (checked_facade_mut_ptrs, checked_direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_0c32);
+    const checked_values = try chooseRepeatedValueArrayCheckedFrom(&checked_engine, u8, 4, &items);
+    for (checked_values) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &items, value) != null);
+    const checked_ptrs = try chooseRepeatedConstPtrArrayCheckedFrom(&checked_engine, u8, 4, &items);
+    for (checked_ptrs) |ptr| try std.testing.expect(std.mem.indexOfScalar(u8, &items, ptr.*) != null);
+    var checked_mutable = items;
+    const checked_mut_ptrs = try chooseRepeatedPtrArrayCheckedFrom(&checked_engine, u8, 4, &checked_mutable);
+    for (checked_mut_ptrs) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&checked_mutable[0]), @sizeOf(u8));
+        try std.testing.expect(index < checked_mutable.len);
+        ptr.* += 1;
+    }
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_0c33);
+    var empty_control = alea.ScalarPrng.init(0x5150_0c33);
+    try std.testing.expectEqual(@as(?[3]u8, null), chooseRepeatedValueArrayFrom(&empty_engine, u8, 3, &.{}));
+    try std.testing.expectEqual(@as(?[3]*const u8, null), chooseRepeatedConstPtrArrayFrom(&empty_engine, u8, 3, &.{}));
+    var empty_mutable: [0]u8 = .{};
+    try std.testing.expectEqual(@as(?[3]*u8, null), chooseRepeatedPtrArrayFrom(&empty_engine, u8, 3, &empty_mutable));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    const empty_values = try chooseRepeatedValueArrayCheckedFrom(&empty_engine, u8, 0, &.{});
+    try std.testing.expectEqual(@as(usize, 0), empty_values.len);
+    const empty_ptrs = try chooseRepeatedConstPtrArrayCheckedFrom(&empty_engine, u8, 0, &.{});
+    try std.testing.expectEqual(@as(usize, 0), empty_ptrs.len);
+    const empty_mut_ptrs = try chooseRepeatedPtrArrayCheckedFrom(&empty_engine, u8, 0, &empty_mutable);
+    try std.testing.expectEqual(@as(usize, 0), empty_mut_ptrs.len);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    try std.testing.expectError(error.EmptyInput, chooseRepeatedValueArrayCheckedFrom(&empty_engine, u8, 3, &.{}));
+    try std.testing.expectError(error.EmptyInput, chooseRepeatedConstPtrArrayCheckedFrom(&empty_engine, u8, 3, &.{}));
+    try std.testing.expectError(error.EmptyInput, chooseRepeatedPtrArrayCheckedFrom(&empty_engine, u8, 3, &empty_mutable));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var single_engine = alea.ScalarPrng.init(0x5150_0c34);
+    var single_control = alea.ScalarPrng.init(0x5150_0c34);
+    const single = [_]u8{77};
+    var single_mutable = single;
+    const single_values = try chooseRepeatedValueArrayCheckedFrom(&single_engine, u8, 4, &single);
+    try std.testing.expectEqualSlices(u8, &.{ 77, 77, 77, 77 }, &single_values);
+    const single_ptrs = try chooseRepeatedConstPtrArrayCheckedFrom(&single_engine, u8, 4, &single);
+    for (single_ptrs) |ptr| try std.testing.expectEqual(&single[0], ptr);
+    const single_mut_ptrs = try chooseRepeatedPtrArrayCheckedFrom(&single_engine, u8, 4, &single_mutable);
+    for (single_mut_ptrs) |ptr| try std.testing.expectEqual(&single_mutable[0], ptr);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 
