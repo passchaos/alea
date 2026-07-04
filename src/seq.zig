@@ -7466,6 +7466,65 @@ pub fn Choice(comptime T: type) type {
             return out;
         }
 
+        pub fn indexIter(self: Self, rng: Rng) IndexIterator(Rng) {
+            return self.indexIterFrom(rng);
+        }
+
+        pub fn indexIterFrom(self: Self, source: anytype) IndexIterator(@TypeOf(source)) {
+            return .{ .source = source, .choice = self };
+        }
+
+        pub fn indexIterU32(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
+            return self.indexIterU32From(rng);
+        }
+
+        pub fn indexIterU32From(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            return .{ .source = source, .choice = self };
+        }
+
+        pub fn IndexIterator(comptime Source: type) type {
+            return struct {
+                const Iterator = @This();
+
+                source: Source,
+                choice: Self,
+
+                pub fn next(self: *Iterator) ?usize {
+                    return self.nextValue();
+                }
+
+                pub fn nextValue(self: *Iterator) usize {
+                    return self.choice.sampleIndexFrom(self.source);
+                }
+
+                pub fn fill(self: *Iterator, dest: []usize) void {
+                    self.choice.fillIndicesFrom(self.source, dest);
+                }
+            };
+        }
+
+        pub fn U32IndexIterator(comptime Source: type) type {
+            return struct {
+                const Iterator = @This();
+
+                source: Source,
+                choice: Self,
+
+                pub fn next(self: *Iterator) ?u32 {
+                    return self.nextValue();
+                }
+
+                pub fn nextValue(self: *Iterator) u32 {
+                    return self.choice.sampleIndexU32From(self.source) catch unreachable;
+                }
+
+                pub fn fill(self: *Iterator, dest: []u32) void {
+                    self.choice.fillIndicesU32From(self.source, dest) catch unreachable;
+                }
+            };
+        }
+
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
             return rng.sampleIter(*const T, self);
         }
@@ -7785,6 +7844,65 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             var out: [N]u32 = undefined;
             try self.fillIndicesU32From(source, &out);
             return out;
+        }
+
+        pub fn indexIter(self: Self, rng: Rng) IndexIterator(Rng) {
+            return self.indexIterFrom(rng);
+        }
+
+        pub fn indexIterFrom(self: Self, source: anytype) IndexIterator(@TypeOf(source)) {
+            return .{ .source = source, .choice = self };
+        }
+
+        pub fn indexIterU32(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
+            return self.indexIterU32From(rng);
+        }
+
+        pub fn indexIterU32From(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            return .{ .source = source, .choice = self };
+        }
+
+        pub fn IndexIterator(comptime Source: type) type {
+            return struct {
+                const Iterator = @This();
+
+                source: Source,
+                choice: Self,
+
+                pub fn next(self: *Iterator) ?usize {
+                    return self.nextValue();
+                }
+
+                pub fn nextValue(self: *Iterator) usize {
+                    return self.choice.sampleIndexFrom(self.source);
+                }
+
+                pub fn fill(self: *Iterator, dest: []usize) void {
+                    self.choice.fillIndicesFrom(self.source, dest);
+                }
+            };
+        }
+
+        pub fn U32IndexIterator(comptime Source: type) type {
+            return struct {
+                const Iterator = @This();
+
+                source: Source,
+                choice: Self,
+
+                pub fn next(self: *Iterator) ?u32 {
+                    return self.nextValue();
+                }
+
+                pub fn nextValue(self: *Iterator) u32 {
+                    return self.choice.sampleIndexU32From(self.source) catch unreachable;
+                }
+
+                pub fn fill(self: *Iterator, dest: []u32) void {
+                    self.choice.fillIndicesU32From(self.source, dest) catch unreachable;
+                }
+            };
         }
 
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
@@ -15350,6 +15468,70 @@ test "Choice index arrays mirror fills" {
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 
+test "Choice index iterators produce repeated indices" {
+    const alea = @import("root.zig");
+    const values = [_]u8{ 2, 4, 6, 8 };
+    const choice = Choice(u8).init(&values).?;
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c0ed);
+        var direct_engine = Engine.init(0x5150_c0ed);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_iter = choice.indexIter(rng);
+        var direct_iter = choice.indexIterFrom(&direct_engine);
+        var i: usize = 0;
+        while (i < 8) : (i += 1) {
+            const facade_index = facade_iter.next().?;
+            const direct_index = direct_iter.next().?;
+            try std.testing.expect(facade_index < values.len);
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_fill: [8]usize = undefined;
+        var direct_fill: [8]usize = undefined;
+        facade_iter.fill(&facade_fill);
+        direct_iter.fill(&direct_fill);
+        try std.testing.expectEqualSlices(usize, &direct_fill, &facade_fill);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_iter_u32 = try choice.indexIterU32(rng);
+        var direct_iter_u32 = try choice.indexIterU32From(&direct_engine);
+        i = 0;
+        while (i < 8) : (i += 1) {
+            const facade_index = facade_iter_u32.next().?;
+            const direct_index = direct_iter_u32.next().?;
+            try std.testing.expect(facade_index < values.len);
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_fill_u32: [8]u32 = undefined;
+        var direct_fill_u32: [8]u32 = undefined;
+        facade_iter_u32.fill(&facade_fill_u32);
+        direct_iter_u32.fill(&direct_fill_u32);
+        try std.testing.expectEqualSlices(u32, &direct_fill_u32, &facade_fill_u32);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    const single_values = [_]u8{42};
+    const single_choice = Choice(u8).init(&single_values).?;
+    var single_engine = alea.ScalarPrng.init(0x5150_c0ee);
+    var single_control = alea.ScalarPrng.init(0x5150_c0ee);
+    var single_iter = single_choice.indexIterFrom(&single_engine);
+    try std.testing.expectEqual(@as(usize, 0), single_iter.next().?);
+    var single_fill: [4]usize = undefined;
+    single_iter.fill(&single_fill);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0, 0 }, &single_fill);
+    var single_iter_u32 = try single_choice.indexIterU32From(&single_engine);
+    try std.testing.expectEqual(@as(u32, 0), single_iter_u32.next().?);
+    var single_fill_u32: [4]u32 = undefined;
+    single_iter_u32.fill(&single_fill_u32);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0, 0 }, &single_fill_u32);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
 test "Choice value and pointer arrays mirror fills" {
     const alea = @import("root.zig");
     const values = [_]u8{ 2, 4, 6, 8 };
@@ -15930,6 +16112,72 @@ test "WeightedChoice index arrays mirror fills" {
     try std.testing.expectEqual(single_control.next(), single_engine.next());
     const single_u32_alias = try single_choice.indexArrayU32From(&single_engine, 4);
     try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, &single_u32_alias);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "WeightedChoice index iterators produce repeated indices" {
+    const alea = @import("root.zig");
+    const labels = [_][]const u8{ "never", "rare", "often", "sometimes" };
+    var choice = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &labels, &.{ 0, 1, 7, 3 });
+    defer choice.deinit();
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c9b0);
+        var direct_engine = Engine.init(0x5150_c9b0);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_iter = choice.indexIter(rng);
+        var direct_iter = choice.indexIterFrom(&direct_engine);
+        var i: usize = 0;
+        while (i < 8) : (i += 1) {
+            const facade_index = facade_iter.next().?;
+            const direct_index = direct_iter.next().?;
+            try std.testing.expect(facade_index == 1 or facade_index == 2 or facade_index == 3);
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_fill: [8]usize = undefined;
+        var direct_fill: [8]usize = undefined;
+        facade_iter.fill(&facade_fill);
+        direct_iter.fill(&direct_fill);
+        try std.testing.expectEqualSlices(usize, &direct_fill, &facade_fill);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_iter_u32 = try choice.indexIterU32(rng);
+        var direct_iter_u32 = try choice.indexIterU32From(&direct_engine);
+        i = 0;
+        while (i < 8) : (i += 1) {
+            const facade_index = facade_iter_u32.next().?;
+            const direct_index = direct_iter_u32.next().?;
+            try std.testing.expect(facade_index == 1 or facade_index == 2 or facade_index == 3);
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_fill_u32: [8]u32 = undefined;
+        var direct_fill_u32: [8]u32 = undefined;
+        facade_iter_u32.fill(&facade_fill_u32);
+        direct_iter_u32.fill(&direct_fill_u32);
+        try std.testing.expectEqualSlices(u32, &direct_fill_u32, &facade_fill_u32);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    const single_items = [_]u8{ 10, 20, 30 };
+    var single_choice = try WeightedChoice(u8, u32).init(std.testing.allocator, &single_items, &.{ 0, 0, 7 });
+    defer single_choice.deinit();
+    var single_engine = alea.ScalarPrng.init(0x5150_c9b1);
+    var single_control = alea.ScalarPrng.init(0x5150_c9b1);
+    var single_iter = single_choice.indexIterFrom(&single_engine);
+    try std.testing.expectEqual(@as(usize, 2), single_iter.next().?);
+    var single_fill: [4]usize = undefined;
+    single_iter.fill(&single_fill);
+    try std.testing.expectEqualSlices(usize, &.{ 2, 2, 2, 2 }, &single_fill);
+    var single_iter_u32 = try single_choice.indexIterU32From(&single_engine);
+    try std.testing.expectEqual(@as(u32, 2), single_iter_u32.next().?);
+    var single_fill_u32: [4]u32 = undefined;
+    single_iter_u32.fill(&single_fill_u32);
+    try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, &single_fill_u32);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 

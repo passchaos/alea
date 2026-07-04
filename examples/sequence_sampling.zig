@@ -333,6 +333,16 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("Choice.indexArrayFrom: {any}\n", .{choice_index_array});
     const choice_index_array_u32 = try choice.indexArrayU32From(&choice_engine, 5);
     try stdout.print("Choice.indexArrayU32From: {any}\n", .{choice_index_array_u32});
+    var choice_index_iter_engine = alea.ScalarPrng.init(0x5e11_0034);
+    var choice_index_iter = choice.indexIterFrom(&choice_index_iter_engine);
+    var choice_index_iter_fill: [5]usize = undefined;
+    choice_index_iter.fill(&choice_index_iter_fill);
+    try stdout.print("Choice.indexIterFrom fill: {any}\n", .{choice_index_iter_fill});
+    var choice_index_iter_u32_engine = alea.ScalarPrng.init(0x5e11_0035);
+    var choice_index_iter_u32 = try choice.indexIterU32From(&choice_index_iter_u32_engine);
+    var choice_index_iter_u32_fill: [5]u32 = undefined;
+    choice_index_iter_u32.fill(&choice_index_iter_u32_fill);
+    try stdout.print("Choice.indexIterU32From fill: {any}\n", .{choice_index_iter_u32_fill});
     const choice_owned_indices = try choice.indicesFrom(allocator, &choice_engine, 5);
     defer allocator.free(choice_owned_indices);
     try stdout.print("Choice.indicesFrom: {any}\n", .{choice_owned_indices});
@@ -403,6 +413,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, seq.chooseIndex/fillChooseIndex/chooseIndexBatch for with-replacement index choices, sampleArrayU32 for compact fixed-size index arrays, chooseRepeatedValueArray/ConstPtrArray/PtrArray for fixed-size repeated with-replacement value/pointer choices, chooseArray/sampleItemsArray and choosePtrArray/samplePtrArray for fixed-size no-replacement item/pointer arrays, chooseMultiple/sampleItems plus chooseMultipleInto/sampleItemsInto and pointer variants for allocation-returning and caller-owned item/pointer subsets, sampleWithoutReplacement for Rng-owned subset sampling, shuffleFrom for full in-place shuffles, partialShuffle/partialShuffleSplit for head-selected in-place subsets, partialShuffleTail/partialShuffleTailSplit for Rust-style tail-selected subsets, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable value/pointer/index batches, fixed-size value/pointer/index arrays, or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, seq.chooseIndex/fillChooseIndex/chooseIndexBatch for with-replacement index choices, sampleArrayU32 for compact fixed-size index arrays, chooseRepeatedValueArray/ConstPtrArray/PtrArray for fixed-size repeated with-replacement value/pointer choices, chooseArray/sampleItemsArray and choosePtrArray/samplePtrArray for fixed-size no-replacement item/pointer arrays, chooseMultiple/sampleItems plus chooseMultipleInto/sampleItemsInto and pointer variants for allocation-returning and caller-owned item/pointer subsets, sampleWithoutReplacement for Rng-owned subset sampling, shuffleFrom for full in-place shuffles, partialShuffle/partialShuffleSplit for head-selected in-place subsets, partialShuffleTail/partialShuffleTailSplit for Rust-style tail-selected subsets, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable value/pointer/index batches, fixed-size value/pointer/index arrays, indexIter/indexIterU32 streams, or streaming choices.\n", .{});
     try stdout.flush();
 }

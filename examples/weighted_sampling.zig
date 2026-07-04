@@ -523,6 +523,16 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("WeightedChoice.indexArrayFrom: {any}\n", .{choice_index_array});
     const choice_index_array_u32 = try choice.indexArrayU32From(&choice_engine, 6);
     try stdout.print("WeightedChoice.indexArrayU32From: {any}\n", .{choice_index_array_u32});
+    var choice_index_iter_engine = alea.ScalarPrng.init(0x71ca);
+    var choice_index_iter = choice.indexIterFrom(&choice_index_iter_engine);
+    var choice_index_iter_fill: [6]usize = undefined;
+    choice_index_iter.fill(&choice_index_iter_fill);
+    try stdout.print("WeightedChoice.indexIterFrom fill: {any}\n", .{choice_index_iter_fill});
+    var choice_index_iter_u32_engine = alea.ScalarPrng.init(0x71cb);
+    var choice_index_iter_u32 = try choice.indexIterU32From(&choice_index_iter_u32_engine);
+    var choice_index_iter_u32_fill: [6]u32 = undefined;
+    choice_index_iter_u32.fill(&choice_index_iter_u32_fill);
+    try stdout.print("WeightedChoice.indexIterU32From fill: {any}\n", .{choice_index_iter_u32_fill});
     const choice_owned_indices = try choice.indicesFrom(allocator, &choice_engine, 8);
     defer allocator.free(choice_owned_indices);
     try stdout.print("WeightedChoice.indicesFrom: {any}\n", .{choice_owned_indices});

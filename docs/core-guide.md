@@ -574,7 +574,8 @@ Use:
   `Choice.valuesFrom` / `ptrsFrom`, fixed-size `Choice.valueArrayFrom` /
   `ptrArrayFrom`, `Choice.fillIndicesFrom`,
   `Choice.fillIndicesU32From`, `Choice.indicesFrom`, `Choice.indicesU32From`,
-  and fixed-size `Choice.indexArrayFrom` / `indexArrayU32From`,
+  fixed-size `Choice.indexArrayFrom` / `indexArrayU32From`, and
+  repeated `Choice.indexIterFrom` / `indexIterU32From` index streams,
   `WeightedChoice.initBy` / `updateBy`, `WeightedChoice.initByIndex` / `updateByIndex`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
   `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
@@ -584,6 +585,8 @@ Use:
   `WeightedChoice.fillIndicesFrom` / `fillIndicesU32From` plus
   `WeightedChoice.indicesFrom` / `indicesU32From` and fixed-size
   `WeightedChoice.indexArrayFrom` / `indexArrayU32From` repeated index arrays
+  plus repeated `WeightedChoice.indexIterFrom` / `indexIterU32From` index
+  streams
 - `distributions.AliasTable` for O(1) repeated weighted index sampling,
   including `len`, `totalWeight`, and allocation-returning or caller-buffer
   `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
