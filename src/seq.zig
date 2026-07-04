@@ -2355,6 +2355,31 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             for (dest) |*item| item.* = self.sampleValueFrom(source);
         }
 
+        pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
+            self.fillIndicesFrom(rng, dest);
+        }
+
+        pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
+            if (self.table.constantIndex()) |index| {
+                @memset(dest, index);
+                return;
+            }
+            for (dest) |*index| index.* = self.table.sampleFrom(source);
+        }
+
+        pub fn fillIndicesU32(self: Self, rng: Rng, dest: []u32) Error!void {
+            return self.fillIndicesU32From(rng, dest);
+        }
+
+        pub fn fillIndicesU32From(self: Self, source: anytype, dest: []u32) Error!void {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.table.constantIndex()) |index| {
+                @memset(dest, @intCast(index));
+                return;
+            }
+            for (dest) |*index| index.* = @intCast(self.table.sampleFrom(source));
+        }
+
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
             return rng.sampleIter(*const T, self);
         }
@@ -5329,6 +5354,12 @@ test "zero-length choice fills do not consume random stream" {
     var weighted_value_buf: [0][]const u8 = .{};
     weighted.fillValuesFrom(&engine, &weighted_value_buf);
     try std.testing.expectEqual(control.next(), engine.next());
+    var weighted_index_buf: [0]usize = .{};
+    weighted.fillIndicesFrom(&engine, &weighted_index_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+    var weighted_index_u32_buf: [0]u32 = .{};
+    try weighted.fillIndicesU32From(&engine, &weighted_index_u32_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "single-item choice sampler does not consume random stream" {
@@ -5428,6 +5459,18 @@ test "weighted choice sampler maps alias indexes to items" {
     var value_buf: [8][]const u8 = undefined;
     choice.fillValuesFrom(&engine, &value_buf);
     for (value_buf) |value| try std.testing.expect(!std.mem.eql(u8, value, "never"));
+    var index_buf: [8]usize = undefined;
+    choice.fillIndicesFrom(&engine, &index_buf);
+    for (index_buf) |index| {
+        try std.testing.expect(index == 1 or index == 2);
+        try std.testing.expect(!std.mem.eql(u8, labels[index], "never"));
+    }
+    var index_u32_buf: [8]u32 = undefined;
+    try choice.fillIndicesU32From(&engine, &index_u32_buf);
+    for (index_u32_buf) |index| {
+        try std.testing.expect(index == 1 or index == 2);
+        try std.testing.expect(!std.mem.eql(u8, labels[index], "never"));
+    }
 
     var iter = choice.iter(rng);
     const picked = iter.next().?.*;
@@ -5482,6 +5525,16 @@ test "single-positive weighted choice does not consume random stream" {
     var value_buf: [4]u8 = undefined;
     choice.fillValuesFrom(&engine, &value_buf);
     for (value_buf) |item| try std.testing.expectEqual(@as(u8, 20), item);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var index_buf: [4]usize = undefined;
+    choice.fillIndicesFrom(&engine, &index_buf);
+    for (index_buf) |index| try std.testing.expectEqual(@as(usize, 1), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var index_u32_buf: [4]u32 = undefined;
+    try choice.fillIndicesU32From(&engine, &index_u32_buf);
+    for (index_u32_buf) |index| try std.testing.expectEqual(@as(u32, 1), index);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try choice.update(&.{ 0, 0, 7 });

@@ -116,6 +116,7 @@ Local Alea evidence:
 - `compare/results/s4-m76-choose-index-u32.md`
 - `compare/results/s4-m77-generic-weighted-index-u32.md`
 - `compare/results/s4-m78-rng-weighted-index-u32.md`
+- `compare/results/s4-m79-weighted-choice-index-fills.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -137,7 +138,7 @@ Out of scope for this Linux-first audit:
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost` |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
 | choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseIndexU32`, `Rng.chooseConstPtr`, `seq` module, `sampleArrayU32`, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer and u32 export mapping, Rust sequence benchmark row |
-| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `Rng.weightedIndexU32`, `seq.weightedIndex`, `seq.weightedIndexU32`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedIndicesU32`, `seq.sampleWeightedIndicesU32Into`, `seq.sampleWeightedIndexVec`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedIndexArrayU32`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedTree`, benchmark rows |
+| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `Rng.weightedIndexU32`, `seq.weightedIndex`, `seq.weightedIndexU32`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedIndicesU32`, `seq.sampleWeightedIndicesU32Into`, `seq.sampleWeightedIndexVec`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedIndexArrayU32`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedChoice.fillIndices`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface
 
@@ -271,6 +272,7 @@ sampling, S4-M70 adds caller-owned weighted u32 index buffers, S4-M71 adds
 fixed-size weighted u32 index arrays, S4-M72 adds allocation-returning weighted
 u32 index slices, S4-M73 adds fixed-size u32 index arrays, S4-M74 adds IndexVec
 u32 export mapping, S4-M75 adds IndexVec owned item mapping, S4-M76 adds
-one-shot u32 index choice, S4-M77 adds generic weighted u32 index choice, and
-S4-M78 adds f64 weighted u32 index choice, but later stages should keep raising
-the bar rather than declaring the product permanently finished.
+one-shot u32 index choice, S4-M77 adds generic weighted u32 index choice, S4-M78
+adds f64 weighted u32 index choice, and S4-M79 adds WeightedChoice index fills,
+but later stages should keep raising the bar rather than declaring the product
+permanently finished.

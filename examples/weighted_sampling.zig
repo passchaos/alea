@@ -81,6 +81,12 @@ pub fn main(init: std.process.Init) !void {
     var choice_values: [8][]const u8 = undefined;
     choice.fillValuesFrom(&choice_engine, &choice_values);
     try printStringSlice(stdout, "weighted choice values", &choice_values);
+    var choice_indices: [8]usize = undefined;
+    choice.fillIndicesFrom(&choice_engine, &choice_indices);
+    try stdout.print("weighted choice indices: {any}\n", .{choice_indices});
+    var choice_indices_u32: [8]u32 = undefined;
+    try choice.fillIndicesU32From(&choice_engine, &choice_indices_u32);
+    try stdout.print("weighted choice u32 indices: {any}\n", .{choice_indices_u32});
 
     var no_replace_engine = alea.ScalarPrng.init(0x7156);
     const no_replace = try alea.seq.sampleWeightedFrom(allocator, &no_replace_engine, []const u8, f64, &items, &float_weights, 3);

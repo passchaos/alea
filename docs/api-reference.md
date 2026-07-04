@@ -2370,6 +2370,8 @@ Dynamic weighted helpers:
   `WeightedChoice.sampleValue`, `WeightedChoice.sampleValueFrom`,
   `WeightedChoice.fill`, `WeightedChoice.fillFrom`,
   `WeightedChoice.fillValues`, `WeightedChoice.fillValuesFrom`,
+  `WeightedChoice.fillIndices`, `WeightedChoice.fillIndicesFrom`,
+  `WeightedChoice.fillIndicesU32`, `WeightedChoice.fillIndicesU32From`,
   `WeightedChoice.iter`, `WeightedChoice.iterFrom`
 - Weighted one-shot indexes: `weightedIndex`, `weightedIndexFrom`,
   `weightedIndexChecked`, `weightedIndexCheckedFrom`, `weightedIndexU32`,

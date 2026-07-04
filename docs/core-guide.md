@@ -316,7 +316,8 @@ Use:
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `WeightedChoice.update`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
-  `WeightedChoice.weightAt` / `weightsInto`
+  `WeightedChoice.weightAt` / `weightsInto`, and `WeightedChoice.fillIndicesFrom`
+  / `fillIndicesU32From`
 - `distributions.AliasTable` for O(1) repeated weighted index sampling,
   including `len`, `totalWeight`, and allocation-returning or caller-buffer
   `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
