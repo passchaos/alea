@@ -64,10 +64,21 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.chooseMultipleIntoFrom(&chosen_engine, []const u8, &items, &chosen, &chosen_indices);
     try printStringArray(stdout, "chooseMultipleInto", &chosen);
 
+    var chosen_ptr_engine = alea.ScalarPrng.init(0xc011_0009);
+    var chosen_ptrs: [3]*const []const u8 = undefined;
+    var chosen_ptr_indices: [3]usize = undefined;
+    _ = try alea.seq.chooseMultiplePtrsIntoFrom(&chosen_ptr_engine, []const u8, &items, &chosen_ptrs, &chosen_ptr_indices);
+    try stdout.print("chooseMultiplePtrsInto: [{s}, {s}, {s}]\n", .{ chosen_ptrs[0].*, chosen_ptrs[1].*, chosen_ptrs[2].* });
+
     var reservoir_engine = alea.ScalarPrng.init(0xc011_0004);
     var reservoir: [4][]const u8 = undefined;
     try alea.seq.reservoirSampleIntoFrom(&reservoir_engine, []const u8, &items, &reservoir);
     try printStringArray(stdout, "reservoirSampleInto", &reservoir);
+
+    var reservoir_ptr_engine = alea.ScalarPrng.init(0xc011_000a);
+    var reservoir_ptrs: [4]*const []const u8 = undefined;
+    try alea.seq.reservoirSamplePtrsIntoFrom(&reservoir_ptr_engine, []const u8, &items, &reservoir_ptrs);
+    try stdout.print("reservoirSamplePtrsInto: [{s}, {s}, {s}, {s}]\n", .{ reservoir_ptrs[0].*, reservoir_ptrs[1].*, reservoir_ptrs[2].*, reservoir_ptrs[3].* });
 
     var iter_engine = alea.ScalarPrng.init(0xc011_0005);
     var iter = Counter{ .limit = 20 };
@@ -88,6 +99,13 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleWeightedIntoFrom(&weighted_item_engine, []const u8, f64, &items, &weights, &weighted_items, &weighted_item_indices, &weighted_item_keys);
     try printStringArray(stdout, "weighted values into", &weighted_items);
 
+    var weighted_ptr_engine = alea.ScalarPrng.init(0xc011_000b);
+    var weighted_ptrs: [3]*const []const u8 = undefined;
+    var weighted_ptr_indices: [3]usize = undefined;
+    var weighted_ptr_keys: [3]f64 = undefined;
+    _ = try alea.seq.sampleWeightedPtrsIntoFrom(&weighted_ptr_engine, []const u8, f64, &items, &weights, &weighted_ptrs, &weighted_ptr_indices, &weighted_ptr_keys);
+    try stdout.print("weighted ptrs into: [{s}, {s}, {s}]\n", .{ weighted_ptrs[0].*, weighted_ptrs[1].*, weighted_ptrs[2].* });
+
     var weighted_iter_engine = alea.ScalarPrng.init(0xc011_0008);
     var weighted_iter = WeightedCounter{ .limit = 20 };
     var weighted_iter_sample: [5]u32 = undefined;
@@ -95,6 +113,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_iter_engine, u32, &weighted_iter, &weighted_iter_sample, &weighted_iter_keys);
     try stdout.print("sampleIteratorWeightedInto: {any}\n", .{weighted_iter_sample});
 
-    try stdout.print("\nUse caller-owned buffers when you need predictable allocation behavior: index/item/iterator/weighted helpers validate sizes before drawing where their stream shape permits.\n", .{});
+    try stdout.print("\nUse caller-owned buffers when you need predictable allocation behavior: index/item/pointer/iterator/weighted helpers validate sizes before drawing where their stream shape permits.\n", .{});
     try stdout.flush();
 }

@@ -99,6 +99,7 @@ Local Alea evidence:
 - `compare/results/s4-m59-weighted-ptrs.md`
 - `compare/results/s4-m60-reservoir-ptrs.md`
 - `compare/results/s4-m61-reservoir-ptrs-into.md`
+- `compare/results/s4-m62-caller-owned-pointer-example.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -244,6 +245,6 @@ caller-owned weighted pointer subset sampling, and S4-M56 adds const-pointer
 single choice, and S4-M57 adds weighted const-pointer single choice, and S4-M58 adds
 allocation-returning pointer subset sampling, and S4-M59 adds allocation-returning
 weighted pointer subset sampling, and S4-M60 adds allocation-returning reservoir
-pointer sampling, and S4-M61 adds caller-owned reservoir pointer sampling, but
-later stages should keep raising the bar rather than declaring the product
-permanently finished.
+pointer sampling, and S4-M61 adds caller-owned reservoir pointer sampling, and S4-M62 refreshes
+the caller-owned pointer adoption example, but later stages should keep raising
+the bar rather than declaring the product permanently finished.
