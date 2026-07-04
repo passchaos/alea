@@ -546,15 +546,17 @@ Use:
   `weights` / `weightsInto` export for diagnostics; use `sampleU32` /
   `fillU32` variants when population indexes fit `u32` and compact output is
   desired, and `indices` / `indicesU32` variants for allocation-returning
-  repeated draws
+  repeated draws; `sampleIndex` / `fillIndices` aliases are available for
+  users discovering dynamic trees from `WeightedChoice` index naming
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
   update/push/pop/sample throughput matters, including `initBy` /
   `updateAllBy` from item weight accessors and `initByIndex` /
   `updateAllByIndex` from index-weight accessors; weights wider than `u64` are
   accepted only when each value fits the `u64` accumulator
   (failed push/update operations preserve the previous tree totals, `sampleU32`
-  / `fillU32` and `indicesU32` variants mirror compact index output, and
-  zero-length checked fills return before validating totals)
+  / `fillU32` and `indicesU32` variants mirror compact index output,
+  `sampleIndex` / `fillIndices` aliases mirror `WeightedChoice`, and zero-length
+  checked fills return before validating totals)
 Run `zig build run-weighted-sampling` for a runnable comparison of one-shot
 weighted indexes, static alias tables, dynamic weighted trees, weighted choices,
 and weighted no-replacement helpers.

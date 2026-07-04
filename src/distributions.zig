@@ -15903,48 +15903,96 @@ pub fn WeightedTree(comptime Weight: type) type {
             return self.sampleChecked(rng) catch unreachable;
         }
 
+        pub fn sampleIndex(self: Self, rng: Rng) usize {
+            return self.sample(rng);
+        }
+
         pub fn sampleU32(self: Self, rng: Rng) u32 {
             return self.sampleU32Checked(rng) catch unreachable;
+        }
+
+        pub fn sampleIndexU32(self: Self, rng: Rng) u32 {
+            return self.sampleU32(rng);
         }
 
         pub fn sampleChecked(self: Self, rng: Rng) Error!usize {
             return self.sampleCheckedFrom(rng);
         }
 
+        pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
+            return self.sampleChecked(rng);
+        }
+
         pub fn sampleU32Checked(self: Self, rng: Rng) Error!u32 {
             return self.sampleU32CheckedFrom(rng);
+        }
+
+        pub fn sampleIndexU32Checked(self: Self, rng: Rng) Error!u32 {
+            return self.sampleU32Checked(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) usize {
             return self.sampleCheckedFrom(source) catch unreachable;
         }
 
+        pub fn sampleIndexFrom(self: Self, source: anytype) usize {
+            return self.sampleFrom(source);
+        }
+
         pub fn sampleU32From(self: Self, source: anytype) u32 {
             return self.sampleU32CheckedFrom(source) catch unreachable;
+        }
+
+        pub fn sampleIndexU32From(self: Self, source: anytype) u32 {
+            return self.sampleU32From(source);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []usize) void {
             self.fillChecked(rng, dest) catch unreachable;
         }
 
+        pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
+            self.fill(rng, dest);
+        }
+
         pub fn fillU32(self: Self, rng: Rng, dest: []u32) void {
             self.fillU32Checked(rng, dest) catch unreachable;
+        }
+
+        pub fn fillIndicesU32(self: Self, rng: Rng, dest: []u32) void {
+            self.fillU32(rng, dest);
         }
 
         pub fn fillChecked(self: Self, rng: Rng, dest: []usize) Error!void {
             try self.fillCheckedFrom(rng, dest);
         }
 
+        pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
+            try self.fillChecked(rng, dest);
+        }
+
         pub fn fillU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
             try self.fillU32CheckedFrom(rng, dest);
+        }
+
+        pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
+            try self.fillU32Checked(rng, dest);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
             self.fillCheckedFrom(source, dest) catch unreachable;
         }
 
+        pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
+            self.fillFrom(source, dest);
+        }
+
         pub fn fillU32From(self: Self, source: anytype, dest: []u32) void {
             self.fillU32CheckedFrom(source, dest) catch unreachable;
+        }
+
+        pub fn fillIndicesU32From(self: Self, source: anytype, dest: []u32) void {
+            self.fillU32From(source, dest);
         }
 
         pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
@@ -15991,6 +16039,10 @@ pub fn WeightedTree(comptime Weight: type) type {
             return out;
         }
 
+        pub fn fillIndicesCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
+            try self.fillCheckedFrom(source, dest);
+        }
+
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
             if (dest.len == 0) return;
             const total = self.totalWeight();
@@ -16014,6 +16066,10 @@ pub fn WeightedTree(comptime Weight: type) type {
             for (dest) |*item| item.* = @intCast(self.sampleWithTotalFrom(source, total));
         }
 
+        pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
+            try self.fillU32CheckedFrom(source, dest);
+        }
+
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
@@ -16022,9 +16078,17 @@ pub fn WeightedTree(comptime Weight: type) type {
             return self.sampleWithTotalFrom(source, total);
         }
 
+        pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
+            return self.sampleCheckedFrom(source);
+        }
+
         pub fn sampleU32CheckedFrom(self: Self, source: anytype) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             return @intCast(try self.sampleCheckedFrom(source));
+        }
+
+        pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
+            return self.sampleU32CheckedFrom(source);
         }
 
         fn sampleWithTotalFrom(self: Self, source: anytype, total: f64) usize {
@@ -16357,48 +16421,96 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return self.sampleChecked(rng) catch unreachable;
         }
 
+        pub fn sampleIndex(self: Self, rng: Rng) usize {
+            return self.sample(rng);
+        }
+
         pub fn sampleU32(self: Self, rng: Rng) u32 {
             return self.sampleU32Checked(rng) catch unreachable;
+        }
+
+        pub fn sampleIndexU32(self: Self, rng: Rng) u32 {
+            return self.sampleU32(rng);
         }
 
         pub fn sampleChecked(self: Self, rng: Rng) Error!usize {
             return self.sampleCheckedFrom(rng);
         }
 
+        pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
+            return self.sampleChecked(rng);
+        }
+
         pub fn sampleU32Checked(self: Self, rng: Rng) Error!u32 {
             return self.sampleU32CheckedFrom(rng);
+        }
+
+        pub fn sampleIndexU32Checked(self: Self, rng: Rng) Error!u32 {
+            return self.sampleU32Checked(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) usize {
             return self.sampleCheckedFrom(source) catch unreachable;
         }
 
+        pub fn sampleIndexFrom(self: Self, source: anytype) usize {
+            return self.sampleFrom(source);
+        }
+
         pub fn sampleU32From(self: Self, source: anytype) u32 {
             return self.sampleU32CheckedFrom(source) catch unreachable;
+        }
+
+        pub fn sampleIndexU32From(self: Self, source: anytype) u32 {
+            return self.sampleU32From(source);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []usize) void {
             self.fillChecked(rng, dest) catch unreachable;
         }
 
+        pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
+            self.fill(rng, dest);
+        }
+
         pub fn fillU32(self: Self, rng: Rng, dest: []u32) void {
             self.fillU32Checked(rng, dest) catch unreachable;
+        }
+
+        pub fn fillIndicesU32(self: Self, rng: Rng, dest: []u32) void {
+            self.fillU32(rng, dest);
         }
 
         pub fn fillChecked(self: Self, rng: Rng, dest: []usize) Error!void {
             try self.fillCheckedFrom(rng, dest);
         }
 
+        pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
+            try self.fillChecked(rng, dest);
+        }
+
         pub fn fillU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
             try self.fillU32CheckedFrom(rng, dest);
+        }
+
+        pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
+            try self.fillU32Checked(rng, dest);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
             self.fillCheckedFrom(source, dest) catch unreachable;
         }
 
+        pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
+            self.fillFrom(source, dest);
+        }
+
         pub fn fillU32From(self: Self, source: anytype, dest: []u32) void {
             self.fillU32CheckedFrom(source, dest) catch unreachable;
+        }
+
+        pub fn fillIndicesU32From(self: Self, source: anytype, dest: []u32) void {
+            self.fillU32From(source, dest);
         }
 
         pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
@@ -16445,6 +16557,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return out;
         }
 
+        pub fn fillIndicesCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
+            try self.fillCheckedFrom(source, dest);
+        }
+
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
             if (dest.len == 0) return;
             const total = self.totalWeight();
@@ -16468,6 +16584,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             for (dest) |*item| item.* = @intCast(self.sampleWithTotalFrom(source, total));
         }
 
+        pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
+            try self.fillU32CheckedFrom(source, dest);
+        }
+
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
@@ -16476,9 +16596,17 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return self.sampleWithTotalFrom(source, total);
         }
 
+        pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
+            return self.sampleCheckedFrom(source);
+        }
+
         pub fn sampleU32CheckedFrom(self: Self, source: anytype) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             return @intCast(try self.sampleCheckedFrom(source));
+        }
+
+        pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
+            return self.sampleU32CheckedFrom(source);
         }
 
         fn sampleWithTotalFrom(self: Self, source: anytype, total: u64) usize {
@@ -18335,6 +18463,90 @@ test "weighted tree owned index batches mirror fills" {
     defer std.testing.allocator.free(single_batch_u32);
     try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, single_batch_u32);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "weighted tree index aliases mirror sample helpers" {
+    const alea = @import("root.zig");
+
+    var sample_engine = alea.ScalarPrng.init(0x5150_d50f);
+    var alias_engine = alea.ScalarPrng.init(0x5150_d50f);
+    var tree = try WeightedTree(f64).init(std.testing.allocator, &.{ 1, 0, 7, 3 });
+    defer tree.deinit();
+    try std.testing.expectEqual(tree.sampleFrom(&sample_engine), tree.sampleIndexFrom(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_d510);
+    alias_engine = alea.ScalarPrng.init(0x5150_d510);
+    try std.testing.expectEqual(try tree.sampleCheckedFrom(&sample_engine), try tree.sampleIndexCheckedFrom(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_d511);
+    alias_engine = alea.ScalarPrng.init(0x5150_d511);
+    try std.testing.expectEqual(tree.sampleU32From(&sample_engine), tree.sampleIndexU32From(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_d512);
+    alias_engine = alea.ScalarPrng.init(0x5150_d512);
+    const rng = Rng.init(&sample_engine);
+    const alias_rng = Rng.init(&alias_engine);
+    try std.testing.expectEqual(try tree.sampleChecked(rng), try tree.sampleIndexChecked(alias_rng));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_d513);
+    alias_engine = alea.ScalarPrng.init(0x5150_d513);
+    var fill_out: [8]usize = undefined;
+    var alias_fill_out: [8]usize = undefined;
+    tree.fillFrom(&sample_engine, &fill_out);
+    tree.fillIndicesFrom(&alias_engine, &alias_fill_out);
+    try std.testing.expectEqualSlices(usize, &fill_out, &alias_fill_out);
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_d514);
+    alias_engine = alea.ScalarPrng.init(0x5150_d514);
+    var fill_u32: [8]u32 = undefined;
+    var alias_fill_u32: [8]u32 = undefined;
+    try tree.fillU32CheckedFrom(&sample_engine, &fill_u32);
+    try tree.fillIndicesU32CheckedFrom(&alias_engine, &alias_fill_u32);
+    try std.testing.expectEqualSlices(u32, &fill_u32, &alias_fill_u32);
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    var invalid_tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 0, 0 });
+    defer invalid_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, invalid_tree.sampleIndexCheckedFrom(&sample_engine));
+    try std.testing.expectError(error.InvalidWeight, invalid_tree.fillIndicesCheckedFrom(&sample_engine, fill_out[0..1]));
+    try std.testing.expectError(error.InvalidWeight, invalid_tree.sampleIndexU32CheckedFrom(&sample_engine));
+    try std.testing.expectError(error.InvalidWeight, invalid_tree.fillIndicesU32CheckedFrom(&sample_engine, fill_u32[0..1]));
+
+    var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 2, 0, 0, 6 });
+    defer int_tree.deinit();
+    sample_engine = alea.ScalarPrng.init(0x5150_d515);
+    alias_engine = alea.ScalarPrng.init(0x5150_d515);
+    try std.testing.expectEqual(int_tree.sampleFrom(&sample_engine), int_tree.sampleIndexFrom(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_d516);
+    alias_engine = alea.ScalarPrng.init(0x5150_d516);
+    try int_tree.fillCheckedFrom(&sample_engine, &fill_out);
+    try int_tree.fillIndicesCheckedFrom(&alias_engine, &alias_fill_out);
+    try std.testing.expectEqualSlices(usize, &fill_out, &alias_fill_out);
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_d517);
+    alias_engine = alea.ScalarPrng.init(0x5150_d517);
+    try int_tree.fillU32CheckedFrom(&sample_engine, &fill_u32);
+    try int_tree.fillIndicesU32CheckedFrom(&alias_engine, &alias_fill_u32);
+    try std.testing.expectEqualSlices(u32, &fill_u32, &alias_fill_u32);
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    var single_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0, 9 });
+    defer single_tree.deinit();
+    sample_engine = alea.ScalarPrng.init(0x5150_d518);
+    var control = alea.ScalarPrng.init(0x5150_d518);
+    try std.testing.expectEqual(@as(usize, 2), single_tree.sampleIndexFrom(&sample_engine));
+    try std.testing.expectEqual(control.next(), sample_engine.next());
+    single_tree.fillIndicesFrom(&sample_engine, &alias_fill_out);
+    for (alias_fill_out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+    try std.testing.expectEqual(control.next(), sample_engine.next());
 }
 
 test "zero-length weighted tree fills do not validate or consume random stream" {
