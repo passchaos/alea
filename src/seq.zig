@@ -5024,6 +5024,13 @@ pub fn PartialShuffleSplit(comptime T: type) type {
     };
 }
 
+pub fn PartialShuffleTailSplit(comptime T: type) type {
+    return struct {
+        selected: []T,
+        rest: []T,
+    };
+}
+
 pub fn partialShuffleSplit(rng: Rng, comptime T: type, items: []T, amount: usize) PartialShuffleSplit(T) {
     return partialShuffleSplitFrom(rng, T, items, amount);
 }
@@ -5040,6 +5047,48 @@ pub fn partialShuffleSplitCheckedFrom(source: anytype, comptime T: type, items: 
 pub fn partialShuffleSplitFrom(source: anytype, comptime T: type, items: []T, amount: usize) PartialShuffleSplit(T) {
     const selected = partialShuffleFrom(source, T, items, amount);
     return .{ .selected = selected, .rest = items[selected.len..] };
+}
+
+pub fn partialShuffleTail(rng: Rng, comptime T: type, items: []T, amount: usize) []T {
+    return partialShuffleTailFrom(rng, T, items, amount);
+}
+
+pub fn partialShuffleTailChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error![]T {
+    return partialShuffleTailCheckedFrom(rng, T, items, amount);
+}
+
+pub fn partialShuffleTailCheckedFrom(source: anytype, comptime T: type, items: []T, amount: usize) Error![]T {
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffleTailFrom(source, T, items, amount);
+}
+
+pub fn partialShuffleTailFrom(source: anytype, comptime T: type, items: []T, amount: usize) []T {
+    const count = @min(amount, items.len);
+    const start = items.len - count;
+    var i = start;
+    while (i < items.len) : (i += 1) {
+        const j = Rng.intRangeLessThanFrom(source, usize, 0, i + 1);
+        std.mem.swap(T, &items[i], &items[j]);
+    }
+    return items[start..];
+}
+
+pub fn partialShuffleTailSplit(rng: Rng, comptime T: type, items: []T, amount: usize) PartialShuffleTailSplit(T) {
+    return partialShuffleTailSplitFrom(rng, T, items, amount);
+}
+
+pub fn partialShuffleTailSplitChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error!PartialShuffleTailSplit(T) {
+    return partialShuffleTailSplitCheckedFrom(rng, T, items, amount);
+}
+
+pub fn partialShuffleTailSplitCheckedFrom(source: anytype, comptime T: type, items: []T, amount: usize) Error!PartialShuffleTailSplit(T) {
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffleTailSplitFrom(source, T, items, amount);
+}
+
+pub fn partialShuffleTailSplitFrom(source: anytype, comptime T: type, items: []T, amount: usize) PartialShuffleTailSplit(T) {
+    const selected = partialShuffleTailFrom(source, T, items, amount);
+    return .{ .selected = selected, .rest = items[0 .. items.len - selected.len] };
 }
 
 pub fn reservoirSample(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
@@ -6322,6 +6371,12 @@ test "invalid facade collection helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, partialShuffleSplitChecked(rng, u8, &tiny_items, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectError(error.InvalidParameter, partialShuffleTailChecked(rng, u8, &tiny_items, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, partialShuffleTailSplitChecked(rng, u8, &tiny_items, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, reservoirSampleChecked(std.testing.allocator, rng, u8, &.{ 1, 2 }, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -7133,6 +7188,17 @@ test "zero-count partial shuffle does not mutate or consume random stream" {
     try std.testing.expectEqual(@as(usize, items.len), split.rest.len);
     try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, &items);
     try std.testing.expectEqual(control.next(), engine.next());
+
+    const tail = try partialShuffleTailCheckedFrom(&engine, u8, &items, 0);
+    try std.testing.expectEqual(@as(usize, 0), tail.len);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, &items);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const tail_split = try partialShuffleTailSplitCheckedFrom(&engine, u8, &items, 0);
+    try std.testing.expectEqual(@as(usize, 0), tail_split.selected.len);
+    try std.testing.expectEqual(@as(usize, items.len), tail_split.rest.len);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, &items);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "zero-count checked index helpers do not consume random stream" {
@@ -7360,6 +7426,27 @@ test "partial shuffle and reservoir sample respect counts" {
     try std.testing.expectEqual(@as(usize, 5), split.rest.len);
     try std.testing.expectEqualSlices(u8, split.selected, split_values[0..3]);
     try std.testing.expectEqualSlices(u8, split.rest, split_values[3..]);
+
+    var tail_values = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const tail = partialShuffleTail(rng, u8, &tail_values, 3);
+    try std.testing.expectEqual(@as(usize, 3), tail.len);
+    try std.testing.expectEqualSlices(u8, tail, tail_values[5..8]);
+
+    var direct_tail_values = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const direct_tail = partialShuffleTailFrom(&engine, u8, &direct_tail_values, 3);
+    try std.testing.expectEqual(@as(usize, 3), direct_tail.len);
+    try std.testing.expectEqualSlices(u8, direct_tail, direct_tail_values[5..8]);
+
+    var checked_tail_values = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const checked_tail = try partialShuffleTailCheckedFrom(&engine, u8, &checked_tail_values, 3);
+    try std.testing.expectEqual(@as(usize, 3), checked_tail.len);
+
+    var tail_split_values = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const tail_split = partialShuffleTailSplitFrom(&engine, u8, &tail_split_values, 3);
+    try std.testing.expectEqual(@as(usize, 3), tail_split.selected.len);
+    try std.testing.expectEqual(@as(usize, 5), tail_split.rest.len);
+    try std.testing.expectEqualSlices(u8, tail_split.selected, tail_split_values[5..8]);
+    try std.testing.expectEqualSlices(u8, tail_split.rest, tail_split_values[0..5]);
 
     const sampled = try reservoirSample(std.testing.allocator, rng, u8, &values, 4);
     defer std.testing.allocator.free(sampled);

@@ -167,6 +167,7 @@ Local Alea evidence:
 - `compare/results/s4-m127-index-weighted-arrays.md`
 - `compare/results/s4-m128-slice-sample-array-aliases.md`
 - `compare/results/s4-m129-seq-shuffle-aliases.md`
+- `compare/results/s4-m130-tail-partial-shuffle.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -304,7 +305,7 @@ weighted index array sampling, S4-M39 adds fixed-size weighted iterator array
 sampling, and S4-M40 adds fixed-size iterator array sampling, S4-M41 adds caller-owned
 weighted index sampling, S4-M42 adds caller-owned weighted item sampling, and
 S4-M43 adds caller-owned weighted iterator sampling, S4-M44 adds caller-owned
-index sampling, and S4-M45 adds caller-owned slice item sampling, and S4-M46 adds selected/rest partial-shuffle splits, and S4-M47 adds caller-owned `u32` index sampling, and S4-M48 adds a focused caller-owned sampling adoption example, and S4-M49 adds IndexVec item iterators, and S4-M50 adds caller-owned IndexVec item
+index sampling, and S4-M45 adds caller-owned slice item sampling, and S4-M46 adds selected/rest head partial-shuffle splits, and S4-M47 adds caller-owned `u32` index sampling, and S4-M48 adds a focused caller-owned sampling adoption example, and S4-M49 adds IndexVec item iterators, and S4-M50 adds caller-owned IndexVec item
 mapping, and S4-M51 adds checked mutable-pointer IndexVec mapping, and S4-M52 adds
 caller-owned pointer subset sampling, and S4-M53 adds fixed-size pointer array
 sampling, and S4-M54 adds fixed-size weighted pointer array sampling, and S4-M55 adds
@@ -351,5 +352,5 @@ sample-fill aliases, S4-M124 adds slice item/pointer sample aliases, S4-M125
 adds index-weighted no-replacement samples, S4-M126 adds caller-owned
 index-weighted buffers, S4-M127 adds fixed-size index-weighted arrays, S4-M128
 adds fixed-size slice sample aliases, and S4-M129 adds `seq.shuffle` aliases,
-but later stages should keep raising the bar rather than declaring the product
-permanently finished.
+and S4-M130 adds Rust-style tail partial shuffles, but later stages should keep
+raising the bar rather than declaring the product permanently finished.

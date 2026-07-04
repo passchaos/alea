@@ -283,7 +283,9 @@ Use:
 - `rng.shuffle`, `Rng.shuffleFrom`
 - `seq.shuffle`, `seq.shuffleFrom`, `seq.partialShuffle`, `seq.partialShuffleFrom`,
   `seq.partialShuffleCheckedFrom`, `seq.partialShuffleSplitFrom`,
-  `seq.partialShuffleSplitCheckedFrom`
+  `seq.partialShuffleSplitCheckedFrom`, `seq.partialShuffleTailFrom`,
+  `seq.partialShuffleTailCheckedFrom`, `seq.partialShuffleTailSplitFrom`,
+  `seq.partialShuffleTailSplitCheckedFrom`
 - `seq.reservoirSample`, `seq.reservoirSampleFrom`,
   `seq.reservoirSampleCheckedFrom`, `seq.reservoirSamplePtrsFrom`,
   `seq.reservoirSamplePtrsCheckedFrom`, `seq.reservoirSampleMutPtrsFrom`,
