@@ -10,7 +10,7 @@ const examples = [_]Example{
     .{
         .path = "examples/basic.zig",
         .step = "zig build run-basic",
-        .source_tokens = &.{ "bytesAlloc", "valueBatch u16", "uintLessThanBatch u16", "uintAtMostBatch u16", "chanceBatch p=.25", "ratioBatch 3/8", "vectorChanceBatch boolx8", "vectorRatioBatch boolx8", "standardNormalBatch", "standardExponentialBatch", "normalBatch", "exponentialBatch", "vectorStandardNormalBatch f64x4", "vectorStandardExponentialBatch f64x4", "vectorNormalBatch f64x4", "vectorExponentialBatch f64x4", "sampleBatch dice", "index choice", "u32 index choice", "index choice batch", "u32 index choice batch", "const pointer choice" },
+        .source_tokens = &.{ "bytesAlloc", "valueBatch u16", "uintLessThanBatch u16", "uintAtMostBatch u16", "chanceBatch p=.25", "ratioBatch 3/8", "vectorChanceBatch boolx8", "vectorRatioBatch boolx8", "standardNormalBatch", "standardExponentialBatch", "normalBatch", "exponentialBatch", "vectorStandardNormalBatch f64x4", "vectorStandardExponentialBatch f64x4", "vectorNormalBatch f64x4", "vectorExponentialBatch f64x4", "sampleBatch dice", "index choice", "u32 index choice", "index choice batch", "u32 index choice batch", "value choice batch", "const pointer choice" },
     },
     .{ .path = "examples/reproducible_streams.zig", .step = "zig build run-reproducible-streams" },
     .{ .path = "examples/range_sampling.zig", .step = "zig build run-range-sampling", .source_tokens = &.{ "rangeBatch u16", "rangeAtMostBatchChecked i16", "rangeBatchChecked f64", "durationRangeAtMostBatch", "vectorRangeBatch f32x4", "vectorRangeAtMostBatch i32x4", "vectorOpenBatch f32x4", "vectorOpenClosedBatch f32x4", "openBatch f32", "openClosedBatch f32" } },

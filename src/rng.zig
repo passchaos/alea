@@ -2495,6 +2495,35 @@ pub fn chooseChecked(self: Rng, comptime T: type, items: []const T) Error!T {
     return chooseCheckedFrom(self, T, items);
 }
 
+pub fn fillChoose(self: Rng, comptime T: type, dest: []T, items: []const T) void {
+    fillChooseFrom(self, T, dest, items);
+}
+
+pub fn chooseBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
+    return chooseBatchFrom(self, T, allocator, count, items);
+}
+
+pub fn chooseBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillChooseFrom(source, T, out, items);
+    return out;
+}
+
+pub fn fillChooseChecked(self: Rng, comptime T: type, dest: []T, items: []const T) Error!void {
+    return fillChooseCheckedFrom(self, T, dest, items);
+}
+
+pub fn chooseBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
+    return chooseBatchCheckedFrom(self, T, allocator, count, items);
+}
+
+pub fn chooseBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (items.len == 0) return error.EmptyRange;
+    return chooseBatchFrom(source, T, allocator, count, items);
+}
+
 pub fn chooseCheckedFrom(source: anytype, comptime T: type, items: []const T) Error!T {
     return chooseFrom(source, T, items) orelse error.EmptyRange;
 }
@@ -2503,6 +2532,21 @@ pub fn chooseFrom(source: anytype, comptime T: type, items: []const T) ?T {
     if (items.len == 0) return null;
     if (items.len == 1) return items[0];
     return items[uintLessThanFrom(source, usize, items.len)];
+}
+
+pub fn fillChooseFrom(source: anytype, comptime T: type, dest: []T, items: []const T) void {
+    std.debug.assert(items.len > 0);
+    if (items.len == 1) {
+        @memset(dest, items[0]);
+        return;
+    }
+    for (dest) |*item| item.* = items[uintLessThanFrom(source, usize, items.len)];
+}
+
+pub fn fillChooseCheckedFrom(source: anytype, comptime T: type, dest: []T, items: []const T) Error!void {
+    if (dest.len == 0) return;
+    if (items.len == 0) return error.EmptyRange;
+    fillChooseFrom(source, T, dest, items);
 }
 
 pub fn chooseIndex(self: Rng, length: usize) ?usize {
@@ -5769,6 +5813,32 @@ test "invalid facade choice helpers do not consume random stream" {
     var empty: [0]u8 = .{};
     try std.testing.expectError(error.EmptyRange, rng.choosePtrChecked(u8, &empty));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty_values: [0]u8 = .{};
+    try rng.fillChooseChecked(u8, &empty_values, &empty);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one_value: [1]u8 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseCheckedFrom(&engine, u8, &one_value, &empty));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty_value_batch = try rng.chooseBatchChecked(u8, empty_value_alloc.allocator(), 0, &empty);
+    defer empty_value_alloc.allocator().free(empty_value_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_value_batch.len);
+    try std.testing.expect(!empty_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseBatchCheckedFrom(&engine, u8, invalid_value_alloc.allocator(), 8, &empty));
+    try std.testing.expect(!invalid_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const non_empty = [_]u8{ 1, 2, 3 };
+    var value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.chooseBatchChecked(u8, value_alloc.allocator(), 8, &non_empty));
+    try std.testing.expect(value_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "single-item choice helpers do not consume random stream" {
@@ -5810,6 +5880,16 @@ test "single-item choice helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(u8, 42), try rng.chooseChecked(u8, &items));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var chosen_values: [5]u8 = undefined;
+    try rng.fillChooseChecked(u8, &chosen_values, &items);
+    for (chosen_values) |sample| try std.testing.expectEqual(@as(u8, 42), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_chosen_values = try chooseBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &items);
+    defer std.testing.allocator.free(owned_chosen_values);
+    for (owned_chosen_values) |sample| try std.testing.expectEqual(@as(u8, 42), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var mutable_items = [_]u8{99};
@@ -5929,6 +6009,28 @@ test "collection helpers preserve direct stream shape" {
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
         try std.testing.expectEqual(try rng.chooseChecked(u8, &items), try Rng.chooseCheckedFrom(&direct_engine, u8, &items));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_values: [8]u8 = undefined;
+        var direct_values: [8]u8 = undefined;
+        rng.fillChoose(u8, &facade_values, &items);
+        Rng.fillChooseFrom(&direct_engine, u8, &direct_values, &items);
+        try std.testing.expectEqualSlices(u8, &facade_values, &direct_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_owned_values = try rng.chooseBatch(u8, std.testing.allocator, 8, &items);
+        defer std.testing.allocator.free(facade_owned_values);
+        const direct_owned_values = try Rng.chooseBatchFrom(&direct_engine, u8, std.testing.allocator, 8, &items);
+        defer std.testing.allocator.free(direct_owned_values);
+        try std.testing.expectEqualSlices(u8, facade_owned_values, direct_owned_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_values = try rng.chooseBatchChecked(u8, std.testing.allocator, 8, &items);
+        defer std.testing.allocator.free(facade_checked_values);
+        const direct_checked_values = try Rng.chooseBatchCheckedFrom(&direct_engine, u8, std.testing.allocator, 8, &items);
+        defer std.testing.allocator.free(direct_checked_values);
+        try std.testing.expectEqualSlices(u8, facade_checked_values, direct_checked_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         const facade_const_ptr = rng.chooseConstPtr(u8, &items).?;
         const direct_const_ptr = Rng.chooseConstPtrFrom(&direct_engine, u8, &items).?;
         try std.testing.expectEqual(facade_const_ptr.*, direct_const_ptr.*);

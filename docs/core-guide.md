@@ -275,7 +275,7 @@ Use:
   `Rng.chooseIndexU32CheckedFrom`, `Rng.fillChooseIndexFrom`,
   `Rng.fillChooseIndexU32From`, `Rng.chooseIndexBatchFrom`,
   `Rng.chooseIndexU32BatchFrom`, `rng.choose`, `Rng.chooseFrom`,
-  `Rng.chooseCheckedFrom`,
+  `Rng.chooseCheckedFrom`, `Rng.fillChooseFrom`, `Rng.chooseBatchFrom`,
   `rng.chooseConstPtr`, `Rng.chooseConstPtrFrom`,
   `Rng.chooseConstPtrCheckedFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`,
   `Rng.choosePtrCheckedFrom`
