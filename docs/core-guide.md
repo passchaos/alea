@@ -316,7 +316,8 @@ Use:
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `Choice.sampleIndexFrom`,
   `Choice.sampleIndexU32From`, `Choice.fillIndicesFrom`,
-  `Choice.fillIndicesU32From`, `WeightedChoice.update`,
+  `Choice.fillIndicesU32From`, `Choice.indicesFrom`, `Choice.indicesU32From`,
+  `WeightedChoice.update`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
   `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
   `sampleIndexU32From`, and `WeightedChoice.fillIndicesFrom` /

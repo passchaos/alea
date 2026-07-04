@@ -2253,6 +2253,28 @@ pub fn Choice(comptime T: type) type {
             for (dest) |*index| index.* = Rng.uintLessThanFrom(source, u32, item_len_u32);
         }
 
+        pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
+            return self.indicesFrom(allocator, rng, amount);
+        }
+
+        pub fn indicesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            self.fillIndicesFrom(source, out);
+            return out;
+        }
+
+        pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
+            return self.indicesU32From(allocator, rng, amount);
+        }
+
+        pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillIndicesU32From(source, out);
+            return out;
+        }
+
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
             return rng.sampleIter(*const T, self);
         }
@@ -5467,6 +5489,16 @@ test "single-item choice sampler does not consume random stream" {
     var index_u32_buf: [4]u32 = undefined;
     try choice.fillIndicesU32From(&engine, &index_u32_buf);
     for (index_u32_buf) |index| try std.testing.expectEqual(@as(u32, 0), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_indices = try choice.indicesFrom(std.testing.allocator, &engine, 4);
+    defer std.testing.allocator.free(owned_indices);
+    for (owned_indices) |index| try std.testing.expectEqual(@as(usize, 0), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_indices_u32 = try choice.indicesU32From(std.testing.allocator, &engine, 4);
+    defer std.testing.allocator.free(owned_indices_u32);
+    for (owned_indices_u32) |index| try std.testing.expectEqual(@as(u32, 0), index);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var iter = choice.iterFrom(&engine);

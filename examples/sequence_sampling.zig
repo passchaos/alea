@@ -208,6 +208,12 @@ pub fn main(init: std.process.Init) !void {
     var choice_indices_u32: [5]u32 = undefined;
     try choice.fillIndicesU32From(&choice_engine, &choice_indices_u32);
     try stdout.print("Choice.fillIndicesU32From: {any}\n", .{choice_indices_u32});
+    const choice_owned_indices = try choice.indicesFrom(allocator, &choice_engine, 5);
+    defer allocator.free(choice_owned_indices);
+    try stdout.print("Choice.indicesFrom: {any}\n", .{choice_owned_indices});
+    const choice_owned_indices_u32 = try choice.indicesU32From(allocator, &choice_engine, 5);
+    defer allocator.free(choice_owned_indices_u32);
+    try stdout.print("Choice.indicesU32From: {any}\n", .{choice_owned_indices_u32});
 
     var iter_choice_engine = alea.ScalarPrng.init(0x5e11_0008);
     var stream = Counter{ .limit = 20 };
