@@ -44,6 +44,11 @@ pub fn main(init: std.process.Init) !void {
     try alea.seq.sampleIndicesIntoCheckedFrom(&indices_into_engine, items.len, &indices_into);
     try stdout.print("sampleIndicesInto: {any}\n", .{indices_into});
 
+    var indices_u32_engine = alea.ScalarPrng.init(0x5e11_0013);
+    var indices_u32_into: [4]u32 = undefined;
+    try alea.seq.sampleIndicesU32IntoCheckedFrom(&indices_u32_engine, @intCast(items.len), &indices_u32_into);
+    try stdout.print("sampleIndicesU32Into: {any}\n", .{indices_u32_into});
+
     var index_vec_engine = alea.ScalarPrng.init(0x5e11_0002);
     const index_vec = try alea.seq.sampleIndexVecFrom(allocator, &index_vec_engine, 10_000, 6);
     defer index_vec.deinit(allocator);
@@ -143,6 +148,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple/chooseMultipleInto or sampleWithoutReplacement for item subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSampleInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple/chooseMultipleInto or sampleWithoutReplacement for item subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSampleInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }

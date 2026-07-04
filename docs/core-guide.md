@@ -239,7 +239,8 @@ Use:
   `seq.sampleIndicesIntoFrom`, `seq.sampleIndicesIntoCheckedFrom`,
   `seq.sampleIndexVec`,
   `seq.sampleIndexVecCheckedFrom`, `seq.sampleIndicesU32`,
-  `seq.sampleIndicesU32CheckedFrom`; compact `IndexVec` results expose
+  `seq.sampleIndicesU32CheckedFrom`, `seq.sampleIndicesU32IntoFrom`,
+  `seq.sampleIndicesU32IntoCheckedFrom`; compact `IndexVec` results expose
   `len`, `isEmpty`, `at`, `copyInto`, `toOwnedSlice`, and an exact-size
   `iter` with `remaining`
 - `seq.sampleArray`, `seq.sampleArrayFrom`, `seq.sampleArrayCheckedFrom`

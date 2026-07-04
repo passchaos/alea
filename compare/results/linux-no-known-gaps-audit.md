@@ -84,6 +84,7 @@ Local Alea evidence:
 - `compare/results/s4-m44-indices-into.md`
 - `compare/results/s4-m45-choose-multiple-into.md`
 - `compare/results/s4-m46-partial-shuffle-split.md`
+- `compare/results/s4-m47-u32-indices-into.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -221,6 +222,6 @@ weighted index array sampling, S4-M39 adds fixed-size weighted iterator array
 sampling, and S4-M40 adds fixed-size iterator array sampling, S4-M41 adds caller-owned
 weighted index sampling, S4-M42 adds caller-owned weighted item sampling, and
 S4-M43 adds caller-owned weighted iterator sampling, S4-M44 adds caller-owned
-index sampling, and S4-M45 adds caller-owned slice item sampling, and S4-M46 adds selected/rest
-partial-shuffle splits, but later stages should keep raising the bar rather than
+index sampling, and S4-M45 adds caller-owned slice item sampling, and S4-M46 adds selected/rest partial-shuffle splits, and S4-M47 adds caller-owned
+`u32` index sampling, but later stages should keep raising the bar rather than
 declaring the product permanently finished.

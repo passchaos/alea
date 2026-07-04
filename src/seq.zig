@@ -198,6 +198,42 @@ pub fn sampleIndicesU32From(allocator: std.mem.Allocator, source: anytype, lengt
     return sampleRejectionU32(allocator, source, length, amount);
 }
 
+pub fn sampleIndicesU32Into(rng: Rng, length: u32, out: []u32) Error!void {
+    return sampleIndicesU32IntoCheckedFrom(rng, length, out);
+}
+
+pub fn sampleIndicesU32IntoChecked(rng: Rng, length: u32, out: []u32) Error!void {
+    return sampleIndicesU32IntoCheckedFrom(rng, length, out);
+}
+
+pub fn sampleIndicesU32IntoCheckedFrom(source: anytype, length: u32, out: []u32) Error!void {
+    if (out.len > @as(usize, length)) return error.InvalidParameter;
+    sampleIndicesU32IntoFrom(source, length, out);
+}
+
+pub fn sampleIndicesU32IntoFrom(source: anytype, length: u32, out: []u32) void {
+    std.debug.assert(out.len <= @as(usize, length));
+    if (out.len == 0) return;
+
+    var i: usize = 0;
+    var j: u32 = length - @as(u32, @intCast(out.len));
+    while (j < length) : ({
+        j += 1;
+        i += 1;
+    }) {
+        const t = Rng.uintAtMostFrom(source, u32, j);
+        var found: ?usize = null;
+        for (out[0..i], 0..) |existing, pos| {
+            if (existing == t) {
+                found = pos;
+                break;
+            }
+        }
+        if (found) |pos| out[pos] = j;
+        out[i] = t;
+    }
+}
+
 fn sampleIndicesU32AsUsize(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]usize {
     std.debug.assert(amount <= length);
     if (amount == 0) return allocator.alloc(usize, 0);
@@ -2095,6 +2131,45 @@ test "sampleIndicesInto preserves facade/direct stream shape and invalid paths d
     var invalid_control = alea.ScalarPrng.init(0x5150_7904);
     var invalid_out: [4]usize = undefined;
     try std.testing.expectError(error.InvalidParameter, sampleIndicesIntoCheckedFrom(&invalid_engine, 3, &invalid_out));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "sampleIndicesU32Into fills caller-owned compact index buffers" {
+    const alea = @import("root.zig");
+
+    var engine = alea.ScalarPrng.init(0x5150_7911);
+    var out: [6]u32 = undefined;
+    try sampleIndicesU32IntoCheckedFrom(&engine, 10_000, &out);
+    for (out) |index| try std.testing.expect(index < 10_000);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_7912);
+    var empty_control = alea.ScalarPrng.init(0x5150_7912);
+    var empty_out: [0]u32 = .{};
+    try sampleIndicesU32IntoCheckedFrom(&empty_engine, 10_000, &empty_out);
+    sampleIndicesU32IntoFrom(&empty_engine, 10_000, &empty_out);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "sampleIndicesU32Into preserves facade/direct stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_7913);
+        var direct_engine = Engine.init(0x5150_7913);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_out: [8]u32 = undefined;
+        var direct_out: [8]u32 = undefined;
+        try sampleIndicesU32Into(rng, 10_000, &facade_out);
+        try sampleIndicesU32IntoCheckedFrom(&direct_engine, 10_000, &direct_out);
+        try std.testing.expectEqualSlices(u32, &facade_out, &direct_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_7914);
+    var invalid_control = alea.ScalarPrng.init(0x5150_7914);
+    var invalid_out: [4]u32 = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesU32IntoCheckedFrom(&invalid_engine, 3, &invalid_out));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 

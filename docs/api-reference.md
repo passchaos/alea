@@ -2278,6 +2278,8 @@ Dynamic weighted helpers:
   `sampleIndicesInto`, `sampleIndicesIntoFrom`, `sampleIndicesIntoChecked`,
   `sampleIndicesIntoCheckedFrom`,
   `sampleIndicesU32`, `sampleIndicesU32From`, `sampleIndicesU32CheckedFrom`,
+  `sampleIndicesU32Into`, `sampleIndicesU32IntoFrom`,
+  `sampleIndicesU32IntoChecked`, `sampleIndicesU32IntoCheckedFrom`,
   `sampleArray`, `sampleArrayFrom`, `sampleArrayChecked`,
   `sampleArrayCheckedFrom`
 - Collections: `chooseMultiple`, `chooseMultipleFrom`,
