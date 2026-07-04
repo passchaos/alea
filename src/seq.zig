@@ -533,8 +533,24 @@ pub fn chooseMultiple(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
     return chooseMultipleFrom(allocator, rng, T, items, amount);
 }
 
+pub fn sampleItems(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
+    return sampleItemsFrom(allocator, rng, T, items, amount);
+}
+
+pub fn sampleItemsFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
+    return chooseMultipleFrom(allocator, source, T, items, amount);
+}
+
 pub fn chooseMultipleChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
     return chooseMultipleCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn sampleItemsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
+    return sampleItemsCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn sampleItemsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
+    return chooseMultipleCheckedFrom(allocator, source, T, items, amount);
 }
 
 pub fn chooseMultipleCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
@@ -558,8 +574,24 @@ pub fn chooseMultiplePtrs(allocator: std.mem.Allocator, rng: Rng, comptime T: ty
     return chooseMultiplePtrsFrom(allocator, rng, T, items, amount);
 }
 
+pub fn samplePtrs(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    return samplePtrsFrom(allocator, rng, T, items, amount);
+}
+
+pub fn samplePtrsFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    return chooseMultiplePtrsFrom(allocator, source, T, items, amount);
+}
+
 pub fn chooseMultiplePtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]*const T {
     return chooseMultiplePtrsCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn samplePtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    return samplePtrsCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn samplePtrsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    return chooseMultiplePtrsCheckedFrom(allocator, source, T, items, amount);
 }
 
 pub fn chooseMultiplePtrsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]*const T {
@@ -583,8 +615,24 @@ pub fn chooseMultipleMutPtrs(allocator: std.mem.Allocator, rng: Rng, comptime T:
     return chooseMultipleMutPtrsFrom(allocator, rng, T, items, amount);
 }
 
+pub fn sampleMutPtrs(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []T, amount: usize) ![]*T {
+    return sampleMutPtrsFrom(allocator, rng, T, items, amount);
+}
+
+pub fn sampleMutPtrsFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []T, amount: usize) ![]*T {
+    return chooseMultipleMutPtrsFrom(allocator, source, T, items, amount);
+}
+
 pub fn chooseMultipleMutPtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []T, amount: usize) ![]*T {
     return chooseMultipleMutPtrsCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn sampleMutPtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []T, amount: usize) ![]*T {
+    return sampleMutPtrsCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn sampleMutPtrsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []T, amount: usize) ![]*T {
+    return chooseMultipleMutPtrsCheckedFrom(allocator, source, T, items, amount);
 }
 
 pub fn chooseMultipleMutPtrsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []T, amount: usize) ![]*T {
@@ -608,6 +656,14 @@ pub fn chooseMultipleInto(rng: Rng, comptime T: type, items: []const T, out: []T
     return chooseMultipleIntoFrom(rng, T, items, out, scratch_indices);
 }
 
+pub fn sampleItemsInto(rng: Rng, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!usize {
+    return sampleItemsIntoFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn sampleItemsIntoFrom(source: anytype, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!usize {
+    return chooseMultipleIntoFrom(source, T, items, out, scratch_indices);
+}
+
 pub fn chooseMultipleIntoFrom(source: anytype, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!usize {
     const count = @min(out.len, items.len);
     if (count == 0) return 0;
@@ -621,6 +677,14 @@ pub fn chooseMultipleIntoChecked(rng: Rng, comptime T: type, items: []const T, o
     return chooseMultipleIntoCheckedFrom(rng, T, items, out, scratch_indices);
 }
 
+pub fn sampleItemsIntoChecked(rng: Rng, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!void {
+    return sampleItemsIntoCheckedFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn sampleItemsIntoCheckedFrom(source: anytype, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!void {
+    return chooseMultipleIntoCheckedFrom(source, T, items, out, scratch_indices);
+}
+
 pub fn chooseMultipleIntoCheckedFrom(source: anytype, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!void {
     if (out.len > items.len) return error.InvalidParameter;
     if (out.len == 0) return;
@@ -631,6 +695,14 @@ pub fn chooseMultipleIntoCheckedFrom(source: anytype, comptime T: type, items: [
 
 pub fn chooseMultiplePtrsInto(rng: Rng, comptime T: type, items: []const T, out: []*const T, scratch_indices: []usize) Error!usize {
     return chooseMultiplePtrsIntoFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn samplePtrsInto(rng: Rng, comptime T: type, items: []const T, out: []*const T, scratch_indices: []usize) Error!usize {
+    return samplePtrsIntoFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn samplePtrsIntoFrom(source: anytype, comptime T: type, items: []const T, out: []*const T, scratch_indices: []usize) Error!usize {
+    return chooseMultiplePtrsIntoFrom(source, T, items, out, scratch_indices);
 }
 
 pub fn chooseMultiplePtrsIntoFrom(source: anytype, comptime T: type, items: []const T, out: []*const T, scratch_indices: []usize) Error!usize {
@@ -646,6 +718,14 @@ pub fn chooseMultiplePtrsIntoChecked(rng: Rng, comptime T: type, items: []const 
     return chooseMultiplePtrsIntoCheckedFrom(rng, T, items, out, scratch_indices);
 }
 
+pub fn samplePtrsIntoChecked(rng: Rng, comptime T: type, items: []const T, out: []*const T, scratch_indices: []usize) Error!void {
+    return samplePtrsIntoCheckedFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn samplePtrsIntoCheckedFrom(source: anytype, comptime T: type, items: []const T, out: []*const T, scratch_indices: []usize) Error!void {
+    return chooseMultiplePtrsIntoCheckedFrom(source, T, items, out, scratch_indices);
+}
+
 pub fn chooseMultiplePtrsIntoCheckedFrom(source: anytype, comptime T: type, items: []const T, out: []*const T, scratch_indices: []usize) Error!void {
     if (out.len > items.len) return error.InvalidParameter;
     if (out.len == 0) return;
@@ -656,6 +736,14 @@ pub fn chooseMultiplePtrsIntoCheckedFrom(source: anytype, comptime T: type, item
 
 pub fn chooseMultipleMutPtrsInto(rng: Rng, comptime T: type, items: []T, out: []*T, scratch_indices: []usize) Error!usize {
     return chooseMultipleMutPtrsIntoFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn sampleMutPtrsInto(rng: Rng, comptime T: type, items: []T, out: []*T, scratch_indices: []usize) Error!usize {
+    return sampleMutPtrsIntoFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn sampleMutPtrsIntoFrom(source: anytype, comptime T: type, items: []T, out: []*T, scratch_indices: []usize) Error!usize {
+    return chooseMultipleMutPtrsIntoFrom(source, T, items, out, scratch_indices);
 }
 
 pub fn chooseMultipleMutPtrsIntoFrom(source: anytype, comptime T: type, items: []T, out: []*T, scratch_indices: []usize) Error!usize {
@@ -669,6 +757,14 @@ pub fn chooseMultipleMutPtrsIntoFrom(source: anytype, comptime T: type, items: [
 
 pub fn chooseMultipleMutPtrsIntoChecked(rng: Rng, comptime T: type, items: []T, out: []*T, scratch_indices: []usize) Error!void {
     return chooseMultipleMutPtrsIntoCheckedFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn sampleMutPtrsIntoChecked(rng: Rng, comptime T: type, items: []T, out: []*T, scratch_indices: []usize) Error!void {
+    return sampleMutPtrsIntoCheckedFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn sampleMutPtrsIntoCheckedFrom(source: anytype, comptime T: type, items: []T, out: []*T, scratch_indices: []usize) Error!void {
+    return chooseMultipleMutPtrsIntoCheckedFrom(source, T, items, out, scratch_indices);
 }
 
 pub fn chooseMultipleMutPtrsIntoCheckedFrom(source: anytype, comptime T: type, items: []T, out: []*T, scratch_indices: []usize) Error!void {
@@ -6870,6 +6966,74 @@ test "chooseMultiple pointer slices preserve stream shape and invalid paths do n
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
+test "slice sampleItems aliases mirror allocation-returning chooseMultiple workflows" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c307);
+        var direct_engine = Engine.init(0x5150_c307);
+        const rng = Rng.init(&facade_engine);
+
+        const facade = try sampleItems(std.testing.allocator, rng, u8, &items, 3);
+        defer std.testing.allocator.free(facade);
+        const direct = try chooseMultipleFrom(std.testing.allocator, &direct_engine, u8, &items, 3);
+        defer std.testing.allocator.free(direct);
+        try std.testing.expectEqualSlices(u8, direct, facade);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var ptr_facade_engine = Engine.init(0x5150_c308);
+        var ptr_direct_engine = Engine.init(0x5150_c308);
+        const ptr_rng = Rng.init(&ptr_facade_engine);
+        const ptr_facade = try samplePtrs(std.testing.allocator, ptr_rng, u8, &items, 3);
+        defer std.testing.allocator.free(ptr_facade);
+        const ptr_direct = try chooseMultiplePtrsFrom(std.testing.allocator, &ptr_direct_engine, u8, &items, 3);
+        defer std.testing.allocator.free(ptr_direct);
+        for (ptr_facade, ptr_direct) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(ptr_facade_engine.next(), ptr_direct_engine.next());
+
+        var mut_facade_engine = Engine.init(0x5150_c309);
+        var mut_direct_engine = Engine.init(0x5150_c309);
+        const mut_rng = Rng.init(&mut_facade_engine);
+        var facade_items = items;
+        var direct_items = items;
+        const mut_facade = try sampleMutPtrs(std.testing.allocator, mut_rng, u8, &facade_items, 3);
+        defer std.testing.allocator.free(mut_facade);
+        const mut_direct = try chooseMultipleMutPtrsFrom(std.testing.allocator, &mut_direct_engine, u8, &direct_items, 3);
+        defer std.testing.allocator.free(mut_direct);
+        for (mut_facade, mut_direct) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(mut_facade_engine.next(), mut_direct_engine.next());
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_c30a);
+    const checked = try sampleItemsCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 3);
+    defer std.testing.allocator.free(checked);
+    try std.testing.expectEqual(@as(usize, 3), checked.len);
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_c30b);
+    var invalid_control = alea.ScalarPrng.init(0x5150_c30b);
+    try std.testing.expectError(error.InvalidParameter, sampleItemsCheckedFrom(std.testing.allocator, &invalid_engine, u8, &items, 6));
+    try std.testing.expectError(error.InvalidParameter, samplePtrsCheckedFrom(std.testing.allocator, &invalid_engine, u8, &items, 6));
+    var mutable = items;
+    try std.testing.expectError(error.InvalidParameter, sampleMutPtrsCheckedFrom(std.testing.allocator, &invalid_engine, u8, &mutable, 6));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_c30c);
+    var empty_control = alea.ScalarPrng.init(0x5150_c30c);
+    const empty = try sampleItemsFrom(std.testing.allocator, &empty_engine, u8, &items, 0);
+    defer std.testing.allocator.free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
 test "chooseMultipleInto fills caller-owned item buffers" {
     const alea = @import("root.zig");
     const items = [_]u8{ 10, 20, 30, 40, 50 };
@@ -6925,6 +7089,94 @@ test "chooseMultipleInto preserves facade/direct stream shape and invalid paths 
     var enough_indices: [6]usize = undefined;
     try std.testing.expectError(error.InvalidParameter, chooseMultipleIntoCheckedFrom(&invalid_engine, u8, &items, &too_many, &enough_indices));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "slice sampleItemsInto aliases mirror caller-owned chooseMultiple workflows" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c10a);
+        var direct_engine = Engine.init(0x5150_c10a);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_out: [3]u8 = undefined;
+        var direct_out: [3]u8 = undefined;
+        var facade_indices: [3]usize = undefined;
+        var direct_indices: [3]usize = undefined;
+        try std.testing.expectEqual(
+            try sampleItemsInto(rng, u8, &items, &facade_out, &facade_indices),
+            try chooseMultipleIntoFrom(&direct_engine, u8, &items, &direct_out, &direct_indices),
+        );
+        try std.testing.expectEqualSlices(u8, &direct_out, &facade_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var ptr_facade_engine = Engine.init(0x5150_c10b);
+        var ptr_direct_engine = Engine.init(0x5150_c10b);
+        const ptr_rng = Rng.init(&ptr_facade_engine);
+        var facade_ptrs: [3]*const u8 = undefined;
+        var direct_ptrs: [3]*const u8 = undefined;
+        var facade_ptr_indices: [3]usize = undefined;
+        var direct_ptr_indices: [3]usize = undefined;
+        try std.testing.expectEqual(
+            try samplePtrsInto(ptr_rng, u8, &items, &facade_ptrs, &facade_ptr_indices),
+            try chooseMultiplePtrsIntoFrom(&ptr_direct_engine, u8, &items, &direct_ptrs, &direct_ptr_indices),
+        );
+        for (facade_ptrs, direct_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(ptr_facade_engine.next(), ptr_direct_engine.next());
+
+        var mut_facade_engine = Engine.init(0x5150_c10c);
+        var mut_direct_engine = Engine.init(0x5150_c10c);
+        const mut_rng = Rng.init(&mut_facade_engine);
+        var facade_items = items;
+        var direct_items = items;
+        var facade_mut_ptrs: [3]*u8 = undefined;
+        var direct_mut_ptrs: [3]*u8 = undefined;
+        var facade_mut_indices: [3]usize = undefined;
+        var direct_mut_indices: [3]usize = undefined;
+        try std.testing.expectEqual(
+            try sampleMutPtrsInto(mut_rng, u8, &facade_items, &facade_mut_ptrs, &facade_mut_indices),
+            try chooseMultipleMutPtrsIntoFrom(&mut_direct_engine, u8, &direct_items, &direct_mut_ptrs, &direct_mut_indices),
+        );
+        for (facade_mut_ptrs, direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(direct_index, facade_index);
+        }
+        try std.testing.expectEqual(mut_facade_engine.next(), mut_direct_engine.next());
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_c10d);
+    var checked_out: [3]u8 = undefined;
+    var checked_indices: [3]usize = undefined;
+    try sampleItemsIntoCheckedFrom(&checked_engine, u8, &items, &checked_out, &checked_indices);
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_c10e);
+    var invalid_control = alea.ScalarPrng.init(0x5150_c10e);
+    var out: [3]u8 = undefined;
+    var short_indices: [2]usize = undefined;
+    try std.testing.expectError(error.LengthMismatch, sampleItemsIntoFrom(&invalid_engine, u8, &items, &out, &short_indices));
+    var too_many: [6]u8 = undefined;
+    var enough_indices: [6]usize = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleItemsIntoCheckedFrom(&invalid_engine, u8, &items, &too_many, &enough_indices));
+    var ptrs: [6]*const u8 = undefined;
+    try std.testing.expectError(error.InvalidParameter, samplePtrsIntoCheckedFrom(&invalid_engine, u8, &items, &ptrs, &enough_indices));
+    var mutable = items;
+    var mut_ptrs: [6]*u8 = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleMutPtrsIntoCheckedFrom(&invalid_engine, u8, &mutable, &mut_ptrs, &enough_indices));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_c10f);
+    var empty_control = alea.ScalarPrng.init(0x5150_c10f);
+    var empty_out: [0]u8 = .{};
+    var empty_indices: [0]usize = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleItemsIntoFrom(&empty_engine, u8, &items, &empty_out, &empty_indices));
+    try sampleItemsIntoCheckedFrom(&empty_engine, u8, &items, &empty_out, &empty_indices);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 }
 
 test "chooseMultiple pointer buffers fill caller-owned pointer outputs" {

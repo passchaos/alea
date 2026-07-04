@@ -305,13 +305,19 @@ Use:
   `seq.sampleArrayU32`, `seq.sampleArrayU32From`,
   `seq.sampleArrayU32CheckedFrom`
 - `seq.chooseMultiple`, `seq.chooseMultipleFrom`,
-  `seq.chooseMultipleCheckedFrom`, `seq.chooseMultiplePtrsFrom`,
-  `seq.chooseMultiplePtrsCheckedFrom`, `seq.chooseMultipleMutPtrsFrom`,
-  `seq.chooseMultipleMutPtrsCheckedFrom`, `seq.chooseMultipleIntoFrom`,
-  `seq.chooseMultipleIntoCheckedFrom`, `seq.chooseMultiplePtrsIntoFrom`,
-  `seq.chooseMultiplePtrsIntoCheckedFrom`,
+  `seq.chooseMultipleCheckedFrom`, sample aliases `seq.sampleItemsFrom` /
+  `seq.sampleItemsCheckedFrom`, `seq.chooseMultiplePtrsFrom`,
+  `seq.chooseMultiplePtrsCheckedFrom`, `seq.samplePtrsFrom` /
+  `seq.samplePtrsCheckedFrom`, `seq.chooseMultipleMutPtrsFrom`,
+  `seq.chooseMultipleMutPtrsCheckedFrom`, `seq.sampleMutPtrsFrom` /
+  `seq.sampleMutPtrsCheckedFrom`, `seq.chooseMultipleIntoFrom`,
+  `seq.chooseMultipleIntoCheckedFrom`, `seq.sampleItemsIntoFrom` /
+  `seq.sampleItemsIntoCheckedFrom`, `seq.chooseMultiplePtrsIntoFrom`,
+  `seq.chooseMultiplePtrsIntoCheckedFrom`, `seq.samplePtrsIntoFrom` /
+  `seq.samplePtrsIntoCheckedFrom`,
   `seq.chooseMultipleMutPtrsIntoFrom`,
-  `seq.chooseMultipleMutPtrsIntoCheckedFrom`, `seq.chooseArray`,
+  `seq.chooseMultipleMutPtrsIntoCheckedFrom`, `seq.sampleMutPtrsIntoFrom` /
+  `seq.sampleMutPtrsIntoCheckedFrom`, `seq.chooseArray`,
   `seq.chooseArrayFrom`, `seq.chooseArrayCheckedFrom`,
   `seq.choosePtrArrayFrom`, `seq.choosePtrArrayCheckedFrom`,
   `seq.chooseMutPtrArrayFrom`, `seq.chooseMutPtrArrayCheckedFrom`

@@ -100,11 +100,22 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(chosen);
     try stdout.print("chooseMultiple items: {s}, {s}, {s}\n", .{ chosen[0], chosen[1], chosen[2] });
 
+    var sample_items_engine = alea.ScalarPrng.init(0x5e11_001b);
+    const sampled_items = try alea.seq.sampleItemsFrom(allocator, &sample_items_engine, []const u8, &items, 3);
+    defer allocator.free(sampled_items);
+    try stdout.print("sampleItemsFrom items: {s}, {s}, {s}\n", .{ sampled_items[0], sampled_items[1], sampled_items[2] });
+
     var choose_into_engine = alea.ScalarPrng.init(0x5e11_0011);
     var chosen_into: [3][]const u8 = undefined;
     var chosen_into_indices: [3]usize = undefined;
     _ = try alea.seq.chooseMultipleIntoFrom(&choose_into_engine, []const u8, &items, &chosen_into, &chosen_into_indices);
     try stdout.print("chooseMultipleInto items: {s}, {s}, {s}\n", .{ chosen_into[0], chosen_into[1], chosen_into[2] });
+
+    var sample_items_into_engine = alea.ScalarPrng.init(0x5e11_001c);
+    var sampled_items_into: [3][]const u8 = undefined;
+    var sampled_items_into_indices: [3]usize = undefined;
+    _ = try alea.seq.sampleItemsIntoFrom(&sample_items_into_engine, []const u8, &items, &sampled_items_into, &sampled_items_into_indices);
+    try stdout.print("sampleItemsIntoFrom items: {s}, {s}, {s}\n", .{ sampled_items_into[0], sampled_items_into[1], sampled_items_into[2] });
 
     var choose_ptrs_engine = alea.ScalarPrng.init(0x5e11_0015);
     var chosen_ptrs: [3]*const []const u8 = undefined;
@@ -278,6 +289,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, sampleArrayU32 for compact fixed-size index arrays, chooseArray/choosePtrArray for fixed-size item/pointer arrays, chooseMultiple/chooseMultipleInto/chooseMultiplePtrsInto or sampleWithoutReplacement for allocation-returning and caller-owned item/pointer subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable value/pointer/index batches or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, sampleArrayU32 for compact fixed-size index arrays, chooseArray/choosePtrArray for fixed-size item/pointer arrays, chooseMultiple/sampleItems plus chooseMultipleInto/sampleItemsInto and pointer variants for allocation-returning and caller-owned item/pointer subsets, sampleWithoutReplacement for Rng-owned subset sampling, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable value/pointer/index batches or streaming choices.\n", .{});
     try stdout.flush();
 }
