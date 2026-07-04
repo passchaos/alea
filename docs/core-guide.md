@@ -314,7 +314,8 @@ Use:
   validating weights; facade and direct-source checked calls validate before
   drawing)
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
-  `seq.WeightedChoice`, including `Choice.iterFrom`, `WeightedChoice.update`,
+  `seq.WeightedChoice`, including `Choice.iterFrom`, `Choice.fillIndicesFrom`,
+  `Choice.fillIndicesU32From`, `WeightedChoice.update`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
   `WeightedChoice.weightAt` / `weightsInto`, and `WeightedChoice.fillIndicesFrom`
   / `fillIndicesU32From`

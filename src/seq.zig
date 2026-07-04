@@ -2209,6 +2209,32 @@ pub fn Choice(comptime T: type) type {
             for (dest) |*item| item.* = self.sampleValueFrom(source);
         }
 
+        pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
+            self.fillIndicesFrom(rng, dest);
+        }
+
+        pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
+            if (self.items.len == 1) {
+                @memset(dest, 0);
+                return;
+            }
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(source, usize, self.items.len);
+        }
+
+        pub fn fillIndicesU32(self: Self, rng: Rng, dest: []u32) Error!void {
+            return self.fillIndicesU32From(rng, dest);
+        }
+
+        pub fn fillIndicesU32From(self: Self, source: anytype, dest: []u32) Error!void {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.items.len == 1) {
+                @memset(dest, 0);
+                return;
+            }
+            const item_len_u32: u32 = @intCast(self.items.len);
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(source, u32, item_len_u32);
+        }
+
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
             return rng.sampleIter(*const T, self);
         }
@@ -5344,6 +5370,12 @@ test "zero-length choice fills do not consume random stream" {
     var value_buf: [0]u8 = .{};
     choice.fillValuesFrom(&engine, &value_buf);
     try std.testing.expectEqual(control.next(), engine.next());
+    var index_buf: [0]usize = .{};
+    choice.fillIndicesFrom(&engine, &index_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+    var index_u32_buf: [0]u32 = .{};
+    try choice.fillIndicesU32From(&engine, &index_u32_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
 
     const labels = [_][]const u8{ "never", "rare", "often" };
     var weighted = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &labels, &.{ 0, 1, 7 });
@@ -5384,6 +5416,16 @@ test "single-item choice sampler does not consume random stream" {
     var value_buf: [4]u8 = undefined;
     choice.fillValuesFrom(&engine, &value_buf);
     for (value_buf) |item| try std.testing.expectEqual(@as(u8, 42), item);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var index_buf: [4]usize = undefined;
+    choice.fillIndicesFrom(&engine, &index_buf);
+    for (index_buf) |index| try std.testing.expectEqual(@as(usize, 0), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var index_u32_buf: [4]u32 = undefined;
+    try choice.fillIndicesU32From(&engine, &index_u32_buf);
+    for (index_u32_buf) |index| try std.testing.expectEqual(@as(u32, 0), index);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var iter = choice.iterFrom(&engine);
