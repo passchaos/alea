@@ -358,10 +358,13 @@ Use:
   `seq.sampleIteratorWeightedIntoFrom`,
   `seq.sampleIteratorWeightedIntoCheckedFrom`
 - `Rng.weightedIndexFrom`, `Rng.fillWeightedIndexFrom`,
-  `Rng.weightedIndexBatchFrom`, `Rng.fillWeightedIndexU32From`,
+  `Rng.weightedIndexArrayFrom`, `Rng.weightedIndexBatchFrom`,
+  `Rng.fillWeightedIndexU32From`, `Rng.weightedIndexU32ArrayFrom`,
   `Rng.weightedIndexU32BatchFrom`, `Rng.fillChooseWeightedFrom`,
-  `Rng.chooseWeightedBatchFrom`, `Rng.fillChooseWeightedConstPtrFrom`,
-  `Rng.chooseWeightedConstPtrBatchFrom`, `Rng.fillChooseWeightedPtrFrom`,
+  `Rng.chooseWeightedValueArrayFrom`, `Rng.chooseWeightedBatchFrom`,
+  `Rng.fillChooseWeightedConstPtrFrom`,
+  `Rng.chooseWeightedConstPtrArrayFrom`, `Rng.chooseWeightedConstPtrBatchFrom`,
+  `Rng.fillChooseWeightedPtrFrom`, `Rng.chooseWeightedPtrArrayFrom`,
   `Rng.chooseWeightedPtrBatchFrom`, `seq.weightedIndex`, `seq.weightedIndexFrom`,
   `seq.weightedIndexCheckedFrom`, `seq.fillWeightedIndexFrom`,
   `seq.weightedIndexBatchFrom`, `seq.weightedIndexU32From`,
@@ -592,10 +595,14 @@ In-place index samplers prepare their returned output before drawing, so output
 allocation failures leave the stream untouched.
 Rejection index samplers also clean up staged set allocations before drawing if
 their internal set allocation fails.
-Use `Rng.weightedIndexFrom`, `Rng.weightedIndexU32From`, `Rng.sampleWithoutReplacementFrom`,
-`sampleWeightedFrom`, `Choice.iterFrom`, `WeightedChoice.iterFrom`,
-`AliasTable.sampleFrom`, and `WeightedChoice.sampleValueFrom` for weighted or
-collection sampling with a comptime-known engine source.
+Use `Rng.weightedIndexFrom`, `Rng.weightedIndexArrayFrom`,
+`Rng.weightedIndexU32From`, `Rng.weightedIndexU32ArrayFrom`,
+`Rng.chooseWeightedValueArrayFrom`,
+`Rng.chooseWeightedConstPtrArrayFrom`, `Rng.chooseWeightedPtrArrayFrom`,
+`Rng.sampleWithoutReplacementFrom`, `sampleWeightedFrom`, `Choice.iterFrom`,
+`WeightedChoice.iterFrom`, `AliasTable.sampleFrom`, and
+`WeightedChoice.sampleValueFrom` for weighted or collection sampling with a
+comptime-known engine source.
 Checked sample-without-replacement and iterator-sampling calls with count zero
 return an empty result before building temporary storage, reading the iterator,
 or drawing from the stream.

@@ -54,10 +54,18 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(weighted_index_batch);
     try stdout.print("weighted index batch: {any}\n", .{weighted_index_batch});
 
+    var rng_weighted_index_array_engine = alea.ScalarPrng.init(0x715d);
+    const rng_weighted_index_array = try alea.Rng.weightedIndexArrayCheckedFrom(&rng_weighted_index_array_engine, 6, &float_weights);
+    try stdout.print("Rng weighted index array: {any}\n", .{rng_weighted_index_array});
+
     var batch_weighted_u32_engine = alea.ScalarPrng.init(0x7153);
     const weighted_u32_index_batch = try alea.Rng.weightedIndexU32BatchCheckedFrom(&batch_weighted_u32_engine, allocator, 6, &float_weights);
     defer allocator.free(weighted_u32_index_batch);
     try stdout.print("weighted u32 index batch: {any}\n", .{weighted_u32_index_batch});
+
+    var rng_weighted_u32_index_array_engine = alea.ScalarPrng.init(0x715e);
+    const rng_weighted_u32_index_array = try alea.Rng.weightedIndexU32ArrayCheckedFrom(&rng_weighted_u32_index_array_engine, 6, &float_weights);
+    try stdout.print("Rng weighted u32 index array: {any}\n", .{rng_weighted_u32_index_array});
 
     var one_shot_u32_engine = alea.ScalarPrng.init(0x716c);
     const one_shot_u32 = (try alea.Rng.weightedIndexU32From(&one_shot_u32_engine, &float_weights)).?;
@@ -166,6 +174,10 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(weighted_value_batch);
     try stdout.print("weighted value batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_value_batch[0], weighted_value_batch[1], weighted_value_batch[2], weighted_value_batch[3], weighted_value_batch[4], weighted_value_batch[5] });
 
+    var rng_weighted_value_array_engine = alea.ScalarPrng.init(0x715a);
+    const rng_weighted_value_array = try alea.Rng.chooseWeightedValueArrayCheckedFrom(&rng_weighted_value_array_engine, []const u8, 6, &items, &float_weights);
+    try stdout.print("Rng weighted value array: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ rng_weighted_value_array[0], rng_weighted_value_array[1], rng_weighted_value_array[2], rng_weighted_value_array[3], rng_weighted_value_array[4], rng_weighted_value_array[5] });
+
     var generic_value_batch_engine = alea.ScalarPrng.init(0x7171);
     const generic_value_batch = try alea.seq.chooseWeightedBatchCheckedFrom(allocator, &generic_value_batch_engine, []const u8, u32, 6, &items, &int_weights);
     defer allocator.free(generic_value_batch);
@@ -180,6 +192,10 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(weighted_const_ptr_batch);
     try stdout.print("weighted const ptr batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_const_ptr_batch[0].*, weighted_const_ptr_batch[1].*, weighted_const_ptr_batch[2].*, weighted_const_ptr_batch[3].*, weighted_const_ptr_batch[4].*, weighted_const_ptr_batch[5].* });
 
+    var rng_weighted_const_ptr_array_engine = alea.ScalarPrng.init(0x715b);
+    const rng_weighted_const_ptr_array = try alea.Rng.chooseWeightedConstPtrArrayCheckedFrom(&rng_weighted_const_ptr_array_engine, []const u8, 6, &items, &float_weights);
+    try stdout.print("Rng weighted const ptr array: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ rng_weighted_const_ptr_array[0].*, rng_weighted_const_ptr_array[1].*, rng_weighted_const_ptr_array[2].*, rng_weighted_const_ptr_array[3].*, rng_weighted_const_ptr_array[4].*, rng_weighted_const_ptr_array[5].* });
+
     var generic_const_ptr_batch_engine = alea.ScalarPrng.init(0x7172);
     const generic_const_ptr_batch = try alea.seq.chooseWeightedConstPtrBatchCheckedFrom(allocator, &generic_const_ptr_batch_engine, []const u8, u32, 6, &items, &int_weights);
     defer allocator.free(generic_const_ptr_batch);
@@ -191,6 +207,12 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(weighted_mut_ptr_batch);
     for (weighted_mut_ptr_batch) |score| score.* += 1;
     try stdout.print("weighted mut ptr batch scores: {any}\n", .{weighted_mut_scores_batch});
+
+    var rng_weighted_mut_ptr_array_engine = alea.ScalarPrng.init(0x715c);
+    var rng_weighted_mut_scores_array = [_]u8{ 10, 20, 30, 40 };
+    const rng_weighted_mut_ptr_array = try alea.Rng.chooseWeightedPtrArrayCheckedFrom(&rng_weighted_mut_ptr_array_engine, u8, 6, &rng_weighted_mut_scores_array, &float_weights);
+    for (rng_weighted_mut_ptr_array) |score| score.* += 1;
+    try stdout.print("Rng weighted mut ptr array scores: {any}\n", .{rng_weighted_mut_scores_array});
 
     var generic_mut_ptr_batch_engine = alea.ScalarPrng.init(0x7173);
     var generic_mut_scores_batch = [_]u8{ 10, 20, 30, 40 };
@@ -699,6 +721,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_by_mut_ptrs_into) |record| record.score += 20;
     try stdout.print("weighted by mut ptrs into scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_records_into[0].score, weighted_by_mut_records_into[1].score, weighted_by_mut_records_into[2].score, weighted_by_mut_records_into[3].score });
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, weightedIndexByIndex/weightedIndexU32ByIndex plus fillWeightedIndexByIndex/fillWeightedIndexU32ByIndex, weightedIndexBatchByIndex/weightedIndexU32BatchByIndex, chooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, fillChooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, and chooseWeightedBatchByIndex/ConstPtrBatchByIndex/PtrBatchByIndex for length/index-weight accessors, weightedIndexBy/weightedIndexU32By plus fillWeightedIndexBy/fillWeightedIndexU32By and weightedIndexBatchBy/weightedIndexU32BatchBy when weights live inside item records, chooseWeightedBy/ConstPtrBy/PtrBy, fillChooseWeightedBy/ConstPtrBy/PtrBy, and chooseWeightedBatchBy/ConstPtrBatchBy/PtrBatchBy for accessor-weighted item choices, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight no-replacement workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including compact sampleU32/fillU32 index output, owned indices/indicesU32 or value/pointer/index batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, iter/iterU32 repeated streams, initBy/updateBy construction from item weight accessors, and initByIndex/updateByIndex construction from index weights, WeightedTree/WeightedIntTree for dynamic updates including initBy/updateAllBy construction from item weight accessors, initByIndex/updateAllByIndex construction from index weights, compact sampleU32/fillU32 index output, owned indices/indicesU32 batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, and iter/iterU32 repeated index streams, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, weightedIndexByIndex/weightedIndexU32ByIndex plus fillWeightedIndexByIndex/fillWeightedIndexU32ByIndex, weightedIndexBatchByIndex/weightedIndexU32BatchByIndex, chooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, fillChooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, and chooseWeightedBatchByIndex/ConstPtrBatchByIndex/PtrBatchByIndex for length/index-weight accessors, weightedIndexBy/weightedIndexU32By plus fillWeightedIndexBy/fillWeightedIndexU32By and weightedIndexBatchBy/weightedIndexU32BatchBy when weights live inside item records, chooseWeightedBy/ConstPtrBy/PtrBy, fillChooseWeightedBy/ConstPtrBy/PtrBy, and chooseWeightedBatchBy/ConstPtrBatchBy/PtrBatchBy for accessor-weighted item choices, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight no-replacement workflows, Rng weighted batch helpers and fixed-size weighted arrays for repeated f64 index/u32-index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including compact sampleU32/fillU32 index output, owned indices/indicesU32 or value/pointer/index batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, iter/iterU32 repeated streams, initBy/updateBy construction from item weight accessors, and initByIndex/updateByIndex construction from index weights, WeightedTree/WeightedIntTree for dynamic updates including initBy/updateAllBy construction from item weight accessors, initByIndex/updateAllByIndex construction from index weights, compact sampleU32/fillU32 index output, owned indices/indicesU32 batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, and iter/iterU32 repeated index streams, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }
