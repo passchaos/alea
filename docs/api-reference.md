@@ -2340,6 +2340,10 @@ Alias helpers:
 - `AliasTable.fillFrom`
 - `AliasTable.fillU32From`
 - `AliasTable.fillU32CheckedFrom`
+- `AliasTable.indices`
+- `AliasTable.indicesFrom`
+- `AliasTable.indicesU32`
+- `AliasTable.indicesU32From`
 - `AliasTable.deinit`
 
 Dynamic weighted helpers:

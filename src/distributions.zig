@@ -15685,6 +15685,28 @@ pub fn AliasTable(comptime Weight: type) type {
             }
             for (dest) |*item| item.* = @intCast(self.sampleFrom(source));
         }
+
+        pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
+            return self.indicesFrom(allocator, rng, amount);
+        }
+
+        pub fn indicesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            self.fillFrom(source, out);
+            return out;
+        }
+
+        pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
+            return self.indicesU32From(allocator, rng, amount);
+        }
+
+        pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillU32CheckedFrom(source, out);
+            return out;
+        }
     };
 }
 
@@ -17892,6 +17914,63 @@ test "alias table u32 sampling helpers mirror usize helpers" {
     const single_rng = Rng.init(&single_engine);
     table.fillU32(single_rng, &u32_out);
     for (u32_out) |index| try std.testing.expectEqual(@as(u32, 2), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "alias table owned index batches mirror fills" {
+    const alea = @import("root.zig");
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    var fill_engine = alea.ScalarPrng.init(0x5150_a121);
+    var batch_engine = alea.ScalarPrng.init(0x5150_a121);
+    var fill_out: [8]usize = undefined;
+    table.fillFrom(&fill_engine, &fill_out);
+    const batch = try table.indicesFrom(std.testing.allocator, &batch_engine, fill_out.len);
+    defer std.testing.allocator.free(batch);
+    try std.testing.expectEqualSlices(usize, &fill_out, batch);
+    try std.testing.expectEqual(fill_engine.next(), batch_engine.next());
+
+    fill_engine = alea.ScalarPrng.init(0x5150_a122);
+    batch_engine = alea.ScalarPrng.init(0x5150_a122);
+    var fill_u32: [8]u32 = undefined;
+    try table.fillU32CheckedFrom(&fill_engine, &fill_u32);
+    const batch_u32 = try table.indicesU32From(std.testing.allocator, &batch_engine, fill_u32.len);
+    defer std.testing.allocator.free(batch_u32);
+    try std.testing.expectEqualSlices(u32, &fill_u32, batch_u32);
+    try std.testing.expectEqual(fill_engine.next(), batch_engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_a123);
+    var direct_engine = alea.ScalarPrng.init(0x5150_a123);
+    const rng = Rng.init(&facade_engine);
+    const facade_batch = try table.indices(std.testing.allocator, rng, 4);
+    defer std.testing.allocator.free(facade_batch);
+    const direct_batch = try table.indicesFrom(std.testing.allocator, &direct_engine, 4);
+    defer std.testing.allocator.free(direct_batch);
+    try std.testing.expectEqualSlices(usize, direct_batch, facade_batch);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const zero_batch = try table.indicesFrom(std.testing.allocator, &batch_engine, 0);
+    defer std.testing.allocator.free(zero_batch);
+    try std.testing.expectEqual(@as(usize, 0), zero_batch.len);
+    const zero_u32_batch = try table.indicesU32From(std.testing.allocator, &batch_engine, 0);
+    defer std.testing.allocator.free(zero_u32_batch);
+    try std.testing.expectEqual(@as(usize, 0), zero_u32_batch.len);
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, table.indicesFrom(failing.allocator(), &batch_engine, 4));
+    try std.testing.expect(failing.has_induced_failure);
+
+    try table.update(&.{ 0, 0, 5, 0 });
+    var single_engine = alea.ScalarPrng.init(0x5150_a124);
+    var single_control = alea.ScalarPrng.init(0x5150_a124);
+    const single_batch = try table.indicesFrom(std.testing.allocator, &single_engine, 4);
+    defer std.testing.allocator.free(single_batch);
+    try std.testing.expectEqualSlices(usize, &.{ 2, 2, 2, 2 }, single_batch);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_batch_u32 = try table.indicesU32From(std.testing.allocator, &single_engine, 4);
+    defer std.testing.allocator.free(single_batch_u32);
+    try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, single_batch_u32);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 
