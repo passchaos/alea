@@ -257,7 +257,8 @@ Use:
   `seq.chooseWeightedCheckedFrom`, `seq.chooseWeightedPtr`,
   `seq.chooseWeightedPtrFrom`, `seq.chooseWeightedPtrCheckedFrom`
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
-  `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeightedIndexArrayFrom`,
+  `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeightedIndicesIntoFrom`,
+  `seq.sampleWeightedIndicesIntoCheckedFrom`, `seq.sampleWeightedIndexArrayFrom`,
   `seq.sampleWeightedIndexArrayCheckedFrom`, `seq.sampleWeighted`,
   `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`,
   `seq.sampleWeightedArrayFrom`, `seq.sampleWeightedArrayCheckedFrom`

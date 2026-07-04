@@ -61,7 +61,8 @@ complete.
 | S4-M38 fixed-size weighted index array sampling | `src/seq.zig`, `examples/weighted_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m38-weighted-index-array.md` | Closed for the current bar: fixed-size weighted no-replacement index arrays are available without heap allocation. |
 | S4-M39 fixed-size weighted iterator array sampling | `src/seq.zig`, `examples/sequence_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m39-weighted-iterator-array.md` | Closed for the current bar: fixed-size weighted iterator arrays are available without heap allocation. |
 | S4-M40 fixed-size iterator array sampling | `src/seq.zig`, `examples/sequence_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m40-iterator-array.md` | Closed for the current bar: fixed-size iterator arrays are available without heap allocation. |
-| S4-M41 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M41 caller-owned weighted index sampling | `src/seq.zig`, `examples/weighted_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m41-weighted-indices-into.md` | Closed for the current bar: runtime-length weighted no-replacement index samples can now fill caller-owned buffers with caller-provided scratch keys. |
+| S4-M42 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -99,8 +100,9 @@ S4-M32 adds roadmap/audit drift checking, S4-M33 adds fixed-size item array
 sequence sampling, S4-M34 adds one-shot weighted item/pointer choice, and S4-M35 adds caller-owned reservoir sampling, S4-M36 adds caller-owned iterator
 reservoir sampling, and S4-M37 adds fixed-size weighted item array sampling, S4-M38 adds fixed-size
 weighted index array sampling, S4-M39 adds fixed-size weighted iterator array
-sampling, and S4-M40 adds fixed-size iterator array sampling, but they do not
-resolve S4-M11 or complete the long-term objective.
+sampling, and S4-M40 adds fixed-size iterator array sampling, and S4-M41 adds caller-owned
+weighted index sampling, but they do not resolve S4-M11 or complete the long-term
+objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
