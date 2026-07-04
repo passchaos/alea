@@ -370,7 +370,11 @@ Use:
   `seq.weightedIndexU32ByIndexCheckedFrom`, `seq.fillWeightedIndexByIndexFrom`,
   `seq.fillWeightedIndexByIndexCheckedFrom`,
   `seq.fillWeightedIndexU32ByIndexFrom`,
-  `seq.fillWeightedIndexU32ByIndexCheckedFrom`, `seq.weightedIndexByFrom`,
+  `seq.fillWeightedIndexU32ByIndexCheckedFrom`,
+  `seq.weightedIndexBatchByIndexFrom`,
+  `seq.weightedIndexBatchByIndexCheckedFrom`,
+  `seq.weightedIndexU32BatchByIndexFrom`,
+  `seq.weightedIndexU32BatchByIndexCheckedFrom`, `seq.weightedIndexByFrom`,
   `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
   `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
   `seq.fillWeightedIndexByCheckedFrom`, `seq.fillWeightedIndexU32ByFrom`,
@@ -389,7 +393,11 @@ Use:
   `seq.weightedIndexU32ByIndexCheckedFrom`, `seq.fillWeightedIndexByIndexFrom`,
   `seq.fillWeightedIndexByIndexCheckedFrom`,
   `seq.fillWeightedIndexU32ByIndexFrom`,
-  `seq.fillWeightedIndexU32ByIndexCheckedFrom`, plus accessor-based
+  `seq.fillWeightedIndexU32ByIndexCheckedFrom`,
+  `seq.weightedIndexBatchByIndexFrom`,
+  `seq.weightedIndexBatchByIndexCheckedFrom`,
+  `seq.weightedIndexU32BatchByIndexFrom`, and
+  `seq.weightedIndexU32BatchByIndexCheckedFrom`, plus accessor-based
   `seq.weightedIndexByFrom`,
   `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
   `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
@@ -412,7 +420,9 @@ Use:
   `seq.chooseWeightedPtrBatchByCheckedFrom` for Zig-native versions of Rust
   `choose_weighted`, `choose_weighted_mut`, and
   `choose_weighted_iter(...).take(n).collect()` when weights are fields or
-  derived from items instead of parallel slices
+  derived from items instead of parallel slices, and allocation-returning
+  repeated length/index-weight index batches for `index::sample_weighted`-style
+  index weight accessors
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeightedIndicesU32From`,
   `seq.sampleWeightedIndicesU32CheckedFrom`, `seq.sampleWeightedIndexVecFrom`,

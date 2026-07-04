@@ -1509,6 +1509,140 @@ pub fn fillWeightedIndexU32ByIndexCheckedFrom(
     for (dest) |*index| index.* = @intCast(weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total));
 }
 
+pub fn weightedIndexBatchByIndex(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime Weight: type,
+    count: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]?usize {
+    return weightedIndexBatchByIndexFrom(allocator, rng, Weight, count, length, weightFn);
+}
+
+pub fn weightedIndexBatchByIndexFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    count: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]?usize {
+    if (count == 0) return allocator.alloc(?usize, 0);
+    const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, length, weightFn);
+    const out = try allocator.alloc(?usize, count);
+    errdefer allocator.free(out);
+    if (validation.total == 0) {
+        @memset(out, null);
+        return out;
+    }
+    if (validation.single_positive) |index| {
+        @memset(out, @as(?usize, index));
+        return out;
+    }
+    for (out) |*index| index.* = weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total);
+    return out;
+}
+
+pub fn weightedIndexBatchByIndexChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime Weight: type,
+    count: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]usize {
+    return weightedIndexBatchByIndexCheckedFrom(allocator, rng, Weight, count, length, weightFn);
+}
+
+pub fn weightedIndexBatchByIndexCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    count: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]usize {
+    if (count == 0) return allocator.alloc(usize, 0);
+    const validation = try validateWeightedIndexByIndex(Weight, length, weightFn);
+    const out = try allocator.alloc(usize, count);
+    errdefer allocator.free(out);
+    if (validation.single_positive) |index| {
+        @memset(out, index);
+        return out;
+    }
+    for (out) |*index| index.* = weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total);
+    return out;
+}
+
+pub fn weightedIndexU32BatchByIndex(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime Weight: type,
+    count: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]?u32 {
+    return weightedIndexU32BatchByIndexFrom(allocator, rng, Weight, count, length, weightFn);
+}
+
+pub fn weightedIndexU32BatchByIndexFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    count: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]?u32 {
+    if (count == 0) return allocator.alloc(?u32, 0);
+    if (length > std.math.maxInt(u32)) return error.InvalidParameter;
+    const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, length, weightFn);
+    const out = try allocator.alloc(?u32, count);
+    errdefer allocator.free(out);
+    if (validation.total == 0) {
+        @memset(out, null);
+        return out;
+    }
+    if (validation.single_positive) |index| {
+        @memset(out, @as(?u32, @intCast(index)));
+        return out;
+    }
+    for (out) |*index| index.* = @intCast(weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total));
+    return out;
+}
+
+pub fn weightedIndexU32BatchByIndexChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime Weight: type,
+    count: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]u32 {
+    return weightedIndexU32BatchByIndexCheckedFrom(allocator, rng, Weight, count, length, weightFn);
+}
+
+pub fn weightedIndexU32BatchByIndexCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    count: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]u32 {
+    if (count == 0) return allocator.alloc(u32, 0);
+    if (length > std.math.maxInt(u32)) return error.InvalidParameter;
+    const validation = try validateWeightedIndexByIndex(Weight, length, weightFn);
+    const out = try allocator.alloc(u32, count);
+    errdefer allocator.free(out);
+    if (validation.single_positive) |index| {
+        @memset(out, @intCast(index));
+        return out;
+    }
+    for (out) |*index| index.* = @intCast(weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total));
+    return out;
+}
+
 pub fn weightedIndexBy(
     rng: Rng,
     comptime T: type,
@@ -10514,6 +10648,162 @@ test "index-weighted fillWeightedIndexByIndex preserves stream shape and invalid
     try std.testing.expectError(error.InvalidWeight, fillWeightedIndexU32ByIndexCheckedFrom(&invalid_engine, f64, &bad_indexes_u32, 8, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32ByIndexFrom(&invalid_engine, u32, &optional_zero_u32, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "index-weighted weightedIndexBatchByIndex allocates index batches" {
+    const alea = @import("root.zig");
+    const IndexWeight = struct {
+        fn weightOf(index: usize) u32 {
+            return switch (index) {
+                1 => 1,
+                3 => 9,
+                6 => 4,
+                else => 0,
+            };
+        }
+    };
+
+    var batch_engine = alea.ScalarPrng.init(0x5150_f14e);
+    const batch = try weightedIndexBatchByIndexFrom(std.testing.allocator, &batch_engine, u32, 8, 8, IndexWeight.weightOf);
+    defer std.testing.allocator.free(batch);
+    for (batch) |index| {
+        try std.testing.expect(index != null);
+        try std.testing.expect(index.? == 1 or index.? == 3 or index.? == 6);
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_f14f);
+    const checked = try weightedIndexBatchByIndexCheckedFrom(std.testing.allocator, &checked_engine, u32, 8, 8, IndexWeight.weightOf);
+    defer std.testing.allocator.free(checked);
+    for (checked) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+
+    var batch_u32_engine = alea.ScalarPrng.init(0x5150_f150);
+    const batch_u32 = try weightedIndexU32BatchByIndexFrom(std.testing.allocator, &batch_u32_engine, u32, 8, 8, IndexWeight.weightOf);
+    defer std.testing.allocator.free(batch_u32);
+    for (batch_u32) |index| {
+        try std.testing.expect(index != null);
+        try std.testing.expect(index.? == 1 or index.? == 3 or index.? == 6);
+    }
+
+    var checked_u32_engine = alea.ScalarPrng.init(0x5150_f151);
+    const checked_u32 = try weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &checked_u32_engine, u32, 8, 8, IndexWeight.weightOf);
+    defer std.testing.allocator.free(checked_u32);
+    for (checked_u32) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+}
+
+test "index-weighted weightedIndexBatchByIndex preserves stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const IndexWeight = struct {
+        fn weightOf(index: usize) f64 {
+            return switch (index) {
+                1 => 1,
+                3 => 9,
+                6 => 4,
+                else => 0,
+            };
+        }
+
+        fn single(index: usize) u32 {
+            return if (index == 4) 7 else 0;
+        }
+
+        fn zero(_: usize) u32 {
+            return 0;
+        }
+
+        fn invalid(index: usize) f64 {
+            return if (index == 2) std.math.inf(f64) else 1;
+        }
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_f152);
+        var direct_engine = Engine.init(0x5150_f152);
+        const rng = Rng.init(&facade_engine);
+
+        const facade_batch = try weightedIndexBatchByIndex(std.testing.allocator, rng, f64, 8, 8, IndexWeight.weightOf);
+        defer std.testing.allocator.free(facade_batch);
+        const direct_batch = try weightedIndexBatchByIndexCheckedFrom(std.testing.allocator, &direct_engine, f64, 8, 8, IndexWeight.weightOf);
+        defer std.testing.allocator.free(direct_batch);
+        for (facade_batch, direct_batch) |facade, direct| try std.testing.expectEqual(facade.?, direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade = try weightedIndexBatchByIndexChecked(std.testing.allocator, rng, f64, 8, 8, IndexWeight.weightOf);
+        defer std.testing.allocator.free(checked_facade);
+        const checked_direct = try weightedIndexBatchByIndexCheckedFrom(std.testing.allocator, &direct_engine, f64, 8, 8, IndexWeight.weightOf);
+        defer std.testing.allocator.free(checked_direct);
+        try std.testing.expectEqualSlices(usize, checked_facade, checked_direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_batch_u32 = try weightedIndexU32BatchByIndex(std.testing.allocator, rng, f64, 8, 8, IndexWeight.weightOf);
+        defer std.testing.allocator.free(facade_batch_u32);
+        const direct_batch_u32 = try weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &direct_engine, f64, 8, 8, IndexWeight.weightOf);
+        defer std.testing.allocator.free(direct_batch_u32);
+        for (facade_batch_u32, direct_batch_u32) |facade, direct| try std.testing.expectEqual(facade.?, direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_u32 = try weightedIndexU32BatchByIndexChecked(std.testing.allocator, rng, f64, 8, 8, IndexWeight.weightOf);
+        defer std.testing.allocator.free(checked_facade_u32);
+        const checked_direct_u32 = try weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &direct_engine, f64, 8, 8, IndexWeight.weightOf);
+        defer std.testing.allocator.free(checked_direct_u32);
+        try std.testing.expectEqualSlices(u32, checked_facade_u32, checked_direct_u32);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var single_engine = alea.ScalarPrng.init(0x5150_f153);
+    var single_control = alea.ScalarPrng.init(0x5150_f153);
+    const single_batch = try weightedIndexBatchByIndexFrom(std.testing.allocator, &single_engine, u32, 4, 8, IndexWeight.single);
+    defer std.testing.allocator.free(single_batch);
+    for (single_batch) |index| try std.testing.expectEqual(@as(?usize, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_checked = try weightedIndexBatchByIndexCheckedFrom(std.testing.allocator, &single_engine, u32, 4, 8, IndexWeight.single);
+    defer std.testing.allocator.free(single_checked);
+    for (single_checked) |index| try std.testing.expectEqual(@as(usize, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_batch_u32 = try weightedIndexU32BatchByIndexFrom(std.testing.allocator, &single_engine, u32, 4, 8, IndexWeight.single);
+    defer std.testing.allocator.free(single_batch_u32);
+    for (single_batch_u32) |index| try std.testing.expectEqual(@as(?u32, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_checked_u32 = try weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &single_engine, u32, 4, 8, IndexWeight.single);
+    defer std.testing.allocator.free(single_checked_u32);
+    for (single_checked_u32) |index| try std.testing.expectEqual(@as(u32, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_f154);
+    var invalid_control = alea.ScalarPrng.init(0x5150_f154);
+    const zero_count = try weightedIndexBatchByIndexFrom(std.testing.allocator, &invalid_engine, f64, 0, 8, IndexWeight.invalid);
+    defer std.testing.allocator.free(zero_count);
+    try std.testing.expectEqual(@as(usize, 0), zero_count.len);
+    const zero_count_checked = try weightedIndexBatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, f64, 0, 8, IndexWeight.invalid);
+    defer std.testing.allocator.free(zero_count_checked);
+    try std.testing.expectEqual(@as(usize, 0), zero_count_checked.len);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    const optional_empty = try weightedIndexBatchByIndexFrom(std.testing.allocator, &invalid_engine, u32, 3, 0, IndexWeight.single);
+    defer std.testing.allocator.free(optional_empty);
+    for (optional_empty) |index| try std.testing.expect(index == null);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    const optional_zero_u32 = try weightedIndexU32BatchByIndexFrom(std.testing.allocator, &invalid_engine, u32, 3, 8, IndexWeight.zero);
+    defer std.testing.allocator.free(optional_zero_u32);
+    for (optional_zero_u32) |index| try std.testing.expect(index == null);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    try std.testing.expectError(error.EmptyInput, weightedIndexBatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, u32, 3, 0, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, u32, 3, 8, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, weightedIndexBatchByIndexFrom(std.testing.allocator, &invalid_engine, f64, 3, 8, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, f64, 3, 8, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexFrom(std.testing.allocator, &invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, weightedIndexBatchByIndexCheckedFrom(failing.allocator(), &invalid_engine, f64, 3, 8, IndexWeight.weightOf));
+    try std.testing.expect(failing.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
