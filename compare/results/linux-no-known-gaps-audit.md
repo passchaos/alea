@@ -146,6 +146,7 @@ Local Alea evidence:
 - `compare/results/s4-m106-rng-owned-weighted-index-batches.md`
 - `compare/results/s4-m107-rng-owned-weighted-u32-index-batches.md`
 - `compare/results/s4-m108-rng-owned-weighted-value-batches.md`
+- `compare/results/s4-m109-rng-owned-weighted-const-ptr-batches.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -167,7 +168,7 @@ Out of scope for this Linux-first audit:
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost`, and owned duration range batches |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
 | choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseIndexBatch`, `Rng.chooseIndexU32`, `Rng.chooseIndexU32Batch`, `Rng.choose`, `Rng.chooseBatch`, `Rng.chooseConstPtr`, `Rng.chooseConstPtrBatch`, `Rng.choosePtr`, `Rng.choosePtrBatch`, `seq` module, `sampleArrayU32`, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `Choice.sampleIndex`, `Choice.fill`, `Choice.fillValues`, `Choice.ptrs`, `Choice.values`, `Choice.fillIndices`, `Choice.indices`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer and u32 export mapping, Rust sequence benchmark row |
-| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `Rng.weightedIndexBatch`, `Rng.weightedIndexU32`, `Rng.weightedIndexU32Batch`, `Rng.chooseWeighted`, `Rng.chooseWeightedBatch`, `seq.weightedIndex`, `seq.weightedIndexU32`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedIndicesU32`, `seq.sampleWeightedIndicesU32Into`, `seq.sampleWeightedIndexVec`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedIndexArrayU32`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedChoice.sample`, `WeightedChoice.ptrs`, `WeightedChoice.values`, `WeightedChoice.sampleIndex`, `WeightedChoice.fillIndices`, `WeightedChoice.indices`, `WeightedTree`, benchmark rows |
+| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `Rng.weightedIndexBatch`, `Rng.weightedIndexU32`, `Rng.weightedIndexU32Batch`, `Rng.chooseWeighted`, `Rng.chooseWeightedBatch`, `Rng.chooseWeightedConstPtr`, `Rng.chooseWeightedConstPtrBatch`, `seq.weightedIndex`, `seq.weightedIndexU32`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedIndicesU32`, `seq.sampleWeightedIndicesU32Into`, `seq.sampleWeightedIndexVec`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedIndexArrayU32`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedChoice.sample`, `WeightedChoice.ptrs`, `WeightedChoice.values`, `WeightedChoice.sampleIndex`, `WeightedChoice.fillIndices`, `WeightedChoice.indices`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface
 
@@ -309,7 +310,14 @@ index batches, S4-M84 adds reusable choice owned value/pointer batches, and
 S4-M85 adds Rng owned repeated value/sample batches, S4-M86 adds Rng owned
 byte buffers, S4-M87 adds Rng owned scalar range batches, and S4-M88 adds
 Rng owned strict-interval float batches, and S4-M89 adds Rng owned probability
-bool batches, and S4-M90 adds Rng owned normal/exponential batches, S4-M91 adds Rng owned duration range batches, S4-M92 adds Rng owned vector
-range batches, S4-M93 adds Rng owned vector strict-interval batches, and S4-M94 adds Rng owned
-vector probability bool batches, but later stages should keep raising the bar
-rather than declaring the product permanently finished.
+bool batches, and S4-M90 adds Rng owned normal/exponential batches, S4-M91 adds
+Rng owned duration range batches, S4-M92 adds Rng owned vector range batches,
+S4-M93 adds Rng owned vector strict-interval batches, S4-M94 adds Rng owned
+vector probability bool batches, S4-M95 adds Rng owned vector
+normal/exponential batches, S4-M96 adds direct standard normal/exponential
+batches, S4-M97 adds Unicode scalar batches, S4-M98 adds Unicode scalar ranges,
+S4-M99 through S4-M101 add bounded/inclusive scalar and vector range batches,
+S4-M102 through S4-M105 add repeated index/value/pointer choice batches, and
+S4-M106 through S4-M109 add repeated weighted index/u32-index/value/const-pointer
+batches, but later stages should keep raising the bar rather than declaring the
+product permanently finished.

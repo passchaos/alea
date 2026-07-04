@@ -3041,6 +3041,88 @@ pub fn chooseWeightedBatchCheckedFrom(source: anytype, comptime T: type, allocat
     return out;
 }
 
+pub fn chooseWeightedConstPtr(self: Rng, comptime T: type, items: []const T, weights: []const f64) Error!?*const T {
+    return chooseWeightedConstPtrFrom(self, T, items, weights);
+}
+
+pub fn chooseWeightedConstPtrFrom(source: anytype, comptime T: type, items: []const T, weights: []const f64) Error!?*const T {
+    if (items.len != weights.len) return error.InvalidParameter;
+    const index = try weightedIndexCheckedFrom(source, weights) orelse return null;
+    return &items[index];
+}
+
+pub fn fillChooseWeightedConstPtr(self: Rng, comptime T: type, dest: []?*const T, items: []const T, weights: []const f64) Error!void {
+    return fillChooseWeightedConstPtrFrom(self, T, dest, items, weights);
+}
+
+pub fn fillChooseWeightedConstPtrFrom(source: anytype, comptime T: type, dest: []?*const T, items: []const T, weights: []const f64) Error!void {
+    if (items.len != weights.len) return error.InvalidParameter;
+    if (dest.len == 0) return;
+    const validation = try validateWeightedIndexWeightsAllowEmpty(weights);
+    if (validation.total == 0) {
+        @memset(dest, null);
+        return;
+    }
+    if (validation.single_positive) |index| {
+        @memset(dest, @as(?*const T, &items[index]));
+        return;
+    }
+    for (dest) |*item| item.* = &items[weightedIndexCheckedFromPrevalidated(source, weights, validation.total)];
+}
+
+pub fn chooseWeightedConstPtrBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]?*const T {
+    return chooseWeightedConstPtrBatchFrom(self, T, allocator, count, items, weights);
+}
+
+pub fn chooseWeightedConstPtrBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]?*const T {
+    if (items.len != weights.len) return error.InvalidParameter;
+    const out = try allocator.alloc(?*const T, count);
+    errdefer allocator.free(out);
+    try fillChooseWeightedConstPtrFrom(source, T, out, items, weights);
+    return out;
+}
+
+pub fn chooseWeightedConstPtrChecked(self: Rng, comptime T: type, items: []const T, weights: []const f64) Error!*const T {
+    return chooseWeightedConstPtrCheckedFrom(self, T, items, weights);
+}
+
+pub fn chooseWeightedConstPtrCheckedFrom(source: anytype, comptime T: type, items: []const T, weights: []const f64) Error!*const T {
+    return (try chooseWeightedConstPtrFrom(source, T, items, weights)) orelse error.EmptyRange;
+}
+
+pub fn fillChooseWeightedConstPtrChecked(self: Rng, comptime T: type, dest: []*const T, items: []const T, weights: []const f64) Error!void {
+    return fillChooseWeightedConstPtrCheckedFrom(self, T, dest, items, weights);
+}
+
+pub fn fillChooseWeightedConstPtrCheckedFrom(source: anytype, comptime T: type, dest: []*const T, items: []const T, weights: []const f64) Error!void {
+    if (dest.len == 0) return;
+    if (items.len != weights.len) return error.InvalidParameter;
+    const validation = try validateWeightedIndexWeights(weights);
+    if (validation.single_positive) |index| {
+        @memset(dest, &items[index]);
+        return;
+    }
+    for (dest) |*item| item.* = &items[weightedIndexCheckedFromPrevalidated(source, weights, validation.total)];
+}
+
+pub fn chooseWeightedConstPtrBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]*const T {
+    return chooseWeightedConstPtrBatchCheckedFrom(self, T, allocator, count, items, weights);
+}
+
+pub fn chooseWeightedConstPtrBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]*const T {
+    if (count == 0) return allocator.alloc(*const T, 0);
+    if (items.len != weights.len) return error.InvalidParameter;
+    const validation = try validateWeightedIndexWeights(weights);
+    const out = try allocator.alloc(*const T, count);
+    errdefer allocator.free(out);
+    if (validation.single_positive) |index| {
+        @memset(out, &items[index]);
+        return out;
+    }
+    for (out) |*item| item.* = &items[weightedIndexCheckedFromPrevalidated(source, weights, validation.total)];
+    return out;
+}
+
 pub fn sampleWithoutReplacement(self: Rng, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
     std.debug.assert(count <= items.len);
     return sampleWithoutReplacementFrom(self, T, allocator, items, count);
@@ -4914,6 +4996,29 @@ test "checked weighted sampling preserves valid-parameter stream shape" {
         }
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        const weighted_const_ptr = try chooseWeightedConstPtrFrom(&unchecked, u8, &items, &weights);
+        const checked_weighted_const_ptr = try chooseWeightedConstPtrCheckedFrom(&checked, u8, &items, &weights);
+        try std.testing.expectEqual(weighted_const_ptr.?.*, checked_weighted_const_ptr.*);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var weighted_const_ptrs_unchecked: [8]?*const u8 = undefined;
+        var weighted_const_ptrs_checked: [8]*const u8 = undefined;
+        try fillChooseWeightedConstPtrFrom(&unchecked, u8, &weighted_const_ptrs_unchecked, &items, &weights);
+        try fillChooseWeightedConstPtrCheckedFrom(&checked, u8, &weighted_const_ptrs_checked, &items, &weights);
+        for (weighted_const_ptrs_unchecked, weighted_const_ptrs_checked) |optional, checked_ptr| {
+            try std.testing.expectEqual(optional.?.*, checked_ptr.*);
+        }
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const weighted_const_ptrs_owned = try chooseWeightedConstPtrBatchFrom(&unchecked, u8, std.testing.allocator, 8, &items, &weights);
+        defer std.testing.allocator.free(weighted_const_ptrs_owned);
+        const weighted_const_ptrs_checked_owned = try chooseWeightedConstPtrBatchCheckedFrom(&checked, u8, std.testing.allocator, 8, &items, &weights);
+        defer std.testing.allocator.free(weighted_const_ptrs_checked_owned);
+        for (weighted_const_ptrs_owned, weighted_const_ptrs_checked_owned) |optional, checked_ptr| {
+            try std.testing.expectEqual(optional.?.*, checked_ptr.*);
+        }
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var weighted_indices_u32_unchecked: [8]?u32 = undefined;
         var weighted_indices_u32_checked: [8]u32 = undefined;
         try fillWeightedIndexU32From(&unchecked, &weighted_indices_u32_unchecked, &weights);
@@ -6134,6 +6239,16 @@ test "single-positive weighted index does not consume random stream" {
     for (owned_weighted_values) |sample| try std.testing.expectEqual(@as(u8, 30), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var weighted_const_ptrs: [5]*const u8 = undefined;
+    try rng.fillChooseWeightedConstPtrChecked(u8, &weighted_const_ptrs, &labels, &.{ 0.0, 5.0, 0.0 });
+    for (weighted_const_ptrs) |sample| try std.testing.expectEqual(@as(u8, 20), sample.*);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_weighted_const_ptrs = try chooseWeightedConstPtrBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &labels, &.{ 0.0, 0.0, 7.0 });
+    defer std.testing.allocator.free(owned_weighted_const_ptrs);
+    for (owned_weighted_const_ptrs) |sample| try std.testing.expectEqual(@as(u8, 30), sample.*);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(?u32, 1), try weightedIndexU32From(&engine, &.{ 0.0, 5.0, 0.0 }));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -6168,6 +6283,10 @@ test "invalid facade weighted helpers do not consume random stream" {
     try rng.fillChooseWeightedChecked(u8, &weighted_value_out, &.{}, &.{});
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var weighted_const_ptr_out: [0]*const u8 = .{};
+    try rng.fillChooseWeightedConstPtrChecked(u8, &weighted_const_ptr_out, &.{}, &.{});
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var one_weighted_out: [1]usize = undefined;
     try std.testing.expectError(error.EmptyRange, fillWeightedIndexCheckedFrom(&engine, &one_weighted_out, &.{}));
     try std.testing.expectEqual(control.next(), engine.next());
@@ -6176,7 +6295,14 @@ test "invalid facade weighted helpers do not consume random stream" {
     try std.testing.expectError(error.EmptyRange, fillChooseWeightedCheckedFrom(&engine, u8, &one_weighted_value_out, &.{}, &.{}));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var one_weighted_const_ptr_out: [1]*const u8 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseWeightedConstPtrCheckedFrom(&engine, u8, &one_weighted_const_ptr_out, &.{}, &.{}));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.InvalidParameter, fillChooseWeightedCheckedFrom(&engine, u8, &one_weighted_value_out, &.{1}, &.{}));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, fillChooseWeightedConstPtrCheckedFrom(&engine, u8, &one_weighted_const_ptr_out, &.{1}, &.{}));
     try std.testing.expectEqual(control.next(), engine.next());
 
     var invalid_weight_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
@@ -6187,6 +6313,11 @@ test "invalid facade weighted helpers do not consume random stream" {
     var invalid_weight_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidWeight, chooseWeightedBatchCheckedFrom(&engine, u8, invalid_weight_value_alloc.allocator(), 5, &.{ 1, 2 }, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expect(!invalid_weight_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_weight_const_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedConstPtrBatchCheckedFrom(&engine, u8, invalid_weight_const_ptr_alloc.allocator(), 5, &.{ 1, 2 }, &.{ 1.0, std.math.nan(f64) }));
+    try std.testing.expect(!invalid_weight_const_ptr_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var empty_weight_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
@@ -6206,6 +6337,11 @@ test "invalid facade weighted helpers do not consume random stream" {
     try std.testing.expect(!no_positive_value_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var no_positive_const_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.chooseWeightedConstPtrBatchChecked(u8, no_positive_const_ptr_alloc.allocator(), 5, &.{ 1, 2 }, &.{ 0.0, 0.0 }));
+    try std.testing.expect(!no_positive_const_ptr_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var weighted_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, rng.weightedIndexBatchChecked(weighted_alloc.allocator(), 5, &.{ 1.0, 2.0 }));
     try std.testing.expect(weighted_alloc.has_induced_failure);
@@ -6214,6 +6350,11 @@ test "invalid facade weighted helpers do not consume random stream" {
     var weighted_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, rng.chooseWeightedBatchChecked(u8, weighted_value_alloc.allocator(), 5, &.{ 1, 2 }, &.{ 1.0, 2.0 }));
     try std.testing.expect(weighted_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var weighted_const_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.chooseWeightedConstPtrBatchChecked(u8, weighted_const_ptr_alloc.allocator(), 5, &.{ 1, 2 }, &.{ 1.0, 2.0 }));
+    try std.testing.expect(weighted_const_ptr_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidWeight, rng.weightedIndexU32Checked(&.{ 1.0, std.math.nan(f64) }));
