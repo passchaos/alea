@@ -2271,13 +2271,16 @@ Dynamic weighted helpers:
 - Error type: `Error`
 - Index vectors: `IndexVec.len`, `IndexVec.isEmpty`, `IndexVec.at`,
   `IndexVec.indexOf`, `IndexVec.contains`, `IndexVec.validateItems`,
-  `IndexVec.copyInto`, `IndexVec.toOwnedSlice`, `IndexVec.values`,
-  `IndexVec.valuesChecked`, `IndexVec.valuesInto`,
-  `IndexVec.valuesIntoChecked`, `IndexVec.ptrs`, `IndexVec.ptrsChecked`,
-  `IndexVec.ptrsInto`, `IndexVec.ptrsIntoChecked`,
+  `IndexVec.validateDistinctItems`, `IndexVec.copyInto`,
+  `IndexVec.toOwnedSlice`, `IndexVec.values`, `IndexVec.valuesChecked`,
+  `IndexVec.valuesInto`, `IndexVec.valuesIntoChecked`, `IndexVec.ptrs`,
+  `IndexVec.ptrsChecked`, `IndexVec.ptrsInto`, `IndexVec.ptrsIntoChecked`,
+  `IndexVec.mutPtrs`, `IndexVec.mutPtrsChecked`,
+  `IndexVec.mutPtrsInto`, `IndexVec.mutPtrsIntoChecked`,
   `IndexVec.iter`, `IndexVec.Iterator.next`, `IndexVec.Iterator.remaining`,
   `IndexVec.ValueIterator.remaining`, `PtrIterator`, `PtrIterator.next`,
-  `PtrIterator.remaining`, `IndexVec.deinit`
+  `PtrIterator.remaining`, `MutPtrIterator`, `MutPtrIterator.next`,
+  `MutPtrIterator.remaining`, `IndexVec.deinit`
 - Indices: `sampleIndexVec`, `sampleIndexVecFrom`, `sampleIndices`,
   `sampleIndexVecCheckedFrom`, `sampleIndicesFrom`, `sampleIndicesCheckedFrom`,
   `sampleIndicesInto`, `sampleIndicesIntoFrom`, `sampleIndicesIntoChecked`,

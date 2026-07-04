@@ -88,6 +88,7 @@ Local Alea evidence:
 - `compare/results/s4-m48-caller-owned-example.md`
 - `compare/results/s4-m49-indexvec-item-iterators.md`
 - `compare/results/s4-m50-indexvec-into.md`
+- `compare/results/s4-m51-indexvec-mutptrs.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -108,7 +109,7 @@ Out of scope for this Linux-first audit:
 | Unicode scalar / char-like sampling | Covered in Zig form | `Rng.unicodeScalar`, `ascii.unicodeUtf8Alloc`, `ascii.unicodeUtf8Into` |
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost` |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
-| choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `seq` module, `chooseArray`, `reservoirSampleInto`, Rust sequence benchmark row |
+| choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `seq` module, `chooseArray`, `reservoirSampleInto`, `IndexVec` value/const-pointer/mutable-pointer mapping, Rust sequence benchmark row |
 | weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `seq.chooseWeighted`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedArray`, `AliasTable`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface
@@ -226,5 +227,6 @@ sampling, and S4-M40 adds fixed-size iterator array sampling, S4-M41 adds caller
 weighted index sampling, S4-M42 adds caller-owned weighted item sampling, and
 S4-M43 adds caller-owned weighted iterator sampling, S4-M44 adds caller-owned
 index sampling, and S4-M45 adds caller-owned slice item sampling, and S4-M46 adds selected/rest partial-shuffle splits, and S4-M47 adds caller-owned `u32` index sampling, and S4-M48 adds a focused caller-owned sampling adoption example, and S4-M49 adds IndexVec item iterators, and S4-M50 adds caller-owned IndexVec item
-mapping, but later stages should keep raising the bar rather than declaring the
-product permanently finished.
+mapping, and S4-M51 adds checked mutable-pointer IndexVec mapping, but later
+stages should keep raising the bar rather than declaring the product permanently
+finished.

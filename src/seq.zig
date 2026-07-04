@@ -54,6 +54,22 @@ pub const IndexVec = union(enum) {
         };
     }
 
+    pub fn MutPtrIterator(comptime T: type) type {
+        return struct {
+            index_iter: Iterator,
+            items: []T,
+
+            pub fn next(self: *@This()) ?*T {
+                const index = self.index_iter.next() orelse return null;
+                return &self.items[index];
+            }
+
+            pub fn remaining(self: @This()) usize {
+                return self.index_iter.remaining();
+            }
+        };
+    }
+
     pub fn len(self: IndexVec) usize {
         return switch (self) {
             .u32 => |items| items.len,
@@ -88,6 +104,17 @@ pub const IndexVec = union(enum) {
         var index: usize = 0;
         while (index < self.len()) : (index += 1) {
             if (self.at(index) >= item_len) return error.InvalidParameter;
+        }
+    }
+
+    pub fn validateDistinctItems(self: IndexVec, item_len: usize) Error!void {
+        try self.validateItems(item_len);
+        var index: usize = 0;
+        while (index < self.len()) : (index += 1) {
+            var other = index + 1;
+            while (other < self.len()) : (other += 1) {
+                if (self.at(index) == self.at(other)) return error.InvalidParameter;
+            }
         }
     }
 
@@ -126,6 +153,15 @@ pub const IndexVec = union(enum) {
         return self.ptrs(T, items);
     }
 
+    pub fn mutPtrs(self: IndexVec, comptime T: type, items: []T) MutPtrIterator(T) {
+        return .{ .index_iter = self.iter(), .items = items };
+    }
+
+    pub fn mutPtrsChecked(self: IndexVec, comptime T: type, items: []T) Error!MutPtrIterator(T) {
+        try self.validateDistinctItems(items.len);
+        return self.mutPtrs(T, items);
+    }
+
     pub fn valuesInto(self: IndexVec, comptime T: type, items: []const T, out: []T) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
         var index: usize = 0;
@@ -146,6 +182,17 @@ pub const IndexVec = union(enum) {
     pub fn ptrsIntoChecked(self: IndexVec, comptime T: type, items: []const T, out: []*const T) Error!void {
         try self.validateItems(items.len);
         try self.ptrsInto(T, items, out);
+    }
+
+    pub fn mutPtrsInto(self: IndexVec, comptime T: type, items: []T, out: []*T) Error!void {
+        if (out.len != self.len()) return error.LengthMismatch;
+        var index: usize = 0;
+        while (index < self.len()) : (index += 1) out[index] = &items[self.at(index)];
+    }
+
+    pub fn mutPtrsIntoChecked(self: IndexVec, comptime T: type, items: []T, out: []*T) Error!void {
+        try self.validateDistinctItems(items.len);
+        try self.mutPtrsInto(T, items, out);
     }
 
     pub fn iter(self: IndexVec) Iterator {
@@ -2174,13 +2221,40 @@ test "index vec maps sampled indexes to slice items" {
     var short_ptrs: [2]*const []const u8 = undefined;
     try std.testing.expectError(error.LengthMismatch, index_vec.ptrsInto([]const u8, &labels, &short_ptrs));
 
+    var numbers = [_]u8{ 10, 20, 30, 40, 50, 60 };
+    var mut_ptrs = try index_vec.mutPtrsChecked(u8, &numbers);
+    try std.testing.expectEqual(@as(usize, 3), mut_ptrs.remaining());
+    mut_ptrs.next().?.* += 1;
+    mut_ptrs.next().?.* += 2;
+    mut_ptrs.next().?.* += 3;
+    try std.testing.expectEqual(@as(?*u8, null), mut_ptrs.next());
+    try std.testing.expectEqualSlices(u8, &.{ 10, 22, 30, 40, 51, 63 }, &numbers);
+
+    var compact_mut_ptrs: [3]*u8 = undefined;
+    try compact.mutPtrsIntoChecked(u8, &numbers, &compact_mut_ptrs);
+    compact_mut_ptrs[0].* += 4;
+    compact_mut_ptrs[1].* += 5;
+    compact_mut_ptrs[2].* += 6;
+    try std.testing.expectEqualSlices(u8, &.{ 14, 22, 35, 46, 51, 63 }, &numbers);
+
+    var short_mut_ptrs: [2]*u8 = undefined;
+    try std.testing.expectError(error.LengthMismatch, index_vec.mutPtrsInto(u8, &numbers, &short_mut_ptrs));
+    var duplicate_backing = [_]usize{ 1, 1 };
+    const duplicate = IndexVec{ .usize = &duplicate_backing };
+    try std.testing.expectError(error.InvalidParameter, duplicate.validateDistinctItems(numbers.len));
+    try std.testing.expectError(error.InvalidParameter, duplicate.mutPtrsChecked(u8, &numbers));
+    try std.testing.expectError(error.InvalidParameter, duplicate.mutPtrsIntoChecked(u8, &numbers, short_mut_ptrs[0..2]));
+
     var invalid_backing = [_]usize{ 1, labels.len };
     const invalid = IndexVec{ .usize = &invalid_backing };
     try std.testing.expectError(error.InvalidParameter, invalid.validateItems(labels.len));
+    try std.testing.expectError(error.InvalidParameter, invalid.validateDistinctItems(labels.len));
     try std.testing.expectError(error.InvalidParameter, invalid.valuesChecked([]const u8, &labels));
     try std.testing.expectError(error.InvalidParameter, invalid.ptrsChecked([]const u8, &labels));
     try std.testing.expectError(error.InvalidParameter, invalid.valuesIntoChecked([]const u8, &labels, mapped_values[0..2]));
     try std.testing.expectError(error.InvalidParameter, invalid.ptrsIntoChecked([]const u8, &labels, mapped_ptrs[0..2]));
+    try std.testing.expectError(error.InvalidParameter, invalid.mutPtrsChecked(u8, &numbers));
+    try std.testing.expectError(error.InvalidParameter, invalid.mutPtrsIntoChecked(u8, &numbers, short_mut_ptrs[0..2]));
 }
 
 test "index vec keeps compact backing for u32 lengths" {
