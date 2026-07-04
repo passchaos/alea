@@ -76,6 +76,23 @@ pub fn build(b: *std.Build) void {
     const lognormal_profiles_example_step = b.step("run-lognormal-profiles", "Run the LogNormal profile alea example");
     lognormal_profiles_example_step.dependOn(&run_lognormal_profiles_example.step);
 
+    const native_f32_profiles_example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/native_f32_profiles.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    native_f32_profiles_example_mod.addImport("alea", module);
+
+    const native_f32_profiles_example = b.addExecutable(.{
+        .name = "alea-native-f32-profiles",
+        .root_module = native_f32_profiles_example_mod,
+    });
+    const run_native_f32_profiles_example = b.addRunArtifact(native_f32_profiles_example);
+    if (b.args) |args| run_native_f32_profiles_example.addArgs(args);
+
+    const native_f32_profiles_example_step = b.step("run-native-f32-profiles", "Run the native-f32 profile alea example");
+    native_f32_profiles_example_step.dependOn(&run_native_f32_profiles_example.step);
+
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/throughput.zig"),
         .target = target,

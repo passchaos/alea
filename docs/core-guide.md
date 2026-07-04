@@ -117,6 +117,11 @@ Use `standardNormalFastFrom`, `normalFastFrom`,
 `standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar
 distribution sampling.
+Use the `NativeF32` standard/parameterized normal and exponential profiles only
+when f32-native throughput matters more than matching the exact/default
+f64-backed f32 output mapping. Run `zig build run-native-f32-profiles` for a
+small executable comparison of exact/default f32 outputs with native-f32 scalar
+and vector profiles.
 
 
 `LogNormalApproxF32`, `VectorLogNormalApproxF32`, and the `logNormalApproxF32*` /

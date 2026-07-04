@@ -2344,6 +2344,7 @@ Build steps:
 - `zig build run-basic`
 - `zig build run-vector-profiles`
 - `zig build run-lognormal-profiles`
+- `zig build run-native-f32-profiles`
 - `zig build apicheck`
 - `zig build validate`
 - `zig build validate-all`
