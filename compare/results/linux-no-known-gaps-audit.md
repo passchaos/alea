@@ -55,6 +55,7 @@ Local Alea evidence:
 - `compare/results/s4-m15-examples-validation.md`
 - `compare/results/s4-m16-weighted-sampling-example.md`
 - `compare/results/s4-m17-multivariate-sampling-example.md`
+- `compare/results/s4-m18-sequence-sampling-example.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -174,6 +175,7 @@ This does not close the long-term product goal. Stage 4 remains active for the
 blocked S4-M11 exact-dense-kernel, future-runner, or new-external-gap bar above.
 S4-M12 through S4-M14 add runnable adoption guidance for accepted vector,
 LogNormal, and native-f32 opt-in profiles, S4-M15 puts examples under local
-validation, S4-M16 adds weighted-sampling adoption guidance, and S4-M17 adds
-multivariate adoption guidance, but later stages should keep raising the bar
-rather than declaring the product permanently finished.
+validation, S4-M16 adds weighted-sampling adoption guidance, S4-M17 adds
+multivariate adoption guidance, and S4-M18 adds sequence-sampling adoption
+guidance, but later stages should keep raising the bar rather than declaring the
+product permanently finished.

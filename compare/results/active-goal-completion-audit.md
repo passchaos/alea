@@ -38,7 +38,8 @@ complete.
 | S4-M15 examples validation gate | `zig build examples`, `zig build validate`, `build.zig`, `compare/results/s4-m15-examples-validation.md` | Closed for the current bar: all user-facing examples run through a single build step and local validation depends on it. |
 | S4-M16 weighted sampling adoption example | `examples/weighted_sampling.zig`, `zig build run-weighted-sampling`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m16-weighted-sampling-example.md` | Closed for the current bar: a runnable example demonstrates one-shot, alias-table, weighted-tree, weighted-choice, and weighted no-replacement workflows. |
 | S4-M17 multivariate sampling adoption example | `examples/multivariate_sampling.zig`, `zig build run-multivariate-sampling`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m17-multivariate-sampling-example.md` | Closed for the current bar: a runnable example demonstrates Multinomial and Dirichlet owned/caller-buffer/batch workflows. |
-| S4-M18 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M18 sequence sampling adoption example | `examples/sequence_sampling.zig`, `zig build run-sequence-sampling`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m18-sequence-sampling-example.md` | Closed for the current bar: a runnable example demonstrates index sampling, item subsets, partial shuffle, reservoir, reusable choice, and streaming iterator workflows. |
+| S4-M19 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -62,8 +63,9 @@ The next unresolved blocked milestone remains S4-M11:
 
 S4-M12 through S4-M14 are closed as unblocked adoption/documentation
 improvements, S4-M15 adds an examples validation gate, S4-M16 adds weighted
-sampling adoption guidance, and S4-M17 adds multivariate adoption guidance, but
-they do not resolve S4-M11 or complete the long-term objective.
+sampling adoption guidance, S4-M17 adds multivariate adoption guidance, and
+S4-M18 adds sequence sampling adoption guidance, but they do not resolve S4-M11
+or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

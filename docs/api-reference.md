@@ -2347,6 +2347,7 @@ Build steps:
 - `zig build run-native-f32-profiles`
 - `zig build run-weighted-sampling`
 - `zig build run-multivariate-sampling`
+- `zig build run-sequence-sampling`
 - `zig build examples`
 - `zig build apicheck`
 - `zig build validate`
