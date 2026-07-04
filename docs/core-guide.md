@@ -534,7 +534,8 @@ Use:
   `sampleIndexU32From`, `WeightedChoice.fillValuesFrom` / `fillFrom`,
   `WeightedChoice.valuesFrom` / `ptrsFrom`, and
   `WeightedChoice.fillIndicesFrom` / `fillIndicesU32From` plus
-  `WeightedChoice.indicesFrom` / `indicesU32From`
+  `WeightedChoice.indicesFrom` / `indicesU32From` and fixed-size
+  `WeightedChoice.indexArrayFrom` / `indexArrayU32From` repeated index arrays
 - `distributions.AliasTable` for O(1) repeated weighted index sampling,
   including `len`, `totalWeight`, and allocation-returning or caller-buffer
   `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted

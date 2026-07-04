@@ -427,6 +427,10 @@ pub fn main(init: std.process.Init) !void {
     var choice_indices_u32: [8]u32 = undefined;
     try choice.fillIndicesU32From(&choice_engine, &choice_indices_u32);
     try stdout.print("weighted choice u32 indices: {any}\n", .{choice_indices_u32});
+    const choice_index_array = choice.indexArrayFrom(&choice_engine, 6);
+    try stdout.print("WeightedChoice.indexArrayFrom: {any}\n", .{choice_index_array});
+    const choice_index_array_u32 = try choice.indexArrayU32From(&choice_engine, 6);
+    try stdout.print("WeightedChoice.indexArrayU32From: {any}\n", .{choice_index_array_u32});
     const choice_owned_indices = try choice.indicesFrom(allocator, &choice_engine, 8);
     defer allocator.free(choice_owned_indices);
     try stdout.print("WeightedChoice.indicesFrom: {any}\n", .{choice_owned_indices});
