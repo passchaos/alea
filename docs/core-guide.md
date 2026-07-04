@@ -182,6 +182,9 @@ batch APIs; both also expose checked `sampleInto*` / `sampleManyInto*` variants
 for user-supplied output buffers. Invalid checked output lengths and initial
 allocation failures in allocation-returning multivariate samples are reported
 before any component draws; zero-length checked batch outputs are no-ops.
+Run `zig build run-multivariate-sampling` for a runnable comparison of
+allocation-returning, caller-owned-buffer, and flat batched Multinomial and
+Dirichlet sampling.
 `Normal(T).initMeanCv` and
 `LogNormal(T).initMeanCv` cover coefficient-of-variation parameterization
 without requiring users to hand-convert to log-space parameters; both samplers

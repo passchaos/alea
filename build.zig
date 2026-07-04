@@ -110,12 +110,30 @@ pub fn build(b: *std.Build) void {
     const weighted_sampling_example_step = b.step("run-weighted-sampling", "Run the weighted sampling alea example");
     weighted_sampling_example_step.dependOn(&run_weighted_sampling_example.step);
 
+    const multivariate_sampling_example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/multivariate_sampling.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    multivariate_sampling_example_mod.addImport("alea", module);
+
+    const multivariate_sampling_example = b.addExecutable(.{
+        .name = "alea-multivariate-sampling",
+        .root_module = multivariate_sampling_example_mod,
+    });
+    const run_multivariate_sampling_example = b.addRunArtifact(multivariate_sampling_example);
+    if (b.args) |args| run_multivariate_sampling_example.addArgs(args);
+
+    const multivariate_sampling_example_step = b.step("run-multivariate-sampling", "Run the multivariate sampling alea example");
+    multivariate_sampling_example_step.dependOn(&run_multivariate_sampling_example.step);
+
     const examples_step = b.step("examples", "Run all alea examples");
     examples_step.dependOn(&run_example.step);
     examples_step.dependOn(&run_vector_profiles_example.step);
     examples_step.dependOn(&run_lognormal_profiles_example.step);
     examples_step.dependOn(&run_native_f32_profiles_example.step);
     examples_step.dependOn(&run_weighted_sampling_example.step);
+    examples_step.dependOn(&run_multivariate_sampling_example.step);
 
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/throughput.zig"),
