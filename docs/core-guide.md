@@ -542,7 +542,8 @@ Use:
   indexes fit `u32` and compact output is desired, and `indices` /
   `indicesU32` variants for allocation-returning repeated draws; `sampleIndex`
   / `fillIndices` aliases mirror `WeightedChoice` naming, and `iter` /
-  `iterU32` provide repeated index streams
+  `iterU32` provide repeated index streams; `initByIndex` / `updateByIndex`
+  construct and refresh static alias tables from index-weight functions
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
   and sampling workloads with weights accumulated as `f64`, including
   `initBy` / `updateAllBy` from item weight accessors,

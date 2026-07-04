@@ -2317,7 +2317,9 @@ Alias helpers:
 
 - `aliasTable(T)`
 - `AliasTable.init`
+- `AliasTable.initByIndex`
 - `AliasTable.update`
+- `AliasTable.updateByIndex`
 - `AliasTable.len`
 - `AliasTable.isEmpty`
 - `AliasTable.totalWeight`

@@ -36,7 +36,7 @@ The current Linux-first roadmap is intentionally broad:
 - reusable uniform, Bernoulli, non-uniform distribution, opt-in bounded f32
   LogNormal approximation, and alias-table samplers with compact `u32` index
   output, `sampleIndex` / `fillIndices` aliases, and owned repeated index
-  batches/iterators
+  batches/iterators plus index-accessor construction/update
 - dynamic weighted trees for frequent update/push/pop/sample/fill weighted
   workloads, including item- and index-accessor construction/full-refresh
   helpers, `sampleIndex` / `fillIndices` aliases, compact `u32` index

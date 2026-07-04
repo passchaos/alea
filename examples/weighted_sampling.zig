@@ -298,12 +298,19 @@ pub fn main(init: std.process.Init) !void {
     var alias_iter = alias.iterU32From(&alias_iter_engine);
     var alias_iter_u32: [6]u32 = undefined;
     alias_iter.fill(&alias_iter_u32);
+    var alias_by_index = try alea.distributions.AliasTable(u32).initByIndex(allocator, items.len, indexWeight);
+    defer alias_by_index.deinit();
+    try alias_by_index.updateByIndex(indexWeight);
+    var alias_by_index_engine = alea.ScalarPrng.init(0x71c0);
+    var alias_by_index_samples: [6]usize = undefined;
+    alias_by_index.fillFrom(&alias_by_index_engine, &alias_by_index_samples);
     try stdout.print("alias probabilities: {any}\n", .{alias_probs});
     try stdout.print("alias sample indices: {any}\n", .{alias_samples});
     try stdout.print("alias u32 sample indices: {any}\n", .{alias_u32_samples});
     try stdout.print("alias owned u32 indices: {any}\n", .{alias_owned_u32});
     try stdout.print("alias sampleIndex alias: {}\n", .{alias_alias_index});
     try stdout.print("alias u32 iterator fill: {any}\n", .{alias_iter_u32});
+    try stdout.print("alias initByIndex/updateByIndex indices: {any}\n", .{alias_by_index_samples});
 
     var tree = try alea.distributions.WeightedTree(f64).init(allocator, &float_weights);
     defer tree.deinit();
