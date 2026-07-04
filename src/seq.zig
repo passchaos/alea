@@ -755,6 +755,24 @@ pub fn weightedIndexCheckedFrom(source: anytype, comptime Weight: type, weights:
     return weightedIndexGenericFrom(source, Weight, weights);
 }
 
+pub fn weightedIndexU32(rng: Rng, comptime Weight: type, weights: []const Weight) Error!?u32 {
+    return weightedIndexU32From(rng, Weight, weights);
+}
+
+pub fn weightedIndexU32From(source: anytype, comptime Weight: type, weights: []const Weight) Error!?u32 {
+    if (weights.len > std.math.maxInt(u32)) return error.InvalidParameter;
+    const index = try weightedIndexGenericFrom(source, Weight, weights) orelse return null;
+    return @intCast(index);
+}
+
+pub fn weightedIndexU32Checked(rng: Rng, comptime Weight: type, weights: []const Weight) Error!?u32 {
+    return weightedIndexU32CheckedFrom(rng, Weight, weights);
+}
+
+pub fn weightedIndexU32CheckedFrom(source: anytype, comptime Weight: type, weights: []const Weight) Error!?u32 {
+    return weightedIndexU32From(source, Weight, weights);
+}
+
 pub fn chooseWeighted(rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !?T {
     return chooseWeightedFrom(rng, T, Weight, items, weights);
 }
@@ -4959,15 +4977,30 @@ test "generic weightedIndex selects indexes" {
     const checked = (try weightedIndexCheckedFrom(&checked_engine, u32, &weights)).?;
     try std.testing.expect(checked == 1 or checked == 2 or checked == 3);
 
+    var u32_engine = alea.ScalarPrng.init(0x5150_c707);
+    const index_u32 = (try weightedIndexU32From(&u32_engine, u32, &weights)).?;
+    try std.testing.expect(index_u32 == 1 or index_u32 == 2 or index_u32 == 3);
+
+    var checked_u32_engine = alea.ScalarPrng.init(0x5150_c708);
+    const checked_u32 = (try weightedIndexU32CheckedFrom(&checked_u32_engine, u32, &weights)).?;
+    try std.testing.expect(checked_u32 == 1 or checked_u32 == 2 or checked_u32 == 3);
+
     var single_engine = alea.ScalarPrng.init(0x5150_c703);
     var single_control = alea.ScalarPrng.init(0x5150_c703);
     try std.testing.expectEqual(@as(?usize, 2), weightedIndexFrom(&single_engine, u32, &.{ 0, 0, 5, 0 }));
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 
+    var single_u32_engine = alea.ScalarPrng.init(0x5150_c709);
+    var single_u32_control = alea.ScalarPrng.init(0x5150_c709);
+    try std.testing.expectEqual(@as(?u32, 2), try weightedIndexU32From(&single_u32_engine, u32, &.{ 0, 0, 5, 0 }));
+    try std.testing.expectEqual(single_u32_control.next(), single_u32_engine.next());
+
     var empty_engine = alea.ScalarPrng.init(0x5150_c704);
     try std.testing.expectEqual(@as(?usize, null), weightedIndexFrom(&empty_engine, u32, &.{}));
     try std.testing.expectEqual(@as(?usize, null), weightedIndexFrom(&empty_engine, u32, &.{ 0, 0, 0, 0 }));
     try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&empty_engine, u32, &.{ 0, 0, 0, 0 }));
+    try std.testing.expectEqual(@as(?u32, null), try weightedIndexU32From(&empty_engine, u32, &.{}));
+    try std.testing.expectEqual(@as(?u32, null), try weightedIndexU32CheckedFrom(&empty_engine, u32, &.{ 0, 0, 0, 0 }));
 }
 
 test "generic weightedIndex preserves facade/direct stream shape and invalid paths do not consume" {
@@ -4984,6 +5017,12 @@ test "generic weightedIndex preserves facade/direct stream shape and invalid pat
 
         try std.testing.expectEqual(try weightedIndexChecked(rng, u32, &weights), try weightedIndexCheckedFrom(&direct_engine, u32, &weights));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try std.testing.expectEqual(try weightedIndexU32(rng, u32, &weights), try weightedIndexU32From(&direct_engine, u32, &weights));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try std.testing.expectEqual(try weightedIndexU32Checked(rng, u32, &weights), try weightedIndexU32CheckedFrom(&direct_engine, u32, &weights));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 
     var invalid_engine = alea.ScalarPrng.init(0x5150_c706);
@@ -4992,6 +5031,8 @@ test "generic weightedIndex preserves facade/direct stream shape and invalid pat
     try std.testing.expectError(error.InvalidWeight, weightedIndexChecked(invalid_rng, f64, &.{ 1.0, std.math.nan(f64), 2.0 }));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&invalid_engine, f64, &.{ 1.0, std.math.inf(f64), 2.0 }));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, weightedIndexU32CheckedFrom(&invalid_engine, f64, &.{ 1.0, std.math.nan(f64), 2.0 }));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 

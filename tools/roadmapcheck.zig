@@ -72,6 +72,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M74", .path = "compare/results/s4-m74-indexvec-u32-export.md" },
     .{ .milestone = "S4-M75", .path = "compare/results/s4-m75-indexvec-owned-mapping.md" },
     .{ .milestone = "S4-M76", .path = "compare/results/s4-m76-choose-index-u32.md" },
+    .{ .milestone = "S4-M77", .path = "compare/results/s4-m77-generic-weighted-index-u32.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -79,7 +80,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M77",
+    "S4-M78",
     "No proxy signal is accepted as whole-goal completion",
 };
 
@@ -160,12 +161,12 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M77 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M77 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M78 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M78 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M77 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M77 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M78 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M78 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
