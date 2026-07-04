@@ -220,6 +220,29 @@ pub fn main(init: std.process.Init) !void {
     for (no_replace_by_mut_ptrs) |record| record.score += 10;
     try stdout.print("weighted by no-replacement mut ptr scores: [{}, {}, {}, {}]\n", .{ no_replace_by_mut_records[0].score, no_replace_by_mut_records[1].score, no_replace_by_mut_records[2].score, no_replace_by_mut_records[3].score });
 
+    var no_replace_by_indices_engine = alea.ScalarPrng.init(0x717e);
+    const no_replace_by_indices = try alea.seq.sampleWeightedIndicesByFrom(allocator, &no_replace_by_indices_engine, WeightedRecord, u32, &weighted_records, 3, WeightedRecord.weightOf);
+    defer allocator.free(no_replace_by_indices);
+    try stdout.print("weighted by no-replacement indices: {any}\n", .{no_replace_by_indices});
+
+    var no_replace_by_u32_indices_engine = alea.ScalarPrng.init(0x717f);
+    const no_replace_by_u32_indices = try alea.seq.sampleWeightedIndicesU32ByFrom(allocator, &no_replace_by_u32_indices_engine, WeightedRecord, u32, &weighted_records, 3, WeightedRecord.weightOf);
+    defer allocator.free(no_replace_by_u32_indices);
+    try stdout.print("weighted by u32 no-replacement indices: {any}\n", .{no_replace_by_u32_indices});
+
+    var no_replace_by_index_vec_engine = alea.ScalarPrng.init(0x7180);
+    const no_replace_by_index_vec = try alea.seq.sampleWeightedIndexVecByFrom(allocator, &no_replace_by_index_vec_engine, WeightedRecord, u32, &weighted_records, 3, WeightedRecord.weightOf);
+    defer no_replace_by_index_vec.deinit(allocator);
+    try stdout.print("weighted by IndexVec: [", .{});
+    var no_replace_by_index_vec_iter = no_replace_by_index_vec.iter();
+    var first_by_index = true;
+    while (no_replace_by_index_vec_iter.next()) |index| {
+        if (!first_by_index) try stdout.print(", ", .{});
+        first_by_index = false;
+        try stdout.print("{}", .{index});
+    }
+    try stdout.print("]\n", .{});
+
     var weighted_array_engine = alea.ScalarPrng.init(0x7159);
     const weighted_array = (try alea.seq.sampleWeightedArrayFrom(&weighted_array_engine, []const u8, f64, 3, &items, &float_weights)).?;
     try stdout.print("weighted array sample: [{s}, {s}, {s}]\n", .{ weighted_array[0], weighted_array[1], weighted_array[2] });

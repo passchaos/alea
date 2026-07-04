@@ -353,7 +353,12 @@ Use:
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeightedIndicesU32From`,
   `seq.sampleWeightedIndicesU32CheckedFrom`, `seq.sampleWeightedIndexVecFrom`,
-  `seq.sampleWeightedIndexVecCheckedFrom`, `seq.sampleWeightedIndicesIntoFrom`,
+  `seq.sampleWeightedIndexVecCheckedFrom`, accessor-based
+  `seq.sampleWeightedIndicesByFrom`, `seq.sampleWeightedIndicesByCheckedFrom`,
+  `seq.sampleWeightedIndicesU32ByFrom`,
+  `seq.sampleWeightedIndicesU32ByCheckedFrom`,
+  `seq.sampleWeightedIndexVecByFrom`, and
+  `seq.sampleWeightedIndexVecByCheckedFrom`, `seq.sampleWeightedIndicesIntoFrom`,
   `seq.sampleWeightedIndicesIntoCheckedFrom`,
   `seq.sampleWeightedIndicesU32IntoFrom`,
   `seq.sampleWeightedIndicesU32IntoCheckedFrom`,
