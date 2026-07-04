@@ -52,7 +52,8 @@ selection.
 - booleans: `boolean`, `booleanFrom`, `chance`, `chanceFrom`, `ratio`, `ratioFrom`,
   `fillChance`, `fillRatio`, `chanceBatch`, and `ratioBatch`
 - durations: `durationRangeLessThan`, `durationRangeAtMost`,
-  `durationRangeLessThanFrom`, `durationRangeAtMostFrom`
+  `durationRangeLessThanFrom`, `durationRangeAtMostFrom`,
+  `durationRangeLessThanBatch`, and `durationRangeAtMostBatch`
 - Unicode scalar values: `unicodeScalar`, `unicodeScalarFrom`
 - structured values: `value(T)` / `valueFrom(source, T)` for bools, ints,
   floats, vectors, enums, arrays, and tuples; use `valueChecked` /
@@ -68,8 +69,12 @@ selection.
   `chanceBatchCheckedFrom`, `ratioBatch`, `ratioBatchFrom`,
   `ratioBatchChecked`, `ratioBatchCheckedFrom`, `normalBatch`,
   `normalBatchFrom`, `normalBatchChecked`, `normalBatchCheckedFrom`,
-  `exponentialBatch`, `exponentialBatchFrom`, `exponentialBatchChecked`, and
-  `exponentialBatchCheckedFrom` allocate owned slices after validating no-consume
+  `exponentialBatch`, `exponentialBatchFrom`, `exponentialBatchChecked`,
+  `exponentialBatchCheckedFrom`, `durationRangeLessThanBatch`,
+  `durationRangeLessThanBatchFrom`, `durationRangeLessThanBatchChecked`,
+  `durationRangeLessThanBatchCheckedFrom`, `durationRangeAtMostBatch`,
+  `durationRangeAtMostBatchFrom`, `durationRangeAtMostBatchChecked`, and
+  `durationRangeAtMostBatchCheckedFrom` allocate owned slices after validating no-consume
   checked cases; use these when an owned result is more ergonomic than a caller
   buffer or iterator loop
 - owned byte buffers: `bytesAlloc` / `bytesAllocFrom` allocate random byte slices after allocation succeeds; use `bytes` or `fill(u8, ...)` for caller-owned buffers

@@ -1683,6 +1683,17 @@ pub fn durationRangeLessThan(self: Rng, min: std.Io.Duration, max: std.Io.Durati
     return durationRangeLessThanFrom(self, min, max);
 }
 
+pub fn durationRangeLessThanBatch(self: Rng, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    return durationRangeLessThanBatchFrom(self, allocator, count, min, max);
+}
+
+pub fn durationRangeLessThanBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    const out = try allocator.alloc(std.Io.Duration, count);
+    errdefer allocator.free(out);
+    for (out) |*item| item.* = durationRangeLessThanFrom(source, min, max);
+    return out;
+}
+
 pub fn durationRangeLessThanFrom(source: anytype, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
     std.debug.assert(min.nanoseconds < max.nanoseconds);
     return .{ .nanoseconds = intRangeLessThanFrom(source, i96, min.nanoseconds, max.nanoseconds) };
@@ -1690,6 +1701,17 @@ pub fn durationRangeLessThanFrom(source: anytype, min: std.Io.Duration, max: std
 
 pub fn durationRangeAtMost(self: Rng, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
     return durationRangeAtMostFrom(self, min, max);
+}
+
+pub fn durationRangeAtMostBatch(self: Rng, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    return durationRangeAtMostBatchFrom(self, allocator, count, min, max);
+}
+
+pub fn durationRangeAtMostBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    const out = try allocator.alloc(std.Io.Duration, count);
+    errdefer allocator.free(out);
+    for (out) |*item| item.* = durationRangeAtMostFrom(source, min, max);
+    return out;
 }
 
 pub fn durationRangeAtMostFrom(source: anytype, min: std.Io.Duration, max: std.Io.Duration) std.Io.Duration {
@@ -1701,6 +1723,16 @@ pub fn durationRangeLessThanChecked(self: Rng, min: std.Io.Duration, max: std.Io
     return durationRangeLessThanCheckedFrom(self, min, max);
 }
 
+pub fn durationRangeLessThanBatchChecked(self: Rng, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    return durationRangeLessThanBatchCheckedFrom(self, allocator, count, min, max);
+}
+
+pub fn durationRangeLessThanBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    if (count == 0) return allocator.alloc(std.Io.Duration, 0);
+    if (min.nanoseconds >= max.nanoseconds) return error.EmptyRange;
+    return durationRangeLessThanBatchFrom(source, allocator, count, min, max);
+}
+
 pub fn durationRangeLessThanCheckedFrom(source: anytype, min: std.Io.Duration, max: std.Io.Duration) Error!std.Io.Duration {
     if (min.nanoseconds >= max.nanoseconds) return error.EmptyRange;
     return durationRangeLessThanFrom(source, min, max);
@@ -1708,6 +1740,16 @@ pub fn durationRangeLessThanCheckedFrom(source: anytype, min: std.Io.Duration, m
 
 pub fn durationRangeAtMostChecked(self: Rng, min: std.Io.Duration, max: std.Io.Duration) Error!std.Io.Duration {
     return durationRangeAtMostCheckedFrom(self, min, max);
+}
+
+pub fn durationRangeAtMostBatchChecked(self: Rng, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    return durationRangeAtMostBatchCheckedFrom(self, allocator, count, min, max);
+}
+
+pub fn durationRangeAtMostBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    if (count == 0) return allocator.alloc(std.Io.Duration, 0);
+    if (min.nanoseconds > max.nanoseconds) return error.EmptyRange;
+    return durationRangeAtMostBatchFrom(source, allocator, count, min, max);
 }
 
 pub fn durationRangeAtMostCheckedFrom(source: anytype, min: std.Io.Duration, max: std.Io.Duration) Error!std.Io.Duration {
@@ -3168,6 +3210,38 @@ test "duration range sampling has stable snapshots" {
     try std.testing.expectEqual(@as(u64, 0x3a7abfece698fa60), engine.next());
 }
 
+test "owned duration range batches preserve checked stream shape" {
+    const alea = @import("root.zig");
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var unchecked = Engine.init(0x5150_d901);
+        var checked = Engine.init(0x5150_d901);
+        const min = std.Io.Duration.fromMilliseconds(10);
+        const max = std.Io.Duration.fromMilliseconds(20);
+
+        const less_than = try durationRangeLessThanBatchFrom(&unchecked, std.testing.allocator, 8, min, max);
+        defer std.testing.allocator.free(less_than);
+        const checked_less_than = try durationRangeLessThanBatchCheckedFrom(&checked, std.testing.allocator, 8, min, max);
+        defer std.testing.allocator.free(checked_less_than);
+        try std.testing.expectEqualSlices(std.Io.Duration, less_than, checked_less_than);
+        for (less_than) |sample| {
+            try std.testing.expect(sample.nanoseconds >= min.nanoseconds);
+            try std.testing.expect(sample.nanoseconds < max.nanoseconds);
+        }
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const at_most = try durationRangeAtMostBatchFrom(&unchecked, std.testing.allocator, 8, min, max);
+        defer std.testing.allocator.free(at_most);
+        const checked_at_most = try durationRangeAtMostBatchCheckedFrom(&checked, std.testing.allocator, 8, min, max);
+        defer std.testing.allocator.free(checked_at_most);
+        try std.testing.expectEqualSlices(std.Io.Duration, at_most, checked_at_most);
+        for (at_most) |sample| {
+            try std.testing.expect(sample.nanoseconds >= min.nanoseconds);
+            try std.testing.expect(sample.nanoseconds <= max.nanoseconds);
+        }
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+    }
+}
+
 test "shuffle and sampling keep item set" {
     const Wyhash64 = @import("engines/wyhash64.zig");
     var engine = Wyhash64.init(9);
@@ -3653,6 +3727,38 @@ test "invalid duration at-most range does not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "owned duration range batches allocate and validate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d902);
+    var control = alea.ScalarPrng.init(0x5150_d902);
+    const rng = Rng.init(&engine);
+
+    const min = std.Io.Duration.fromSeconds(2);
+    const max = std.Io.Duration.fromSeconds(1);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.durationRangeLessThanBatchChecked(empty_alloc.allocator(), 0, min, max);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_less_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.durationRangeLessThanBatchChecked(invalid_less_alloc.allocator(), 8, min, max));
+    try std.testing.expect(!invalid_less_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_at_most_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, durationRangeAtMostBatchCheckedFrom(&engine, invalid_at_most_alloc.allocator(), 8, min, max));
+    try std.testing.expect(!invalid_at_most_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.durationRangeAtMostBatchChecked(alloc.allocator(), 8, max, min));
+    try std.testing.expect(alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "zero-count sample without replacement does not build pool or consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_baf);
@@ -3782,6 +3888,11 @@ test "degenerate range helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(std.Io.Duration.fromSeconds(3), durationRangeAtMostFrom(&engine, .fromSeconds(3), .fromSeconds(3)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_duration = try rng.durationRangeAtMostBatch(std.testing.allocator, 5, .fromSeconds(3), .fromSeconds(3));
+    defer std.testing.allocator.free(owned_duration);
+    for (owned_duration) |sample| try std.testing.expectEqual(std.Io.Duration.fromSeconds(3), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(f64, 2.5), rng.floatRange(f64, 2.5, 2.5));

@@ -128,6 +128,7 @@ Local Alea evidence:
 - `compare/results/s4-m88-rng-owned-strict-intervals.md`
 - `compare/results/s4-m89-rng-owned-probabilities.md`
 - `compare/results/s4-m90-rng-owned-normal-exponential.md`
+- `compare/results/s4-m91-rng-owned-durations.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -146,7 +147,7 @@ Out of scope for this Linux-first audit:
 | integer, float, bool, range, owned range/strict-interval/probability batches, ratio/chance, caller-owned and allocation-returning bytes | Covered | `Rng`, `Rng.rangeBatch`, `Rng.openBatch`, `Rng.openClosedBatch`, `Rng.chanceBatch`, `Rng.ratioBatch`, `Rng.bytesAlloc`, unit tests, Zig/Rust benchmark rows |
 | arrays, tuples, enums | Covered | `Rng.value(T)`, `Rng.valueBatch(T)`, and checked empty-enum tests |
 | Unicode scalar / char-like sampling | Covered in Zig form | `Rng.unicodeScalar`, `ascii.unicodeUtf8Alloc`, `ascii.unicodeUtf8Into` |
-| durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost` |
+| durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost`, and owned duration range batches |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
 | choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseIndexU32`, `Rng.chooseConstPtr`, `seq` module, `sampleArrayU32`, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `Choice.sampleIndex`, `Choice.fill`, `Choice.fillValues`, `Choice.ptrs`, `Choice.values`, `Choice.fillIndices`, `Choice.indices`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer and u32 export mapping, Rust sequence benchmark row |
 | weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `Rng.weightedIndexU32`, `seq.weightedIndex`, `seq.weightedIndexU32`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedIndicesU32`, `seq.sampleWeightedIndicesU32Into`, `seq.sampleWeightedIndexVec`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedIndexArrayU32`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedChoice.sample`, `WeightedChoice.ptrs`, `WeightedChoice.values`, `WeightedChoice.sampleIndex`, `WeightedChoice.fillIndices`, `WeightedChoice.indices`, `WeightedTree`, benchmark rows |
@@ -291,6 +292,6 @@ index batches, S4-M84 adds reusable choice owned value/pointer batches, and
 S4-M85 adds Rng owned repeated value/sample batches, S4-M86 adds Rng owned
 byte buffers, S4-M87 adds Rng owned scalar range batches, and S4-M88 adds
 Rng owned strict-interval float batches, and S4-M89 adds Rng owned probability
-bool batches, and S4-M90 adds Rng owned normal/exponential batches, but later
-stages should keep raising the bar rather than declaring the product permanently
-finished.
+bool batches, and S4-M90 adds Rng owned normal/exponential batches, and S4-M91 adds Rng owned duration range batches,
+but later stages should keep raising the bar rather than declaring the product
+permanently finished.

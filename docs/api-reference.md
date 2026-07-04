@@ -63,9 +63,14 @@ stability expectations.
   `floatRange`, `floatRangeFrom`, `floatRangeChecked`, `floatRangeCheckedFrom`,
   `rangeBatch`, `rangeBatchFrom`, `rangeBatchChecked`,
   `rangeBatchCheckedFrom`, `durationRangeLessThan`,
-  `durationRangeLessThanFrom`, `durationRangeAtMost`, `durationRangeAtMostFrom`,
-  `durationRangeLessThanChecked`, `durationRangeLessThanCheckedFrom`,
-  `durationRangeAtMostChecked`, `durationRangeAtMostCheckedFrom`
+  `durationRangeLessThanFrom`, `durationRangeLessThanBatch`,
+  `durationRangeLessThanBatchFrom`, `durationRangeAtMost`,
+  `durationRangeAtMostFrom`, `durationRangeAtMostBatch`,
+  `durationRangeAtMostBatchFrom`, `durationRangeLessThanChecked`,
+  `durationRangeLessThanCheckedFrom`, `durationRangeLessThanBatchChecked`,
+  `durationRangeLessThanBatchCheckedFrom`, `durationRangeAtMostChecked`,
+  `durationRangeAtMostCheckedFrom`, `durationRangeAtMostBatchChecked`,
+  `durationRangeAtMostBatchCheckedFrom`
 - Floats: `float`, `floatFrom`, `floatOpen`, `floatOpenFrom`,
   `floatOpenClosed`, `floatOpenClosedFrom`
 - Vectors: `vector`, `vectorOpen`, `vectorOpenClosed`, `vectorRange`,
