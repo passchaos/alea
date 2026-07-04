@@ -367,9 +367,9 @@ Use:
   `Rng.fillChooseWeightedPtrFrom`, `Rng.chooseWeightedPtrArrayFrom`,
   `Rng.chooseWeightedPtrBatchFrom`, `seq.weightedIndex`, `seq.weightedIndexFrom`,
   `seq.weightedIndexCheckedFrom`, `seq.fillWeightedIndexFrom`,
-  `seq.weightedIndexBatchFrom`, `seq.weightedIndexU32From`,
+  `seq.weightedIndexArrayFrom`, `seq.weightedIndexBatchFrom`, `seq.weightedIndexU32From`,
   `seq.weightedIndexU32CheckedFrom`, `seq.fillWeightedIndexU32From`,
-  `seq.weightedIndexU32BatchFrom`, `seq.weightedIndexByIndexFrom`,
+  `seq.weightedIndexU32ArrayFrom`, `seq.weightedIndexU32BatchFrom`, `seq.weightedIndexByIndexFrom`,
   `seq.weightedIndexByIndexCheckedFrom`, `seq.weightedIndexU32ByIndexFrom`,
   `seq.weightedIndexU32ByIndexCheckedFrom`, `seq.fillWeightedIndexByIndexFrom`,
   `seq.fillWeightedIndexByIndexCheckedFrom`,
@@ -402,9 +402,11 @@ Use:
   `seq.fillWeightedIndexU32ByCheckedFrom`, `seq.weightedIndexBatchByFrom`,
   `seq.weightedIndexBatchByCheckedFrom`, `seq.weightedIndexU32BatchByFrom`,
   `seq.weightedIndexU32BatchByCheckedFrom`, `seq.fillChooseWeightedFrom`,
-  `seq.chooseWeightedBatchFrom`, `seq.fillChooseWeightedConstPtrFrom`,
-  `seq.chooseWeightedConstPtrBatchFrom`, `seq.fillChooseWeightedPtrFrom`,
-  `seq.chooseWeightedPtrBatchFrom`
+  `seq.chooseWeightedValueArrayFrom`, `seq.chooseWeightedBatchFrom`,
+  `seq.fillChooseWeightedConstPtrFrom`,
+  `seq.chooseWeightedConstPtrArrayFrom`, `seq.chooseWeightedConstPtrBatchFrom`,
+  `seq.fillChooseWeightedPtrFrom`,
+  `seq.chooseWeightedPtrArrayFrom`, `seq.chooseWeightedPtrBatchFrom`
 - `seq.chooseWeighted`, `seq.chooseWeightedFrom`,
   `seq.chooseWeightedCheckedFrom`, `seq.chooseWeightedConstPtrFrom`,
   `seq.chooseWeightedConstPtrCheckedFrom`, `seq.chooseWeightedPtr`,
@@ -457,7 +459,12 @@ Use:
   `seq.chooseWeightedConstPtrBatchByFrom`,
   `seq.chooseWeightedConstPtrBatchByCheckedFrom`,
   `seq.chooseWeightedPtrBatchByFrom`, and
-  `seq.chooseWeightedPtrBatchByCheckedFrom` for Zig-native versions of Rust
+  `seq.chooseWeightedPtrBatchByCheckedFrom`, plus generic-weight
+  `seq.weightedIndexArrayFrom`, `seq.weightedIndexU32ArrayFrom`,
+  `seq.chooseWeightedValueArrayFrom`,
+  `seq.chooseWeightedConstPtrArrayFrom`, and
+  `seq.chooseWeightedPtrArrayFrom` for fixed-size repeated with-replacement
+  arrays, for Zig-native versions of Rust
   `choose_weighted`, `choose_weighted_mut`, and
   `choose_weighted_iter(...).take(n).collect()` when weights are fields or
   derived from items instead of parallel slices, and allocation-returning

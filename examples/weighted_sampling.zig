@@ -80,6 +80,10 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(generic_index_batch);
     try stdout.print("generic weighted index batch: {any}\n", .{generic_index_batch});
 
+    var generic_index_array_engine = alea.ScalarPrng.init(0x7186);
+    const generic_index_array = try alea.seq.weightedIndexArrayCheckedFrom(&generic_index_array_engine, u32, 6, &int_weights);
+    try stdout.print("generic weighted index array: {any}\n", .{generic_index_array});
+
     var u32_index_engine = alea.ScalarPrng.init(0x716b);
     const generic_u32_index = (try alea.seq.weightedIndexU32From(&u32_index_engine, u32, &int_weights)).?;
     try stdout.print("generic weighted u32 index: {} ({s})\n", .{ generic_u32_index, items[generic_u32_index] });
@@ -88,6 +92,10 @@ pub fn main(init: std.process.Init) !void {
     const generic_u32_index_batch = try alea.seq.weightedIndexU32BatchCheckedFrom(allocator, &generic_u32_index_batch_engine, u32, 6, &int_weights);
     defer allocator.free(generic_u32_index_batch);
     try stdout.print("generic weighted u32 index batch: {any}\n", .{generic_u32_index_batch});
+
+    var generic_u32_index_array_engine = alea.ScalarPrng.init(0x7187);
+    const generic_u32_index_array = try alea.seq.weightedIndexU32ArrayCheckedFrom(&generic_u32_index_array_engine, u32, 6, &int_weights);
+    try stdout.print("generic weighted u32 index array: {any}\n", .{generic_u32_index_array});
 
     var index_weight_one_engine = alea.ScalarPrng.init(0x71a0);
     const index_weight_one = (try alea.seq.weightedIndexByIndexFrom(&index_weight_one_engine, u32, items.len, indexWeight)).?;
@@ -183,6 +191,10 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(generic_value_batch);
     try stdout.print("generic weighted value batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ generic_value_batch[0], generic_value_batch[1], generic_value_batch[2], generic_value_batch[3], generic_value_batch[4], generic_value_batch[5] });
 
+    var generic_value_array_engine = alea.ScalarPrng.init(0x7188);
+    const generic_value_array = try alea.seq.chooseWeightedValueArrayCheckedFrom(&generic_value_array_engine, []const u8, u32, 6, &items, &int_weights);
+    try stdout.print("generic weighted value array: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ generic_value_array[0], generic_value_array[1], generic_value_array[2], generic_value_array[3], generic_value_array[4], generic_value_array[5] });
+
     var weighted_const_ptr_engine = alea.ScalarPrng.init(0x7163);
     const weighted_const_ptr = (try alea.seq.chooseWeightedConstPtrFrom(&weighted_const_ptr_engine, []const u8, f64, &items, &float_weights)).?;
     try stdout.print("one-shot weighted const ptr: {s}\n", .{weighted_const_ptr.*});
@@ -200,6 +212,10 @@ pub fn main(init: std.process.Init) !void {
     const generic_const_ptr_batch = try alea.seq.chooseWeightedConstPtrBatchCheckedFrom(allocator, &generic_const_ptr_batch_engine, []const u8, u32, 6, &items, &int_weights);
     defer allocator.free(generic_const_ptr_batch);
     try stdout.print("generic weighted const ptr batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ generic_const_ptr_batch[0].*, generic_const_ptr_batch[1].*, generic_const_ptr_batch[2].*, generic_const_ptr_batch[3].*, generic_const_ptr_batch[4].*, generic_const_ptr_batch[5].* });
+
+    var generic_const_ptr_array_engine = alea.ScalarPrng.init(0x7189);
+    const generic_const_ptr_array = try alea.seq.chooseWeightedConstPtrArrayCheckedFrom(&generic_const_ptr_array_engine, []const u8, u32, 6, &items, &int_weights);
+    try stdout.print("generic weighted const ptr array: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ generic_const_ptr_array[0].*, generic_const_ptr_array[1].*, generic_const_ptr_array[2].*, generic_const_ptr_array[3].*, generic_const_ptr_array[4].*, generic_const_ptr_array[5].* });
 
     var weighted_mut_ptr_batch_engine = alea.ScalarPrng.init(0x716e);
     var weighted_mut_scores_batch = [_]u8{ 10, 20, 30, 40 };
@@ -220,6 +236,12 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(generic_mut_ptr_batch);
     for (generic_mut_ptr_batch) |score| score.* += 1;
     try stdout.print("generic weighted mut ptr batch scores: {any}\n", .{generic_mut_scores_batch});
+
+    var generic_mut_ptr_array_engine = alea.ScalarPrng.init(0x718a);
+    var generic_mut_scores_array = [_]u8{ 10, 20, 30, 40 };
+    const generic_mut_ptr_array = try alea.seq.chooseWeightedPtrArrayCheckedFrom(&generic_mut_ptr_array_engine, u8, u32, 6, &generic_mut_scores_array, &int_weights);
+    for (generic_mut_ptr_array) |score| score.* += 1;
+    try stdout.print("generic weighted mut ptr array scores: {any}\n", .{generic_mut_scores_array});
 
     const weighted_records = [_]WeightedRecord{
         .{ .label = "never", .score = 0 },
