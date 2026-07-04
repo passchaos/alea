@@ -396,8 +396,10 @@ Use:
   `seq.chooseWeightedConstPtrBatchByIndexCheckedFrom`,
   `seq.chooseWeightedPtrBatchByIndexFrom`,
   `seq.chooseWeightedPtrBatchByIndexCheckedFrom`, `seq.weightedIndexByFrom`,
-  `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
-  `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
+  `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexArrayByFrom`,
+  `seq.weightedIndexArrayByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
+  `seq.weightedIndexU32ByCheckedFrom`, `seq.weightedIndexU32ArrayByFrom`,
+  `seq.weightedIndexU32ArrayByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
   `seq.fillWeightedIndexByCheckedFrom`, `seq.fillWeightedIndexU32ByFrom`,
   `seq.fillWeightedIndexU32ByCheckedFrom`, `seq.weightedIndexBatchByFrom`,
   `seq.weightedIndexBatchByCheckedFrom`, `seq.weightedIndexU32BatchByFrom`,
@@ -441,15 +443,21 @@ Use:
   `seq.chooseWeightedPtrBatchByIndexFrom`, and
   `seq.chooseWeightedPtrBatchByIndexCheckedFrom`, plus accessor-based
   `seq.weightedIndexByFrom`,
-  `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
-  `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
+  `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexArrayByFrom`,
+  `seq.weightedIndexArrayByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
+  `seq.weightedIndexU32ByCheckedFrom`, `seq.weightedIndexU32ArrayByFrom`,
+  `seq.weightedIndexU32ArrayByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
   `seq.fillWeightedIndexByCheckedFrom`, `seq.fillWeightedIndexU32ByFrom`,
   `seq.fillWeightedIndexU32ByCheckedFrom`, `seq.weightedIndexBatchByFrom`,
   `seq.weightedIndexBatchByCheckedFrom`, `seq.weightedIndexU32BatchByFrom`,
   `seq.weightedIndexU32BatchByCheckedFrom`, `seq.chooseWeightedByFrom`,
-  `seq.chooseWeightedByCheckedFrom`, `seq.chooseWeightedConstPtrByFrom`,
-  `seq.chooseWeightedConstPtrByCheckedFrom`, `seq.chooseWeightedPtrByFrom`,
-  `seq.chooseWeightedPtrByCheckedFrom`, plus caller-owned
+  `seq.chooseWeightedByCheckedFrom`, `seq.chooseWeightedValueArrayByFrom`,
+  `seq.chooseWeightedValueArrayByCheckedFrom`, `seq.chooseWeightedConstPtrByFrom`,
+  `seq.chooseWeightedConstPtrByCheckedFrom`,
+  `seq.chooseWeightedConstPtrArrayByFrom`,
+  `seq.chooseWeightedConstPtrArrayByCheckedFrom`, `seq.chooseWeightedPtrByFrom`,
+  `seq.chooseWeightedPtrByCheckedFrom`, `seq.chooseWeightedPtrArrayByFrom`,
+  `seq.chooseWeightedPtrArrayByCheckedFrom`, plus caller-owned
   `seq.fillChooseWeightedByFrom`, `seq.fillChooseWeightedByCheckedFrom`,
   `seq.fillChooseWeightedConstPtrByFrom`,
   `seq.fillChooseWeightedConstPtrByCheckedFrom`,
@@ -459,7 +467,11 @@ Use:
   `seq.chooseWeightedConstPtrBatchByFrom`,
   `seq.chooseWeightedConstPtrBatchByCheckedFrom`,
   `seq.chooseWeightedPtrBatchByFrom`, and
-  `seq.chooseWeightedPtrBatchByCheckedFrom`, plus generic-weight
+  `seq.chooseWeightedPtrBatchByCheckedFrom`, plus item-accessor fixed arrays
+  `seq.weightedIndexArrayByFrom`, `seq.weightedIndexU32ArrayByFrom`,
+  `seq.chooseWeightedValueArrayByFrom`,
+  `seq.chooseWeightedConstPtrArrayByFrom`, and
+  `seq.chooseWeightedPtrArrayByFrom`, plus generic-weight
   `seq.weightedIndexArrayFrom`, `seq.weightedIndexU32ArrayFrom`,
   `seq.chooseWeightedValueArrayFrom`,
   `seq.chooseWeightedConstPtrArrayFrom`, and

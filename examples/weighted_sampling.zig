@@ -284,10 +284,18 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(weighted_by_index_batch);
     try stdout.print("weighted by index batch: {any}\n", .{weighted_by_index_batch});
 
+    var weighted_by_repeated_index_array_engine = alea.ScalarPrng.init(0x718b);
+    const weighted_by_repeated_index_array = try alea.seq.weightedIndexArrayByCheckedFrom(&weighted_by_repeated_index_array_engine, WeightedRecord, u32, 6, &weighted_records, WeightedRecord.weightOf);
+    try stdout.print("weighted by repeated index array: {any}\n", .{weighted_by_repeated_index_array});
+
     var weighted_by_u32_index_batch_engine = alea.ScalarPrng.init(0x719f);
     const weighted_by_u32_index_batch = try alea.seq.weightedIndexU32BatchByFrom(allocator, &weighted_by_u32_index_batch_engine, WeightedRecord, u32, 6, &weighted_records, WeightedRecord.weightOf);
     defer allocator.free(weighted_by_u32_index_batch);
     try stdout.print("weighted by u32 index batch: {any}\n", .{weighted_by_u32_index_batch});
+
+    var weighted_by_repeated_u32_index_array_engine = alea.ScalarPrng.init(0x718c);
+    const weighted_by_repeated_u32_index_array = try alea.seq.weightedIndexU32ArrayByCheckedFrom(&weighted_by_repeated_u32_index_array_engine, WeightedRecord, u32, 6, &weighted_records, WeightedRecord.weightOf);
+    try stdout.print("weighted by repeated u32 index array: {any}\n", .{weighted_by_repeated_u32_index_array});
 
     var weighted_by_fill_engine = alea.ScalarPrng.init(0x7194);
     var weighted_by_fill_values: [6]?WeightedRecord = undefined;
@@ -311,10 +319,18 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(weighted_by_batch);
     try stdout.print("weighted by value batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_by_batch[0].?.label, weighted_by_batch[1].?.label, weighted_by_batch[2].?.label, weighted_by_batch[3].?.label, weighted_by_batch[4].?.label, weighted_by_batch[5].?.label });
 
+    var weighted_by_repeated_value_array_engine = alea.ScalarPrng.init(0x718d);
+    const weighted_by_repeated_value_array = try alea.seq.chooseWeightedValueArrayByCheckedFrom(&weighted_by_repeated_value_array_engine, WeightedRecord, u32, 6, &weighted_records, WeightedRecord.weightOf);
+    try stdout.print("weighted by repeated value array: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_by_repeated_value_array[0].label, weighted_by_repeated_value_array[1].label, weighted_by_repeated_value_array[2].label, weighted_by_repeated_value_array[3].label, weighted_by_repeated_value_array[4].label, weighted_by_repeated_value_array[5].label });
+
     var weighted_by_ptr_batch_engine = alea.ScalarPrng.init(0x7198);
     const weighted_by_ptr_batch = try alea.seq.chooseWeightedConstPtrBatchByFrom(allocator, &weighted_by_ptr_batch_engine, WeightedRecord, u32, 6, &weighted_records, WeightedRecord.weightOf);
     defer allocator.free(weighted_by_ptr_batch);
     try stdout.print("weighted by const ptr batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_by_ptr_batch[0].?.label, weighted_by_ptr_batch[1].?.label, weighted_by_ptr_batch[2].?.label, weighted_by_ptr_batch[3].?.label, weighted_by_ptr_batch[4].?.label, weighted_by_ptr_batch[5].?.label });
+
+    var weighted_by_repeated_const_ptr_array_engine = alea.ScalarPrng.init(0x718e);
+    const weighted_by_repeated_const_ptr_array = try alea.seq.chooseWeightedConstPtrArrayByCheckedFrom(&weighted_by_repeated_const_ptr_array_engine, WeightedRecord, u32, 6, &weighted_records, WeightedRecord.weightOf);
+    try stdout.print("weighted by repeated const ptr array: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_by_repeated_const_ptr_array[0].label, weighted_by_repeated_const_ptr_array[1].label, weighted_by_repeated_const_ptr_array[2].label, weighted_by_repeated_const_ptr_array[3].label, weighted_by_repeated_const_ptr_array[4].label, weighted_by_repeated_const_ptr_array[5].label });
 
     var weighted_by_mut_batch_records = weighted_records;
     var weighted_by_mut_batch_engine = alea.ScalarPrng.init(0x7199);
@@ -322,6 +338,12 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(weighted_by_mut_batch);
     for (weighted_by_mut_batch) |record| record.?.score += 1;
     try stdout.print("weighted by mut ptr batch scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_batch_records[0].score, weighted_by_mut_batch_records[1].score, weighted_by_mut_batch_records[2].score, weighted_by_mut_batch_records[3].score });
+
+    var weighted_by_repeated_mut_array_records = weighted_records;
+    var weighted_by_repeated_mut_array_engine = alea.ScalarPrng.init(0x718f);
+    const weighted_by_repeated_mut_array = try alea.seq.chooseWeightedPtrArrayByCheckedFrom(&weighted_by_repeated_mut_array_engine, WeightedRecord, u32, 6, &weighted_by_repeated_mut_array_records, WeightedRecord.weightOf);
+    for (weighted_by_repeated_mut_array) |record| record.score += 1;
+    try stdout.print("weighted by repeated mut ptr array scores: [{}, {}, {}, {}]\n", .{ weighted_by_repeated_mut_array_records[0].score, weighted_by_repeated_mut_array_records[1].score, weighted_by_repeated_mut_array_records[2].score, weighted_by_repeated_mut_array_records[3].score });
 
     var alias = try alea.distributions.AliasTable(f64).init(allocator, &float_weights);
     defer alias.deinit();
