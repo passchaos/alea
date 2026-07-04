@@ -92,6 +92,13 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_mut_ptr_batch) |score| score.* += 1;
     try stdout.print("weighted mut ptr batch scores: {any}\n", .{weighted_mut_scores_batch});
 
+    var generic_mut_ptr_batch_engine = alea.ScalarPrng.init(0x7173);
+    var generic_mut_scores_batch = [_]u8{ 10, 20, 30, 40 };
+    const generic_mut_ptr_batch = try alea.seq.chooseWeightedPtrBatchCheckedFrom(allocator, &generic_mut_ptr_batch_engine, u8, u32, 6, &generic_mut_scores_batch, &int_weights);
+    defer allocator.free(generic_mut_ptr_batch);
+    for (generic_mut_ptr_batch) |score| score.* += 1;
+    try stdout.print("generic weighted mut ptr batch scores: {any}\n", .{generic_mut_scores_batch});
+
     var alias = try alea.distributions.AliasTable(f64).init(allocator, &float_weights);
     defer alias.deinit();
     var alias_probs: [items.len]f64 = undefined;
