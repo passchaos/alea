@@ -138,6 +138,7 @@ Local Alea evidence:
 - `compare/results/s4-m98-unicode-scalar-ranges.md`
 - `compare/results/s4-m99-rng-owned-bounded-uint.md`
 - `compare/results/s4-m100-rng-owned-inclusive-ranges.md`
+- `compare/results/s4-m101-rng-owned-vector-inclusive-ranges.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -153,7 +154,7 @@ Out of scope for this Linux-first audit:
 
 | Rust area | Alea status | Evidence |
 | --- | --- | --- |
-| integer, float, bool, range, owned bounded-uint, owned scalar/vector half-open and inclusive range, scalar/vector strict-interval, scalar/vector probability, scalar/vector standard-or-parameterized normal/exponential, and duration batches, ratio/chance, caller-owned and allocation-returning bytes | Covered | `Rng`, `Rng.uintLessThanBatch`, `Rng.uintAtMostBatch`, `Rng.rangeBatch`, `Rng.rangeAtMostBatch`, `Rng.vectorRangeBatch`, `Rng.openBatch`, `Rng.openClosedBatch`, `Rng.vectorOpenBatch`, `Rng.vectorOpenClosedBatch`, `Rng.chanceBatch`, `Rng.ratioBatch`, `Rng.vectorChanceBatch`, `Rng.vectorRatioBatch`, `Rng.standardNormalBatch`, `Rng.normalBatch`, `Rng.standardExponentialBatch`, `Rng.exponentialBatch`, `Rng.vectorStandardNormalBatch`, `Rng.vectorNormalBatch`, `Rng.vectorStandardExponentialBatch`, `Rng.vectorExponentialBatch`, `Rng.bytesAlloc`, unit tests, Zig/Rust benchmark rows |
+| integer, float, bool, range, owned bounded-uint, owned scalar/vector half-open and inclusive range, scalar/vector strict-interval, scalar/vector probability, scalar/vector standard-or-parameterized normal/exponential, and duration batches, ratio/chance, caller-owned and allocation-returning bytes | Covered | `Rng`, `Rng.uintLessThanBatch`, `Rng.uintAtMostBatch`, `Rng.rangeBatch`, `Rng.rangeAtMostBatch`, `Rng.vectorRangeBatch`, `Rng.vectorRangeAtMostBatch`, `Rng.openBatch`, `Rng.openClosedBatch`, `Rng.vectorOpenBatch`, `Rng.vectorOpenClosedBatch`, `Rng.chanceBatch`, `Rng.ratioBatch`, `Rng.vectorChanceBatch`, `Rng.vectorRatioBatch`, `Rng.standardNormalBatch`, `Rng.normalBatch`, `Rng.standardExponentialBatch`, `Rng.exponentialBatch`, `Rng.vectorStandardNormalBatch`, `Rng.vectorNormalBatch`, `Rng.vectorStandardExponentialBatch`, `Rng.vectorExponentialBatch`, `Rng.bytesAlloc`, unit tests, Zig/Rust benchmark rows |
 | arrays, tuples, enums | Covered | `Rng.value(T)`, `Rng.valueBatch(T)`, and checked empty-enum tests |
 | Unicode scalar / char-like sampling | Covered in Zig form | `Rng.unicodeScalar`, `Rng.unicodeScalarRangeLessThan`, `Rng.unicodeScalarRangeAtMost`, `Rng.fillUnicodeScalar`, `Rng.fillUnicodeScalarRangeLessThan`, `Rng.fillUnicodeScalarRangeAtMost`, `Rng.unicodeScalarBatch`, `Rng.unicodeScalarRangeLessThanBatch`, `Rng.unicodeScalarRangeAtMostBatch`, `ascii.unicodeUtf8Alloc`, `ascii.unicodeUtf8Into` |
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost`, and owned duration range batches |

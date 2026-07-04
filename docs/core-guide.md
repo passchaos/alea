@@ -88,6 +88,8 @@ selection.
   `durationRangeAtMostBatchFrom`, `durationRangeAtMostBatchChecked`,
   `durationRangeAtMostBatchCheckedFrom`, `vectorRangeBatch`,
   `vectorRangeBatchFrom`, `vectorRangeBatchChecked`, `vectorRangeBatchCheckedFrom`,
+  `vectorRangeAtMostBatch`, `vectorRangeAtMostBatchFrom`,
+  `vectorRangeAtMostBatchChecked`, `vectorRangeAtMostBatchCheckedFrom`,
   `vectorOpenBatch`, `vectorOpenBatchFrom`, `vectorOpenClosedBatch`,
   `vectorOpenClosedBatchFrom`, `vectorChanceBatch`, `vectorChanceBatchFrom`,
   `vectorChanceBatchChecked`, `vectorChanceBatchCheckedFrom`,

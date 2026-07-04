@@ -650,14 +650,29 @@ pub fn fillVectorRange(self: Rng, comptime VectorType: type, dest: []VectorType,
     fillVectorRangeFrom(self, VectorType, dest, min, max);
 }
 
+pub fn fillVectorRangeAtMost(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    fillVectorRangeAtMostFrom(self, VectorType, dest, min, max);
+}
+
 pub fn vectorRangeBatch(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
     return vectorRangeBatchFrom(self, VectorType, allocator, count, min, max);
+}
+
+pub fn vectorRangeAtMostBatch(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
+    return vectorRangeAtMostBatchFrom(self, VectorType, allocator, count, min, max);
 }
 
 pub fn vectorRangeBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
     const out = try allocator.alloc(VectorType, count);
     errdefer allocator.free(out);
     fillVectorRangeFrom(source, VectorType, out, min, max);
+    return out;
+}
+
+pub fn vectorRangeAtMostBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
+    const out = try allocator.alloc(VectorType, count);
+    errdefer allocator.free(out);
+    fillVectorRangeAtMostFrom(source, VectorType, out, min, max);
     return out;
 }
 
@@ -719,12 +734,31 @@ pub fn fillVectorRangeFrom(source: anytype, comptime VectorType: type, dest: []V
     for (dest) |*item| item.* = vectorRangeFrom(source, VectorType, min, max);
 }
 
+pub fn fillVectorRangeAtMostFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    const info = vectorInfo(VectorType);
+    if (@typeInfo(info.child) != .int) @compileError("Rng.fillVectorRangeAtMostFrom supports integer vectors");
+    std.debug.assert(min <= max);
+    if (min == max) {
+        @memset(dest, @as(VectorType, @splat(min)));
+        return;
+    }
+    for (dest) |*item| item.* = vectorRangeAtMostFrom(source, VectorType, min, max);
+}
+
 pub fn fillVectorRangeChecked(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
     return fillVectorRangeCheckedFrom(self, VectorType, dest, min, max);
 }
 
+pub fn fillVectorRangeAtMostChecked(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    return fillVectorRangeAtMostCheckedFrom(self, VectorType, dest, min, max);
+}
+
 pub fn vectorRangeBatchChecked(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
     return vectorRangeBatchCheckedFrom(self, VectorType, allocator, count, min, max);
+}
+
+pub fn vectorRangeAtMostBatchChecked(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
+    return vectorRangeAtMostBatchCheckedFrom(self, VectorType, allocator, count, min, max);
 }
 
 pub fn vectorRangeBatchCheckedFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
@@ -742,6 +776,14 @@ pub fn vectorRangeBatchCheckedFrom(source: anytype, comptime VectorType: type, a
     return vectorRangeBatchFrom(source, VectorType, allocator, count, min, max);
 }
 
+pub fn vectorRangeAtMostBatchCheckedFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
+    if (count == 0) return allocator.alloc(VectorType, 0);
+    const info = vectorInfo(VectorType);
+    if (@typeInfo(info.child) != .int) @compileError("Rng.vectorRangeAtMostBatchChecked supports integer vectors");
+    if (min > max) return error.EmptyRange;
+    return vectorRangeAtMostBatchFrom(source, VectorType, allocator, count, min, max);
+}
+
 pub fn fillVectorRangeCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
     const info = vectorInfo(VectorType);
     if (dest.len == 0) return;
@@ -755,6 +797,14 @@ pub fn fillVectorRangeCheckedFrom(source: anytype, comptime VectorType: type, de
         else => @compileError("Rng.fillVectorRangeChecked supports integer and floating-point vectors"),
     }
     fillVectorRangeFrom(source, VectorType, dest, min, max);
+}
+
+pub fn fillVectorRangeAtMostCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const info = vectorInfo(VectorType);
+    if (@typeInfo(info.child) != .int) @compileError("Rng.fillVectorRangeAtMostChecked supports integer vectors");
+    if (min > max) return error.EmptyRange;
+    fillVectorRangeAtMostFrom(source, VectorType, dest, min, max);
 }
 
 pub fn fillVectorChance(self: Rng, comptime VectorType: type, dest: []VectorType, p: f64) void {
@@ -1802,6 +1852,10 @@ pub fn vectorRange(self: Rng, comptime VectorType: type, min: vectorChild(Vector
     return vectorRangeFrom(self, VectorType, min, max);
 }
 
+pub fn vectorRangeAtMost(self: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    return vectorRangeAtMostFrom(self, VectorType, min, max);
+}
+
 pub fn vectorOpen(self: Rng, comptime VectorType: type) VectorType {
     return vectorOpenFrom(self, VectorType);
 }
@@ -1849,6 +1903,16 @@ pub fn vectorRangeFrom(source: anytype, comptime VectorType: type, min: vectorCh
     }
 }
 
+pub fn vectorRangeAtMostFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
+    const info = vectorInfo(VectorType);
+    if (@typeInfo(info.child) != .int) @compileError("Rng.vectorRangeAtMost supports integer vectors");
+    std.debug.assert(min <= max);
+    if (min == max) return @splat(min);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |i| out[i] = intRangeAtMostFrom(source, info.child, min, max);
+    return out;
+}
+
 fn exclusiveIntRangeHasSingleValue(comptime T: type, min: T, max: T) bool {
     comptime requireInt(T);
     const info = @typeInfo(T).int;
@@ -1865,6 +1929,10 @@ pub fn vectorRangeChecked(self: Rng, comptime VectorType: type, min: vectorChild
     return vectorRangeCheckedFrom(self, VectorType, min, max);
 }
 
+pub fn vectorRangeAtMostChecked(self: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
+    return vectorRangeAtMostCheckedFrom(self, VectorType, min, max);
+}
+
 pub fn vectorRangeCheckedFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
     const info = vectorInfo(VectorType);
     switch (@typeInfo(info.child)) {
@@ -1877,6 +1945,13 @@ pub fn vectorRangeCheckedFrom(source: anytype, comptime VectorType: type, min: v
         else => @compileError("Rng.vectorRangeChecked supports integer and floating-point vectors"),
     }
     return vectorRangeFrom(source, VectorType, min, max);
+}
+
+pub fn vectorRangeAtMostCheckedFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
+    const info = vectorInfo(VectorType);
+    if (@typeInfo(info.child) != .int) @compileError("Rng.vectorRangeAtMostChecked supports integer vectors");
+    if (min > max) return error.EmptyRange;
+    return vectorRangeAtMostFrom(source, VectorType, min, max);
 }
 
 pub fn vectorChance(self: Rng, comptime VectorType: type, p: f64) VectorType {
@@ -4288,6 +4363,20 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(@Vector(8, f32), vector_range_owned, vector_range_checked_owned);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        var vector_range_at_most_unchecked: [4]@Vector(8, i32) = undefined;
+        var vector_range_at_most_checked: [4]@Vector(8, i32) = undefined;
+        fillVectorRangeAtMostFrom(&unchecked, @Vector(8, i32), &vector_range_at_most_unchecked, -5, 5);
+        try fillVectorRangeAtMostCheckedFrom(&checked, @Vector(8, i32), &vector_range_at_most_checked, -5, 5);
+        try std.testing.expectEqualSlices(@Vector(8, i32), &vector_range_at_most_unchecked, &vector_range_at_most_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const vector_range_at_most_owned = try vectorRangeAtMostBatchFrom(&unchecked, @Vector(8, i32), std.testing.allocator, 4, -5, 5);
+        defer std.testing.allocator.free(vector_range_at_most_owned);
+        const vector_range_at_most_checked_owned = try vectorRangeAtMostBatchCheckedFrom(&checked, @Vector(8, i32), std.testing.allocator, 4, -5, 5);
+        defer std.testing.allocator.free(vector_range_at_most_checked_owned);
+        try std.testing.expectEqualSlices(@Vector(8, i32), vector_range_at_most_owned, vector_range_at_most_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var vector_chance_unchecked: [4]@Vector(8, bool) = undefined;
         var vector_chance_checked: [4]@Vector(8, bool) = undefined;
         fillVectorChanceFrom(&unchecked, @Vector(8, bool), &vector_chance_unchecked, 0.25);
@@ -4826,6 +4915,18 @@ test "owned vector range batches allocate and validate before consuming random s
     try std.testing.expect(!invalid_int_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var empty_inclusive_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty_inclusive = try rng.vectorRangeAtMostBatchChecked(@Vector(4, u32), empty_inclusive_alloc.allocator(), 0, 4, 3);
+    defer empty_inclusive_alloc.allocator().free(empty_inclusive);
+    try std.testing.expectEqual(@as(usize, 0), empty_inclusive.len);
+    try std.testing.expect(!empty_inclusive_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_inclusive_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.vectorRangeAtMostBatchChecked(@Vector(4, u32), invalid_inclusive_alloc.allocator(), 4, 4, 3));
+    try std.testing.expect(!invalid_inclusive_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var invalid_float_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.EmptyRange, vectorRangeBatchCheckedFrom(&engine, @Vector(4, f64), invalid_float_alloc.allocator(), 4, std.math.inf(f64), 1));
     try std.testing.expect(!invalid_float_alloc.has_induced_failure);
@@ -4834,6 +4935,11 @@ test "owned vector range batches allocate and validate before consuming random s
     var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, rng.vectorRangeBatchChecked(@Vector(8, f32), alloc.allocator(), 4, -1, 1));
     try std.testing.expect(alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var inclusive_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, vectorRangeAtMostBatchCheckedFrom(&engine, @Vector(8, i32), inclusive_alloc.allocator(), 4, -10, 20));
+    try std.testing.expect(inclusive_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -4964,6 +5070,16 @@ test "degenerate range helpers do not consume random stream" {
     var vec_signed_ints: [3]@Vector(4, i32) = undefined;
     try rng.fillVectorRangeChecked(@Vector(4, i32), &vec_signed_ints, -16, -15);
     for (vec_signed_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-16)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vec_inclusive_signed_ints: [3]@Vector(4, i32) = undefined;
+    rng.fillVectorRangeAtMost(@Vector(4, i32), &vec_inclusive_signed_ints, -16, -16);
+    for (vec_inclusive_signed_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-16)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_vec_inclusive_signed_ints = try vectorRangeAtMostBatchCheckedFrom(&engine, @Vector(4, i32), std.testing.allocator, 3, -16, -16);
+    defer std.testing.allocator.free(owned_vec_inclusive_signed_ints);
+    for (owned_vec_inclusive_signed_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-16)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var vec_floats: [3]@Vector(4, f64) = undefined;

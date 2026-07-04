@@ -71,6 +71,8 @@ pub fn main(init: std.process.Init) !void {
     const vec_uniform = alea.distributions.vectorUniformFrom(&vector_engine, @Vector(4, f32), 10, 20);
     const vec_range_batch = try alea.Rng.vectorRangeBatchFrom(&vector_engine, @Vector(4, f32), allocator, 3, -1, 1);
     defer allocator.free(vec_range_batch);
+    const vec_range_at_most_batch = try alea.Rng.vectorRangeAtMostBatchCheckedFrom(&vector_engine, @Vector(4, i32), allocator, 3, -10, 10);
+    defer allocator.free(vec_range_at_most_batch);
     const vec_open_batch = try alea.Rng.vectorOpenBatchFrom(&vector_engine, @Vector(4, f32), allocator, 3);
     defer allocator.free(vec_open_batch);
     const vec_open_closed_batch = try alea.Rng.vectorOpenClosedBatchFrom(&vector_engine, @Vector(4, f32), allocator, 3);
@@ -80,6 +82,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("vectorOpenClosed f32x4 (0,1]: {any}\n", .{vec_open_closed});
     try stdout.print("distribution vectorUniform f32x4 [10,20): {any}\n", .{vec_uniform});
     try stdout.print("vectorRangeBatch f32x4 [-1,1): {any}\n", .{vec_range_batch});
+    try stdout.print("vectorRangeAtMostBatch i32x4 [-10,10]: {any}\n", .{vec_range_at_most_batch});
     try stdout.print("vectorOpenBatch f32x4 (0,1): {any}\n", .{vec_open_batch});
     try stdout.print("vectorOpenClosedBatch f32x4 (0,1]: {any}\n", .{vec_open_closed_batch});
 

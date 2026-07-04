@@ -16,7 +16,7 @@ The current Linux-first roadmap is intentionally broad:
 - `Rng.valueBatch(T)` / `Rng.valueBatchChecked(T)`,
   `Rng.sampleBatch(T, sampler)`, bounded-uint `uintLessThanBatch` /
   `uintAtMostBatch`, `Rng.rangeBatch(T, min, max)` / inclusive integer
-  `rangeAtMostBatch(T, min, max)`, strict interval
+  `rangeAtMostBatch(T, min, max)`, vector range / inclusive vector range batches, strict interval
   `openBatch` / `openClosedBatch`, probability `chanceBatch` /
   `ratioBatch` / vector probability batches, duration/vector range batches, vector strict-interval batches, and scalar/vector standard-or-parameterized normal/exponential batches for
   allocation-returning repeated samples
