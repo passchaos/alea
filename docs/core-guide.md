@@ -422,14 +422,25 @@ Use:
   `seq.weightedIndexBatchByIndexFrom`,
   `seq.weightedIndexBatchByIndexCheckedFrom`,
   `seq.weightedIndexU32BatchByIndexFrom`, and
-  `seq.weightedIndexU32BatchByIndexCheckedFrom`, plus index-weighted
+  `seq.weightedIndexU32BatchByIndexCheckedFrom`, plus fixed-size repeated
+  index-weighted `seq.weightedIndexArrayByIndexFrom`,
+  `seq.weightedIndexArrayByIndexCheckedFrom`,
+  `seq.weightedIndexU32ArrayByIndexFrom`, and
+  `seq.weightedIndexU32ArrayByIndexCheckedFrom`, plus index-weighted
   value/const-pointer/mutable-pointer choices
   `seq.chooseWeightedByIndexFrom`,
   `seq.chooseWeightedByIndexCheckedFrom`,
   `seq.chooseWeightedConstPtrByIndexFrom`,
   `seq.chooseWeightedConstPtrByIndexCheckedFrom`,
   `seq.chooseWeightedPtrByIndexFrom`, and
-  `seq.chooseWeightedPtrByIndexCheckedFrom`, plus caller-owned index-weighted
+  `seq.chooseWeightedPtrByIndexCheckedFrom`, plus fixed-size repeated
+  index-weighted value/pointer arrays
+  `seq.chooseWeightedValueArrayByIndexFrom`,
+  `seq.chooseWeightedValueArrayByIndexCheckedFrom`,
+  `seq.chooseWeightedConstPtrArrayByIndexFrom`,
+  `seq.chooseWeightedConstPtrArrayByIndexCheckedFrom`,
+  `seq.chooseWeightedPtrArrayByIndexFrom`, and
+  `seq.chooseWeightedPtrArrayByIndexCheckedFrom`, plus caller-owned index-weighted
   repeated choices `seq.fillChooseWeightedByIndexFrom`,
   `seq.fillChooseWeightedByIndexCheckedFrom`,
   `seq.fillChooseWeightedConstPtrByIndexFrom`,
@@ -480,9 +491,11 @@ Use:
   `choose_weighted`, `choose_weighted_mut`, and
   `choose_weighted_iter(...).take(n).collect()` when weights are fields or
   derived from items instead of parallel slices, and allocation-returning
-  repeated length/index-weight index batches for `index::sample_weighted`-style
-  index weight accessors, while `chooseWeighted*ByIndex` maps those
-  length/index-weight choices back to values or pointers and
+  repeated length/index-weight index batches plus fixed-size
+  `weightedIndex*ArrayByIndex` / `chooseWeighted*ArrayByIndex` arrays for
+  `index::sample_weighted`-style index weight accessors, while
+  `chooseWeighted*ByIndex` maps those length/index-weight choices back to values
+  or pointers and
   `fillChooseWeighted*ByIndex` fills caller-owned repeated value/pointer buffers, and `chooseWeighted*BatchByIndex` allocates owned repeated value/pointer batches
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeightedIndicesU32From`,

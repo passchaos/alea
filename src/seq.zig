@@ -1499,6 +1499,122 @@ pub fn weightedIndexU32ByIndexCheckedFrom(
     return (try weightedIndexU32ByIndexFrom(source, Weight, length, weightFn)) orelse error.EmptyInput;
 }
 
+pub fn weightedIndexArrayByIndex(
+    rng: Rng,
+    comptime Weight: type,
+    comptime N: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!?[N]usize {
+    return weightedIndexArrayByIndexFrom(rng, Weight, N, length, weightFn);
+}
+
+pub fn weightedIndexArrayByIndexFrom(
+    source: anytype,
+    comptime Weight: type,
+    comptime N: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!?[N]usize {
+    var out: [N]usize = undefined;
+    if (N == 0) return out;
+    const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, length, weightFn);
+    if (validation.total == 0) return null;
+    if (validation.single_positive) |index| {
+        @memset(out[0..], index);
+        return out;
+    }
+    for (&out) |*index| index.* = weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total);
+    return out;
+}
+
+pub fn weightedIndexArrayByIndexChecked(
+    rng: Rng,
+    comptime Weight: type,
+    comptime N: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error![N]usize {
+    return weightedIndexArrayByIndexCheckedFrom(rng, Weight, N, length, weightFn);
+}
+
+pub fn weightedIndexArrayByIndexCheckedFrom(
+    source: anytype,
+    comptime Weight: type,
+    comptime N: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error![N]usize {
+    var out: [N]usize = undefined;
+    if (N == 0) return out;
+    const validation = try validateWeightedIndexByIndex(Weight, length, weightFn);
+    if (validation.single_positive) |index| {
+        @memset(out[0..], index);
+        return out;
+    }
+    for (&out) |*index| index.* = weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total);
+    return out;
+}
+
+pub fn weightedIndexU32ArrayByIndex(
+    rng: Rng,
+    comptime Weight: type,
+    comptime N: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!?[N]u32 {
+    return weightedIndexU32ArrayByIndexFrom(rng, Weight, N, length, weightFn);
+}
+
+pub fn weightedIndexU32ArrayByIndexFrom(
+    source: anytype,
+    comptime Weight: type,
+    comptime N: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!?[N]u32 {
+    var out: [N]u32 = undefined;
+    if (N == 0) return out;
+    if (length > std.math.maxInt(u32)) return error.InvalidParameter;
+    const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, length, weightFn);
+    if (validation.total == 0) return null;
+    if (validation.single_positive) |index| {
+        @memset(out[0..], @intCast(index));
+        return out;
+    }
+    for (&out) |*index| index.* = @intCast(weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total));
+    return out;
+}
+
+pub fn weightedIndexU32ArrayByIndexChecked(
+    rng: Rng,
+    comptime Weight: type,
+    comptime N: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error![N]u32 {
+    return weightedIndexU32ArrayByIndexCheckedFrom(rng, Weight, N, length, weightFn);
+}
+
+pub fn weightedIndexU32ArrayByIndexCheckedFrom(
+    source: anytype,
+    comptime Weight: type,
+    comptime N: usize,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error![N]u32 {
+    var out: [N]u32 = undefined;
+    if (N == 0) return out;
+    if (length > std.math.maxInt(u32)) return error.InvalidParameter;
+    const validation = try validateWeightedIndexByIndex(Weight, length, weightFn);
+    if (validation.single_positive) |index| {
+        @memset(out[0..], @intCast(index));
+        return out;
+    }
+    for (&out) |*index| index.* = @intCast(weightedIndexByIndexFromPrevalidated(source, Weight, length, weightFn, validation.total));
+    return out;
+}
+
 pub fn fillWeightedIndexByIndex(
     rng: Rng,
     comptime Weight: type,
@@ -2378,6 +2494,67 @@ pub fn chooseWeightedByIndexFrom(
     return items[index];
 }
 
+pub fn chooseWeightedValueArrayByIndex(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !?[N]T {
+    return chooseWeightedValueArrayByIndexFrom(rng, T, Weight, N, items, weightFn);
+}
+
+pub fn chooseWeightedValueArrayByIndexFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !?[N]T {
+    var out: [N]T = undefined;
+    if (N == 0) return out;
+    const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, items.len, weightFn);
+    if (validation.total == 0) return null;
+    if (validation.single_positive) |index| {
+        @memset(out[0..], items[index]);
+        return out;
+    }
+    for (&out) |*item| item.* = items[weightedIndexByIndexFromPrevalidated(source, Weight, items.len, weightFn, validation.total)];
+    return out;
+}
+
+pub fn chooseWeightedValueArrayByIndexChecked(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) ![N]T {
+    return chooseWeightedValueArrayByIndexCheckedFrom(rng, T, Weight, N, items, weightFn);
+}
+
+pub fn chooseWeightedValueArrayByIndexCheckedFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) ![N]T {
+    var out: [N]T = undefined;
+    if (N == 0) return out;
+    const validation = try validateWeightedIndexByIndex(Weight, items.len, weightFn);
+    if (validation.single_positive) |index| {
+        @memset(out[0..], items[index]);
+        return out;
+    }
+    for (&out) |*item| item.* = items[weightedIndexByIndexFromPrevalidated(source, Weight, items.len, weightFn, validation.total)];
+    return out;
+}
+
 pub fn fillChooseWeightedByIndex(
     rng: Rng,
     comptime T: type,
@@ -2943,6 +3120,67 @@ pub fn chooseWeightedConstPtrByIndexFrom(
     return &items[index];
 }
 
+pub fn chooseWeightedConstPtrArrayByIndex(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !?[N]*const T {
+    return chooseWeightedConstPtrArrayByIndexFrom(rng, T, Weight, N, items, weightFn);
+}
+
+pub fn chooseWeightedConstPtrArrayByIndexFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !?[N]*const T {
+    var out: [N]*const T = undefined;
+    if (N == 0) return out;
+    const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, items.len, weightFn);
+    if (validation.total == 0) return null;
+    if (validation.single_positive) |index| {
+        @memset(out[0..], &items[index]);
+        return out;
+    }
+    for (&out) |*item| item.* = &items[weightedIndexByIndexFromPrevalidated(source, Weight, items.len, weightFn, validation.total)];
+    return out;
+}
+
+pub fn chooseWeightedConstPtrArrayByIndexChecked(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) ![N]*const T {
+    return chooseWeightedConstPtrArrayByIndexCheckedFrom(rng, T, Weight, N, items, weightFn);
+}
+
+pub fn chooseWeightedConstPtrArrayByIndexCheckedFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) ![N]*const T {
+    var out: [N]*const T = undefined;
+    if (N == 0) return out;
+    const validation = try validateWeightedIndexByIndex(Weight, items.len, weightFn);
+    if (validation.single_positive) |index| {
+        @memset(out[0..], &items[index]);
+        return out;
+    }
+    for (&out) |*item| item.* = &items[weightedIndexByIndexFromPrevalidated(source, Weight, items.len, weightFn, validation.total)];
+    return out;
+}
+
 pub fn fillChooseWeightedConstPtrByIndex(
     rng: Rng,
     comptime T: type,
@@ -3471,6 +3709,67 @@ pub fn chooseWeightedPtrByIndexFrom(
 ) !?*T {
     const index = (try weightedIndexFromIndexWeights(source, Weight, items.len, weightFn)) orelse return null;
     return &items[index];
+}
+
+pub fn chooseWeightedPtrArrayByIndex(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []T,
+    comptime weightFn: fn (usize) Weight,
+) !?[N]*T {
+    return chooseWeightedPtrArrayByIndexFrom(rng, T, Weight, N, items, weightFn);
+}
+
+pub fn chooseWeightedPtrArrayByIndexFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []T,
+    comptime weightFn: fn (usize) Weight,
+) !?[N]*T {
+    var out: [N]*T = undefined;
+    if (N == 0) return out;
+    const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, items.len, weightFn);
+    if (validation.total == 0) return null;
+    if (validation.single_positive) |index| {
+        @memset(out[0..], &items[index]);
+        return out;
+    }
+    for (&out) |*item| item.* = &items[weightedIndexByIndexFromPrevalidated(source, Weight, items.len, weightFn, validation.total)];
+    return out;
+}
+
+pub fn chooseWeightedPtrArrayByIndexChecked(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []T,
+    comptime weightFn: fn (usize) Weight,
+) ![N]*T {
+    return chooseWeightedPtrArrayByIndexCheckedFrom(rng, T, Weight, N, items, weightFn);
+}
+
+pub fn chooseWeightedPtrArrayByIndexCheckedFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    comptime N: usize,
+    items: []T,
+    comptime weightFn: fn (usize) Weight,
+) ![N]*T {
+    var out: [N]*T = undefined;
+    if (N == 0) return out;
+    const validation = try validateWeightedIndexByIndex(Weight, items.len, weightFn);
+    if (validation.single_positive) |index| {
+        @memset(out[0..], &items[index]);
+        return out;
+    }
+    for (&out) |*item| item.* = &items[weightedIndexByIndexFromPrevalidated(source, Weight, items.len, weightFn, validation.total)];
+    return out;
 }
 
 pub fn fillChooseWeightedPtrByIndex(
@@ -11760,6 +12059,22 @@ test "index-weighted weightedIndexByIndex selects one index from length weights"
     var checked_u32_engine = alea.ScalarPrng.init(0x5150_f143);
     const checked_u32 = try weightedIndexU32ByIndexCheckedFrom(&checked_u32_engine, u32, 8, IndexWeight.weightOf);
     try std.testing.expect(checked_u32 == 1 or checked_u32 == 3 or checked_u32 == 6);
+
+    var array_engine = alea.ScalarPrng.init(0x5150_f17b);
+    const array = (try weightedIndexArrayByIndexFrom(&array_engine, u32, 8, 8, IndexWeight.weightOf)).?;
+    for (array) |sample_index| try std.testing.expect(sample_index == 1 or sample_index == 3 or sample_index == 6);
+
+    var checked_array_engine = alea.ScalarPrng.init(0x5150_f17c);
+    const checked_array = try weightedIndexArrayByIndexCheckedFrom(&checked_array_engine, u32, 8, 8, IndexWeight.weightOf);
+    for (checked_array) |sample_index| try std.testing.expect(sample_index == 1 or sample_index == 3 or sample_index == 6);
+
+    var array_u32_engine = alea.ScalarPrng.init(0x5150_f17d);
+    const array_u32 = (try weightedIndexU32ArrayByIndexFrom(&array_u32_engine, u32, 8, 8, IndexWeight.weightOf)).?;
+    for (array_u32) |sample_index| try std.testing.expect(sample_index == 1 or sample_index == 3 or sample_index == 6);
+
+    var checked_array_u32_engine = alea.ScalarPrng.init(0x5150_f17e);
+    const checked_array_u32 = try weightedIndexU32ArrayByIndexCheckedFrom(&checked_array_u32_engine, u32, 8, 8, IndexWeight.weightOf);
+    for (checked_array_u32) |sample_index| try std.testing.expect(sample_index == 1 or sample_index == 3 or sample_index == 6);
 }
 
 test "index-weighted weightedIndexByIndex preserves stream shape and invalid paths do not consume" {
@@ -11815,6 +12130,26 @@ test "index-weighted weightedIndexByIndex preserves stream shape and invalid pat
             try weightedIndexU32ByIndexCheckedFrom(&direct_engine, f64, 8, IndexWeight.weightOf),
         );
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_array = (try weightedIndexArrayByIndex(rng, f64, 8, 8, IndexWeight.weightOf)).?;
+        const direct_array = (try weightedIndexArrayByIndexFrom(&direct_engine, f64, 8, 8, IndexWeight.weightOf)).?;
+        try std.testing.expectEqualSlices(usize, &facade_array, &direct_array);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_array_checked = try weightedIndexArrayByIndexChecked(rng, f64, 8, 8, IndexWeight.weightOf);
+        const direct_array_checked = try weightedIndexArrayByIndexCheckedFrom(&direct_engine, f64, 8, 8, IndexWeight.weightOf);
+        try std.testing.expectEqualSlices(usize, &facade_array_checked, &direct_array_checked);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_array_u32 = (try weightedIndexU32ArrayByIndex(rng, f64, 8, 8, IndexWeight.weightOf)).?;
+        const direct_array_u32 = (try weightedIndexU32ArrayByIndexFrom(&direct_engine, f64, 8, 8, IndexWeight.weightOf)).?;
+        try std.testing.expectEqualSlices(u32, &facade_array_u32, &direct_array_u32);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_array_u32_checked = try weightedIndexU32ArrayByIndexChecked(rng, f64, 8, 8, IndexWeight.weightOf);
+        const direct_array_u32_checked = try weightedIndexU32ArrayByIndexCheckedFrom(&direct_engine, f64, 8, 8, IndexWeight.weightOf);
+        try std.testing.expectEqualSlices(u32, &facade_array_u32_checked, &direct_array_u32_checked);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 
     var single_engine = alea.ScalarPrng.init(0x5150_f145);
@@ -11826,6 +12161,18 @@ test "index-weighted weightedIndexByIndex preserves stream shape and invalid pat
     try std.testing.expectEqual(@as(?u32, 4), try weightedIndexU32ByIndexFrom(&single_engine, u32, 8, IndexWeight.single));
     try std.testing.expectEqual(single_control.next(), single_engine.next());
     try std.testing.expectEqual(@as(u32, 4), try weightedIndexU32ByIndexCheckedFrom(&single_engine, u32, 8, IndexWeight.single));
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_array = (try weightedIndexArrayByIndexFrom(&single_engine, u32, 4, 8, IndexWeight.single)).?;
+    for (single_array) |index| try std.testing.expectEqual(@as(usize, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_array_checked = try weightedIndexArrayByIndexCheckedFrom(&single_engine, u32, 4, 8, IndexWeight.single);
+    for (single_array_checked) |index| try std.testing.expectEqual(@as(usize, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_array_u32 = (try weightedIndexU32ArrayByIndexFrom(&single_engine, u32, 4, 8, IndexWeight.single)).?;
+    for (single_array_u32) |index| try std.testing.expectEqual(@as(u32, 4), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_array_u32_checked = try weightedIndexU32ArrayByIndexCheckedFrom(&single_engine, u32, 4, 8, IndexWeight.single);
+    for (single_array_u32_checked) |index| try std.testing.expectEqual(@as(u32, 4), index);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 
     var invalid_engine = alea.ScalarPrng.init(0x5150_f146);
@@ -11839,11 +12186,31 @@ test "index-weighted weightedIndexByIndex preserves stream shape and invalid pat
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.EmptyInput, weightedIndexU32ByIndexCheckedFrom(&invalid_engine, u32, 8, IndexWeight.zero));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectEqual(@as(?[3]usize, null), try weightedIndexArrayByIndexFrom(&invalid_engine, u32, 3, 0, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectEqual(@as(?[3]u32, null), try weightedIndexU32ArrayByIndexFrom(&invalid_engine, u32, 3, 8, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    const empty_array = try weightedIndexArrayByIndexCheckedFrom(&invalid_engine, f64, 0, 8, IndexWeight.invalid);
+    try std.testing.expectEqual(@as(usize, 0), empty_array.len);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    const empty_array_u32 = try weightedIndexU32ArrayByIndexCheckedFrom(&invalid_engine, f64, 0, 8, IndexWeight.invalid);
+    try std.testing.expectEqual(@as(usize, 0), empty_array_u32.len);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, weightedIndexArrayByIndexCheckedFrom(&invalid_engine, u32, 3, 0, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, weightedIndexU32ArrayByIndexCheckedFrom(&invalid_engine, u32, 3, 8, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, weightedIndexByIndexFrom(&invalid_engine, f64, 8, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32ByIndexCheckedFrom(&invalid_engine, f64, 8, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, weightedIndexArrayByIndexCheckedFrom(&invalid_engine, f64, 3, 8, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, weightedIndexU32ArrayByIndexCheckedFrom(&invalid_engine, f64, 3, 8, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidParameter, weightedIndexU32ByIndexFrom(&invalid_engine, u32, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, weightedIndexU32ArrayByIndexFrom(&invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
@@ -12998,6 +13365,14 @@ test "index-weighted chooseWeightedByIndex selects values and pointers" {
     const checked_value = try chooseWeightedByIndexCheckedFrom(&checked_engine, Entry, u32, &entries, IndexWeight.weightOf);
     try std.testing.expect(checked_value.score == 20 or checked_value.score == 30);
 
+    var value_array_engine = alea.ScalarPrng.init(0x5150_f17f);
+    const value_array = (try chooseWeightedValueArrayByIndexFrom(&value_array_engine, Entry, u32, 8, &entries, IndexWeight.weightOf)).?;
+    for (value_array) |item| try std.testing.expect(item.score == 20 or item.score == 30);
+
+    var checked_value_array_engine = alea.ScalarPrng.init(0x5150_f180);
+    const checked_value_array = try chooseWeightedValueArrayByIndexCheckedFrom(&checked_value_array_engine, Entry, u32, 8, &entries, IndexWeight.weightOf);
+    for (checked_value_array) |item| try std.testing.expect(item.score == 20 or item.score == 30);
+
     var const_ptr_engine = alea.ScalarPrng.init(0x5150_f157);
     const const_ptr = (try chooseWeightedConstPtrByIndexFrom(&const_ptr_engine, Entry, u32, &entries, IndexWeight.weightOf)).?;
     try std.testing.expect(const_ptr.score == 20 or const_ptr.score == 30);
@@ -13007,6 +13382,20 @@ test "index-weighted chooseWeightedByIndex selects values and pointers" {
     const checked_const_ptr = try chooseWeightedConstPtrByIndexCheckedFrom(&checked_const_ptr_engine, Entry, u32, &entries, IndexWeight.weightOf);
     try std.testing.expect(checked_const_ptr.score == 20 or checked_const_ptr.score == 30);
     try std.testing.expect(!std.mem.eql(u8, checked_const_ptr.label, "never"));
+
+    var const_ptr_array_engine = alea.ScalarPrng.init(0x5150_f181);
+    const const_ptr_array = (try chooseWeightedConstPtrArrayByIndexFrom(&const_ptr_array_engine, Entry, u32, 8, &entries, IndexWeight.weightOf)).?;
+    for (const_ptr_array) |ptr| {
+        try std.testing.expect(ptr.score == 20 or ptr.score == 30);
+        try std.testing.expect(!std.mem.eql(u8, ptr.label, "never"));
+    }
+
+    var checked_const_ptr_array_engine = alea.ScalarPrng.init(0x5150_f182);
+    const checked_const_ptr_array = try chooseWeightedConstPtrArrayByIndexCheckedFrom(&checked_const_ptr_array_engine, Entry, u32, 8, &entries, IndexWeight.weightOf);
+    for (checked_const_ptr_array) |ptr| {
+        try std.testing.expect(ptr.score == 20 or ptr.score == 30);
+        try std.testing.expect(!std.mem.eql(u8, ptr.label, "never"));
+    }
 
     var ptr_items = entries;
     var ptr_engine = alea.ScalarPrng.init(0x5150_f159);
@@ -13021,6 +13410,32 @@ test "index-weighted chooseWeightedByIndex selects values and pointers" {
     try std.testing.expect(checked_ptr.score == 20 or checked_ptr.score == 30);
     checked_ptr.label = "checked";
     try std.testing.expect(std.mem.eql(u8, checked_ptr.label, "checked"));
+
+    var ptr_array_items = entries;
+    var ptr_array_engine = alea.ScalarPrng.init(0x5150_f183);
+    const ptr_array = (try chooseWeightedPtrArrayByIndexFrom(&ptr_array_engine, Entry, u32, 8, &ptr_array_items, IndexWeight.weightOf)).?;
+    for (ptr_array) |sample| {
+        try std.testing.expect(sample.score == 20 or sample.score == 30);
+        sample.label = "array";
+    }
+    var array_changed = false;
+    for (ptr_array_items) |item| {
+        if (std.mem.eql(u8, item.label, "array")) array_changed = true;
+    }
+    try std.testing.expect(array_changed);
+
+    var checked_ptr_array_items = entries;
+    var checked_ptr_array_engine = alea.ScalarPrng.init(0x5150_f184);
+    const checked_ptr_array = try chooseWeightedPtrArrayByIndexCheckedFrom(&checked_ptr_array_engine, Entry, u32, 8, &checked_ptr_array_items, IndexWeight.weightOf);
+    for (checked_ptr_array) |sample| {
+        try std.testing.expect(sample.score == 20 or sample.score == 30);
+        sample.label = "checked-array";
+    }
+    var checked_array_changed = false;
+    for (checked_ptr_array_items) |item| {
+        if (std.mem.eql(u8, item.label, "checked-array")) checked_array_changed = true;
+    }
+    try std.testing.expect(checked_array_changed);
 }
 
 test "index-weighted chooseWeightedByIndex preserves stream shape and invalid paths do not consume" {
@@ -13072,6 +13487,16 @@ test "index-weighted chooseWeightedByIndex preserves stream shape and invalid pa
         try std.testing.expectEqual(facade_checked.value, direct_checked.value);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+        const facade_array = (try chooseWeightedValueArrayByIndex(rng, Entry, f64, 8, &entries, IndexWeight.weightOf)).?;
+        const direct_array = (try chooseWeightedValueArrayByIndexFrom(&direct_engine, Entry, f64, 8, &entries, IndexWeight.weightOf)).?;
+        for (facade_array, direct_array) |facade_item, direct_item| try std.testing.expectEqual(facade_item.value, direct_item.value);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_array_checked = try chooseWeightedValueArrayByIndexChecked(rng, Entry, f64, 8, &entries, IndexWeight.weightOf);
+        const direct_array_checked = try chooseWeightedValueArrayByIndexCheckedFrom(&direct_engine, Entry, f64, 8, &entries, IndexWeight.weightOf);
+        for (facade_array_checked, direct_array_checked) |facade_item, direct_item| try std.testing.expectEqual(facade_item.value, direct_item.value);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         const facade_const_ptr = (try chooseWeightedConstPtrByIndex(rng, Entry, f64, &entries, IndexWeight.weightOf)).?;
         const direct_const_ptr = (try chooseWeightedConstPtrByIndexFrom(&direct_engine, Entry, f64, &entries, IndexWeight.weightOf)).?;
         try std.testing.expectEqual(@intFromPtr(facade_const_ptr) - @intFromPtr(&entries[0]), @intFromPtr(direct_const_ptr) - @intFromPtr(&entries[0]));
@@ -13080,6 +13505,20 @@ test "index-weighted chooseWeightedByIndex preserves stream shape and invalid pa
         const facade_checked_const_ptr = try chooseWeightedConstPtrByIndexChecked(rng, Entry, f64, &entries, IndexWeight.weightOf);
         const direct_checked_const_ptr = try chooseWeightedConstPtrByIndexCheckedFrom(&direct_engine, Entry, f64, &entries, IndexWeight.weightOf);
         try std.testing.expectEqual(@intFromPtr(facade_checked_const_ptr) - @intFromPtr(&entries[0]), @intFromPtr(direct_checked_const_ptr) - @intFromPtr(&entries[0]));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_const_ptr_array = (try chooseWeightedConstPtrArrayByIndex(rng, Entry, f64, 8, &entries, IndexWeight.weightOf)).?;
+        const direct_const_ptr_array = (try chooseWeightedConstPtrArrayByIndexFrom(&direct_engine, Entry, f64, 8, &entries, IndexWeight.weightOf)).?;
+        for (facade_const_ptr_array, direct_const_ptr_array) |facade_item, direct_item| {
+            try std.testing.expectEqual(@intFromPtr(facade_item) - @intFromPtr(&entries[0]), @intFromPtr(direct_item) - @intFromPtr(&entries[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_const_ptr_array_checked = try chooseWeightedConstPtrArrayByIndexChecked(rng, Entry, f64, 8, &entries, IndexWeight.weightOf);
+        const direct_const_ptr_array_checked = try chooseWeightedConstPtrArrayByIndexCheckedFrom(&direct_engine, Entry, f64, 8, &entries, IndexWeight.weightOf);
+        for (facade_const_ptr_array_checked, direct_const_ptr_array_checked) |facade_item, direct_item| {
+            try std.testing.expectEqual(@intFromPtr(facade_item) - @intFromPtr(&entries[0]), @intFromPtr(direct_item) - @intFromPtr(&entries[0]));
+        }
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         var facade_ptr_items = entries;
@@ -13095,6 +13534,22 @@ test "index-weighted chooseWeightedByIndex preserves stream shape and invalid pa
         const direct_checked_ptr = try chooseWeightedPtrByIndexCheckedFrom(&direct_engine, Entry, f64, &direct_checked_ptr_items, IndexWeight.weightOf);
         try std.testing.expectEqual(@intFromPtr(facade_checked_ptr) - @intFromPtr(&facade_checked_ptr_items[0]), @intFromPtr(direct_checked_ptr) - @intFromPtr(&direct_checked_ptr_items[0]));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_ptr_array_items = entries;
+        var direct_ptr_array_items = entries;
+        const facade_ptr_array = (try chooseWeightedPtrArrayByIndex(rng, Entry, f64, 8, &facade_ptr_array_items, IndexWeight.weightOf)).?;
+        const direct_ptr_array = (try chooseWeightedPtrArrayByIndexFrom(&direct_engine, Entry, f64, 8, &direct_ptr_array_items, IndexWeight.weightOf)).?;
+        for (facade_ptr_array, direct_ptr_array) |facade_item, direct_item| {
+            try std.testing.expectEqual(@intFromPtr(facade_item) - @intFromPtr(&facade_ptr_array_items[0]), @intFromPtr(direct_item) - @intFromPtr(&direct_ptr_array_items[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_ptr_array_checked = try chooseWeightedPtrArrayByIndexChecked(rng, Entry, f64, 8, &facade_ptr_array_items, IndexWeight.weightOf);
+        const direct_ptr_array_checked = try chooseWeightedPtrArrayByIndexCheckedFrom(&direct_engine, Entry, f64, 8, &direct_ptr_array_items, IndexWeight.weightOf);
+        for (facade_ptr_array_checked, direct_ptr_array_checked) |facade_item, direct_item| {
+            try std.testing.expectEqual(@intFromPtr(facade_item) - @intFromPtr(&facade_ptr_array_items[0]), @intFromPtr(direct_item) - @intFromPtr(&direct_ptr_array_items[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 
     var single_engine = alea.ScalarPrng.init(0x5150_f15c);
@@ -13103,14 +13558,32 @@ test "index-weighted chooseWeightedByIndex preserves stream shape and invalid pa
     try std.testing.expectEqual(single_control.next(), single_engine.next());
     try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedByIndexCheckedFrom(&single_engine, Entry, u32, &entries, IndexWeight.single)).value);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_values = (try chooseWeightedValueArrayByIndexFrom(&single_engine, Entry, u32, 4, &entries, IndexWeight.single)).?;
+    for (single_values) |item| try std.testing.expectEqual(@as(u8, 30), item.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_values_checked = try chooseWeightedValueArrayByIndexCheckedFrom(&single_engine, Entry, u32, 4, &entries, IndexWeight.single);
+    for (single_values_checked) |item| try std.testing.expectEqual(@as(u8, 30), item.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
     try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedConstPtrByIndexFrom(&single_engine, Entry, u32, &entries, IndexWeight.single)).?.value);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
     try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedConstPtrByIndexCheckedFrom(&single_engine, Entry, u32, &entries, IndexWeight.single)).value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_const_ptrs = (try chooseWeightedConstPtrArrayByIndexFrom(&single_engine, Entry, u32, 4, &entries, IndexWeight.single)).?;
+    for (single_const_ptrs) |ptr| try std.testing.expectEqual(@as(u8, 30), ptr.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_const_ptrs_checked = try chooseWeightedConstPtrArrayByIndexCheckedFrom(&single_engine, Entry, u32, 4, &entries, IndexWeight.single);
+    for (single_const_ptrs_checked) |ptr| try std.testing.expectEqual(@as(u8, 30), ptr.value);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
     var single_mutable = entries;
     try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedPtrByIndexFrom(&single_engine, Entry, u32, &single_mutable, IndexWeight.single)).?.value);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
     try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedPtrByIndexCheckedFrom(&single_engine, Entry, u32, &single_mutable, IndexWeight.single)).value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_ptrs = (try chooseWeightedPtrArrayByIndexFrom(&single_engine, Entry, u32, 4, &single_mutable, IndexWeight.single)).?;
+    for (single_ptrs) |ptr| try std.testing.expectEqual(@as(u8, 30), ptr.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_ptrs_checked = try chooseWeightedPtrArrayByIndexCheckedFrom(&single_engine, Entry, u32, 4, &single_mutable, IndexWeight.single);
+    for (single_ptrs_checked) |ptr| try std.testing.expectEqual(@as(u8, 30), ptr.value);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 
     const BadEntry = struct {
@@ -13124,23 +13597,50 @@ test "index-weighted chooseWeightedByIndex preserves stream shape and invalid pa
     var invalid_control = alea.ScalarPrng.init(0x5150_f15d);
     try std.testing.expectEqual(@as(?BadEntry, null), try chooseWeightedByIndexFrom(&invalid_engine, BadEntry, u32, &empty_entries, IndexWeight.single));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectEqual(@as(?[3]BadEntry, null), try chooseWeightedValueArrayByIndexFrom(&invalid_engine, BadEntry, u32, 3, &empty_entries, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectEqual(@as(?*const BadEntry, null), try chooseWeightedConstPtrByIndexFrom(&invalid_engine, BadEntry, u32, &zero_entries, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectEqual(@as(?[3]*const BadEntry, null), try chooseWeightedConstPtrArrayByIndexFrom(&invalid_engine, BadEntry, u32, 3, &zero_entries, IndexWeight.zero));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     var zero_mutable = zero_entries;
     try std.testing.expectEqual(@as(?*BadEntry, null), try chooseWeightedPtrByIndexFrom(&invalid_engine, BadEntry, u32, &zero_mutable, IndexWeight.zero));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectEqual(@as(?[3]*BadEntry, null), try chooseWeightedPtrArrayByIndexFrom(&invalid_engine, BadEntry, u32, 3, &zero_mutable, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    const empty_value_array = try chooseWeightedValueArrayByIndexCheckedFrom(&invalid_engine, BadEntry, f64, 0, &bad_entries, IndexWeight.invalid);
+    try std.testing.expectEqual(@as(usize, 0), empty_value_array.len);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    const empty_const_ptr_array = try chooseWeightedConstPtrArrayByIndexCheckedFrom(&invalid_engine, BadEntry, f64, 0, &bad_entries, IndexWeight.invalid);
+    try std.testing.expectEqual(@as(usize, 0), empty_const_ptr_array.len);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    const empty_ptr_array = try chooseWeightedPtrArrayByIndexCheckedFrom(&invalid_engine, BadEntry, f64, 0, &zero_mutable, IndexWeight.invalid);
+    try std.testing.expectEqual(@as(usize, 0), empty_ptr_array.len);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.EmptyInput, chooseWeightedByIndexCheckedFrom(&invalid_engine, BadEntry, u32, &empty_entries, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseWeightedValueArrayByIndexCheckedFrom(&invalid_engine, BadEntry, u32, 3, &empty_entries, IndexWeight.single));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.EmptyInput, chooseWeightedConstPtrByIndexCheckedFrom(&invalid_engine, BadEntry, u32, &zero_entries, IndexWeight.zero));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseWeightedConstPtrArrayByIndexCheckedFrom(&invalid_engine, BadEntry, u32, 3, &zero_entries, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.EmptyInput, chooseWeightedPtrByIndexCheckedFrom(&invalid_engine, BadEntry, u32, &zero_mutable, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseWeightedPtrArrayByIndexCheckedFrom(&invalid_engine, BadEntry, u32, 3, &zero_mutable, IndexWeight.zero));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, chooseWeightedByIndexFrom(&invalid_engine, BadEntry, f64, &bad_entries, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedValueArrayByIndexCheckedFrom(&invalid_engine, BadEntry, f64, 3, &bad_entries, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, chooseWeightedConstPtrByIndexCheckedFrom(&invalid_engine, BadEntry, f64, &bad_entries, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedConstPtrArrayByIndexCheckedFrom(&invalid_engine, BadEntry, f64, 3, &bad_entries, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     var bad_mutable = bad_entries;
     try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrByIndexCheckedFrom(&invalid_engine, BadEntry, f64, &bad_mutable, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrArrayByIndexCheckedFrom(&invalid_engine, BadEntry, f64, 3, &bad_mutable, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
