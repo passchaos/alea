@@ -7,7 +7,7 @@ focused `zig build run-*` step for quick adoption checks.
 | --- | --- | --- |
 | `zig build run-basic` | `examples/basic.zig` | A broad first tour: engines, `Rng`, owned byte/value/sample batches, distributions, strings, index and const-pointer choice, sequence helpers, and child streams. |
 | `zig build run-reproducible-streams` | `examples/reproducible_streams.zig` | Stable named seeds, substreams, engine aliases, split/jump, and PCG stream selection. |
-| `zig build run-range-sampling` | `examples/range_sampling.zig` | Integer ranges, strict float endpoint semantics, duration ranges, owned range batches, reusable `Uniform`, vector ranges, point masses, and checked errors. |
+| `zig build run-range-sampling` | `examples/range_sampling.zig` | Integer ranges, strict float endpoint semantics, duration ranges, owned range and strict-interval batches, reusable `Uniform`, vector ranges, point masses, and checked errors. |
 | `zig build run-discrete-distributions` | `examples/discrete_distributions.zig` | Bernoulli, Binomial, NegativeBinomial, Poisson, Geometric trial/failure semantics, Hypergeometric, vector discrete samplers, and checked errors. |
 | `zig build run-continuous-distributions` | `examples/continuous_distributions.zig` | Core continuous reusable samplers and diagnostics: Gamma, Beta, FisherF, StudentT, Triangular, Arcsine, Cauchy, Laplace, Logistic, Rayleigh, Pareto, and Weibull. |
 | `zig build run-advanced-continuous-distributions` | `examples/advanced_continuous_distributions.zig` | Advanced continuous shape/tail families: HalfNormal, ChiSquared, Chi, Erlang, Maxwell, LogLogistic, Kumaraswamy, PowerFunction, Gumbel, Frechet, SkewNormal, InverseGaussian, and NormalInverseGaussian. |

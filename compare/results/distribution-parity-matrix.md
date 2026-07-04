@@ -17,7 +17,7 @@ Zig-native way.
 | `StandardUniform` integers/floats/bools/bytes | Covered by `Rng.value`, scalar helpers, `float`, `boolean`, caller-owned bytes, and allocation-returning `bytesAlloc` |
 | `StandardUniform` arrays/tuples | Covered by `Rng.value` arrays and tuples plus allocation-returning `Rng.valueBatch` / `Rng.valueBatchChecked` repeated samples |
 | `StandardUniform` char | Covered by explicit `Rng.unicodeScalar` and Unicode UTF-8 helpers, including caller-owned-buffer UTF-8 output |
-| `Uniform` integer/float ranges | Covered by `Uniform(T)`, `Open01`, `OpenClosed01`, scalar range helpers, caller-owned range fills, owned `Rng.rangeBatch` batches, endpoint/inclusivity, and range/strict-interval moment accessors |
+| `Uniform` integer/float ranges | Covered by `Uniform(T)`, `Open01`, `OpenClosed01`, scalar range helpers, caller-owned range/strict-interval fills, owned `Rng.rangeBatch` / `openBatch` / `openClosedBatch` batches, endpoint/inclusivity, and range/strict-interval moment accessors |
 | `UniformChar` | Covered by `unicodeScalar`; explicit char-range sampler is not needed because Zig has no native `char` type |
 | `UniformDuration` | Covered by `durationRangeLessThan` and `durationRangeAtMost` for `std.Io.Duration` |
 | `Bernoulli` | Covered by `Bernoulli`, `chance`, `ratio`, checked variants, and probability/moment/mode/support accessors |

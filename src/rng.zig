@@ -351,6 +351,17 @@ pub fn fillOpen(self: Rng, comptime T: type, dest: []T) void {
     fillOpenFrom(self, T, dest);
 }
 
+pub fn openBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    return openBatchFrom(self, T, allocator, count);
+}
+
+pub fn openBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillOpenFrom(source, T, out);
+    return out;
+}
+
 pub fn fillOpenFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireFloat(T);
     switch (T) {
@@ -362,6 +373,17 @@ pub fn fillOpenFrom(source: anytype, comptime T: type, dest: []T) void {
 
 pub fn fillOpenClosed(self: Rng, comptime T: type, dest: []T) void {
     fillOpenClosedFrom(self, T, dest);
+}
+
+pub fn openClosedBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    return openClosedBatchFrom(self, T, allocator, count);
+}
+
+pub fn openClosedBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillOpenClosedFrom(source, T, out);
+    return out;
 }
 
 pub fn fillOpenClosedFrom(source: anytype, comptime T: type, dest: []T) void {
@@ -2974,6 +2996,55 @@ test "open-closed f64 fill preserves facade stream shape" {
     fillOpenClosedFrom(&direct_engine, f64, &direct_values);
     try std.testing.expectEqualSlices(f64, &facade_values, &direct_values);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+}
+
+test "owned strict interval batches preserve fill stream shape" {
+    const alea = @import("root.zig");
+    inline for (.{ alea.ScalarPrng, alea.FastPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_0888);
+        var direct_engine = Engine.init(0x5150_0888);
+        const rng = Rng.init(&facade_engine);
+
+        const open_values = try rng.openBatch(f64, std.testing.allocator, 32);
+        defer std.testing.allocator.free(open_values);
+        var direct_open_values: [32]f64 = undefined;
+        fillOpenFrom(&direct_engine, f64, &direct_open_values);
+        try std.testing.expectEqualSlices(f64, &direct_open_values, open_values);
+        for (open_values) |sample| try std.testing.expect(sample > 0 and sample < 1);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const open_closed_values = try rng.openClosedBatch(f32, std.testing.allocator, 32);
+        defer std.testing.allocator.free(open_closed_values);
+        var direct_open_closed_values: [32]f32 = undefined;
+        fillOpenClosedFrom(&direct_engine, f32, &direct_open_closed_values);
+        try std.testing.expectEqualSlices(f32, &direct_open_closed_values, open_closed_values);
+        for (open_closed_values) |sample| try std.testing.expect(sample > 0 and sample <= 1);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
+
+test "owned strict interval batches allocate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_0889);
+    var control = alea.ScalarPrng.init(0x5150_0889);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.openBatch(f32, empty_alloc.allocator(), 0);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var open_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.openBatch(f64, open_alloc.allocator(), 8));
+    try std.testing.expect(open_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var open_closed_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, openClosedBatchFrom(&engine, f32, open_closed_alloc.allocator(), 8));
+    try std.testing.expect(open_closed_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "value and vector sampling have stable snapshots" {

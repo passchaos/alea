@@ -62,8 +62,9 @@ selection.
   tuples containing an empty enum fail before consuming randomness)
 - allocation-returning repeated sampling: `valueBatch`, `valueBatchFrom`,
   `valueBatchChecked`, `valueBatchCheckedFrom`, `sampleBatch`,
-  `sampleBatchFrom`, `rangeBatch`, `rangeBatchFrom`, `rangeBatchChecked`, and
-  `rangeBatchCheckedFrom` allocate owned slices after validating no-consume
+  `sampleBatchFrom`, `rangeBatch`, `rangeBatchFrom`, `rangeBatchChecked`,
+  `rangeBatchCheckedFrom`, `openBatch`, `openBatchFrom`, `openClosedBatch`, and
+  `openClosedBatchFrom` allocate owned slices after validating no-consume
   checked cases; use these when an owned result is more ergonomic than a caller
   buffer or iterator loop
 - owned byte buffers: `bytesAlloc` / `bytesAllocFrom` allocate random byte slices after allocation succeeds; use `bytes` or `fill(u8, ...)` for caller-owned buffers
