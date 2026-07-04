@@ -70,6 +70,9 @@ including facade and direct-source `From` helpers for single scalar draws and
 scalar fills, including duration ranges. The same checked/error-returning style
 is available for vector ranges, vector probabilities, and parameterized vector
 normal/exponential sampling, including facade and direct-source `From` helpers
+Run `zig build run-range-sampling` for a runnable comparison of integer ranges,
+strict float intervals, bulk range fills, reusable `Uniform` samplers, vector
+ranges, duration ranges, collapsed point-masses, and checked range errors.
 for ranges, probability vectors, Bernoulli/binomial/binomial-approx/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/Poisson-AD vectors,
 and parameterized normal/exponential vectors/fills when the engine type is
 comptime-known.

@@ -212,6 +212,23 @@ pub fn build(b: *std.Build) void {
     const reproducible_streams_example_step = b.step("run-reproducible-streams", "Run the reproducible streams alea example");
     reproducible_streams_example_step.dependOn(&run_reproducible_streams_example.step);
 
+    const range_sampling_example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/range_sampling.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    range_sampling_example_mod.addImport("alea", module);
+
+    const range_sampling_example = b.addExecutable(.{
+        .name = "alea-range-sampling",
+        .root_module = range_sampling_example_mod,
+    });
+    const run_range_sampling_example = b.addRunArtifact(range_sampling_example);
+    if (b.args) |args| run_range_sampling_example.addArgs(args);
+
+    const range_sampling_example_step = b.step("run-range-sampling", "Run the range sampling alea example");
+    range_sampling_example_step.dependOn(&run_range_sampling_example.step);
+
     const examples_step = b.step("examples", "Run all alea examples");
     examples_step.dependOn(&run_example.step);
     examples_step.dependOn(&run_vector_profiles_example.step);
@@ -224,6 +241,7 @@ pub fn build(b: *std.Build) void {
     examples_step.dependOn(&run_unit_geometry_example.step);
     examples_step.dependOn(&run_distribution_diagnostics_example.step);
     examples_step.dependOn(&run_reproducible_streams_example.step);
+    examples_step.dependOn(&run_range_sampling_example.step);
 
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/throughput.zig"),
