@@ -54,7 +54,8 @@ complete.
 | S4-M31 README discovery and doccheck aggregate | `README.md`, `tools/readmecheck.zig`, `zig build readmecheck`, `zig build doccheck`, `zig build test`, `zig build validate`, `compare/results/s4-m31-readme-doccheck.md` | Closed for the current bar: README discovery is verified and API/example/tooling/README/roadmap checks run through one documentation gate. |
 | S4-M32 roadmap and active-audit drift check | `tools/roadmapcheck.zig`, `zig build roadmapcheck`, `zig build doccheck`, `zig build test`, `zig build validate`, `compare/results/core-rand-coverage.md`, `compare/results/active-goal-completion-audit.md`, `compare/results/linux-no-known-gaps-audit.md`, `compare/results/s4-m32-roadmapcheck.md` | Closed for the current bar: closed S4 evidence files, next-gap continuity, S4-M11 blocker visibility, and non-completion audit language are verified. |
 | S4-M33 fixed-size item array sequence sampling | `src/seq.zig`, `examples/sequence_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m33-choose-array.md` | Closed for the current bar: fixed-size item array sampling is available without heap allocation and documented against local Rust sequence ergonomics. |
-| S4-M34 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M34 one-shot weighted item and pointer choice | `src/seq.zig`, `examples/weighted_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m34-choose-weighted.md` | Closed for the current bar: one-shot weighted values and mutable pointers are available and documented alongside weighted indexes and reusable weighted samplers. |
+| S4-M35 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -88,9 +89,9 @@ guidance, S4-M26 adds advanced-continuous adoption guidance, S4-M27 adds
 rank-distribution adoption guidance, S4-M28 adds a central examples catalog,
 S4-M29 adds an example catalog drift checker, S4-M30 adds a build/tooling
 catalog drift checker, S4-M31 adds README/doccheck discovery validation, and
-S4-M32 adds roadmap/audit drift checking, and S4-M33 adds fixed-size item array
-sequence sampling, but they do not resolve S4-M11 or complete the long-term
-objective.
+S4-M32 adds roadmap/audit drift checking, S4-M33 adds fixed-size item array
+sequence sampling, and S4-M34 adds one-shot weighted item/pointer choice, but
+they do not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

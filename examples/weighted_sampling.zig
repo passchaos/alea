@@ -25,6 +25,10 @@ pub fn main(init: std.process.Init) !void {
     const one_shot = alea.Rng.weightedIndexFrom(&one_shot_engine, &float_weights).?;
     try stdout.print("one-shot weighted index: {} ({s})\n", .{ one_shot, items[one_shot] });
 
+    var weighted_choice_engine = alea.ScalarPrng.init(0x7158);
+    const weighted_value = (try alea.seq.chooseWeightedFrom(&weighted_choice_engine, []const u8, f64, &items, &float_weights)).?;
+    try stdout.print("one-shot weighted value: {s}\n", .{weighted_value});
+
     var alias = try alea.distributions.AliasTable(f64).init(allocator, &float_weights);
     defer alias.deinit();
     var alias_probs: [items.len]f64 = undefined;
@@ -73,6 +77,6 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(no_replace_indices);
     try stdout.print("weighted no-replacement indices: {any}\n", .{no_replace_indices});
 
-    try stdout.print("\nUse one-shot weightedIndex for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/no-replacement workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/no-replacement workflows.\n", .{});
     try stdout.flush();
 }

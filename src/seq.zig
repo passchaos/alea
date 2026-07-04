@@ -281,6 +281,42 @@ pub fn chooseArrayFrom(source: anytype, comptime T: type, comptime N: usize, ite
     return out;
 }
 
+pub fn chooseWeighted(rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !?T {
+    return chooseWeightedFrom(rng, T, Weight, items, weights);
+}
+
+pub fn chooseWeightedChecked(rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !T {
+    return chooseWeightedCheckedFrom(rng, T, Weight, items, weights);
+}
+
+pub fn chooseWeightedCheckedFrom(source: anytype, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !T {
+    return (try chooseWeightedFrom(source, T, Weight, items, weights)) orelse error.EmptyInput;
+}
+
+pub fn chooseWeightedFrom(source: anytype, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !?T {
+    if (items.len != weights.len) return error.LengthMismatch;
+    const index = (try weightedIndexGenericFrom(source, Weight, weights)) orelse return null;
+    return items[index];
+}
+
+pub fn chooseWeightedPtr(rng: Rng, comptime T: type, comptime Weight: type, items: []T, weights: []const Weight) !?*T {
+    return chooseWeightedPtrFrom(rng, T, Weight, items, weights);
+}
+
+pub fn chooseWeightedPtrChecked(rng: Rng, comptime T: type, comptime Weight: type, items: []T, weights: []const Weight) !*T {
+    return chooseWeightedPtrCheckedFrom(rng, T, Weight, items, weights);
+}
+
+pub fn chooseWeightedPtrCheckedFrom(source: anytype, comptime T: type, comptime Weight: type, items: []T, weights: []const Weight) !*T {
+    return (try chooseWeightedPtrFrom(source, T, Weight, items, weights)) orelse error.EmptyInput;
+}
+
+pub fn chooseWeightedPtrFrom(source: anytype, comptime T: type, comptime Weight: type, items: []T, weights: []const Weight) !?*T {
+    if (items.len != weights.len) return error.LengthMismatch;
+    const index = (try weightedIndexGenericFrom(source, Weight, weights)) orelse return null;
+    return &items[index];
+}
+
 pub fn chooseIterator(rng: Rng, comptime T: type, iterator: anytype) ?T {
     return chooseIteratorFrom(rng, T, iterator);
 }
@@ -1220,6 +1256,32 @@ fn weightedSelectionKeyFrom(source: anytype, weight: f64) f64 {
     return if (std.math.isFinite(key)) key else -std.math.floatMax(f64);
 }
 
+fn weightedIndexGenericFrom(source: anytype, comptime Weight: type, weights: []const Weight) Error!?usize {
+    var total: f64 = 0;
+    var positive_index: ?usize = null;
+    var positive_count: usize = 0;
+    for (weights, 0..) |weight, index| {
+        const value = weightAsF64(Weight, weight);
+        if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+        total += value;
+        if (!std.math.isFinite(total)) return error.InvalidWeight;
+        if (value > 0) {
+            positive_index = index;
+            positive_count += 1;
+        }
+    }
+    if (weights.len == 0 or total == 0) return null;
+    if (positive_count == 1) return positive_index.?;
+
+    const point = Rng.floatFrom(source, f64) * total;
+    var acc: f64 = 0;
+    for (weights, 0..) |weight, index| {
+        acc += weightAsF64(Weight, weight);
+        if (point < acc) return index;
+    }
+    return weights.len - 1;
+}
+
 const U32Set = struct {
     keys: []u32,
     used: []u8,
@@ -1511,6 +1573,12 @@ test "invalid facade weighted sequence helpers do not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_5de);
     var control = alea.ScalarPrng.init(0x5150_5de);
     const rng = alea.Rng.init(&engine);
+
+    try std.testing.expectError(error.LengthMismatch, chooseWeightedChecked(rng, u8, u32, &.{ 1, 2 }, &.{1}));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedChecked(rng, u8, f64, &.{ 1, 2 }, &.{ 1.0, std.math.nan(f64) }));
+    try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesChecked(std.testing.allocator, rng, u32, &.{ 1, 2 }, 3));
     try std.testing.expectEqual(control.next(), engine.next());
@@ -2322,6 +2390,68 @@ test "invalid chooseArray helpers do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, chooseArrayCheckedFrom(&engine, u8, 4, &.{ 1, 2, 3 }));
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "chooseWeighted selects values and mutable pointers" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40 };
+    const weights = [_]u32{ 0, 2, 6, 3 };
+
+    var value_engine = alea.ScalarPrng.init(0x5150_b001);
+    const value = (try chooseWeightedFrom(&value_engine, u8, u32, &items, &weights)).?;
+    try std.testing.expect(std.mem.indexOfScalar(u8, &items, value) != null);
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_b002);
+    const checked = try chooseWeightedCheckedFrom(&checked_engine, u8, u32, &items, &weights);
+    try std.testing.expect(std.mem.indexOfScalar(u8, &items, checked) != null);
+
+    var mutable = items;
+    var ptr_engine = alea.ScalarPrng.init(0x5150_b003);
+    const ptr = (try chooseWeightedPtrFrom(&ptr_engine, u8, u32, &mutable, &weights)).?;
+    ptr.* += 1;
+    try std.testing.expect(std.mem.indexOfScalar(u8, &mutable, ptr.*) != null);
+
+    var single_engine = alea.ScalarPrng.init(0x5150_b004);
+    var single_control = alea.ScalarPrng.init(0x5150_b004);
+    try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedFrom(&single_engine, u8, u32, &items, &.{ 0, 0, 5, 0 })).?);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_b005);
+    try std.testing.expect((try chooseWeightedFrom(&empty_engine, u8, u32, &.{}, &.{})) == null);
+    try std.testing.expect((try chooseWeightedFrom(&empty_engine, u8, u32, &items, &.{ 0, 0, 0, 0 })) == null);
+    try std.testing.expectError(error.EmptyInput, chooseWeightedCheckedFrom(&empty_engine, u8, u32, &items, &.{ 0, 0, 0, 0 }));
+}
+
+test "chooseWeighted preserves facade/direct stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40 };
+    const weights = [_]f64{ 1, 2, 6, 3 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_b006);
+        var direct_engine = Engine.init(0x5150_b006);
+        const rng = Rng.init(&facade_engine);
+
+        const facade = (try chooseWeighted(rng, u8, f64, &items, &weights)).?;
+        const direct = (try chooseWeightedFrom(&direct_engine, u8, f64, &items, &weights)).?;
+        try std.testing.expectEqual(facade, direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_mutable = items;
+        var direct_mutable = items;
+        const facade_ptr = (try chooseWeightedPtr(rng, u8, f64, &facade_mutable, &weights)).?;
+        const direct_ptr = (try chooseWeightedPtrFrom(&direct_engine, u8, f64, &direct_mutable, &weights)).?;
+        try std.testing.expectEqual(@intFromPtr(facade_ptr) - @intFromPtr(&facade_mutable[0]), @intFromPtr(direct_ptr) - @intFromPtr(&direct_mutable[0]));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_b007);
+    var invalid_control = alea.ScalarPrng.init(0x5150_b007);
+    const invalid_rng = Rng.init(&invalid_engine);
+    try std.testing.expectError(error.LengthMismatch, chooseWeighted(invalid_rng, u8, u32, &items, &.{ 1, 2 }));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrFrom(&invalid_engine, u8, f64, @constCast(&items), &.{ 1.0, std.math.inf(f64), 2.0, 3.0 }));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "collection sequence helpers preserve direct stream shape" {

@@ -248,6 +248,9 @@ Use:
 - `seq.chooseIteratorWeighted`, `seq.chooseIteratorWeightedFrom`,
   `seq.chooseIteratorWeightedCheckedFrom`, `seq.sampleIteratorWeighted`,
   `seq.sampleIteratorWeightedFrom`, `seq.sampleIteratorWeightedCheckedFrom`
+- `seq.chooseWeighted`, `seq.chooseWeightedFrom`,
+  `seq.chooseWeightedCheckedFrom`, `seq.chooseWeightedPtr`,
+  `seq.chooseWeightedPtrFrom`, `seq.chooseWeightedPtrCheckedFrom`
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeighted`,
   `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`

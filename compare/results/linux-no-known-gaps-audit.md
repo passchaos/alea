@@ -71,6 +71,7 @@ Local Alea evidence:
 - `compare/results/s4-m31-readme-doccheck.md`
 - `compare/results/s4-m32-roadmapcheck.md`
 - `compare/results/s4-m33-choose-array.md`
+- `compare/results/s4-m34-choose-weighted.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -92,7 +93,7 @@ Out of scope for this Linux-first audit:
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost` |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
 | choose, shuffle, sample indices, fixed-size slice samples | Covered | `seq` module, `chooseArray`, Rust sequence benchmark row |
-| weighted index | Covered | `Rng.weightedIndex`, `AliasTable`, `WeightedTree`, benchmark rows |
+| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `seq.chooseWeighted`, `seq.chooseWeightedPtr`, `AliasTable`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface
 
@@ -200,6 +201,7 @@ adds continuous-distribution adoption guidance, S4-M26 adds advanced-continuous
 adoption guidance, S4-M27 adds rank-distribution adoption guidance, S4-M28 adds
 a central examples catalog, S4-M29 adds catalog drift checking, S4-M30 adds
 build/tooling catalog drift checking, S4-M31 adds README/doccheck discovery
-validation, S4-M32 adds roadmap/audit drift checking, and S4-M33 adds fixed-size
-item array sequence sampling, but later stages should keep raising the bar
-rather than declaring the product permanently finished.
+validation, S4-M32 adds roadmap/audit drift checking, S4-M33 adds fixed-size
+item array sequence sampling, and S4-M34 adds one-shot weighted item/pointer
+choice, but later stages should keep raising the bar rather than declaring the
+product permanently finished.
