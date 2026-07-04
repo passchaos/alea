@@ -87,6 +87,20 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.chooseMultipleIntoFrom(&choose_into_engine, []const u8, &items, &chosen_into, &chosen_into_indices);
     try stdout.print("chooseMultipleInto items: {s}, {s}, {s}\n", .{ chosen_into[0], chosen_into[1], chosen_into[2] });
 
+    var choose_ptrs_engine = alea.ScalarPrng.init(0x5e11_0015);
+    var chosen_ptrs: [3]*const []const u8 = undefined;
+    var chosen_ptr_indices: [3]usize = undefined;
+    _ = try alea.seq.chooseMultiplePtrsIntoFrom(&choose_ptrs_engine, []const u8, &items, &chosen_ptrs, &chosen_ptr_indices);
+    try stdout.print("chooseMultiplePtrsInto items: {s}, {s}, {s}\n", .{ chosen_ptrs[0].*, chosen_ptrs[1].*, chosen_ptrs[2].* });
+
+    var choose_mut_ptrs_engine = alea.ScalarPrng.init(0x5e11_0016);
+    var mutable_subset_scores = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+    var chosen_mut_ptrs: [3]*u8 = undefined;
+    var chosen_mut_ptr_indices: [3]usize = undefined;
+    _ = try alea.seq.chooseMultipleMutPtrsIntoFrom(&choose_mut_ptrs_engine, u8, &mutable_subset_scores, &chosen_mut_ptrs, &chosen_mut_ptr_indices);
+    for (chosen_mut_ptrs) |score| score.* += 2;
+    try stdout.print("chooseMultipleMutPtrsInto updated scores: {any}\n", .{mutable_subset_scores});
+
     var choose_array_engine = alea.ScalarPrng.init(0x5e11_000a);
     const chosen_array = alea.seq.chooseArrayFrom(&choose_array_engine, []const u8, 3, &items).?;
     try stdout.print("chooseArray items: {s}, {s}, {s}\n", .{ chosen_array[0], chosen_array[1], chosen_array[2] });
@@ -168,6 +182,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and value/const-pointer/mutable-pointer mapping, chooseArray for fixed-size arrays, chooseMultiple/chooseMultipleInto or sampleWithoutReplacement for item subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSampleInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and value/const-pointer/mutable-pointer mapping, chooseArray for fixed-size arrays, chooseMultiple/chooseMultipleInto/chooseMultiplePtrsInto or sampleWithoutReplacement for item/pointer subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSampleInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }
