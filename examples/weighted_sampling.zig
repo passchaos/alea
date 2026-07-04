@@ -66,6 +66,11 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(weighted_value_batch);
     try stdout.print("weighted value batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_value_batch[0], weighted_value_batch[1], weighted_value_batch[2], weighted_value_batch[3], weighted_value_batch[4], weighted_value_batch[5] });
 
+    var generic_value_batch_engine = alea.ScalarPrng.init(0x7171);
+    const generic_value_batch = try alea.seq.chooseWeightedBatchCheckedFrom(allocator, &generic_value_batch_engine, []const u8, u32, 6, &items, &int_weights);
+    defer allocator.free(generic_value_batch);
+    try stdout.print("generic weighted value batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ generic_value_batch[0], generic_value_batch[1], generic_value_batch[2], generic_value_batch[3], generic_value_batch[4], generic_value_batch[5] });
+
     var weighted_const_ptr_engine = alea.ScalarPrng.init(0x7163);
     const weighted_const_ptr = (try alea.seq.chooseWeightedConstPtrFrom(&weighted_const_ptr_engine, []const u8, f64, &items, &float_weights)).?;
     try stdout.print("one-shot weighted const ptr: {s}\n", .{weighted_const_ptr.*});
