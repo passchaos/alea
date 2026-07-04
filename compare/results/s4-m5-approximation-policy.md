@@ -79,7 +79,8 @@ ziggurat lane-fill.
 The long-term objective remains active. S4-M6 has since hardened this decision
 with native and WASI `profilecheck` evidence, S4-M7 added native and WASI
 8Mi-lane tail-focused gates, S4-M8 added native and WASI deterministic
-multi-seed stress gates, and S4-M9 added native and WASI long stress gates. The
-next roadmap bar should add another non-WASI executed target, keep exact/default
-dense SIMD candidates under watch, and add new Rust comparison rows if the local
-Rust surface gains SIMD non-uniform distributions.
+multi-seed stress gates, S4-M9 added native and WASI long stress gates, and
+S4-M10 added x86_64-linux-musl long-sweep execution. The next roadmap bar should
+keep exact/default dense SIMD candidates under watch, use additional
+architecture/runtime runners if they become available, and add new Rust
+comparison rows if the local Rust surface gains SIMD non-uniform distributions.

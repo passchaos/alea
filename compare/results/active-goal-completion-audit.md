@@ -30,7 +30,8 @@ complete.
 | S4-M7 longer tail/profile validation | `compare/results/2026-07-04-s4-m7-profiletailcheck.md`, `tools/profiletailcheck.zig`, `zig build -Doptimize=ReleaseFast profilecheck-tail`, `zig build -Doptimize=ReleaseFast wasi-profiletailcheck` | Closed for the current bar: accepted profiles now have 8Mi-lane tail-focused gates on native Linux and WASI. |
 | S4-M8 multi-seed/profile stress | `compare/results/2026-07-04-s4-m8-profilestresscheck.md`, `tools/profilestresscheck.zig`, `zig build -Doptimize=ReleaseFast profilecheck-stress`, `zig build -Doptimize=ReleaseFast wasi-profilestresscheck` | Closed for the current bar: accepted profiles now have deterministic 8-seed stress gates on native Linux and WASI. |
 | S4-M9 longer stress sweep | `compare/results/2026-07-04-s4-m9-profilelongcheck.md`, `tools/profilelongcheck.zig`, `zig build -Doptimize=ReleaseFast profilecheck-long`, `zig build -Doptimize=ReleaseFast wasi-profilelongcheck` | Closed for the current long-sweep bar: accepted profiles now have 8Mi-lane/profile long stress gates on native Linux and WASI. |
-| S4-M10 additional non-WASI runtime or exact dense-kernel win | `core-rand-coverage.md`, future non-WASI runtime reports, future exact dense SIMD evidence | Not complete; accepted profile validation has not executed on another non-WASI target, and no exact/default-compatible dense SIMD kernel has beaten scalar lane-fill. |
+| S4-M10 additional non-WASI runtime | `compare/results/2026-07-04-s4-m10-profilelong-musl.md`, `zig build -Dtarget=x86_64-linux-musl -Doptimize=ReleaseFast profilecheck-long` | Closed for the current bar: accepted profiles execute the long sweep on x86_64-linux-musl in addition to native glibc and WASI. |
+| S4-M11 exact/default dense-kernel breakthrough or new external gap | `core-rand-coverage.md`, future dense SIMD evidence, future architecture/runtime reports, future local Rust audits | Not complete; no exact/default-compatible dense SIMD kernel has beaten scalar lane-fill, no further architecture/runtime runner is available, and no new local Rust core gap has been identified. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -42,12 +43,14 @@ profiles are accepted as the explicit throughput-first dense vector surface for
 callers who choose approximation/output-mapping contracts, while exact/default
 APIs remain scalar ziggurat lane-fill.
 
-The next unresolved milestone is S4-M10:
+The next unresolved milestone is S4-M11:
 
-1. The accepted approximation profiles have native and WASI deterministic long
-   stress evidence, but not another executed non-WASI runtime target.
-2. No exact/default-compatible dense SIMD normal/exponential kernel has beaten
-   scalar ziggurat lane-fill in the real `vectorbench` slice-fill harness.
+1. Accepted approximation profiles have native glibc, x86_64-linux-musl, and WASI
+   long-sweep evidence, but no exact/default-compatible dense SIMD
+   normal/exponential kernel has beaten scalar ziggurat lane-fill in the real
+   `vectorbench` slice-fill harness.
+2. No additional architecture/runtime runner is available in this session, and
+   no new local `rand` / `rand_distr` core gap has been identified.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
@@ -65,17 +68,16 @@ moment/CDF gates for those approximation profiles. S4-M5 is closed by policy,
 S4-M6 is closed by native+WASI `profilecheck` hardening, S4-M7 is closed by
 native+WASI `profiletailcheck` tail gates, and S4-M8 is closed by native+WASI
 `profilestresscheck` multi-seed gates, and S4-M9 is closed by native+WASI
-`profilelongcheck` long stress gates. S4-M10 remains unresolved because accepted
-profiles still need another executed non-WASI runtime target, and exact/default
-normal/exponential kernels remain scalar ziggurat lane-fill.
+`profilelongcheck` long stress gates, and S4-M10 is closed by x86_64-linux-musl
+`profilelongcheck` execution. S4-M11 remains unresolved because exact/default
+normal/exponential kernels remain scalar ziggurat lane-fill, no further executed
+architecture/runtime is available, and no new local Rust core gap is known.
 
 ## Required Next Work Before Completion
 
 The goal remains active until at least one of these happens:
 
-- accepted table/approx-log vector profiles execute on another non-WASI target
-  or otherwise close S4-M10;
-- or a default/exact-compatible dense SIMD normal/exponential candidate beats
+- a default/exact-compatible dense SIMD normal/exponential candidate beats
   scalar lane-fill in the real vector-slice harness while preserving or
   deliberately versioning rejected-lane stream shape;
 - or a later roadmap audit raises/reshapes the bar again with explicit rationale.

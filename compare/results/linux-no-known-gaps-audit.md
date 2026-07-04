@@ -10,10 +10,10 @@ functionality gaps in Alea's current local Linux parity stage. S4-M4 performance
 follow-up is closed for the current bar: LogNormal performance is covered by
 explicit opt-ins while exact defaults remain a stable-output tradeoff. The S4-M5 policy bar is closed by `s4-m5-approximation-policy.md`, the S4-M6 hardening bar is closed by `2026-07-04-s4-m6-profilecheck.md`, the
 S4-M7 tail bar is closed by `2026-07-04-s4-m7-profiletailcheck.md`, the S4-M8
-stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9
-long-sweep bar is closed by `2026-07-04-s4-m9-profilelongcheck.md`; the active
-S4-M10 watch item is an additional executed non-WASI runtime target or an
-exact/default-compatible dense SIMD winner.
+stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 long-sweep bar is closed by `2026-07-04-s4-m9-profilelongcheck.md`, and
+S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`; the
+active S4-M11 watch item is an exact/default-compatible dense SIMD winner, a
+new available architecture/runtime runner, or a newly found local Rust core gap.
 
 ## Scope
 
@@ -46,6 +46,7 @@ Local Alea evidence:
 - `compare/results/2026-07-04-s4-m7-profiletailcheck.md`
 - `compare/results/2026-07-04-s4-m8-profilestresscheck.md`
 - `compare/results/2026-07-04-s4-m9-profilelongcheck.md`
+- `compare/results/2026-07-04-s4-m10-profilelong-musl.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -89,13 +90,14 @@ Out of scope for this Linux-first audit:
 
 ## Current Stage 4 Performance Watch Items
 
-These are not functionality gaps. S4-M4 through S4-M9 are closed for the current
-bars, while S4-M10 remains active. The current blocker and policy audits are
+These are not functionality gaps. S4-M4 through S4-M10 are closed for the current
+bars, while S4-M11 remains active. The current blocker and policy audits are
 `s4-m4-remaining-gaps.md`, `s4-m5-approximation-policy.md`,
 `2026-07-04-s4-m6-profilecheck.md`,
 `2026-07-04-s4-m7-profiletailcheck.md`,
-`2026-07-04-s4-m8-profilestresscheck.md`, and
-`2026-07-04-s4-m9-profilelongcheck.md`. In short:
+`2026-07-04-s4-m8-profilestresscheck.md`,
+`2026-07-04-s4-m9-profilelongcheck.md`, and
+`2026-07-04-s4-m10-profilelong-musl.md`. In short:
 
 - `LogNormal` exact defaults remain intentionally stable on Zig `@exp` output
   mapping and still trail local Rust single-sample rows, but the S4-M4
@@ -161,6 +163,6 @@ Within this audit's local Linux scope, no known core RNG functionality gap
 remains against the locally available `rand` / `rand_distr` evidence.
 
 This does not close the long-term product goal. Stage 4 remains active for the
-S4-M10 additional executed target or exact-dense-kernel bar above, and later
-stages should keep raising the bar rather than declaring the product permanently
-finished.
+S4-M11 exact-dense-kernel, future-runner, or new-external-gap bar above, and
+later stages should keep raising the bar rather than declaring the product
+permanently finished.
