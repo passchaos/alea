@@ -40,7 +40,8 @@ complete.
 | S4-M17 multivariate sampling adoption example | `examples/multivariate_sampling.zig`, `zig build run-multivariate-sampling`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m17-multivariate-sampling-example.md` | Closed for the current bar: a runnable example demonstrates Multinomial and Dirichlet owned/caller-buffer/batch workflows. |
 | S4-M18 sequence sampling adoption example | `examples/sequence_sampling.zig`, `zig build run-sequence-sampling`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m18-sequence-sampling-example.md` | Closed for the current bar: a runnable example demonstrates index sampling, item subsets, partial shuffle, reservoir, reusable choice, and streaming iterator workflows. |
 | S4-M19 string generation adoption example | `examples/string_generation.zig`, `zig build run-string-generation`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m19-string-generation-example.md` | Closed for the current bar: a runnable example demonstrates predefined/custom ASCII charsets, allocated strings, Unicode scalar generation, and caller-owned UTF-8 buffers. |
-| S4-M20 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M20 unit geometry adoption example | `examples/unit_geometry.zig`, `zig build run-unit-geometry`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m20-unit-geometry-example.md` | Closed for the current bar: a runnable example demonstrates scalar, fill, reusable diagnostic, and vector-lane unit geometry workflows. |
+| S4-M21 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -65,9 +66,9 @@ The next unresolved blocked milestone remains S4-M11:
 S4-M12 through S4-M14 are closed as unblocked adoption/documentation
 improvements, S4-M15 adds an examples validation gate, S4-M16 adds weighted
 sampling adoption guidance, S4-M17 adds multivariate adoption guidance, S4-M18
-adds sequence sampling adoption guidance, and S4-M19 adds string-generation
-adoption guidance, but they do not resolve S4-M11 or complete the long-term
-objective.
+adds sequence sampling adoption guidance, S4-M19 adds string-generation adoption
+guidance, and S4-M20 adds unit-geometry adoption guidance, but they do not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

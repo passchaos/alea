@@ -194,6 +194,9 @@ and `withMean` for workflows that choose range before mode/mean. Unit geometry s
 expose `fill` / `fillFrom`, and the module-level `fillUnitCircle`,
 `fillUnitDisc`, `fillUnitSphere`, and `fillUnitBall` helpers fill slices of
 fixed-size point arrays.
+Run `zig build run-unit-geometry` for a runnable comparison of unit surface,
+filled-volume, slice-fill, reusable-sampler diagnostics, and vector-lane unit
+geometry helpers.
 
 ## Sequence And Collection Sampling
 
