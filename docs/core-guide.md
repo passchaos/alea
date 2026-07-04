@@ -385,7 +385,13 @@ Use:
   `seq.fillChooseWeightedConstPtrByIndexFrom`,
   `seq.fillChooseWeightedConstPtrByIndexCheckedFrom`,
   `seq.fillChooseWeightedPtrByIndexFrom`,
-  `seq.fillChooseWeightedPtrByIndexCheckedFrom`, `seq.weightedIndexByFrom`,
+  `seq.fillChooseWeightedPtrByIndexCheckedFrom`,
+  `seq.chooseWeightedBatchByIndexFrom`,
+  `seq.chooseWeightedBatchByIndexCheckedFrom`,
+  `seq.chooseWeightedConstPtrBatchByIndexFrom`,
+  `seq.chooseWeightedConstPtrBatchByIndexCheckedFrom`,
+  `seq.chooseWeightedPtrBatchByIndexFrom`,
+  `seq.chooseWeightedPtrBatchByIndexCheckedFrom`, `seq.weightedIndexByFrom`,
   `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
   `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
   `seq.fillWeightedIndexByCheckedFrom`, `seq.fillWeightedIndexU32ByFrom`,
@@ -421,7 +427,13 @@ Use:
   `seq.fillChooseWeightedConstPtrByIndexFrom`,
   `seq.fillChooseWeightedConstPtrByIndexCheckedFrom`,
   `seq.fillChooseWeightedPtrByIndexFrom`, and
-  `seq.fillChooseWeightedPtrByIndexCheckedFrom`, plus accessor-based
+  `seq.fillChooseWeightedPtrByIndexCheckedFrom`, plus allocation-returning
+  index-weighted repeated choice batches `seq.chooseWeightedBatchByIndexFrom`,
+  `seq.chooseWeightedBatchByIndexCheckedFrom`,
+  `seq.chooseWeightedConstPtrBatchByIndexFrom`,
+  `seq.chooseWeightedConstPtrBatchByIndexCheckedFrom`,
+  `seq.chooseWeightedPtrBatchByIndexFrom`, and
+  `seq.chooseWeightedPtrBatchByIndexCheckedFrom`, plus accessor-based
   `seq.weightedIndexByFrom`,
   `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
   `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
@@ -448,7 +460,7 @@ Use:
   repeated length/index-weight index batches for `index::sample_weighted`-style
   index weight accessors, while `chooseWeighted*ByIndex` maps those
   length/index-weight choices back to values or pointers and
-  `fillChooseWeighted*ByIndex` fills caller-owned repeated value/pointer buffers
+  `fillChooseWeighted*ByIndex` fills caller-owned repeated value/pointer buffers, and `chooseWeighted*BatchByIndex` allocates owned repeated value/pointer batches
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeightedIndicesU32From`,
   `seq.sampleWeightedIndicesU32CheckedFrom`, `seq.sampleWeightedIndexVecFrom`,
