@@ -27,7 +27,8 @@ complete.
 | S4-M4 targeted performance follow-up | `compare/results/performance-triage.md`, `compare/results/s4-m4-remaining-gaps.md`, `lognormal-codegen-audit.md`, `simd-distribution-kernel-notes.md` | Closed for the current local Linux bar; LogNormal and vector normal/exponential throughput gaps now have documented opt-in coverage. |
 | S4-M5 default/general dense SIMD kernels | `compare/results/s4-m5-approximation-policy.md`, `compare/results/s4-m4-remaining-gaps.md`, `compare/results/simd-distribution-kernel-notes.md`, `compare/results/performance-triage.md` | Closed for the current local Linux policy bar: named table and approx-log vector profiles are accepted as the explicit throughput-first dense vector surface, while exact/default APIs remain scalar ziggurat lane-fill. |
 | S4-M6 accepted profile hardening | `compare/results/2026-07-04-s4-m6-profilecheck.md`, `tools/profilecheck.zig`, `compare/results/reproducibility-matrix.md`, `zig build validate`, `zig build crosscheck`, `zig build -Doptimize=ReleaseFast wasi-profilecheck` | Closed for the current bar: accepted profiles now have 1Mi-lane mean/variance/CDF gates, native validation integration, WASI execution, and cross-target compile coverage. |
-| S4-M7 longer tail/profile validation | `core-rand-coverage.md`, future long-run/tail-focused profile reports, future non-WASI runtime evidence | Not complete; the accepted approximation profiles still need longer/adversarial tail-focused validation or another executed non-WASI target, unless an exact/default-compatible dense SIMD kernel supersedes the policy path. |
+| S4-M7 longer tail/profile validation | `compare/results/2026-07-04-s4-m7-profiletailcheck.md`, `tools/profiletailcheck.zig`, `zig build -Doptimize=ReleaseFast profilecheck-tail`, `zig build -Doptimize=ReleaseFast wasi-profiletailcheck` | Closed for the current bar: accepted profiles now have 8Mi-lane tail-focused gates on native Linux and WASI. |
+| S4-M8 multi-seed/profile stress | `core-rand-coverage.md`, future multi-seed stress reports, future non-WASI runtime evidence | Not complete; accepted profiles still need multi-seed stress or another executed non-WASI target, unless an exact/default-compatible dense SIMD kernel supersedes the policy path. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -39,10 +40,11 @@ profiles are accepted as the explicit throughput-first dense vector surface for
 callers who choose approximation/output-mapping contracts, while exact/default
 APIs remain scalar ziggurat lane-fill.
 
-The next unresolved milestone is S4-M7:
+The next unresolved milestone is S4-M8:
 
-1. The accepted approximation profiles have native and WASI 1Mi-lane smoke
-   evidence, but not longer/adversarial tail-focused validation beyond that bar.
+1. The accepted approximation profiles have fixed-seed native and WASI smoke and
+   tail evidence, but not multi-seed stress evidence or another executed
+   non-WASI target.
 2. No exact/default-compatible dense SIMD normal/exponential kernel has beaten
    scalar ziggurat lane-fill in the real `vectorbench` slice-fill harness.
 
@@ -59,16 +61,17 @@ normal/exponential and f32 approximate-log exponential vector opt-ins now beat t
 matching ziggurat lane-fill rows for users who accept explicit
 approximation/output-mapping contracts, and distcheck now includes larger-sample
 moment/CDF gates for those approximation profiles. S4-M5 is closed by policy,
-and S4-M6 is closed by native+WASI `profilecheck` hardening, but S4-M7 remains
-unresolved because the accepted profiles still need longer/tail-focused evidence
+S4-M6 is closed by native+WASI `profilecheck` hardening, and S4-M7 is closed by
+native+WASI `profiletailcheck` tail gates, but S4-M8 remains unresolved because
+the accepted profiles still need multi-seed or broader-runtime stress evidence
 and exact/default normal/exponential kernels remain scalar ziggurat lane-fill.
 
 ## Required Next Work Before Completion
 
 The goal remains active until at least one of these happens:
 
-- accepted table/approx-log vector profiles gain longer/adversarial tail-focused
-  validation or another executed non-WASI target sufficient to close S4-M7;
+- accepted table/approx-log vector profiles gain multi-seed stress evidence or
+  another executed non-WASI target sufficient to close S4-M8;
 - or a default/exact-compatible dense SIMD normal/exponential candidate beats
   scalar lane-fill in the real vector-slice harness while preserving or
   deliberately versioning rejected-lane stream shape;

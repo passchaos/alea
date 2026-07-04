@@ -777,10 +777,12 @@ pub fn build(b: *std.Build) void {
         const wasi_statcheck = addWasiTool(b, optimize, node_path, wasi_alea_mod, "statcheck", "tools/statcheck.zig");
         const wasi_distcheck = addWasiTool(b, optimize, node_path, wasi_alea_mod, "distcheck", "tools/distcheck.zig");
         const wasi_profilecheck = addWasiTool(b, optimize, node_path, wasi_alea_mod, "profilecheck", "tools/profilecheck.zig");
+        const wasi_profiletailcheck = addWasiTool(b, optimize, node_path, wasi_alea_mod, "profiletailcheck", "tools/profiletailcheck.zig");
         wasi_statcheck.step.dependOn(&wasi_repro.step);
         wasi_distcheck.step.dependOn(&wasi_statcheck.step);
         wasi_profilecheck.step.dependOn(&wasi_distcheck.step);
-        wasi_report_step.dependOn(&wasi_profilecheck.step);
+        wasi_profiletailcheck.step.dependOn(&wasi_profilecheck.step);
+        wasi_report_step.dependOn(&wasi_profiletailcheck.step);
     } else |_| {
         const node_missing = b.addFail("zig build test-wasi and zig build wasi-report require node with node:wasi support");
         wasi_test_step.dependOn(&node_missing.step);
@@ -855,6 +857,23 @@ pub fn build(b: *std.Build) void {
 
     const profilecheck_step = b.step("profilecheck", "Run accepted vector profile distribution checks");
     profilecheck_step.dependOn(&run_profilecheck.step);
+
+    const profiletailcheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/profiletailcheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    profiletailcheck_mod.addImport("alea", module);
+
+    const profiletailcheck = b.addExecutable(.{
+        .name = "alea-profiletailcheck",
+        .root_module = profiletailcheck_mod,
+    });
+    const run_profiletailcheck = b.addRunArtifact(profiletailcheck);
+    if (b.args) |args| run_profiletailcheck.addArgs(args);
+
+    const profiletailcheck_step = b.step("profilecheck-tail", "Run accepted vector profile tail checks");
+    profiletailcheck_step.dependOn(&run_profiletailcheck.step);
 
     const validate_step = b.step("validate", "Run unit, API, statistical, and distribution checks");
     validate_step.dependOn(&run_tests.step);
