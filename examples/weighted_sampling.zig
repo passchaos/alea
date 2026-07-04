@@ -91,6 +91,12 @@ pub fn main(init: std.process.Init) !void {
     var choice_indices_u32: [8]u32 = undefined;
     try choice.fillIndicesU32From(&choice_engine, &choice_indices_u32);
     try stdout.print("weighted choice u32 indices: {any}\n", .{choice_indices_u32});
+    const choice_owned_indices = try choice.indicesFrom(allocator, &choice_engine, 8);
+    defer allocator.free(choice_owned_indices);
+    try stdout.print("WeightedChoice.indicesFrom: {any}\n", .{choice_owned_indices});
+    const choice_owned_indices_u32 = try choice.indicesU32From(allocator, &choice_engine, 8);
+    defer allocator.free(choice_owned_indices_u32);
+    try stdout.print("WeightedChoice.indicesU32From: {any}\n", .{choice_owned_indices_u32});
 
     var no_replace_engine = alea.ScalarPrng.init(0x7156);
     const no_replace = try alea.seq.sampleWeightedFrom(allocator, &no_replace_engine, []const u8, f64, &items, &float_weights, 3);
@@ -189,6 +195,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_mut_ptrs_into) |score| score.* += 5;
     try stdout.print("weighted mut ptrs into scores: {any}\n", .{weighted_scores_into});
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable/WeightedChoice for repeated static weights including owned index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }

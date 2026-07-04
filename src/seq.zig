@@ -2463,6 +2463,29 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             for (dest) |*index| index.* = @intCast(self.table.sampleFrom(source));
         }
 
+        pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
+            return self.indicesFrom(allocator, rng, amount);
+        }
+
+        pub fn indicesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            self.fillIndicesFrom(source, out);
+            return out;
+        }
+
+        pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
+            return self.indicesU32From(allocator, rng, amount);
+        }
+
+        pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillIndicesU32From(source, out);
+            return out;
+        }
+
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
             return rng.sampleIter(*const T, self);
         }
@@ -5590,6 +5613,20 @@ test "weighted choice sampler maps alias indexes to items" {
         try std.testing.expect(index == 1 or index == 2);
         try std.testing.expect(!std.mem.eql(u8, labels[index], "never"));
     }
+    const owned_indices = try choice.indicesFrom(std.testing.allocator, &engine, 8);
+    defer std.testing.allocator.free(owned_indices);
+    try std.testing.expectEqual(@as(usize, 8), owned_indices.len);
+    for (owned_indices) |index| {
+        try std.testing.expect(index == 1 or index == 2);
+        try std.testing.expect(!std.mem.eql(u8, labels[index], "never"));
+    }
+    const owned_indices_u32 = try choice.indicesU32From(std.testing.allocator, &engine, 8);
+    defer std.testing.allocator.free(owned_indices_u32);
+    try std.testing.expectEqual(@as(usize, 8), owned_indices_u32.len);
+    for (owned_indices_u32) |index| {
+        try std.testing.expect(index == 1 or index == 2);
+        try std.testing.expect(!std.mem.eql(u8, labels[index], "never"));
+    }
 
     var iter = choice.iter(rng);
     const picked = iter.next().?.*;
@@ -5662,8 +5699,38 @@ test "single-positive weighted choice does not consume random stream" {
     for (index_u32_buf) |index| try std.testing.expectEqual(@as(u32, 1), index);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const owned_indices = try choice.indicesFrom(std.testing.allocator, &engine, 4);
+    defer std.testing.allocator.free(owned_indices);
+    for (owned_indices) |index| try std.testing.expectEqual(@as(usize, 1), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_indices_u32 = try choice.indicesU32From(std.testing.allocator, &engine, 4);
+    defer std.testing.allocator.free(owned_indices_u32);
+    for (owned_indices_u32) |index| try std.testing.expectEqual(@as(u32, 1), index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try choice.update(&.{ 0, 0, 7 });
     try std.testing.expectEqual(@as(u8, 30), choice.sampleValueFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "weighted choice owned index allocation failure does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_0483);
+    var control = alea.ScalarPrng.init(0x5150_0483);
+
+    const items = [_]u8{ 10, 20, 30 };
+    var choice = try WeightedChoice(u8, u32).init(std.testing.allocator, &items, &.{ 1, 2, 3 });
+    defer choice.deinit();
+
+    var indices_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, choice.indicesFrom(indices_alloc.allocator(), &engine, 4));
+    try std.testing.expect(indices_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var indices_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, choice.indicesU32From(indices_u32_alloc.allocator(), &engine, 4));
+    try std.testing.expect(indices_u32_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
