@@ -126,6 +126,7 @@ Local Alea evidence:
 - `compare/results/s4-m86-rng-owned-bytes.md`
 - `compare/results/s4-m87-rng-owned-ranges.md`
 - `compare/results/s4-m88-rng-owned-strict-intervals.md`
+- `compare/results/s4-m89-rng-owned-probabilities.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -141,7 +142,7 @@ Out of scope for this Linux-first audit:
 
 | Rust area | Alea status | Evidence |
 | --- | --- | --- |
-| integer, float, bool, range, owned range and strict-interval batches, ratio/chance, caller-owned and allocation-returning bytes | Covered | `Rng`, `Rng.rangeBatch`, `Rng.openBatch`, `Rng.openClosedBatch`, `Rng.bytesAlloc`, unit tests, Zig/Rust benchmark rows |
+| integer, float, bool, range, owned range/strict-interval/probability batches, ratio/chance, caller-owned and allocation-returning bytes | Covered | `Rng`, `Rng.rangeBatch`, `Rng.openBatch`, `Rng.openClosedBatch`, `Rng.chanceBatch`, `Rng.ratioBatch`, `Rng.bytesAlloc`, unit tests, Zig/Rust benchmark rows |
 | arrays, tuples, enums | Covered | `Rng.value(T)`, `Rng.valueBatch(T)`, and checked empty-enum tests |
 | Unicode scalar / char-like sampling | Covered in Zig form | `Rng.unicodeScalar`, `ascii.unicodeUtf8Alloc`, `ascii.unicodeUtf8Into` |
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost` |
@@ -288,5 +289,6 @@ S4-M82 adds Choice owned index batches, S4-M83 adds WeightedChoice owned
 index batches, S4-M84 adds reusable choice owned value/pointer batches, and
 S4-M85 adds Rng owned repeated value/sample batches, S4-M86 adds Rng owned
 byte buffers, S4-M87 adds Rng owned scalar range batches, and S4-M88 adds
-Rng owned strict-interval float batches, but later stages should keep raising the
-bar rather than declaring the product permanently finished.
+Rng owned strict-interval float batches, and S4-M89 adds Rng owned probability
+bool batches, but later stages should keep raising the bar rather than declaring
+the product permanently finished.

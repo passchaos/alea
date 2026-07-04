@@ -50,7 +50,7 @@ selection.
   `vectorNormal`, `vectorStandardExponential`, `vectorExponential` for
   `f32`/`f64`, integer, and boolean lanes
 - booleans: `boolean`, `booleanFrom`, `chance`, `chanceFrom`, `ratio`, `ratioFrom`,
-  `fillChance`, `fillRatio`
+  `fillChance`, `fillRatio`, `chanceBatch`, and `ratioBatch`
 - durations: `durationRangeLessThan`, `durationRangeAtMost`,
   `durationRangeLessThanFrom`, `durationRangeAtMostFrom`
 - Unicode scalar values: `unicodeScalar`, `unicodeScalarFrom`
@@ -63,8 +63,10 @@ selection.
 - allocation-returning repeated sampling: `valueBatch`, `valueBatchFrom`,
   `valueBatchChecked`, `valueBatchCheckedFrom`, `sampleBatch`,
   `sampleBatchFrom`, `rangeBatch`, `rangeBatchFrom`, `rangeBatchChecked`,
-  `rangeBatchCheckedFrom`, `openBatch`, `openBatchFrom`, `openClosedBatch`, and
-  `openClosedBatchFrom` allocate owned slices after validating no-consume
+  `rangeBatchCheckedFrom`, `openBatch`, `openBatchFrom`, `openClosedBatch`,
+  `openClosedBatchFrom`, `chanceBatch`, `chanceBatchFrom`, `chanceBatchChecked`,
+  `chanceBatchCheckedFrom`, `ratioBatch`, `ratioBatchFrom`,
+  `ratioBatchChecked`, and `ratioBatchCheckedFrom` allocate owned slices after validating no-consume
   checked cases; use these when an owned result is more ergonomic than a caller
   buffer or iterator loop
 - owned byte buffers: `bytesAlloc` / `bytesAllocFrom` allocate random byte slices after allocation succeeds; use `bytes` or `fill(u8, ...)` for caller-owned buffers

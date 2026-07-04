@@ -14,9 +14,9 @@ The current Linux-first roadmap is intentionally broad:
 - `Rng.value(T)` / `Rng.valueChecked(T)` for scalar, enum, tuple, and array
   sampling, including fallible empty-enum handling
 - `Rng.valueBatch(T)` / `Rng.valueBatchChecked(T)`,
-  `Rng.sampleBatch(T, sampler)`, `Rng.rangeBatch(T, min, max)`, and strict
-  interval `openBatch` / `openClosedBatch` for allocation-returning repeated
-  samples
+  `Rng.sampleBatch(T, sampler)`, `Rng.rangeBatch(T, min, max)`, strict
+  interval `openBatch` / `openClosedBatch`, and probability `chanceBatch` /
+  `ratioBatch` for allocation-returning repeated samples
 - `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling,
   including bulk `fill` methods where stream policy permits
 - bulk `fillSample`, `fillRange`, strict-interval scalar and vector float

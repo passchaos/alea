@@ -399,6 +399,27 @@ pub fn fillChance(self: Rng, dest: []bool, p: f64) void {
     fillChanceFrom(self, dest, p);
 }
 
+pub fn chanceBatch(self: Rng, allocator: std.mem.Allocator, count: usize, p: f64) ![]bool {
+    return chanceBatchFrom(self, allocator, count, p);
+}
+
+pub fn chanceBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, p: f64) ![]bool {
+    const out = try allocator.alloc(bool, count);
+    errdefer allocator.free(out);
+    fillChanceFrom(source, out, p);
+    return out;
+}
+
+pub fn chanceBatchChecked(self: Rng, allocator: std.mem.Allocator, count: usize, p: f64) ![]bool {
+    return chanceBatchCheckedFrom(self, allocator, count, p);
+}
+
+pub fn chanceBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, p: f64) ![]bool {
+    if (count == 0) return allocator.alloc(bool, 0);
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+    return chanceBatchFrom(source, allocator, count, p);
+}
+
 pub fn fillChanceFrom(source: anytype, dest: []bool, p: f64) void {
     std.debug.assert(p >= 0 and p <= 1);
     if (p == 0) {
@@ -434,6 +455,27 @@ pub fn fillChanceCheckedFrom(source: anytype, dest: []bool, p: f64) Error!void {
 
 pub fn fillRatio(self: Rng, dest: []bool, numerator: u32, denominator: u32) void {
     fillRatioFrom(self, dest, numerator, denominator);
+}
+
+pub fn ratioBatch(self: Rng, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]bool {
+    return ratioBatchFrom(self, allocator, count, numerator, denominator);
+}
+
+pub fn ratioBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]bool {
+    const out = try allocator.alloc(bool, count);
+    errdefer allocator.free(out);
+    fillRatioFrom(source, out, numerator, denominator);
+    return out;
+}
+
+pub fn ratioBatchChecked(self: Rng, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]bool {
+    return ratioBatchCheckedFrom(self, allocator, count, numerator, denominator);
+}
+
+pub fn ratioBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]bool {
+    if (count == 0) return allocator.alloc(bool, 0);
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
+    return ratioBatchFrom(source, allocator, count, numerator, denominator);
 }
 
 pub fn fillRatioFrom(source: anytype, dest: []bool, numerator: u32, denominator: u32) void {
@@ -3200,11 +3242,25 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(bool, &chance_unchecked, &chance_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        const chance_owned = try chanceBatchFrom(&unchecked, std.testing.allocator, 16, 0.25);
+        defer std.testing.allocator.free(chance_owned);
+        const chance_checked_owned = try chanceBatchCheckedFrom(&checked, std.testing.allocator, 16, 0.25);
+        defer std.testing.allocator.free(chance_checked_owned);
+        try std.testing.expectEqualSlices(bool, chance_owned, chance_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var ratio_unchecked: [16]bool = undefined;
         var ratio_checked: [16]bool = undefined;
         fillRatioFrom(&unchecked, &ratio_unchecked, 3, 8);
         try fillRatioCheckedFrom(&checked, &ratio_checked, 3, 8);
         try std.testing.expectEqualSlices(bool, &ratio_unchecked, &ratio_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const ratio_owned = try ratioBatchFrom(&unchecked, std.testing.allocator, 16, 3, 8);
+        defer std.testing.allocator.free(ratio_owned);
+        const ratio_checked_owned = try ratioBatchCheckedFrom(&checked, std.testing.allocator, 16, 3, 8);
+        defer std.testing.allocator.free(ratio_checked_owned);
+        try std.testing.expectEqualSlices(bool, ratio_owned, ratio_checked_owned);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var normal_unchecked: [8]f64 = undefined;
@@ -3892,6 +3948,67 @@ test "invalid facade checked fills do not consume random stream" {
 
     var vec_floats: [2]@Vector(8, f32) = undefined;
     try std.testing.expectError(error.InvalidParameter, rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_floats, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "owned probability batches allocate and validate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_89a0);
+    var control = alea.ScalarPrng.init(0x5150_89a0);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.chanceBatchChecked(empty_alloc.allocator(), 0, -0.1);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_chance_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, rng.chanceBatchChecked(invalid_chance_alloc.allocator(), 8, -0.1));
+    try std.testing.expect(!invalid_chance_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_ratio_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, ratioBatchCheckedFrom(&engine, invalid_ratio_alloc.allocator(), 8, 2, 1));
+    try std.testing.expect(!invalid_ratio_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var chance_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.chanceBatchChecked(chance_alloc.allocator(), 8, 0.25));
+    try std.testing.expect(chance_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var ratio_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, ratioBatchFrom(&engine, ratio_alloc.allocator(), 8, 3, 8));
+    try std.testing.expect(ratio_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate owned probability batches do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_89a1);
+    var control = alea.ScalarPrng.init(0x5150_89a1);
+    const rng = Rng.init(&engine);
+
+    const all_false = try rng.chanceBatchChecked(std.testing.allocator, 8, 0);
+    defer std.testing.allocator.free(all_false);
+    for (all_false) |sample| try std.testing.expect(!sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const all_true = try chanceBatchCheckedFrom(&engine, std.testing.allocator, 8, 1);
+    defer std.testing.allocator.free(all_true);
+    for (all_true) |sample| try std.testing.expect(sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const ratio_false = try rng.ratioBatchChecked(std.testing.allocator, 8, 0, 7);
+    defer std.testing.allocator.free(ratio_false);
+    for (ratio_false) |sample| try std.testing.expect(!sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const ratio_true = try ratioBatchCheckedFrom(&engine, std.testing.allocator, 8, 7, 7);
+    defer std.testing.allocator.free(ratio_true);
+    for (ratio_true) |sample| try std.testing.expect(sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
