@@ -66,10 +66,13 @@ pub fn main(init: std.process.Init) !void {
     const vec_open = alea.Rng.vectorOpenFrom(&vector_engine, @Vector(4, f32));
     const vec_open_closed = alea.Rng.vectorOpenClosedFrom(&vector_engine, @Vector(4, f32));
     const vec_uniform = alea.distributions.vectorUniformFrom(&vector_engine, @Vector(4, f32), 10, 20);
+    const vec_range_batch = try alea.Rng.vectorRangeBatchFrom(&vector_engine, @Vector(4, f32), allocator, 3, -1, 1);
+    defer allocator.free(vec_range_batch);
     try stdout.print("vectorRange f32x4 [-1,1): {any}\n", .{vec_range});
     try stdout.print("vectorOpen f32x4 (0,1): {any}\n", .{vec_open});
     try stdout.print("vectorOpenClosed f32x4 (0,1]: {any}\n", .{vec_open_closed});
     try stdout.print("distribution vectorUniform f32x4 [10,20): {any}\n", .{vec_uniform});
+    try stdout.print("vectorRangeBatch f32x4 [-1,1): {any}\n", .{vec_range_batch});
 
     const collapsed = rng.floatRange(f64, 2.5, 2.5);
     const checked_error_name = if (rng.intRangeLessThanChecked(u32, 3, 3)) |_| "unexpected-success" else |err| @errorName(err);

@@ -74,7 +74,9 @@ stability expectations.
 - Floats: `float`, `floatFrom`, `floatOpen`, `floatOpenFrom`,
   `floatOpenClosed`, `floatOpenClosedFrom`
 - Vectors: `vector`, `vectorOpen`, `vectorOpenClosed`, `vectorRange`,
-  `vectorRangeChecked`, `vectorRangeCheckedFrom`, `vectorChance`,
+  `vectorRangeChecked`, `vectorRangeCheckedFrom`, `vectorRangeBatch`,
+  `vectorRangeBatchFrom`, `vectorRangeBatchChecked`,
+  `vectorRangeBatchCheckedFrom`, `vectorChance`,
   `vectorChanceChecked`, `vectorChanceCheckedFrom`, `vectorRatio`,
   `vectorRatioChecked`, `vectorRatioCheckedFrom`,
   `vectorStandardNormal`, `vectorNormal`, `vectorNormalChecked`,

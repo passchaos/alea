@@ -517,6 +517,17 @@ pub fn fillVectorRange(self: Rng, comptime VectorType: type, dest: []VectorType,
     fillVectorRangeFrom(self, VectorType, dest, min, max);
 }
 
+pub fn vectorRangeBatch(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
+    return vectorRangeBatchFrom(self, VectorType, allocator, count, min, max);
+}
+
+pub fn vectorRangeBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
+    const out = try allocator.alloc(VectorType, count);
+    errdefer allocator.free(out);
+    fillVectorRangeFrom(source, VectorType, out, min, max);
+    return out;
+}
+
 pub fn fillVectorOpen(self: Rng, comptime VectorType: type, dest: []VectorType) void {
     fillVectorOpenFrom(self, VectorType, dest);
 }
@@ -555,6 +566,25 @@ pub fn fillVectorRangeFrom(source: anytype, comptime VectorType: type, dest: []V
 
 pub fn fillVectorRangeChecked(self: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
     return fillVectorRangeCheckedFrom(self, VectorType, dest, min, max);
+}
+
+pub fn vectorRangeBatchChecked(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
+    return vectorRangeBatchCheckedFrom(self, VectorType, allocator, count, min, max);
+}
+
+pub fn vectorRangeBatchCheckedFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
+    if (count == 0) return allocator.alloc(VectorType, 0);
+    const info = vectorInfo(VectorType);
+    switch (@typeInfo(info.child)) {
+        .int => {
+            if (min >= max) return error.EmptyRange;
+        },
+        .float => {
+            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+        },
+        else => @compileError("Rng.vectorRangeBatchChecked supports integer and floating-point vectors"),
+    }
+    return vectorRangeBatchFrom(source, VectorType, allocator, count, min, max);
 }
 
 pub fn fillVectorRangeCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
@@ -3416,6 +3446,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(@Vector(8, f32), &vector_range_unchecked, &vector_range_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        const vector_range_owned = try vectorRangeBatchFrom(&unchecked, @Vector(8, f32), std.testing.allocator, 4, -1, 1);
+        defer std.testing.allocator.free(vector_range_owned);
+        const vector_range_checked_owned = try vectorRangeBatchCheckedFrom(&checked, @Vector(8, f32), std.testing.allocator, 4, -1, 1);
+        defer std.testing.allocator.free(vector_range_checked_owned);
+        try std.testing.expectEqualSlices(@Vector(8, f32), vector_range_owned, vector_range_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var vector_chance_unchecked: [4]@Vector(8, bool) = undefined;
         var vector_chance_checked: [4]@Vector(8, bool) = undefined;
         fillVectorChanceFrom(&unchecked, @Vector(8, bool), &vector_chance_unchecked, 0.25);
@@ -3863,6 +3900,35 @@ test "owned range batches allocate and validate before consuming random stream" 
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "owned vector range batches allocate and validate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_9220);
+    var control = alea.ScalarPrng.init(0x5150_9220);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.vectorRangeBatchChecked(@Vector(4, u32), empty_alloc.allocator(), 0, 3, 3);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_int_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.vectorRangeBatchChecked(@Vector(4, u32), invalid_int_alloc.allocator(), 4, 3, 3));
+    try std.testing.expect(!invalid_int_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_float_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, vectorRangeBatchCheckedFrom(&engine, @Vector(4, f64), invalid_float_alloc.allocator(), 4, std.math.inf(f64), 1));
+    try std.testing.expect(!invalid_float_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.vectorRangeBatchChecked(@Vector(8, f32), alloc.allocator(), 4, -1, 1));
+    try std.testing.expect(alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "degenerate range helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_ba4);
@@ -3933,10 +3999,20 @@ test "degenerate range helpers do not consume random stream" {
     try std.testing.expectEqual(@as(@Vector(4, u32), @splat(13)), vectorRangeFrom(&engine, @Vector(4, u32), 13, 14));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const owned_vec_ints = try vectorRangeBatchCheckedFrom(&engine, @Vector(4, u32), std.testing.allocator, 3, 13, 14);
+    defer std.testing.allocator.free(owned_vec_ints);
+    for (owned_vec_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, u32), @splat(13)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-14)), try rng.vectorRangeChecked(@Vector(4, i32), -14, -13));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(6.25)), vectorRangeFrom(&engine, @Vector(4, f64), 6.25, 6.25));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_vec_floats = try rng.vectorRangeBatch(@Vector(4, f64), std.testing.allocator, 3, 6.25, 6.25);
+    defer std.testing.allocator.free(owned_vec_floats);
+    for (owned_vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(6.25)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(@Vector(8, f32), @splat(-2.5)), try rng.vectorRangeChecked(@Vector(8, f32), -2.5, -2.5));
