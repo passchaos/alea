@@ -248,7 +248,9 @@ Use:
   `valuesInto` / `ptrsInto` / `mutPtrsInto`, and checked variants for mapping indexes back to slice items
 - `seq.sampleArray`, `seq.sampleArrayFrom`, `seq.sampleArrayCheckedFrom`
 - `seq.chooseMultiple`, `seq.chooseMultipleFrom`,
-  `seq.chooseMultipleCheckedFrom`, `seq.chooseMultipleIntoFrom`,
+  `seq.chooseMultipleCheckedFrom`, `seq.chooseMultiplePtrsFrom`,
+  `seq.chooseMultiplePtrsCheckedFrom`, `seq.chooseMultipleMutPtrsFrom`,
+  `seq.chooseMultipleMutPtrsCheckedFrom`, `seq.chooseMultipleIntoFrom`,
   `seq.chooseMultipleIntoCheckedFrom`, `seq.chooseMultiplePtrsIntoFrom`,
   `seq.chooseMultiplePtrsIntoCheckedFrom`,
   `seq.chooseMultipleMutPtrsIntoFrom`,

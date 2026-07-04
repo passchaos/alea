@@ -459,6 +459,56 @@ pub fn chooseMultipleFrom(allocator: std.mem.Allocator, source: anytype, comptim
     return out;
 }
 
+pub fn chooseMultiplePtrs(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    return chooseMultiplePtrsFrom(allocator, rng, T, items, amount);
+}
+
+pub fn chooseMultiplePtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    return chooseMultiplePtrsCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn chooseMultiplePtrsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    if (amount > items.len) return error.InvalidParameter;
+    return chooseMultiplePtrsFrom(allocator, source, T, items, amount);
+}
+
+pub fn chooseMultiplePtrsFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]*const T {
+    const count = @min(amount, items.len);
+    const out = try allocator.alloc(*const T, count);
+    errdefer allocator.free(out);
+
+    const indices = try sampleIndicesFrom(allocator, source, items.len, count);
+    defer allocator.free(indices);
+
+    for (indices, out) |index, *slot| slot.* = &items[index];
+    return out;
+}
+
+pub fn chooseMultipleMutPtrs(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []T, amount: usize) ![]*T {
+    return chooseMultipleMutPtrsFrom(allocator, rng, T, items, amount);
+}
+
+pub fn chooseMultipleMutPtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []T, amount: usize) ![]*T {
+    return chooseMultipleMutPtrsCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn chooseMultipleMutPtrsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []T, amount: usize) ![]*T {
+    if (amount > items.len) return error.InvalidParameter;
+    return chooseMultipleMutPtrsFrom(allocator, source, T, items, amount);
+}
+
+pub fn chooseMultipleMutPtrsFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []T, amount: usize) ![]*T {
+    const count = @min(amount, items.len);
+    const out = try allocator.alloc(*T, count);
+    errdefer allocator.free(out);
+
+    const indices = try sampleIndicesFrom(allocator, source, items.len, count);
+    defer allocator.free(indices);
+
+    for (indices, out) |index, *slot| slot.* = &items[index];
+    return out;
+}
+
 pub fn chooseMultipleInto(rng: Rng, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!usize {
     return chooseMultipleIntoFrom(rng, T, items, out, scratch_indices);
 }
@@ -3728,6 +3778,106 @@ test "choose pointer arrays return fixed-size pointer samples" {
     try std.testing.expectError(error.InvalidParameter, choosePtrArrayCheckedFrom(&facade_engine, u8, 9, &items));
     try std.testing.expect(chooseMutPtrArrayFrom(&facade_engine, u8, 9, &mutable) == null);
     try std.testing.expectError(error.InvalidParameter, chooseMutPtrArrayCheckedFrom(&facade_engine, u8, 9, &mutable));
+}
+
+test "chooseMultiple pointer slices allocate pointer subsets" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    var optional_engine = alea.ScalarPrng.init(0x5150_c301);
+    const optional = try chooseMultiplePtrsFrom(std.testing.allocator, &optional_engine, u8, &items, 8);
+    defer std.testing.allocator.free(optional);
+    try std.testing.expectEqual(@as(usize, items.len), optional.len);
+    for (optional) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+        try std.testing.expect(index < items.len);
+        try std.testing.expectEqual(&items[index], ptr);
+    }
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_c302);
+    const checked = try chooseMultiplePtrsCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 3);
+    defer std.testing.allocator.free(checked);
+    try std.testing.expectEqual(@as(usize, 3), checked.len);
+    for (checked) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+        try std.testing.expect(index < items.len);
+        try std.testing.expectEqual(&items[index], ptr);
+    }
+
+    var mutable = items;
+    var mut_engine = alea.ScalarPrng.init(0x5150_c303);
+    const mut_ptrs = try chooseMultipleMutPtrsCheckedFrom(std.testing.allocator, &mut_engine, u8, &mutable, 3);
+    defer std.testing.allocator.free(mut_ptrs);
+    var expected = items;
+    for (mut_ptrs) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&mutable[0]), @sizeOf(u8));
+        try std.testing.expect(index < mutable.len);
+        try std.testing.expectEqual(&mutable[index], ptr);
+        ptr.* += 1;
+        expected[index] += 1;
+    }
+    try std.testing.expectEqualSlices(u8, &expected, &mutable);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_c304);
+    var empty_control = alea.ScalarPrng.init(0x5150_c304);
+    const empty = try chooseMultiplePtrsFrom(std.testing.allocator, &empty_engine, u8, &items, 0);
+    defer std.testing.allocator.free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "chooseMultiple pointer slices preserve stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c305);
+        var direct_engine = Engine.init(0x5150_c305);
+        const rng = Rng.init(&facade_engine);
+
+        const facade = try chooseMultiplePtrs(std.testing.allocator, rng, u8, &items, 3);
+        defer std.testing.allocator.free(facade);
+        const direct = try chooseMultiplePtrsFrom(std.testing.allocator, &direct_engine, u8, &items, 3);
+        defer std.testing.allocator.free(direct);
+        for (facade, direct) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(facade_index, direct_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_items = items;
+        var direct_items = items;
+        const facade_mut = try chooseMultipleMutPtrs(std.testing.allocator, rng, u8, &facade_items, 3);
+        defer std.testing.allocator.free(facade_mut);
+        const direct_mut = try chooseMultipleMutPtrsFrom(std.testing.allocator, &direct_engine, u8, &direct_items, 3);
+        defer std.testing.allocator.free(direct_mut);
+        for (facade_mut, direct_mut) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(facade_index, direct_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_c306);
+    var invalid_control = alea.ScalarPrng.init(0x5150_c306);
+    try std.testing.expectError(error.InvalidParameter, chooseMultiplePtrsCheckedFrom(std.testing.allocator, &invalid_engine, u8, &items, 6));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var mutable_items = items;
+    try std.testing.expectError(error.InvalidParameter, chooseMultipleMutPtrsCheckedFrom(std.testing.allocator, &invalid_engine, u8, &mutable_items, 6));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var out_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, chooseMultiplePtrsFrom(out_alloc.allocator(), &invalid_engine, u8, &items, 3));
+    try std.testing.expect(out_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var index_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, chooseMultiplePtrsFrom(index_alloc.allocator(), &invalid_engine, u8, &items, 3));
+    try std.testing.expect(index_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "chooseMultipleInto fills caller-owned item buffers" {
