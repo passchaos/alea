@@ -323,6 +323,7 @@ zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast profilecheck
 zig build -Doptimize=ReleaseFast profilecheck-tail
 zig build -Doptimize=ReleaseFast profilecheck-stress
+zig build -Doptimize=ReleaseFast profilecheck-long
 zig build -Doptimize=ReleaseFast wasi-profilecheck
 zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/alea.bin
 sh tools/practrand.sh fast 1073741824
