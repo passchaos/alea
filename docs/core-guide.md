@@ -328,7 +328,8 @@ Use:
   `seq.sampleIteratorWeightedIntoFrom`,
   `seq.sampleIteratorWeightedIntoCheckedFrom`
 - `Rng.weightedIndexFrom`, `Rng.fillWeightedIndexFrom`,
-  `Rng.weightedIndexBatchFrom`, `seq.weightedIndex`, `seq.weightedIndexFrom`,
+  `Rng.weightedIndexBatchFrom`, `Rng.fillWeightedIndexU32From`,
+  `Rng.weightedIndexU32BatchFrom`, `seq.weightedIndex`, `seq.weightedIndexFrom`,
   `seq.weightedIndexCheckedFrom`, `seq.weightedIndexU32From`,
   `seq.weightedIndexU32CheckedFrom`
 - `seq.chooseWeighted`, `seq.chooseWeightedFrom`,
