@@ -1219,6 +1219,35 @@ pub fn sampleWeightedIndicesFrom(allocator: std.mem.Allocator, source: anytype, 
     return sampleWeightedIndicesExactFrom(allocator, source, Weight, weights, count);
 }
 
+pub fn sampleWeightedIndexVec(allocator: std.mem.Allocator, rng: Rng, comptime Weight: type, weights: []const Weight, amount: usize) !IndexVec {
+    return sampleWeightedIndexVecFrom(allocator, rng, Weight, weights, amount);
+}
+
+pub fn sampleWeightedIndexVecFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) !IndexVec {
+    if (amount == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
+    if (weights.len == 0) return error.EmptyInput;
+
+    const positive = try countPositiveWeights(Weight, weights);
+    const count = @min(amount, positive);
+    if (count == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
+    if (positive == 1) return singlePositiveWeightIndexVecAlloc(allocator, Weight, weights);
+    return sampleWeightedIndexVecExactFrom(allocator, source, Weight, weights, count);
+}
+
+pub fn sampleWeightedIndexVecChecked(allocator: std.mem.Allocator, rng: Rng, comptime Weight: type, weights: []const Weight, amount: usize) !IndexVec {
+    return sampleWeightedIndexVecCheckedFrom(allocator, rng, Weight, weights, amount);
+}
+
+pub fn sampleWeightedIndexVecCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) !IndexVec {
+    if (amount == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
+    if (amount > weights.len) return error.InvalidParameter;
+
+    const positive = try countPositiveWeights(Weight, weights);
+    if (positive < amount) return error.InvalidParameter;
+    if (positive == 1 and amount == 1) return singlePositiveWeightIndexVecAlloc(allocator, Weight, weights);
+    return sampleWeightedIndexVecExactFrom(allocator, source, Weight, weights, amount);
+}
+
 pub fn sampleWeightedIndicesInto(rng: Rng, comptime Weight: type, weights: []const Weight, out: []usize, scratch_keys: []f64) Error!usize {
     return sampleWeightedIndicesIntoFrom(rng, Weight, weights, out, scratch_keys);
 }
@@ -1376,6 +1405,32 @@ fn sampleWeightedIndicesExactFrom(allocator: std.mem.Allocator, source: anytype,
         out[i] = candidate.index;
     }
     return out;
+}
+
+fn sampleWeightedIndexVecExactFrom(allocator: std.mem.Allocator, source: anytype, comptime Weight: type, weights: []const Weight, amount: usize) !IndexVec {
+    std.debug.assert(amount > 0);
+    std.debug.assert(amount <= weights.len);
+
+    if (weights.len <= std.math.maxInt(u32)) {
+        const out = try allocator.alloc(u32, amount);
+        errdefer allocator.free(out);
+        const scratch = try allocator.alloc(usize, amount);
+        defer allocator.free(scratch);
+        const keys = try allocator.alloc(f64, amount);
+        defer allocator.free(keys);
+
+        sampleWeightedIndicesIntoExactFrom(source, Weight, weights, scratch, keys);
+        for (scratch, out) |index, *slot| slot.* = @intCast(index);
+        return .{ .u32 = out };
+    }
+
+    const out = try allocator.alloc(usize, amount);
+    errdefer allocator.free(out);
+    const keys = try allocator.alloc(f64, amount);
+    defer allocator.free(keys);
+
+    sampleWeightedIndicesIntoExactFrom(source, Weight, weights, out, keys);
+    return .{ .usize = out };
 }
 
 pub fn sampleWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
@@ -2441,6 +2496,18 @@ fn singlePositiveWeightIndexAlloc(allocator: std.mem.Allocator, comptime Weight:
     const out = try allocator.alloc(usize, 1);
     out[0] = index;
     return out;
+}
+
+fn singlePositiveWeightIndexVecAlloc(allocator: std.mem.Allocator, comptime Weight: type, weights: []const Weight) !IndexVec {
+    const index = (try singlePositiveWeightIndex(Weight, weights)).?;
+    if (weights.len <= std.math.maxInt(u32)) {
+        const out = try allocator.alloc(u32, 1);
+        out[0] = @intCast(index);
+        return .{ .u32 = out };
+    }
+    const out = try allocator.alloc(usize, 1);
+    out[0] = index;
+    return .{ .usize = out };
 }
 
 fn singlePositiveWeightItemAlloc(
@@ -5017,9 +5084,26 @@ test "weighted sampling without replacement returns distinct positive-weight ite
         try std.testing.expect(weights[index] > 0);
     }
 
+    const index_vec = try sampleWeightedIndexVecFrom(std.testing.allocator, &engine, f64, &weights, 4);
+    defer index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 3), index_vec.len());
+    switch (index_vec) {
+        .u32 => {},
+        .usize => return error.TestExpectedEqual,
+    }
+    var index_vec_iter = index_vec.iter();
+    while (index_vec_iter.next()) |index| {
+        try std.testing.expect(index < weights.len);
+        try std.testing.expect(weights[index] > 0);
+    }
+
     const checked_indices = try sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, f64, &weights, 3);
     defer std.testing.allocator.free(checked_indices);
     try std.testing.expectEqual(@as(usize, 3), checked_indices.len);
+
+    const checked_index_vec = try sampleWeightedIndexVecCheckedFrom(std.testing.allocator, &engine, f64, &weights, 3);
+    defer checked_index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 3), checked_index_vec.len());
 
     const direct_sample = try sampleWeightedFrom(std.testing.allocator, &engine, u8, f64, &items, &weights, 2);
     defer std.testing.allocator.free(direct_sample);
@@ -5037,6 +5121,9 @@ test "weighted sampling without replacement returns distinct positive-weight ite
     const invalid_empty_checked_indices = try sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, f64, &.{std.math.nan(f64)}, 0);
     defer std.testing.allocator.free(invalid_empty_checked_indices);
     try std.testing.expectEqual(@as(usize, 0), invalid_empty_checked_indices.len);
+    const empty_checked_index_vec = try sampleWeightedIndexVecCheckedFrom(std.testing.allocator, &engine, f64, &.{std.math.nan(f64)}, 0);
+    defer empty_checked_index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 0), empty_checked_index_vec.len());
     const empty_checked_sample = try sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{}, &.{1}, 0);
     defer std.testing.allocator.free(empty_checked_sample);
     try std.testing.expectEqual(@as(usize, 0), empty_checked_sample.len);
@@ -5046,9 +5133,12 @@ test "weighted sampling without replacement returns distinct positive-weight ite
 
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndices(std.testing.allocator, rng, u32, &.{}, 1));
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesFrom(std.testing.allocator, &engine, u32, &.{}, 1));
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndexVecFrom(std.testing.allocator, &engine, u32, &.{}, 1));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesChecked(std.testing.allocator, rng, u32, &.{ 1, 2 }, 3));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, u32, &.{ 1, 2 }, 3));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexVecCheckedFrom(std.testing.allocator, &engine, u32, &.{ 1, 2 }, 3));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndices(std.testing.allocator, rng, f64, &.{ 1.0, std.math.nan(f64) }, 1));
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexVecFrom(std.testing.allocator, &engine, f64, &.{ 1.0, std.math.nan(f64) }, 1));
     try std.testing.expectError(error.LengthMismatch, sampleWeighted(std.testing.allocator, rng, u8, u32, &.{ 1, 2 }, &.{1}, 1));
     try std.testing.expectError(error.LengthMismatch, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 1));
     try std.testing.expectError(error.LengthMismatch, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 3));

@@ -114,6 +114,19 @@ pub fn main(init: std.process.Init) !void {
     const weighted_index_array = (try alea.seq.sampleWeightedIndexArrayFrom(&index_array_engine, f64, 3, &float_weights)).?;
     try stdout.print("weighted index array: {any}\n", .{weighted_index_array});
 
+    var index_vec_engine = alea.ScalarPrng.init(0x7167);
+    const weighted_index_vec = try alea.seq.sampleWeightedIndexVecFrom(allocator, &index_vec_engine, f64, &float_weights, 3);
+    defer weighted_index_vec.deinit(allocator);
+    try stdout.print("weighted IndexVec: [", .{});
+    var weighted_index_vec_iter = weighted_index_vec.iter();
+    var first_weighted_index = true;
+    while (weighted_index_vec_iter.next()) |index| {
+        if (!first_weighted_index) try stdout.print(", ", .{});
+        first_weighted_index = false;
+        try stdout.print("{}", .{index});
+    }
+    try stdout.print("]\n", .{});
+
     var indices_into_engine = alea.ScalarPrng.init(0x715b);
     var weighted_indices_into: [3]usize = undefined;
     var weighted_indices_keys: [3]f64 = undefined;

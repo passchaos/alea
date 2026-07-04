@@ -25,7 +25,7 @@ const examples = [_]Example{
     .{
         .path = "examples/weighted_sampling.zig",
         .step = "zig build run-weighted-sampling",
-        .source_tokens = &.{ "generic weighted index", "weighted ptrs into", "weighted no-replacement ptrs" },
+        .source_tokens = &.{ "generic weighted index", "weighted ptrs into", "weighted no-replacement ptrs", "weighted IndexVec" },
     },
     .{
         .path = "examples/sequence_sampling.zig",
