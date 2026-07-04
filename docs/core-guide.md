@@ -400,7 +400,7 @@ Use:
   `Choice.sampleIndexU32From`, `Choice.fillValuesFrom` / `fillFrom`,
   `Choice.valuesFrom` / `ptrsFrom`, `Choice.fillIndicesFrom`,
   `Choice.fillIndicesU32From`, `Choice.indicesFrom`, `Choice.indicesU32From`,
-  `WeightedChoice.update`,
+  `WeightedChoice.initBy` / `updateBy`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
   `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
   `sampleIndexU32From`, `WeightedChoice.fillValuesFrom` / `fillFrom`,

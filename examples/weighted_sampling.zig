@@ -186,6 +186,16 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(choice_owned_ptrs);
     try stdout.print("WeightedChoice.ptrsFrom: [{s}, {s}, {s}, {s}, {s}, {s}, {s}, {s}]\n", .{ choice_owned_ptrs[0].*, choice_owned_ptrs[1].*, choice_owned_ptrs[2].*, choice_owned_ptrs[3].*, choice_owned_ptrs[4].*, choice_owned_ptrs[5].*, choice_owned_ptrs[6].*, choice_owned_ptrs[7].* });
 
+    var choice_by = try alea.seq.WeightedChoice(WeightedRecord, u32).initBy(allocator, &weighted_records, WeightedRecord.weightOf);
+    defer choice_by.deinit();
+    var choice_by_engine = alea.ScalarPrng.init(0x7186);
+    const choice_by_sample = choice_by.sampleFrom(&choice_by_engine);
+    try stdout.print("WeightedChoice.initBy sample: {s}\n", .{choice_by_sample.label});
+    try choice_by.updateBy(WeightedRecord.weightOf);
+    var choice_by_indices: [4]usize = undefined;
+    choice_by.fillIndicesFrom(&choice_by_engine, &choice_by_indices);
+    try stdout.print("WeightedChoice.updateBy indices: {any}\n", .{choice_by_indices});
+
     var no_replace_engine = alea.ScalarPrng.init(0x7156);
     const no_replace = try alea.seq.sampleWeightedFrom(allocator, &no_replace_engine, []const u8, f64, &items, &float_weights, 3);
     defer allocator.free(no_replace);

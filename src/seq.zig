@@ -3954,6 +3954,20 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             };
         }
 
+        pub fn initBy(
+            allocator: std.mem.Allocator,
+            items: []const T,
+            comptime weightFn: fn (*const T) Weight,
+        ) !Self {
+            if (items.len == 0) return error.EmptyInput;
+            const input_weights = try weightsFromItems(allocator, items, weightFn);
+            defer allocator.free(input_weights);
+            return .{
+                .items = items,
+                .table = try Table.init(allocator, input_weights),
+            };
+        }
+
         pub fn deinit(self: *Self) void {
             self.table.deinit();
             self.* = undefined;
@@ -4010,6 +4024,12 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn update(self: *Self, input_weights: []const Weight) !void {
             if (input_weights.len != self.items.len) return error.LengthMismatch;
+            try self.table.update(input_weights);
+        }
+
+        pub fn updateBy(self: *Self, comptime weightFn: fn (*const T) Weight) !void {
+            const input_weights = try weightsFromItems(self.table.allocator, self.items, weightFn);
+            defer self.table.allocator.free(input_weights);
             try self.table.update(input_weights);
         }
 
@@ -4146,6 +4166,17 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn iterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
             return Rng.sampleIterFrom(source, *const T, self);
+        }
+
+        fn weightsFromItems(
+            allocator: std.mem.Allocator,
+            items: []const T,
+            comptime weightFn: fn (*const T) Weight,
+        ) ![]Weight {
+            const out = try allocator.alloc(Weight, items.len);
+            errdefer allocator.free(out);
+            for (items, out) |*item, *slot| slot.* = weightFn(item);
+            return out;
         }
     };
 }
@@ -7978,6 +8009,98 @@ test "weighted choice init allocation failure cleans up" {
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
     try std.testing.expectError(error.OutOfMemory, WeightedChoice(u8, u32).init(failing.allocator(), &items, &.{ 1, 2, 3 }));
     try std.testing.expect(failing.has_induced_failure);
+}
+
+test "weighted choice accessor initialization and update use item weights" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        label: []const u8,
+        weight: u32,
+
+        fn weightOf(item: *const @This()) u32 {
+            return item.weight;
+        }
+
+        fn updatedWeight(item: *const @This()) u32 {
+            if (std.mem.eql(u8, item.label, "rare")) return 0;
+            if (std.mem.eql(u8, item.label, "often")) return 0;
+            return 5;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .label = "never", .weight = 0 },
+        .{ .label = "rare", .weight = 1 },
+        .{ .label = "often", .weight = 7 },
+    };
+
+    var choice = try WeightedChoice(Entry, u32).initBy(std.testing.allocator, &entries, Entry.weightOf);
+    defer choice.deinit();
+
+    try std.testing.expectEqual(@as(usize, 3), choice.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 8), choice.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try choice.weightAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try choice.weightAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7), try choice.weightAt(2), 1e-12);
+
+    var engine = alea.ScalarPrng.init(0x5150_c881);
+    var saw_often = false;
+    var i: usize = 0;
+    while (i < 32) : (i += 1) {
+        const item = choice.sampleFrom(&engine);
+        try std.testing.expect(!std.mem.eql(u8, item.label, "never"));
+        saw_often = saw_often or std.mem.eql(u8, item.label, "often");
+    }
+    try std.testing.expect(saw_often);
+
+    try choice.updateBy(Entry.updatedWeight);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), choice.totalWeight(), 1e-12);
+    try std.testing.expectEqual(@as(usize, 0), choice.sampleIndexFrom(&engine));
+    try std.testing.expect(std.mem.eql(u8, choice.sampleFrom(&engine).label, "never"));
+}
+
+test "weighted choice accessor invalid and allocation paths preserve table" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        label: []const u8,
+        weight: f64,
+
+        fn weightOf(item: *const @This()) f64 {
+            return item.weight;
+        }
+
+        fn invalidWeight(item: *const @This()) f64 {
+            if (std.mem.eql(u8, item.label, "rare")) return std.math.nan(f64);
+            return item.weight;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .label = "never", .weight = 0 },
+        .{ .label = "rare", .weight = 1 },
+        .{ .label = "often", .weight = 7 },
+    };
+
+    try std.testing.expectError(error.EmptyInput, WeightedChoice(Entry, f64).initBy(std.testing.allocator, &.{}, Entry.weightOf));
+    try std.testing.expectError(error.InvalidWeight, WeightedChoice(Entry, f64).initBy(std.testing.allocator, &entries, Entry.invalidWeight));
+
+    var choice = try WeightedChoice(Entry, f64).initBy(std.testing.allocator, &entries, Entry.weightOf);
+    defer choice.deinit();
+    var engine = alea.ScalarPrng.init(0x5150_c882);
+    var control = alea.ScalarPrng.init(0x5150_c882);
+
+    try std.testing.expectError(error.InvalidWeight, choice.updateBy(Entry.invalidWeight));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectApproxEqAbs(@as(f64, 8), choice.totalWeight(), 1e-12);
+    var out: [4]Entry = undefined;
+    choice.fillValuesFrom(&engine, &out);
+    for (out) |item| try std.testing.expect(!std.mem.eql(u8, item.label, "never"));
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    var failing_choice = try WeightedChoice(Entry, f64).initBy(failing.allocator(), &entries, Entry.weightOf);
+    defer failing_choice.deinit();
+    failing.fail_index = failing.alloc_index;
+    try std.testing.expectError(error.OutOfMemory, failing_choice.updateBy(Entry.weightOf));
+    try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectApproxEqAbs(@as(f64, 8), failing_choice.totalWeight(), 1e-12);
 }
 
 test "weighted choice sampler maps alias indexes to items" {
