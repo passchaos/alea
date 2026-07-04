@@ -127,6 +127,7 @@ Local Alea evidence:
 - `compare/results/s4-m87-rng-owned-ranges.md`
 - `compare/results/s4-m88-rng-owned-strict-intervals.md`
 - `compare/results/s4-m89-rng-owned-probabilities.md`
+- `compare/results/s4-m90-rng-owned-normal-exponential.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -290,5 +291,6 @@ index batches, S4-M84 adds reusable choice owned value/pointer batches, and
 S4-M85 adds Rng owned repeated value/sample batches, S4-M86 adds Rng owned
 byte buffers, S4-M87 adds Rng owned scalar range batches, and S4-M88 adds
 Rng owned strict-interval float batches, and S4-M89 adds Rng owned probability
-bool batches, but later stages should keep raising the bar rather than declaring
-the product permanently finished.
+bool batches, and S4-M90 adds Rng owned normal/exponential batches, but later
+stages should keep raising the bar rather than declaring the product permanently
+finished.

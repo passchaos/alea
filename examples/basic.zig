@@ -31,6 +31,10 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(chance_flags);
     const ratio_flags = try rng.ratioBatch(init.gpa, 8, 3, 8);
     defer init.gpa.free(ratio_flags);
+    const normal_batch = try rng.normalBatch(f64, init.gpa, 4, 10, 2.5);
+    defer init.gpa.free(normal_batch);
+    const exponential_batch = try rng.exponentialBatch(f64, init.gpa, 4, 4);
+    defer init.gpa.free(exponential_batch);
 
     const dirichlet = try alea.distributions.Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
     var proportions: [3]f64 = undefined;
@@ -72,6 +76,8 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("valueBatch u16: {any}\n", .{random_words});
     try stdout.print("chanceBatch p=.25: {any}\n", .{chance_flags});
     try stdout.print("ratioBatch 3/8: {any}\n", .{ratio_flags});
+    try stdout.print("normalBatch: {any}\n", .{normal_batch});
+    try stdout.print("exponentialBatch: {any}\n", .{exponential_batch});
     try stdout.print("dirichlet: {any}\n", .{proportions});
     try stdout.print("partial shuffle hand: {any}\n", .{hand});
     try stdout.print("index choice: {} ({s})\n", .{ color_index, colors[color_index] });

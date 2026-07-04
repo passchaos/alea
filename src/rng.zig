@@ -726,6 +726,28 @@ pub fn fillNormal(self: Rng, comptime T: type, dest: []T, mean: T, stddev: T) vo
     fillNormalFrom(self, T, dest, mean, stddev);
 }
 
+pub fn normalBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, mean: T, stddev: T) ![]T {
+    return normalBatchFrom(self, T, allocator, count, mean, stddev);
+}
+
+pub fn normalBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, mean: T, stddev: T) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillNormalFrom(source, T, out, mean, stddev);
+    return out;
+}
+
+pub fn normalBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, mean: T, stddev: T) ![]T {
+    return normalBatchCheckedFrom(self, T, allocator, count, mean, stddev);
+}
+
+pub fn normalBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, mean: T, stddev: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    return normalBatchFrom(source, T, allocator, count, mean, stddev);
+}
+
 pub fn fillNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
@@ -755,6 +777,28 @@ pub fn fillNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mean:
 
 pub fn fillExponential(self: Rng, comptime T: type, dest: []T, rate: T) void {
     fillExponentialFrom(self, T, dest, rate);
+}
+
+pub fn exponentialBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, rate: T) ![]T {
+    return exponentialBatchFrom(self, T, allocator, count, rate);
+}
+
+pub fn exponentialBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, rate: T) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillExponentialFrom(source, T, out, rate);
+    return out;
+}
+
+pub fn exponentialBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, rate: T) ![]T {
+    return exponentialBatchCheckedFrom(self, T, allocator, count, rate);
+}
+
+pub fn exponentialBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, rate: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    comptime requireFloat(T);
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(T))) return error.InvalidParameter;
+    return exponentialBatchFrom(source, T, allocator, count, rate);
 }
 
 pub fn fillExponentialFrom(source: anytype, comptime T: type, dest: []T, rate: T) void {
@@ -3270,11 +3314,25 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(f64, &normal_unchecked, &normal_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        const normal_owned = try normalBatchFrom(&unchecked, f64, std.testing.allocator, 8, 0, 1);
+        defer std.testing.allocator.free(normal_owned);
+        const normal_checked_owned = try normalBatchCheckedFrom(&checked, f64, std.testing.allocator, 8, 0, 1);
+        defer std.testing.allocator.free(normal_checked_owned);
+        try std.testing.expectEqualSlices(f64, normal_owned, normal_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var exponential_unchecked: [8]f64 = undefined;
         var exponential_checked: [8]f64 = undefined;
         fillExponentialFrom(&unchecked, f64, &exponential_unchecked, 2);
         try fillExponentialCheckedFrom(&checked, f64, &exponential_checked, 2);
         try std.testing.expectEqualSlices(f64, &exponential_unchecked, &exponential_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const exponential_owned = try exponentialBatchFrom(&unchecked, f64, std.testing.allocator, 8, 2);
+        defer std.testing.allocator.free(exponential_owned);
+        const exponential_checked_owned = try exponentialBatchCheckedFrom(&checked, f64, std.testing.allocator, 8, 2);
+        defer std.testing.allocator.free(exponential_checked_owned);
+        try std.testing.expectEqualSlices(f64, exponential_owned, exponential_checked_owned);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var vector_range_unchecked: [4]@Vector(8, f32) = undefined;
@@ -3901,6 +3959,16 @@ test "degenerate normal helpers do not consume random stream" {
     for (out) |sample| try std.testing.expectEqual(@as(f64, 9.5), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const owned = try rng.normalBatch(f64, std.testing.allocator, 5, -3.25, 0);
+    defer std.testing.allocator.free(owned);
+    for (owned) |sample| try std.testing.expectEqual(@as(f64, -3.25), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const checked_owned = try normalBatchCheckedFrom(&engine, f64, std.testing.allocator, 5, 6.25, 0);
+    defer std.testing.allocator.free(checked_owned);
+    for (checked_owned) |sample| try std.testing.expectEqual(@as(f64, 6.25), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(2.25)), rng.vectorNormal(@Vector(4, f64), 2.25, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -3913,6 +3981,23 @@ test "degenerate normal helpers do not consume random stream" {
 
     try fillVectorNormalCheckedFrom(&engine, @Vector(8, f32), &vec_out, 4.5, 0);
     for (vec_out) |vec_sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(4.5)), vec_sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "degenerate exponential owned batches do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_ba9);
+    var control = alea.ScalarPrng.init(0x5150_ba9);
+    const rng = Rng.init(&engine);
+
+    const owned = try rng.exponentialBatch(f64, std.testing.allocator, 5, std.math.inf(f64));
+    defer std.testing.allocator.free(owned);
+    for (owned) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const checked_owned = try exponentialBatchCheckedFrom(&engine, f32, std.testing.allocator, 5, std.math.inf(f32));
+    defer std.testing.allocator.free(checked_owned);
+    for (checked_owned) |sample| try std.testing.expectEqual(@as(f32, 0), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -3948,6 +4033,40 @@ test "invalid facade checked fills do not consume random stream" {
 
     var vec_floats: [2]@Vector(8, f32) = undefined;
     try std.testing.expectError(error.InvalidParameter, rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_floats, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "owned normal and exponential batches allocate and validate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_90a0);
+    var control = alea.ScalarPrng.init(0x5150_90a0);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.normalBatchChecked(f64, empty_alloc.allocator(), 0, std.math.inf(f64), -1);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_normal_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, rng.normalBatchChecked(f64, invalid_normal_alloc.allocator(), 8, 0, -1));
+    try std.testing.expect(!invalid_normal_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_exponential_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, exponentialBatchCheckedFrom(&engine, f64, invalid_exponential_alloc.allocator(), 8, 0));
+    try std.testing.expect(!invalid_exponential_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var normal_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.normalBatchChecked(f64, normal_alloc.allocator(), 8, 0, 1));
+    try std.testing.expect(normal_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var exponential_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, exponentialBatchFrom(&engine, f64, exponential_alloc.allocator(), 8, 2));
+    try std.testing.expect(exponential_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
