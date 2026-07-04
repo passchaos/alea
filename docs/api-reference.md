@@ -2449,7 +2449,7 @@ Dynamic weighted helpers:
   `chooseMutPtrArrayFrom`, `chooseMutPtrArrayChecked`,
   `chooseMutPtrArrayCheckedFrom`, `sampleMutPtrArray`,
   `sampleMutPtrArrayFrom`, `sampleMutPtrArrayChecked`,
-  `sampleMutPtrArrayCheckedFrom`, `partialShuffle`,
+  `sampleMutPtrArrayCheckedFrom`, `shuffle`, `shuffleFrom`, `partialShuffle`,
   `partialShuffleFrom`, `partialShuffleChecked`, `partialShuffleCheckedFrom`,
   `PartialShuffleSplit(T)`, `partialShuffleSplit`, `partialShuffleSplitFrom`,
   `partialShuffleSplitChecked`, `partialShuffleSplitCheckedFrom`,

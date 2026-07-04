@@ -281,7 +281,7 @@ Use:
   `Rng.chooseConstPtrBatchFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`,
   `Rng.choosePtrCheckedFrom`, `Rng.fillChoosePtrFrom`, `Rng.choosePtrBatchFrom`
 - `rng.shuffle`, `Rng.shuffleFrom`
-- `seq.partialShuffle`, `seq.partialShuffleFrom`,
+- `seq.shuffle`, `seq.shuffleFrom`, `seq.partialShuffle`, `seq.partialShuffleFrom`,
   `seq.partialShuffleCheckedFrom`, `seq.partialShuffleSplitFrom`,
   `seq.partialShuffleSplitCheckedFrom`
 - `seq.reservoirSample`, `seq.reservoirSampleFrom`,

@@ -4986,6 +4986,14 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
     };
 }
 
+pub fn shuffle(rng: Rng, comptime T: type, items: []T) void {
+    shuffleFrom(rng, T, items);
+}
+
+pub fn shuffleFrom(source: anytype, comptime T: type, items: []T) void {
+    Rng.shuffleFrom(source, T, items);
+}
+
 pub fn partialShuffle(rng: Rng, comptime T: type, items: []T, amount: usize) []T {
     return partialShuffleFrom(rng, T, items, amount);
 }
@@ -7326,6 +7334,14 @@ test "partial shuffle and reservoir sample respect counts" {
     var engine = alea.FastPrng.init(444);
     const rng = alea.Rng.init(&engine);
 
+    var shuffled = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    shuffle(rng, u8, &shuffled);
+    try std.testing.expectEqual(@as(usize, 8), shuffled.len);
+
+    var direct_shuffled = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    shuffleFrom(&engine, u8, &direct_shuffled);
+    try std.testing.expectEqual(@as(usize, 8), direct_shuffled.len);
+
     var values = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
     const head = partialShuffle(rng, u8, &values, 3);
     try std.testing.expectEqual(@as(usize, 3), head.len);
@@ -7368,6 +7384,41 @@ test "partial shuffle and reservoir sample respect counts" {
     const checked_multiple = try chooseMultipleCheckedFrom(std.testing.allocator, &engine, u8, &values, 3);
     defer std.testing.allocator.free(checked_multiple);
     try std.testing.expectEqual(@as(usize, 3), checked_multiple.len);
+}
+
+test "seq shuffle aliases mirror Rng.shuffleFrom" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_5a11);
+        var direct_engine = Engine.init(0x5150_5a11);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_values = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+        var direct_values = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+        shuffle(rng, u8, &facade_values);
+        Rng.shuffleFrom(&direct_engine, u8, &direct_values);
+        try std.testing.expectEqualSlices(u8, &direct_values, &facade_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_values_from = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+        var direct_values_from = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+        shuffleFrom(&facade_engine, u8, &facade_values_from);
+        Rng.shuffleFrom(&direct_engine, u8, &direct_values_from);
+        try std.testing.expectEqualSlices(u8, &direct_values_from, &facade_values_from);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var engine = alea.ScalarPrng.init(0x5150_5a12);
+    var control = alea.ScalarPrng.init(0x5150_5a12);
+    var empty: [0]u8 = .{};
+    shuffleFrom(&engine, u8, &empty);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var singleton = [_]u8{42};
+    shuffleFrom(&engine, u8, &singleton);
+    try std.testing.expectEqualSlices(u8, &.{42}, &singleton);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "chooseArray returns fixed-size item samples" {
