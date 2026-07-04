@@ -1468,6 +1468,31 @@ pub fn partialShuffleFrom(source: anytype, comptime T: type, items: []T, amount:
     return items[0..count];
 }
 
+pub fn PartialShuffleSplit(comptime T: type) type {
+    return struct {
+        selected: []T,
+        rest: []T,
+    };
+}
+
+pub fn partialShuffleSplit(rng: Rng, comptime T: type, items: []T, amount: usize) PartialShuffleSplit(T) {
+    return partialShuffleSplitFrom(rng, T, items, amount);
+}
+
+pub fn partialShuffleSplitChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error!PartialShuffleSplit(T) {
+    return partialShuffleSplitCheckedFrom(rng, T, items, amount);
+}
+
+pub fn partialShuffleSplitCheckedFrom(source: anytype, comptime T: type, items: []T, amount: usize) Error!PartialShuffleSplit(T) {
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffleSplitFrom(source, T, items, amount);
+}
+
+pub fn partialShuffleSplitFrom(source: anytype, comptime T: type, items: []T, amount: usize) PartialShuffleSplit(T) {
+    const selected = partialShuffleFrom(source, T, items, amount);
+    return .{ .selected = selected, .rest = items[selected.len..] };
+}
+
 pub fn reservoirSample(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
     return reservoirSampleFrom(allocator, rng, T, items, amount);
 }
@@ -2148,6 +2173,9 @@ test "invalid facade collection helpers do not consume random stream" {
 
     var tiny_items = [_]u8{ 1, 2 };
     try std.testing.expectError(error.InvalidParameter, partialShuffleChecked(rng, u8, &tiny_items, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, partialShuffleSplitChecked(rng, u8, &tiny_items, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, reservoirSampleChecked(std.testing.allocator, rng, u8, &.{ 1, 2 }, 3));
@@ -2888,6 +2916,12 @@ test "zero-count partial shuffle does not mutate or consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), head.len);
     try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, &items);
     try std.testing.expectEqual(control.next(), engine.next());
+
+    const split = try partialShuffleSplitCheckedFrom(&engine, u8, &items, 0);
+    try std.testing.expectEqual(@as(usize, 0), split.selected.len);
+    try std.testing.expectEqual(@as(usize, items.len), split.rest.len);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, &items);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "zero-count checked index helpers do not consume random stream" {
@@ -3079,6 +3113,13 @@ test "partial shuffle and reservoir sample respect counts" {
     var checked_values = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
     const checked_head = try partialShuffleCheckedFrom(&engine, u8, &checked_values, 3);
     try std.testing.expectEqual(@as(usize, 3), checked_head.len);
+
+    var split_values = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const split = partialShuffleSplitFrom(&engine, u8, &split_values, 3);
+    try std.testing.expectEqual(@as(usize, 3), split.selected.len);
+    try std.testing.expectEqual(@as(usize, 5), split.rest.len);
+    try std.testing.expectEqualSlices(u8, split.selected, split_values[0..3]);
+    try std.testing.expectEqualSlices(u8, split.rest, split_values[3..]);
 
     const sampled = try reservoirSample(std.testing.allocator, rng, u8, &values, 4);
     defer std.testing.allocator.free(sampled);
@@ -3277,6 +3318,15 @@ test "collection sequence helpers preserve direct stream shape" {
         const direct_head = partialShuffleFrom(&direct_engine, u8, &direct_values, 3);
         try std.testing.expectEqualSlices(u8, facade_head, direct_head);
         try std.testing.expectEqualSlices(u8, &facade_values, &direct_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_split_values = items;
+        var direct_split_values = items;
+        const facade_split = partialShuffleSplit(rng, u8, &facade_split_values, 3);
+        const direct_split = partialShuffleSplitFrom(&direct_engine, u8, &direct_split_values, 3);
+        try std.testing.expectEqualSlices(u8, facade_split.selected, direct_split.selected);
+        try std.testing.expectEqualSlices(u8, facade_split.rest, direct_split.rest);
+        try std.testing.expectEqualSlices(u8, &facade_split_values, &direct_split_values);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         const sampled = try reservoirSample(std.testing.allocator, rng, u8, &items, 4);

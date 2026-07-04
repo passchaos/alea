@@ -230,7 +230,8 @@ Use:
   `rng.choosePtr`, `Rng.choosePtrFrom`, `Rng.choosePtrCheckedFrom`
 - `rng.shuffle`, `Rng.shuffleFrom`
 - `seq.partialShuffle`, `seq.partialShuffleFrom`,
-  `seq.partialShuffleCheckedFrom`
+  `seq.partialShuffleCheckedFrom`, `seq.partialShuffleSplitFrom`,
+  `seq.partialShuffleSplitCheckedFrom`
 - `seq.reservoirSample`, `seq.reservoirSampleFrom`,
   `seq.reservoirSampleCheckedFrom`, `seq.reservoirSampleInto`,
   `seq.reservoirSampleIntoFrom`

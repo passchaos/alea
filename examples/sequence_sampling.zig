@@ -76,6 +76,11 @@ pub fn main(init: std.process.Init) !void {
     const hand = alea.seq.partialShuffleFrom(&shuffle_engine, []const u8, &deck, 3);
     try stdout.print("partialShuffle hand: {s}, {s}, {s}; deck head now: {s}, {s}, {s}\n", .{ hand[0], hand[1], hand[2], deck[0], deck[1], deck[2] });
 
+    var split_deck = items;
+    var split_engine = alea.ScalarPrng.init(0x5e11_0012);
+    const split = alea.seq.partialShuffleSplitFrom(&split_engine, []const u8, &split_deck, 3);
+    try stdout.print("partialShuffleSplit selected: {s}, {s}, {s}; rest-len={}\n", .{ split.selected[0], split.selected[1], split.selected[2], split.rest.len });
+
     var reservoir_engine = alea.ScalarPrng.init(0x5e11_0006);
     const reservoir = try alea.seq.reservoirSampleFrom(allocator, &reservoir_engine, []const u8, &items, 4);
     defer allocator.free(reservoir);
@@ -138,6 +143,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple/chooseMultipleInto or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample/reservoirSampleInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple/chooseMultipleInto or sampleWithoutReplacement for item subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSampleInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }

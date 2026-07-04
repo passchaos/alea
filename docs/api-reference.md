@@ -2286,6 +2286,8 @@ Dynamic weighted helpers:
   `chooseMultipleIntoCheckedFrom`, `chooseArray`,
   `chooseArrayFrom`, `chooseArrayChecked`, `chooseArrayCheckedFrom`, `partialShuffle`,
   `partialShuffleFrom`, `partialShuffleChecked`, `partialShuffleCheckedFrom`,
+  `PartialShuffleSplit(T)`, `partialShuffleSplit`, `partialShuffleSplitFrom`,
+  `partialShuffleSplitChecked`, `partialShuffleSplitCheckedFrom`,
   `reservoirSample`, `reservoirSampleFrom`, `reservoirSampleChecked`,
   `reservoirSampleCheckedFrom`, `reservoirSampleInto`,
   `reservoirSampleIntoFrom`
