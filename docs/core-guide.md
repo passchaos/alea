@@ -250,7 +250,9 @@ Use:
   `len`, `isEmpty`, `at`, `copyInto`, `toOwnedSlice`, and an exact-size
   `iter` with `remaining`, plus `values` / `ptrs` / `mutPtrs`,
   `valuesInto` / `ptrsInto` / `mutPtrsInto`, and checked variants for mapping indexes back to slice items
-- `seq.sampleArray`, `seq.sampleArrayFrom`, `seq.sampleArrayCheckedFrom`
+- `seq.sampleArray`, `seq.sampleArrayFrom`, `seq.sampleArrayCheckedFrom`,
+  `seq.sampleArrayU32`, `seq.sampleArrayU32From`,
+  `seq.sampleArrayU32CheckedFrom`
 - `seq.chooseMultiple`, `seq.chooseMultipleFrom`,
   `seq.chooseMultipleCheckedFrom`, `seq.chooseMultiplePtrsFrom`,
   `seq.chooseMultiplePtrsCheckedFrom`, `seq.chooseMultipleMutPtrsFrom`,
@@ -327,7 +329,9 @@ weighted indexes, static alias tables, dynamic weighted trees, weighted choices,
 and weighted no-replacement helpers.
 
 Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput index
-sampling. Use `sampleIndices` when a `[]usize` result is more convenient.
+sampling. Use `sampleArrayU32From` for compact fixed-size index arrays when the
+population length fits `u32`, and use `sampleIndices` when a `[]usize` result is
+more convenient.
 Run `zig build run-sequence-sampling` for a runnable comparison of index
 sampling, item subsets, partial shuffles, reservoir samples, reusable `Choice`,
 and streaming iterator choices. Run `zig build run-caller-owned-sampling` for a

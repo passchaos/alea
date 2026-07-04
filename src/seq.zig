@@ -434,6 +434,45 @@ pub fn sampleArrayFrom(source: anytype, comptime N: usize, length: usize) ?[N]us
     return indices;
 }
 
+pub fn sampleArrayU32(rng: Rng, comptime N: usize, length: u32) ?[N]u32 {
+    return sampleArrayU32From(rng, N, length);
+}
+
+pub fn sampleArrayU32Checked(rng: Rng, comptime N: usize, length: u32) Error![N]u32 {
+    return sampleArrayU32CheckedFrom(rng, N, length);
+}
+
+pub fn sampleArrayU32CheckedFrom(source: anytype, comptime N: usize, length: u32) Error![N]u32 {
+    if (N > @as(usize, length)) return error.InvalidParameter;
+    return sampleArrayU32From(source, N, length).?;
+}
+
+pub fn sampleArrayU32From(source: anytype, comptime N: usize, length: u32) ?[N]u32 {
+    if (N > @as(usize, length)) return null;
+    var indices: [N]u32 = undefined;
+    if (comptime N == 0) return indices;
+
+    var i: usize = 0;
+    var j: u32 = length - @as(u32, @intCast(N));
+    while (j < length) : ({
+        j += 1;
+        i += 1;
+    }) {
+        const t = Rng.uintAtMostFrom(source, u32, j);
+        var found: ?usize = null;
+        for (indices[0..i], 0..) |existing, pos| {
+            if (existing == t) {
+                found = pos;
+                break;
+            }
+        }
+        if (found) |pos| indices[pos] = j;
+        indices[i] = t;
+    }
+
+    return indices;
+}
+
 pub fn chooseMultiple(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
     return chooseMultipleFrom(allocator, rng, T, items, amount);
 }
@@ -2856,6 +2895,10 @@ test "sample indices are distinct and bounded" {
     for (direct_fixed) |index| try std.testing.expect(index < 32);
     const checked_fixed = try sampleArrayCheckedFrom(&engine, 4, 32);
     for (checked_fixed) |index| try std.testing.expect(index < 32);
+    const direct_fixed_u32 = sampleArrayU32From(&engine, 4, 32).?;
+    for (direct_fixed_u32) |index| try std.testing.expect(index < 32);
+    const checked_fixed_u32 = try sampleArrayU32CheckedFrom(&engine, 4, 32);
+    for (checked_fixed_u32) |index| try std.testing.expect(index < 32);
 }
 
 test "portable index sampling has stable snapshots" {
@@ -3104,6 +3147,48 @@ test "sampleIndicesInto preserves facade/direct stream shape and invalid paths d
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
+test "sampleArrayU32 returns fixed-size compact index arrays" {
+    const alea = @import("root.zig");
+
+    var optional_engine = alea.ScalarPrng.init(0x5150_c001);
+    const optional = sampleArrayU32From(&optional_engine, 4, 32).?;
+    try std.testing.expectEqual(@as(usize, 4), optional.len);
+    for (optional) |index| try std.testing.expect(index < 32);
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_c002);
+    const checked = try sampleArrayU32CheckedFrom(&checked_engine, 4, 32);
+    try std.testing.expectEqual(@as(usize, 4), checked.len);
+    for (checked) |index| try std.testing.expect(index < 32);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_c003);
+    var empty_control = alea.ScalarPrng.init(0x5150_c003);
+    const empty = sampleArrayU32From(&empty_engine, 0, 32).?;
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    try std.testing.expect(sampleArrayU32From(&empty_engine, 4, 3) == null);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "sampleArrayU32 preserves facade/direct stream shape" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c004);
+        var direct_engine = Engine.init(0x5150_c004);
+        const rng = Rng.init(&facade_engine);
+
+        const facade = sampleArrayU32(rng, 5, 64).?;
+        const direct = sampleArrayU32From(&direct_engine, 5, 64).?;
+        try std.testing.expectEqualSlices(u32, &facade, &direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade = try sampleArrayU32Checked(rng, 5, 64);
+        const checked_direct = try sampleArrayU32CheckedFrom(&direct_engine, 5, 64);
+        try std.testing.expectEqualSlices(u32, &checked_facade, &checked_direct);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
+
 test "sampleIndicesU32Into fills caller-owned compact index buffers" {
     const alea = @import("root.zig");
 
@@ -3201,6 +3286,9 @@ test "invalid facade index helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, sampleArrayChecked(rng, 4, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, sampleArrayU32Checked(rng, 4, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -4005,8 +4093,16 @@ test "zero-count checked index helpers do not consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), fixed.len);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const fixed_u32 = try sampleArrayU32CheckedFrom(&engine, 0, 0);
+    try std.testing.expectEqual(@as(usize, 0), fixed_u32.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const fixed_nonempty_range = try sampleArrayCheckedFrom(&engine, 0, 10);
     try std.testing.expectEqual(@as(usize, 0), fixed_nonempty_range.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const fixed_u32_nonempty_range = try sampleArrayU32CheckedFrom(&engine, 0, 10);
+    try std.testing.expectEqual(@as(usize, 0), fixed_u32_nonempty_range.len);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

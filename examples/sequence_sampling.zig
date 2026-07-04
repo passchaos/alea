@@ -49,6 +49,10 @@ pub fn main(init: std.process.Init) !void {
     try alea.seq.sampleIndicesU32IntoCheckedFrom(&indices_u32_engine, @intCast(items.len), &indices_u32_into);
     try stdout.print("sampleIndicesU32Into: {any}\n", .{indices_u32_into});
 
+    var index_array_u32_engine = alea.ScalarPrng.init(0x5e11_001f);
+    const index_array_u32 = try alea.seq.sampleArrayU32CheckedFrom(&index_array_u32_engine, 4, @intCast(items.len));
+    try stdout.print("sampleArrayU32: {any}\n", .{index_array_u32});
+
     var index_vec_engine = alea.ScalarPrng.init(0x5e11_0002);
     const index_vec = try alea.seq.sampleIndexVecFrom(allocator, &index_vec_engine, 10_000, 6);
     defer index_vec.deinit(allocator);
@@ -228,6 +232,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and value/const-pointer/mutable-pointer mapping, chooseArray/choosePtrArray for fixed-size arrays, chooseMultiple/chooseMultipleInto/chooseMultiplePtrsInto or sampleWithoutReplacement for allocation-returning and caller-owned item/pointer subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and value/const-pointer/mutable-pointer mapping, sampleArrayU32 for compact fixed-size index arrays, chooseArray/choosePtrArray for fixed-size item/pointer arrays, chooseMultiple/chooseMultipleInto/chooseMultiplePtrsInto or sampleWithoutReplacement for allocation-returning and caller-owned item/pointer subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }

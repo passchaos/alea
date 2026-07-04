@@ -110,6 +110,7 @@ Local Alea evidence:
 - `compare/results/s4-m70-weighted-u32-indices-into.md`
 - `compare/results/s4-m71-weighted-u32-index-array.md`
 - `compare/results/s4-m72-weighted-u32-indices.md`
+- `compare/results/s4-m73-u32-index-array.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -130,7 +131,7 @@ Out of scope for this Linux-first audit:
 | Unicode scalar / char-like sampling | Covered in Zig form | `Rng.unicodeScalar`, `ascii.unicodeUtf8Alloc`, `ascii.unicodeUtf8Into` |
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost` |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
-| choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseConstPtr`, `seq` module, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` value/const-pointer/mutable-pointer mapping, Rust sequence benchmark row |
+| choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseConstPtr`, `seq` module, `sampleArrayU32`, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` value/const-pointer/mutable-pointer mapping, Rust sequence benchmark row |
 | weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `seq.weightedIndex`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedIndicesU32`, `seq.sampleWeightedIndicesU32Into`, `seq.sampleWeightedIndexVec`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedIndexArrayU32`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface
@@ -262,6 +263,7 @@ example content drift checks, and S4-M66 hardens S4-M11 blocker audit drift
 checks, and S4-M67 refreshes README quick-start index/pointer choice discovery, and
 S4-M68 hardens doccheck dependency validation, and S4-M69 adds weighted IndexVec
 sampling, S4-M70 adds caller-owned weighted u32 index buffers, S4-M71 adds
-fixed-size weighted u32 index arrays, and S4-M72 adds allocation-returning
-weighted u32 index slices, but later stages should keep raising the bar rather
-than declaring the product permanently finished.
+fixed-size weighted u32 index arrays, S4-M72 adds allocation-returning weighted
+u32 index slices, and S4-M73 adds fixed-size u32 index arrays, but later stages
+should keep raising the bar rather than declaring the product permanently
+finished.
