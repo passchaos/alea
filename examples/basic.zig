@@ -72,6 +72,8 @@ pub fn main(init: std.process.Init) !void {
     const color_values = try rng.chooseBatch([]const u8, init.gpa, 4, &colors);
     defer init.gpa.free(color_values);
     const color_ptr = rng.chooseConstPtr([]const u8, &colors).?;
+    const color_ptrs = try rng.chooseConstPtrBatch([]const u8, init.gpa, 4, &colors);
+    defer init.gpa.free(color_ptrs);
     const die_sampler = try alea.distributions.Uniform(u8).initInclusive(1, 6);
     const owned_rolls = try rng.sampleBatch(u8, init.gpa, die_sampler, 6);
     defer init.gpa.free(owned_rolls);
@@ -122,6 +124,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("u32 index choice batch: {any}\n", .{compact_color_indices});
     try stdout.print("value choice batch: {s}, {s}, {s}, {s}\n", .{ color_values[0], color_values[1], color_values[2], color_values[3] });
     try stdout.print("const pointer choice: {s}\n", .{color_ptr.*});
+    try stdout.print("const pointer choice batch: {s}, {s}, {s}, {s}\n", .{ color_ptrs[0].*, color_ptrs[1].*, color_ptrs[2].*, color_ptrs[3].* });
     try stdout.print("sampleBatch dice: {any}\n", .{owned_rolls});
     try stdout.print("iterator choice: {}\n", .{stream_choice});
     try stdout.print("child stream u64: {}\n", .{child_rng.next()});

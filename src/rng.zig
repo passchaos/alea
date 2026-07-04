@@ -2677,8 +2677,37 @@ pub fn chooseConstPtr(self: Rng, comptime T: type, items: []const T) ?*const T {
     return chooseConstPtrFrom(self, T, items);
 }
 
+pub fn fillChooseConstPtr(self: Rng, comptime T: type, dest: []*const T, items: []const T) void {
+    fillChooseConstPtrFrom(self, T, dest, items);
+}
+
+pub fn chooseConstPtrBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]*const T {
+    return chooseConstPtrBatchFrom(self, T, allocator, count, items);
+}
+
+pub fn chooseConstPtrBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]*const T {
+    const out = try allocator.alloc(*const T, count);
+    errdefer allocator.free(out);
+    fillChooseConstPtrFrom(source, T, out, items);
+    return out;
+}
+
 pub fn chooseConstPtrChecked(self: Rng, comptime T: type, items: []const T) Error!*const T {
     return chooseConstPtrCheckedFrom(self, T, items);
+}
+
+pub fn fillChooseConstPtrChecked(self: Rng, comptime T: type, dest: []*const T, items: []const T) Error!void {
+    return fillChooseConstPtrCheckedFrom(self, T, dest, items);
+}
+
+pub fn chooseConstPtrBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]*const T {
+    return chooseConstPtrBatchCheckedFrom(self, T, allocator, count, items);
+}
+
+pub fn chooseConstPtrBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]*const T {
+    if (count == 0) return allocator.alloc(*const T, 0);
+    if (items.len == 0) return error.EmptyRange;
+    return chooseConstPtrBatchFrom(source, T, allocator, count, items);
 }
 
 pub fn chooseConstPtrCheckedFrom(source: anytype, comptime T: type, items: []const T) Error!*const T {
@@ -2689,6 +2718,21 @@ pub fn chooseConstPtrFrom(source: anytype, comptime T: type, items: []const T) ?
     if (items.len == 0) return null;
     if (items.len == 1) return &items[0];
     return &items[uintLessThanFrom(source, usize, items.len)];
+}
+
+pub fn fillChooseConstPtrFrom(source: anytype, comptime T: type, dest: []*const T, items: []const T) void {
+    std.debug.assert(items.len > 0);
+    if (items.len == 1) {
+        @memset(dest, &items[0]);
+        return;
+    }
+    for (dest) |*item| item.* = &items[uintLessThanFrom(source, usize, items.len)];
+}
+
+pub fn fillChooseConstPtrCheckedFrom(source: anytype, comptime T: type, dest: []*const T, items: []const T) Error!void {
+    if (dest.len == 0) return;
+    if (items.len == 0) return error.EmptyRange;
+    fillChooseConstPtrFrom(source, T, dest, items);
 }
 
 pub fn choosePtr(self: Rng, comptime T: type, items: []T) ?*T {
@@ -5814,6 +5858,26 @@ test "invalid facade choice helpers do not consume random stream" {
     try std.testing.expectError(error.EmptyRange, rng.choosePtrChecked(u8, &empty));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var empty_const_ptrs: [0]*const u8 = .{};
+    try rng.fillChooseConstPtrChecked(u8, &empty_const_ptrs, &empty);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var one_const_ptr: [1]*const u8 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseConstPtrCheckedFrom(&engine, u8, &one_const_ptr, &empty));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty_const_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty_const_ptr_batch = try rng.chooseConstPtrBatchChecked(u8, empty_const_ptr_alloc.allocator(), 0, &empty);
+    defer empty_const_ptr_alloc.allocator().free(empty_const_ptr_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_const_ptr_batch.len);
+    try std.testing.expect(!empty_const_ptr_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_const_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseConstPtrBatchCheckedFrom(&engine, u8, invalid_const_ptr_alloc.allocator(), 8, &empty));
+    try std.testing.expect(!invalid_const_ptr_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var empty_values: [0]u8 = .{};
     try rng.fillChooseChecked(u8, &empty_values, &empty);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -5835,6 +5899,11 @@ test "invalid facade choice helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     const non_empty = [_]u8{ 1, 2, 3 };
+    var const_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.chooseConstPtrBatchChecked(u8, const_ptr_alloc.allocator(), 8, &non_empty));
+    try std.testing.expect(const_ptr_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, rng.chooseBatchChecked(u8, value_alloc.allocator(), 8, &non_empty));
     try std.testing.expect(value_alloc.has_induced_failure);
@@ -5877,6 +5946,16 @@ test "single-item choice helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(&items[0], try rng.chooseConstPtrChecked(u8, &items));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var chosen_const_ptrs: [5]*const u8 = undefined;
+    try rng.fillChooseConstPtrChecked(u8, &chosen_const_ptrs, &items);
+    for (chosen_const_ptrs) |sample| try std.testing.expectEqual(@as(u8, 42), sample.*);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_chosen_const_ptrs = try chooseConstPtrBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &items);
+    defer std.testing.allocator.free(owned_chosen_const_ptrs);
+    for (owned_chosen_const_ptrs) |sample| try std.testing.expectEqual(@as(u8, 42), sample.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(u8, 42), try rng.chooseChecked(u8, &items));
@@ -6038,6 +6117,24 @@ test "collection helpers preserve direct stream shape" {
         const checked_facade_const_ptr = try rng.chooseConstPtrChecked(u8, &items);
         const checked_direct_const_ptr = try Rng.chooseConstPtrCheckedFrom(&direct_engine, u8, &items);
         try std.testing.expectEqual(checked_facade_const_ptr.*, checked_direct_const_ptr.*);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_const_ptrs: [8]*const u8 = undefined;
+        var direct_const_ptrs: [8]*const u8 = undefined;
+        rng.fillChooseConstPtr(u8, &facade_const_ptrs, &items);
+        Rng.fillChooseConstPtrFrom(&direct_engine, u8, &direct_const_ptrs, &items);
+        for (facade_const_ptrs, direct_const_ptrs) |facade_item, direct_item| {
+            try std.testing.expectEqual(facade_item.*, direct_item.*);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_owned_const_ptrs = try rng.chooseConstPtrBatch(u8, std.testing.allocator, 8, &items);
+        defer std.testing.allocator.free(facade_owned_const_ptrs);
+        const direct_owned_const_ptrs = try Rng.chooseConstPtrBatchFrom(&direct_engine, u8, std.testing.allocator, 8, &items);
+        defer std.testing.allocator.free(direct_owned_const_ptrs);
+        for (facade_owned_const_ptrs, direct_owned_const_ptrs) |facade_item, direct_item| {
+            try std.testing.expectEqual(facade_item.*, direct_item.*);
+        }
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         const Enum = enum { a, b, c };

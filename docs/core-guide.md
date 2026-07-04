@@ -277,7 +277,8 @@ Use:
   `Rng.chooseIndexU32BatchFrom`, `rng.choose`, `Rng.chooseFrom`,
   `Rng.chooseCheckedFrom`, `Rng.fillChooseFrom`, `Rng.chooseBatchFrom`,
   `rng.chooseConstPtr`, `Rng.chooseConstPtrFrom`,
-  `Rng.chooseConstPtrCheckedFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`,
+  `Rng.chooseConstPtrCheckedFrom`, `Rng.fillChooseConstPtrFrom`,
+  `Rng.chooseConstPtrBatchFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`,
   `Rng.choosePtrCheckedFrom`
 - `rng.shuffle`, `Rng.shuffleFrom`
 - `seq.partialShuffle`, `seq.partialShuffleFrom`,
