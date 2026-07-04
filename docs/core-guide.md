@@ -324,6 +324,9 @@ reported before any scalar is drawn, so retry/error paths do not silently
 advance a deterministic stream. `unicodeUtf8Into` / `unicodeUtf8IntoFrom` let
 callers use a caller-owned buffer sized via `unicodeUtf8Capacity`; too-small
 buffers fail before drawing.
+Run `zig build run-string-generation` for a runnable comparison of predefined
+ASCII charsets, custom `Charset` diagnostics, allocation-returning strings,
+Unicode scalar generation, and caller-owned UTF-8 buffers.
 
 ## Validation
 

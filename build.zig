@@ -144,6 +144,23 @@ pub fn build(b: *std.Build) void {
     const sequence_sampling_example_step = b.step("run-sequence-sampling", "Run the sequence sampling alea example");
     sequence_sampling_example_step.dependOn(&run_sequence_sampling_example.step);
 
+    const string_generation_example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/string_generation.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    string_generation_example_mod.addImport("alea", module);
+
+    const string_generation_example = b.addExecutable(.{
+        .name = "alea-string-generation",
+        .root_module = string_generation_example_mod,
+    });
+    const run_string_generation_example = b.addRunArtifact(string_generation_example);
+    if (b.args) |args| run_string_generation_example.addArgs(args);
+
+    const string_generation_example_step = b.step("run-string-generation", "Run the string generation alea example");
+    string_generation_example_step.dependOn(&run_string_generation_example.step);
+
     const examples_step = b.step("examples", "Run all alea examples");
     examples_step.dependOn(&run_example.step);
     examples_step.dependOn(&run_vector_profiles_example.step);
@@ -152,6 +169,7 @@ pub fn build(b: *std.Build) void {
     examples_step.dependOn(&run_weighted_sampling_example.step);
     examples_step.dependOn(&run_multivariate_sampling_example.step);
     examples_step.dependOn(&run_sequence_sampling_example.step);
+    examples_step.dependOn(&run_string_generation_example.step);
 
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/throughput.zig"),

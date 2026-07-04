@@ -2348,6 +2348,7 @@ Build steps:
 - `zig build run-weighted-sampling`
 - `zig build run-multivariate-sampling`
 - `zig build run-sequence-sampling`
+- `zig build run-string-generation`
 - `zig build examples`
 - `zig build apicheck`
 - `zig build validate`
