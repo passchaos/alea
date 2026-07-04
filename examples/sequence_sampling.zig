@@ -226,6 +226,11 @@ pub fn main(init: std.process.Init) !void {
     const picked = alea.seq.chooseIteratorFrom(&iter_choice_engine, u32, &stream).?;
     try stdout.print("chooseIteratorFrom counter[0..20): {}\n", .{picked});
 
+    var stable_choice_engine = alea.ScalarPrng.init(0x5e11_0017);
+    var stable_stream = Counter{ .limit = 20 };
+    const stable_picked = alea.seq.chooseIteratorStableFrom(&stable_choice_engine, u32, &stable_stream).?;
+    try stdout.print("chooseIteratorStableFrom counter[0..20): {}\n", .{stable_picked});
+
     var iter_array_engine = alea.ScalarPrng.init(0x5e11_000e);
     var array_stream = Counter{ .limit = 20 };
     const stream_array = alea.seq.sampleIteratorArrayFrom(&iter_array_engine, u32, 5, &array_stream).?;

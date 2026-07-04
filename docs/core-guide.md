@@ -316,7 +316,8 @@ Use:
   `seq.choosePtrArrayFrom`, `seq.choosePtrArrayCheckedFrom`,
   `seq.chooseMutPtrArrayFrom`, `seq.chooseMutPtrArrayCheckedFrom`
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`,
-  `seq.chooseIteratorCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`,
+  `seq.chooseIteratorCheckedFrom`, stable aliases `seq.chooseIteratorStableFrom`
+  and `seq.chooseIteratorStableCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`,
   `seq.sampleIteratorCheckedFrom`, `seq.sampleIteratorArrayFrom`,
   `seq.sampleIteratorArrayCheckedFrom`, `seq.sampleIteratorInto`,
   `seq.sampleIteratorIntoFrom`, `seq.sampleIteratorIntoCheckedFrom`

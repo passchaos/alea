@@ -159,6 +159,7 @@ Local Alea evidence:
 - `compare/results/s4-m119-accessor-weighted-index-arrays.md`
 - `compare/results/s4-m120-accessor-weighted-item-arrays.md`
 - `compare/results/s4-m121-weightedchoice-accessor-init.md`
+- `compare/results/s4-m122-stable-iterator-choice.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -179,7 +180,7 @@ Out of scope for this Linux-first audit:
 | Unicode scalar / char-like sampling | Covered in Zig form | `Rng.unicodeScalar`, `Rng.unicodeScalarRangeLessThan`, `Rng.unicodeScalarRangeAtMost`, `Rng.fillUnicodeScalar`, `Rng.fillUnicodeScalarRangeLessThan`, `Rng.fillUnicodeScalarRangeAtMost`, `Rng.unicodeScalarBatch`, `Rng.unicodeScalarRangeLessThanBatch`, `Rng.unicodeScalarRangeAtMostBatch`, `ascii.unicodeUtf8Alloc`, `ascii.unicodeUtf8Into` |
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost`, and owned duration range batches |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
-| choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseIndexBatch`, `Rng.chooseIndexU32`, `Rng.chooseIndexU32Batch`, `Rng.choose`, `Rng.chooseBatch`, `Rng.chooseConstPtr`, `Rng.chooseConstPtrBatch`, `Rng.choosePtr`, `Rng.choosePtrBatch`, `seq` module, `sampleArrayU32`, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `Choice.sampleIndex`, `Choice.fill`, `Choice.fillValues`, `Choice.ptrs`, `Choice.values`, `Choice.fillIndices`, `Choice.indices`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer and u32 export mapping, Rust sequence benchmark row |
+| choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseIndexBatch`, `Rng.chooseIndexU32`, `Rng.chooseIndexU32Batch`, `Rng.choose`, `Rng.chooseBatch`, `Rng.chooseConstPtr`, `Rng.chooseConstPtrBatch`, `Rng.choosePtr`, `Rng.choosePtrBatch`, `seq` module, `sampleArrayU32`, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `seq.chooseIteratorStable`, `Choice.sampleIndex`, `Choice.fill`, `Choice.fillValues`, `Choice.ptrs`, `Choice.values`, `Choice.fillIndices`, `Choice.indices`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer and u32 export mapping, Rust sequence benchmark row |
 | weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `Rng.weightedIndexBatch`, `Rng.weightedIndexU32`, `Rng.weightedIndexU32Batch`, `Rng.chooseWeighted`, `Rng.chooseWeightedBatch`, `Rng.chooseWeightedConstPtr`, `Rng.chooseWeightedConstPtrBatch`, `Rng.chooseWeightedPtr`, `Rng.chooseWeightedPtrBatch`, `seq.weightedIndex`, `seq.weightedIndexBatch`, `seq.weightedIndexU32`, `seq.weightedIndexU32Batch`, `seq.chooseWeighted`, `seq.chooseWeightedBy`, `seq.chooseWeightedBatch`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedConstPtrBy`, `seq.chooseWeightedConstPtrBatch`, `seq.chooseWeightedPtr`, `seq.chooseWeightedPtrBy`, `seq.chooseWeightedPtrBatch`, `seq.sampleWeightedIndexArrayBy`, `seq.sampleWeightedIndexArrayU32By`, `seq.sampleWeightedArrayBy`, `seq.sampleWeightedPtrArrayBy`, `seq.sampleWeightedMutPtrArrayBy`, `seq.sampleWeightedIndicesBy`, `seq.sampleWeightedIndicesU32By`, `seq.sampleWeightedIndexVecBy`, `seq.sampleWeightedBy`, `seq.sampleWeightedPtrsBy`, `seq.sampleWeightedMutPtrsBy`, `seq.sampleWeightedIndicesByInto`, `seq.sampleWeightedByInto`, `seq.sampleWeightedPtrsByInto`, `seq.sampleWeightedMutPtrsByInto`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedIndicesU32`, `seq.sampleWeightedIndicesU32Into`, `seq.sampleWeightedIndexVec`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedIndexArrayU32`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedChoice.initBy`, `WeightedChoice.updateBy`, `WeightedChoice.sample`, `WeightedChoice.ptrs`, `WeightedChoice.values`, `WeightedChoice.sampleIndex`, `WeightedChoice.fillIndices`, `WeightedChoice.indices`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface
@@ -338,6 +339,6 @@ weighted no-replacement value/const-pointer/mutable-pointer samples, S4-M117
 adds caller-owned accessor-weighted no-replacement buffers, S4-M118 adds
 allocation-returning accessor-weighted index/u32-index/IndexVec samples, S4-M119 adds accessor-weighted fixed-size index arrays, and S4-M120 adds
 accessor-weighted fixed-size value/const-pointer/mutable-pointer arrays, and
-S4-M121 adds accessor-based reusable `WeightedChoice` construction/update, but
-later stages should keep raising the bar rather than declaring the product
-permanently finished.
+S4-M121 adds accessor-based reusable `WeightedChoice` construction/update, and
+S4-M122 adds stable iterator choice aliases, but later stages should keep
+raising the bar rather than declaring the product permanently finished.

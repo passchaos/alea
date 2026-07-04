@@ -1328,6 +1328,22 @@ pub fn chooseIteratorCheckedFrom(source: anytype, comptime T: type, iterator: an
     return chooseIteratorFrom(source, T, iterator) orelse error.EmptyInput;
 }
 
+pub fn chooseIteratorStable(rng: Rng, comptime T: type, iterator: anytype) ?T {
+    return chooseIteratorStableFrom(rng, T, iterator);
+}
+
+pub fn chooseIteratorStableChecked(rng: Rng, comptime T: type, iterator: anytype) Error!T {
+    return chooseIteratorStableCheckedFrom(rng, T, iterator);
+}
+
+pub fn chooseIteratorStableCheckedFrom(source: anytype, comptime T: type, iterator: anytype) Error!T {
+    return chooseIteratorStableFrom(source, T, iterator) orelse error.EmptyInput;
+}
+
+pub fn chooseIteratorStableFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
+    return chooseIteratorFrom(source, T, iterator);
+}
+
 pub fn chooseIteratorFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
     var seen: usize = 0;
     var result: ?T = null;
@@ -10368,6 +10384,47 @@ test "sampleWeightedInto preserves facade/direct stream shape and invalid paths 
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIntoCheckedFrom(&invalid_engine, u8, f64, &items, &.{ 1.0, std.math.nan(f64), 2.0, 3.0 }, &out, &indices, &keys));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "stable iterator choice aliases reservoir selection" {
+    const alea = @import("root.zig");
+
+    const RangeIter = struct {
+        next_value: u32,
+        end: u32,
+
+        fn next(self: *@This()) ?u32 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var stable_engine = Engine.init(0x5150_c901);
+        var direct_engine = Engine.init(0x5150_c901);
+        const rng = Rng.init(&stable_engine);
+
+        var stable_iter = RangeIter{ .next_value = 0, .end = 100 };
+        var direct_iter = RangeIter{ .next_value = 0, .end = 100 };
+        try std.testing.expectEqual(chooseIteratorStable(rng, u32, &stable_iter), chooseIteratorFrom(&direct_engine, u32, &direct_iter));
+        try std.testing.expectEqual(stable_engine.next(), direct_engine.next());
+
+        var checked_iter = RangeIter{ .next_value = 0, .end = 100 };
+        var checked_direct_iter = RangeIter{ .next_value = 0, .end = 100 };
+        try std.testing.expectEqual(try chooseIteratorStableChecked(rng, u32, &checked_iter), try chooseIteratorCheckedFrom(&direct_engine, u32, &checked_direct_iter));
+        try std.testing.expectEqual(stable_engine.next(), direct_engine.next());
+    }
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_c902);
+    var empty_control = alea.ScalarPrng.init(0x5150_c902);
+    var empty_iter = RangeIter{ .next_value = 0, .end = 0 };
+    try std.testing.expectEqual(@as(?u32, null), chooseIteratorStableFrom(&empty_engine, u32, &empty_iter));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    var checked_empty_iter = RangeIter{ .next_value = 0, .end = 0 };
+    try std.testing.expectError(error.EmptyInput, chooseIteratorStableCheckedFrom(&empty_engine, u32, &checked_empty_iter));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 }
 
 test "iterator sampling works without collecting first" {
