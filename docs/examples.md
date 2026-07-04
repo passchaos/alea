@@ -5,7 +5,7 @@ focused `zig build run-*` step for quick adoption checks.
 
 | Build step | Source | Use when you want to learn |
 | --- | --- | --- |
-| `zig build run-basic` | `examples/basic.zig` | A broad first tour: engines, `Rng`, owned byte/value/sample/scalar-and-vector-probability/standard-and-parameterized normal/exponential batches, distributions, strings, index and const-pointer choice, sequence helpers, and child streams. |
+| `zig build run-basic` | `examples/basic.zig` | A broad first tour: engines, `Rng`, owned byte/value/bounded-uint/sample/scalar-and-vector-probability/standard-and-parameterized normal/exponential batches, distributions, strings, index and const-pointer choice, sequence helpers, and child streams. |
 | `zig build run-reproducible-streams` | `examples/reproducible_streams.zig` | Stable named seeds, substreams, engine aliases, split/jump, and PCG stream selection. |
 | `zig build run-range-sampling` | `examples/range_sampling.zig` | Integer ranges, strict float endpoint semantics, duration ranges, owned duration/range/vector-range and scalar/vector strict-interval batches, reusable `Uniform`, vector ranges, point masses, and checked errors. |
 | `zig build run-discrete-distributions` | `examples/discrete_distributions.zig` | Bernoulli, Binomial, NegativeBinomial, Poisson, Geometric trial/failure semantics, Hypergeometric, vector discrete samplers, and checked errors. |

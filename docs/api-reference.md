@@ -63,7 +63,12 @@ stability expectations.
 - Raw/scalars: `next`, `nextFrom`, `boolean`, `booleanFrom`, `chance`, `chanceChecked`, `ratio`,
   `chanceFrom`, `chanceCheckedFrom`, `ratioFrom`, `ratioChecked`,
   `ratioCheckedFrom`, `uint`, `uintLessThan`, `uintLessThanChecked`,
-  `uintLessThanCheckedFrom`, `uintAtMost`, `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`,
+  `uintLessThanCheckedFrom`, `fillUintLessThan`, `fillUintLessThanFrom`,
+  `fillUintLessThanChecked`, `fillUintLessThanCheckedFrom`,
+  `uintLessThanBatch`, `uintLessThanBatchFrom`, `uintLessThanBatchChecked`,
+  `uintLessThanBatchCheckedFrom`, `uintAtMost`, `fillUintAtMost`,
+  `fillUintAtMostFrom`, `uintAtMostBatch`, `uintAtMostBatchFrom`,
+  `uintFrom`, `uintLessThanFrom`, `uintAtMostFrom`,
   `probabilityThreshold`
 - Ranges: `intRangeLessThan`, `intRangeLessThanChecked`, `intRangeAtMost`,
   `intRangeLessThanCheckedFrom`, `intRangeAtMostChecked`,

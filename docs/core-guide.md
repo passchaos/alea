@@ -42,7 +42,8 @@ selection.
 
 `Rng` supports:
 
-- integers: `uint`, `uintLessThan`, `uintAtMost`
+- integers: `uint`, `uintLessThan`, `uintAtMost`, `fillUintLessThan`,
+  `fillUintAtMost`, `uintLessThanBatch`, and `uintAtMostBatch`
 - signed and unsigned ranges: `intRangeLessThan`, `intRangeAtMost`
 - floats: `float`, `floatOpen`, `floatOpenClosed`, `floatRange`,
   `standardNormal`, `standardExponential`
@@ -69,7 +70,9 @@ selection.
   tuples containing an empty enum fail before consuming randomness)
 - allocation-returning repeated sampling: `valueBatch`, `valueBatchFrom`,
   `valueBatchChecked`, `valueBatchCheckedFrom`, `sampleBatch`,
-  `sampleBatchFrom`, `rangeBatch`, `rangeBatchFrom`, `rangeBatchChecked`,
+  `sampleBatchFrom`, `uintLessThanBatch`, `uintLessThanBatchFrom`,
+  `uintLessThanBatchChecked`, `uintLessThanBatchCheckedFrom`,
+  `uintAtMostBatch`, `uintAtMostBatchFrom`, `rangeBatch`, `rangeBatchFrom`, `rangeBatchChecked`,
   `rangeBatchCheckedFrom`, `openBatch`, `openBatchFrom`, `openClosedBatch`,
   `openClosedBatchFrom`, `chanceBatch`, `chanceBatchFrom`, `chanceBatchChecked`,
   `chanceBatchCheckedFrom`, `ratioBatch`, `ratioBatchFrom`,

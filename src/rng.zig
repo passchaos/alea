@@ -282,6 +282,81 @@ pub fn fillRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
     fillRangeFrom(self, T, dest, min, max);
 }
 
+pub fn fillUintLessThan(self: Rng, comptime T: type, dest: []T, less_than: T) void {
+    fillUintLessThanFrom(self, T, dest, less_than);
+}
+
+pub fn uintLessThanBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, less_than: T) ![]T {
+    return uintLessThanBatchFrom(self, T, allocator, count, less_than);
+}
+
+pub fn uintLessThanBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, less_than: T) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillUintLessThanFrom(source, T, out, less_than);
+    return out;
+}
+
+pub fn uintLessThanBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, less_than: T) ![]T {
+    return uintLessThanBatchCheckedFrom(self, T, allocator, count, less_than);
+}
+
+pub fn uintLessThanBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, less_than: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    comptime requireUnsigned(T);
+    if (less_than == 0) return error.EmptyRange;
+    return uintLessThanBatchFrom(source, T, allocator, count, less_than);
+}
+
+pub fn fillUintLessThanFrom(source: anytype, comptime T: type, dest: []T, less_than: T) void {
+    comptime requireUnsigned(T);
+    std.debug.assert(less_than > 0);
+    if (less_than == 1) {
+        @memset(dest, 0);
+        return;
+    }
+    for (dest) |*item| item.* = uintLessThanFrom(source, T, less_than);
+}
+
+pub fn fillUintLessThanChecked(self: Rng, comptime T: type, dest: []T, less_than: T) Error!void {
+    return fillUintLessThanCheckedFrom(self, T, dest, less_than);
+}
+
+pub fn fillUintLessThanCheckedFrom(source: anytype, comptime T: type, dest: []T, less_than: T) Error!void {
+    if (dest.len == 0) return;
+    comptime requireUnsigned(T);
+    if (less_than == 0) return error.EmptyRange;
+    fillUintLessThanFrom(source, T, dest, less_than);
+}
+
+pub fn fillUintAtMost(self: Rng, comptime T: type, dest: []T, at_most: T) void {
+    fillUintAtMostFrom(self, T, dest, at_most);
+}
+
+pub fn uintAtMostBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, at_most: T) ![]T {
+    return uintAtMostBatchFrom(self, T, allocator, count, at_most);
+}
+
+pub fn uintAtMostBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, at_most: T) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillUintAtMostFrom(source, T, out, at_most);
+    return out;
+}
+
+pub fn fillUintAtMostFrom(source: anytype, comptime T: type, dest: []T, at_most: T) void {
+    comptime requireUnsigned(T);
+    if (at_most == 0) {
+        @memset(dest, 0);
+        return;
+    }
+    if (at_most == std.math.maxInt(T)) {
+        fillIntsFrom(source, T, dest);
+        return;
+    }
+    fillUintLessThanFrom(source, T, dest, at_most + 1);
+}
+
 pub fn rangeBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
     return rangeBatchFrom(self, T, allocator, count, min, max);
 }
@@ -4016,6 +4091,33 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(u32, range_owned, range_checked_owned);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        var uint_less_unchecked: [8]u32 = undefined;
+        var uint_less_checked: [8]u32 = undefined;
+        fillUintLessThanFrom(&unchecked, u32, &uint_less_unchecked, 1000);
+        try fillUintLessThanCheckedFrom(&checked, u32, &uint_less_checked, 1000);
+        try std.testing.expectEqualSlices(u32, &uint_less_unchecked, &uint_less_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const uint_less_owned = try uintLessThanBatchFrom(&unchecked, u32, std.testing.allocator, 8, 1000);
+        defer std.testing.allocator.free(uint_less_owned);
+        const uint_less_checked_owned = try uintLessThanBatchCheckedFrom(&checked, u32, std.testing.allocator, 8, 1000);
+        defer std.testing.allocator.free(uint_less_checked_owned);
+        try std.testing.expectEqualSlices(u32, uint_less_owned, uint_less_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        var uint_at_most_unchecked: [8]u32 = undefined;
+        fillUintAtMostFrom(&unchecked, u32, &uint_at_most_unchecked, 999);
+        try fillUintLessThanCheckedFrom(&checked, u32, &uint_less_checked, 1000);
+        try std.testing.expectEqualSlices(u32, &uint_at_most_unchecked, &uint_less_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const uint_at_most_owned = try uintAtMostBatchFrom(&unchecked, u32, std.testing.allocator, 8, 999);
+        defer std.testing.allocator.free(uint_at_most_owned);
+        const uint_at_most_checked_owned = try uintLessThanBatchCheckedFrom(&checked, u32, std.testing.allocator, 8, 1000);
+        defer std.testing.allocator.free(uint_at_most_checked_owned);
+        try std.testing.expectEqualSlices(u32, uint_at_most_owned, uint_at_most_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var chance_unchecked: [16]bool = undefined;
         var chance_checked: [16]bool = undefined;
         fillChanceFrom(&unchecked, &chance_unchecked, 0.25);
@@ -4655,7 +4757,27 @@ test "degenerate range helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u32, 0), uintLessThanFrom(&engine, u32, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var uint_less: [5]u32 = undefined;
+    rng.fillUintLessThan(u32, &uint_less, 1);
+    for (uint_less) |sample| try std.testing.expectEqual(@as(u32, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_uint_less = try uintLessThanBatchCheckedFrom(&engine, u32, std.testing.allocator, 5, 1);
+    defer std.testing.allocator.free(owned_uint_less);
+    for (owned_uint_less) |sample| try std.testing.expectEqual(@as(u32, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(u32, 0), uintAtMostFrom(&engine, u32, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var uint_at_most: [5]u32 = undefined;
+    fillUintAtMostFrom(&engine, u32, &uint_at_most, 0);
+    for (uint_at_most) |sample| try std.testing.expectEqual(@as(u32, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_uint_at_most = try rng.uintAtMostBatch(u32, std.testing.allocator, 5, 0);
+    defer std.testing.allocator.free(owned_uint_at_most);
+    for (owned_uint_at_most) |sample| try std.testing.expectEqual(@as(u32, 0), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(u32, 7), intRangeAtMostFrom(&engine, u32, 7, 7));
@@ -4991,6 +5113,35 @@ test "owned normal and exponential batches allocate and validate before consumin
     var exponential_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, exponentialBatchFrom(&engine, f64, exponential_alloc.allocator(), 8, 2));
     try std.testing.expect(exponential_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "owned bounded uint batches allocate and validate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_99a0);
+    var control = alea.ScalarPrng.init(0x5150_99a0);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.uintLessThanBatchChecked(u32, empty_alloc.allocator(), 0, 0);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.uintLessThanBatchChecked(u32, invalid_alloc.allocator(), 8, 0));
+    try std.testing.expect(!invalid_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var less_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, uintLessThanBatchCheckedFrom(&engine, u32, less_alloc.allocator(), 8, 1000));
+    try std.testing.expect(less_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var at_most_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.uintAtMostBatch(u32, at_most_alloc.allocator(), 8, 1000));
+    try std.testing.expect(at_most_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
