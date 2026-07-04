@@ -76,6 +76,16 @@ pub fn main(init: std.process.Init) !void {
     const weighted_array = (try alea.seq.sampleWeightedArrayFrom(&weighted_array_engine, []const u8, f64, 3, &items, &float_weights)).?;
     try stdout.print("weighted array sample: [{s}, {s}, {s}]\n", .{ weighted_array[0], weighted_array[1], weighted_array[2] });
 
+    var weighted_ptr_array_engine = alea.ScalarPrng.init(0x715f);
+    const weighted_ptr_array = (try alea.seq.sampleWeightedPtrArrayFrom(&weighted_ptr_array_engine, []const u8, f64, 3, &items, &float_weights)).?;
+    try stdout.print("weighted ptr array sample: [{s}, {s}, {s}]\n", .{ weighted_ptr_array[0].*, weighted_ptr_array[1].*, weighted_ptr_array[2].* });
+
+    var weighted_mut_ptr_array_engine = alea.ScalarPrng.init(0x7160);
+    var weighted_scores = [_]u8{ 10, 20, 30, 40 };
+    const weighted_mut_ptr_array = (try alea.seq.sampleWeightedMutPtrArrayFrom(&weighted_mut_ptr_array_engine, u8, f64, 3, &weighted_scores, &float_weights)).?;
+    for (weighted_mut_ptr_array) |score| score.* += 4;
+    try stdout.print("weighted mut ptr array scores: {any}\n", .{weighted_scores});
+
     var indices_engine = alea.ScalarPrng.init(0x7157);
     const no_replace_indices = try alea.seq.sampleWeightedIndicesFrom(allocator, &indices_engine, f64, &float_weights, 3);
     defer allocator.free(no_replace_indices);
@@ -98,6 +108,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleWeightedIntoFrom(&weighted_into_engine, []const u8, f64, &items, &float_weights, &weighted_into_values, &weighted_into_indices, &weighted_into_keys);
     try printStringSlice(stdout, "weighted values into", &weighted_into_values);
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/index no-replacement, caller-owned index/value buffers, and fixed-size array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/index/pointer no-replacement, caller-owned index/value buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }

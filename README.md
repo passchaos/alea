@@ -22,7 +22,7 @@ The current Linux-first roadmap is intentionally broad:
 - deterministic seed derivation with named streams and system-entropy helpers
 - scalar helpers for integers, floats, durations, ranges, booleans, and bytes
 - collection helpers for `choose`, `shuffle`, fixed-size item/pointer arrays, caller-owned item and pointer subsets, partial shuffle selected/rest splits, compact `IndexVec` index samples with lazy/caller-owned value and pointer mapping, weighted indexes,
-  repeated choice iterators, one-shot weighted item/pointer helpers, weighted choice samplers, weighted sampling without
+  repeated choice iterators, one-shot weighted item/pointer helpers, weighted choice samplers, weighted fixed-size pointer arrays, weighted sampling without
   replacement, iterator and weighted iterator sampling with and without
   replacement, fixed-size and caller-owned iterator sampling, allocated and caller-owned reservoir sampling, adaptive and caller-owned usize/u32 index sampling, and checked
   variants for fallible user-supplied counts or empty inputs
