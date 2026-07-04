@@ -72,11 +72,14 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(color_indices);
     const compact_color_indices = try rng.chooseIndexU32Batch(init.gpa, 4, @intCast(colors.len));
     defer init.gpa.free(compact_color_indices);
+    const color_value_array = rng.chooseValueArray([]const u8, 4, &colors).?;
     const color_values = try rng.chooseBatch([]const u8, init.gpa, 4, &colors);
     defer init.gpa.free(color_values);
     const color_ptr = rng.chooseConstPtr([]const u8, &colors).?;
+    const color_ptr_array = rng.chooseConstPtrArray([]const u8, 4, &colors).?;
     const color_ptrs = try rng.chooseConstPtrBatch([]const u8, init.gpa, 4, &colors);
     defer init.gpa.free(color_ptrs);
+    const mutable_color_ptr_array = rng.choosePtrArray([]const u8, 4, &mutable_colors).?;
     const mutable_color_ptrs = try rng.choosePtrBatch([]const u8, init.gpa, 4, &mutable_colors);
     defer init.gpa.free(mutable_color_ptrs);
     const die_sampler = try alea.distributions.Uniform(u8).initInclusive(1, 6);
@@ -129,9 +132,12 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("u32 index choice array: {any}\n", .{compact_color_index_array});
     try stdout.print("index choice batch: {any}\n", .{color_indices});
     try stdout.print("u32 index choice batch: {any}\n", .{compact_color_indices});
+    try stdout.print("value choice array: {s}, {s}, {s}, {s}\n", .{ color_value_array[0], color_value_array[1], color_value_array[2], color_value_array[3] });
     try stdout.print("value choice batch: {s}, {s}, {s}, {s}\n", .{ color_values[0], color_values[1], color_values[2], color_values[3] });
     try stdout.print("const pointer choice: {s}\n", .{color_ptr.*});
+    try stdout.print("const pointer choice array: {s}, {s}, {s}, {s}\n", .{ color_ptr_array[0].*, color_ptr_array[1].*, color_ptr_array[2].*, color_ptr_array[3].* });
     try stdout.print("const pointer choice batch: {s}, {s}, {s}, {s}\n", .{ color_ptrs[0].*, color_ptrs[1].*, color_ptrs[2].*, color_ptrs[3].* });
+    try stdout.print("mutable pointer choice array: {s}, {s}, {s}, {s}\n", .{ mutable_color_ptr_array[0].*, mutable_color_ptr_array[1].*, mutable_color_ptr_array[2].*, mutable_color_ptr_array[3].* });
     try stdout.print("mutable pointer choice batch: {s}, {s}, {s}, {s}\n", .{ mutable_color_ptrs[0].*, mutable_color_ptrs[1].*, mutable_color_ptrs[2].*, mutable_color_ptrs[3].* });
     try stdout.print("sampleBatch dice: {any}\n", .{owned_rolls});
     try stdout.print("iterator choice: {}\n", .{stream_choice});

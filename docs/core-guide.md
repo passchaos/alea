@@ -275,11 +275,12 @@ Use:
   `Rng.chooseIndexU32CheckedFrom`, `Rng.fillChooseIndexFrom`,
   `Rng.fillChooseIndexU32From`, `Rng.chooseIndexBatchFrom`,
   `Rng.chooseIndexU32BatchFrom`, `rng.choose`, `Rng.chooseFrom`,
-  `Rng.chooseCheckedFrom`, `Rng.fillChooseFrom`, `Rng.chooseBatchFrom`,
-  `rng.chooseConstPtr`, `Rng.chooseConstPtrFrom`,
-  `Rng.chooseConstPtrCheckedFrom`, `Rng.fillChooseConstPtrFrom`,
-  `Rng.chooseConstPtrBatchFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`,
-  `Rng.choosePtrCheckedFrom`, `Rng.fillChoosePtrFrom`, `Rng.choosePtrBatchFrom`
+  `Rng.chooseCheckedFrom`, `Rng.fillChooseFrom`, `Rng.chooseValueArrayFrom`,
+  `Rng.chooseBatchFrom`, `rng.chooseConstPtr`, `Rng.chooseConstPtrFrom`,
+  `Rng.chooseConstPtrCheckedFrom`, `Rng.chooseConstPtrArrayFrom`,
+  `Rng.fillChooseConstPtrFrom`, `Rng.chooseConstPtrBatchFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`,
+  `Rng.choosePtrCheckedFrom`, `Rng.choosePtrArrayFrom`,
+  `Rng.fillChoosePtrFrom`, `Rng.choosePtrBatchFrom`
 - `rng.shuffle`, `Rng.shuffleFrom`
 - `seq.shuffle`, `seq.shuffleFrom`, `seq.partialShuffle`, `seq.partialShuffleFrom`,
   `seq.partialShuffleCheckedFrom`, `seq.partialShuffleSplitFrom`,

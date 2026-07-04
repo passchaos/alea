@@ -2499,6 +2499,30 @@ pub fn fillChoose(self: Rng, comptime T: type, dest: []T, items: []const T) void
     fillChooseFrom(self, T, dest, items);
 }
 
+pub fn chooseValueArray(self: Rng, comptime T: type, comptime N: usize, items: []const T) ?[N]T {
+    return chooseValueArrayFrom(self, T, N, items);
+}
+
+pub fn chooseValueArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) ?[N]T {
+    var out: [N]T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return null;
+    fillChooseFrom(source, T, &out, items);
+    return out;
+}
+
+pub fn chooseValueArrayChecked(self: Rng, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
+    return chooseValueArrayCheckedFrom(self, T, N, items);
+}
+
+pub fn chooseValueArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
+    var out: [N]T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return error.EmptyRange;
+    fillChooseFrom(source, T, &out, items);
+    return out;
+}
+
 pub fn chooseBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
     return chooseBatchFrom(self, T, allocator, count, items);
 }
@@ -2725,6 +2749,30 @@ pub fn chooseConstPtr(self: Rng, comptime T: type, items: []const T) ?*const T {
     return chooseConstPtrFrom(self, T, items);
 }
 
+pub fn chooseConstPtrArray(self: Rng, comptime T: type, comptime N: usize, items: []const T) ?[N]*const T {
+    return chooseConstPtrArrayFrom(self, T, N, items);
+}
+
+pub fn chooseConstPtrArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) ?[N]*const T {
+    var out: [N]*const T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return null;
+    fillChooseConstPtrFrom(source, T, &out, items);
+    return out;
+}
+
+pub fn chooseConstPtrArrayChecked(self: Rng, comptime T: type, comptime N: usize, items: []const T) Error![N]*const T {
+    return chooseConstPtrArrayCheckedFrom(self, T, N, items);
+}
+
+pub fn chooseConstPtrArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]*const T {
+    var out: [N]*const T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return error.EmptyRange;
+    fillChooseConstPtrFrom(source, T, &out, items);
+    return out;
+}
+
 pub fn fillChooseConstPtr(self: Rng, comptime T: type, dest: []*const T, items: []const T) void {
     fillChooseConstPtrFrom(self, T, dest, items);
 }
@@ -2785,6 +2833,30 @@ pub fn fillChooseConstPtrCheckedFrom(source: anytype, comptime T: type, dest: []
 
 pub fn choosePtr(self: Rng, comptime T: type, items: []T) ?*T {
     return choosePtrFrom(self, T, items);
+}
+
+pub fn choosePtrArray(self: Rng, comptime T: type, comptime N: usize, items: []T) ?[N]*T {
+    return choosePtrArrayFrom(self, T, N, items);
+}
+
+pub fn choosePtrArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []T) ?[N]*T {
+    var out: [N]*T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return null;
+    fillChoosePtrFrom(source, T, &out, items);
+    return out;
+}
+
+pub fn choosePtrArrayChecked(self: Rng, comptime T: type, comptime N: usize, items: []T) Error![N]*T {
+    return choosePtrArrayCheckedFrom(self, T, N, items);
+}
+
+pub fn choosePtrArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []T) Error![N]*T {
+    var out: [N]*T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return error.EmptyRange;
+    fillChoosePtrFrom(source, T, &out, items);
+    return out;
 }
 
 pub fn fillChoosePtr(self: Rng, comptime T: type, dest: []*T, items: []T) void {
@@ -6644,8 +6716,38 @@ test "invalid facade choice helpers do not consume random stream" {
     try rng.fillChooseChecked(u8, &empty_values, &empty);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectEqual(@as(?[1]u8, null), rng.chooseValueArray(u8, 1, &empty));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.chooseValueArrayChecked(u8, 1, &empty));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const empty_value_array = try rng.chooseValueArrayChecked(u8, 0, &empty);
+    try std.testing.expectEqual(@as(usize, 0), empty_value_array.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var one_value: [1]u8 = undefined;
     try std.testing.expectError(error.EmptyRange, fillChooseCheckedFrom(&engine, u8, &one_value, &empty));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(?[1]*const u8, null), rng.chooseConstPtrArray(u8, 1, &empty));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.chooseConstPtrArrayChecked(u8, 1, &empty));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const empty_const_ptr_array = try rng.chooseConstPtrArrayChecked(u8, 0, &empty);
+    try std.testing.expectEqual(@as(usize, 0), empty_const_ptr_array.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(?[1]*u8, null), rng.choosePtrArray(u8, 1, &empty));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.choosePtrArrayChecked(u8, 1, &empty));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const empty_mut_ptr_array = try rng.choosePtrArrayChecked(u8, 0, &empty);
+    try std.testing.expectEqual(@as(usize, 0), empty_mut_ptr_array.len);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var empty_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
@@ -6729,6 +6831,10 @@ test "single-item choice helpers do not consume random stream" {
     for (chosen_const_ptrs) |sample| try std.testing.expectEqual(@as(u8, 42), sample.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const single_const_ptr_array = try rng.chooseConstPtrArrayChecked(u8, 5, &items);
+    for (single_const_ptr_array) |sample| try std.testing.expectEqual(@as(u8, 42), sample.*);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const owned_chosen_const_ptrs = try chooseConstPtrBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &items);
     defer std.testing.allocator.free(owned_chosen_const_ptrs);
     for (owned_chosen_const_ptrs) |sample| try std.testing.expectEqual(@as(u8, 42), sample.*);
@@ -6740,6 +6846,10 @@ test "single-item choice helpers do not consume random stream" {
     var chosen_values: [5]u8 = undefined;
     try rng.fillChooseChecked(u8, &chosen_values, &items);
     for (chosen_values) |sample| try std.testing.expectEqual(@as(u8, 42), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const single_value_array = try rng.chooseValueArrayChecked(u8, 5, &items);
+    try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42, 42, 42 }, &single_value_array);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_chosen_values = try chooseBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &items);
@@ -6757,6 +6867,10 @@ test "single-item choice helpers do not consume random stream" {
     var chosen_mut_ptrs: [5]*u8 = undefined;
     try rng.fillChoosePtrChecked(u8, &chosen_mut_ptrs, &mutable_items);
     for (chosen_mut_ptrs) |sample| try std.testing.expectEqual(@as(u8, 99), sample.*);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const single_mut_ptr_array = try rng.choosePtrArrayChecked(u8, 5, &mutable_items);
+    for (single_mut_ptr_array) |sample| try std.testing.expectEqual(@as(u8, 99), sample.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_chosen_mut_ptrs = try choosePtrBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &mutable_items);
@@ -6922,6 +7036,16 @@ test "collection helpers preserve direct stream shape" {
         try std.testing.expectEqualSlices(u8, &facade_values, &direct_values);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+        const facade_value_array = rng.chooseValueArray(u8, 8, &items).?;
+        const direct_value_array = Rng.chooseValueArrayFrom(&direct_engine, u8, 8, &items).?;
+        try std.testing.expectEqualSlices(u8, &facade_value_array, &direct_value_array);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_value_array = try rng.chooseValueArrayChecked(u8, 8, &items);
+        const direct_checked_value_array = try Rng.chooseValueArrayCheckedFrom(&direct_engine, u8, 8, &items);
+        try std.testing.expectEqualSlices(u8, &facade_checked_value_array, &direct_checked_value_array);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         const facade_owned_values = try rng.chooseBatch(u8, std.testing.allocator, 8, &items);
         defer std.testing.allocator.free(facade_owned_values);
         const direct_owned_values = try Rng.chooseBatchFrom(&direct_engine, u8, std.testing.allocator, 8, &items);
@@ -6950,6 +7074,20 @@ test "collection helpers preserve direct stream shape" {
         rng.fillChooseConstPtr(u8, &facade_const_ptrs, &items);
         Rng.fillChooseConstPtrFrom(&direct_engine, u8, &direct_const_ptrs, &items);
         for (facade_const_ptrs, direct_const_ptrs) |facade_item, direct_item| {
+            try std.testing.expectEqual(facade_item.*, direct_item.*);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_const_ptr_array = rng.chooseConstPtrArray(u8, 8, &items).?;
+        const direct_const_ptr_array = Rng.chooseConstPtrArrayFrom(&direct_engine, u8, 8, &items).?;
+        for (facade_const_ptr_array, direct_const_ptr_array) |facade_item, direct_item| {
+            try std.testing.expectEqual(facade_item.*, direct_item.*);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_const_ptr_array = try rng.chooseConstPtrArrayChecked(u8, 8, &items);
+        const direct_checked_const_ptr_array = try Rng.chooseConstPtrArrayCheckedFrom(&direct_engine, u8, 8, &items);
+        for (facade_checked_const_ptr_array, direct_checked_const_ptr_array) |facade_item, direct_item| {
             try std.testing.expectEqual(facade_item.*, direct_item.*);
         }
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
@@ -6983,6 +7121,20 @@ test "collection helpers preserve direct stream shape" {
         rng.fillChoosePtr(u8, &facade_mut_ptrs, &facade_items);
         Rng.fillChoosePtrFrom(&direct_engine, u8, &direct_mut_ptrs, &direct_items);
         for (facade_mut_ptrs, direct_mut_ptrs) |facade_item, direct_item| {
+            try std.testing.expectEqual(facade_item.*, direct_item.*);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_mut_ptr_array = rng.choosePtrArray(u8, 8, &facade_items).?;
+        const direct_mut_ptr_array = Rng.choosePtrArrayFrom(&direct_engine, u8, 8, &direct_items).?;
+        for (facade_mut_ptr_array, direct_mut_ptr_array) |facade_item, direct_item| {
+            try std.testing.expectEqual(facade_item.*, direct_item.*);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_mut_ptr_array = try rng.choosePtrArrayChecked(u8, 8, &facade_items);
+        const direct_checked_mut_ptr_array = try Rng.choosePtrArrayCheckedFrom(&direct_engine, u8, 8, &direct_items);
+        for (facade_checked_mut_ptr_array, direct_checked_mut_ptr_array) |facade_item, direct_item| {
             try std.testing.expectEqual(facade_item.*, direct_item.*);
         }
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
