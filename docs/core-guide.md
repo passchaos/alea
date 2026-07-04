@@ -372,7 +372,11 @@ Use:
   caller-owned `seq.sampleWeightedIndicesByIndexIntoFrom`,
   `seq.sampleWeightedIndicesByIndexIntoCheckedFrom`,
   `seq.sampleWeightedIndicesU32ByIndexIntoFrom`, and
-  `seq.sampleWeightedIndicesU32ByIndexIntoCheckedFrom`,
+  `seq.sampleWeightedIndicesU32ByIndexIntoCheckedFrom`, plus fixed-size
+  `seq.sampleWeightedIndexArrayByIndexFrom`,
+  `seq.sampleWeightedIndexArrayByIndexCheckedFrom`,
+  `seq.sampleWeightedIndexArrayU32ByIndexFrom`, and
+  `seq.sampleWeightedIndexArrayU32ByIndexCheckedFrom`,
   item accessor-based
   `seq.sampleWeightedIndicesByFrom`, `seq.sampleWeightedIndicesByCheckedFrom`,
   `seq.sampleWeightedIndicesU32ByFrom`,

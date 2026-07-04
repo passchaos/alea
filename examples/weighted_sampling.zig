@@ -297,6 +297,14 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleWeightedIndicesU32ByIndexIntoFrom(&no_replace_by_index_weight_u32_into_engine, u32, items.len, &no_replace_by_index_weight_u32_into, &no_replace_by_index_weight_u32_keys, indexWeight);
     try stdout.print("weighted index-weight u32 indices into: {any}\n", .{no_replace_by_index_weight_u32_into});
 
+    var weighted_index_weight_array_engine = alea.ScalarPrng.init(0x7192);
+    const weighted_index_weight_array = (try alea.seq.sampleWeightedIndexArrayByIndexFrom(&weighted_index_weight_array_engine, u32, 3, items.len, indexWeight)).?;
+    try stdout.print("weighted index-weight index array: {any}\n", .{weighted_index_weight_array});
+
+    var weighted_index_weight_u32_array_engine = alea.ScalarPrng.init(0x7193);
+    const weighted_index_weight_u32_array = (try alea.seq.sampleWeightedIndexArrayU32ByIndexFrom(&weighted_index_weight_u32_array_engine, u32, 3, items.len, indexWeight)).?;
+    try stdout.print("weighted index-weight u32 index array: {any}\n", .{weighted_index_weight_u32_array});
+
     var weighted_by_index_array_engine = alea.ScalarPrng.init(0x7181);
     const weighted_by_index_array = (try alea.seq.sampleWeightedIndexArrayByFrom(&weighted_by_index_array_engine, WeightedRecord, u32, 3, &weighted_records, WeightedRecord.weightOf)).?;
     try stdout.print("weighted by index array: {any}\n", .{weighted_by_index_array});
@@ -428,6 +436,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_by_mut_ptrs_into) |record| record.score += 20;
     try stdout.print("weighted by mut ptrs into scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_records_into[0].score, weighted_by_mut_records_into[1].score, weighted_by_mut_records_into[2].score, weighted_by_mut_records_into[3].score });
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy and sampleWeightedBy/PtrsBy/MutPtrsBy when weights live inside item records, sampleWeightedIndicesByIndex and sampleWeightedIndicesByIndexInto for length/index-weight workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy and sampleWeightedBy/PtrsBy/MutPtrsBy when weights live inside item records, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }
