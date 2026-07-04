@@ -83,6 +83,8 @@ stability expectations.
   `chooseConstPtrCheckedFrom`, `choosePtr`, `choosePtrFrom`,
   `choosePtrChecked`, `choosePtrCheckedFrom`, `weightedIndex`,
   `weightedIndexFrom`, `weightedIndexChecked`, `weightedIndexCheckedFrom`,
+  `weightedIndexU32`, `weightedIndexU32From`, `weightedIndexU32Checked`,
+  `weightedIndexU32CheckedFrom`,
   `sampleWithoutReplacement`, `sampleWithoutReplacementFrom`,
   `sampleWithoutReplacementChecked`, `sampleWithoutReplacementCheckedFrom`
 - Iterator types: `ValueIterator(T)`, `ValueIteratorFrom(Source, T)`,

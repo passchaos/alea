@@ -348,7 +348,7 @@ In-place index samplers prepare their returned output before drawing, so output
 allocation failures leave the stream untouched.
 Rejection index samplers also clean up staged set allocations before drawing if
 their internal set allocation fails.
-Use `Rng.weightedIndexFrom`, `Rng.sampleWithoutReplacementFrom`,
+Use `Rng.weightedIndexFrom`, `Rng.weightedIndexU32From`, `Rng.sampleWithoutReplacementFrom`,
 `sampleWeightedFrom`, `Choice.iterFrom`, `WeightedChoice.iterFrom`,
 `AliasTable.sampleFrom`, and `WeightedChoice.sampleValueFrom` for weighted or
 collection sampling with a comptime-known engine source.

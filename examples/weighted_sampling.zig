@@ -25,6 +25,10 @@ pub fn main(init: std.process.Init) !void {
     const one_shot = alea.Rng.weightedIndexFrom(&one_shot_engine, &float_weights).?;
     try stdout.print("one-shot weighted index: {} ({s})\n", .{ one_shot, items[one_shot] });
 
+    var one_shot_u32_engine = alea.ScalarPrng.init(0x716c);
+    const one_shot_u32 = (try alea.Rng.weightedIndexU32From(&one_shot_u32_engine, &float_weights)).?;
+    try stdout.print("one-shot weighted u32 index: {} ({s})\n", .{ one_shot_u32, items[one_shot_u32] });
+
     var generic_index_engine = alea.ScalarPrng.init(0x7166);
     const generic_index = alea.seq.weightedIndexFrom(&generic_index_engine, u32, &int_weights).?;
     try stdout.print("generic weighted index: {} ({s})\n", .{ generic_index, items[generic_index] });

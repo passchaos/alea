@@ -1776,6 +1776,24 @@ pub fn weightedIndexCheckedFrom(source: anytype, weights: []const f64) Error!?us
     return weights.len - 1;
 }
 
+pub fn weightedIndexU32(self: Rng, weights: []const f64) Error!?u32 {
+    return weightedIndexU32From(self, weights);
+}
+
+pub fn weightedIndexU32From(source: anytype, weights: []const f64) Error!?u32 {
+    if (weights.len > std.math.maxInt(u32)) return error.InvalidParameter;
+    const index = try weightedIndexCheckedFrom(source, weights) orelse return null;
+    return @intCast(index);
+}
+
+pub fn weightedIndexU32Checked(self: Rng, weights: []const f64) Error!?u32 {
+    return weightedIndexU32CheckedFrom(self, weights);
+}
+
+pub fn weightedIndexU32CheckedFrom(source: anytype, weights: []const f64) Error!?u32 {
+    return weightedIndexU32From(source, weights);
+}
+
 pub fn sampleWithoutReplacement(self: Rng, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
     std.debug.assert(count <= items.len);
     return sampleWithoutReplacementFrom(self, T, allocator, items, count);
@@ -3107,6 +3125,11 @@ test "checked weighted sampling preserves valid-parameter stream shape" {
         try std.testing.expectEqual(weighted, checked_weighted);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        const weighted_u32 = try weightedIndexU32From(&unchecked, &weights);
+        const checked_weighted_u32 = try weightedIndexU32CheckedFrom(&checked, &weights);
+        try std.testing.expectEqual(weighted_u32, checked_weighted_u32);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         const sample = try sampleWithoutReplacementFrom(&unchecked, u8, std.testing.allocator, &items, 3);
         defer std.testing.allocator.free(sample);
         const checked_sample = try sampleWithoutReplacementCheckedFrom(&checked, u8, std.testing.allocator, &items, 3);
@@ -3747,6 +3770,12 @@ test "single-positive weighted index does not consume random stream" {
 
     try std.testing.expectEqual(@as(?usize, 1), try rng.weightedIndexChecked(&.{ 0.0, 5.0, 0.0 }));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(?u32, 1), try weightedIndexU32From(&engine, &.{ 0.0, 5.0, 0.0 }));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(?u32, 1), try rng.weightedIndexU32Checked(&.{ 0.0, 5.0, 0.0 }));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "invalid facade weighted helpers do not consume random stream" {
@@ -3756,6 +3785,9 @@ test "invalid facade weighted helpers do not consume random stream" {
     const rng = Rng.init(&engine);
 
     try std.testing.expectError(error.InvalidWeight, rng.weightedIndexChecked(&.{ 1.0, std.math.nan(f64) }));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidWeight, rng.weightedIndexU32Checked(&.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectEqual(control.next(), engine.next());
 
     const items = [_]u8{ 1, 2 };
