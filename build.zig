@@ -1038,9 +1038,31 @@ pub fn build(b: *std.Build) void {
     const toolingcheck_step = b.step("toolingcheck", "Check build/tooling catalog coverage");
     toolingcheck_step.dependOn(&run_toolingcheck.step);
 
-    const test_step = b.step("test", "Run alea unit tests and API reference checks");
+    const readmecheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/readmecheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const readmecheck = b.addExecutable(.{
+        .name = "alea-readmecheck",
+        .root_module = readmecheck_mod,
+    });
+    const run_readmecheck = b.addRunArtifact(readmecheck);
+    if (b.args) |args| run_readmecheck.addArgs(args);
+
+    const readmecheck_step = b.step("readmecheck", "Check README discovery coverage");
+    readmecheck_step.dependOn(&run_readmecheck.step);
+
+    const doccheck_step = b.step("doccheck", "Run documentation and catalog coverage checks");
+    doccheck_step.dependOn(&run_apicheck.step);
+    doccheck_step.dependOn(&run_examplecheck.step);
+    doccheck_step.dependOn(&run_toolingcheck.step);
+    doccheck_step.dependOn(&run_readmecheck.step);
+
+    const test_step = b.step("test", "Run alea unit tests and documentation checks");
     test_step.dependOn(&run_tests.step);
-    test_step.dependOn(&run_apicheck.step);
+    test_step.dependOn(doccheck_step);
 
     const crosscheck_step = b.step("crosscheck", "Compile unit tests for secondary targets without executing them");
     inline for (cross_compile_targets) |cross_target| {
@@ -1221,9 +1243,7 @@ pub fn build(b: *std.Build) void {
     const validate_step = b.step("validate", "Run unit, API, statistical, and distribution checks");
     validate_step.dependOn(&run_tests.step);
     validate_step.dependOn(examples_step);
-    validate_step.dependOn(&run_examplecheck.step);
-    validate_step.dependOn(&run_toolingcheck.step);
-    validate_step.dependOn(&run_apicheck.step);
+    validate_step.dependOn(doccheck_step);
     validate_step.dependOn(&run_statcheck.step);
     validate_step.dependOn(&run_distcheck.step);
     validate_step.dependOn(&run_distcheck_libc.step);

@@ -37,10 +37,11 @@ The checker verifies:
   `build.zig`;
 - `docs/core-guide.md` and `docs/api-reference.md` link the tooling catalog and
   mention `zig build toolingcheck`;
-- `zig build validate` depends on `toolingcheck`.
+- `zig build validate` runs `toolingcheck` through the aggregate `doccheck` step.
 
-`zig build validate` now depends on `toolingcheck`, so API docs, example docs,
-and tooling docs are all covered by the normal local validation gate.
+`zig build validate` now depends on `doccheck`, and `doccheck` depends on
+`toolingcheck`, so API docs, example docs, README discovery, and tooling docs are
+all covered by the normal local validation gate.
 
 ## Validation
 

@@ -2361,6 +2361,8 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build examples`
 - `zig build examplecheck`
 - `zig build toolingcheck`
+- `zig build readmecheck`
+- `zig build doccheck`
 - `zig build apicheck`
 - `zig build validate`
 - `zig build validate-all`
@@ -2388,5 +2390,6 @@ Tools:
 - `tools/ziggurat_probe.zig`
 - `tools/cauchy_probe.zig`
 - `tools/repro.zig`
+- `tools/readmecheck.zig`
 - `tools/toolingcheck.zig`
 - `tools/practrand.sh`

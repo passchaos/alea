@@ -13,6 +13,8 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build apicheck` | Verify public symbols are covered by `docs/api-reference.md`. |
 | `zig build examplecheck` | Verify `docs/examples.md` covers every checked-in runnable example and focused `run-*` step. |
 | `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step and checked-in tool file. |
+| `zig build readmecheck` | Verify README discovery links and core validation commands stay visible. |
+| `zig build doccheck` | Run API, examples, tooling, and README documentation checks together. |
 | `zig build statcheck` | Run extended statistical smoke checks. |
 | `zig build distcheck` | Run parameter-grid distribution checks. |
 | `zig build distcheck-libc` | Run libc-linked distribution checks for platform-backed opt-ins. |
@@ -26,8 +28,9 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, and accepted-profile checks. |
 | `zig build validate-all` | Run native validation plus cross-target compile checks and WASI runtime checks. |
 
-`zig build validate` depends on `zig build examples`, `zig build
-examplecheck`, `zig build toolingcheck`, `zig build apicheck`, `zig build
+`zig build doccheck` depends on `zig build apicheck`, `zig build
+examplecheck`, `zig build toolingcheck`, and `zig build readmecheck`. `zig build
+validate` depends on `zig build examples`, `zig build doccheck`, `zig build
 statcheck`, `zig build distcheck`, `zig build distcheck-libc`, and `zig build
 profilecheck`. `zig build validate-all` adds `zig build crosscheck`, `zig build
 test-wasi`, and `zig build wasi-report`.
@@ -172,6 +175,7 @@ new helpers that need documentation.
 | `tools/profiletailcheck.zig` | Accepted vector profile tail checker. |
 | `tools/rayleigh_probe.zig` | Rayleigh performance probe. |
 | `tools/repro.zig` | Reproducibility snapshot printer. |
+| `tools/readmecheck.zig` | README discovery checker. |
 | `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps. |
 | `tools/skew_normal_probe.zig` | SkewNormal performance probe. |
 | `tools/standard_fill_probe.zig` | Standard distribution fill performance probe. |

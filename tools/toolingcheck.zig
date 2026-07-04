@@ -70,6 +70,8 @@ const build_steps = [_]BuildStep{
     .{ .name = "apicheck", .build_token = "b.step(\"apicheck\"" },
     .{ .name = "examplecheck", .build_token = "b.step(\"examplecheck\"" },
     .{ .name = "toolingcheck", .build_token = "b.step(\"toolingcheck\"" },
+    .{ .name = "readmecheck", .build_token = "b.step(\"readmecheck\"" },
+    .{ .name = "doccheck", .build_token = "b.step(\"doccheck\"" },
     .{ .name = "test", .build_token = "b.step(\"test\"" },
     .{ .name = "crosscheck", .build_token = "b.step(\"crosscheck\"" },
     .{ .name = "test-wasi", .build_token = "b.step(\"test-wasi\"" },
@@ -131,6 +133,7 @@ const tools = [_]Tool{
     .{ .path = "tools/profiletailcheck.zig", .build_token = "tools/profiletailcheck.zig" },
     .{ .path = "tools/rayleigh_probe.zig", .build_token = "tools/rayleigh_probe.zig" },
     .{ .path = "tools/repro.zig", .build_token = "tools/repro.zig" },
+    .{ .path = "tools/readmecheck.zig", .build_token = "tools/readmecheck.zig" },
     .{ .path = "tools/run_wasi_test.js", .build_token = "tools/run_wasi_test.js" },
     .{ .path = "tools/skew_normal_probe.zig", .build_token = "tools/skew_normal_probe.zig" },
     .{ .path = "tools/standard_fill_probe.zig", .build_token = "tools/standard_fill_probe.zig" },
@@ -231,8 +234,8 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("toolingcheck: docs/core-guide.md must link docs/tooling.md and mention `zig build toolingcheck`\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, build, "validate_step.dependOn(&run_toolingcheck.step)") == null) {
-        try stderr.print("toolingcheck: zig build validate must depend on toolingcheck\n", .{});
+    if (std.mem.indexOf(u8, build, "validate_step.dependOn(doccheck_step)") == null) {
+        try stderr.print("toolingcheck: zig build validate must depend on doccheck\n", .{});
         missing += 1;
     }
 

@@ -91,15 +91,23 @@ pub fn main() !void {
 
 ## Build
 
+Run `zig build -l` for the generated list of project-defined build steps. The
+most common checks are:
+
 ```sh
 zig build test
 zig build apicheck
+zig build examplecheck
+zig build toolingcheck
+zig build readmecheck
+zig build doccheck
 zig build validate
 zig build validate-all
 zig build crosscheck
 zig build test-wasi
 zig build wasi-report
 zig build run-basic
+zig build examples
 zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast distcheck
 zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/alea.bin
@@ -144,7 +152,8 @@ exposes `random()` for standard-library consumers, and `Rng.random()` returns a
 aliases without spelling out the concrete engine type.
 
 See `docs/core-guide.md` for the core API guide, `docs/api-reference.md` for
-the public API reference, and
+the public API reference, `docs/examples.md` for runnable examples,
+`docs/tooling.md` for the build/tool catalog, and
 `compare/results/core-rand-coverage.md` for the roadmap and validation matrix.
 Current hard performance gaps and rejected optimization attempts are tracked in
 `compare/results/performance-triage.md`; LogNormal transform tradeoffs,
