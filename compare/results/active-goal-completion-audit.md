@@ -76,7 +76,8 @@ complete.
 | S4-M53 fixed-size pointer array sampling | `src/seq.zig`, `examples/sequence_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m53-choose-ptr-array.md` | Closed for the current bar: fixed-size item subsets can now return const/mutable pointer arrays without heap allocation or value copies. |
 | S4-M54 fixed-size weighted pointer array sampling | `src/seq.zig`, `examples/weighted_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m54-weighted-ptr-array.md` | Closed for the current bar: fixed-size weighted no-replacement item subsets can now return const/mutable pointer arrays without heap allocation or value copies. |
 | S4-M55 caller-owned weighted pointer subset sampling | `src/seq.zig`, `examples/weighted_sampling.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m55-weighted-ptrs-into.md` | Closed for the current bar: runtime-length weighted no-replacement item subsets can now fill caller-owned const/mutable pointer buffers with caller-provided index/key scratch. |
-| S4-M56 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M56 const-pointer single choice | `src/rng.zig`, `examples/basic.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m56-choose-const-ptr.md` | Closed for the current bar: one-shot choice can now return `*const T` from immutable slices without value copies or mutable slice requirements. |
+| S4-M57 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -119,7 +120,7 @@ weighted index sampling, S4-M42 adds caller-owned weighted item sampling, and
 S4-M43 adds caller-owned weighted iterator sampling, S4-M44 adds caller-owned
 index sampling, and S4-M45 adds caller-owned slice item sampling, S4-M46 adds selected/rest
 partial-shuffle splits, and S4-M47 adds caller-owned `u32` index sampling, and S4-M48 adds a focused caller-owned sampling adoption example, and S4-M49 adds IndexVec item iterators, and S4-M50 adds caller-owned IndexVec item
-mapping, and S4-M51 adds checked mutable-pointer IndexVec mapping, and S4-M52 adds caller-owned pointer subset sampling, and S4-M53 adds fixed-size pointer array sampling, and S4-M54 adds fixed-size weighted pointer array sampling, and S4-M55 adds caller-owned weighted pointer subset sampling, but they do not resolve S4-M11 or complete the long-term objective.
+mapping, and S4-M51 adds checked mutable-pointer IndexVec mapping, and S4-M52 adds caller-owned pointer subset sampling, and S4-M53 adds fixed-size pointer array sampling, and S4-M54 adds fixed-size weighted pointer array sampling, and S4-M55 adds caller-owned weighted pointer subset sampling, and S4-M56 adds const-pointer single choice, but they do not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

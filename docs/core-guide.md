@@ -227,7 +227,9 @@ geometry helpers.
 Use:
 
 - `rng.choose`, `Rng.chooseFrom`, `Rng.chooseCheckedFrom`,
-  `rng.choosePtr`, `Rng.choosePtrFrom`, `Rng.choosePtrCheckedFrom`
+  `rng.chooseConstPtr`, `Rng.chooseConstPtrFrom`,
+  `Rng.chooseConstPtrCheckedFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`,
+  `Rng.choosePtrCheckedFrom`
 - `rng.shuffle`, `Rng.shuffleFrom`
 - `seq.partialShuffle`, `seq.partialShuffleFrom`,
   `seq.partialShuffleCheckedFrom`, `seq.partialShuffleSplitFrom`,

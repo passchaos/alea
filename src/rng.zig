@@ -1667,6 +1667,24 @@ pub fn chooseFrom(source: anytype, comptime T: type, items: []const T) ?T {
     return items[uintLessThanFrom(source, usize, items.len)];
 }
 
+pub fn chooseConstPtr(self: Rng, comptime T: type, items: []const T) ?*const T {
+    return chooseConstPtrFrom(self, T, items);
+}
+
+pub fn chooseConstPtrChecked(self: Rng, comptime T: type, items: []const T) Error!*const T {
+    return chooseConstPtrCheckedFrom(self, T, items);
+}
+
+pub fn chooseConstPtrCheckedFrom(source: anytype, comptime T: type, items: []const T) Error!*const T {
+    return chooseConstPtrFrom(source, T, items) orelse error.EmptyRange;
+}
+
+pub fn chooseConstPtrFrom(source: anytype, comptime T: type, items: []const T) ?*const T {
+    if (items.len == 0) return null;
+    if (items.len == 1) return &items[0];
+    return &items[uintLessThanFrom(source, usize, items.len)];
+}
+
 pub fn choosePtr(self: Rng, comptime T: type, items: []T) ?*T {
     return choosePtrFrom(self, T, items);
 }
@@ -2894,6 +2912,11 @@ test "shuffle and sampling keep item set" {
     const checked_chosen = try Rng.chooseCheckedFrom(&engine, u8, &values);
     try std.testing.expect(checked_chosen >= 1 and checked_chosen <= 5);
 
+    const chosen_const_ptr = Rng.chooseConstPtrFrom(&engine, u8, &values).?;
+    try std.testing.expect(chosen_const_ptr.* >= 1 and chosen_const_ptr.* <= 5);
+    const checked_chosen_const_ptr = try Rng.chooseConstPtrCheckedFrom(&engine, u8, &values);
+    try std.testing.expect(checked_chosen_const_ptr.* >= 1 and checked_chosen_const_ptr.* <= 5);
+
     const chosen_ptr = Rng.choosePtrFrom(&engine, u8, &values).?;
     try std.testing.expect(chosen_ptr.* >= 1 and chosen_ptr.* <= 5);
     const checked_chosen_ptr = try Rng.choosePtrCheckedFrom(&engine, u8, &values);
@@ -3124,6 +3147,8 @@ test "invalid checked helpers do not consume random stream" {
 
     try std.testing.expectError(error.EmptyRange, chooseCheckedFrom(&engine, u8, &.{}));
     try std.testing.expectEqual(@as(u64, 0x8a685176c49005b1), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, chooseConstPtrCheckedFrom(&engine, u8, &.{}));
 
     var empty_items: [0]u8 = .{};
     try std.testing.expectError(error.EmptyRange, choosePtrCheckedFrom(&engine, u8, &empty_items));
@@ -3717,6 +3742,12 @@ test "single-item choice helpers do not consume random stream" {
     try std.testing.expectEqual(@as(?u8, 42), chooseFrom(&engine, u8, &items));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectEqual(&items[0], chooseConstPtrFrom(&engine, u8, &items).?);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(&items[0], try rng.chooseConstPtrChecked(u8, &items));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(u8, 42), try rng.chooseChecked(u8, &items));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -3740,6 +3771,14 @@ test "collection helpers preserve direct stream shape" {
         try std.testing.expectEqual(rng.choose(u8, &items), Rng.chooseFrom(&direct_engine, u8, &items));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
         try std.testing.expectEqual(try rng.chooseChecked(u8, &items), try Rng.chooseCheckedFrom(&direct_engine, u8, &items));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        const facade_const_ptr = rng.chooseConstPtr(u8, &items).?;
+        const direct_const_ptr = Rng.chooseConstPtrFrom(&direct_engine, u8, &items).?;
+        try std.testing.expectEqual(facade_const_ptr.*, direct_const_ptr.*);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        const checked_facade_const_ptr = try rng.chooseConstPtrChecked(u8, &items);
+        const checked_direct_const_ptr = try Rng.chooseConstPtrCheckedFrom(&direct_engine, u8, &items);
+        try std.testing.expectEqual(checked_facade_const_ptr.*, checked_direct_const_ptr.*);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         const Enum = enum { a, b, c };
