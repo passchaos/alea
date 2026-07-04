@@ -117,6 +117,23 @@ pub fn main(init: std.process.Init) !void {
     index_weight_mut_ptr.* = "picked";
     try stdout.print("weighted index-weight mut ptr value: {s}\n", .{index_weight_mut_ptr.*});
 
+    var index_weight_value_fill_engine = alea.ScalarPrng.init(0x71a9);
+    var index_weight_value_fill: [6]?[]const u8 = undefined;
+    try alea.seq.fillChooseWeightedByIndexFrom(&index_weight_value_fill_engine, []const u8, u32, &index_weight_value_fill, &items, indexWeight);
+    try stdout.print("weighted index-weight value fill: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ index_weight_value_fill[0].?, index_weight_value_fill[1].?, index_weight_value_fill[2].?, index_weight_value_fill[3].?, index_weight_value_fill[4].?, index_weight_value_fill[5].? });
+
+    var index_weight_const_ptr_fill_engine = alea.ScalarPrng.init(0x71aa);
+    var index_weight_const_ptr_fill: [6]?*const []const u8 = undefined;
+    try alea.seq.fillChooseWeightedConstPtrByIndexFrom(&index_weight_const_ptr_fill_engine, []const u8, u32, &index_weight_const_ptr_fill, &items, indexWeight);
+    try stdout.print("weighted index-weight const ptr fill: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ index_weight_const_ptr_fill[0].?.*, index_weight_const_ptr_fill[1].?.*, index_weight_const_ptr_fill[2].?.*, index_weight_const_ptr_fill[3].?.*, index_weight_const_ptr_fill[4].?.*, index_weight_const_ptr_fill[5].?.* });
+
+    var index_weight_mut_fill_items = items;
+    var index_weight_mut_ptr_fill_engine = alea.ScalarPrng.init(0x71ab);
+    var index_weight_mut_ptr_fill: [6]?*[]const u8 = undefined;
+    try alea.seq.fillChooseWeightedPtrByIndexFrom(&index_weight_mut_ptr_fill_engine, []const u8, u32, &index_weight_mut_ptr_fill, &index_weight_mut_fill_items, indexWeight);
+    for (index_weight_mut_ptr_fill) |slot| slot.?.* = "fill";
+    try stdout.print("weighted index-weight mut ptr fill items: [{s}, {s}, {s}, {s}]\n", .{ index_weight_mut_fill_items[0], index_weight_mut_fill_items[1], index_weight_mut_fill_items[2], index_weight_mut_fill_items[3] });
+
     var weighted_choice_engine = alea.ScalarPrng.init(0x7158);
     const weighted_value = (try alea.seq.chooseWeightedFrom(&weighted_choice_engine, []const u8, f64, &items, &float_weights)).?;
     try stdout.print("one-shot weighted value: {s}\n", .{weighted_value});
@@ -540,6 +557,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_by_mut_ptrs_into) |record| record.score += 20;
     try stdout.print("weighted by mut ptrs into scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_records_into[0].score, weighted_by_mut_records_into[1].score, weighted_by_mut_records_into[2].score, weighted_by_mut_records_into[3].score });
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, weightedIndexByIndex/weightedIndexU32ByIndex plus fillWeightedIndexByIndex/fillWeightedIndexU32ByIndex, weightedIndexBatchByIndex/weightedIndexU32BatchByIndex, and chooseWeightedByIndex/ConstPtrByIndex/PtrByIndex for length/index-weight accessors, weightedIndexBy/weightedIndexU32By plus fillWeightedIndexBy/fillWeightedIndexU32By and weightedIndexBatchBy/weightedIndexU32BatchBy when weights live inside item records, chooseWeightedBy/ConstPtrBy/PtrBy, fillChooseWeightedBy/ConstPtrBy/PtrBy, and chooseWeightedBatchBy/ConstPtrBatchBy/PtrBatchBy for accessor-weighted item choices, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight no-replacement workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, weightedIndexByIndex/weightedIndexU32ByIndex plus fillWeightedIndexByIndex/fillWeightedIndexU32ByIndex, weightedIndexBatchByIndex/weightedIndexU32BatchByIndex, chooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, and fillChooseWeightedByIndex/ConstPtrByIndex/PtrByIndex for length/index-weight accessors, weightedIndexBy/weightedIndexU32By plus fillWeightedIndexBy/fillWeightedIndexU32By and weightedIndexBatchBy/weightedIndexU32BatchBy when weights live inside item records, chooseWeightedBy/ConstPtrBy/PtrBy, fillChooseWeightedBy/ConstPtrBy/PtrBy, and chooseWeightedBatchBy/ConstPtrBatchBy/PtrBatchBy for accessor-weighted item choices, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight no-replacement workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }
