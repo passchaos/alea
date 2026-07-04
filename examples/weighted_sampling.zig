@@ -243,6 +243,14 @@ pub fn main(init: std.process.Init) !void {
     }
     try stdout.print("]\n", .{});
 
+    var weighted_by_index_array_engine = alea.ScalarPrng.init(0x7181);
+    const weighted_by_index_array = (try alea.seq.sampleWeightedIndexArrayByFrom(&weighted_by_index_array_engine, WeightedRecord, u32, 3, &weighted_records, WeightedRecord.weightOf)).?;
+    try stdout.print("weighted by index array: {any}\n", .{weighted_by_index_array});
+
+    var weighted_by_u32_index_array_engine = alea.ScalarPrng.init(0x7182);
+    const weighted_by_u32_index_array = (try alea.seq.sampleWeightedIndexArrayU32ByFrom(&weighted_by_u32_index_array_engine, WeightedRecord, u32, 3, &weighted_records, WeightedRecord.weightOf)).?;
+    try stdout.print("weighted by u32 index array: {any}\n", .{weighted_by_u32_index_array});
+
     var weighted_array_engine = alea.ScalarPrng.init(0x7159);
     const weighted_array = (try alea.seq.sampleWeightedArrayFrom(&weighted_array_engine, []const u8, f64, 3, &items, &float_weights)).?;
     try stdout.print("weighted array sample: [{s}, {s}, {s}]\n", .{ weighted_array[0], weighted_array[1], weighted_array[2] });
