@@ -21,7 +21,7 @@ The current Linux-first roadmap is intentionally broad:
   high-volume sampling without iterator ceremony
 - deterministic seed derivation with named streams and system-entropy helpers
 - scalar helpers for integers, floats, durations, ranges, booleans, and bytes
-- collection helpers for one-shot index choice, `choose`, const/mutable pointer choice, `shuffle`, fixed-size u32 index and item/pointer arrays, allocation-returning and caller-owned item/pointer subsets, partial shuffle selected/rest splits, compact `IndexVec` index samples with lazy/caller-owned/allocation-returning value and pointer mapping plus u32 export mapping, f64/generic weighted indexes, compact weighted IndexVec samples, allocation-returning weighted u32 index slices, fixed-size weighted u32 index arrays, caller-owned weighted u32 index buffers,
+- collection helpers for one-shot usize/u32 index choice, `choose`, const/mutable pointer choice, `shuffle`, fixed-size u32 index and item/pointer arrays, allocation-returning and caller-owned item/pointer subsets, partial shuffle selected/rest splits, compact `IndexVec` index samples with lazy/caller-owned/allocation-returning value and pointer mapping plus u32 export mapping, f64/generic weighted indexes, compact weighted IndexVec samples, allocation-returning weighted u32 index slices, fixed-size weighted u32 index arrays, caller-owned weighted u32 index buffers,
   repeated choice iterators, one-shot weighted item/const-pointer/mutable-pointer helpers, weighted choice samplers, weighted fixed-size pointer arrays, allocation-returning weighted pointer subsets, caller-owned weighted pointer buffers, caller-owned pointer adoption examples, weighted sampling without
   replacement, iterator and weighted iterator sampling with and without
   replacement, fixed-size and caller-owned iterator sampling, allocated/caller-owned value and pointer reservoir sampling, adaptive and caller-owned usize/u32 index sampling, and checked
@@ -76,6 +76,7 @@ pub fn main() !void {
 
     var items = [_]u32{ 10, 20, 30, 40 };
     const item_index = rng.chooseIndex(items.len).?;
+    const compact_item_index = rng.chooseIndexU32(@intCast(items.len)).?;
     const item_ptr = rng.chooseConstPtr(u32, &items).?;
     const hand = alea.seq.partialShuffle(rng, u32, &items, 2);
 

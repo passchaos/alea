@@ -227,7 +227,9 @@ geometry helpers.
 Use:
 
 - `rng.chooseIndex`, `Rng.chooseIndexFrom`, `Rng.chooseIndexCheckedFrom`,
-  `rng.choose`, `Rng.chooseFrom`, `Rng.chooseCheckedFrom`,
+  `rng.chooseIndexU32`, `Rng.chooseIndexU32From`,
+  `Rng.chooseIndexU32CheckedFrom`, `rng.choose`, `Rng.chooseFrom`,
+  `Rng.chooseCheckedFrom`,
   `rng.chooseConstPtr`, `Rng.chooseConstPtrFrom`,
   `Rng.chooseConstPtrCheckedFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`,
   `Rng.choosePtrCheckedFrom`

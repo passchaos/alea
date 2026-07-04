@@ -32,6 +32,7 @@ pub fn main(init: std.process.Init) !void {
     const hand = alea.seq.partialShuffle(rng, u8, &deck, 3);
     const colors = [_][]const u8{ "red", "green", "blue", "gold" };
     const color_index = rng.chooseIndex(colors.len).?;
+    const compact_color_index = rng.chooseIndexU32(@intCast(colors.len)).?;
     const color_ptr = rng.chooseConstPtr([]const u8, &colors).?;
 
     const Iter = struct {
@@ -59,6 +60,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("dirichlet: {any}\n", .{proportions});
     try stdout.print("partial shuffle hand: {any}\n", .{hand});
     try stdout.print("index choice: {} ({s})\n", .{ color_index, colors[color_index] });
+    try stdout.print("u32 index choice: {} ({s})\n", .{ compact_color_index, colors[compact_color_index] });
     try stdout.print("const pointer choice: {s}\n", .{color_ptr.*});
     try stdout.print("iterator choice: {}\n", .{stream_choice});
     try stdout.print("child stream u64: {}\n", .{child_rng.next()});

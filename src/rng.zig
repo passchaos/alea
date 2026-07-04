@@ -1685,6 +1685,24 @@ pub fn chooseIndexFrom(source: anytype, length: usize) ?usize {
     return uintLessThanFrom(source, usize, length);
 }
 
+pub fn chooseIndexU32(self: Rng, length: u32) ?u32 {
+    return chooseIndexU32From(self, length);
+}
+
+pub fn chooseIndexU32Checked(self: Rng, length: u32) Error!u32 {
+    return chooseIndexU32CheckedFrom(self, length);
+}
+
+pub fn chooseIndexU32CheckedFrom(source: anytype, length: u32) Error!u32 {
+    return chooseIndexU32From(source, length) orelse error.EmptyRange;
+}
+
+pub fn chooseIndexU32From(source: anytype, length: u32) ?u32 {
+    if (length == 0) return null;
+    if (length == 1) return 0;
+    return uintLessThanFrom(source, u32, length);
+}
+
 pub fn chooseConstPtr(self: Rng, comptime T: type, items: []const T) ?*const T {
     return chooseConstPtrFrom(self, T, items);
 }
@@ -2934,6 +2952,10 @@ test "shuffle and sampling keep item set" {
     try std.testing.expect(chosen_index < values.len);
     const checked_chosen_index = try Rng.chooseIndexCheckedFrom(&engine, values.len);
     try std.testing.expect(checked_chosen_index < values.len);
+    const chosen_index_u32 = Rng.chooseIndexU32From(&engine, @intCast(values.len)).?;
+    try std.testing.expect(chosen_index_u32 < values.len);
+    const checked_chosen_index_u32 = try Rng.chooseIndexU32CheckedFrom(&engine, @intCast(values.len));
+    try std.testing.expect(checked_chosen_index_u32 < values.len);
 
     const chosen_const_ptr = Rng.chooseConstPtrFrom(&engine, u8, &values).?;
     try std.testing.expect(chosen_const_ptr.* >= 1 and chosen_const_ptr.* <= 5);
@@ -3767,6 +3789,12 @@ test "single-item choice helpers do not consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), try rng.chooseIndexChecked(1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectEqual(@as(?u32, 0), chooseIndexU32From(&engine, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(u32, 0), try rng.chooseIndexU32Checked(1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const items = [_]u8{42};
     try std.testing.expectEqual(@as(?u8, 42), chooseFrom(&engine, u8, &items));
     try std.testing.expectEqual(control.next(), engine.next());
@@ -3802,6 +3830,15 @@ test "empty index choice helpers do not consume random stream" {
 
     try std.testing.expectError(error.EmptyRange, rng.chooseIndexChecked(0));
     try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(?u32, null), chooseIndexU32From(&engine, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, chooseIndexU32CheckedFrom(&engine, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.chooseIndexU32Checked(0));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "collection helpers preserve direct stream shape" {
@@ -3816,6 +3853,10 @@ test "collection helpers preserve direct stream shape" {
         try std.testing.expectEqual(rng.chooseIndex(items.len), Rng.chooseIndexFrom(&direct_engine, items.len));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
         try std.testing.expectEqual(try rng.chooseIndexChecked(items.len), try Rng.chooseIndexCheckedFrom(&direct_engine, items.len));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        try std.testing.expectEqual(rng.chooseIndexU32(@intCast(items.len)), Rng.chooseIndexU32From(&direct_engine, @intCast(items.len)));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        try std.testing.expectEqual(try rng.chooseIndexU32Checked(@intCast(items.len)), try Rng.chooseIndexU32CheckedFrom(&direct_engine, @intCast(items.len)));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         try std.testing.expectEqual(rng.choose(u8, &items), Rng.chooseFrom(&direct_engine, u8, &items));
