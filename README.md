@@ -13,6 +13,8 @@ The current Linux-first roadmap is intentionally broad:
   bulk-fill throughput
 - `Rng.value(T)` / `Rng.valueChecked(T)` for scalar, enum, tuple, and array
   sampling, including fallible empty-enum handling
+- `Rng.valueBatch(T)` / `Rng.valueBatchChecked(T)` and
+  `Rng.sampleBatch(T, sampler)` for allocation-returning repeated samples
 - `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling,
   including bulk `fill` methods where stream policy permits
 - bulk `fillSample`, `fillRange`, strict-interval scalar and vector float
@@ -67,6 +69,8 @@ pub fn main() !void {
     const tuple = rng.value(struct { u16, bool, f32 });
     var rolls = rng.sampleIter(u8, try alea.distributions.Uniform(u8).initInclusive(1, 6));
     const next_roll = rolls.next().?;
+    const random_words = try rng.valueBatch(u16, std.heap.smp_allocator, 4);
+    defer std.heap.smp_allocator.free(random_words);
     const token = try alea.ascii.Alphanumeric.alloc(std.heap.smp_allocator, rng, 16);
     defer std.heap.smp_allocator.free(token);
     const utf8_capacity = try alea.ascii.unicodeUtf8Capacity(8);
@@ -85,6 +89,7 @@ pub fn main() !void {
     _ = outages;
     _ = tuple;
     _ = next_roll;
+    _ = random_words;
     _ = token;
     _ = utf8_capacity;
     _ = text;

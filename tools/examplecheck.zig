@@ -10,7 +10,7 @@ const examples = [_]Example{
     .{
         .path = "examples/basic.zig",
         .step = "zig build run-basic",
-        .source_tokens = &.{ "index choice", "u32 index choice", "const pointer choice" },
+        .source_tokens = &.{ "valueBatch u16", "sampleBatch dice", "index choice", "u32 index choice", "const pointer choice" },
     },
     .{ .path = "examples/reproducible_streams.zig", .step = "zig build run-reproducible-streams" },
     .{ .path = "examples/range_sampling.zig", .step = "zig build run-range-sampling" },

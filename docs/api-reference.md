@@ -21,8 +21,10 @@ stability expectations.
 - Error type: `Error`
 - Construction and interop: `init`, `fromRandom`, `random`
 - Values: `value`, `valueFrom`, `valueChecked`, `valueCheckedFrom`,
-  `valueIter`, `valueIterFrom`, `randomIter`, `randomIterFrom`, `sampleIter`,
-  `sampleIterFrom`
+  `valueBatch`, `valueBatchFrom`, `valueBatchChecked`,
+  `valueBatchCheckedFrom`, `valueIter`, `valueIterFrom`, `randomIter`,
+  `randomIterFrom`, `sampleIter`, `sampleIterFrom`, `sampleBatch`,
+  `sampleBatchFrom`
 - Bytes/fill: `bytes`, `fill` and `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`,
   `fillRangeChecked`, `fillRangeCheckedFrom`, `fillOpen`,

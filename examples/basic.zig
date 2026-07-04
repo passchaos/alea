@@ -23,6 +23,8 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(token);
     const unicode = try alea.ascii.unicodeUtf8Alloc(init.gpa, rng, 6);
     defer init.gpa.free(unicode);
+    const random_words = try rng.valueBatch(u16, init.gpa, 4);
+    defer init.gpa.free(random_words);
 
     const dirichlet = try alea.distributions.Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
     var proportions: [3]f64 = undefined;
@@ -34,6 +36,9 @@ pub fn main(init: std.process.Init) !void {
     const color_index = rng.chooseIndex(colors.len).?;
     const compact_color_index = rng.chooseIndexU32(@intCast(colors.len)).?;
     const color_ptr = rng.chooseConstPtr([]const u8, &colors).?;
+    const die_sampler = try alea.distributions.Uniform(u8).initInclusive(1, 6);
+    const owned_rolls = try rng.sampleBatch(u8, init.gpa, die_sampler, 6);
+    defer init.gpa.free(owned_rolls);
 
     const Iter = struct {
         next_value: u8 = 0,
@@ -57,11 +62,13 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("weighted index: {}\n", .{weighted});
     try stdout.print("token: {s}\n", .{token});
     try stdout.print("unicode scalars: {s}\n", .{unicode});
+    try stdout.print("valueBatch u16: {any}\n", .{random_words});
     try stdout.print("dirichlet: {any}\n", .{proportions});
     try stdout.print("partial shuffle hand: {any}\n", .{hand});
     try stdout.print("index choice: {} ({s})\n", .{ color_index, colors[color_index] });
     try stdout.print("u32 index choice: {} ({s})\n", .{ compact_color_index, colors[compact_color_index] });
     try stdout.print("const pointer choice: {s}\n", .{color_ptr.*});
+    try stdout.print("sampleBatch dice: {any}\n", .{owned_rolls});
     try stdout.print("iterator choice: {}\n", .{stream_choice});
     try stdout.print("child stream u64: {}\n", .{child_rng.next()});
     try stdout.flush();

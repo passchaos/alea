@@ -110,6 +110,28 @@ pub fn valueCheckedFrom(source: anytype, comptime T: type) Error!T {
     return valueCheckedFromPrevalidated(source, T);
 }
 
+pub fn valueBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    return valueBatchFrom(self, T, allocator, count);
+}
+
+pub fn valueBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    var iter = valueIterFrom(source, T);
+    iter.fill(out);
+    return out;
+}
+
+pub fn valueBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    return valueBatchCheckedFrom(self, T, allocator, count);
+}
+
+pub fn valueBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+    return valueBatchFrom(source, T, allocator, count);
+}
+
 fn valueCheckedFromPrevalidated(source: anytype, comptime T: type) T {
     return switch (@typeInfo(T)) {
         .bool, .int, .float, .vector => valueFrom(source, T),
@@ -202,6 +224,17 @@ pub fn sampleIterFrom(source: anytype, comptime T: type, sampler: anytype) Sampl
         .source = source,
         .sampler = sampler,
     };
+}
+
+pub fn sampleBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, sampler: anytype, count: usize) ![]T {
+    return sampleBatchFrom(self, T, allocator, sampler, count);
+}
+
+pub fn sampleBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, sampler: anytype, count: usize) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillSampleFrom(source, T, out, sampler);
+    return out;
 }
 
 pub fn bytes(self: Rng, buf: []u8) void {
@@ -3977,7 +4010,80 @@ test "value and iterator helpers preserve direct stream shape" {
         direct_sample_iter.fill(&direct_sample_buf);
         try std.testing.expectEqualSlices(u8, &sample_buf, &direct_sample_buf);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const owned_values = try rng.valueBatch(u16, std.testing.allocator, 8);
+        defer std.testing.allocator.free(owned_values);
+        const direct_owned_values = try valueBatchFrom(&direct_engine, u16, std.testing.allocator, 8);
+        defer std.testing.allocator.free(direct_owned_values);
+        try std.testing.expectEqualSlices(u16, owned_values, direct_owned_values);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const owned_rolls = try rng.sampleBatch(u8, std.testing.allocator, die, 8);
+        defer std.testing.allocator.free(owned_rolls);
+        const direct_owned_rolls = try sampleBatchFrom(&direct_engine, u8, std.testing.allocator, die, 8);
+        defer std.testing.allocator.free(direct_owned_rolls);
+        try std.testing.expectEqualSlices(u8, owned_rolls, direct_owned_rolls);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
+}
+
+test "owned value and sampler batches allocate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_0a85);
+    var control = alea.ScalarPrng.init(0x5150_0a85);
+    const rng = Rng.init(&engine);
+    const die = try alea.distributions.Uniform(u8).initInclusive(1, 6);
+
+    var values_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.valueBatch(u16, values_alloc.allocator(), 8));
+    try std.testing.expect(values_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var samples_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.sampleBatch(u8, samples_alloc.allocator(), die, 8));
+    try std.testing.expect(samples_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var direct_values_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, valueBatchFrom(&engine, u16, direct_values_alloc.allocator(), 8));
+    try std.testing.expect(direct_values_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var direct_samples_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleBatchFrom(&engine, u8, direct_samples_alloc.allocator(), die, 8));
+    try std.testing.expect(direct_samples_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "owned checked values validate empty enums before consuming random stream" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    var engine = alea.ScalarPrng.init(0x5150_0a86);
+    var control = alea.ScalarPrng.init(0x5150_0a86);
+    const rng = Rng.init(&engine);
+
+    var zero_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.valueBatchChecked(Empty, zero_alloc.allocator(), 0);
+    defer zero_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!zero_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (rng.valueBatchChecked(Empty, std.testing.allocator, 1)) |unexpected| {
+        defer std.testing.allocator.free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (valueBatchCheckedFrom(&engine, Empty, std.testing.allocator, 1)) |unexpected| {
+        defer std.testing.allocator.free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "value and sampler iterators produce unbounded samples" {

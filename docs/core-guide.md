@@ -60,6 +60,11 @@ selection.
   empty enum type should be reported as `EmptyRange` (zero-length arrays are
   valid even when their child type is not sampled, while non-empty arrays or
   tuples containing an empty enum fail before consuming randomness)
+- allocation-returning repeated sampling: `valueBatch`, `valueBatchFrom`,
+  `valueBatchChecked`, `valueBatchCheckedFrom`, `sampleBatch`, and
+  `sampleBatchFrom` allocate owned slices after validating no-consume checked
+  cases; use these when an owned result is more ergonomic than a caller buffer
+  or iterator loop
 - bulk sampling: `fill` / `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,
   `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`,

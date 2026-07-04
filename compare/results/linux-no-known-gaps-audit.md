@@ -122,6 +122,7 @@ Local Alea evidence:
 - `compare/results/s4-m82-choice-owned-indices.md`
 - `compare/results/s4-m83-weighted-choice-owned-indices.md`
 - `compare/results/s4-m84-choice-owned-values-ptrs.md`
+- `compare/results/s4-m85-rng-owned-batches.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -138,7 +139,7 @@ Out of scope for this Linux-first audit:
 | Rust area | Alea status | Evidence |
 | --- | --- | --- |
 | integer, float, bool, range, ratio/chance, bytes | Covered | `Rng`, unit tests, Zig/Rust benchmark rows |
-| arrays, tuples, enums | Covered | `Rng.value(T)` tests |
+| arrays, tuples, enums | Covered | `Rng.value(T)`, `Rng.valueBatch(T)`, and checked empty-enum tests |
 | Unicode scalar / char-like sampling | Covered in Zig form | `Rng.unicodeScalar`, `ascii.unicodeUtf8Alloc`, `ascii.unicodeUtf8Into` |
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost` |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
@@ -281,6 +282,6 @@ one-shot u32 index choice, S4-M77 adds generic weighted u32 index choice, S4-M78
 adds f64 weighted u32 index choice, S4-M79 adds WeightedChoice index fills,
 S4-M80 adds Choice index fills, S4-M81 adds Choice sampler index samples, and
 S4-M82 adds Choice owned index batches, S4-M83 adds WeightedChoice owned
-index batches, and S4-M84 adds reusable choice owned value/pointer batches, but
-later stages should keep raising the bar rather than declaring the product
-permanently finished.
+index batches, S4-M84 adds reusable choice owned value/pointer batches, and
+S4-M85 adds Rng owned repeated value/sample batches, but later stages should
+keep raising the bar rather than declaring the product permanently finished.
