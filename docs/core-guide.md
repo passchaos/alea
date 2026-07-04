@@ -369,7 +369,9 @@ Use:
   `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
   `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
   `seq.fillWeightedIndexByCheckedFrom`, `seq.fillWeightedIndexU32ByFrom`,
-  `seq.fillWeightedIndexU32ByCheckedFrom`, `seq.fillChooseWeightedFrom`,
+  `seq.fillWeightedIndexU32ByCheckedFrom`, `seq.weightedIndexBatchByFrom`,
+  `seq.weightedIndexBatchByCheckedFrom`, `seq.weightedIndexU32BatchByFrom`,
+  `seq.weightedIndexU32BatchByCheckedFrom`, `seq.fillChooseWeightedFrom`,
   `seq.chooseWeightedBatchFrom`, `seq.fillChooseWeightedConstPtrFrom`,
   `seq.chooseWeightedConstPtrBatchFrom`, `seq.fillChooseWeightedPtrFrom`,
   `seq.chooseWeightedPtrBatchFrom`
@@ -381,7 +383,9 @@ Use:
   `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
   `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
   `seq.fillWeightedIndexByCheckedFrom`, `seq.fillWeightedIndexU32ByFrom`,
-  `seq.fillWeightedIndexU32ByCheckedFrom`, `seq.chooseWeightedByFrom`,
+  `seq.fillWeightedIndexU32ByCheckedFrom`, `seq.weightedIndexBatchByFrom`,
+  `seq.weightedIndexBatchByCheckedFrom`, `seq.weightedIndexU32BatchByFrom`,
+  `seq.weightedIndexU32BatchByCheckedFrom`, `seq.chooseWeightedByFrom`,
   `seq.chooseWeightedByCheckedFrom`, `seq.chooseWeightedConstPtrByFrom`,
   `seq.chooseWeightedConstPtrByCheckedFrom`, `seq.chooseWeightedPtrByFrom`,
   `seq.chooseWeightedPtrByCheckedFrom`, plus caller-owned
