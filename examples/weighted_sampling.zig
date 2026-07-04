@@ -10,6 +10,15 @@ fn printStringSlice(stdout: *std.Io.Writer, label: []const u8, values: []const [
     try stdout.print("]\n", .{});
 }
 
+const WeightedRecord = struct {
+    label: []const u8,
+    score: u32,
+
+    fn weightOf(item: *const WeightedRecord) u32 {
+        return item.score;
+    }
+};
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const allocator = init.gpa;
@@ -98,6 +107,24 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(generic_mut_ptr_batch);
     for (generic_mut_ptr_batch) |score| score.* += 1;
     try stdout.print("generic weighted mut ptr batch scores: {any}\n", .{generic_mut_scores_batch});
+
+    const weighted_records = [_]WeightedRecord{
+        .{ .label = "never", .score = 0 },
+        .{ .label = "rare", .score = 2 },
+        .{ .label = "often", .score = 8 },
+        .{ .label = "bonus", .score = 3 },
+    };
+    var weighted_by_engine = alea.ScalarPrng.init(0x7174);
+    const weighted_by_value = (try alea.seq.chooseWeightedByFrom(&weighted_by_engine, WeightedRecord, u32, &weighted_records, WeightedRecord.weightOf)).?;
+    try stdout.print("weighted by value: {s}\n", .{weighted_by_value.label});
+    var weighted_by_const_ptr_engine = alea.ScalarPrng.init(0x7175);
+    const weighted_by_const_ptr = (try alea.seq.chooseWeightedConstPtrByFrom(&weighted_by_const_ptr_engine, WeightedRecord, u32, &weighted_records, WeightedRecord.weightOf)).?;
+    try stdout.print("weighted by const ptr: {s}\n", .{weighted_by_const_ptr.label});
+    var weighted_by_mut_records = weighted_records;
+    var weighted_by_mut_ptr_engine = alea.ScalarPrng.init(0x7176);
+    const weighted_by_mut_ptr = (try alea.seq.chooseWeightedPtrByFrom(&weighted_by_mut_ptr_engine, WeightedRecord, u32, &weighted_by_mut_records, WeightedRecord.weightOf)).?;
+    weighted_by_mut_ptr.score += 1;
+    try stdout.print("weighted by mut ptr score: {}\n", .{weighted_by_mut_ptr.score});
 
     var alias = try alea.distributions.AliasTable(f64).init(allocator, &float_weights);
     defer alias.deinit();
@@ -256,6 +283,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_mut_ptrs_into) |score| score.* += 5;
     try stdout.print("weighted mut ptrs into scores: {any}\n", .{weighted_scores_into});
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy when weights live inside item records, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }

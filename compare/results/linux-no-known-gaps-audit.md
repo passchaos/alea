@@ -152,6 +152,7 @@ Local Alea evidence:
 - `compare/results/s4-m112-generic-weighted-value-batches.md`
 - `compare/results/s4-m113-generic-weighted-const-ptr-batches.md`
 - `compare/results/s4-m114-generic-weighted-mut-ptr-batches.md`
+- `compare/results/s4-m115-accessor-weighted-choices.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -173,7 +174,7 @@ Out of scope for this Linux-first audit:
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost`, and owned duration range batches |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
 | choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseIndexBatch`, `Rng.chooseIndexU32`, `Rng.chooseIndexU32Batch`, `Rng.choose`, `Rng.chooseBatch`, `Rng.chooseConstPtr`, `Rng.chooseConstPtrBatch`, `Rng.choosePtr`, `Rng.choosePtrBatch`, `seq` module, `sampleArrayU32`, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `Choice.sampleIndex`, `Choice.fill`, `Choice.fillValues`, `Choice.ptrs`, `Choice.values`, `Choice.fillIndices`, `Choice.indices`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer and u32 export mapping, Rust sequence benchmark row |
-| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `Rng.weightedIndexBatch`, `Rng.weightedIndexU32`, `Rng.weightedIndexU32Batch`, `Rng.chooseWeighted`, `Rng.chooseWeightedBatch`, `Rng.chooseWeightedConstPtr`, `Rng.chooseWeightedConstPtrBatch`, `Rng.chooseWeightedPtr`, `Rng.chooseWeightedPtrBatch`, `seq.weightedIndex`, `seq.weightedIndexBatch`, `seq.weightedIndexU32`, `seq.weightedIndexU32Batch`, `seq.chooseWeighted`, `seq.chooseWeightedBatch`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedConstPtrBatch`, `seq.chooseWeightedPtr`, `seq.chooseWeightedPtrBatch`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedIndicesU32`, `seq.sampleWeightedIndicesU32Into`, `seq.sampleWeightedIndexVec`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedIndexArrayU32`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedChoice.sample`, `WeightedChoice.ptrs`, `WeightedChoice.values`, `WeightedChoice.sampleIndex`, `WeightedChoice.fillIndices`, `WeightedChoice.indices`, `WeightedTree`, benchmark rows |
+| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `Rng.weightedIndexBatch`, `Rng.weightedIndexU32`, `Rng.weightedIndexU32Batch`, `Rng.chooseWeighted`, `Rng.chooseWeightedBatch`, `Rng.chooseWeightedConstPtr`, `Rng.chooseWeightedConstPtrBatch`, `Rng.chooseWeightedPtr`, `Rng.chooseWeightedPtrBatch`, `seq.weightedIndex`, `seq.weightedIndexBatch`, `seq.weightedIndexU32`, `seq.weightedIndexU32Batch`, `seq.chooseWeighted`, `seq.chooseWeightedBy`, `seq.chooseWeightedBatch`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedConstPtrBy`, `seq.chooseWeightedConstPtrBatch`, `seq.chooseWeightedPtr`, `seq.chooseWeightedPtrBy`, `seq.chooseWeightedPtrBatch`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedIndicesU32`, `seq.sampleWeightedIndicesU32Into`, `seq.sampleWeightedIndexVec`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedIndexArrayU32`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedChoice.sample`, `WeightedChoice.ptrs`, `WeightedChoice.values`, `WeightedChoice.sampleIndex`, `WeightedChoice.fillIndices`, `WeightedChoice.indices`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface
 
@@ -325,5 +326,6 @@ S4-M99 through S4-M101 add bounded/inclusive scalar and vector range batches,
 S4-M102 through S4-M105 add repeated index/value/pointer choice batches, and
 S4-M106 through S4-M114 add repeated weighted
 f64/generic index/u32-index plus value/const-pointer/mutable-pointer batches,
-but later stages should keep raising the bar rather than declaring the product
-permanently finished.
+and S4-M115 adds accessor-based weighted value/const-pointer/mutable-pointer
+choices for item-embedded weights, but later stages should keep raising the bar
+rather than declaring the product permanently finished.
