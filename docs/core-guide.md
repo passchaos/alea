@@ -526,7 +526,8 @@ Use:
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `Choice.sampleIndexFrom`,
   `Choice.sampleIndexU32From`, `Choice.fillValuesFrom` / `fillFrom`,
-  `Choice.valuesFrom` / `ptrsFrom`, `Choice.fillIndicesFrom`,
+  `Choice.valuesFrom` / `ptrsFrom`, fixed-size `Choice.valueArrayFrom` /
+  `ptrArrayFrom`, `Choice.fillIndicesFrom`,
   `Choice.fillIndicesU32From`, `Choice.indicesFrom`, `Choice.indicesU32From`,
   and fixed-size `Choice.indexArrayFrom` / `indexArrayU32From`,
   `WeightedChoice.initBy` / `updateBy`, `WeightedChoice.initByIndex` / `updateByIndex`,

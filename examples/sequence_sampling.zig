@@ -299,6 +299,10 @@ pub fn main(init: std.process.Init) !void {
     var choice_values: [5][]const u8 = undefined;
     choice.fillValuesFrom(&choice_engine, &choice_values);
     try stdout.print("Choice.fillValuesFrom: {s}, {s}, {s}, {s}, {s}\n", .{ choice_values[0], choice_values[1], choice_values[2], choice_values[3], choice_values[4] });
+    const choice_value_array = choice.valueArrayFrom(&choice_engine, 5);
+    try stdout.print("Choice.valueArrayFrom: {s}, {s}, {s}, {s}, {s}\n", .{ choice_value_array[0], choice_value_array[1], choice_value_array[2], choice_value_array[3], choice_value_array[4] });
+    const choice_ptr_array = choice.ptrArrayFrom(&choice_engine, 5);
+    try stdout.print("Choice.ptrArrayFrom: {s}, {s}, {s}, {s}, {s}\n", .{ choice_ptr_array[0].*, choice_ptr_array[1].*, choice_ptr_array[2].*, choice_ptr_array[3].*, choice_ptr_array[4].* });
     var choice_indices: [5]usize = undefined;
     choice.fillIndicesFrom(&choice_engine, &choice_indices);
     try stdout.print("Choice.fillIndicesFrom: {any}\n", .{choice_indices});
@@ -379,6 +383,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, seq.chooseIndex/fillChooseIndex/chooseIndexBatch for with-replacement index choices, sampleArrayU32 for compact fixed-size index arrays, chooseArray/sampleItemsArray and choosePtrArray/samplePtrArray for fixed-size item/pointer arrays, chooseMultiple/sampleItems plus chooseMultipleInto/sampleItemsInto and pointer variants for allocation-returning and caller-owned item/pointer subsets, sampleWithoutReplacement for Rng-owned subset sampling, shuffleFrom for full in-place shuffles, partialShuffle/partialShuffleSplit for head-selected in-place subsets, partialShuffleTail/partialShuffleTailSplit for Rust-style tail-selected subsets, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable value/pointer/index batches, fixed-size index arrays, or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, seq.chooseIndex/fillChooseIndex/chooseIndexBatch for with-replacement index choices, sampleArrayU32 for compact fixed-size index arrays, chooseArray/sampleItemsArray and choosePtrArray/samplePtrArray for fixed-size item/pointer arrays, chooseMultiple/sampleItems plus chooseMultipleInto/sampleItemsInto and pointer variants for allocation-returning and caller-owned item/pointer subsets, sampleWithoutReplacement for Rng-owned subset sampling, shuffleFrom for full in-place shuffles, partialShuffle/partialShuffleSplit for head-selected in-place subsets, partialShuffleTail/partialShuffleTailSplit for Rust-style tail-selected subsets, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable value/pointer/index batches, fixed-size value/pointer/index arrays, or streaming choices.\n", .{});
     try stdout.flush();
 }

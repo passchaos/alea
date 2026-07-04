@@ -6495,6 +6495,26 @@ pub fn Choice(comptime T: type) type {
             return out;
         }
 
+        pub fn valueArray(self: Self, rng: Rng, comptime N: usize) [N]T {
+            return self.valueArrayFrom(rng, N);
+        }
+
+        pub fn valueArrayFrom(self: Self, source: anytype, comptime N: usize) [N]T {
+            var out: [N]T = undefined;
+            self.fillValuesFrom(source, &out);
+            return out;
+        }
+
+        pub fn ptrArray(self: Self, rng: Rng, comptime N: usize) [N]*const T {
+            return self.ptrArrayFrom(rng, N);
+        }
+
+        pub fn ptrArrayFrom(self: Self, source: anytype, comptime N: usize) [N]*const T {
+            var out: [N]*const T = undefined;
+            self.fillFrom(source, &out);
+            return out;
+        }
+
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
             self.fillIndicesFrom(rng, dest);
         }
@@ -13664,6 +13684,64 @@ test "Choice index arrays mirror fills" {
     try std.testing.expectEqual(single_control.next(), single_engine.next());
     const single_u32_array = try single_choice.indexArrayU32From(&single_engine, 4);
     try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0, 0 }, &single_u32_array);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "Choice value and pointer arrays mirror fills" {
+    const alea = @import("root.zig");
+    const values = [_]u8{ 2, 4, 6, 8 };
+    const choice = Choice(u8).init(&values).?;
+
+    var fill_engine = alea.ScalarPrng.init(0x5150_c0ea);
+    var array_engine = alea.ScalarPrng.init(0x5150_c0ea);
+    var fill_values: [6]u8 = undefined;
+    choice.fillValuesFrom(&fill_engine, &fill_values);
+    const value_array = choice.valueArrayFrom(&array_engine, 6);
+    try std.testing.expectEqualSlices(u8, &fill_values, &value_array);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+
+    fill_engine = alea.ScalarPrng.init(0x5150_c0eb);
+    array_engine = alea.ScalarPrng.init(0x5150_c0eb);
+    var fill_ptrs: [6]*const u8 = undefined;
+    choice.fillFrom(&fill_engine, &fill_ptrs);
+    const ptr_array = choice.ptrArrayFrom(&array_engine, 6);
+    try std.testing.expectEqualSlices(*const u8, &fill_ptrs, &ptr_array);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_c0ec);
+    var direct_engine = alea.ScalarPrng.init(0x5150_c0ec);
+    const rng = Rng.init(&facade_engine);
+    const facade_values = choice.valueArray(rng, 4);
+    const direct_values = choice.valueArrayFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(u8, &direct_values, &facade_values);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    facade_engine = alea.ScalarPrng.init(0x5150_c0ed);
+    direct_engine = alea.ScalarPrng.init(0x5150_c0ed);
+    const ptr_rng = Rng.init(&facade_engine);
+    const facade_ptrs = choice.ptrArray(ptr_rng, 4);
+    const direct_ptrs = choice.ptrArrayFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(*const u8, &direct_ptrs, &facade_ptrs);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var zero_engine = alea.ScalarPrng.init(0x5150_c0ee);
+    var zero_control = alea.ScalarPrng.init(0x5150_c0ee);
+    const zero_values = choice.valueArrayFrom(&zero_engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), zero_values.len);
+    try std.testing.expectEqual(zero_control.next(), zero_engine.next());
+    const zero_ptrs = choice.ptrArrayFrom(&zero_engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), zero_ptrs.len);
+    try std.testing.expectEqual(zero_control.next(), zero_engine.next());
+
+    const single_values = [_]u8{42};
+    const single_choice = Choice(u8).init(&single_values).?;
+    var single_engine = alea.ScalarPrng.init(0x5150_c0ef);
+    var single_control = alea.ScalarPrng.init(0x5150_c0ef);
+    const single_value_array = single_choice.valueArrayFrom(&single_engine, 4);
+    try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42, 42 }, &single_value_array);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_ptr_array = single_choice.ptrArrayFrom(&single_engine, 4);
+    for (single_ptr_array) |ptr| try std.testing.expectEqual(&single_values[0], ptr);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 
