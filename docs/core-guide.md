@@ -274,6 +274,8 @@ Use:
   `seq.sampleIteratorWeightedArrayCheckedFrom`,
   `seq.sampleIteratorWeightedIntoFrom`,
   `seq.sampleIteratorWeightedIntoCheckedFrom`
+- `seq.weightedIndex`, `seq.weightedIndexFrom`,
+  `seq.weightedIndexCheckedFrom`
 - `seq.chooseWeighted`, `seq.chooseWeightedFrom`,
   `seq.chooseWeightedCheckedFrom`, `seq.chooseWeightedConstPtrFrom`,
   `seq.chooseWeightedConstPtrCheckedFrom`, `seq.chooseWeightedPtr`,

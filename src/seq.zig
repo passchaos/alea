@@ -644,6 +644,22 @@ pub fn chooseMutPtrArrayFrom(source: anytype, comptime T: type, comptime N: usiz
     return out;
 }
 
+pub fn weightedIndex(rng: Rng, comptime Weight: type, weights: []const Weight) ?usize {
+    return weightedIndexFrom(rng, Weight, weights);
+}
+
+pub fn weightedIndexFrom(source: anytype, comptime Weight: type, weights: []const Weight) ?usize {
+    return weightedIndexCheckedFrom(source, Weight, weights) catch unreachable;
+}
+
+pub fn weightedIndexChecked(rng: Rng, comptime Weight: type, weights: []const Weight) Error!?usize {
+    return weightedIndexCheckedFrom(rng, Weight, weights);
+}
+
+pub fn weightedIndexCheckedFrom(source: anytype, comptime Weight: type, weights: []const Weight) Error!?usize {
+    return weightedIndexGenericFrom(source, Weight, weights);
+}
+
 pub fn chooseWeighted(rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight) !?T {
     return chooseWeightedFrom(rng, T, Weight, items, weights);
 }
@@ -4419,6 +4435,54 @@ test "invalid chooseArray helpers do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, chooseMutPtrArrayCheckedFrom(&engine, u8, 4, &mutable));
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "generic weightedIndex selects indexes" {
+    const alea = @import("root.zig");
+    const weights = [_]u32{ 0, 2, 6, 3 };
+
+    var index_engine = alea.ScalarPrng.init(0x5150_c701);
+    const index = weightedIndexFrom(&index_engine, u32, &weights).?;
+    try std.testing.expect(index == 1 or index == 2 or index == 3);
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_c702);
+    const checked = (try weightedIndexCheckedFrom(&checked_engine, u32, &weights)).?;
+    try std.testing.expect(checked == 1 or checked == 2 or checked == 3);
+
+    var single_engine = alea.ScalarPrng.init(0x5150_c703);
+    var single_control = alea.ScalarPrng.init(0x5150_c703);
+    try std.testing.expectEqual(@as(?usize, 2), weightedIndexFrom(&single_engine, u32, &.{ 0, 0, 5, 0 }));
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_c704);
+    try std.testing.expectEqual(@as(?usize, null), weightedIndexFrom(&empty_engine, u32, &.{}));
+    try std.testing.expectEqual(@as(?usize, null), weightedIndexFrom(&empty_engine, u32, &.{ 0, 0, 0, 0 }));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexCheckedFrom(&empty_engine, u32, &.{ 0, 0, 0, 0 }));
+}
+
+test "generic weightedIndex preserves facade/direct stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const weights = [_]u32{ 1, 2, 6, 3 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c705);
+        var direct_engine = Engine.init(0x5150_c705);
+        const rng = Rng.init(&facade_engine);
+
+        try std.testing.expectEqual(weightedIndex(rng, u32, &weights), weightedIndexFrom(&direct_engine, u32, &weights));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try std.testing.expectEqual(try weightedIndexChecked(rng, u32, &weights), try weightedIndexCheckedFrom(&direct_engine, u32, &weights));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_c706);
+    var invalid_control = alea.ScalarPrng.init(0x5150_c706);
+    const invalid_rng = Rng.init(&invalid_engine);
+    try std.testing.expectError(error.InvalidWeight, weightedIndexChecked(invalid_rng, f64, &.{ 1.0, std.math.nan(f64), 2.0 }));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, weightedIndexCheckedFrom(&invalid_engine, f64, &.{ 1.0, std.math.inf(f64), 2.0 }));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "chooseWeighted selects values and mutable pointers" {

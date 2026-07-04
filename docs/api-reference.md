@@ -2363,6 +2363,8 @@ Dynamic weighted helpers:
   `WeightedChoice.fill`, `WeightedChoice.fillFrom`,
   `WeightedChoice.fillValues`, `WeightedChoice.fillValuesFrom`,
   `WeightedChoice.iter`, `WeightedChoice.iterFrom`
+- Weighted one-shot indexes: `weightedIndex`, `weightedIndexFrom`,
+  `weightedIndexChecked`, `weightedIndexCheckedFrom`
 - Weighted one-shot slices: `chooseWeighted`, `chooseWeightedFrom`,
   `chooseWeightedChecked`, `chooseWeightedCheckedFrom`,
   `chooseWeightedConstPtr`, `chooseWeightedConstPtrFrom`,

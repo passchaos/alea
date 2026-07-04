@@ -101,6 +101,7 @@ Local Alea evidence:
 - `compare/results/s4-m61-reservoir-ptrs-into.md`
 - `compare/results/s4-m62-caller-owned-pointer-example.md`
 - `compare/results/s4-m63-choose-index.md`
+- `compare/results/s4-m64-generic-weighted-index.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -122,7 +123,7 @@ Out of scope for this Linux-first audit:
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost` |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
 | choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseConstPtr`, `seq` module, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` value/const-pointer/mutable-pointer mapping, Rust sequence benchmark row |
-| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedTree`, benchmark rows |
+| weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `seq.weightedIndex`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface
 
@@ -248,5 +249,5 @@ allocation-returning pointer subset sampling, and S4-M59 adds allocation-returni
 weighted pointer subset sampling, and S4-M60 adds allocation-returning reservoir
 pointer sampling, and S4-M61 adds caller-owned reservoir pointer sampling, and S4-M62 refreshes
 the caller-owned pointer adoption example, and S4-M63 adds one-shot index choice,
-but later stages should keep raising the bar rather than declaring the product
-permanently finished.
+and S4-M64 adds generic one-shot weighted index choice, but later stages should
+keep raising the bar rather than declaring the product permanently finished.
