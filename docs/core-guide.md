@@ -364,6 +364,11 @@ Use:
   `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`,
   `seq.sampleWeightedPtrsFrom`, `seq.sampleWeightedPtrsCheckedFrom`,
   `seq.sampleWeightedMutPtrsFrom`, `seq.sampleWeightedMutPtrsCheckedFrom`,
+  accessor-based `seq.sampleWeightedByFrom`, `seq.sampleWeightedByCheckedFrom`,
+  `seq.sampleWeightedPtrsByFrom`, `seq.sampleWeightedPtrsByCheckedFrom`,
+  `seq.sampleWeightedMutPtrsByFrom`, and
+  `seq.sampleWeightedMutPtrsByCheckedFrom` for Rust `sample_weighted`-style
+  item-derived weights,
   `seq.sampleWeightedIntoFrom`, `seq.sampleWeightedIntoCheckedFrom`,
   `seq.sampleWeightedPtrsIntoFrom`, `seq.sampleWeightedPtrsIntoCheckedFrom`,
   `seq.sampleWeightedMutPtrsIntoFrom`,

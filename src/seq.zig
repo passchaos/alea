@@ -2178,6 +2178,62 @@ fn sampleWeightedIndexVecExactFrom(allocator: std.mem.Allocator, source: anytype
     return .{ .usize = out };
 }
 
+fn sampleWeightedIndicesByExactFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]usize {
+    std.debug.assert(amount > 0);
+    std.debug.assert(amount <= items.len);
+
+    const out = try allocator.alloc(usize, amount);
+    errdefer allocator.free(out);
+    const keys = try allocator.alloc(f64, amount);
+    defer allocator.free(keys);
+
+    sampleWeightedIndicesByIntoExactFrom(source, T, Weight, items, out, keys, weightFn);
+    return out;
+}
+
+fn sampleWeightedIndicesByIntoExactFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    out: []usize,
+    keys: []f64,
+    comptime weightFn: fn (*const T) Weight,
+) void {
+    std.debug.assert(out.len > 0);
+    std.debug.assert(keys.len == out.len);
+
+    var count: usize = 0;
+    for (items, 0..) |*item, index| {
+        const value = weightAsF64(Weight, weightFn(item));
+        std.debug.assert(value >= 0 and std.math.isFinite(value));
+        if (value == 0) continue;
+
+        const key = weightedSelectionKeyFrom(source, value);
+        if (count < out.len) {
+            out[count] = index;
+            keys[count] = key;
+            count += 1;
+        } else {
+            const min_index = minWeightedKeyIndex(keys);
+            if (key > keys[min_index]) {
+                out[min_index] = index;
+                keys[min_index] = key;
+            }
+        }
+    }
+    std.debug.assert(count == out.len);
+    sortWeightedIndexKeyPairs(out, keys);
+}
+
 pub fn sampleWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
     return sampleWeightedFrom(allocator, rng, T, Weight, items, weights, amount);
 }
@@ -2219,6 +2275,238 @@ pub fn sampleWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptim
     defer allocator.free(indices);
 
     for (indices, out) |index, *slot| slot.* = items[index];
+    return out;
+}
+
+pub fn sampleWeightedBy(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]T {
+    return sampleWeightedByFrom(allocator, rng, T, Weight, items, amount, weightFn);
+}
+
+pub fn sampleWeightedByChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]T {
+    return sampleWeightedByCheckedFrom(allocator, rng, T, Weight, items, amount, weightFn);
+}
+
+pub fn sampleWeightedByCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
+    if (amount > items.len) return error.InvalidParameter;
+    const positive = try countPositiveItemsBy(T, Weight, items, weightFn);
+    if (positive < amount) return error.InvalidParameter;
+    if (positive == 1 and amount == 1) return singlePositiveItemByAlloc(allocator, T, Weight, items, weightFn);
+
+    const out = try allocator.alloc(T, amount);
+    errdefer allocator.free(out);
+    const indices = try sampleWeightedIndicesByExactFrom(allocator, source, T, Weight, items, amount, weightFn);
+    defer allocator.free(indices);
+
+    for (indices, out) |index, *slot| slot.* = items[index];
+    return out;
+}
+
+pub fn sampleWeightedByFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
+    if (items.len == 0) return error.EmptyInput;
+
+    const positive = try countPositiveItemsBy(T, Weight, items, weightFn);
+    const count = @min(amount, positive);
+    if (count == 0) return allocator.alloc(T, 0);
+    if (positive == 1) return singlePositiveItemByAlloc(allocator, T, Weight, items, weightFn);
+
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    const indices = try sampleWeightedIndicesByExactFrom(allocator, source, T, Weight, items, count, weightFn);
+    defer allocator.free(indices);
+
+    for (indices, out) |index, *slot| slot.* = items[index];
+    return out;
+}
+
+pub fn sampleWeightedPtrsBy(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*const T {
+    return sampleWeightedPtrsByFrom(allocator, rng, T, Weight, items, amount, weightFn);
+}
+
+pub fn sampleWeightedPtrsByChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*const T {
+    return sampleWeightedPtrsByCheckedFrom(allocator, rng, T, Weight, items, amount, weightFn);
+}
+
+pub fn sampleWeightedPtrsByCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*const T {
+    if (amount == 0) return allocator.alloc(*const T, 0);
+    if (amount > items.len) return error.InvalidParameter;
+    const positive = try countPositiveItemsBy(T, Weight, items, weightFn);
+    if (positive < amount) return error.InvalidParameter;
+    if (positive == 1 and amount == 1) return singlePositivePtrByAlloc(allocator, T, Weight, items, weightFn);
+    return sampleWeightedPtrsByExactFrom(allocator, source, T, Weight, items, amount, weightFn);
+}
+
+pub fn sampleWeightedPtrsByFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*const T {
+    if (amount == 0) return allocator.alloc(*const T, 0);
+    if (items.len == 0) return error.EmptyInput;
+
+    const positive = try countPositiveItemsBy(T, Weight, items, weightFn);
+    const count = @min(amount, positive);
+    if (count == 0) return allocator.alloc(*const T, 0);
+    if (positive == 1) return singlePositivePtrByAlloc(allocator, T, Weight, items, weightFn);
+    return sampleWeightedPtrsByExactFrom(allocator, source, T, Weight, items, count, weightFn);
+}
+
+pub fn sampleWeightedMutPtrsBy(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*T {
+    return sampleWeightedMutPtrsByFrom(allocator, rng, T, Weight, items, amount, weightFn);
+}
+
+pub fn sampleWeightedMutPtrsByChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*T {
+    return sampleWeightedMutPtrsByCheckedFrom(allocator, rng, T, Weight, items, amount, weightFn);
+}
+
+pub fn sampleWeightedMutPtrsByCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*T {
+    if (amount == 0) return allocator.alloc(*T, 0);
+    if (amount > items.len) return error.InvalidParameter;
+    const positive = try countPositiveItemsBy(T, Weight, items, weightFn);
+    if (positive < amount) return error.InvalidParameter;
+    if (positive == 1 and amount == 1) return singlePositiveMutPtrByAlloc(allocator, T, Weight, items, weightFn);
+    return sampleWeightedMutPtrsByExactFrom(allocator, source, T, Weight, items, amount, weightFn);
+}
+
+pub fn sampleWeightedMutPtrsByFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*T {
+    if (amount == 0) return allocator.alloc(*T, 0);
+    if (items.len == 0) return error.EmptyInput;
+
+    const positive = try countPositiveItemsBy(T, Weight, items, weightFn);
+    const count = @min(amount, positive);
+    if (count == 0) return allocator.alloc(*T, 0);
+    if (positive == 1) return singlePositiveMutPtrByAlloc(allocator, T, Weight, items, weightFn);
+    return sampleWeightedMutPtrsByExactFrom(allocator, source, T, Weight, items, count, weightFn);
+}
+
+fn sampleWeightedPtrsByExactFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*const T {
+    const out = try allocator.alloc(*const T, amount);
+    errdefer allocator.free(out);
+
+    const indices = try sampleWeightedIndicesByExactFrom(allocator, source, T, Weight, items, amount, weightFn);
+    defer allocator.free(indices);
+
+    for (indices, out) |index, *slot| slot.* = &items[index];
+    return out;
+}
+
+fn sampleWeightedMutPtrsByExactFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    amount: usize,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*T {
+    const out = try allocator.alloc(*T, amount);
+    errdefer allocator.free(out);
+
+    const indices = try sampleWeightedIndicesByExactFrom(allocator, source, T, Weight, items, amount, weightFn);
+    defer allocator.free(indices);
+
+    for (indices, out) |index, *slot| slot.* = &items[index];
     return out;
 }
 
@@ -3515,6 +3803,80 @@ fn singlePositiveWeightItemAlloc(
     const index = (try singlePositiveWeightIndex(Weight, weights)).?;
     const out = try allocator.alloc(T, 1);
     out[0] = items[index];
+    return out;
+}
+
+fn countPositiveItemsBy(
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) Error!usize {
+    var positive: usize = 0;
+    for (items) |*item| {
+        const value = weightAsF64(Weight, weightFn(item));
+        if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+        if (value > 0) positive += 1;
+    }
+    return positive;
+}
+
+fn singlePositiveItemIndexBy(
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) Error!?usize {
+    var positive_index: ?usize = null;
+    var positive: usize = 0;
+    for (items, 0..) |*item, index| {
+        const value = weightAsF64(Weight, weightFn(item));
+        if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+        if (value > 0) {
+            positive_index = index;
+            positive += 1;
+            if (positive > 1) return null;
+        }
+    }
+    return positive_index;
+}
+
+fn singlePositiveItemByAlloc(
+    allocator: std.mem.Allocator,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]T {
+    const index = (try singlePositiveItemIndexBy(T, Weight, items, weightFn)).?;
+    const out = try allocator.alloc(T, 1);
+    out[0] = items[index];
+    return out;
+}
+
+fn singlePositivePtrByAlloc(
+    allocator: std.mem.Allocator,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*const T {
+    const index = (try singlePositiveItemIndexBy(T, Weight, items, weightFn)).?;
+    const out = try allocator.alloc(*const T, 1);
+    out[0] = &items[index];
+    return out;
+}
+
+fn singlePositiveMutPtrByAlloc(
+    allocator: std.mem.Allocator,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*T {
+    const index = (try singlePositiveItemIndexBy(T, Weight, items, weightFn)).?;
+    const out = try allocator.alloc(*T, 1);
+    out[0] = &items[index];
     return out;
 }
 
@@ -7184,6 +7546,248 @@ test "weighted sampling without replacement preserves direct stream shape" {
         try std.testing.expectEqualSlices(u8, sample, direct_sample);
         try std.testing.expectEqual(unchecked.next(), direct.next());
     }
+}
+
+test "accessor weighted no-replacement samples allocate values and pointers" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        value: u8,
+        weight: u32,
+
+        fn weightOf(item: *const @This()) u32 {
+            return item.weight;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .value = 10, .weight = 0 },
+        .{ .value = 20, .weight = 1 },
+        .{ .value = 30, .weight = 5 },
+        .{ .value = 40, .weight = 0 },
+        .{ .value = 50, .weight = 9 },
+    };
+
+    var value_engine = alea.ScalarPrng.init(0x5150_c721);
+    const values = try sampleWeightedByFrom(std.testing.allocator, &value_engine, Entry, u32, &entries, 5, Entry.weightOf);
+    defer std.testing.allocator.free(values);
+    try std.testing.expectEqual(@as(usize, 3), values.len);
+    for (values) |item| try std.testing.expect(item.weight > 0);
+
+    var checked_value_engine = alea.ScalarPrng.init(0x5150_c722);
+    const checked_values = try sampleWeightedByCheckedFrom(std.testing.allocator, &checked_value_engine, Entry, u32, &entries, 3, Entry.weightOf);
+    defer std.testing.allocator.free(checked_values);
+    try std.testing.expectEqual(@as(usize, 3), checked_values.len);
+    for (checked_values) |item| try std.testing.expect(item.weight > 0);
+
+    var ptr_engine = alea.ScalarPrng.init(0x5150_c723);
+    const ptrs = try sampleWeightedPtrsByFrom(std.testing.allocator, &ptr_engine, Entry, u32, &entries, 5, Entry.weightOf);
+    defer std.testing.allocator.free(ptrs);
+    try std.testing.expectEqual(@as(usize, 3), ptrs.len);
+    for (ptrs, 0..) |ptr, i| {
+        try std.testing.expect(ptr.weight > 0);
+        for (ptrs[0..i]) |seen| try std.testing.expect(ptr != seen);
+    }
+
+    var checked_ptr_engine = alea.ScalarPrng.init(0x5150_c724);
+    const checked_ptrs = try sampleWeightedPtrsByCheckedFrom(std.testing.allocator, &checked_ptr_engine, Entry, u32, &entries, 3, Entry.weightOf);
+    defer std.testing.allocator.free(checked_ptrs);
+    try std.testing.expectEqual(@as(usize, 3), checked_ptrs.len);
+    for (checked_ptrs, 0..) |ptr, i| {
+        try std.testing.expect(ptr.weight > 0);
+        for (checked_ptrs[0..i]) |seen| try std.testing.expect(ptr != seen);
+    }
+
+    var mutable_entries = entries;
+    var mut_engine = alea.ScalarPrng.init(0x5150_c725);
+    const mut_ptrs = try sampleWeightedMutPtrsByCheckedFrom(std.testing.allocator, &mut_engine, Entry, u32, &mutable_entries, 3, Entry.weightOf);
+    defer std.testing.allocator.free(mut_ptrs);
+    try std.testing.expectEqual(@as(usize, 3), mut_ptrs.len);
+    for (mut_ptrs, 0..) |ptr, i| {
+        try std.testing.expect(ptr.weight > 0);
+        for (mut_ptrs[0..i]) |seen| try std.testing.expect(ptr != seen);
+        ptr.value += 1;
+    }
+    var changed_positive: usize = 0;
+    for (mutable_entries, entries) |after, before| {
+        if (before.weight > 0) {
+            try std.testing.expectEqual(before.value + 1, after.value);
+            changed_positive += 1;
+        } else {
+            try std.testing.expectEqual(before.value, after.value);
+        }
+    }
+    try std.testing.expectEqual(@as(usize, 3), changed_positive);
+
+    const SingleEntry = struct {
+        value: u8,
+        weight: u32,
+
+        fn weightOf(item: *const @This()) u32 {
+            return item.weight;
+        }
+    };
+    const single_entries = [_]SingleEntry{
+        .{ .value = 1, .weight = 0 },
+        .{ .value = 2, .weight = 7 },
+        .{ .value = 3, .weight = 0 },
+    };
+    var single_engine = alea.ScalarPrng.init(0x5150_c726);
+    var single_control = alea.ScalarPrng.init(0x5150_c726);
+    const single_values = try sampleWeightedByFrom(std.testing.allocator, &single_engine, SingleEntry, u32, &single_entries, 3, SingleEntry.weightOf);
+    defer std.testing.allocator.free(single_values);
+    try std.testing.expectEqual(@as(usize, 1), single_values.len);
+    try std.testing.expectEqual(@as(u8, 2), single_values[0].value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    const single_ptrs = try sampleWeightedPtrsByFrom(std.testing.allocator, &single_engine, SingleEntry, u32, &single_entries, 3, SingleEntry.weightOf);
+    defer std.testing.allocator.free(single_ptrs);
+    try std.testing.expectEqual(@as(usize, 1), single_ptrs.len);
+    try std.testing.expectEqual(&single_entries[1], single_ptrs[0]);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var single_mutable = single_entries;
+    const single_mut_ptrs = try sampleWeightedMutPtrsByFrom(std.testing.allocator, &single_engine, SingleEntry, u32, &single_mutable, 3, SingleEntry.weightOf);
+    defer std.testing.allocator.free(single_mut_ptrs);
+    try std.testing.expectEqual(@as(usize, 1), single_mut_ptrs.len);
+    try std.testing.expectEqual(&single_mutable[1], single_mut_ptrs[0]);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    const BadEntry = struct {
+        value: u8,
+        weight: f64,
+
+        fn weightOf(item: *const @This()) f64 {
+            return item.weight;
+        }
+    };
+    const bad_entries = [_]BadEntry{.{ .value = 1, .weight = std.math.nan(f64) }};
+    var empty_engine = alea.ScalarPrng.init(0x5150_c727);
+    var empty_control = alea.ScalarPrng.init(0x5150_c727);
+    const empty = try sampleWeightedByFrom(std.testing.allocator, &empty_engine, BadEntry, f64, &bad_entries, 0, BadEntry.weightOf);
+    defer std.testing.allocator.free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "accessor weighted no-replacement samples preserve stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        value: u8,
+        weight: f64,
+
+        fn weightOf(item: *const @This()) f64 {
+            return item.weight;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .value = 10, .weight = 1 },
+        .{ .value = 20, .weight = 2 },
+        .{ .value = 30, .weight = 6 },
+        .{ .value = 40, .weight = 3 },
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c728);
+        var direct_engine = Engine.init(0x5150_c728);
+        const rng = Rng.init(&facade_engine);
+
+        const facade = try sampleWeightedBy(std.testing.allocator, rng, Entry, f64, &entries, 3, Entry.weightOf);
+        defer std.testing.allocator.free(facade);
+        const direct = try sampleWeightedByFrom(std.testing.allocator, &direct_engine, Entry, f64, &entries, 3, Entry.weightOf);
+        defer std.testing.allocator.free(direct);
+        for (facade, direct) |facade_item, direct_item| try std.testing.expectEqual(facade_item.value, direct_item.value);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade = try sampleWeightedByChecked(std.testing.allocator, rng, Entry, f64, &entries, 3, Entry.weightOf);
+        defer std.testing.allocator.free(checked_facade);
+        const checked_direct = try sampleWeightedByCheckedFrom(std.testing.allocator, &direct_engine, Entry, f64, &entries, 3, Entry.weightOf);
+        defer std.testing.allocator.free(checked_direct);
+        for (checked_facade, checked_direct) |facade_item, direct_item| try std.testing.expectEqual(facade_item.value, direct_item.value);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_ptrs = try sampleWeightedPtrsBy(std.testing.allocator, rng, Entry, f64, &entries, 3, Entry.weightOf);
+        defer std.testing.allocator.free(facade_ptrs);
+        const direct_ptrs = try sampleWeightedPtrsByFrom(std.testing.allocator, &direct_engine, Entry, f64, &entries, 3, Entry.weightOf);
+        defer std.testing.allocator.free(direct_ptrs);
+        for (facade_ptrs, direct_ptrs) |facade_ptr, direct_ptr| {
+            try std.testing.expectEqual(@intFromPtr(facade_ptr) - @intFromPtr(&entries[0]), @intFromPtr(direct_ptr) - @intFromPtr(&entries[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_ptrs = try sampleWeightedPtrsByChecked(std.testing.allocator, rng, Entry, f64, &entries, 3, Entry.weightOf);
+        defer std.testing.allocator.free(checked_facade_ptrs);
+        const checked_direct_ptrs = try sampleWeightedPtrsByCheckedFrom(std.testing.allocator, &direct_engine, Entry, f64, &entries, 3, Entry.weightOf);
+        defer std.testing.allocator.free(checked_direct_ptrs);
+        for (checked_facade_ptrs, checked_direct_ptrs) |facade_ptr, direct_ptr| {
+            try std.testing.expectEqual(@intFromPtr(facade_ptr) - @intFromPtr(&entries[0]), @intFromPtr(direct_ptr) - @intFromPtr(&entries[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_mutable = entries;
+        var direct_mutable = entries;
+        const facade_mut_ptrs = try sampleWeightedMutPtrsBy(std.testing.allocator, rng, Entry, f64, &facade_mutable, 3, Entry.weightOf);
+        defer std.testing.allocator.free(facade_mut_ptrs);
+        const direct_mut_ptrs = try sampleWeightedMutPtrsByFrom(std.testing.allocator, &direct_engine, Entry, f64, &direct_mutable, 3, Entry.weightOf);
+        defer std.testing.allocator.free(direct_mut_ptrs);
+        for (facade_mut_ptrs, direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            try std.testing.expectEqual(@intFromPtr(facade_ptr) - @intFromPtr(&facade_mutable[0]), @intFromPtr(direct_ptr) - @intFromPtr(&direct_mutable[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_mutable = entries;
+        var checked_direct_mutable = entries;
+        const checked_facade_mut_ptrs = try sampleWeightedMutPtrsByChecked(std.testing.allocator, rng, Entry, f64, &checked_facade_mutable, 3, Entry.weightOf);
+        defer std.testing.allocator.free(checked_facade_mut_ptrs);
+        const checked_direct_mut_ptrs = try sampleWeightedMutPtrsByCheckedFrom(std.testing.allocator, &direct_engine, Entry, f64, &checked_direct_mutable, 3, Entry.weightOf);
+        defer std.testing.allocator.free(checked_direct_mut_ptrs);
+        for (checked_facade_mut_ptrs, checked_direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            try std.testing.expectEqual(@intFromPtr(facade_ptr) - @intFromPtr(&checked_facade_mutable[0]), @intFromPtr(direct_ptr) - @intFromPtr(&checked_direct_mutable[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    const BadEntry = struct {
+        value: u8,
+        weight: f64,
+
+        fn weightOf(item: *const @This()) f64 {
+            return item.weight;
+        }
+    };
+    const empty_entries = [_]BadEntry{};
+    const zero_entries = [_]BadEntry{
+        .{ .value = 1, .weight = 0 },
+        .{ .value = 2, .weight = 0 },
+    };
+    const bad_entries = [_]BadEntry{
+        .{ .value = 1, .weight = 1 },
+        .{ .value = 2, .weight = std.math.inf(f64) },
+    };
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_c729);
+    var invalid_control = alea.ScalarPrng.init(0x5150_c729);
+    try std.testing.expectError(error.EmptyInput, sampleWeightedByFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, &empty_entries, 1, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedByCheckedFrom(std.testing.allocator, &invalid_engine, Entry, f64, &entries, 5, Entry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedByCheckedFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, &zero_entries, 1, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedByFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, &bad_entries, 1, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedPtrsByCheckedFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, &bad_entries, 1, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var bad_mutable = bad_entries;
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedMutPtrsByCheckedFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, &bad_mutable, 1, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var out_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleWeightedByFrom(out_alloc.allocator(), &invalid_engine, Entry, f64, &entries, 3, Entry.weightOf));
+    try std.testing.expect(out_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var indices_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    try std.testing.expectError(error.OutOfMemory, sampleWeightedByFrom(indices_alloc.allocator(), &invalid_engine, Entry, f64, &entries, 3, Entry.weightOf));
+    try std.testing.expect(indices_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "sampleWeightedArray returns fixed-size weighted item samples" {

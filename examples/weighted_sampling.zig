@@ -203,6 +203,23 @@ pub fn main(init: std.process.Init) !void {
     for (no_replace_mut_ptrs) |score| score.* += 7;
     try stdout.print("weighted no-replacement mut ptr scores: {any}\n", .{weighted_alloc_scores});
 
+    var no_replace_by_engine = alea.ScalarPrng.init(0x7177);
+    const no_replace_by = try alea.seq.sampleWeightedByFrom(allocator, &no_replace_by_engine, WeightedRecord, u32, &weighted_records, 3, WeightedRecord.weightOf);
+    defer allocator.free(no_replace_by);
+    try stdout.print("weighted by no-replacement sample: [{s}, {s}, {s}]\n", .{ no_replace_by[0].label, no_replace_by[1].label, no_replace_by[2].label });
+
+    var no_replace_by_ptrs_engine = alea.ScalarPrng.init(0x7178);
+    const no_replace_by_ptrs = try alea.seq.sampleWeightedPtrsByFrom(allocator, &no_replace_by_ptrs_engine, WeightedRecord, u32, &weighted_records, 3, WeightedRecord.weightOf);
+    defer allocator.free(no_replace_by_ptrs);
+    try stdout.print("weighted by no-replacement ptrs: [{s}, {s}, {s}]\n", .{ no_replace_by_ptrs[0].label, no_replace_by_ptrs[1].label, no_replace_by_ptrs[2].label });
+
+    var no_replace_by_mut_records = weighted_records;
+    var no_replace_by_mut_ptrs_engine = alea.ScalarPrng.init(0x7179);
+    const no_replace_by_mut_ptrs = try alea.seq.sampleWeightedMutPtrsByFrom(allocator, &no_replace_by_mut_ptrs_engine, WeightedRecord, u32, &no_replace_by_mut_records, 3, WeightedRecord.weightOf);
+    defer allocator.free(no_replace_by_mut_ptrs);
+    for (no_replace_by_mut_ptrs) |record| record.score += 10;
+    try stdout.print("weighted by no-replacement mut ptr scores: [{}, {}, {}, {}]\n", .{ no_replace_by_mut_records[0].score, no_replace_by_mut_records[1].score, no_replace_by_mut_records[2].score, no_replace_by_mut_records[3].score });
+
     var weighted_array_engine = alea.ScalarPrng.init(0x7159);
     const weighted_array = (try alea.seq.sampleWeightedArrayFrom(&weighted_array_engine, []const u8, f64, 3, &items, &float_weights)).?;
     try stdout.print("weighted array sample: [{s}, {s}, {s}]\n", .{ weighted_array[0], weighted_array[1], weighted_array[2] });
@@ -283,6 +300,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_mut_ptrs_into) |score| score.* += 5;
     try stdout.print("weighted mut ptrs into scores: {any}\n", .{weighted_scores_into});
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy when weights live inside item records, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy and sampleWeightedBy/PtrsBy/MutPtrsBy when weights live inside item records, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }
