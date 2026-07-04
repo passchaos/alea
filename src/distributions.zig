@@ -15624,12 +15624,24 @@ pub fn AliasTable(comptime Weight: type) type {
             return self.sampleFrom(rng);
         }
 
+        pub fn sampleIndex(self: Self, rng: Rng) usize {
+            return self.sample(rng);
+        }
+
         pub fn sampleU32(self: Self, rng: Rng) u32 {
             return self.sampleU32Checked(rng) catch unreachable;
         }
 
+        pub fn sampleIndexU32(self: Self, rng: Rng) u32 {
+            return self.sampleU32(rng);
+        }
+
         pub fn sampleU32Checked(self: Self, rng: Rng) Error!u32 {
             return self.sampleU32CheckedFrom(rng);
+        }
+
+        pub fn sampleIndexU32Checked(self: Self, rng: Rng) Error!u32 {
+            return self.sampleU32Checked(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) usize {
@@ -15643,8 +15655,16 @@ pub fn AliasTable(comptime Weight: type) type {
             return if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column];
         }
 
+        pub fn sampleIndexFrom(self: Self, source: anytype) usize {
+            return self.sampleFrom(source);
+        }
+
         pub fn sampleU32From(self: Self, source: anytype) u32 {
             return self.sampleU32CheckedFrom(source) catch unreachable;
+        }
+
+        pub fn sampleIndexU32From(self: Self, source: anytype) u32 {
+            return self.sampleU32From(source);
         }
 
         pub fn sampleU32CheckedFrom(self: Self, source: anytype) Error!u32 {
@@ -15652,16 +15672,32 @@ pub fn AliasTable(comptime Weight: type) type {
             return @intCast(self.sampleFrom(source));
         }
 
+        pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
+            return self.sampleU32CheckedFrom(source);
+        }
+
         pub fn fill(self: Self, rng: Rng, dest: []usize) void {
             self.fillFrom(rng, dest);
+        }
+
+        pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
+            self.fill(rng, dest);
         }
 
         pub fn fillU32(self: Self, rng: Rng, dest: []u32) void {
             self.fillU32Checked(rng, dest) catch unreachable;
         }
 
+        pub fn fillIndicesU32(self: Self, rng: Rng, dest: []u32) void {
+            self.fillU32(rng, dest);
+        }
+
         pub fn fillU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
             try self.fillU32CheckedFrom(rng, dest);
+        }
+
+        pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
+            try self.fillU32Checked(rng, dest);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
@@ -15672,8 +15708,16 @@ pub fn AliasTable(comptime Weight: type) type {
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
 
+        pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
+            self.fillFrom(source, dest);
+        }
+
         pub fn fillU32From(self: Self, source: anytype, dest: []u32) void {
             self.fillU32CheckedFrom(source, dest) catch unreachable;
+        }
+
+        pub fn fillIndicesU32From(self: Self, source: anytype, dest: []u32) void {
+            self.fillU32From(source, dest);
         }
 
         pub fn fillU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
@@ -15684,6 +15728,10 @@ pub fn AliasTable(comptime Weight: type) type {
                 return;
             }
             for (dest) |*item| item.* = @intCast(self.sampleFrom(source));
+        }
+
+        pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
+            try self.fillU32CheckedFrom(source, dest);
         }
 
         pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
@@ -17971,6 +18019,65 @@ test "alias table owned index batches mirror fills" {
     const single_batch_u32 = try table.indicesU32From(std.testing.allocator, &single_engine, 4);
     defer std.testing.allocator.free(single_batch_u32);
     try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, single_batch_u32);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "alias table index aliases mirror sample helpers" {
+    const alea = @import("root.zig");
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    var sample_engine = alea.ScalarPrng.init(0x5150_a125);
+    var alias_engine = alea.ScalarPrng.init(0x5150_a125);
+    try std.testing.expectEqual(table.sampleFrom(&sample_engine), table.sampleIndexFrom(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_a126);
+    alias_engine = alea.ScalarPrng.init(0x5150_a126);
+    try std.testing.expectEqual(table.sampleU32From(&sample_engine), table.sampleIndexU32From(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_a127);
+    var direct_engine = alea.ScalarPrng.init(0x5150_a127);
+    const rng = Rng.init(&facade_engine);
+    const direct_rng = Rng.init(&direct_engine);
+    try std.testing.expectEqual(table.sampleIndex(rng), table.sample(direct_rng));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    facade_engine = alea.ScalarPrng.init(0x5150_a128);
+    direct_engine = alea.ScalarPrng.init(0x5150_a128);
+    const u32_rng = Rng.init(&facade_engine);
+    try std.testing.expectEqual(try table.sampleIndexU32Checked(u32_rng), try table.sampleU32CheckedFrom(&direct_engine));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_a129);
+    alias_engine = alea.ScalarPrng.init(0x5150_a129);
+    var fill_out: [8]usize = undefined;
+    var alias_fill_out: [8]usize = undefined;
+    table.fillFrom(&sample_engine, &fill_out);
+    table.fillIndicesFrom(&alias_engine, &alias_fill_out);
+    try std.testing.expectEqualSlices(usize, &fill_out, &alias_fill_out);
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_a12a);
+    alias_engine = alea.ScalarPrng.init(0x5150_a12a);
+    var fill_u32: [8]u32 = undefined;
+    var alias_fill_u32: [8]u32 = undefined;
+    try table.fillU32CheckedFrom(&sample_engine, &fill_u32);
+    try table.fillIndicesU32CheckedFrom(&alias_engine, &alias_fill_u32);
+    try std.testing.expectEqualSlices(u32, &fill_u32, &alias_fill_u32);
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    try table.update(&.{ 0, 0, 5, 0 });
+    var single_engine = alea.ScalarPrng.init(0x5150_a12b);
+    var single_control = alea.ScalarPrng.init(0x5150_a12b);
+    try std.testing.expectEqual(@as(usize, 2), table.sampleIndexFrom(&single_engine));
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    table.fillIndicesFrom(&single_engine, &alias_fill_out);
+    for (alias_fill_out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    try table.fillIndicesU32CheckedFrom(&single_engine, &alias_fill_u32);
+    for (alias_fill_u32) |index| try std.testing.expectEqual(@as(u32, 2), index);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 

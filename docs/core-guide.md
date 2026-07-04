@@ -540,7 +540,8 @@ Use:
   `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
   sampler introspection; use `sampleU32` / `fillU32` variants when population
   indexes fit `u32` and compact output is desired, and `indices` /
-  `indicesU32` variants for allocation-returning repeated draws
+  `indicesU32` variants for allocation-returning repeated draws; `sampleIndex`
+  / `fillIndices` aliases mirror `WeightedChoice` naming
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
   and sampling workloads with weights accumulated as `f64`, including
   `initBy` / `updateAllBy` from item weight accessors,
