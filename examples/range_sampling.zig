@@ -68,11 +68,17 @@ pub fn main(init: std.process.Init) !void {
     const vec_uniform = alea.distributions.vectorUniformFrom(&vector_engine, @Vector(4, f32), 10, 20);
     const vec_range_batch = try alea.Rng.vectorRangeBatchFrom(&vector_engine, @Vector(4, f32), allocator, 3, -1, 1);
     defer allocator.free(vec_range_batch);
+    const vec_open_batch = try alea.Rng.vectorOpenBatchFrom(&vector_engine, @Vector(4, f32), allocator, 3);
+    defer allocator.free(vec_open_batch);
+    const vec_open_closed_batch = try alea.Rng.vectorOpenClosedBatchFrom(&vector_engine, @Vector(4, f32), allocator, 3);
+    defer allocator.free(vec_open_closed_batch);
     try stdout.print("vectorRange f32x4 [-1,1): {any}\n", .{vec_range});
     try stdout.print("vectorOpen f32x4 (0,1): {any}\n", .{vec_open});
     try stdout.print("vectorOpenClosed f32x4 (0,1]: {any}\n", .{vec_open_closed});
     try stdout.print("distribution vectorUniform f32x4 [10,20): {any}\n", .{vec_uniform});
     try stdout.print("vectorRangeBatch f32x4 [-1,1): {any}\n", .{vec_range_batch});
+    try stdout.print("vectorOpenBatch f32x4 (0,1): {any}\n", .{vec_open_batch});
+    try stdout.print("vectorOpenClosedBatch f32x4 (0,1]: {any}\n", .{vec_open_closed_batch});
 
     const collapsed = rng.floatRange(f64, 2.5, 2.5);
     const checked_error_name = if (rng.intRangeLessThanChecked(u32, 3, 3)) |_| "unexpected-success" else |err| @errorName(err);

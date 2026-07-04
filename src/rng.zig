@@ -532,8 +532,30 @@ pub fn fillVectorOpen(self: Rng, comptime VectorType: type, dest: []VectorType) 
     fillVectorOpenFrom(self, VectorType, dest);
 }
 
+pub fn vectorOpenBatch(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize) ![]VectorType {
+    return vectorOpenBatchFrom(self, VectorType, allocator, count);
+}
+
+pub fn vectorOpenBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize) ![]VectorType {
+    const out = try allocator.alloc(VectorType, count);
+    errdefer allocator.free(out);
+    fillVectorOpenFrom(source, VectorType, out);
+    return out;
+}
+
 pub fn fillVectorOpenClosed(self: Rng, comptime VectorType: type, dest: []VectorType) void {
     fillVectorOpenClosedFrom(self, VectorType, dest);
+}
+
+pub fn vectorOpenClosedBatch(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize) ![]VectorType {
+    return vectorOpenClosedBatchFrom(self, VectorType, allocator, count);
+}
+
+pub fn vectorOpenClosedBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize) ![]VectorType {
+    const out = try allocator.alloc(VectorType, count);
+    errdefer allocator.free(out);
+    fillVectorOpenClosedFrom(source, VectorType, out);
+    return out;
 }
 
 pub fn fillVectorFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
@@ -3181,6 +3203,35 @@ test "owned strict interval batches preserve fill stream shape" {
     }
 }
 
+test "owned vector strict interval batches preserve fill stream shape" {
+    const alea = @import("root.zig");
+    inline for (.{ alea.ScalarPrng, alea.FastPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_0930);
+        var direct_engine = Engine.init(0x5150_0930);
+        const rng = Rng.init(&facade_engine);
+
+        const open_values = try rng.vectorOpenBatch(@Vector(8, f32), std.testing.allocator, 8);
+        defer std.testing.allocator.free(open_values);
+        var direct_open_values: [8]@Vector(8, f32) = undefined;
+        fillVectorOpenFrom(&direct_engine, @Vector(8, f32), &direct_open_values);
+        try std.testing.expectEqualSlices(@Vector(8, f32), &direct_open_values, open_values);
+        for (open_values) |vec| {
+            inline for (0..8) |lane| try std.testing.expect(vec[lane] > 0 and vec[lane] < 1);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const open_closed_values = try rng.vectorOpenClosedBatch(@Vector(4, f64), std.testing.allocator, 8);
+        defer std.testing.allocator.free(open_closed_values);
+        var direct_open_closed_values: [8]@Vector(4, f64) = undefined;
+        fillVectorOpenClosedFrom(&direct_engine, @Vector(4, f64), &direct_open_closed_values);
+        try std.testing.expectEqualSlices(@Vector(4, f64), &direct_open_closed_values, open_closed_values);
+        for (open_closed_values) |vec| {
+            inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0 and vec[lane] <= 1);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
+
 test "owned strict interval batches allocate before consuming random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_0889);
@@ -3201,6 +3252,30 @@ test "owned strict interval batches allocate before consuming random stream" {
 
     var open_closed_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, openClosedBatchFrom(&engine, f32, open_closed_alloc.allocator(), 8));
+    try std.testing.expect(open_closed_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "owned vector strict interval batches allocate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_0931);
+    var control = alea.ScalarPrng.init(0x5150_0931);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.vectorOpenBatch(@Vector(8, f32), empty_alloc.allocator(), 0);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var open_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.vectorOpenBatch(@Vector(8, f32), open_alloc.allocator(), 8));
+    try std.testing.expect(open_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var open_closed_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, vectorOpenClosedBatchFrom(&engine, @Vector(4, f64), open_closed_alloc.allocator(), 8));
     try std.testing.expect(open_closed_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
