@@ -282,6 +282,27 @@ pub fn fillRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
     fillRangeFrom(self, T, dest, min, max);
 }
 
+pub fn rangeBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    return rangeBatchFrom(self, T, allocator, count, min, max);
+}
+
+pub fn rangeBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillRangeFrom(source, T, out, min, max);
+    return out;
+}
+
+pub fn rangeBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    return rangeBatchCheckedFrom(self, T, allocator, count, min, max);
+}
+
+pub fn rangeBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    try validateRangeParams(T, min, max);
+    return rangeBatchFrom(source, T, allocator, count, min, max);
+}
+
 pub fn fillRangeFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
     switch (@typeInfo(T)) {
         .int => {
@@ -310,6 +331,11 @@ pub fn fillRangeChecked(self: Rng, comptime T: type, dest: []T, min: T, max: T) 
 
 pub fn fillRangeCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
     if (dest.len == 0) return;
+    try validateRangeParams(T, min, max);
+    fillRangeFrom(source, T, dest, min, max);
+}
+
+fn validateRangeParams(comptime T: type, min: T, max: T) Error!void {
     switch (@typeInfo(T)) {
         .int => {
             if (min >= max) return error.EmptyRange;
@@ -319,7 +345,6 @@ pub fn fillRangeCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T
         },
         else => @compileError("alea.Rng.fillRangeChecked supports integer and floating-point slices"),
     }
-    fillRangeFrom(source, T, dest, min, max);
 }
 
 pub fn fillOpen(self: Rng, comptime T: type, dest: []T) void {
@@ -3090,6 +3115,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(u32, &range_unchecked, &range_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        const range_owned = try rangeBatchFrom(&unchecked, u32, std.testing.allocator, 8, 5, 9);
+        defer std.testing.allocator.free(range_owned);
+        const range_checked_owned = try rangeBatchCheckedFrom(&checked, u32, std.testing.allocator, 8, 5, 9);
+        defer std.testing.allocator.free(range_checked_owned);
+        try std.testing.expectEqualSlices(u32, range_owned, range_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var chance_unchecked: [16]bool = undefined;
         var chance_checked: [16]bool = undefined;
         fillChanceFrom(&unchecked, &chance_unchecked, 0.25);
@@ -3513,6 +3545,33 @@ test "invalid facade range helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "owned range batches allocate and validate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_8720);
+    var control = alea.ScalarPrng.init(0x5150_8720);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.rangeBatchChecked(u32, empty_alloc.allocator(), 0, 3, 3);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.rangeBatchChecked(u32, invalid_alloc.allocator(), 4, 3, 3));
+    try std.testing.expect(!invalid_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rangeBatchCheckedFrom(&engine, f64, std.testing.allocator, 4, std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.rangeBatchChecked(u16, alloc.allocator(), 4, 10, 20));
+    try std.testing.expect(alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "degenerate range helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_ba4);
@@ -3551,6 +3610,11 @@ test "degenerate range helpers do not consume random stream" {
     for (ints) |sample| try std.testing.expectEqual(@as(u32, 10), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const owned_ints = try rangeBatchCheckedFrom(&engine, u32, std.testing.allocator, 5, 10, 11);
+    defer std.testing.allocator.free(owned_ints);
+    for (owned_ints) |sample| try std.testing.expectEqual(@as(u32, 10), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var signed_ints: [5]i32 = undefined;
     try rng.fillRangeChecked(i32, &signed_ints, -12, -11);
     for (signed_ints) |sample| try std.testing.expectEqual(@as(i32, -12), sample);
@@ -3559,6 +3623,11 @@ test "degenerate range helpers do not consume random stream" {
     var floats: [5]f64 = undefined;
     fillRangeFrom(&engine, f64, &floats, 4.75, 4.75);
     for (floats) |sample| try std.testing.expectEqual(@as(f64, 4.75), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_floats = try rng.rangeBatch(f64, std.testing.allocator, 5, 4.75, 4.75);
+    defer std.testing.allocator.free(owned_floats);
+    for (owned_floats) |sample| try std.testing.expectEqual(@as(f64, 4.75), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try rng.fillRangeChecked(f64, &floats, -3.5, -3.5);

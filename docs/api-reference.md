@@ -54,7 +54,9 @@ stability expectations.
 - Ranges: `intRangeLessThan`, `intRangeLessThanChecked`, `intRangeAtMost`,
   `intRangeLessThanCheckedFrom`, `intRangeAtMostChecked`,
   `intRangeAtMostCheckedFrom`, `intRangeLessThanFrom`, `intRangeAtMostFrom`,
-  `floatRange`, `floatRangeFrom`, `floatRangeChecked`, `floatRangeCheckedFrom`, `durationRangeLessThan`,
+  `floatRange`, `floatRangeFrom`, `floatRangeChecked`, `floatRangeCheckedFrom`,
+  `rangeBatch`, `rangeBatchFrom`, `rangeBatchChecked`,
+  `rangeBatchCheckedFrom`, `durationRangeLessThan`,
   `durationRangeLessThanFrom`, `durationRangeAtMost`, `durationRangeAtMostFrom`,
   `durationRangeLessThanChecked`, `durationRangeLessThanCheckedFrom`,
   `durationRangeAtMostChecked`, `durationRangeAtMostCheckedFrom`

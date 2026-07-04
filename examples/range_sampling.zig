@@ -3,6 +3,7 @@ const alea = @import("alea");
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
+    const allocator = init.gpa;
     var stdout_buffer: [4096]u8 = undefined;
     var stdout_file = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_file.interface;
@@ -33,6 +34,14 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("fillRange u16 [100,200): {any}\n", .{ints});
     try stdout.print("fillRange f64 [-5,5): {any}\n", .{floats});
     try stdout.print("fillOpenClosed f32 (0,1]: {any}\n", .{open_values});
+
+    var batch_engine = alea.ScalarPrng.init(0x7261_6e67_69);
+    const owned_ints = try alea.Rng.rangeBatchFrom(&batch_engine, u16, allocator, 6, 100, 200);
+    defer allocator.free(owned_ints);
+    const owned_floats = try alea.Rng.rangeBatchCheckedFrom(&batch_engine, f64, allocator, 6, -5, 5);
+    defer allocator.free(owned_floats);
+    try stdout.print("rangeBatch u16 [100,200): {any}\n", .{owned_ints});
+    try stdout.print("rangeBatchChecked f64 [-5,5): {any}\n", .{owned_floats});
 
     var dist_engine = alea.ScalarPrng.init(0x7261_6e67_67);
     const uniform = try alea.distributions.Uniform(f64).init(-2, 3);

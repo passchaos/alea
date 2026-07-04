@@ -61,10 +61,11 @@ selection.
   valid even when their child type is not sampled, while non-empty arrays or
   tuples containing an empty enum fail before consuming randomness)
 - allocation-returning repeated sampling: `valueBatch`, `valueBatchFrom`,
-  `valueBatchChecked`, `valueBatchCheckedFrom`, `sampleBatch`, and
-  `sampleBatchFrom` allocate owned slices after validating no-consume checked
-  cases; use these when an owned result is more ergonomic than a caller buffer
-  or iterator loop
+  `valueBatchChecked`, `valueBatchCheckedFrom`, `sampleBatch`,
+  `sampleBatchFrom`, `rangeBatch`, `rangeBatchFrom`, `rangeBatchChecked`, and
+  `rangeBatchCheckedFrom` allocate owned slices after validating no-consume
+  checked cases; use these when an owned result is more ergonomic than a caller
+  buffer or iterator loop
 - owned byte buffers: `bytesAlloc` / `bytesAllocFrom` allocate random byte slices after allocation succeeds; use `bytes` or `fill(u8, ...)` for caller-owned buffers
 - bulk sampling: `fill` / `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,

@@ -13,8 +13,9 @@ The current Linux-first roadmap is intentionally broad:
   bulk-fill throughput
 - `Rng.value(T)` / `Rng.valueChecked(T)` for scalar, enum, tuple, and array
   sampling, including fallible empty-enum handling
-- `Rng.valueBatch(T)` / `Rng.valueBatchChecked(T)` and
-  `Rng.sampleBatch(T, sampler)` for allocation-returning repeated samples
+- `Rng.valueBatch(T)` / `Rng.valueBatchChecked(T)`,
+  `Rng.sampleBatch(T, sampler)`, and `Rng.rangeBatch(T, min, max)` for
+  allocation-returning repeated samples
 - `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling,
   including bulk `fill` methods where stream policy permits
 - bulk `fillSample`, `fillRange`, strict-interval scalar and vector float
