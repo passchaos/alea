@@ -15755,6 +15755,43 @@ pub fn AliasTable(comptime Weight: type) type {
             try self.fillU32CheckedFrom(source, out);
             return out;
         }
+
+        pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, usize) {
+            return rng.sampleIter(usize, self);
+        }
+
+        pub fn iterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
+            return Rng.sampleIterFrom(source, usize, self);
+        }
+
+        pub fn iterU32(self: Self, rng: Rng) U32IndexIterator(Rng) {
+            return .{ .source = rng, .table = self };
+        }
+
+        pub fn iterU32From(self: Self, source: anytype) U32IndexIterator(@TypeOf(source)) {
+            return .{ .source = source, .table = self };
+        }
+
+        pub fn U32IndexIterator(comptime Source: type) type {
+            return struct {
+                const Iterator = @This();
+
+                source: Source,
+                table: Self,
+
+                pub fn next(self: *Iterator) ?u32 {
+                    return self.nextValue();
+                }
+
+                pub fn nextValue(self: *Iterator) u32 {
+                    return self.table.sampleU32From(self.source);
+                }
+
+                pub fn fill(self: *Iterator, dest: []u32) void {
+                    self.table.fillU32From(self.source, dest);
+                }
+            };
+        }
     };
 }
 
@@ -18078,6 +18115,72 @@ test "alias table index aliases mirror sample helpers" {
     try std.testing.expectEqual(single_control.next(), single_engine.next());
     try table.fillIndicesU32CheckedFrom(&single_engine, &alias_fill_u32);
     for (alias_fill_u32) |index| try std.testing.expectEqual(@as(u32, 2), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "alias table iterators produce repeated indices" {
+    const alea = @import("root.zig");
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    var sample_engine = alea.ScalarPrng.init(0x5150_a12c);
+    var iter_engine = alea.ScalarPrng.init(0x5150_a12c);
+    var iter = table.iterFrom(&iter_engine);
+    var i: usize = 0;
+    while (i < 8) : (i += 1) {
+        try std.testing.expectEqual(table.sampleFrom(&sample_engine), iter.next().?);
+    }
+    try std.testing.expectEqual(sample_engine.next(), iter_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_a12d);
+    iter_engine = alea.ScalarPrng.init(0x5150_a12d);
+    var fill_out: [8]usize = undefined;
+    var iter_fill_out: [8]usize = undefined;
+    table.fillFrom(&sample_engine, &fill_out);
+    var fill_iter = table.iterFrom(&iter_engine);
+    fill_iter.fill(&iter_fill_out);
+    try std.testing.expectEqualSlices(usize, &fill_out, &iter_fill_out);
+    try std.testing.expectEqual(sample_engine.next(), iter_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_a12e);
+    iter_engine = alea.ScalarPrng.init(0x5150_a12e);
+    var fill_u32: [8]u32 = undefined;
+    var iter_fill_u32: [8]u32 = undefined;
+    try table.fillU32CheckedFrom(&sample_engine, &fill_u32);
+    var u32_iter = table.iterU32From(&iter_engine);
+    u32_iter.fill(&iter_fill_u32);
+    try std.testing.expectEqualSlices(u32, &fill_u32, &iter_fill_u32);
+    try std.testing.expectEqual(sample_engine.next(), iter_engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_a12f);
+    var direct_engine = alea.ScalarPrng.init(0x5150_a12f);
+    const rng = Rng.init(&facade_engine);
+    var facade_iter = table.iter(rng);
+    var direct_iter = table.iterFrom(&direct_engine);
+    try std.testing.expectEqual(facade_iter.next().?, direct_iter.next().?);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    facade_engine = alea.ScalarPrng.init(0x5150_a130);
+    direct_engine = alea.ScalarPrng.init(0x5150_a130);
+    const u32_rng = Rng.init(&facade_engine);
+    var facade_u32_iter = table.iterU32(u32_rng);
+    var direct_u32_iter = table.iterU32From(&direct_engine);
+    try std.testing.expectEqual(facade_u32_iter.next().?, direct_u32_iter.next().?);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    try table.update(&.{ 0, 0, 5, 0 });
+    var single_engine = alea.ScalarPrng.init(0x5150_a131);
+    var single_control = alea.ScalarPrng.init(0x5150_a131);
+    var single_iter = table.iterFrom(&single_engine);
+    var single_out: [4]usize = undefined;
+    single_iter.fill(&single_out);
+    try std.testing.expectEqualSlices(usize, &.{ 2, 2, 2, 2 }, &single_out);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var single_u32_iter = table.iterU32From(&single_engine);
+    var single_u32_out: [4]u32 = undefined;
+    single_u32_iter.fill(&single_u32_out);
+    try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, &single_u32_out);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 

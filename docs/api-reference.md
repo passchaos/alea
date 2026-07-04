@@ -2356,6 +2356,14 @@ Alias helpers:
 - `AliasTable.indicesFrom`
 - `AliasTable.indicesU32`
 - `AliasTable.indicesU32From`
+- `AliasTable.iter`
+- `AliasTable.iterFrom`
+- `AliasTable.iterU32`
+- `AliasTable.iterU32From`
+- `AliasTable.U32IndexIterator`
+- `AliasTable.U32IndexIterator.next`
+- `AliasTable.U32IndexIterator.nextValue`
+- `AliasTable.U32IndexIterator.fill`
 - `AliasTable.deinit`
 
 Dynamic weighted helpers:
