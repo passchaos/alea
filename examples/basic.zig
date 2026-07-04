@@ -3,7 +3,7 @@ const alea = @import("alea");
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
-    var stdout_buffer: [2048]u8 = undefined;
+    var stdout_buffer: [4096]u8 = undefined;
     var stdout_file = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_file.interface;
 
@@ -35,10 +35,18 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(vector_chance_flags);
     const vector_ratio_flags = try rng.vectorRatioBatch(@Vector(8, bool), init.gpa, 2, 3, 8);
     defer init.gpa.free(vector_ratio_flags);
+    const standard_normal_batch = try rng.standardNormalBatch(f64, init.gpa, 4);
+    defer init.gpa.free(standard_normal_batch);
+    const standard_exponential_batch = try rng.standardExponentialBatch(f64, init.gpa, 4);
+    defer init.gpa.free(standard_exponential_batch);
     const normal_batch = try rng.normalBatch(f64, init.gpa, 4, 10, 2.5);
     defer init.gpa.free(normal_batch);
     const exponential_batch = try rng.exponentialBatch(f64, init.gpa, 4, 4);
     defer init.gpa.free(exponential_batch);
+    const vector_standard_normal_batch = try rng.vectorStandardNormalBatch(@Vector(4, f64), init.gpa, 2);
+    defer init.gpa.free(vector_standard_normal_batch);
+    const vector_standard_exponential_batch = try rng.vectorStandardExponentialBatch(@Vector(4, f64), init.gpa, 2);
+    defer init.gpa.free(vector_standard_exponential_batch);
     const vector_normal_batch = try rng.vectorNormalBatch(@Vector(4, f64), init.gpa, 2, 0, 1);
     defer init.gpa.free(vector_normal_batch);
     const vector_exponential_batch = try rng.vectorExponentialBatch(@Vector(4, f64), init.gpa, 2, 2);
@@ -86,8 +94,12 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("ratioBatch 3/8: {any}\n", .{ratio_flags});
     try stdout.print("vectorChanceBatch boolx8 p=.25: {any}\n", .{vector_chance_flags});
     try stdout.print("vectorRatioBatch boolx8 3/8: {any}\n", .{vector_ratio_flags});
+    try stdout.print("standardNormalBatch: {any}\n", .{standard_normal_batch});
+    try stdout.print("standardExponentialBatch: {any}\n", .{standard_exponential_batch});
     try stdout.print("normalBatch: {any}\n", .{normal_batch});
     try stdout.print("exponentialBatch: {any}\n", .{exponential_batch});
+    try stdout.print("vectorStandardNormalBatch f64x4: {any}\n", .{vector_standard_normal_batch});
+    try stdout.print("vectorStandardExponentialBatch f64x4: {any}\n", .{vector_standard_exponential_batch});
     try stdout.print("vectorNormalBatch f64x4: {any}\n", .{vector_normal_batch});
     try stdout.print("vectorExponentialBatch f64x4: {any}\n", .{vector_exponential_batch});
     try stdout.print("dirichlet: {any}\n", .{proportions});

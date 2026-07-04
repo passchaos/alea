@@ -44,7 +44,8 @@ selection.
 
 - integers: `uint`, `uintLessThan`, `uintAtMost`
 - signed and unsigned ranges: `intRangeLessThan`, `intRangeAtMost`
-- floats: `float`, `floatOpen`, `floatOpenClosed`, `floatRange`
+- floats: `float`, `floatOpen`, `floatOpenClosed`, `floatRange`,
+  `standardNormal`, `standardExponential`
 - vectors: `value(@Vector(N, T))`, `vectorOpen`, `vectorOpenClosed`,
   `vectorRange`, `vectorChance`, `vectorRatio`, `vectorStandardNormal`,
   `vectorNormal`, `vectorStandardExponential`, `vectorExponential` for
@@ -67,8 +68,10 @@ selection.
   `rangeBatchCheckedFrom`, `openBatch`, `openBatchFrom`, `openClosedBatch`,
   `openClosedBatchFrom`, `chanceBatch`, `chanceBatchFrom`, `chanceBatchChecked`,
   `chanceBatchCheckedFrom`, `ratioBatch`, `ratioBatchFrom`,
-  `ratioBatchChecked`, `ratioBatchCheckedFrom`, `normalBatch`,
-  `normalBatchFrom`, `normalBatchChecked`, `normalBatchCheckedFrom`,
+  `ratioBatchChecked`, `ratioBatchCheckedFrom`, `standardNormalBatch`,
+  `standardNormalBatchFrom`, `normalBatch`, `normalBatchFrom`,
+  `normalBatchChecked`, `normalBatchCheckedFrom`,
+  `standardExponentialBatch`, `standardExponentialBatchFrom`,
   `exponentialBatch`, `exponentialBatchFrom`, `exponentialBatchChecked`,
   `exponentialBatchCheckedFrom`, `durationRangeLessThanBatch`,
   `durationRangeLessThanBatchFrom`, `durationRangeLessThanBatchChecked`,
@@ -80,10 +83,12 @@ selection.
   `vectorOpenClosedBatchFrom`, `vectorChanceBatch`, `vectorChanceBatchFrom`,
   `vectorChanceBatchChecked`, `vectorChanceBatchCheckedFrom`,
   `vectorRatioBatch`, `vectorRatioBatchFrom`, `vectorRatioBatchChecked`,
-  `vectorRatioBatchCheckedFrom`, `vectorNormalBatch`,
+  `vectorRatioBatchCheckedFrom`, `vectorStandardNormalBatch`,
+  `vectorStandardNormalBatchFrom`, `vectorNormalBatch`,
   `vectorNormalBatchFrom`, `vectorNormalBatchChecked`,
   `vectorNormalBatchCheckedFrom`, `vectorExponentialBatch`,
-  `vectorExponentialBatchFrom`, `vectorExponentialBatchChecked`, and
+  `vectorExponentialBatchFrom`, `vectorExponentialBatchChecked`,
+  `vectorStandardExponentialBatch`, `vectorStandardExponentialBatchFrom`, and
   `vectorExponentialBatchCheckedFrom` allocate owned slices after validating
   no-consume checked cases; use these when an owned result is more ergonomic
   than a caller buffer or iterator loop

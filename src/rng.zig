@@ -732,8 +732,39 @@ pub fn fillVectorRatioCheckedFrom(source: anytype, comptime VectorType: type, de
     fillVectorRatioFrom(source, VectorType, dest, numerator, denominator);
 }
 
+pub fn fillStandardNormal(self: Rng, comptime T: type, dest: []T) void {
+    fillStandardNormalFrom(self, T, dest);
+}
+
+pub fn standardNormalBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    return standardNormalBatchFrom(self, T, allocator, count);
+}
+
+pub fn standardNormalBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillStandardNormalFrom(source, T, out);
+    return out;
+}
+
+pub fn fillStandardNormalFrom(source: anytype, comptime T: type, dest: []T) void {
+    comptime requireFloat(T);
+    for (dest) |*item| item.* = standardNormalFastFrom(source, T);
+}
+
 pub fn fillVectorStandardNormal(self: Rng, comptime VectorType: type, dest: []VectorType) void {
     fillVectorStandardNormalFrom(self, VectorType, dest);
+}
+
+pub fn vectorStandardNormalBatch(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize) ![]VectorType {
+    return vectorStandardNormalBatchFrom(self, VectorType, allocator, count);
+}
+
+pub fn vectorStandardNormalBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize) ![]VectorType {
+    const out = try allocator.alloc(VectorType, count);
+    errdefer allocator.free(out);
+    fillVectorStandardNormalFrom(source, VectorType, out);
+    return out;
 }
 
 pub fn fillVectorStandardNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
@@ -856,8 +887,39 @@ pub fn fillVectorExponentialCheckedFrom(source: anytype, comptime VectorType: ty
     fillVectorExponentialFrom(source, VectorType, dest, rate);
 }
 
+pub fn fillStandardExponential(self: Rng, comptime T: type, dest: []T) void {
+    fillStandardExponentialFrom(self, T, dest);
+}
+
+pub fn standardExponentialBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    return standardExponentialBatchFrom(self, T, allocator, count);
+}
+
+pub fn standardExponentialBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    fillStandardExponentialFrom(source, T, out);
+    return out;
+}
+
+pub fn fillStandardExponentialFrom(source: anytype, comptime T: type, dest: []T) void {
+    comptime requireFloat(T);
+    for (dest) |*item| item.* = standardExponentialFastFrom(source, T);
+}
+
 pub fn fillVectorStandardExponential(self: Rng, comptime VectorType: type, dest: []VectorType) void {
     fillVectorStandardExponentialFrom(self, VectorType, dest);
+}
+
+pub fn vectorStandardExponentialBatch(self: Rng, comptime VectorType: type, allocator: std.mem.Allocator, count: usize) ![]VectorType {
+    return vectorStandardExponentialBatchFrom(self, VectorType, allocator, count);
+}
+
+pub fn vectorStandardExponentialBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize) ![]VectorType {
+    const out = try allocator.alloc(VectorType, count);
+    errdefer allocator.free(out);
+    fillVectorStandardExponentialFrom(source, VectorType, out);
+    return out;
 }
 
 pub fn fillVectorStandardExponentialFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
@@ -1916,6 +1978,14 @@ pub fn normal(self: Rng, comptime T: type, mean: T, stddev: T) T {
     return normalFastFrom(self, T, mean, stddev);
 }
 
+pub fn standardNormal(self: Rng, comptime T: type) T {
+    return standardNormalFrom(self, T);
+}
+
+pub fn standardNormalFrom(source: anytype, comptime T: type) T {
+    return standardNormalFastFrom(source, T);
+}
+
 pub fn normalChecked(self: Rng, comptime T: type, mean: T, stddev: T) Error!T {
     return normalCheckedFrom(self, T, mean, stddev);
 }
@@ -1944,6 +2014,14 @@ pub inline fn normalFastFrom(source: anytype, comptime T: type, mean: T, stddev:
 
 pub fn exponential(self: Rng, comptime T: type, rate: T) T {
     return exponentialFastFrom(self, T, rate);
+}
+
+pub fn standardExponential(self: Rng, comptime T: type) T {
+    return standardExponentialFrom(self, T);
+}
+
+pub fn standardExponentialFrom(source: anytype, comptime T: type) T {
+    return standardExponentialFastFrom(source, T);
 }
 
 pub fn exponentialChecked(self: Rng, comptime T: type, rate: T) Error!T {
@@ -2885,6 +2963,23 @@ test "rng facade covers scalar APIs" {
     try Rng.fillNormalCheckedFrom(&engine, f64, &direct_checked_normal_buf, 0, 1);
     for (direct_checked_normal_buf) |item| try std.testing.expect(std.math.isFinite(item));
 
+    const standard_normal = rng.standardNormal(f64);
+    try std.testing.expect(std.math.isFinite(standard_normal));
+    const direct_standard_normal = Rng.standardNormalFrom(&engine, f32);
+    try std.testing.expect(std.math.isFinite(direct_standard_normal));
+
+    var standard_normal_buf: [16]f64 = undefined;
+    rng.fillStandardNormal(f64, &standard_normal_buf);
+    for (standard_normal_buf) |item| try std.testing.expect(std.math.isFinite(item));
+
+    var direct_standard_normal_buf: [16]f64 = undefined;
+    Rng.fillStandardNormalFrom(&engine, f64, &direct_standard_normal_buf);
+    for (direct_standard_normal_buf) |item| try std.testing.expect(std.math.isFinite(item));
+
+    const standard_normal_owned = try rng.standardNormalBatch(f64, std.testing.allocator, 8);
+    defer std.testing.allocator.free(standard_normal_owned);
+    for (standard_normal_owned) |item| try std.testing.expect(std.math.isFinite(item));
+
     var normal_f32_buf: [33]f32 = undefined;
     try rng.fillNormalChecked(f32, &normal_f32_buf, 0, 1);
     for (normal_f32_buf) |item| try std.testing.expect(std.math.isFinite(item));
@@ -2904,6 +2999,23 @@ test "rng facade covers scalar APIs" {
     var exp_f32_buf: [17]f32 = undefined;
     try rng.fillExponentialChecked(f32, &exp_f32_buf, 2);
     for (exp_f32_buf) |item| try std.testing.expect(item >= 0);
+
+    const standard_exponential = rng.standardExponential(f64);
+    try std.testing.expect(standard_exponential >= 0);
+    const direct_standard_exponential = Rng.standardExponentialFrom(&engine, f32);
+    try std.testing.expect(direct_standard_exponential >= 0);
+
+    var standard_exp_buf: [16]f64 = undefined;
+    rng.fillStandardExponential(f64, &standard_exp_buf);
+    for (standard_exp_buf) |item| try std.testing.expect(item >= 0);
+
+    var direct_standard_exp_buf: [16]f64 = undefined;
+    Rng.fillStandardExponentialFrom(&engine, f64, &direct_standard_exp_buf);
+    for (direct_standard_exp_buf) |item| try std.testing.expect(item >= 0);
+
+    const standard_exponential_owned = try rng.standardExponentialBatch(f64, std.testing.allocator, 8);
+    defer std.testing.allocator.free(standard_exponential_owned);
+    for (standard_exponential_owned) |item| try std.testing.expect(item >= 0);
 
     const alea = @import("root.zig");
     var poisson_buf: [16]u64 = undefined;
@@ -3039,6 +3151,10 @@ test "rng facade covers scalar APIs" {
     rng.fillVectorStandardNormal(@Vector(8, f32), &vec_standard_normal_buf);
     for (vec_standard_normal_buf) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
 
+    const vec_standard_normal_owned = try rng.vectorStandardNormalBatch(@Vector(8, f32), std.testing.allocator, 4);
+    defer std.testing.allocator.free(vec_standard_normal_owned);
+    for (vec_standard_normal_owned) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
+
     var vec_normal_buf: [8]@Vector(8, f32) = undefined;
     try rng.fillVectorNormalChecked(@Vector(8, f32), &vec_normal_buf, 0, 1);
     for (vec_normal_buf) |vec| inline for (0..8) |i| try std.testing.expect(std.math.isFinite(vec[i]));
@@ -3058,6 +3174,10 @@ test "rng facade covers scalar APIs" {
     var vec_standard_exp_buf: [4]@Vector(8, f32) = undefined;
     rng.fillVectorStandardExponential(@Vector(8, f32), &vec_standard_exp_buf);
     for (vec_standard_exp_buf) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0);
+
+    const vec_standard_exponential_owned = try rng.vectorStandardExponentialBatch(@Vector(8, f32), std.testing.allocator, 4);
+    defer std.testing.allocator.free(vec_standard_exponential_owned);
+    for (vec_standard_exponential_owned) |vec| inline for (0..8) |i| try std.testing.expect(vec[i] >= 0);
 
     var vec_exp_buf: [8]@Vector(8, f32) = undefined;
     try rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_exp_buf, 2);
@@ -3585,6 +3705,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(f64, &normal_unchecked, &normal_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        var standard_normal_unchecked: [8]f64 = undefined;
+        var standard_normal_checked: [8]f64 = undefined;
+        fillStandardNormalFrom(&unchecked, f64, &standard_normal_unchecked);
+        try fillNormalCheckedFrom(&checked, f64, &standard_normal_checked, 0, 1);
+        try std.testing.expectEqualSlices(f64, &standard_normal_unchecked, &standard_normal_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         const normal_owned = try normalBatchFrom(&unchecked, f64, std.testing.allocator, 8, 0, 1);
         defer std.testing.allocator.free(normal_owned);
         const normal_checked_owned = try normalBatchCheckedFrom(&checked, f64, std.testing.allocator, 8, 0, 1);
@@ -3592,18 +3719,39 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(f64, normal_owned, normal_checked_owned);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        const standard_normal_owned = try standardNormalBatchFrom(&unchecked, f64, std.testing.allocator, 8);
+        defer std.testing.allocator.free(standard_normal_owned);
+        const standard_normal_checked_owned = try normalBatchCheckedFrom(&checked, f64, std.testing.allocator, 8, 0, 1);
+        defer std.testing.allocator.free(standard_normal_checked_owned);
+        try std.testing.expectEqualSlices(f64, standard_normal_owned, standard_normal_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var exponential_unchecked: [8]f64 = undefined;
         var exponential_checked: [8]f64 = undefined;
-        fillExponentialFrom(&unchecked, f64, &exponential_unchecked, 2);
-        try fillExponentialCheckedFrom(&checked, f64, &exponential_checked, 2);
+        fillExponentialFrom(&unchecked, f64, &exponential_unchecked, 1);
+        try fillExponentialCheckedFrom(&checked, f64, &exponential_checked, 1);
         try std.testing.expectEqualSlices(f64, &exponential_unchecked, &exponential_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
-        const exponential_owned = try exponentialBatchFrom(&unchecked, f64, std.testing.allocator, 8, 2);
+        var standard_exponential_unchecked: [8]f64 = undefined;
+        var standard_exponential_checked: [8]f64 = undefined;
+        fillStandardExponentialFrom(&unchecked, f64, &standard_exponential_unchecked);
+        try fillExponentialCheckedFrom(&checked, f64, &standard_exponential_checked, 1);
+        try std.testing.expectEqualSlices(f64, &standard_exponential_unchecked, &standard_exponential_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const exponential_owned = try exponentialBatchFrom(&unchecked, f64, std.testing.allocator, 8, 1);
         defer std.testing.allocator.free(exponential_owned);
-        const exponential_checked_owned = try exponentialBatchCheckedFrom(&checked, f64, std.testing.allocator, 8, 2);
+        const exponential_checked_owned = try exponentialBatchCheckedFrom(&checked, f64, std.testing.allocator, 8, 1);
         defer std.testing.allocator.free(exponential_checked_owned);
         try std.testing.expectEqualSlices(f64, exponential_owned, exponential_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const standard_exponential_owned = try standardExponentialBatchFrom(&unchecked, f64, std.testing.allocator, 8);
+        defer std.testing.allocator.free(standard_exponential_owned);
+        const standard_exponential_checked_owned = try exponentialBatchCheckedFrom(&checked, f64, std.testing.allocator, 8, 1);
+        defer std.testing.allocator.free(standard_exponential_checked_owned);
+        try std.testing.expectEqualSlices(f64, standard_exponential_owned, standard_exponential_checked_owned);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         var vector_range_unchecked: [4]@Vector(8, f32) = undefined;
@@ -3655,6 +3803,13 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(@Vector(8, f32), &vector_normal_unchecked, &vector_normal_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        var vector_standard_normal_unchecked: [4]@Vector(8, f32) = undefined;
+        var vector_standard_normal_checked: [4]@Vector(8, f32) = undefined;
+        fillVectorStandardNormalFrom(&unchecked, @Vector(8, f32), &vector_standard_normal_unchecked);
+        try fillVectorNormalCheckedFrom(&checked, @Vector(8, f32), &vector_standard_normal_checked, 0, 1);
+        try std.testing.expectEqualSlices(@Vector(8, f32), &vector_standard_normal_unchecked, &vector_standard_normal_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         const vector_normal_owned = try vectorNormalBatchFrom(&unchecked, @Vector(8, f32), std.testing.allocator, 4, 0, 1);
         defer std.testing.allocator.free(vector_normal_owned);
         const vector_normal_checked_owned = try vectorNormalBatchCheckedFrom(&checked, @Vector(8, f32), std.testing.allocator, 4, 0, 1);
@@ -3662,18 +3817,39 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(@Vector(8, f32), vector_normal_owned, vector_normal_checked_owned);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
+        const vector_standard_normal_owned = try vectorStandardNormalBatchFrom(&unchecked, @Vector(8, f32), std.testing.allocator, 4);
+        defer std.testing.allocator.free(vector_standard_normal_owned);
+        const vector_standard_normal_checked_owned = try vectorNormalBatchCheckedFrom(&checked, @Vector(8, f32), std.testing.allocator, 4, 0, 1);
+        defer std.testing.allocator.free(vector_standard_normal_checked_owned);
+        try std.testing.expectEqualSlices(@Vector(8, f32), vector_standard_normal_owned, vector_standard_normal_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
         var vector_exponential_unchecked: [4]@Vector(8, f32) = undefined;
         var vector_exponential_checked: [4]@Vector(8, f32) = undefined;
-        fillVectorExponentialFrom(&unchecked, @Vector(8, f32), &vector_exponential_unchecked, 2);
-        try fillVectorExponentialCheckedFrom(&checked, @Vector(8, f32), &vector_exponential_checked, 2);
+        fillVectorExponentialFrom(&unchecked, @Vector(8, f32), &vector_exponential_unchecked, 1);
+        try fillVectorExponentialCheckedFrom(&checked, @Vector(8, f32), &vector_exponential_checked, 1);
         try std.testing.expectEqualSlices(@Vector(8, f32), &vector_exponential_unchecked, &vector_exponential_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
-        const vector_exponential_owned = try vectorExponentialBatchFrom(&unchecked, @Vector(8, f32), std.testing.allocator, 4, 2);
+        var vector_standard_exponential_unchecked: [4]@Vector(8, f32) = undefined;
+        var vector_standard_exponential_checked: [4]@Vector(8, f32) = undefined;
+        fillVectorStandardExponentialFrom(&unchecked, @Vector(8, f32), &vector_standard_exponential_unchecked);
+        try fillVectorExponentialCheckedFrom(&checked, @Vector(8, f32), &vector_standard_exponential_checked, 1);
+        try std.testing.expectEqualSlices(@Vector(8, f32), &vector_standard_exponential_unchecked, &vector_standard_exponential_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const vector_exponential_owned = try vectorExponentialBatchFrom(&unchecked, @Vector(8, f32), std.testing.allocator, 4, 1);
         defer std.testing.allocator.free(vector_exponential_owned);
-        const vector_exponential_checked_owned = try vectorExponentialBatchCheckedFrom(&checked, @Vector(8, f32), std.testing.allocator, 4, 2);
+        const vector_exponential_checked_owned = try vectorExponentialBatchCheckedFrom(&checked, @Vector(8, f32), std.testing.allocator, 4, 1);
         defer std.testing.allocator.free(vector_exponential_checked_owned);
         try std.testing.expectEqualSlices(@Vector(8, f32), vector_exponential_owned, vector_exponential_checked_owned);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const vector_standard_exponential_owned = try vectorStandardExponentialBatchFrom(&unchecked, @Vector(8, f32), std.testing.allocator, 4);
+        defer std.testing.allocator.free(vector_standard_exponential_owned);
+        const vector_standard_exponential_checked_owned = try vectorExponentialBatchCheckedFrom(&checked, @Vector(8, f32), std.testing.allocator, 4, 1);
+        defer std.testing.allocator.free(vector_standard_exponential_checked_owned);
+        try std.testing.expectEqualSlices(@Vector(8, f32), vector_standard_exponential_owned, vector_standard_exponential_checked_owned);
         try std.testing.expectEqual(unchecked.next(), checked.next());
     }
 }
@@ -4502,6 +4678,54 @@ test "owned vector normal and exponential batches allocate and validate before c
 
     var exponential_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, vectorExponentialBatchFrom(&engine, @Vector(4, f64), exponential_alloc.allocator(), 4, 2));
+    try std.testing.expect(exponential_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "owned standard normal and exponential batches allocate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_96a0);
+    var control = alea.ScalarPrng.init(0x5150_96a0);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.standardNormalBatch(f64, empty_alloc.allocator(), 0);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var normal_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.standardNormalBatch(f64, normal_alloc.allocator(), 8));
+    try std.testing.expect(normal_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var exponential_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, standardExponentialBatchFrom(&engine, f64, exponential_alloc.allocator(), 8));
+    try std.testing.expect(exponential_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "owned vector standard normal and exponential batches allocate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_96a1);
+    var control = alea.ScalarPrng.init(0x5150_96a1);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.vectorStandardNormalBatch(@Vector(8, f32), empty_alloc.allocator(), 0);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var normal_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.vectorStandardNormalBatch(@Vector(8, f32), normal_alloc.allocator(), 4));
+    try std.testing.expect(normal_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var exponential_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, vectorStandardExponentialBatchFrom(&engine, @Vector(4, f64), exponential_alloc.allocator(), 4));
     try std.testing.expect(exponential_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }

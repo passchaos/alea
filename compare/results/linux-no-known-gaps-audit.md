@@ -133,6 +133,7 @@ Local Alea evidence:
 - `compare/results/s4-m93-rng-owned-vector-strict-intervals.md`
 - `compare/results/s4-m94-rng-owned-vector-probabilities.md`
 - `compare/results/s4-m95-rng-owned-vector-normal-exponential.md`
+- `compare/results/s4-m96-rng-owned-standard-normal-exponential.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -148,7 +149,7 @@ Out of scope for this Linux-first audit:
 
 | Rust area | Alea status | Evidence |
 | --- | --- | --- |
-| integer, float, bool, range, owned scalar/vector range, scalar/vector strict-interval, scalar/vector probability, scalar/vector normal/exponential, and duration batches, ratio/chance, caller-owned and allocation-returning bytes | Covered | `Rng`, `Rng.rangeBatch`, `Rng.vectorRangeBatch`, `Rng.openBatch`, `Rng.openClosedBatch`, `Rng.vectorOpenBatch`, `Rng.vectorOpenClosedBatch`, `Rng.chanceBatch`, `Rng.ratioBatch`, `Rng.vectorChanceBatch`, `Rng.vectorRatioBatch`, `Rng.normalBatch`, `Rng.exponentialBatch`, `Rng.vectorNormalBatch`, `Rng.vectorExponentialBatch`, `Rng.bytesAlloc`, unit tests, Zig/Rust benchmark rows |
+| integer, float, bool, range, owned scalar/vector range, scalar/vector strict-interval, scalar/vector probability, scalar/vector standard-or-parameterized normal/exponential, and duration batches, ratio/chance, caller-owned and allocation-returning bytes | Covered | `Rng`, `Rng.rangeBatch`, `Rng.vectorRangeBatch`, `Rng.openBatch`, `Rng.openClosedBatch`, `Rng.vectorOpenBatch`, `Rng.vectorOpenClosedBatch`, `Rng.chanceBatch`, `Rng.ratioBatch`, `Rng.vectorChanceBatch`, `Rng.vectorRatioBatch`, `Rng.standardNormalBatch`, `Rng.normalBatch`, `Rng.standardExponentialBatch`, `Rng.exponentialBatch`, `Rng.vectorStandardNormalBatch`, `Rng.vectorNormalBatch`, `Rng.vectorStandardExponentialBatch`, `Rng.vectorExponentialBatch`, `Rng.bytesAlloc`, unit tests, Zig/Rust benchmark rows |
 | arrays, tuples, enums | Covered | `Rng.value(T)`, `Rng.valueBatch(T)`, and checked empty-enum tests |
 | Unicode scalar / char-like sampling | Covered in Zig form | `Rng.unicodeScalar`, `ascii.unicodeUtf8Alloc`, `ascii.unicodeUtf8Into` |
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost`, and owned duration range batches |
@@ -160,7 +161,7 @@ Out of scope for this Linux-first audit:
 
 | Local Rust family | Alea API | Validation |
 | --- | --- | --- |
-| Normal, LogNormal, Exp | `normal`, `Normal`, `logNormal`, `LogNormal`, `BufferedLogNormal`, `LogNormalDlsymExp`, `LogNormalLibmvec`, `exponential`, `Exponential`, plus explicit bounded/native f32 LogNormal opt-ins, vector-only table-quantile Normal/Exponential opt-ins, and vector-only approximate-log f32 Exponential opt-ins | unit tests, `distcheck`, `distcheck-libc` for f64/f32 libmvec/dlsym availability, vector `distcheck`, benchmark rows |
+| Normal, LogNormal, Exp | `standardNormal`, `normal`, `Normal`, `standardExponential`, `exponential`, `Exponential`, scalar/vector standard and parameterized owned batches, `logNormal`, `LogNormal`, `BufferedLogNormal`, `LogNormalDlsymExp`, `LogNormalLibmvec`, plus explicit bounded/native f32 LogNormal opt-ins, vector-only table-quantile Normal/Exponential opt-ins, and vector-only approximate-log f32 Exponential opt-ins | unit tests, `distcheck`, `distcheck-libc` for f64/f32 libmvec/dlsym availability, vector `distcheck`, benchmark rows |
 | Gamma, ChiSquared, Beta | `gamma`, `Gamma`, `chiSquared`, `ChiSquared`, `beta`, `Beta` | unit tests, `distcheck`, benchmark rows |
 | FisherF, StudentT | `fisherF`, `FisherF`, `studentT`, `StudentT` | unit tests, `distcheck`, benchmark rows |
 | Poisson, Binomial | `poisson`, `Poisson`, `binomial`, `Binomial` | unit tests, `distcheck`, benchmark rows |
