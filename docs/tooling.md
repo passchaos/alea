@@ -13,7 +13,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build apicheck` | Verify public symbols are covered by `docs/api-reference.md`. |
 | `zig build examplecheck` | Verify `docs/examples.md` covers every checked-in runnable example/focused `run-*` step and that key examples still contain expected adoption-output tokens. |
 | `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step and checked-in tool file. |
-| `zig build readmecheck` | Verify README discovery links and core validation commands stay visible. |
+| `zig build readmecheck` | Verify README discovery links, quick-start API tokens, and core validation commands stay visible. |
 | `zig build roadmapcheck` | Verify roadmap, active-audit milestone evidence, and concrete S4-M11 blocker tokens stay synchronized. |
 | `zig build doccheck` | Run API, examples, tooling, README, and roadmap documentation checks together. |
 | `zig build statcheck` | Run extended statistical smoke checks. |
@@ -178,7 +178,7 @@ new helpers that need documentation.
 | `tools/profiletailcheck.zig` | Accepted vector profile tail checker. |
 | `tools/rayleigh_probe.zig` | Rayleigh performance probe. |
 | `tools/repro.zig` | Reproducibility snapshot printer. |
-| `tools/readmecheck.zig` | README discovery checker. |
+| `tools/readmecheck.zig` | README discovery and quick-start token checker. |
 | `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, and S4-M11 blocker-token checker. |
 | `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps. |
 | `tools/skew_normal_probe.zig` | SkewNormal performance probe. |

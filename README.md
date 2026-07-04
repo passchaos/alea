@@ -75,6 +75,8 @@ pub fn main() !void {
     const text = try alea.ascii.unicodeUtf8Into(rng, utf8_buf, 8);
 
     var items = [_]u32{ 10, 20, 30, 40 };
+    const item_index = rng.chooseIndex(items.len).?;
+    const item_ptr = rng.chooseConstPtr(u32, &items).?;
     const hand = alea.seq.partialShuffle(rng, u32, &items, 2);
 
     _ = die;
@@ -85,6 +87,8 @@ pub fn main() !void {
     _ = token;
     _ = utf8_capacity;
     _ = text;
+    _ = item_index;
+    _ = item_ptr;
     _ = hand;
 }
 ```

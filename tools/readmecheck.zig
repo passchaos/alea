@@ -24,6 +24,8 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build run-basic", .reason = "runnable example entry point" },
     .{ .token = "zig build examples", .reason = "aggregate examples command" },
     .{ .token = "zig build -l", .reason = "generated build-step list discovery" },
+    .{ .token = "rng.chooseIndex", .reason = "quick-start one-shot index choice" },
+    .{ .token = "rng.chooseConstPtr", .reason = "quick-start const-pointer choice" },
 };
 
 const required_files = [_][]const u8{
