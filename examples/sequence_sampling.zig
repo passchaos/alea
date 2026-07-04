@@ -70,6 +70,11 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(reservoir);
     try stdout.print("reservoirSample: {s}, {s}, {s}, {s}\n", .{ reservoir[0], reservoir[1], reservoir[2], reservoir[3] });
 
+    var reservoir_into_engine = alea.ScalarPrng.init(0x5e11_000b);
+    var reservoir_into: [4][]const u8 = undefined;
+    try alea.seq.reservoirSampleIntoFrom(&reservoir_into_engine, []const u8, &items, &reservoir_into);
+    try stdout.print("reservoirSampleInto: {s}, {s}, {s}, {s}\n", .{ reservoir_into[0], reservoir_into[1], reservoir_into[2], reservoir_into[3] });
+
     const choice = alea.seq.Choice([]const u8).init(&items).?;
     var choice_engine = alea.ScalarPrng.init(0x5e11_0007);
     var choice_values: [5][]const u8 = undefined;
@@ -87,6 +92,6 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(stream_sample);
     try stdout.print("sampleIteratorFrom counter[0..20): {any}\n", .{stream_sample});
 
-    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample for streams, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/IndexVec for indexes, chooseArray for fixed-size arrays, chooseMultiple or sampleWithoutReplacement for item subsets, partialShuffle for in-place heads, reservoirSample/reservoirSampleInto for streams, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }

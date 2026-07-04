@@ -232,7 +232,8 @@ Use:
 - `seq.partialShuffle`, `seq.partialShuffleFrom`,
   `seq.partialShuffleCheckedFrom`
 - `seq.reservoirSample`, `seq.reservoirSampleFrom`,
-  `seq.reservoirSampleCheckedFrom`
+  `seq.reservoirSampleCheckedFrom`, `seq.reservoirSampleInto`,
+  `seq.reservoirSampleIntoFrom`
 - `seq.sampleIndices`, `seq.sampleIndicesCheckedFrom`, `seq.sampleIndexVec`,
   `seq.sampleIndexVecCheckedFrom`, `seq.sampleIndicesU32`,
   `seq.sampleIndicesU32CheckedFrom`; compact `IndexVec` results expose
@@ -318,7 +319,8 @@ Allocation failures while preparing the sample-without-replacement temporary
 pool/output also return before drawing.
 Successful sample-without-replacement calls return their exact-capacity output
 without a post-sampling ownership allocation.
-`chooseMultipleFrom` prepares its output and index storage before drawing, so
+`chooseMultipleFrom` prepares its output and index storage before drawing, and
+`reservoirSampleIntoFrom` validates caller-owned output length before drawing, so
 allocation failures leave the stream untouched.
 Checked weighted index and item sampling likewise prepare output and temporary
 heap/index storage before drawing after validating lengths and positive-weight

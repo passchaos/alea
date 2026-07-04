@@ -968,15 +968,25 @@ pub fn reservoirSampleCheckedFrom(allocator: std.mem.Allocator, source: anytype,
 pub fn reservoirSampleFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
     const count = @min(amount, items.len);
     const out = try allocator.alloc(T, count);
-    if (count == 0) return out;
+    errdefer allocator.free(out);
+    try reservoirSampleIntoFrom(source, T, items, out);
+    return out;
+}
 
-    @memcpy(out, items[0..count]);
-    var i = count;
+pub fn reservoirSampleInto(rng: Rng, comptime T: type, items: []const T, out: []T) Error!void {
+    return reservoirSampleIntoFrom(rng, T, items, out);
+}
+
+pub fn reservoirSampleIntoFrom(source: anytype, comptime T: type, items: []const T, out: []T) Error!void {
+    if (out.len > items.len) return error.InvalidParameter;
+    if (out.len == 0) return;
+
+    @memcpy(out, items[0..out.len]);
+    var i = out.len;
     while (i < items.len) : (i += 1) {
         const j = Rng.uintAtMostFrom(source, usize, i);
-        if (j < count) out[j] = items[i];
+        if (j < out.len) out[j] = items[i];
     }
-    return out;
 }
 
 fn sampleFloyd(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
@@ -1565,6 +1575,10 @@ test "invalid facade collection helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, reservoirSampleChecked(std.testing.allocator, rng, u8, &.{ 1, 2 }, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [3]u8 = undefined;
+    try std.testing.expectError(error.InvalidParameter, reservoirSampleInto(rng, u8, &.{ 1, 2 }, &out));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -2205,6 +2219,10 @@ test "zero-count checked sequence helpers do not consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), sampled.len);
     try std.testing.expect(!reservoir_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
+
+    var reservoir_out: [0]u8 = .{};
+    try reservoirSampleIntoFrom(&engine, u8, &items, &reservoir_out);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "full iterator reservoir avoids post-sampling ownership allocation" {
@@ -2345,6 +2363,10 @@ test "partial shuffle and reservoir sample respect counts" {
     defer std.testing.allocator.free(checked_sampled);
     try std.testing.expectEqual(@as(usize, 4), checked_sampled.len);
 
+    var into: [4]u8 = undefined;
+    try reservoirSampleIntoFrom(&engine, u8, &values, &into);
+    try std.testing.expectEqual(@as(usize, 4), into.len);
+
     const direct_multiple = try chooseMultipleFrom(std.testing.allocator, &engine, u8, &values, 3);
     defer std.testing.allocator.free(direct_multiple);
     try std.testing.expectEqual(@as(usize, 3), direct_multiple.len);
@@ -2476,6 +2498,13 @@ test "collection sequence helpers preserve direct stream shape" {
         const direct_sampled = try reservoirSampleFrom(std.testing.allocator, &direct_engine, u8, &items, 4);
         defer std.testing.allocator.free(direct_sampled);
         try std.testing.expectEqualSlices(u8, sampled, direct_sampled);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var into: [4]u8 = undefined;
+        var direct_into: [4]u8 = undefined;
+        try reservoirSampleInto(rng, u8, &items, &into);
+        try reservoirSampleIntoFrom(&direct_engine, u8, &items, &direct_into);
+        try std.testing.expectEqualSlices(u8, &into, &direct_into);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         const multiple = try chooseMultiple(std.testing.allocator, rng, u8, &items, 3);
