@@ -576,9 +576,9 @@ Run `zig build run-weighted-sampling` for a runnable comparison of one-shot
 weighted indexes, static alias tables, dynamic weighted trees, weighted choices,
 and weighted no-replacement helpers.
 
-Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput index
-sampling. Use `sampleArrayU32From` for compact fixed-size index arrays when the
-population length fits `u32`, and use `sampleIndices` when a `[]usize` result is
+Prefer `sampleIndexVec` or `sampleIndicesU32` for compact, high-throughput no-replacement index
+sampling. Use `sampleArrayU32From` for compact fixed-size no-replacement index arrays when the
+population length fits `u32`, use `chooseIndexArrayFrom` / `chooseIndexArrayU32From` for fixed-size repeated with-replacement index choices, and use `sampleIndices` when a `[]usize` result is
 more convenient.
 Run `zig build run-sequence-sampling` for a runnable comparison of index
 sampling, item subsets, partial shuffles, reservoir samples, reusable `Choice`,

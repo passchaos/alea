@@ -623,6 +623,24 @@ pub fn chooseIndexCheckedFrom(source: anytype, length: usize) Error!usize {
     return chooseIndexFrom(source, length) orelse error.EmptyInput;
 }
 
+pub fn chooseIndexArray(rng: Rng, comptime N: usize, length: usize) ?[N]usize {
+    return chooseIndexArrayFrom(rng, N, length);
+}
+
+pub fn chooseIndexArrayFrom(source: anytype, comptime N: usize, length: usize) ?[N]usize {
+    return Rng.chooseIndexArrayFrom(source, N, length);
+}
+
+pub fn chooseIndexArrayChecked(rng: Rng, comptime N: usize, length: usize) Error![N]usize {
+    return chooseIndexArrayCheckedFrom(rng, N, length);
+}
+
+pub fn chooseIndexArrayCheckedFrom(source: anytype, comptime N: usize, length: usize) Error![N]usize {
+    if (N == 0) return .{};
+    if (length == 0) return error.EmptyInput;
+    return Rng.chooseIndexArrayFrom(source, N, length).?;
+}
+
 pub fn fillChooseIndex(rng: Rng, dest: []usize, length: usize) void {
     fillChooseIndexFrom(rng, dest, length);
 }
@@ -673,6 +691,24 @@ pub fn chooseIndexU32Checked(rng: Rng, length: u32) Error!u32 {
 
 pub fn chooseIndexU32CheckedFrom(source: anytype, length: u32) Error!u32 {
     return chooseIndexU32From(source, length) orelse error.EmptyInput;
+}
+
+pub fn chooseIndexArrayU32(rng: Rng, comptime N: usize, length: u32) ?[N]u32 {
+    return chooseIndexArrayU32From(rng, N, length);
+}
+
+pub fn chooseIndexArrayU32From(source: anytype, comptime N: usize, length: u32) ?[N]u32 {
+    return Rng.chooseIndexArrayU32From(source, N, length);
+}
+
+pub fn chooseIndexArrayU32Checked(rng: Rng, comptime N: usize, length: u32) Error![N]u32 {
+    return chooseIndexArrayU32CheckedFrom(rng, N, length);
+}
+
+pub fn chooseIndexArrayU32CheckedFrom(source: anytype, comptime N: usize, length: u32) Error![N]u32 {
+    if (N == 0) return .{};
+    if (length == 0) return error.EmptyInput;
+    return Rng.chooseIndexArrayU32From(source, N, length).?;
 }
 
 pub fn fillChooseIndexU32(rng: Rng, dest: []u32, length: u32) void {
@@ -9764,6 +9800,16 @@ test "seq index choice aliases mirror Rng index helpers" {
         try std.testing.expectEqual(try Rng.chooseIndexCheckedFrom(&direct_engine, length), try chooseIndexChecked(rng, length));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+        const facade_array = chooseIndexArray(rng, 6, length).?;
+        const direct_array = Rng.chooseIndexArrayFrom(&direct_engine, 6, length).?;
+        try std.testing.expectEqualSlices(usize, &direct_array, &facade_array);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_array = try chooseIndexArrayChecked(rng, 6, length);
+        const checked_direct_array = try Rng.chooseIndexArrayCheckedFrom(&direct_engine, 6, length);
+        try std.testing.expectEqualSlices(usize, &checked_direct_array, &checked_facade_array);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         var facade_indexes: [6]usize = undefined;
         var direct_indexes: [6]usize = undefined;
         fillChooseIndex(rng, &facade_indexes, length);
@@ -9796,6 +9842,16 @@ test "seq index choice aliases mirror Rng index helpers" {
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         try std.testing.expectEqual(try Rng.chooseIndexU32CheckedFrom(&direct_engine, compact_length), try chooseIndexU32Checked(rng, compact_length));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_array_u32 = chooseIndexArrayU32(rng, 6, compact_length).?;
+        const direct_array_u32 = Rng.chooseIndexArrayU32From(&direct_engine, 6, compact_length).?;
+        try std.testing.expectEqualSlices(u32, &direct_array_u32, &facade_array_u32);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_array_u32 = try chooseIndexArrayU32Checked(rng, 6, compact_length);
+        const checked_direct_array_u32 = try Rng.chooseIndexArrayU32CheckedFrom(&direct_engine, 6, compact_length);
+        try std.testing.expectEqualSlices(u32, &checked_direct_array_u32, &checked_facade_array_u32);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         var facade_indexes_u32: [6]u32 = undefined;
@@ -9859,6 +9915,20 @@ test "seq index choice aliases mirror Rng index helpers" {
     try std.testing.expectError(error.EmptyInput, chooseIndexU32CheckedFrom(&empty_engine, 0));
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
+    try std.testing.expectEqual(@as(?[1]usize, null), chooseIndexArrayFrom(&empty_engine, 1, 0));
+    try std.testing.expectEqual(@as(?[1]u32, null), chooseIndexArrayU32From(&empty_engine, 1, 0));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    try std.testing.expectError(error.EmptyInput, chooseIndexArrayCheckedFrom(&empty_engine, 1, 0));
+    try std.testing.expectError(error.EmptyInput, chooseIndexArrayU32CheckedFrom(&empty_engine, 1, 0));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    const empty_array = try chooseIndexArrayCheckedFrom(&empty_engine, 0, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_array.len);
+    const empty_array_u32 = try chooseIndexArrayU32CheckedFrom(&empty_engine, 0, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_array_u32.len);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
     var empty_indexes: [0]usize = .{};
     try fillChooseIndexCheckedFrom(&empty_engine, &empty_indexes, 0);
     var empty_indexes_u32: [0]u32 = .{};
@@ -9889,6 +9959,10 @@ test "seq index choice aliases mirror Rng index helpers" {
     try std.testing.expectEqual(@as(usize, 0), try chooseIndexCheckedFrom(&single_engine, 1));
     try std.testing.expectEqual(@as(?u32, 0), chooseIndexU32From(&single_engine, 1));
     try std.testing.expectEqual(@as(u32, 0), try chooseIndexU32CheckedFrom(&single_engine, 1));
+    const single_array = try chooseIndexArrayCheckedFrom(&single_engine, 4, 1);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0, 0 }, &single_array);
+    const single_array_u32 = try chooseIndexArrayU32CheckedFrom(&single_engine, 4, 1);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0, 0 }, &single_array_u32);
     var single_indexes: [4]usize = undefined;
     try fillChooseIndexCheckedFrom(&single_engine, &single_indexes, 1);
     try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0, 0 }, &single_indexes);

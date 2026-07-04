@@ -131,11 +131,17 @@ pub fn main(init: std.process.Init) !void {
     var filled_index_choices: [5]usize = undefined;
     alea.seq.fillChooseIndexFrom(&fill_index_choice_engine, &filled_index_choices, items.len);
     try stdout.print("seq.fillChooseIndexFrom indices: {any}\n", .{filled_index_choices});
+    var index_choice_array_engine = alea.ScalarPrng.init(0x5e11_002f);
+    const index_choice_array = alea.seq.chooseIndexArrayFrom(&index_choice_array_engine, 5, items.len).?;
+    try stdout.print("seq.chooseIndexArrayFrom indices: {any}\n", .{index_choice_array});
 
     var fill_index_choice_u32_engine = alea.ScalarPrng.init(0x5e11_002c);
     var filled_index_choices_u32: [5]u32 = undefined;
     alea.seq.fillChooseIndexU32From(&fill_index_choice_u32_engine, &filled_index_choices_u32, @intCast(items.len));
     try stdout.print("seq.fillChooseIndexU32From indices: {any}\n", .{filled_index_choices_u32});
+    var index_choice_array_u32_engine = alea.ScalarPrng.init(0x5e11_0030);
+    const index_choice_array_u32 = alea.seq.chooseIndexArrayU32From(&index_choice_array_u32_engine, 5, @intCast(items.len)).?;
+    try stdout.print("seq.chooseIndexArrayU32From indices: {any}\n", .{index_choice_array_u32});
 
     var choice_batch_engine = alea.ScalarPrng.init(0x5e11_0027);
     const choice_batch = try alea.seq.chooseBatchFrom(allocator, &choice_batch_engine, []const u8, 5, &items);

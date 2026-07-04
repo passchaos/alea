@@ -2553,6 +2553,30 @@ pub fn chooseIndex(self: Rng, length: usize) ?usize {
     return chooseIndexFrom(self, length);
 }
 
+pub fn chooseIndexArray(self: Rng, comptime N: usize, length: usize) ?[N]usize {
+    return chooseIndexArrayFrom(self, N, length);
+}
+
+pub fn chooseIndexArrayFrom(source: anytype, comptime N: usize, length: usize) ?[N]usize {
+    var out: [N]usize = undefined;
+    if (N == 0) return out;
+    if (length == 0) return null;
+    fillChooseIndexFrom(source, &out, length);
+    return out;
+}
+
+pub fn chooseIndexArrayChecked(self: Rng, comptime N: usize, length: usize) Error![N]usize {
+    return chooseIndexArrayCheckedFrom(self, N, length);
+}
+
+pub fn chooseIndexArrayCheckedFrom(source: anytype, comptime N: usize, length: usize) Error![N]usize {
+    var out: [N]usize = undefined;
+    if (N == 0) return out;
+    if (length == 0) return error.EmptyRange;
+    fillChooseIndexFrom(source, &out, length);
+    return out;
+}
+
 pub fn chooseIndexBatch(self: Rng, allocator: std.mem.Allocator, count: usize, length: usize) ![]usize {
     return chooseIndexBatchFrom(self, allocator, count, length);
 }
@@ -2613,6 +2637,30 @@ pub fn fillChooseIndexCheckedFrom(source: anytype, dest: []usize, length: usize)
 
 pub fn chooseIndexU32(self: Rng, length: u32) ?u32 {
     return chooseIndexU32From(self, length);
+}
+
+pub fn chooseIndexArrayU32(self: Rng, comptime N: usize, length: u32) ?[N]u32 {
+    return chooseIndexArrayU32From(self, N, length);
+}
+
+pub fn chooseIndexArrayU32From(source: anytype, comptime N: usize, length: u32) ?[N]u32 {
+    var out: [N]u32 = undefined;
+    if (N == 0) return out;
+    if (length == 0) return null;
+    fillChooseIndexU32From(source, &out, length);
+    return out;
+}
+
+pub fn chooseIndexArrayU32Checked(self: Rng, comptime N: usize, length: u32) Error![N]u32 {
+    return chooseIndexArrayU32CheckedFrom(self, N, length);
+}
+
+pub fn chooseIndexArrayU32CheckedFrom(source: anytype, comptime N: usize, length: u32) Error![N]u32 {
+    var out: [N]u32 = undefined;
+    if (N == 0) return out;
+    if (length == 0) return error.EmptyRange;
+    fillChooseIndexU32From(source, &out, length);
+    return out;
 }
 
 pub fn chooseIndexU32Batch(self: Rng, allocator: std.mem.Allocator, count: usize, length: u32) ![]u32 {
@@ -6642,6 +6690,10 @@ test "single-item choice helpers do not consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), try rng.chooseIndexChecked(1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const single_index_array = try rng.chooseIndexArrayChecked(5, 1);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0, 0, 0 }, &single_index_array);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const single_indices = try rng.chooseIndexBatchChecked(std.testing.allocator, 5, 1);
     defer std.testing.allocator.free(single_indices);
     for (single_indices) |sample| try std.testing.expectEqual(@as(usize, 0), sample);
@@ -6651,6 +6703,10 @@ test "single-item choice helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(u32, 0), try rng.chooseIndexU32Checked(1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const single_u32_index_array = try rng.chooseIndexArrayU32Checked(5, 1);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0, 0, 0 }, &single_u32_index_array);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const single_u32_indices = try chooseIndexU32BatchCheckedFrom(&engine, std.testing.allocator, 5, 1);
@@ -6724,6 +6780,16 @@ test "empty index choice helpers do not consume random stream" {
     try std.testing.expectError(error.EmptyRange, rng.chooseIndexChecked(0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectEqual(@as(?[1]usize, null), rng.chooseIndexArray(1, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.chooseIndexArrayChecked(1, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const empty_array = try rng.chooseIndexArrayChecked(0, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_array.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     const empty = try rng.chooseIndexBatchChecked(empty_alloc.allocator(), 0, 0);
     defer empty_alloc.allocator().free(empty);
@@ -6743,6 +6809,16 @@ test "empty index choice helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.EmptyRange, rng.chooseIndexU32Checked(0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(?[1]u32, null), rng.chooseIndexArrayU32(1, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyRange, rng.chooseIndexArrayU32Checked(1, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const empty_array_u32 = try rng.chooseIndexArrayU32Checked(0, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_array_u32.len);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var empty_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
@@ -6784,6 +6860,26 @@ test "collection helpers preserve direct stream shape" {
         try std.testing.expectEqual(rng.chooseIndexU32(@intCast(items.len)), Rng.chooseIndexU32From(&direct_engine, @intCast(items.len)));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
         try std.testing.expectEqual(try rng.chooseIndexU32Checked(@intCast(items.len)), try Rng.chooseIndexU32CheckedFrom(&direct_engine, @intCast(items.len)));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_array = rng.chooseIndexArray(8, items.len).?;
+        const direct_array = Rng.chooseIndexArrayFrom(&direct_engine, 8, items.len).?;
+        try std.testing.expectEqualSlices(usize, &facade_array, &direct_array);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_array = try rng.chooseIndexArrayChecked(8, items.len);
+        const direct_checked_array = try Rng.chooseIndexArrayCheckedFrom(&direct_engine, 8, items.len);
+        try std.testing.expectEqualSlices(usize, &facade_checked_array, &direct_checked_array);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_array_u32 = rng.chooseIndexArrayU32(8, @intCast(items.len)).?;
+        const direct_array_u32 = Rng.chooseIndexArrayU32From(&direct_engine, 8, @intCast(items.len)).?;
+        try std.testing.expectEqualSlices(u32, &facade_array_u32, &direct_array_u32);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_array_u32 = try rng.chooseIndexArrayU32Checked(8, @intCast(items.len));
+        const direct_checked_array_u32 = try Rng.chooseIndexArrayU32CheckedFrom(&direct_engine, 8, @intCast(items.len));
+        try std.testing.expectEqualSlices(u32, &facade_checked_array_u32, &direct_checked_array_u32);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         const facade_indices = try rng.chooseIndexBatch(std.testing.allocator, 8, items.len);

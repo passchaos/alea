@@ -66,6 +66,8 @@ pub fn main(init: std.process.Init) !void {
     var mutable_colors = colors;
     const color_index = rng.chooseIndex(colors.len).?;
     const compact_color_index = rng.chooseIndexU32(@intCast(colors.len)).?;
+    const color_index_array = rng.chooseIndexArray(4, colors.len).?;
+    const compact_color_index_array = try rng.chooseIndexArrayU32Checked(4, @intCast(colors.len));
     const color_indices = try rng.chooseIndexBatch(init.gpa, 4, colors.len);
     defer init.gpa.free(color_indices);
     const compact_color_indices = try rng.chooseIndexU32Batch(init.gpa, 4, @intCast(colors.len));
@@ -123,6 +125,8 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("partial shuffle hand: {any}\n", .{hand});
     try stdout.print("index choice: {} ({s})\n", .{ color_index, colors[color_index] });
     try stdout.print("u32 index choice: {} ({s})\n", .{ compact_color_index, colors[compact_color_index] });
+    try stdout.print("index choice array: {any}\n", .{color_index_array});
+    try stdout.print("u32 index choice array: {any}\n", .{compact_color_index_array});
     try stdout.print("index choice batch: {any}\n", .{color_indices});
     try stdout.print("u32 index choice batch: {any}\n", .{compact_color_indices});
     try stdout.print("value choice batch: {s}, {s}, {s}, {s}\n", .{ color_values[0], color_values[1], color_values[2], color_values[3] });
