@@ -384,9 +384,12 @@ Use:
   `seq.sampleWeightedPtrsByIntoFrom`, `seq.sampleWeightedPtrsByIntoCheckedFrom`,
   `seq.sampleWeightedMutPtrsByIntoFrom`, and
   `seq.sampleWeightedMutPtrsByIntoCheckedFrom`,
-  `seq.sampleWeightedArrayFrom`, `seq.sampleWeightedArrayCheckedFrom`,
-  `seq.sampleWeightedPtrArrayFrom`, `seq.sampleWeightedPtrArrayCheckedFrom`,
-  `seq.sampleWeightedMutPtrArrayFrom`,
+  accessor-based fixed-size `seq.sampleWeightedArrayByFrom`,
+  `seq.sampleWeightedArrayByCheckedFrom`, `seq.sampleWeightedPtrArrayByFrom`,
+  `seq.sampleWeightedPtrArrayByCheckedFrom`, `seq.sampleWeightedMutPtrArrayByFrom`,
+  `seq.sampleWeightedMutPtrArrayByCheckedFrom`, `seq.sampleWeightedArrayFrom`,
+  `seq.sampleWeightedArrayCheckedFrom`, `seq.sampleWeightedPtrArrayFrom`,
+  `seq.sampleWeightedPtrArrayCheckedFrom`, `seq.sampleWeightedMutPtrArrayFrom`,
   `seq.sampleWeightedMutPtrArrayCheckedFrom`
   (`*Checked*` variants require enough positive-weight entries for the
   requested amount; requesting zero samples returns an empty result before

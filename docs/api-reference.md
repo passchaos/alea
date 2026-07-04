@@ -2597,10 +2597,17 @@ Dynamic weighted helpers:
   `sampleWeightedMutPtrsByIntoCheckedFrom`,
   `sampleWeightedArray`, `sampleWeightedArrayFrom`,
   `sampleWeightedArrayChecked`, `sampleWeightedArrayCheckedFrom`,
+  `sampleWeightedArrayBy`, `sampleWeightedArrayByFrom`,
+  `sampleWeightedArrayByChecked`, `sampleWeightedArrayByCheckedFrom`,
   `sampleWeightedPtrArray`, `sampleWeightedPtrArrayFrom`,
   `sampleWeightedPtrArrayChecked`, `sampleWeightedPtrArrayCheckedFrom`,
+  `sampleWeightedPtrArrayBy`, `sampleWeightedPtrArrayByFrom`,
+  `sampleWeightedPtrArrayByChecked`, `sampleWeightedPtrArrayByCheckedFrom`,
   `sampleWeightedMutPtrArray`, `sampleWeightedMutPtrArrayFrom`,
-  `sampleWeightedMutPtrArrayChecked`, `sampleWeightedMutPtrArrayCheckedFrom`
+  `sampleWeightedMutPtrArrayChecked`, `sampleWeightedMutPtrArrayCheckedFrom`,
+  `sampleWeightedMutPtrArrayBy`, `sampleWeightedMutPtrArrayByFrom`,
+  `sampleWeightedMutPtrArrayByChecked`,
+  `sampleWeightedMutPtrArrayByCheckedFrom`
 
 ## ASCII And Unicode
 

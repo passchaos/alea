@@ -251,6 +251,20 @@ pub fn main(init: std.process.Init) !void {
     const weighted_by_u32_index_array = (try alea.seq.sampleWeightedIndexArrayU32ByFrom(&weighted_by_u32_index_array_engine, WeightedRecord, u32, 3, &weighted_records, WeightedRecord.weightOf)).?;
     try stdout.print("weighted by u32 index array: {any}\n", .{weighted_by_u32_index_array});
 
+    var weighted_by_array_engine = alea.ScalarPrng.init(0x7183);
+    const weighted_by_array = (try alea.seq.sampleWeightedArrayByFrom(&weighted_by_array_engine, WeightedRecord, u32, 3, &weighted_records, WeightedRecord.weightOf)).?;
+    try stdout.print("weighted by array sample: [{s}, {s}, {s}]\n", .{ weighted_by_array[0].label, weighted_by_array[1].label, weighted_by_array[2].label });
+
+    var weighted_by_ptr_array_engine = alea.ScalarPrng.init(0x7184);
+    const weighted_by_ptr_array = (try alea.seq.sampleWeightedPtrArrayByFrom(&weighted_by_ptr_array_engine, WeightedRecord, u32, 3, &weighted_records, WeightedRecord.weightOf)).?;
+    try stdout.print("weighted by ptr array: [{s}, {s}, {s}]\n", .{ weighted_by_ptr_array[0].label, weighted_by_ptr_array[1].label, weighted_by_ptr_array[2].label });
+
+    var weighted_by_mut_array_records = weighted_records;
+    var weighted_by_mut_array_engine = alea.ScalarPrng.init(0x7185);
+    const weighted_by_mut_array = (try alea.seq.sampleWeightedMutPtrArrayByFrom(&weighted_by_mut_array_engine, WeightedRecord, u32, 3, &weighted_by_mut_array_records, WeightedRecord.weightOf)).?;
+    for (weighted_by_mut_array) |record| record.score += 30;
+    try stdout.print("weighted by mut ptr array scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_array_records[0].score, weighted_by_mut_array_records[1].score, weighted_by_mut_array_records[2].score, weighted_by_mut_array_records[3].score });
+
     var weighted_array_engine = alea.ScalarPrng.init(0x7159);
     const weighted_array = (try alea.seq.sampleWeightedArrayFrom(&weighted_array_engine, []const u8, f64, 3, &items, &float_weights)).?;
     try stdout.print("weighted array sample: [{s}, {s}, {s}]\n", .{ weighted_array[0], weighted_array[1], weighted_array[2] });
