@@ -3,7 +3,7 @@ const alea = @import("alea");
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
-    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_buffer: [2048]u8 = undefined;
     var stdout_file = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_file.interface;
 
@@ -39,6 +39,10 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(normal_batch);
     const exponential_batch = try rng.exponentialBatch(f64, init.gpa, 4, 4);
     defer init.gpa.free(exponential_batch);
+    const vector_normal_batch = try rng.vectorNormalBatch(@Vector(4, f64), init.gpa, 2, 0, 1);
+    defer init.gpa.free(vector_normal_batch);
+    const vector_exponential_batch = try rng.vectorExponentialBatch(@Vector(4, f64), init.gpa, 2, 2);
+    defer init.gpa.free(vector_exponential_batch);
 
     const dirichlet = try alea.distributions.Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
     var proportions: [3]f64 = undefined;
@@ -84,6 +88,8 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("vectorRatioBatch boolx8 3/8: {any}\n", .{vector_ratio_flags});
     try stdout.print("normalBatch: {any}\n", .{normal_batch});
     try stdout.print("exponentialBatch: {any}\n", .{exponential_batch});
+    try stdout.print("vectorNormalBatch f64x4: {any}\n", .{vector_normal_batch});
+    try stdout.print("vectorExponentialBatch f64x4: {any}\n", .{vector_exponential_batch});
     try stdout.print("dirichlet: {any}\n", .{proportions});
     try stdout.print("partial shuffle hand: {any}\n", .{hand});
     try stdout.print("index choice: {} ({s})\n", .{ color_index, colors[color_index] });
