@@ -2329,9 +2329,17 @@ Alias helpers:
 - `AliasTable.probabilityAt`
 - `AliasTable.constantIndex`
 - `AliasTable.sample`
+- `AliasTable.sampleU32`
+- `AliasTable.sampleU32Checked`
 - `AliasTable.sampleFrom`
+- `AliasTable.sampleU32From`
+- `AliasTable.sampleU32CheckedFrom`
 - `AliasTable.fill`
+- `AliasTable.fillU32`
+- `AliasTable.fillU32Checked`
 - `AliasTable.fillFrom`
+- `AliasTable.fillU32From`
+- `AliasTable.fillU32CheckedFrom`
 - `AliasTable.deinit`
 
 Dynamic weighted helpers:

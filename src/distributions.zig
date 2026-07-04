@@ -15624,6 +15624,14 @@ pub fn AliasTable(comptime Weight: type) type {
             return self.sampleFrom(rng);
         }
 
+        pub fn sampleU32(self: Self, rng: Rng) u32 {
+            return self.sampleU32Checked(rng) catch unreachable;
+        }
+
+        pub fn sampleU32Checked(self: Self, rng: Rng) Error!u32 {
+            return self.sampleU32CheckedFrom(rng);
+        }
+
         pub fn sampleFrom(self: Self, source: anytype) usize {
             if (self.constant_index) |index| return index;
             if (aliasTableCanSampleWithOneWord(self.prob.len)) {
@@ -15635,8 +15643,25 @@ pub fn AliasTable(comptime Weight: type) type {
             return if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column];
         }
 
+        pub fn sampleU32From(self: Self, source: anytype) u32 {
+            return self.sampleU32CheckedFrom(source) catch unreachable;
+        }
+
+        pub fn sampleU32CheckedFrom(self: Self, source: anytype) Error!u32 {
+            if (self.prob.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            return @intCast(self.sampleFrom(source));
+        }
+
         pub fn fill(self: Self, rng: Rng, dest: []usize) void {
             self.fillFrom(rng, dest);
+        }
+
+        pub fn fillU32(self: Self, rng: Rng, dest: []u32) void {
+            self.fillU32Checked(rng, dest) catch unreachable;
+        }
+
+        pub fn fillU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
+            try self.fillU32CheckedFrom(rng, dest);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
@@ -15645,6 +15670,20 @@ pub fn AliasTable(comptime Weight: type) type {
                 return;
             }
             for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        pub fn fillU32From(self: Self, source: anytype, dest: []u32) void {
+            self.fillU32CheckedFrom(source, dest) catch unreachable;
+        }
+
+        pub fn fillU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
+            if (dest.len == 0) return;
+            if (self.prob.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.constant_index) |index| {
+                @memset(dest, @intCast(index));
+                return;
+            }
+            for (dest) |*item| item.* = @intCast(self.sampleFrom(source));
         }
     };
 }
@@ -17811,6 +17850,49 @@ test "alias table samples valid indexes" {
 
     try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{}));
     try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{ 0, 0 }));
+}
+
+test "alias table u32 sampling helpers mirror usize helpers" {
+    const alea = @import("root.zig");
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    var usize_engine = alea.ScalarPrng.init(0x5150_a11d);
+    var u32_engine = alea.ScalarPrng.init(0x5150_a11d);
+    try std.testing.expectEqual(@as(u32, @intCast(table.sampleFrom(&usize_engine))), table.sampleU32From(&u32_engine));
+    try std.testing.expectEqual(usize_engine.next(), u32_engine.next());
+
+    usize_engine = alea.ScalarPrng.init(0x5150_a11e);
+    u32_engine = alea.ScalarPrng.init(0x5150_a11e);
+    var usize_out: [8]usize = undefined;
+    var u32_out: [8]u32 = undefined;
+    table.fillFrom(&usize_engine, &usize_out);
+    try table.fillU32CheckedFrom(&u32_engine, &u32_out);
+    for (usize_out, u32_out) |usize_index, u32_index| {
+        try std.testing.expectEqual(@as(u32, @intCast(usize_index)), u32_index);
+        try std.testing.expect(usize_index < 4);
+        try std.testing.expect(usize_index != 1);
+    }
+    try std.testing.expectEqual(usize_engine.next(), u32_engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_a11f);
+    var direct_engine = alea.ScalarPrng.init(0x5150_a11f);
+    const rng = Rng.init(&facade_engine);
+    try std.testing.expectEqual(try table.sampleU32Checked(rng), try table.sampleU32CheckedFrom(&direct_engine));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    var empty: [0]u32 = .{};
+    try table.fillU32CheckedFrom(&direct_engine, &empty);
+
+    try table.update(&.{ 0, 0, 5, 0 });
+    var single_engine = alea.ScalarPrng.init(0x5150_a120);
+    var single_control = alea.ScalarPrng.init(0x5150_a120);
+    try std.testing.expectEqual(@as(u32, 2), table.sampleU32From(&single_engine));
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_rng = Rng.init(&single_engine);
+    table.fillU32(single_rng, &u32_out);
+    for (u32_out) |index| try std.testing.expectEqual(@as(u32, 2), index);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 
 test "alias table exposes totals and reconstructs weights" {
