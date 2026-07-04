@@ -114,6 +114,10 @@ pub fn main(init: std.process.Init) !void {
     const weighted_index_array = (try alea.seq.sampleWeightedIndexArrayFrom(&index_array_engine, f64, 3, &float_weights)).?;
     try stdout.print("weighted index array: {any}\n", .{weighted_index_array});
 
+    var u32_index_array_engine = alea.ScalarPrng.init(0x7169);
+    const weighted_u32_index_array = (try alea.seq.sampleWeightedIndexArrayU32From(&u32_index_array_engine, f64, 3, &float_weights)).?;
+    try stdout.print("weighted u32 index array: {any}\n", .{weighted_u32_index_array});
+
     var index_vec_engine = alea.ScalarPrng.init(0x7167);
     const weighted_index_vec = try alea.seq.sampleWeightedIndexVecFrom(allocator, &index_vec_engine, f64, &float_weights, 3);
     defer weighted_index_vec.deinit(allocator);

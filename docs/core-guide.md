@@ -287,7 +287,9 @@ Use:
   `seq.sampleWeightedIndicesU32IntoFrom`,
   `seq.sampleWeightedIndicesU32IntoCheckedFrom`,
   `seq.sampleWeightedIndexArrayFrom`,
-  `seq.sampleWeightedIndexArrayCheckedFrom`, `seq.sampleWeighted`,
+  `seq.sampleWeightedIndexArrayCheckedFrom`,
+  `seq.sampleWeightedIndexArrayU32From`,
+  `seq.sampleWeightedIndexArrayU32CheckedFrom`, `seq.sampleWeighted`,
   `seq.sampleWeightedFrom`, `seq.sampleWeightedCheckedFrom`,
   `seq.sampleWeightedPtrsFrom`, `seq.sampleWeightedPtrsCheckedFrom`,
   `seq.sampleWeightedMutPtrsFrom`, `seq.sampleWeightedMutPtrsCheckedFrom`,
@@ -370,8 +372,10 @@ without a post-sampling ownership allocation.
 allocation failures leave the stream untouched.
 Checked weighted index and item sampling likewise prepare output and temporary
 heap/index storage before drawing after validating lengths and positive-weight
-availability. Use `sampleWeightedIndicesU32IntoFrom` when the weight slice fits
-`u32` and the caller wants compact, allocation-free index output.
+availability. Use `sampleWeightedIndexArrayU32From` for compact fixed-size
+weighted index arrays, or `sampleWeightedIndicesU32IntoFrom` when the weight
+slice fits `u32` and the caller wants compact, allocation-free runtime-length
+index output.
 Slice weighted sampling validates all weights before drawing, so invalid
 weights leave the stream untouched.
 The remaining allocation-returning streaming helpers whose result length is not

@@ -1349,6 +1349,27 @@ pub fn sampleWeightedIndexArrayCheckedFrom(source: anytype, comptime Weight: typ
     return (try sampleWeightedIndexArrayExactFrom(source, Weight, N, weights)) orelse error.InvalidParameter;
 }
 
+pub fn sampleWeightedIndexArrayU32(rng: Rng, comptime Weight: type, comptime N: usize, weights: []const Weight) Error!?[N]u32 {
+    return sampleWeightedIndexArrayU32From(rng, Weight, N, weights);
+}
+
+pub fn sampleWeightedIndexArrayU32From(source: anytype, comptime Weight: type, comptime N: usize, weights: []const Weight) Error!?[N]u32 {
+    if (comptime N == 0) return .{};
+    if (weights.len == 0) return error.EmptyInput;
+    if (weights.len > std.math.maxInt(u32)) return error.InvalidParameter;
+    return sampleWeightedIndexArrayU32ExactFrom(source, Weight, N, weights);
+}
+
+pub fn sampleWeightedIndexArrayU32Checked(rng: Rng, comptime Weight: type, comptime N: usize, weights: []const Weight) Error![N]u32 {
+    return sampleWeightedIndexArrayU32CheckedFrom(rng, Weight, N, weights);
+}
+
+pub fn sampleWeightedIndexArrayU32CheckedFrom(source: anytype, comptime Weight: type, comptime N: usize, weights: []const Weight) Error![N]u32 {
+    if (comptime N == 0) return .{};
+    if (N > weights.len or weights.len > std.math.maxInt(u32)) return error.InvalidParameter;
+    return (try sampleWeightedIndexArrayU32ExactFrom(source, Weight, N, weights)) orelse error.InvalidParameter;
+}
+
 fn sampleWeightedIndicesIntoExactFrom(source: anytype, comptime Weight: type, weights: []const Weight, out: []usize, keys: []f64) void {
     std.debug.assert(out.len > 0);
     std.debug.assert(keys.len == out.len);
@@ -1865,11 +1886,58 @@ fn sampleWeightedIndexArrayExactFrom(source: anytype, comptime Weight: type, com
     return out;
 }
 
+fn sampleWeightedIndexArrayU32ExactFrom(source: anytype, comptime Weight: type, comptime N: usize, weights: []const Weight) Error!?[N]u32 {
+    if (comptime N == 0) return .{};
+    std.debug.assert(weights.len <= std.math.maxInt(u32));
+
+    const positive = try countPositiveWeights(Weight, weights);
+    if (positive < N) return null;
+    if (positive == 1 and comptime N == 1) {
+        return .{@intCast((try singlePositiveWeightIndex(Weight, weights)).?)};
+    }
+
+    var candidates: [N]WeightedU32Candidate = undefined;
+    var count: usize = 0;
+    for (weights, 0..) |weight, index| {
+        const value = weightAsF64(Weight, weight);
+        if (value == 0) continue;
+
+        const candidate = WeightedU32Candidate{
+            .index = @intCast(index),
+            .key = weightedSelectionKeyFrom(source, value),
+        };
+        if (count < N) {
+            candidates[count] = candidate;
+            count += 1;
+        } else {
+            const min_index = minWeightedU32CandidateIndex(candidates[0..]);
+            if (compareWeightedU32Candidate({}, candidate, candidates[min_index]) == .gt) {
+                candidates[min_index] = candidate;
+            }
+        }
+    }
+    std.debug.assert(count == N);
+    sortWeightedU32Candidates(candidates[0..]);
+
+    var out: [N]u32 = undefined;
+    inline for (0..N) |i| out[i] = candidates[i].index;
+    return out;
+}
+
 fn minWeightedCandidateIndex(candidates: []const WeightedCandidate) usize {
     std.debug.assert(candidates.len > 0);
     var min_index: usize = 0;
     for (candidates[1..], 1..) |candidate, index| {
         if (compareWeightedCandidate({}, candidate, candidates[min_index]) == .lt) min_index = index;
+    }
+    return min_index;
+}
+
+fn minWeightedU32CandidateIndex(candidates: []const WeightedU32Candidate) usize {
+    std.debug.assert(candidates.len > 0);
+    var min_index: usize = 0;
+    for (candidates[1..], 1..) |candidate, index| {
+        if (compareWeightedU32Candidate({}, candidate, candidates[min_index]) == .lt) min_index = index;
     }
     return min_index;
 }
@@ -1880,6 +1948,16 @@ fn sortWeightedCandidates(candidates: []WeightedCandidate) void {
         var j = i;
         while (j > 0 and compareWeightedCandidate({}, candidates[j], candidates[j - 1]) == .lt) : (j -= 1) {
             std.mem.swap(WeightedCandidate, &candidates[j], &candidates[j - 1]);
+        }
+    }
+}
+
+fn sortWeightedU32Candidates(candidates: []WeightedU32Candidate) void {
+    var i: usize = 1;
+    while (i < candidates.len) : (i += 1) {
+        var j = i;
+        while (j > 0 and compareWeightedU32Candidate({}, candidates[j], candidates[j - 1]) == .lt) : (j -= 1) {
+            std.mem.swap(WeightedU32Candidate, &candidates[j], &candidates[j - 1]);
         }
     }
 }
@@ -2491,6 +2569,17 @@ const WeightedCandidate = struct {
 const WeightedCandidateQueue = std.PriorityQueue(WeightedCandidate, void, compareWeightedCandidate);
 
 fn compareWeightedCandidate(_: void, a: WeightedCandidate, b: WeightedCandidate) std.math.Order {
+    const key_order = std.math.order(a.key, b.key);
+    if (key_order != .eq) return key_order;
+    return std.math.order(a.index, b.index);
+}
+
+const WeightedU32Candidate = struct {
+    index: u32,
+    key: f64,
+};
+
+fn compareWeightedU32Candidate(_: void, a: WeightedU32Candidate, b: WeightedU32Candidate) std.math.Order {
     const key_order = std.math.order(a.key, b.key);
     if (key_order != .eq) return key_order;
     return std.math.order(a.index, b.index);
@@ -5609,19 +5698,45 @@ test "sampleWeightedIndexArray returns fixed-size weighted indexes" {
         try std.testing.expect(weights[index] > 0);
     }
 
+    var optional_u32_engine = alea.ScalarPrng.init(0x5150_ba17);
+    const optional_u32 = (try sampleWeightedIndexArrayU32From(&optional_u32_engine, u32, 2, &weights)).?;
+    try std.testing.expectEqual(@as(usize, 2), optional_u32.len);
+    for (optional_u32) |index| {
+        try std.testing.expect(index < weights.len);
+        try std.testing.expect(weights[index] > 0);
+    }
+
+    var checked_u32_engine = alea.ScalarPrng.init(0x5150_ba18);
+    const checked_u32 = try sampleWeightedIndexArrayU32CheckedFrom(&checked_u32_engine, u32, 3, &weights);
+    try std.testing.expectEqual(@as(usize, 3), checked_u32.len);
+    for (checked_u32) |index| {
+        try std.testing.expect(index < weights.len);
+        try std.testing.expect(weights[index] > 0);
+    }
+
     var single_engine = alea.ScalarPrng.init(0x5150_ba13);
     var single_control = alea.ScalarPrng.init(0x5150_ba13);
     const single = (try sampleWeightedIndexArrayFrom(&single_engine, u32, 1, &.{ 0, 0, 7, 0, 0 })).?;
     try std.testing.expectEqual(@as(usize, 2), single[0]);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 
+    var single_u32_engine = alea.ScalarPrng.init(0x5150_ba19);
+    var single_u32_control = alea.ScalarPrng.init(0x5150_ba19);
+    const single_u32 = (try sampleWeightedIndexArrayU32From(&single_u32_engine, u32, 1, &.{ 0, 0, 7, 0, 0 })).?;
+    try std.testing.expectEqual(@as(u32, 2), single_u32[0]);
+    try std.testing.expectEqual(single_u32_control.next(), single_u32_engine.next());
+
     var empty_engine = alea.ScalarPrng.init(0x5150_ba14);
     var empty_control = alea.ScalarPrng.init(0x5150_ba14);
     const empty = try sampleWeightedIndexArrayFrom(&empty_engine, u32, 0, &weights);
     try std.testing.expectEqual(@as(usize, 0), empty.?.len);
+    const empty_u32 = try sampleWeightedIndexArrayU32From(&empty_engine, u32, 0, &weights);
+    try std.testing.expectEqual(@as(usize, 0), empty_u32.?.len);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
     try std.testing.expect((try sampleWeightedIndexArrayFrom(&empty_engine, u32, 4, &weights)) == null);
+    try std.testing.expect((try sampleWeightedIndexArrayU32From(&empty_engine, u32, 4, &weights)) == null);
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayCheckedFrom(&empty_engine, u32, 4, &weights));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32CheckedFrom(&empty_engine, u32, 4, &weights));
 }
 
 test "sampleWeightedIndexArray preserves facade/direct stream shape and invalid paths do not consume" {
@@ -5642,6 +5757,16 @@ test "sampleWeightedIndexArray preserves facade/direct stream shape and invalid 
         const checked_direct = try sampleWeightedIndexArrayCheckedFrom(&direct_engine, f64, 2, &weights);
         try std.testing.expectEqualSlices(usize, &checked_facade, &checked_direct);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_u32 = (try sampleWeightedIndexArrayU32(rng, f64, 2, &weights)).?;
+        const direct_u32 = (try sampleWeightedIndexArrayU32From(&direct_engine, f64, 2, &weights)).?;
+        try std.testing.expectEqualSlices(u32, &facade_u32, &direct_u32);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_u32 = try sampleWeightedIndexArrayU32Checked(rng, f64, 2, &weights);
+        const checked_direct_u32 = try sampleWeightedIndexArrayU32CheckedFrom(&direct_engine, f64, 2, &weights);
+        try std.testing.expectEqualSlices(u32, &checked_facade_u32, &checked_direct_u32);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 
     var invalid_engine = alea.ScalarPrng.init(0x5150_ba16);
@@ -5649,7 +5774,11 @@ test "sampleWeightedIndexArray preserves facade/direct stream shape and invalid 
     const rng = Rng.init(&invalid_engine);
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayChecked(rng, f64, 5, &weights));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32Checked(rng, f64, 5, &weights));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexArrayCheckedFrom(&invalid_engine, f64, 2, &.{ 1.0, std.math.nan(f64), 2.0, 3.0 }));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexArrayU32CheckedFrom(&invalid_engine, f64, 2, &.{ 1.0, std.math.nan(f64), 2.0, 3.0 }));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
