@@ -331,7 +331,8 @@ Use:
   `Rng.weightedIndexBatchFrom`, `Rng.fillWeightedIndexU32From`,
   `Rng.weightedIndexU32BatchFrom`, `Rng.fillChooseWeightedFrom`,
   `Rng.chooseWeightedBatchFrom`, `Rng.fillChooseWeightedConstPtrFrom`,
-  `Rng.chooseWeightedConstPtrBatchFrom`, `seq.weightedIndex`, `seq.weightedIndexFrom`,
+  `Rng.chooseWeightedConstPtrBatchFrom`, `Rng.fillChooseWeightedPtrFrom`,
+  `Rng.chooseWeightedPtrBatchFrom`, `seq.weightedIndex`, `seq.weightedIndexFrom`,
   `seq.weightedIndexCheckedFrom`, `seq.weightedIndexU32From`,
   `seq.weightedIndexU32CheckedFrom`
 - `seq.chooseWeighted`, `seq.chooseWeightedFrom`,
