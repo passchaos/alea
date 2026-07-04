@@ -2319,7 +2319,9 @@ Dynamic weighted helpers:
   `reservoirSamplePtrsCheckedFrom`, `reservoirSampleMutPtrs`,
   `reservoirSampleMutPtrsFrom`, `reservoirSampleMutPtrsChecked`,
   `reservoirSampleMutPtrsCheckedFrom`, `reservoirSampleInto`,
-  `reservoirSampleIntoFrom`
+  `reservoirSampleIntoFrom`, `reservoirSamplePtrsInto`,
+  `reservoirSamplePtrsIntoFrom`, `reservoirSampleMutPtrsInto`,
+  `reservoirSampleMutPtrsIntoFrom`
 - Iterators: `chooseIterator`, `chooseIteratorFrom`, `chooseIteratorChecked`,
   `chooseIteratorCheckedFrom`, `sampleIterator`, `sampleIteratorFrom`,
   `sampleIteratorChecked`, `sampleIteratorCheckedFrom`, `sampleIteratorArray`,

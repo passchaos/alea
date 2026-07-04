@@ -238,7 +238,8 @@ Use:
   `seq.reservoirSampleCheckedFrom`, `seq.reservoirSamplePtrsFrom`,
   `seq.reservoirSamplePtrsCheckedFrom`, `seq.reservoirSampleMutPtrsFrom`,
   `seq.reservoirSampleMutPtrsCheckedFrom`, `seq.reservoirSampleInto`,
-  `seq.reservoirSampleIntoFrom`
+  `seq.reservoirSampleIntoFrom`, `seq.reservoirSamplePtrsIntoFrom`,
+  `seq.reservoirSampleMutPtrsIntoFrom`
 - `seq.sampleIndices`, `seq.sampleIndicesCheckedFrom`,
   `seq.sampleIndicesIntoFrom`, `seq.sampleIndicesIntoCheckedFrom`,
   `seq.sampleIndexVec`,

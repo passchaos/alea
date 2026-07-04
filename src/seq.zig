@@ -2108,6 +2108,24 @@ pub fn reservoirSampleIntoFrom(source: anytype, comptime T: type, items: []const
     }
 }
 
+pub fn reservoirSamplePtrsInto(rng: Rng, comptime T: type, items: []const T, out: []*const T) Error!void {
+    return reservoirSamplePtrsIntoFrom(rng, T, items, out);
+}
+
+pub fn reservoirSamplePtrsIntoFrom(source: anytype, comptime T: type, items: []const T, out: []*const T) Error!void {
+    if (out.len > items.len) return error.InvalidParameter;
+    reservoirSamplePtrsFillFrom(source, T, items, out);
+}
+
+pub fn reservoirSampleMutPtrsInto(rng: Rng, comptime T: type, items: []T, out: []*T) Error!void {
+    return reservoirSampleMutPtrsIntoFrom(rng, T, items, out);
+}
+
+pub fn reservoirSampleMutPtrsIntoFrom(source: anytype, comptime T: type, items: []T, out: []*T) Error!void {
+    if (out.len > items.len) return error.InvalidParameter;
+    reservoirSampleMutPtrsFillFrom(source, T, items, out);
+}
+
 fn reservoirSamplePtrsFillFrom(source: anytype, comptime T: type, items: []const T, out: []*const T) void {
     if (out.len == 0) return;
 
@@ -4038,6 +4056,86 @@ test "reservoir pointer slices preserve stream shape and invalid paths do not co
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, reservoirSamplePtrsFrom(failing.allocator(), &invalid_engine, u8, &items, 4));
     try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "reservoir pointer buffers fill caller-owned reservoir pointer outputs" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+
+    var ptr_engine = alea.ScalarPrng.init(0x5150_d201);
+    var ptrs: [4]*const u8 = undefined;
+    try reservoirSamplePtrsIntoFrom(&ptr_engine, u8, &items, &ptrs);
+    for (ptrs) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+        try std.testing.expect(index < items.len);
+        try std.testing.expectEqual(&items[index], ptr);
+    }
+
+    var mutable = items;
+    var mut_engine = alea.ScalarPrng.init(0x5150_d202);
+    var mut_ptrs: [4]*u8 = undefined;
+    try reservoirSampleMutPtrsIntoFrom(&mut_engine, u8, &mutable, &mut_ptrs);
+    var expected = items;
+    for (mut_ptrs) |ptr| {
+        const index = @divExact(@intFromPtr(ptr) - @intFromPtr(&mutable[0]), @sizeOf(u8));
+        try std.testing.expect(index < mutable.len);
+        try std.testing.expectEqual(&mutable[index], ptr);
+        ptr.* += 1;
+        expected[index] += 1;
+    }
+    try std.testing.expectEqualSlices(u8, &expected, &mutable);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_d203);
+    var empty_control = alea.ScalarPrng.init(0x5150_d203);
+    var empty_ptrs: [0]*const u8 = .{};
+    try reservoirSamplePtrsIntoFrom(&empty_engine, u8, &items, &empty_ptrs);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "reservoir pointer buffers preserve stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_d204);
+        var direct_engine = Engine.init(0x5150_d204);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_ptrs: [4]*const u8 = undefined;
+        var direct_ptrs: [4]*const u8 = undefined;
+        try reservoirSamplePtrsInto(rng, u8, &items, &facade_ptrs);
+        try reservoirSamplePtrsIntoFrom(&direct_engine, u8, &items, &direct_ptrs);
+        for (facade_ptrs, direct_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(facade_index, direct_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_items = items;
+        var direct_items = items;
+        var facade_mut_ptrs: [4]*u8 = undefined;
+        var direct_mut_ptrs: [4]*u8 = undefined;
+        try reservoirSampleMutPtrsInto(rng, u8, &facade_items, &facade_mut_ptrs);
+        try reservoirSampleMutPtrsIntoFrom(&direct_engine, u8, &direct_items, &direct_mut_ptrs);
+        for (facade_mut_ptrs, direct_mut_ptrs) |facade_ptr, direct_ptr| {
+            const facade_index = @divExact(@intFromPtr(facade_ptr) - @intFromPtr(&facade_items[0]), @sizeOf(u8));
+            const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&direct_items[0]), @sizeOf(u8));
+            try std.testing.expectEqual(facade_index, direct_index);
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_d205);
+    var invalid_control = alea.ScalarPrng.init(0x5150_d205);
+    var too_many: [9]*const u8 = undefined;
+    try std.testing.expectError(error.InvalidParameter, reservoirSamplePtrsIntoFrom(&invalid_engine, u8, &items, &too_many));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var mutable_items = items;
+    var too_many_mut: [9]*u8 = undefined;
+    try std.testing.expectError(error.InvalidParameter, reservoirSampleMutPtrsIntoFrom(&invalid_engine, u8, &mutable_items, &too_many_mut));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
