@@ -126,7 +126,9 @@ distribution sampling.
 are checked to `|mean| <= LogNormalApproxF32.max_abs_mean` and
 `stddev <= LogNormalApproxF32.max_stddev`; use exact `LogNormal(f32)` /
 `fillLogNormal` whenever bit-identical `@exp` output or wider parameters are
-required.
+required. Run `zig build run-lognormal-profiles` for a small executable example
+showing exact, buffered, native-f32, exp2, native-exp2, and platform libc-backed
+LogNormal profiles when available.
 
 For throughput-first vector normal/exponential workloads, Alea exposes explicit
 profile names instead of silently changing the exact/default vector APIs. Use

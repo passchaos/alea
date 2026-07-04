@@ -50,6 +50,7 @@ Local Alea evidence:
 - `compare/results/2026-07-04-s4-m10-profilelong-musl.md`
 - `compare/results/s4-m11-blocker-audit.md`
 - `compare/results/s4-m12-vector-profile-example.md`
+- `compare/results/s4-m13-lognormal-profile-example.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -167,6 +168,6 @@ remains against the locally available `rand` / `rand_distr` evidence.
 
 This does not close the long-term product goal. Stage 4 remains active for the
 blocked S4-M11 exact-dense-kernel, future-runner, or new-external-gap bar above.
-S4-M12 adds runnable adoption guidance for the accepted vector profiles, but
-later stages should keep raising the bar rather than declaring the product
-permanently finished.
+S4-M12 and S4-M13 add runnable adoption guidance for accepted vector and
+LogNormal opt-in profiles, but later stages should keep raising the bar rather
+than declaring the product permanently finished.
