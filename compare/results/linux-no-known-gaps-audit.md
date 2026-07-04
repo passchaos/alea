@@ -12,8 +12,9 @@ explicit opt-ins while exact defaults remain a stable-output tradeoff. The S4-M5
 S4-M7 tail bar is closed by `2026-07-04-s4-m7-profiletailcheck.md`, the S4-M8
 stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 long-sweep bar is closed by `2026-07-04-s4-m9-profilelongcheck.md`, and
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`; the
-active S4-M11 watch item is an exact/default-compatible dense SIMD winner, a
-new available architecture/runtime runner, or a newly found local Rust core gap.
+active S4-M11 watch item is blocked on an exact/default-compatible dense SIMD
+winner, a newly available architecture/runtime runner, or a newly found local
+Rust core gap.
 
 ## Scope
 
@@ -47,6 +48,7 @@ Local Alea evidence:
 - `compare/results/2026-07-04-s4-m8-profilestresscheck.md`
 - `compare/results/2026-07-04-s4-m9-profilelongcheck.md`
 - `compare/results/2026-07-04-s4-m10-profilelong-musl.md`
+- `compare/results/s4-m11-blocker-audit.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -163,6 +165,6 @@ Within this audit's local Linux scope, no known core RNG functionality gap
 remains against the locally available `rand` / `rand_distr` evidence.
 
 This does not close the long-term product goal. Stage 4 remains active for the
-S4-M11 exact-dense-kernel, future-runner, or new-external-gap bar above, and
-later stages should keep raising the bar rather than declaring the product
+blocked S4-M11 exact-dense-kernel, future-runner, or new-external-gap bar above,
+and later stages should keep raising the bar rather than declaring the product
 permanently finished.
