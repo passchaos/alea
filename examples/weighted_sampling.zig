@@ -152,6 +152,23 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_by_mut_fill) |record| record.?.score += 1;
     try stdout.print("weighted by mut ptr fill scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_fill_records[0].score, weighted_by_mut_fill_records[1].score, weighted_by_mut_fill_records[2].score, weighted_by_mut_fill_records[3].score });
 
+    var weighted_by_batch_engine = alea.ScalarPrng.init(0x7197);
+    const weighted_by_batch = try alea.seq.chooseWeightedBatchByFrom(allocator, &weighted_by_batch_engine, WeightedRecord, u32, 6, &weighted_records, WeightedRecord.weightOf);
+    defer allocator.free(weighted_by_batch);
+    try stdout.print("weighted by value batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_by_batch[0].?.label, weighted_by_batch[1].?.label, weighted_by_batch[2].?.label, weighted_by_batch[3].?.label, weighted_by_batch[4].?.label, weighted_by_batch[5].?.label });
+
+    var weighted_by_ptr_batch_engine = alea.ScalarPrng.init(0x7198);
+    const weighted_by_ptr_batch = try alea.seq.chooseWeightedConstPtrBatchByFrom(allocator, &weighted_by_ptr_batch_engine, WeightedRecord, u32, 6, &weighted_records, WeightedRecord.weightOf);
+    defer allocator.free(weighted_by_ptr_batch);
+    try stdout.print("weighted by const ptr batch: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_by_ptr_batch[0].?.label, weighted_by_ptr_batch[1].?.label, weighted_by_ptr_batch[2].?.label, weighted_by_ptr_batch[3].?.label, weighted_by_ptr_batch[4].?.label, weighted_by_ptr_batch[5].?.label });
+
+    var weighted_by_mut_batch_records = weighted_records;
+    var weighted_by_mut_batch_engine = alea.ScalarPrng.init(0x7199);
+    const weighted_by_mut_batch = try alea.seq.chooseWeightedPtrBatchByFrom(allocator, &weighted_by_mut_batch_engine, WeightedRecord, u32, 6, &weighted_by_mut_batch_records, WeightedRecord.weightOf);
+    defer allocator.free(weighted_by_mut_batch);
+    for (weighted_by_mut_batch) |record| record.?.score += 1;
+    try stdout.print("weighted by mut ptr batch scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_batch_records[0].score, weighted_by_mut_batch_records[1].score, weighted_by_mut_batch_records[2].score, weighted_by_mut_batch_records[3].score });
+
     var alias = try alea.distributions.AliasTable(f64).init(allocator, &float_weights);
     defer alias.deinit();
     var alias_probs: [items.len]f64 = undefined;
@@ -453,6 +470,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_by_mut_ptrs_into) |record| record.score += 20;
     try stdout.print("weighted by mut ptrs into scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_records_into[0].score, weighted_by_mut_records_into[1].score, weighted_by_mut_records_into[2].score, weighted_by_mut_records_into[3].score });
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy and fillChooseWeightedBy/ConstPtrBy/PtrBy when weights live inside item records, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, chooseWeightedBy/ConstPtrBy/PtrBy plus fillChooseWeightedBy/ConstPtrBy/PtrBy and chooseWeightedBatchBy/ConstPtrBatchBy/PtrBatchBy when weights live inside item records, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight workflows, Rng weighted batch helpers for repeated f64 index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }

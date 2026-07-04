@@ -1440,6 +1440,76 @@ pub fn fillChooseWeightedByCheckedFrom(
     for (dest) |*item| item.* = items[weightedIndexByFromPrevalidated(source, T, Weight, items, weightFn, validation.total)];
 }
 
+pub fn chooseWeightedBatchBy(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]?T {
+    return chooseWeightedBatchByFrom(allocator, rng, T, Weight, count, items, weightFn);
+}
+
+pub fn chooseWeightedBatchByFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]?T {
+    if (count == 0) return allocator.alloc(?T, 0);
+    const validation = try validateWeightedIndexByAllowEmpty(T, Weight, items, weightFn);
+    const out = try allocator.alloc(?T, count);
+    errdefer allocator.free(out);
+    if (validation.total == 0) {
+        @memset(out, null);
+        return out;
+    }
+    if (validation.single_positive) |index| {
+        @memset(out, @as(?T, items[index]));
+        return out;
+    }
+    for (out) |*item| item.* = items[weightedIndexByFromPrevalidated(source, T, Weight, items, weightFn, validation.total)];
+    return out;
+}
+
+pub fn chooseWeightedBatchByChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]T {
+    return chooseWeightedBatchByCheckedFrom(allocator, rng, T, Weight, count, items, weightFn);
+}
+
+pub fn chooseWeightedBatchByCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    const validation = try validateWeightedIndexBy(T, Weight, items, weightFn);
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    if (validation.single_positive) |index| {
+        @memset(out, items[index]);
+        return out;
+    }
+    for (out) |*item| item.* = items[weightedIndexByFromPrevalidated(source, T, Weight, items, weightFn, validation.total)];
+    return out;
+}
+
 pub fn fillChooseWeighted(rng: Rng, comptime T: type, comptime Weight: type, dest: []?T, items: []const T, weights: []const Weight) !void {
     return fillChooseWeightedFrom(rng, T, Weight, dest, items, weights);
 }
@@ -1633,6 +1703,76 @@ pub fn fillChooseWeightedConstPtrByCheckedFrom(
     for (dest) |*item| item.* = &items[weightedIndexByFromPrevalidated(source, T, Weight, items, weightFn, validation.total)];
 }
 
+pub fn chooseWeightedConstPtrBatchBy(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]?*const T {
+    return chooseWeightedConstPtrBatchByFrom(allocator, rng, T, Weight, count, items, weightFn);
+}
+
+pub fn chooseWeightedConstPtrBatchByFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]?*const T {
+    if (count == 0) return allocator.alloc(?*const T, 0);
+    const validation = try validateWeightedIndexByAllowEmpty(T, Weight, items, weightFn);
+    const out = try allocator.alloc(?*const T, count);
+    errdefer allocator.free(out);
+    if (validation.total == 0) {
+        @memset(out, null);
+        return out;
+    }
+    if (validation.single_positive) |index| {
+        @memset(out, @as(?*const T, &items[index]));
+        return out;
+    }
+    for (out) |*item| item.* = &items[weightedIndexByFromPrevalidated(source, T, Weight, items, weightFn, validation.total)];
+    return out;
+}
+
+pub fn chooseWeightedConstPtrBatchByChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*const T {
+    return chooseWeightedConstPtrBatchByCheckedFrom(allocator, rng, T, Weight, count, items, weightFn);
+}
+
+pub fn chooseWeightedConstPtrBatchByCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []const T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*const T {
+    if (count == 0) return allocator.alloc(*const T, 0);
+    const validation = try validateWeightedIndexBy(T, Weight, items, weightFn);
+    const out = try allocator.alloc(*const T, count);
+    errdefer allocator.free(out);
+    if (validation.single_positive) |index| {
+        @memset(out, &items[index]);
+        return out;
+    }
+    for (out) |*item| item.* = &items[weightedIndexByFromPrevalidated(source, T, Weight, items, weightFn, validation.total)];
+    return out;
+}
+
 pub fn fillChooseWeightedConstPtr(rng: Rng, comptime T: type, comptime Weight: type, dest: []?*const T, items: []const T, weights: []const Weight) !void {
     return fillChooseWeightedConstPtrFrom(rng, T, Weight, dest, items, weights);
 }
@@ -1824,6 +1964,76 @@ pub fn fillChooseWeightedPtrByCheckedFrom(
         return;
     }
     for (dest) |*item| item.* = &items[weightedIndexByFromPrevalidated(source, T, Weight, items, weightFn, validation.total)];
+}
+
+pub fn chooseWeightedPtrBatchBy(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]?*T {
+    return chooseWeightedPtrBatchByFrom(allocator, rng, T, Weight, count, items, weightFn);
+}
+
+pub fn chooseWeightedPtrBatchByFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]?*T {
+    if (count == 0) return allocator.alloc(?*T, 0);
+    const validation = try validateWeightedIndexByAllowEmpty(T, Weight, items, weightFn);
+    const out = try allocator.alloc(?*T, count);
+    errdefer allocator.free(out);
+    if (validation.total == 0) {
+        @memset(out, null);
+        return out;
+    }
+    if (validation.single_positive) |index| {
+        @memset(out, @as(?*T, &items[index]));
+        return out;
+    }
+    for (out) |*item| item.* = &items[weightedIndexByFromPrevalidated(source, T, Weight, items, weightFn, validation.total)];
+    return out;
+}
+
+pub fn chooseWeightedPtrBatchByChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*T {
+    return chooseWeightedPtrBatchByCheckedFrom(allocator, rng, T, Weight, count, items, weightFn);
+}
+
+pub fn chooseWeightedPtrBatchByCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    count: usize,
+    items: []T,
+    comptime weightFn: fn (*const T) Weight,
+) ![]*T {
+    if (count == 0) return allocator.alloc(*T, 0);
+    const validation = try validateWeightedIndexBy(T, Weight, items, weightFn);
+    const out = try allocator.alloc(*T, count);
+    errdefer allocator.free(out);
+    if (validation.single_positive) |index| {
+        @memset(out, &items[index]);
+        return out;
+    }
+    for (out) |*item| item.* = &items[weightedIndexByFromPrevalidated(source, T, Weight, items, weightFn, validation.total)];
+    return out;
 }
 
 pub fn fillChooseWeightedPtr(rng: Rng, comptime T: type, comptime Weight: type, dest: []?*T, items: []T, weights: []const Weight) !void {
@@ -10033,6 +10243,238 @@ test "fillChooseWeightedBy preserves facade/direct stream shape and invalid path
     var bad_mutable = bad_entries;
     var bad_mut_ptrs: [3]*BadEntry = undefined;
     try std.testing.expectError(error.InvalidWeight, fillChooseWeightedPtrByCheckedFrom(&invalid_engine, BadEntry, f64, &bad_mut_ptrs, &bad_mutable, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "chooseWeightedBatchBy allocates accessor weighted choices" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        value: u8,
+        weight: u32,
+
+        fn weightOf(item: *const @This()) u32 {
+            return item.weight;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .value = 10, .weight = 0 },
+        .{ .value = 20, .weight = 1 },
+        .{ .value = 30, .weight = 7 },
+        .{ .value = 40, .weight = 3 },
+    };
+
+    var values_engine = alea.ScalarPrng.init(0x5150_c92a);
+    const values = try chooseWeightedBatchByFrom(std.testing.allocator, &values_engine, Entry, u32, 8, &entries, Entry.weightOf);
+    defer std.testing.allocator.free(values);
+    for (values) |item| {
+        try std.testing.expect(item != null);
+        try std.testing.expect(item.?.weight > 0);
+    }
+
+    var checked_values_engine = alea.ScalarPrng.init(0x5150_c92b);
+    const checked_values = try chooseWeightedBatchByCheckedFrom(std.testing.allocator, &checked_values_engine, Entry, u32, 8, &entries, Entry.weightOf);
+    defer std.testing.allocator.free(checked_values);
+    for (checked_values) |item| try std.testing.expect(item.weight > 0);
+
+    var ptr_engine = alea.ScalarPrng.init(0x5150_c92c);
+    const ptrs = try chooseWeightedConstPtrBatchByFrom(std.testing.allocator, &ptr_engine, Entry, u32, 8, &entries, Entry.weightOf);
+    defer std.testing.allocator.free(ptrs);
+    for (ptrs) |ptr| {
+        try std.testing.expect(ptr != null);
+        try std.testing.expect(ptr.?.weight > 0);
+    }
+
+    var checked_ptr_engine = alea.ScalarPrng.init(0x5150_c92d);
+    const checked_ptrs = try chooseWeightedConstPtrBatchByCheckedFrom(std.testing.allocator, &checked_ptr_engine, Entry, u32, 8, &entries, Entry.weightOf);
+    defer std.testing.allocator.free(checked_ptrs);
+    for (checked_ptrs) |ptr| try std.testing.expect(ptr.weight > 0);
+
+    var mutable_entries = entries;
+    var mut_engine = alea.ScalarPrng.init(0x5150_c92e);
+    const mut_ptrs = try chooseWeightedPtrBatchByFrom(std.testing.allocator, &mut_engine, Entry, u32, 8, &mutable_entries, Entry.weightOf);
+    defer std.testing.allocator.free(mut_ptrs);
+    for (mut_ptrs) |ptr| {
+        try std.testing.expect(ptr != null);
+        try std.testing.expect(ptr.?.weight > 0);
+        ptr.?.value += 1;
+    }
+    var changed = false;
+    for (mutable_entries, entries) |after, before| {
+        if (after.value != before.value) changed = true;
+    }
+    try std.testing.expect(changed);
+
+    var checked_mutable_entries = entries;
+    var checked_mut_engine = alea.ScalarPrng.init(0x5150_c92f);
+    const checked_mut_ptrs = try chooseWeightedPtrBatchByCheckedFrom(std.testing.allocator, &checked_mut_engine, Entry, u32, 8, &checked_mutable_entries, Entry.weightOf);
+    defer std.testing.allocator.free(checked_mut_ptrs);
+    for (checked_mut_ptrs) |ptr| {
+        try std.testing.expect(ptr.weight > 0);
+        ptr.value += 1;
+    }
+}
+
+test "chooseWeightedBatchBy preserves facade/direct stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        value: u8,
+        weight: f64,
+
+        fn weightOf(item: *const @This()) f64 {
+            return item.weight;
+        }
+    };
+    const entries = [_]Entry{
+        .{ .value = 10, .weight = 1 },
+        .{ .value = 20, .weight = 2 },
+        .{ .value = 30, .weight = 6 },
+        .{ .value = 40, .weight = 3 },
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c930);
+        var direct_engine = Engine.init(0x5150_c930);
+        const rng = Rng.init(&facade_engine);
+
+        const facade_values = try chooseWeightedBatchBy(std.testing.allocator, rng, Entry, f64, 8, &entries, Entry.weightOf);
+        defer std.testing.allocator.free(facade_values);
+        const direct_values = try chooseWeightedBatchByFrom(std.testing.allocator, &direct_engine, Entry, f64, 8, &entries, Entry.weightOf);
+        defer std.testing.allocator.free(direct_values);
+        for (facade_values, direct_values) |facade, direct| try std.testing.expectEqual(facade.?.value, direct.?.value);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_values = try chooseWeightedBatchByChecked(std.testing.allocator, rng, Entry, f64, 8, &entries, Entry.weightOf);
+        defer std.testing.allocator.free(checked_facade_values);
+        const checked_direct_values = try chooseWeightedBatchByCheckedFrom(std.testing.allocator, &direct_engine, Entry, f64, 8, &entries, Entry.weightOf);
+        defer std.testing.allocator.free(checked_direct_values);
+        for (checked_facade_values, checked_direct_values) |facade, direct| try std.testing.expectEqual(facade.value, direct.value);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_ptrs = try chooseWeightedConstPtrBatchBy(std.testing.allocator, rng, Entry, f64, 8, &entries, Entry.weightOf);
+        defer std.testing.allocator.free(facade_ptrs);
+        const direct_ptrs = try chooseWeightedConstPtrBatchByFrom(std.testing.allocator, &direct_engine, Entry, f64, 8, &entries, Entry.weightOf);
+        defer std.testing.allocator.free(direct_ptrs);
+        for (facade_ptrs, direct_ptrs) |facade, direct| {
+            try std.testing.expectEqual(@intFromPtr(facade.?) - @intFromPtr(&entries[0]), @intFromPtr(direct.?) - @intFromPtr(&entries[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const checked_facade_ptrs = try chooseWeightedConstPtrBatchByChecked(std.testing.allocator, rng, Entry, f64, 8, &entries, Entry.weightOf);
+        defer std.testing.allocator.free(checked_facade_ptrs);
+        const checked_direct_ptrs = try chooseWeightedConstPtrBatchByCheckedFrom(std.testing.allocator, &direct_engine, Entry, f64, 8, &entries, Entry.weightOf);
+        defer std.testing.allocator.free(checked_direct_ptrs);
+        for (checked_facade_ptrs, checked_direct_ptrs) |facade, direct| {
+            try std.testing.expectEqual(@intFromPtr(facade) - @intFromPtr(&entries[0]), @intFromPtr(direct) - @intFromPtr(&entries[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_mutable = entries;
+        var direct_mutable = entries;
+        const facade_mut_ptrs = try chooseWeightedPtrBatchBy(std.testing.allocator, rng, Entry, f64, 8, &facade_mutable, Entry.weightOf);
+        defer std.testing.allocator.free(facade_mut_ptrs);
+        const direct_mut_ptrs = try chooseWeightedPtrBatchByFrom(std.testing.allocator, &direct_engine, Entry, f64, 8, &direct_mutable, Entry.weightOf);
+        defer std.testing.allocator.free(direct_mut_ptrs);
+        for (facade_mut_ptrs, direct_mut_ptrs) |facade, direct| {
+            try std.testing.expectEqual(@intFromPtr(facade.?) - @intFromPtr(&facade_mutable[0]), @intFromPtr(direct.?) - @intFromPtr(&direct_mutable[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_mutable = entries;
+        var checked_direct_mutable = entries;
+        const checked_facade_mut_ptrs = try chooseWeightedPtrBatchByChecked(std.testing.allocator, rng, Entry, f64, 8, &checked_facade_mutable, Entry.weightOf);
+        defer std.testing.allocator.free(checked_facade_mut_ptrs);
+        const checked_direct_mut_ptrs = try chooseWeightedPtrBatchByCheckedFrom(std.testing.allocator, &direct_engine, Entry, f64, 8, &checked_direct_mutable, Entry.weightOf);
+        defer std.testing.allocator.free(checked_direct_mut_ptrs);
+        for (checked_facade_mut_ptrs, checked_direct_mut_ptrs) |facade, direct| {
+            try std.testing.expectEqual(@intFromPtr(facade) - @intFromPtr(&checked_facade_mutable[0]), @intFromPtr(direct) - @intFromPtr(&checked_direct_mutable[0]));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    const SingleEntry = struct {
+        value: u8,
+        weight: u32,
+
+        fn weightOf(item: *const @This()) u32 {
+            return item.weight;
+        }
+    };
+    const single_entries = [_]SingleEntry{
+        .{ .value = 1, .weight = 0 },
+        .{ .value = 2, .weight = 9 },
+        .{ .value = 3, .weight = 0 },
+    };
+    var single_engine = alea.ScalarPrng.init(0x5150_c931);
+    var single_control = alea.ScalarPrng.init(0x5150_c931);
+    const single_values = try chooseWeightedBatchByFrom(std.testing.allocator, &single_engine, SingleEntry, u32, 4, &single_entries, SingleEntry.weightOf);
+    defer std.testing.allocator.free(single_values);
+    for (single_values) |item| try std.testing.expectEqual(@as(u8, 2), item.?.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_checked_values = try chooseWeightedBatchByCheckedFrom(std.testing.allocator, &single_engine, SingleEntry, u32, 4, &single_entries, SingleEntry.weightOf);
+    defer std.testing.allocator.free(single_checked_values);
+    for (single_checked_values) |item| try std.testing.expectEqual(@as(u8, 2), item.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_ptrs = try chooseWeightedConstPtrBatchByFrom(std.testing.allocator, &single_engine, SingleEntry, u32, 4, &single_entries, SingleEntry.weightOf);
+    defer std.testing.allocator.free(single_ptrs);
+    for (single_ptrs) |ptr| try std.testing.expectEqual(@as(u8, 2), ptr.?.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    var single_mutable = single_entries;
+    const single_mut_ptrs = try chooseWeightedPtrBatchByFrom(std.testing.allocator, &single_engine, SingleEntry, u32, 4, &single_mutable, SingleEntry.weightOf);
+    defer std.testing.allocator.free(single_mut_ptrs);
+    for (single_mut_ptrs) |ptr| try std.testing.expectEqual(@as(u8, 2), ptr.?.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    const BadEntry = struct {
+        value: u8,
+        weight: f64,
+
+        fn weightOf(item: *const @This()) f64 {
+            return item.weight;
+        }
+    };
+    const empty_entries = [_]BadEntry{};
+    const zero_entries = [_]BadEntry{ .{ .value = 1, .weight = 0 }, .{ .value = 2, .weight = 0 } };
+    const bad_entries = [_]BadEntry{ .{ .value = 1, .weight = 1 }, .{ .value = 2, .weight = std.math.inf(f64) } };
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_c932);
+    var invalid_control = alea.ScalarPrng.init(0x5150_c932);
+    const zero_len = try chooseWeightedBatchByFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, 0, &bad_entries, BadEntry.weightOf);
+    defer std.testing.allocator.free(zero_len);
+    try std.testing.expectEqual(@as(usize, 0), zero_len.len);
+    const zero_len_checked = try chooseWeightedBatchByCheckedFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, 0, &bad_entries, BadEntry.weightOf);
+    defer std.testing.allocator.free(zero_len_checked);
+    try std.testing.expectEqual(@as(usize, 0), zero_len_checked.len);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    const optional_empty = try chooseWeightedBatchByFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, 3, &empty_entries, BadEntry.weightOf);
+    defer std.testing.allocator.free(optional_empty);
+    for (optional_empty) |item| try std.testing.expect(item == null);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    const optional_zero_ptrs = try chooseWeightedConstPtrBatchByFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, 3, &zero_entries, BadEntry.weightOf);
+    defer std.testing.allocator.free(optional_zero_ptrs);
+    for (optional_zero_ptrs) |ptr| try std.testing.expect(ptr == null);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    try std.testing.expectError(error.EmptyInput, chooseWeightedBatchByCheckedFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, 3, &empty_entries, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseWeightedConstPtrBatchByCheckedFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, 3, &zero_entries, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var zero_mutable = zero_entries;
+    try std.testing.expectError(error.EmptyInput, chooseWeightedPtrBatchByCheckedFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, 3, &zero_mutable, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedBatchByFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, 3, &bad_entries, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedConstPtrBatchByCheckedFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, 3, &bad_entries, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var bad_mutable = bad_entries;
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrBatchByCheckedFrom(std.testing.allocator, &invalid_engine, BadEntry, f64, 3, &bad_mutable, BadEntry.weightOf));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, chooseWeightedBatchByCheckedFrom(failing.allocator(), &invalid_engine, Entry, f64, 3, &entries, Entry.weightOf));
+    try std.testing.expect(failing.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
