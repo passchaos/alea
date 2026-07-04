@@ -2008,6 +2008,178 @@ pub fn sampleWeightedIndexVecCheckedFrom(allocator: std.mem.Allocator, source: a
     return sampleWeightedIndexVecExactFrom(allocator, source, Weight, weights, amount);
 }
 
+pub fn sampleWeightedIndicesByIndex(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]usize {
+    return sampleWeightedIndicesByIndexFrom(allocator, rng, Weight, length, amount, weightFn);
+}
+
+pub fn sampleWeightedIndicesByIndexChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]usize {
+    return sampleWeightedIndicesByIndexCheckedFrom(allocator, rng, Weight, length, amount, weightFn);
+}
+
+pub fn sampleWeightedIndicesByIndexCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]usize {
+    if (amount == 0) return allocator.alloc(usize, 0);
+    if (amount > length) return error.InvalidParameter;
+
+    const positive = try countPositiveIndicesBy(Weight, length, weightFn);
+    if (positive < amount) return error.InvalidParameter;
+    if (positive == 1 and amount == 1) return singlePositiveIndexByAlloc(allocator, Weight, length, weightFn);
+    return sampleWeightedIndicesByIndexExactFrom(allocator, source, Weight, length, amount, weightFn);
+}
+
+pub fn sampleWeightedIndicesByIndexFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]usize {
+    if (amount == 0) return allocator.alloc(usize, 0);
+    if (length == 0) return error.EmptyInput;
+
+    const positive = try countPositiveIndicesBy(Weight, length, weightFn);
+    const count = @min(amount, positive);
+    if (count == 0) return allocator.alloc(usize, 0);
+    if (positive == 1) return singlePositiveIndexByAlloc(allocator, Weight, length, weightFn);
+    return sampleWeightedIndicesByIndexExactFrom(allocator, source, Weight, length, count, weightFn);
+}
+
+pub fn sampleWeightedIndicesU32ByIndex(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]u32 {
+    return sampleWeightedIndicesU32ByIndexFrom(allocator, rng, Weight, length, amount, weightFn);
+}
+
+pub fn sampleWeightedIndicesU32ByIndexChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]u32 {
+    return sampleWeightedIndicesU32ByIndexCheckedFrom(allocator, rng, Weight, length, amount, weightFn);
+}
+
+pub fn sampleWeightedIndicesU32ByIndexCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]u32 {
+    if (amount == 0) return allocator.alloc(u32, 0);
+    if (amount > length or length > std.math.maxInt(u32)) return error.InvalidParameter;
+
+    const positive = try countPositiveIndicesBy(Weight, length, weightFn);
+    if (positive < amount) return error.InvalidParameter;
+    if (positive == 1 and amount == 1) return singlePositiveIndexU32ByAlloc(allocator, Weight, length, weightFn);
+    return sampleWeightedIndicesU32ByIndexExactFrom(allocator, source, Weight, length, amount, weightFn);
+}
+
+pub fn sampleWeightedIndicesU32ByIndexFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]u32 {
+    if (amount == 0) return allocator.alloc(u32, 0);
+    if (length == 0) return error.EmptyInput;
+    if (length > std.math.maxInt(u32)) return error.InvalidParameter;
+
+    const positive = try countPositiveIndicesBy(Weight, length, weightFn);
+    const count = @min(amount, positive);
+    if (count == 0) return allocator.alloc(u32, 0);
+    if (positive == 1) return singlePositiveIndexU32ByAlloc(allocator, Weight, length, weightFn);
+    return sampleWeightedIndicesU32ByIndexExactFrom(allocator, source, Weight, length, count, weightFn);
+}
+
+pub fn sampleWeightedIndexVecByIndex(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) !IndexVec {
+    return sampleWeightedIndexVecByIndexFrom(allocator, rng, Weight, length, amount, weightFn);
+}
+
+pub fn sampleWeightedIndexVecByIndexChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) !IndexVec {
+    return sampleWeightedIndexVecByIndexCheckedFrom(allocator, rng, Weight, length, amount, weightFn);
+}
+
+pub fn sampleWeightedIndexVecByIndexCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) !IndexVec {
+    if (amount == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
+    if (amount > length) return error.InvalidParameter;
+
+    const positive = try countPositiveIndicesBy(Weight, length, weightFn);
+    if (positive < amount) return error.InvalidParameter;
+    if (positive == 1 and amount == 1) return singlePositiveIndexVecByAlloc(allocator, Weight, length, weightFn);
+    return sampleWeightedIndexVecByIndexExactFrom(allocator, source, Weight, length, amount, weightFn);
+}
+
+pub fn sampleWeightedIndexVecByIndexFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) !IndexVec {
+    if (amount == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
+    if (length == 0) return error.EmptyInput;
+
+    const positive = try countPositiveIndicesBy(Weight, length, weightFn);
+    const count = @min(amount, positive);
+    if (count == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
+    if (positive == 1) return singlePositiveIndexVecByAlloc(allocator, Weight, length, weightFn);
+    return sampleWeightedIndexVecByIndexExactFrom(allocator, source, Weight, length, count, weightFn);
+}
+
 pub fn sampleWeightedIndicesBy(
     allocator: std.mem.Allocator,
     rng: Rng,
@@ -2658,6 +2830,77 @@ fn sampleWeightedIndexVecExactFrom(allocator: std.mem.Allocator, source: anytype
     return .{ .usize = out };
 }
 
+fn sampleWeightedIndicesByIndexExactFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]usize {
+    std.debug.assert(amount > 0);
+    std.debug.assert(amount <= length);
+
+    const out = try allocator.alloc(usize, amount);
+    errdefer allocator.free(out);
+    const keys = try allocator.alloc(f64, amount);
+    defer allocator.free(keys);
+
+    sampleWeightedIndicesByIndexIntoExactFrom(source, Weight, length, out, keys, weightFn);
+    return out;
+}
+
+fn sampleWeightedIndicesU32ByIndexExactFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]u32 {
+    std.debug.assert(amount > 0);
+    std.debug.assert(amount <= length);
+    std.debug.assert(length <= std.math.maxInt(u32));
+
+    const out = try allocator.alloc(u32, amount);
+    errdefer allocator.free(out);
+    const keys = try allocator.alloc(f64, amount);
+    defer allocator.free(keys);
+
+    sampleWeightedIndicesU32ByIndexIntoExactFrom(source, Weight, length, out, keys, weightFn);
+    return out;
+}
+
+fn sampleWeightedIndexVecByIndexExactFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    amount: usize,
+    comptime weightFn: fn (usize) Weight,
+) !IndexVec {
+    std.debug.assert(amount > 0);
+    std.debug.assert(amount <= length);
+
+    if (length <= std.math.maxInt(u32)) {
+        const out = try allocator.alloc(u32, amount);
+        errdefer allocator.free(out);
+        const keys = try allocator.alloc(f64, amount);
+        defer allocator.free(keys);
+
+        sampleWeightedIndicesU32ByIndexIntoExactFrom(source, Weight, length, out, keys, weightFn);
+        return .{ .u32 = out };
+    }
+
+    const out = try allocator.alloc(usize, amount);
+    errdefer allocator.free(out);
+    const keys = try allocator.alloc(f64, amount);
+    defer allocator.free(keys);
+
+    sampleWeightedIndicesByIndexIntoExactFrom(source, Weight, length, out, keys, weightFn);
+    return .{ .usize = out };
+}
+
 fn sampleWeightedIndicesByExactFrom(
     allocator: std.mem.Allocator,
     source: anytype,
@@ -2771,6 +3014,77 @@ fn sampleWeightedIndicesByIntoExactFrom(
     }
     std.debug.assert(count == out.len);
     sortWeightedIndexKeyPairs(out, keys);
+}
+
+fn sampleWeightedIndicesByIndexIntoExactFrom(
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    out: []usize,
+    keys: []f64,
+    comptime weightFn: fn (usize) Weight,
+) void {
+    std.debug.assert(out.len > 0);
+    std.debug.assert(keys.len == out.len);
+
+    var count: usize = 0;
+    var index: usize = 0;
+    while (index < length) : (index += 1) {
+        const value = weightAsF64(Weight, weightFn(index));
+        std.debug.assert(value >= 0 and std.math.isFinite(value));
+        if (value == 0) continue;
+
+        const key = weightedSelectionKeyFrom(source, value);
+        if (count < out.len) {
+            out[count] = index;
+            keys[count] = key;
+            count += 1;
+        } else {
+            const min_index = minWeightedKeyIndex(keys);
+            if (key > keys[min_index]) {
+                out[min_index] = index;
+                keys[min_index] = key;
+            }
+        }
+    }
+    std.debug.assert(count == out.len);
+    sortWeightedIndexKeyPairs(out, keys);
+}
+
+fn sampleWeightedIndicesU32ByIndexIntoExactFrom(
+    source: anytype,
+    comptime Weight: type,
+    length: usize,
+    out: []u32,
+    keys: []f64,
+    comptime weightFn: fn (usize) Weight,
+) void {
+    std.debug.assert(out.len > 0);
+    std.debug.assert(keys.len == out.len);
+    std.debug.assert(length <= std.math.maxInt(u32));
+
+    var count: usize = 0;
+    var index: usize = 0;
+    while (index < length) : (index += 1) {
+        const value = weightAsF64(Weight, weightFn(index));
+        std.debug.assert(value >= 0 and std.math.isFinite(value));
+        if (value == 0) continue;
+
+        const key = weightedSelectionKeyFrom(source, value);
+        if (count < out.len) {
+            out[count] = @intCast(index);
+            keys[count] = key;
+            count += 1;
+        } else {
+            const min_index = minWeightedKeyIndex(keys);
+            if (key > keys[min_index]) {
+                out[min_index] = @intCast(index);
+                keys[min_index] = key;
+            }
+        }
+    }
+    std.debug.assert(count == out.len);
+    sortWeightedU32IndexKeyPairs(out, keys);
 }
 
 pub fn sampleWeighted(allocator: std.mem.Allocator, rng: Rng, comptime T: type, comptime Weight: type, items: []const T, weights: []const Weight, amount: usize) ![]T {
@@ -4776,6 +5090,82 @@ fn singlePositiveWeightIndexU32Alloc(allocator: std.mem.Allocator, comptime Weig
 fn singlePositiveWeightIndexVecAlloc(allocator: std.mem.Allocator, comptime Weight: type, weights: []const Weight) !IndexVec {
     const index = (try singlePositiveWeightIndex(Weight, weights)).?;
     if (weights.len <= std.math.maxInt(u32)) {
+        const out = try allocator.alloc(u32, 1);
+        out[0] = @intCast(index);
+        return .{ .u32 = out };
+    }
+    const out = try allocator.alloc(usize, 1);
+    out[0] = index;
+    return .{ .usize = out };
+}
+
+fn countPositiveIndicesBy(
+    comptime Weight: type,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!usize {
+    var positive: usize = 0;
+    var index: usize = 0;
+    while (index < length) : (index += 1) {
+        const value = weightAsF64(Weight, weightFn(index));
+        if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+        if (value > 0) positive += 1;
+    }
+    return positive;
+}
+
+fn singlePositiveIndexBy(
+    comptime Weight: type,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) Error!?usize {
+    var positive_index: ?usize = null;
+    var positive: usize = 0;
+    var index: usize = 0;
+    while (index < length) : (index += 1) {
+        const value = weightAsF64(Weight, weightFn(index));
+        if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+        if (value > 0) {
+            positive_index = index;
+            positive += 1;
+            if (positive > 1) return null;
+        }
+    }
+    return positive_index;
+}
+
+fn singlePositiveIndexByAlloc(
+    allocator: std.mem.Allocator,
+    comptime Weight: type,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]usize {
+    const index = (try singlePositiveIndexBy(Weight, length, weightFn)).?;
+    const out = try allocator.alloc(usize, 1);
+    out[0] = index;
+    return out;
+}
+
+fn singlePositiveIndexU32ByAlloc(
+    allocator: std.mem.Allocator,
+    comptime Weight: type,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) ![]u32 {
+    const index = (try singlePositiveIndexBy(Weight, length, weightFn)).?;
+    const out = try allocator.alloc(u32, 1);
+    out[0] = @intCast(index);
+    return out;
+}
+
+fn singlePositiveIndexVecByAlloc(
+    allocator: std.mem.Allocator,
+    comptime Weight: type,
+    length: usize,
+    comptime weightFn: fn (usize) Weight,
+) !IndexVec {
+    const index = (try singlePositiveIndexBy(Weight, length, weightFn)).?;
+    if (length <= std.math.maxInt(u32)) {
         const out = try allocator.alloc(u32, 1);
         out[0] = @intCast(index);
         return .{ .u32 = out };
@@ -8847,6 +9237,152 @@ test "weighted sampling without replacement returns distinct positive-weight ite
     try std.testing.expectError(error.LengthMismatch, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 3));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedChecked(std.testing.allocator, rng, u8, u32, &.{ 1, 2 }, &.{ 1, 2 }, 3));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{ 1, 2 }, 3));
+}
+
+test "index-weighted no-replacement samples support length weight functions" {
+    const alea = @import("root.zig");
+    const IndexWeight = struct {
+        fn weightOf(index: usize) f64 {
+            return switch (index) {
+                1 => 1,
+                3 => 9,
+                6 => 4,
+                else => 0,
+            };
+        }
+
+        fn single(index: usize) u32 {
+            return if (index == 4) 7 else 0;
+        }
+
+        fn sparse(index: usize) u32 {
+            return if (index == 2) 1 else 0;
+        }
+
+        fn invalid(index: usize) f64 {
+            return if (index == 2) std.math.nan(f64) else 1;
+        }
+    };
+
+    var engine = alea.ScalarPrng.init(0x5150_f125);
+
+    const indices = try sampleWeightedIndicesByIndexFrom(std.testing.allocator, &engine, f64, 8, 4, IndexWeight.weightOf);
+    defer std.testing.allocator.free(indices);
+    try std.testing.expectEqual(@as(usize, 3), indices.len);
+    var seen = [_]bool{false} ** 8;
+    for (indices) |index| {
+        try std.testing.expect(index == 1 or index == 3 or index == 6);
+        try std.testing.expect(!seen[index]);
+        seen[index] = true;
+    }
+
+    const checked_indices = try sampleWeightedIndicesByIndexCheckedFrom(std.testing.allocator, &engine, f64, 8, 2, IndexWeight.weightOf);
+    defer std.testing.allocator.free(checked_indices);
+    try std.testing.expectEqual(@as(usize, 2), checked_indices.len);
+    for (checked_indices) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+
+    const indices_u32 = try sampleWeightedIndicesU32ByIndexFrom(std.testing.allocator, &engine, f64, 8, 4, IndexWeight.weightOf);
+    defer std.testing.allocator.free(indices_u32);
+    try std.testing.expectEqual(@as(usize, 3), indices_u32.len);
+    for (indices_u32) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+
+    const checked_indices_u32 = try sampleWeightedIndicesU32ByIndexCheckedFrom(std.testing.allocator, &engine, f64, 8, 2, IndexWeight.weightOf);
+    defer std.testing.allocator.free(checked_indices_u32);
+    try std.testing.expectEqual(@as(usize, 2), checked_indices_u32.len);
+    for (checked_indices_u32) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+
+    const index_vec = try sampleWeightedIndexVecByIndexFrom(std.testing.allocator, &engine, f64, 8, 4, IndexWeight.weightOf);
+    defer index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 3), index_vec.len());
+    switch (index_vec) {
+        .u32 => {},
+        .usize => return error.TestExpectedEqual,
+    }
+    var iter = index_vec.iter();
+    while (iter.next()) |index| try std.testing.expect(index == 1 or index == 3 or index == 6);
+
+    const checked_index_vec = try sampleWeightedIndexVecByIndexCheckedFrom(std.testing.allocator, &engine, f64, 8, 2, IndexWeight.weightOf);
+    defer checked_index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 2), checked_index_vec.len());
+
+    var no_consume_engine = alea.ScalarPrng.init(0x5150_f127);
+    var no_consume_control = alea.ScalarPrng.init(0x5150_f127);
+
+    const single_indices = try sampleWeightedIndicesByIndexFrom(std.testing.allocator, &no_consume_engine, u32, 8, 8, IndexWeight.single);
+    defer std.testing.allocator.free(single_indices);
+    try std.testing.expectEqualSlices(usize, &.{4}, single_indices);
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+
+    const single_indices_u32 = try sampleWeightedIndicesU32ByIndexCheckedFrom(std.testing.allocator, &no_consume_engine, u32, 8, 1, IndexWeight.single);
+    defer std.testing.allocator.free(single_indices_u32);
+    try std.testing.expectEqualSlices(u32, &.{4}, single_indices_u32);
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+
+    const single_index_vec = try sampleWeightedIndexVecByIndexFrom(std.testing.allocator, &no_consume_engine, u32, 8, 8, IndexWeight.single);
+    defer single_index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 1), single_index_vec.len());
+    try std.testing.expectEqual(@as(usize, 4), single_index_vec.at(0));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+
+    const empty = try sampleWeightedIndicesByIndexFrom(std.testing.allocator, &no_consume_engine, f64, 8, 0, IndexWeight.invalid);
+    defer std.testing.allocator.free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesByIndexFrom(std.testing.allocator, &no_consume_engine, u32, 0, 1, IndexWeight.single));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexCheckedFrom(std.testing.allocator, &no_consume_engine, u32, 2, 3, IndexWeight.single));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexCheckedFrom(std.testing.allocator, &no_consume_engine, u32, 8, 2, IndexWeight.sparse));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesByIndexFrom(std.testing.allocator, &no_consume_engine, f64, 8, 2, IndexWeight.invalid));
+    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+}
+
+test "index-weighted no-replacement samples preserve direct stream shape" {
+    const alea = @import("root.zig");
+    const IndexWeight = struct {
+        fn weightOf(index: usize) u32 {
+            return switch (index) {
+                0 => 1,
+                2 => 4,
+                5 => 2,
+                6 => 8,
+                else => 0,
+            };
+        }
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_f126);
+        var direct_engine = Engine.init(0x5150_f126);
+        const rng = Rng.init(&facade_engine);
+
+        const facade_indices = try sampleWeightedIndicesByIndex(std.testing.allocator, rng, u32, 8, 3, IndexWeight.weightOf);
+        defer std.testing.allocator.free(facade_indices);
+        const direct_indices = try sampleWeightedIndicesByIndexFrom(std.testing.allocator, &direct_engine, u32, 8, 3, IndexWeight.weightOf);
+        defer std.testing.allocator.free(direct_indices);
+        try std.testing.expectEqualSlices(usize, direct_indices, facade_indices);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_indices_u32 = try sampleWeightedIndicesU32ByIndex(std.testing.allocator, rng, u32, 8, 3, IndexWeight.weightOf);
+        defer std.testing.allocator.free(facade_indices_u32);
+        const direct_indices_u32 = try sampleWeightedIndicesU32ByIndexFrom(std.testing.allocator, &direct_engine, u32, 8, 3, IndexWeight.weightOf);
+        defer std.testing.allocator.free(direct_indices_u32);
+        try std.testing.expectEqualSlices(u32, direct_indices_u32, facade_indices_u32);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_vec = try sampleWeightedIndexVecByIndex(std.testing.allocator, rng, u32, 8, 3, IndexWeight.weightOf);
+        defer facade_vec.deinit(std.testing.allocator);
+        const direct_vec = try sampleWeightedIndexVecByIndexFrom(std.testing.allocator, &direct_engine, u32, 8, 3, IndexWeight.weightOf);
+        defer direct_vec.deinit(std.testing.allocator);
+        try std.testing.expectEqual(facade_vec.len(), direct_vec.len());
+        var index: usize = 0;
+        while (index < facade_vec.len()) : (index += 1) {
+            try std.testing.expectEqual(direct_vec.at(index), facade_vec.at(index));
+        }
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
 }
 
 test "weighted sampling without replacement preserves direct stream shape" {
