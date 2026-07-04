@@ -193,6 +193,18 @@ pub const IndexVec = union(enum) {
         try self.valuesInto(T, items, out);
     }
 
+    pub fn valuesOwned(self: IndexVec, allocator: std.mem.Allocator, comptime T: type, items: []const T) ![]T {
+        const out = try allocator.alloc(T, self.len());
+        errdefer allocator.free(out);
+        try self.valuesInto(T, items, out);
+        return out;
+    }
+
+    pub fn valuesOwnedChecked(self: IndexVec, allocator: std.mem.Allocator, comptime T: type, items: []const T) ![]T {
+        try self.validateItems(items.len);
+        return self.valuesOwned(allocator, T, items);
+    }
+
     pub fn ptrsInto(self: IndexVec, comptime T: type, items: []const T, out: []*const T) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
         var index: usize = 0;
@@ -204,6 +216,18 @@ pub const IndexVec = union(enum) {
         try self.ptrsInto(T, items, out);
     }
 
+    pub fn ptrsOwned(self: IndexVec, allocator: std.mem.Allocator, comptime T: type, items: []const T) ![]*const T {
+        const out = try allocator.alloc(*const T, self.len());
+        errdefer allocator.free(out);
+        try self.ptrsInto(T, items, out);
+        return out;
+    }
+
+    pub fn ptrsOwnedChecked(self: IndexVec, allocator: std.mem.Allocator, comptime T: type, items: []const T) ![]*const T {
+        try self.validateItems(items.len);
+        return self.ptrsOwned(allocator, T, items);
+    }
+
     pub fn mutPtrsInto(self: IndexVec, comptime T: type, items: []T, out: []*T) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
         var index: usize = 0;
@@ -213,6 +237,18 @@ pub const IndexVec = union(enum) {
     pub fn mutPtrsIntoChecked(self: IndexVec, comptime T: type, items: []T, out: []*T) Error!void {
         try self.validateDistinctItems(items.len);
         try self.mutPtrsInto(T, items, out);
+    }
+
+    pub fn mutPtrsOwned(self: IndexVec, allocator: std.mem.Allocator, comptime T: type, items: []T) ![]*T {
+        const out = try allocator.alloc(*T, self.len());
+        errdefer allocator.free(out);
+        try self.mutPtrsInto(T, items, out);
+        return out;
+    }
+
+    pub fn mutPtrsOwnedChecked(self: IndexVec, allocator: std.mem.Allocator, comptime T: type, items: []T) ![]*T {
+        try self.validateDistinctItems(items.len);
+        return self.mutPtrsOwned(allocator, T, items);
     }
 
     pub fn iter(self: IndexVec) Iterator {
@@ -3053,6 +3089,14 @@ test "index vec maps sampled indexes to slice items" {
     try std.testing.expectEqualStrings("eel", mapped_values[0]);
     try std.testing.expectEqualStrings("bee", mapped_values[1]);
     try std.testing.expectEqualStrings("fox", mapped_values[2]);
+    const owned_values = try index_vec.valuesOwnedChecked(std.testing.allocator, []const u8, &labels);
+    defer std.testing.allocator.free(owned_values);
+    try std.testing.expectEqualStrings("eel", owned_values[0]);
+    try std.testing.expectEqualStrings("bee", owned_values[1]);
+    try std.testing.expectEqualStrings("fox", owned_values[2]);
+    var failing_values = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, index_vec.valuesOwnedChecked(failing_values.allocator(), []const u8, &labels));
+    try std.testing.expect(failing_values.has_induced_failure);
     var short_values: [2][]const u8 = undefined;
     try std.testing.expectError(error.LengthMismatch, index_vec.valuesInto([]const u8, &labels, &short_values));
 
@@ -3061,6 +3105,14 @@ test "index vec maps sampled indexes to slice items" {
     try std.testing.expectEqualStrings("eel", mapped_ptrs[0].*);
     try std.testing.expectEqualStrings("bee", mapped_ptrs[1].*);
     try std.testing.expectEqualStrings("fox", mapped_ptrs[2].*);
+    const owned_ptrs = try index_vec.ptrsOwnedChecked(std.testing.allocator, []const u8, &labels);
+    defer std.testing.allocator.free(owned_ptrs);
+    try std.testing.expectEqualStrings("eel", owned_ptrs[0].*);
+    try std.testing.expectEqualStrings("bee", owned_ptrs[1].*);
+    try std.testing.expectEqualStrings("fox", owned_ptrs[2].*);
+    var failing_ptrs = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, index_vec.ptrsOwnedChecked(failing_ptrs.allocator(), []const u8, &labels));
+    try std.testing.expect(failing_ptrs.has_induced_failure);
     var short_ptrs: [2]*const []const u8 = undefined;
     try std.testing.expectError(error.LengthMismatch, index_vec.ptrsInto([]const u8, &labels, &short_ptrs));
 
@@ -3087,6 +3139,7 @@ test "index vec maps sampled indexes to slice items" {
     try std.testing.expectError(error.InvalidParameter, duplicate.validateDistinctItems(numbers.len));
     try std.testing.expectError(error.InvalidParameter, duplicate.mutPtrsChecked(u8, &numbers));
     try std.testing.expectError(error.InvalidParameter, duplicate.mutPtrsIntoChecked(u8, &numbers, short_mut_ptrs[0..2]));
+    try std.testing.expectError(error.InvalidParameter, duplicate.mutPtrsOwnedChecked(std.testing.allocator, u8, &numbers));
 
     var invalid_backing = [_]usize{ 1, labels.len };
     const invalid = IndexVec{ .usize = &invalid_backing };
@@ -3096,8 +3149,11 @@ test "index vec maps sampled indexes to slice items" {
     try std.testing.expectError(error.InvalidParameter, invalid.ptrsChecked([]const u8, &labels));
     try std.testing.expectError(error.InvalidParameter, invalid.valuesIntoChecked([]const u8, &labels, mapped_values[0..2]));
     try std.testing.expectError(error.InvalidParameter, invalid.ptrsIntoChecked([]const u8, &labels, mapped_ptrs[0..2]));
+    try std.testing.expectError(error.InvalidParameter, invalid.valuesOwnedChecked(std.testing.allocator, []const u8, &labels));
+    try std.testing.expectError(error.InvalidParameter, invalid.ptrsOwnedChecked(std.testing.allocator, []const u8, &labels));
     try std.testing.expectError(error.InvalidParameter, invalid.mutPtrsChecked(u8, &numbers));
     try std.testing.expectError(error.InvalidParameter, invalid.mutPtrsIntoChecked(u8, &numbers, short_mut_ptrs[0..2]));
+    try std.testing.expectError(error.InvalidParameter, invalid.mutPtrsOwnedChecked(std.testing.allocator, u8, &numbers));
 }
 
 test "index vec keeps compact backing for u32 lengths" {
@@ -4170,6 +4226,16 @@ test "zero-count checked sequence helpers do not consume random stream" {
     const empty_owned_u32 = try index_vec.toOwnedU32Slice(std.testing.allocator);
     defer std.testing.allocator.free(empty_owned_u32);
     try std.testing.expectEqual(@as(usize, 0), empty_owned_u32.len);
+    const empty_values = try index_vec.valuesOwnedChecked(std.testing.allocator, u8, &items);
+    defer std.testing.allocator.free(empty_values);
+    try std.testing.expectEqual(@as(usize, 0), empty_values.len);
+    const empty_ptrs = try index_vec.ptrsOwnedChecked(std.testing.allocator, u8, &items);
+    defer std.testing.allocator.free(empty_ptrs);
+    try std.testing.expectEqual(@as(usize, 0), empty_ptrs.len);
+    var mutable_items = items;
+    const empty_mut_ptrs = try index_vec.mutPtrsOwnedChecked(std.testing.allocator, u8, &mutable_items);
+    defer std.testing.allocator.free(empty_mut_ptrs);
+    try std.testing.expectEqual(@as(usize, 0), empty_mut_ptrs.len);
     try std.testing.expect(!index_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 

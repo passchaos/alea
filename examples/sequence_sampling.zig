@@ -71,6 +71,9 @@ pub fn main(init: std.process.Init) !void {
     var mapped_into: [3][]const u8 = undefined;
     try item_index_vec.valuesIntoChecked([]const u8, &items, &mapped_into);
     try stdout.print("IndexVec.valuesInto: {s}, {s}, {s}\n", .{ mapped_into[0], mapped_into[1], mapped_into[2] });
+    const mapped_owned = try item_index_vec.valuesOwnedChecked(allocator, []const u8, &items);
+    defer allocator.free(mapped_owned);
+    try stdout.print("IndexVec.valuesOwned: {s}, {s}, {s}\n", .{ mapped_owned[0], mapped_owned[1], mapped_owned[2] });
     var compact_index_copy: [3]u32 = undefined;
     try item_index_vec.copyIntoU32(&compact_index_copy);
     try stdout.print("IndexVec.copyIntoU32: {any}\n", .{compact_index_copy});
@@ -80,11 +83,17 @@ pub fn main(init: std.process.Init) !void {
     var mapped_ptrs: [3]*const []const u8 = undefined;
     try item_index_vec.ptrsIntoChecked([]const u8, &items, &mapped_ptrs);
     try stdout.print("IndexVec.ptrsInto: {s}, {s}, {s}\n", .{ mapped_ptrs[0].*, mapped_ptrs[1].*, mapped_ptrs[2].* });
+    const mapped_owned_ptrs = try item_index_vec.ptrsOwnedChecked(allocator, []const u8, &items);
+    defer allocator.free(mapped_owned_ptrs);
+    try stdout.print("IndexVec.ptrsOwned: {s}, {s}, {s}\n", .{ mapped_owned_ptrs[0].*, mapped_owned_ptrs[1].*, mapped_owned_ptrs[2].* });
     var mutable_scores = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
     var mapped_mut_ptrs: [3]*u8 = undefined;
     try item_index_vec.mutPtrsIntoChecked(u8, &mutable_scores, &mapped_mut_ptrs);
     for (mapped_mut_ptrs) |score| score.* += 1;
-    try stdout.print("IndexVec.mutPtrsInto updated scores: {any}\n", .{mutable_scores});
+    const mapped_owned_mut_ptrs = try item_index_vec.mutPtrsOwnedChecked(allocator, u8, &mutable_scores);
+    defer allocator.free(mapped_owned_mut_ptrs);
+    for (mapped_owned_mut_ptrs) |score| score.* += 1;
+    try stdout.print("IndexVec.mutPtrsOwned updated scores: {any}\n", .{mutable_scores});
 
     var choose_engine = alea.ScalarPrng.init(0x5e11_0003);
     const chosen = try alea.seq.chooseMultipleFrom(allocator, &choose_engine, []const u8, &items, 3);
@@ -238,6 +247,6 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleIteratorWeightedIntoFrom(&weighted_into_engine, u32, &weighted_into_stream, &weighted_stream_into, &weighted_stream_keys);
     try stdout.print("sampleIteratorWeightedIntoFrom counter[0..20): {any}\n", .{weighted_stream_into});
 
-    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and value/const-pointer/mutable-pointer mapping, sampleArrayU32 for compact fixed-size index arrays, chooseArray/choosePtrArray for fixed-size item/pointer arrays, chooseMultiple/chooseMultipleInto/chooseMultiplePtrsInto or sampleWithoutReplacement for allocation-returning and caller-owned item/pointer subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
+    try stdout.print("\nUse sampleIndices/sampleIndicesInto/IndexVec for indexes and lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer mapping, sampleArrayU32 for compact fixed-size index arrays, chooseArray/choosePtrArray for fixed-size item/pointer arrays, chooseMultiple/chooseMultipleInto/chooseMultiplePtrsInto or sampleWithoutReplacement for allocation-returning and caller-owned item/pointer subsets, partialShuffle/partialShuffleSplit for in-place heads/rests, reservoirSample/reservoirSamplePtrs/reservoirSampleInto/reservoirSamplePtrsInto for slices, sampleIteratorArray/sampleIterator/sampleIteratorInto for streams, weighted iterator arrays/into buffers, and Choice/iterator helpers for reusable or streaming choices.\n", .{});
     try stdout.flush();
 }
