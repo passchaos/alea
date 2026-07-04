@@ -279,7 +279,7 @@ Use:
   `rng.chooseConstPtr`, `Rng.chooseConstPtrFrom`,
   `Rng.chooseConstPtrCheckedFrom`, `Rng.fillChooseConstPtrFrom`,
   `Rng.chooseConstPtrBatchFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`,
-  `Rng.choosePtrCheckedFrom`
+  `Rng.choosePtrCheckedFrom`, `Rng.fillChoosePtrFrom`, `Rng.choosePtrBatchFrom`
 - `rng.shuffle`, `Rng.shuffleFrom`
 - `seq.partialShuffle`, `seq.partialShuffleFrom`,
   `seq.partialShuffleCheckedFrom`, `seq.partialShuffleSplitFrom`,

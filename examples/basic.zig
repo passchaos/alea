@@ -63,6 +63,7 @@ pub fn main(init: std.process.Init) !void {
     var deck = [_]u8{ 1, 2, 3, 4, 5, 6, 7, 8 };
     const hand = alea.seq.partialShuffle(rng, u8, &deck, 3);
     const colors = [_][]const u8{ "red", "green", "blue", "gold" };
+    var mutable_colors = colors;
     const color_index = rng.chooseIndex(colors.len).?;
     const compact_color_index = rng.chooseIndexU32(@intCast(colors.len)).?;
     const color_indices = try rng.chooseIndexBatch(init.gpa, 4, colors.len);
@@ -74,6 +75,8 @@ pub fn main(init: std.process.Init) !void {
     const color_ptr = rng.chooseConstPtr([]const u8, &colors).?;
     const color_ptrs = try rng.chooseConstPtrBatch([]const u8, init.gpa, 4, &colors);
     defer init.gpa.free(color_ptrs);
+    const mutable_color_ptrs = try rng.choosePtrBatch([]const u8, init.gpa, 4, &mutable_colors);
+    defer init.gpa.free(mutable_color_ptrs);
     const die_sampler = try alea.distributions.Uniform(u8).initInclusive(1, 6);
     const owned_rolls = try rng.sampleBatch(u8, init.gpa, die_sampler, 6);
     defer init.gpa.free(owned_rolls);
@@ -125,6 +128,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("value choice batch: {s}, {s}, {s}, {s}\n", .{ color_values[0], color_values[1], color_values[2], color_values[3] });
     try stdout.print("const pointer choice: {s}\n", .{color_ptr.*});
     try stdout.print("const pointer choice batch: {s}, {s}, {s}, {s}\n", .{ color_ptrs[0].*, color_ptrs[1].*, color_ptrs[2].*, color_ptrs[3].* });
+    try stdout.print("mutable pointer choice batch: {s}, {s}, {s}, {s}\n", .{ mutable_color_ptrs[0].*, mutable_color_ptrs[1].*, mutable_color_ptrs[2].*, mutable_color_ptrs[3].* });
     try stdout.print("sampleBatch dice: {any}\n", .{owned_rolls});
     try stdout.print("iterator choice: {}\n", .{stream_choice});
     try stdout.print("child stream u64: {}\n", .{child_rng.next()});
