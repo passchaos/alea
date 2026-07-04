@@ -195,6 +195,23 @@ pub fn build(b: *std.Build) void {
     const distribution_diagnostics_example_step = b.step("run-distribution-diagnostics", "Run the distribution diagnostics alea example");
     distribution_diagnostics_example_step.dependOn(&run_distribution_diagnostics_example.step);
 
+    const reproducible_streams_example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/reproducible_streams.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    reproducible_streams_example_mod.addImport("alea", module);
+
+    const reproducible_streams_example = b.addExecutable(.{
+        .name = "alea-reproducible-streams",
+        .root_module = reproducible_streams_example_mod,
+    });
+    const run_reproducible_streams_example = b.addRunArtifact(reproducible_streams_example);
+    if (b.args) |args| run_reproducible_streams_example.addArgs(args);
+
+    const reproducible_streams_example_step = b.step("run-reproducible-streams", "Run the reproducible streams alea example");
+    reproducible_streams_example_step.dependOn(&run_reproducible_streams_example.step);
+
     const examples_step = b.step("examples", "Run all alea examples");
     examples_step.dependOn(&run_example.step);
     examples_step.dependOn(&run_vector_profiles_example.step);
@@ -206,6 +223,7 @@ pub fn build(b: *std.Build) void {
     examples_step.dependOn(&run_string_generation_example.step);
     examples_step.dependOn(&run_unit_geometry_example.step);
     examples_step.dependOn(&run_distribution_diagnostics_example.step);
+    examples_step.dependOn(&run_reproducible_streams_example.step);
 
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/throughput.zig"),

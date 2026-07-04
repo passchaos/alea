@@ -59,6 +59,7 @@ Local Alea evidence:
 - `compare/results/s4-m19-string-generation-example.md`
 - `compare/results/s4-m20-unit-geometry-example.md`
 - `compare/results/s4-m21-distribution-diagnostics-example.md`
+- `compare/results/s4-m22-reproducible-streams-example.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -181,6 +182,6 @@ LogNormal, and native-f32 opt-in profiles, S4-M15 puts examples under local
 validation, S4-M16 adds weighted-sampling adoption guidance, S4-M17 adds
 multivariate adoption guidance, S4-M18 adds sequence-sampling adoption guidance,
 S4-M19 adds string-generation adoption guidance, S4-M20 adds unit-geometry
-adoption guidance, and S4-M21 adds distribution diagnostics adoption guidance,
-but later stages should keep raising the bar rather than declaring the product
-permanently finished.
+adoption guidance, S4-M21 adds distribution diagnostics adoption guidance, and
+S4-M22 adds reproducible-stream adoption guidance, but later stages should keep
+raising the bar rather than declaring the product permanently finished.

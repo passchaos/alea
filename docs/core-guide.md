@@ -30,6 +30,9 @@ stable named streams. Use `Seed.secure(io)`, `defaultSecure`, `fastSecure`,
 `secureBytes` when the seed must come from system entropy.
 
 See `compare/results/reproducibility-matrix.md` for stable-output expectations.
+Run `zig build run-reproducible-streams` for a runnable example of named seeds,
+substreams, engine aliases, `Xoshiro` split/jump, and `Pcg64.initTwo` stream
+selection.
 
 ## Scalar Sampling
 

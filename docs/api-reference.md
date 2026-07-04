@@ -2351,6 +2351,7 @@ Build steps:
 - `zig build run-string-generation`
 - `zig build run-unit-geometry`
 - `zig build run-distribution-diagnostics`
+- `zig build run-reproducible-streams`
 - `zig build examples`
 - `zig build apicheck`
 - `zig build validate`
