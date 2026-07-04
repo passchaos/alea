@@ -44,7 +44,8 @@ complete.
 | S4-M21 distribution diagnostics adoption example | `examples/distribution_diagnostics.zig`, `zig build run-distribution-diagnostics`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m21-distribution-diagnostics-example.md` | Closed for the current bar: a runnable example demonstrates moments, support, derived constructors, z-score conversion, and PERT builder diagnostics. |
 | S4-M22 reproducible streams adoption example | `examples/reproducible_streams.zig`, `zig build run-reproducible-streams`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m22-reproducible-streams-example.md` | Closed for the current bar: a runnable example demonstrates seed mixing/substreams, engine aliases, split/jump, and PCG stream selection. |
 | S4-M23 range and uniform sampling adoption example | `examples/range_sampling.zig`, `zig build run-range-sampling`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m23-range-sampling-example.md` | Closed for the current bar: a runnable example demonstrates integer/float/duration ranges, endpoint semantics, reusable Uniform, vector ranges, collapsed point masses, and checked errors. |
-| S4-M24 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M24 discrete distributions adoption example | `examples/discrete_distributions.zig`, `zig build run-discrete-distributions`, `zig build examples`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m24-discrete-distributions-example.md` | Closed for the current bar: a runnable example demonstrates Bernoulli, Binomial, NegativeBinomial, Poisson, Geometric, Hypergeometric, vector discrete samplers, and checked errors. |
+| S4-M25 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -72,8 +73,9 @@ sampling adoption guidance, S4-M17 adds multivariate adoption guidance, S4-M18
 adds sequence sampling adoption guidance, S4-M19 adds string-generation adoption
 guidance, S4-M20 adds unit-geometry adoption guidance, S4-M21 adds distribution
 diagnostics adoption guidance, S4-M22 adds reproducible-stream adoption
-guidance, and S4-M23 adds range/uniform adoption guidance, but they do not
-resolve S4-M11 or complete the long-term objective.
+guidance, S4-M23 adds range/uniform adoption guidance, and S4-M24 adds discrete
+distribution adoption guidance, but they do not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

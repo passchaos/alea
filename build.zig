@@ -229,6 +229,23 @@ pub fn build(b: *std.Build) void {
     const range_sampling_example_step = b.step("run-range-sampling", "Run the range sampling alea example");
     range_sampling_example_step.dependOn(&run_range_sampling_example.step);
 
+    const discrete_distributions_example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/discrete_distributions.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    discrete_distributions_example_mod.addImport("alea", module);
+
+    const discrete_distributions_example = b.addExecutable(.{
+        .name = "alea-discrete-distributions",
+        .root_module = discrete_distributions_example_mod,
+    });
+    const run_discrete_distributions_example = b.addRunArtifact(discrete_distributions_example);
+    if (b.args) |args| run_discrete_distributions_example.addArgs(args);
+
+    const discrete_distributions_example_step = b.step("run-discrete-distributions", "Run the discrete distributions alea example");
+    discrete_distributions_example_step.dependOn(&run_discrete_distributions_example.step);
+
     const examples_step = b.step("examples", "Run all alea examples");
     examples_step.dependOn(&run_example.step);
     examples_step.dependOn(&run_vector_profiles_example.step);
@@ -242,6 +259,7 @@ pub fn build(b: *std.Build) void {
     examples_step.dependOn(&run_distribution_diagnostics_example.step);
     examples_step.dependOn(&run_reproducible_streams_example.step);
     examples_step.dependOn(&run_range_sampling_example.step);
+    examples_step.dependOn(&run_discrete_distributions_example.step);
 
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/throughput.zig"),

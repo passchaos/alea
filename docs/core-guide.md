@@ -92,6 +92,9 @@ before drawing.
 Zero-length checked fills in the core distribution wrapper, discrete families,
 core continuous families, derived/tail continuous families, inverse-Gaussian
 family, and Zipf/Zeta fills return before validating user parameters.
+Run `zig build run-discrete-distributions` for a runnable comparison of
+Bernoulli, Binomial, NegativeBinomial, Poisson, Geometric trial/failure counts,
+Hypergeometric, and vector discrete samplers.
 The distributions module also mirrors `Rng.fillNormal*` and
 `Rng.fillExponential*` as top-level helpers for callers who prefer the
 distribution namespace; `fillUniform*` and `fillUniformInclusive*` do the same
