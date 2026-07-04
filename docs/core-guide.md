@@ -365,7 +365,9 @@ Use:
   `seq.weightedIndexCheckedFrom`, `seq.fillWeightedIndexFrom`,
   `seq.weightedIndexBatchFrom`, `seq.weightedIndexU32From`,
   `seq.weightedIndexU32CheckedFrom`, `seq.fillWeightedIndexU32From`,
-  `seq.weightedIndexU32BatchFrom`, `seq.weightedIndexByFrom`,
+  `seq.weightedIndexU32BatchFrom`, `seq.weightedIndexByIndexFrom`,
+  `seq.weightedIndexByIndexCheckedFrom`, `seq.weightedIndexU32ByIndexFrom`,
+  `seq.weightedIndexU32ByIndexCheckedFrom`, `seq.weightedIndexByFrom`,
   `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
   `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
   `seq.fillWeightedIndexByCheckedFrom`, `seq.fillWeightedIndexU32ByFrom`,
@@ -379,7 +381,10 @@ Use:
   `seq.chooseWeightedCheckedFrom`, `seq.chooseWeightedConstPtrFrom`,
   `seq.chooseWeightedConstPtrCheckedFrom`, `seq.chooseWeightedPtr`,
   `seq.chooseWeightedPtrFrom`, `seq.chooseWeightedPtrCheckedFrom`,
-  plus accessor-based `seq.weightedIndexByFrom`,
+  plus index-weighted one-shot `seq.weightedIndexByIndexFrom`,
+  `seq.weightedIndexByIndexCheckedFrom`, `seq.weightedIndexU32ByIndexFrom`,
+  `seq.weightedIndexU32ByIndexCheckedFrom`, plus accessor-based
+  `seq.weightedIndexByFrom`,
   `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
   `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
   `seq.fillWeightedIndexByCheckedFrom`, `seq.fillWeightedIndexU32ByFrom`,
@@ -412,7 +417,8 @@ Use:
   `seq.sampleWeightedIndicesU32ByIndexCheckedFrom`,
   `seq.sampleWeightedIndexVecByIndexFrom`, and
   `seq.sampleWeightedIndexVecByIndexCheckedFrom` for Rust
-  `index::sample_weighted(rng, length, |index| ...)`-style workflows, plus
+  `index::sample_weighted(rng, length, |index| ...)`-style no-replacement
+  workflows, plus
   caller-owned `seq.sampleWeightedIndicesByIndexIntoFrom`,
   `seq.sampleWeightedIndicesByIndexIntoCheckedFrom`,
   `seq.sampleWeightedIndicesU32ByIndexIntoFrom`, and
