@@ -2048,6 +2048,47 @@ pub fn chooseWeightedByFrom(
     return items[index];
 }
 
+pub fn chooseWeightedByIndex(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !?T {
+    return chooseWeightedByIndexFrom(rng, T, Weight, items, weightFn);
+}
+
+pub fn chooseWeightedByIndexChecked(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !T {
+    return chooseWeightedByIndexCheckedFrom(rng, T, Weight, items, weightFn);
+}
+
+pub fn chooseWeightedByIndexCheckedFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !T {
+    return (try chooseWeightedByIndexFrom(source, T, Weight, items, weightFn)) orelse error.EmptyInput;
+}
+
+pub fn chooseWeightedByIndexFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !?T {
+    const index = (try weightedIndexFromIndexWeights(source, Weight, items.len, weightFn)) orelse return null;
+    return items[index];
+}
+
 pub fn fillChooseWeightedBy(
     rng: Rng,
     comptime T: type,
@@ -2311,6 +2352,47 @@ pub fn chooseWeightedConstPtrByFrom(
     return &items[index];
 }
 
+pub fn chooseWeightedConstPtrByIndex(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !?*const T {
+    return chooseWeightedConstPtrByIndexFrom(rng, T, Weight, items, weightFn);
+}
+
+pub fn chooseWeightedConstPtrByIndexChecked(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !*const T {
+    return chooseWeightedConstPtrByIndexCheckedFrom(rng, T, Weight, items, weightFn);
+}
+
+pub fn chooseWeightedConstPtrByIndexCheckedFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !*const T {
+    return (try chooseWeightedConstPtrByIndexFrom(source, T, Weight, items, weightFn)) orelse error.EmptyInput;
+}
+
+pub fn chooseWeightedConstPtrByIndexFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !?*const T {
+    const index = (try weightedIndexFromIndexWeights(source, Weight, items.len, weightFn)) orelse return null;
+    return &items[index];
+}
+
 pub fn fillChooseWeightedConstPtrBy(
     rng: Rng,
     comptime T: type,
@@ -2571,6 +2653,47 @@ pub fn chooseWeightedPtrByFrom(
     comptime weightFn: fn (*const T) Weight,
 ) !?*T {
     const index = (try weightedIndexFromItems(source, T, Weight, items, weightFn)) orelse return null;
+    return &items[index];
+}
+
+pub fn chooseWeightedPtrByIndex(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    comptime weightFn: fn (usize) Weight,
+) !?*T {
+    return chooseWeightedPtrByIndexFrom(rng, T, Weight, items, weightFn);
+}
+
+pub fn chooseWeightedPtrByIndexChecked(
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    comptime weightFn: fn (usize) Weight,
+) !*T {
+    return chooseWeightedPtrByIndexCheckedFrom(rng, T, Weight, items, weightFn);
+}
+
+pub fn chooseWeightedPtrByIndexCheckedFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    comptime weightFn: fn (usize) Weight,
+) !*T {
+    return (try chooseWeightedPtrByIndexFrom(source, T, Weight, items, weightFn)) orelse error.EmptyInput;
+}
+
+pub fn chooseWeightedPtrByIndexFrom(
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []T,
+    comptime weightFn: fn (usize) Weight,
+) !?*T {
+    const index = (try weightedIndexFromIndexWeights(source, Weight, items.len, weightFn)) orelse return null;
     return &items[index];
 }
 
@@ -11481,6 +11604,181 @@ test "chooseWeighted preserves facade/direct stream shape and invalid paths do n
     var weighted_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, chooseWeightedPtrBatchCheckedFrom(weighted_ptr_alloc.allocator(), &invalid_engine, u8, f64, 4, &invalid_mutable, &weights));
     try std.testing.expect(weighted_ptr_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "index-weighted chooseWeightedByIndex selects values and pointers" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        label: []const u8,
+        score: u8,
+    };
+    const IndexWeight = struct {
+        fn weightOf(index: usize) u32 {
+            return switch (index) {
+                1 => 1,
+                2 => 7,
+                else => 0,
+            };
+        }
+    };
+    const entries = [_]Entry{
+        .{ .label = "never", .score = 0 },
+        .{ .label = "rare", .score = 20 },
+        .{ .label = "often", .score = 30 },
+    };
+
+    var value_engine = alea.ScalarPrng.init(0x5150_f155);
+    const value = (try chooseWeightedByIndexFrom(&value_engine, Entry, u32, &entries, IndexWeight.weightOf)).?;
+    try std.testing.expect(value.score == 20 or value.score == 30);
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_f156);
+    const checked_value = try chooseWeightedByIndexCheckedFrom(&checked_engine, Entry, u32, &entries, IndexWeight.weightOf);
+    try std.testing.expect(checked_value.score == 20 or checked_value.score == 30);
+
+    var const_ptr_engine = alea.ScalarPrng.init(0x5150_f157);
+    const const_ptr = (try chooseWeightedConstPtrByIndexFrom(&const_ptr_engine, Entry, u32, &entries, IndexWeight.weightOf)).?;
+    try std.testing.expect(const_ptr.score == 20 or const_ptr.score == 30);
+    try std.testing.expect(!std.mem.eql(u8, const_ptr.label, "never"));
+
+    var checked_const_ptr_engine = alea.ScalarPrng.init(0x5150_f158);
+    const checked_const_ptr = try chooseWeightedConstPtrByIndexCheckedFrom(&checked_const_ptr_engine, Entry, u32, &entries, IndexWeight.weightOf);
+    try std.testing.expect(checked_const_ptr.score == 20 or checked_const_ptr.score == 30);
+    try std.testing.expect(!std.mem.eql(u8, checked_const_ptr.label, "never"));
+
+    var ptr_items = entries;
+    var ptr_engine = alea.ScalarPrng.init(0x5150_f159);
+    const ptr = (try chooseWeightedPtrByIndexFrom(&ptr_engine, Entry, u32, &ptr_items, IndexWeight.weightOf)).?;
+    try std.testing.expect(ptr.score == 20 or ptr.score == 30);
+    ptr.label = "selected";
+    try std.testing.expect(std.mem.eql(u8, ptr.label, "selected"));
+
+    var checked_ptr_items = entries;
+    var checked_ptr_engine = alea.ScalarPrng.init(0x5150_f15a);
+    const checked_ptr = try chooseWeightedPtrByIndexCheckedFrom(&checked_ptr_engine, Entry, u32, &checked_ptr_items, IndexWeight.weightOf);
+    try std.testing.expect(checked_ptr.score == 20 or checked_ptr.score == 30);
+    checked_ptr.label = "checked";
+    try std.testing.expect(std.mem.eql(u8, checked_ptr.label, "checked"));
+}
+
+test "index-weighted chooseWeightedByIndex preserves stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const Entry = struct {
+        value: u8,
+    };
+    const entries = [_]Entry{
+        .{ .value = 10 },
+        .{ .value = 20 },
+        .{ .value = 30 },
+        .{ .value = 40 },
+    };
+    const IndexWeight = struct {
+        fn weightOf(index: usize) f64 {
+            return switch (index) {
+                1 => 1,
+                2 => 6,
+                3 => 3,
+                else => 0,
+            };
+        }
+
+        fn single(index: usize) u32 {
+            return if (index == 2) 9 else 0;
+        }
+
+        fn zero(_: usize) u32 {
+            return 0;
+        }
+
+        fn invalid(index: usize) f64 {
+            return if (index == 1) std.math.nan(f64) else 1;
+        }
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_f15b);
+        var direct_engine = Engine.init(0x5150_f15b);
+        const rng = Rng.init(&facade_engine);
+
+        const facade = (try chooseWeightedByIndex(rng, Entry, f64, &entries, IndexWeight.weightOf)).?;
+        const direct = (try chooseWeightedByIndexFrom(&direct_engine, Entry, f64, &entries, IndexWeight.weightOf)).?;
+        try std.testing.expectEqual(facade.value, direct.value);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked = try chooseWeightedByIndexChecked(rng, Entry, f64, &entries, IndexWeight.weightOf);
+        const direct_checked = try chooseWeightedByIndexCheckedFrom(&direct_engine, Entry, f64, &entries, IndexWeight.weightOf);
+        try std.testing.expectEqual(facade_checked.value, direct_checked.value);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_const_ptr = (try chooseWeightedConstPtrByIndex(rng, Entry, f64, &entries, IndexWeight.weightOf)).?;
+        const direct_const_ptr = (try chooseWeightedConstPtrByIndexFrom(&direct_engine, Entry, f64, &entries, IndexWeight.weightOf)).?;
+        try std.testing.expectEqual(@intFromPtr(facade_const_ptr) - @intFromPtr(&entries[0]), @intFromPtr(direct_const_ptr) - @intFromPtr(&entries[0]));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_const_ptr = try chooseWeightedConstPtrByIndexChecked(rng, Entry, f64, &entries, IndexWeight.weightOf);
+        const direct_checked_const_ptr = try chooseWeightedConstPtrByIndexCheckedFrom(&direct_engine, Entry, f64, &entries, IndexWeight.weightOf);
+        try std.testing.expectEqual(@intFromPtr(facade_checked_const_ptr) - @intFromPtr(&entries[0]), @intFromPtr(direct_checked_const_ptr) - @intFromPtr(&entries[0]));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_ptr_items = entries;
+        var direct_ptr_items = entries;
+        const facade_ptr = (try chooseWeightedPtrByIndex(rng, Entry, f64, &facade_ptr_items, IndexWeight.weightOf)).?;
+        const direct_ptr = (try chooseWeightedPtrByIndexFrom(&direct_engine, Entry, f64, &direct_ptr_items, IndexWeight.weightOf)).?;
+        try std.testing.expectEqual(@intFromPtr(facade_ptr) - @intFromPtr(&facade_ptr_items[0]), @intFromPtr(direct_ptr) - @intFromPtr(&direct_ptr_items[0]));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_checked_ptr_items = entries;
+        var direct_checked_ptr_items = entries;
+        const facade_checked_ptr = try chooseWeightedPtrByIndexChecked(rng, Entry, f64, &facade_checked_ptr_items, IndexWeight.weightOf);
+        const direct_checked_ptr = try chooseWeightedPtrByIndexCheckedFrom(&direct_engine, Entry, f64, &direct_checked_ptr_items, IndexWeight.weightOf);
+        try std.testing.expectEqual(@intFromPtr(facade_checked_ptr) - @intFromPtr(&facade_checked_ptr_items[0]), @intFromPtr(direct_checked_ptr) - @intFromPtr(&direct_checked_ptr_items[0]));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var single_engine = alea.ScalarPrng.init(0x5150_f15c);
+    var single_control = alea.ScalarPrng.init(0x5150_f15c);
+    try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedByIndexFrom(&single_engine, Entry, u32, &entries, IndexWeight.single)).?.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedByIndexCheckedFrom(&single_engine, Entry, u32, &entries, IndexWeight.single)).value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedConstPtrByIndexFrom(&single_engine, Entry, u32, &entries, IndexWeight.single)).?.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedConstPtrByIndexCheckedFrom(&single_engine, Entry, u32, &entries, IndexWeight.single)).value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    var single_mutable = entries;
+    try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedPtrByIndexFrom(&single_engine, Entry, u32, &single_mutable, IndexWeight.single)).?.value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    try std.testing.expectEqual(@as(u8, 30), (try chooseWeightedPtrByIndexCheckedFrom(&single_engine, Entry, u32, &single_mutable, IndexWeight.single)).value);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    const BadEntry = struct {
+        value: u8,
+    };
+    const empty_entries = [_]BadEntry{};
+    const zero_entries = [_]BadEntry{ .{ .value = 1 }, .{ .value = 2 } };
+    const bad_entries = [_]BadEntry{ .{ .value = 1 }, .{ .value = 2 } };
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_f15d);
+    var invalid_control = alea.ScalarPrng.init(0x5150_f15d);
+    try std.testing.expectEqual(@as(?BadEntry, null), try chooseWeightedByIndexFrom(&invalid_engine, BadEntry, u32, &empty_entries, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectEqual(@as(?*const BadEntry, null), try chooseWeightedConstPtrByIndexFrom(&invalid_engine, BadEntry, u32, &zero_entries, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var zero_mutable = zero_entries;
+    try std.testing.expectEqual(@as(?*BadEntry, null), try chooseWeightedPtrByIndexFrom(&invalid_engine, BadEntry, u32, &zero_mutable, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseWeightedByIndexCheckedFrom(&invalid_engine, BadEntry, u32, &empty_entries, IndexWeight.single));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseWeightedConstPtrByIndexCheckedFrom(&invalid_engine, BadEntry, u32, &zero_entries, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseWeightedPtrByIndexCheckedFrom(&invalid_engine, BadEntry, u32, &zero_mutable, IndexWeight.zero));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedByIndexFrom(&invalid_engine, BadEntry, f64, &bad_entries, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedConstPtrByIndexCheckedFrom(&invalid_engine, BadEntry, f64, &bad_entries, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var bad_mutable = bad_entries;
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrByIndexCheckedFrom(&invalid_engine, BadEntry, f64, &bad_mutable, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 

@@ -374,7 +374,12 @@ Use:
   `seq.weightedIndexBatchByIndexFrom`,
   `seq.weightedIndexBatchByIndexCheckedFrom`,
   `seq.weightedIndexU32BatchByIndexFrom`,
-  `seq.weightedIndexU32BatchByIndexCheckedFrom`, `seq.weightedIndexByFrom`,
+  `seq.weightedIndexU32BatchByIndexCheckedFrom`,
+  `seq.chooseWeightedByIndexFrom`, `seq.chooseWeightedByIndexCheckedFrom`,
+  `seq.chooseWeightedConstPtrByIndexFrom`,
+  `seq.chooseWeightedConstPtrByIndexCheckedFrom`,
+  `seq.chooseWeightedPtrByIndexFrom`,
+  `seq.chooseWeightedPtrByIndexCheckedFrom`, `seq.weightedIndexByFrom`,
   `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
   `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
   `seq.fillWeightedIndexByCheckedFrom`, `seq.fillWeightedIndexU32ByFrom`,
@@ -397,7 +402,14 @@ Use:
   `seq.weightedIndexBatchByIndexFrom`,
   `seq.weightedIndexBatchByIndexCheckedFrom`,
   `seq.weightedIndexU32BatchByIndexFrom`, and
-  `seq.weightedIndexU32BatchByIndexCheckedFrom`, plus accessor-based
+  `seq.weightedIndexU32BatchByIndexCheckedFrom`, plus index-weighted
+  value/const-pointer/mutable-pointer choices
+  `seq.chooseWeightedByIndexFrom`,
+  `seq.chooseWeightedByIndexCheckedFrom`,
+  `seq.chooseWeightedConstPtrByIndexFrom`,
+  `seq.chooseWeightedConstPtrByIndexCheckedFrom`,
+  `seq.chooseWeightedPtrByIndexFrom`, and
+  `seq.chooseWeightedPtrByIndexCheckedFrom`, plus accessor-based
   `seq.weightedIndexByFrom`,
   `seq.weightedIndexByCheckedFrom`, `seq.weightedIndexU32ByFrom`,
   `seq.weightedIndexU32ByCheckedFrom`, `seq.fillWeightedIndexByFrom`,
@@ -422,7 +434,8 @@ Use:
   `choose_weighted_iter(...).take(n).collect()` when weights are fields or
   derived from items instead of parallel slices, and allocation-returning
   repeated length/index-weight index batches for `index::sample_weighted`-style
-  index weight accessors
+  index weight accessors, while `chooseWeighted*ByIndex` maps those
+  length/index-weight choices back to values or pointers
 - `seq.sampleWeightedIndices`, `seq.sampleWeightedIndicesFrom`,
   `seq.sampleWeightedIndicesCheckedFrom`, `seq.sampleWeightedIndicesU32From`,
   `seq.sampleWeightedIndicesU32CheckedFrom`, `seq.sampleWeightedIndexVecFrom`,
