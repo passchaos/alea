@@ -25,7 +25,7 @@ const examples = [_]Example{
     .{
         .path = "examples/weighted_sampling.zig",
         .step = "zig build run-weighted-sampling",
-        .source_tokens = &.{ "one-shot weighted u32 index", "weighted index batch", "weighted u32 index batch", "generic weighted index", "generic weighted u32 index", "weighted choice sample u32 index", "weighted choice u32 indices", "WeightedChoice.indicesU32From", "WeightedChoice.valuesFrom", "WeightedChoice.ptrsFrom", "weighted ptrs into", "weighted no-replacement ptrs", "weighted u32 no-replacement indices", "weighted IndexVec", "weighted u32 index array", "weighted u32 indices into" },
+        .source_tokens = &.{ "one-shot weighted u32 index", "weighted index batch", "weighted u32 index batch", "weighted value batch", "generic weighted index", "generic weighted u32 index", "weighted choice sample u32 index", "weighted choice u32 indices", "WeightedChoice.indicesU32From", "WeightedChoice.valuesFrom", "WeightedChoice.ptrsFrom", "weighted ptrs into", "weighted no-replacement ptrs", "weighted u32 no-replacement indices", "weighted IndexVec", "weighted u32 index array", "weighted u32 indices into" },
     },
     .{
         .path = "examples/sequence_sampling.zig",

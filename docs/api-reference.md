@@ -176,7 +176,11 @@ stability expectations.
   `fillWeightedIndexU32From`, `fillWeightedIndexU32Checked`,
   `fillWeightedIndexU32CheckedFrom`, `weightedIndexU32Batch`,
   `weightedIndexU32BatchFrom`, `weightedIndexU32BatchChecked`,
-  `weightedIndexU32BatchCheckedFrom`,
+  `weightedIndexU32BatchCheckedFrom`, `chooseWeighted`, `chooseWeightedFrom`,
+  `fillChooseWeighted`, `fillChooseWeightedFrom`, `fillChooseWeightedChecked`,
+  `fillChooseWeightedCheckedFrom`, `chooseWeightedBatch`,
+  `chooseWeightedBatchFrom`, `chooseWeightedBatchChecked`,
+  `chooseWeightedBatchCheckedFrom`,
   `sampleWithoutReplacement`, `sampleWithoutReplacementFrom`,
   `sampleWithoutReplacementChecked`, `sampleWithoutReplacementCheckedFrom`
 - Iterator types: `ValueIterator(T)`, `ValueIteratorFrom(Source, T)`,
@@ -2485,7 +2489,11 @@ Dynamic weighted helpers:
   `fillWeightedIndexU32Checked`, `fillWeightedIndexU32CheckedFrom`,
   `weightedIndexU32Batch`, `weightedIndexU32BatchFrom`,
   `weightedIndexU32BatchChecked`, `weightedIndexU32BatchCheckedFrom`,
-  `weightedIndexU32Checked`, `weightedIndexU32CheckedFrom`
+  `weightedIndexU32Checked`, `weightedIndexU32CheckedFrom`,
+  `fillChooseWeighted`, `fillChooseWeightedFrom`,
+  `fillChooseWeightedChecked`, `fillChooseWeightedCheckedFrom`,
+  `chooseWeightedBatch`, `chooseWeightedBatchFrom`, `chooseWeightedBatchChecked`,
+  `chooseWeightedBatchCheckedFrom`
 - Weighted one-shot slices: `chooseWeighted`, `chooseWeightedFrom`,
   `chooseWeightedChecked`, `chooseWeightedCheckedFrom`,
   `chooseWeightedConstPtr`, `chooseWeightedConstPtrFrom`,
