@@ -38,7 +38,11 @@ const examples = [_]Example{
         .source_tokens = &.{ "chooseMultiplePtrsInto", "reservoirSamplePtrsInto", "weighted ptrs into" },
     },
     .{ .path = "examples/multivariate_sampling.zig", .step = "zig build run-multivariate-sampling" },
-    .{ .path = "examples/string_generation.zig", .step = "zig build run-string-generation" },
+    .{
+        .path = "examples/string_generation.zig",
+        .step = "zig build run-string-generation",
+        .source_tokens = &.{ "unicode scalar fill", "unicode scalar batch", "unicodeScalarBatch", "fillUnicodeScalar" },
+    },
     .{ .path = "examples/unit_geometry.zig", .step = "zig build run-unit-geometry" },
 };
 

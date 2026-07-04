@@ -104,7 +104,8 @@ stability expectations.
   `vectorStandardNormalFrom`, `vectorNormalFrom`, `vectorNormalCheckedFrom`,
   `vectorStandardExponentialFrom`, `vectorExponentialFrom`,
   `vectorExponentialCheckedFrom`
-- Unicode: `unicodeScalar`, `unicodeScalarFrom`
+- Unicode: `unicodeScalar`, `unicodeScalarFrom`, `fillUnicodeScalar`,
+  `fillUnicodeScalarFrom`, `unicodeScalarBatch`, `unicodeScalarBatchFrom`
 - Distributions: `standardNormal`, `standardNormalFrom`, `normal`,
   `normalChecked`, `normalCheckedFrom`, `standardExponential`,
   `standardExponentialFrom`, `exponential`, `exponentialChecked`,

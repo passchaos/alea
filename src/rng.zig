@@ -1967,11 +1967,30 @@ pub fn unicodeScalar(self: Rng) u21 {
     return unicodeScalarFrom(self);
 }
 
+pub fn fillUnicodeScalar(self: Rng, dest: []u21) void {
+    fillUnicodeScalarFrom(self, dest);
+}
+
+pub fn unicodeScalarBatch(self: Rng, allocator: std.mem.Allocator, count: usize) ![]u21 {
+    return unicodeScalarBatchFrom(self, allocator, count);
+}
+
+pub fn unicodeScalarBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize) ![]u21 {
+    const out = try allocator.alloc(u21, count);
+    errdefer allocator.free(out);
+    fillUnicodeScalarFrom(source, out);
+    return out;
+}
+
 pub fn unicodeScalarFrom(source: anytype) u21 {
     const gap_size = 0xDFFF - 0xD800 + 1;
     var scalar = intRangeLessThanFrom(source, u21, gap_size, 0x11_0000);
     if (scalar <= 0xDFFF) scalar -= gap_size;
     return scalar;
+}
+
+pub fn fillUnicodeScalarFrom(source: anytype, dest: []u21) void {
+    for (dest) |*item| item.* = unicodeScalarFrom(source);
 }
 
 pub fn normal(self: Rng, comptime T: type, mean: T, stddev: T) T {
@@ -2853,6 +2872,27 @@ test "rng facade covers scalar APIs" {
     try std.testing.expect(direct_scalar < 0xD800 or direct_scalar > 0xDFFF);
     try std.testing.expect(direct_scalar < 0x11_0000);
 
+    var unicode_scalar_buf: [8]u21 = undefined;
+    rng.fillUnicodeScalar(&unicode_scalar_buf);
+    for (unicode_scalar_buf) |item| {
+        try std.testing.expect(item < 0xD800 or item > 0xDFFF);
+        try std.testing.expect(item < 0x11_0000);
+    }
+
+    var direct_unicode_scalar_buf: [8]u21 = undefined;
+    Rng.fillUnicodeScalarFrom(&engine, &direct_unicode_scalar_buf);
+    for (direct_unicode_scalar_buf) |item| {
+        try std.testing.expect(item < 0xD800 or item > 0xDFFF);
+        try std.testing.expect(item < 0x11_0000);
+    }
+
+    const unicode_scalar_owned = try rng.unicodeScalarBatch(std.testing.allocator, 8);
+    defer std.testing.allocator.free(unicode_scalar_owned);
+    for (unicode_scalar_owned) |item| {
+        try std.testing.expect(item < 0xD800 or item > 0xDFFF);
+        try std.testing.expect(item < 0x11_0000);
+    }
+
     var buf: [16]u16 = undefined;
     rng.fill(u16, &buf);
     var any_non_zero = false;
@@ -3511,6 +3551,35 @@ test "value and vector sampling have stable snapshots" {
     try std.testing.expectEqual(@Vector(8, bool){ false, false, false, false, false, false, false, false }, rng.vectorChance(@Vector(8, bool), 0.25));
     try std.testing.expectEqual(@Vector(8, bool){ true, false, false, false, false, false, false, false }, rng.vectorRatio(@Vector(8, bool), 3, 8));
     try std.testing.expectEqual(@as(u64, 0x931f893ca11f58de), engine.next());
+}
+
+test "unicode scalar fills and batches preserve scalar stream shape" {
+    const alea = @import("root.zig");
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var manual = Engine.init(0x5150_97a0);
+        var filled = Engine.init(0x5150_97a0);
+
+        var manual_buf: [8]u21 = undefined;
+        for (&manual_buf) |*item| item.* = unicodeScalarFrom(&manual);
+
+        var filled_buf: [8]u21 = undefined;
+        fillUnicodeScalarFrom(&filled, &filled_buf);
+
+        try std.testing.expectEqualSlices(u21, &manual_buf, &filled_buf);
+        try std.testing.expectEqual(manual.next(), filled.next());
+
+        var owned_manual = Engine.init(0x5150_97a1);
+        var owned = Engine.init(0x5150_97a1);
+        var owned_manual_buf: [8]u21 = undefined;
+        for (&owned_manual_buf) |*item| item.* = unicodeScalarFrom(&owned_manual);
+
+        const owned_buf = try unicodeScalarBatchFrom(&owned, std.testing.allocator, 8);
+        defer std.testing.allocator.free(owned_buf);
+
+        try std.testing.expectEqualSlices(u21, &owned_manual_buf, owned_buf);
+        try std.testing.expectEqual(owned_manual.next(), owned.next());
+    }
 }
 
 test "duration range sampling has stable snapshots" {
@@ -4703,6 +4772,25 @@ test "owned standard normal and exponential batches allocate before consuming ra
     var exponential_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, standardExponentialBatchFrom(&engine, f64, exponential_alloc.allocator(), 8));
     try std.testing.expect(exponential_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "owned unicode scalar batches allocate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_97a2);
+    var control = alea.ScalarPrng.init(0x5150_97a2);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.unicodeScalarBatch(empty_alloc.allocator(), 0);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, unicodeScalarBatchFrom(&engine, alloc.allocator(), 8));
+    try std.testing.expect(alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

@@ -25,6 +25,11 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(custom_alloc);
 
     const scalar = alea.ascii.unicodeScalarFrom(&engine);
+    const rng = alea.Rng.init(&engine);
+    var scalar_fill: [4]u21 = undefined;
+    rng.fillUnicodeScalar(&scalar_fill);
+    const scalar_batch = try rng.unicodeScalarBatch(allocator, 4);
+    defer allocator.free(scalar_batch);
     const utf8 = try alea.ascii.unicodeUtf8AllocFrom(allocator, &engine, 6);
     defer allocator.free(utf8);
 
@@ -40,9 +45,11 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("custom charset fill: {s}\n", .{custom_buf});
     try stdout.print("custom charset alloc: {s}\n", .{custom_alloc});
     try stdout.print("unicode scalar: U+{X:0>4}\n", .{scalar});
+    try stdout.print("unicode scalar fill: {any}\n", .{scalar_fill});
+    try stdout.print("unicode scalar batch: {any}\n", .{scalar_batch});
     try stdout.print("unicode utf8 alloc: {s}\n", .{utf8});
     try stdout.print("unicode utf8 into: {s}\n", .{utf8_into});
     try stdout.print("empty charset checked result: {s}\n", .{empty_checked_name});
-    try stdout.print("\nUse predefined ASCII charsets for common tokens, Charset for custom alphabets and diagnostics, and unicodeUtf8Capacity/unicodeUtf8Into for caller-owned UTF-8 buffers.\n", .{});
+    try stdout.print("\nUse predefined ASCII charsets for common tokens, Charset for custom alphabets and diagnostics, unicodeScalarBatch/fillUnicodeScalar for codepoint batches, and unicodeUtf8Capacity/unicodeUtf8Into for caller-owned UTF-8 buffers.\n", .{});
     try stdout.flush();
 }
