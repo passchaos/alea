@@ -10,6 +10,14 @@ const Tool = struct {
     build_token: []const u8 = "",
 };
 
+const doccheck_dependencies = [_][]const u8{
+    "doccheck_step.dependOn(&run_apicheck.step)",
+    "doccheck_step.dependOn(&run_examplecheck.step)",
+    "doccheck_step.dependOn(&run_toolingcheck.step)",
+    "doccheck_step.dependOn(&run_readmecheck.step)",
+    "doccheck_step.dependOn(&run_roadmapcheck.step)",
+};
+
 const build_steps = [_]BuildStep{
     .{ .name = "run-basic", .build_token = "b.step(\"run-basic\"" },
     .{ .name = "run-vector-profiles", .build_token = "b.step(\"run-vector-profiles\"" },
@@ -240,6 +248,12 @@ pub fn main(init: std.process.Init) !void {
     if (std.mem.indexOf(u8, build, "validate_step.dependOn(doccheck_step)") == null) {
         try stderr.print("toolingcheck: zig build validate must depend on doccheck\n", .{});
         missing += 1;
+    }
+    inline for (doccheck_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: doccheck missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
     }
 
     if (missing != 0) {

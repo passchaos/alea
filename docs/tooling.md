@@ -12,7 +12,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build test` | Run unit tests and API reference coverage checks. |
 | `zig build apicheck` | Verify public symbols are covered by `docs/api-reference.md`. |
 | `zig build examplecheck` | Verify `docs/examples.md` covers every checked-in runnable example/focused `run-*` step and that key examples still contain expected adoption-output tokens. |
-| `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step and checked-in tool file. |
+| `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step/checked-in tool file and that doccheck runs every documentation/catalog checker. |
 | `zig build readmecheck` | Verify README discovery links, quick-start API tokens, and core validation commands stay visible. |
 | `zig build roadmapcheck` | Verify roadmap, active-audit milestone evidence, and concrete S4-M11 blocker tokens stay synchronized. |
 | `zig build doccheck` | Run API, examples, tooling, README, and roadmap documentation checks together. |
@@ -186,7 +186,7 @@ new helpers that need documentation.
 | `tools/statcheck.zig` | Statistical smoke checker. |
 | `tools/stream.zig` | Raw RNG byte stream exporter. |
 | `tools/student_t_probe.zig` | StudentT special-case performance probe. |
-| `tools/toolingcheck.zig` | Build/tooling catalog checker. |
+| `tools/toolingcheck.zig` | Build/tooling catalog and doccheck dependency checker. |
 | `tools/triangular_probe.zig` | Triangular performance probe. |
 | `tools/unit_geometry_probe.zig` | Unit geometry performance probe. |
 | `tools/weibull_probe.zig` | Weibull performance probe. |
