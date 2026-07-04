@@ -108,6 +108,22 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleWeightedIntoFrom(&weighted_into_engine, []const u8, f64, &items, &float_weights, &weighted_into_values, &weighted_into_indices, &weighted_into_keys);
     try printStringSlice(stdout, "weighted values into", &weighted_into_values);
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/index/pointer no-replacement, caller-owned index/value buffers, and fixed-size value/pointer array workflows.\n", .{});
+    var weighted_ptrs_into_engine = alea.ScalarPrng.init(0x7161);
+    var weighted_ptrs_into: [3]*const []const u8 = undefined;
+    var weighted_ptrs_indices: [3]usize = undefined;
+    var weighted_ptrs_keys: [3]f64 = undefined;
+    _ = try alea.seq.sampleWeightedPtrsIntoFrom(&weighted_ptrs_into_engine, []const u8, f64, &items, &float_weights, &weighted_ptrs_into, &weighted_ptrs_indices, &weighted_ptrs_keys);
+    try stdout.print("weighted ptrs into: [{s}, {s}, {s}]\n", .{ weighted_ptrs_into[0].*, weighted_ptrs_into[1].*, weighted_ptrs_into[2].* });
+
+    var weighted_mut_ptrs_into_engine = alea.ScalarPrng.init(0x7162);
+    var weighted_scores_into = [_]u8{ 10, 20, 30, 40 };
+    var weighted_mut_ptrs_into: [3]*u8 = undefined;
+    var weighted_mut_ptrs_indices: [3]usize = undefined;
+    var weighted_mut_ptrs_keys: [3]f64 = undefined;
+    _ = try alea.seq.sampleWeightedMutPtrsIntoFrom(&weighted_mut_ptrs_into_engine, u8, f64, &weighted_scores_into, &float_weights, &weighted_mut_ptrs_into, &weighted_mut_ptrs_indices, &weighted_mut_ptrs_keys);
+    for (weighted_mut_ptrs_into) |score| score.* += 5;
+    try stdout.print("weighted mut ptrs into scores: {any}\n", .{weighted_scores_into});
+
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for item/index/pointer no-replacement, caller-owned index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }
