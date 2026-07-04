@@ -297,6 +297,31 @@ pub fn chooseMultipleFrom(allocator: std.mem.Allocator, source: anytype, comptim
     return out;
 }
 
+pub fn chooseMultipleInto(rng: Rng, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!usize {
+    return chooseMultipleIntoFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn chooseMultipleIntoFrom(source: anytype, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!usize {
+    const count = @min(out.len, items.len);
+    if (count == 0) return 0;
+    if (scratch_indices.len < count) return error.LengthMismatch;
+    try sampleIndicesIntoCheckedFrom(source, items.len, scratch_indices[0..count]);
+    for (scratch_indices[0..count], out[0..count]) |index, *slot| slot.* = items[index];
+    return count;
+}
+
+pub fn chooseMultipleIntoChecked(rng: Rng, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!void {
+    return chooseMultipleIntoCheckedFrom(rng, T, items, out, scratch_indices);
+}
+
+pub fn chooseMultipleIntoCheckedFrom(source: anytype, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!void {
+    if (out.len > items.len) return error.InvalidParameter;
+    if (out.len == 0) return;
+    if (scratch_indices.len < out.len) return error.LengthMismatch;
+    try sampleIndicesIntoCheckedFrom(source, items.len, scratch_indices[0..out.len]);
+    for (scratch_indices[0..out.len], out) |index, *slot| slot.* = items[index];
+}
+
 pub fn chooseArray(rng: Rng, comptime T: type, comptime N: usize, items: []const T) ?[N]T {
     return chooseArrayFrom(rng, T, N, items);
 }
@@ -3103,6 +3128,63 @@ test "chooseArray returns fixed-size item samples" {
     try std.testing.expectEqual(@as(usize, 0), empty.len);
     try std.testing.expect(chooseArrayFrom(&facade_engine, u8, 9, &items) == null);
     try std.testing.expectError(error.InvalidParameter, chooseArrayCheckedFrom(&facade_engine, u8, 9, &items));
+}
+
+test "chooseMultipleInto fills caller-owned item buffers" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    var optional_engine = alea.ScalarPrng.init(0x5150_c101);
+    var optional_out: [8]u8 = undefined;
+    var optional_indices: [8]usize = undefined;
+    const filled = try chooseMultipleIntoFrom(&optional_engine, u8, &items, &optional_out, &optional_indices);
+    try std.testing.expectEqual(@as(usize, items.len), filled);
+    for (optional_out[0..filled]) |item| try std.testing.expect(std.mem.indexOfScalar(u8, &items, item) != null);
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_c102);
+    var checked_out: [3]u8 = undefined;
+    var checked_indices: [3]usize = undefined;
+    try chooseMultipleIntoCheckedFrom(&checked_engine, u8, &items, &checked_out, &checked_indices);
+    for (checked_out[0..]) |item| try std.testing.expect(std.mem.indexOfScalar(u8, &items, item) != null);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_c103);
+    var empty_control = alea.ScalarPrng.init(0x5150_c103);
+    var empty_out: [0]u8 = .{};
+    var empty_indices: [0]usize = .{};
+    try std.testing.expectEqual(@as(usize, 0), try chooseMultipleIntoFrom(&empty_engine, u8, &items, &empty_out, &empty_indices));
+    try chooseMultipleIntoCheckedFrom(&empty_engine, u8, &items, &empty_out, &empty_indices);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "chooseMultipleInto preserves facade/direct stream shape and invalid paths do not consume" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c104);
+        var direct_engine = Engine.init(0x5150_c104);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_out: [3]u8 = undefined;
+        var direct_out: [3]u8 = undefined;
+        var facade_indices: [3]usize = undefined;
+        var direct_indices: [3]usize = undefined;
+        try std.testing.expectEqual(try chooseMultipleInto(rng, u8, &items, &facade_out, &facade_indices), try chooseMultipleIntoFrom(&direct_engine, u8, &items, &direct_out, &direct_indices));
+        try std.testing.expectEqualSlices(u8, &facade_out, &direct_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_c105);
+    var invalid_control = alea.ScalarPrng.init(0x5150_c105);
+    var out: [3]u8 = undefined;
+    var short_indices: [2]usize = undefined;
+    try std.testing.expectError(error.LengthMismatch, chooseMultipleIntoFrom(&invalid_engine, u8, &items, &out, &short_indices));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var too_many: [6]u8 = undefined;
+    var enough_indices: [6]usize = undefined;
+    try std.testing.expectError(error.InvalidParameter, chooseMultipleIntoCheckedFrom(&invalid_engine, u8, &items, &too_many, &enough_indices));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "invalid chooseArray helpers do not consume random stream" {
