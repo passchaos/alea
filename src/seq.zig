@@ -1288,6 +1288,47 @@ pub fn sampleWeightedIndicesIntoCheckedFrom(source: anytype, comptime Weight: ty
     sampleWeightedIndicesIntoExactFrom(source, Weight, weights, out, scratch_keys[0..out.len]);
 }
 
+pub fn sampleWeightedIndicesU32Into(rng: Rng, comptime Weight: type, weights: []const Weight, out: []u32, scratch_keys: []f64) Error!usize {
+    return sampleWeightedIndicesU32IntoFrom(rng, Weight, weights, out, scratch_keys);
+}
+
+pub fn sampleWeightedIndicesU32IntoFrom(source: anytype, comptime Weight: type, weights: []const Weight, out: []u32, scratch_keys: []f64) Error!usize {
+    if (out.len == 0) return 0;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (weights.len == 0) return error.EmptyInput;
+    if (weights.len > std.math.maxInt(u32)) return error.InvalidParameter;
+
+    const positive = try countPositiveWeights(Weight, weights);
+    const count = @min(out.len, positive);
+    if (count == 0) return 0;
+    if (positive == 1) {
+        out[0] = @intCast((try singlePositiveWeightIndex(Weight, weights)).?);
+        return 1;
+    }
+
+    sampleWeightedIndicesU32IntoExactFrom(source, Weight, weights, out[0..count], scratch_keys[0..count]);
+    return count;
+}
+
+pub fn sampleWeightedIndicesU32IntoChecked(rng: Rng, comptime Weight: type, weights: []const Weight, out: []u32, scratch_keys: []f64) Error!void {
+    return sampleWeightedIndicesU32IntoCheckedFrom(rng, Weight, weights, out, scratch_keys);
+}
+
+pub fn sampleWeightedIndicesU32IntoCheckedFrom(source: anytype, comptime Weight: type, weights: []const Weight, out: []u32, scratch_keys: []f64) Error!void {
+    if (out.len == 0) return;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (out.len > weights.len or weights.len > std.math.maxInt(u32)) return error.InvalidParameter;
+
+    const positive = try countPositiveWeights(Weight, weights);
+    if (positive < out.len) return error.InvalidParameter;
+    if (positive == 1) {
+        out[0] = @intCast((try singlePositiveWeightIndex(Weight, weights)).?);
+        return;
+    }
+
+    sampleWeightedIndicesU32IntoExactFrom(source, Weight, weights, out, scratch_keys[0..out.len]);
+}
+
 pub fn sampleWeightedIndexArray(rng: Rng, comptime Weight: type, comptime N: usize, weights: []const Weight) Error!?[N]usize {
     return sampleWeightedIndexArrayFrom(rng, Weight, N, weights);
 }
@@ -1335,6 +1376,34 @@ fn sampleWeightedIndicesIntoExactFrom(source: anytype, comptime Weight: type, we
     sortWeightedIndexKeyPairs(out, keys);
 }
 
+fn sampleWeightedIndicesU32IntoExactFrom(source: anytype, comptime Weight: type, weights: []const Weight, out: []u32, keys: []f64) void {
+    std.debug.assert(out.len > 0);
+    std.debug.assert(keys.len == out.len);
+    std.debug.assert(weights.len <= std.math.maxInt(u32));
+
+    var count: usize = 0;
+    for (weights, 0..) |weight, index| {
+        const value = weightAsF64(Weight, weight);
+        std.debug.assert(value >= 0 and std.math.isFinite(value));
+        if (value == 0) continue;
+
+        const key = weightedSelectionKeyFrom(source, value);
+        if (count < out.len) {
+            out[count] = @intCast(index);
+            keys[count] = key;
+            count += 1;
+        } else {
+            const min_index = minWeightedKeyIndex(keys);
+            if (key > keys[min_index]) {
+                out[min_index] = @intCast(index);
+                keys[min_index] = key;
+            }
+        }
+    }
+    std.debug.assert(count == out.len);
+    sortWeightedU32IndexKeyPairs(out, keys);
+}
+
 fn minWeightedKeyIndex(keys: []const f64) usize {
     std.debug.assert(keys.len > 0);
     var min_index: usize = 0;
@@ -1351,6 +1420,18 @@ fn sortWeightedIndexKeyPairs(indices: []usize, keys: []f64) void {
         var j = i;
         while (j > 0 and keys[j] < keys[j - 1]) : (j -= 1) {
             std.mem.swap(usize, &indices[j], &indices[j - 1]);
+            std.mem.swap(f64, &keys[j], &keys[j - 1]);
+        }
+    }
+}
+
+fn sortWeightedU32IndexKeyPairs(indices: []u32, keys: []f64) void {
+    std.debug.assert(indices.len == keys.len);
+    var i: usize = 1;
+    while (i < indices.len) : (i += 1) {
+        var j = i;
+        while (j > 0 and keys[j] < keys[j - 1]) : (j -= 1) {
+            std.mem.swap(u32, &indices[j], &indices[j - 1]);
             std.mem.swap(f64, &keys[j], &keys[j - 1]);
         }
     }
@@ -1414,13 +1495,10 @@ fn sampleWeightedIndexVecExactFrom(allocator: std.mem.Allocator, source: anytype
     if (weights.len <= std.math.maxInt(u32)) {
         const out = try allocator.alloc(u32, amount);
         errdefer allocator.free(out);
-        const scratch = try allocator.alloc(usize, amount);
-        defer allocator.free(scratch);
         const keys = try allocator.alloc(f64, amount);
         defer allocator.free(keys);
 
-        sampleWeightedIndicesIntoExactFrom(source, Weight, weights, scratch, keys);
-        for (scratch, out) |index, *slot| slot.* = @intCast(index);
+        sampleWeightedIndicesU32IntoExactFrom(source, Weight, weights, out, keys);
         return .{ .u32 = out };
     }
 
@@ -3353,6 +3431,18 @@ test "single-positive weighted no-replacement does not consume random stream" {
     defer std.testing.allocator.free(checked_sample);
     try std.testing.expectEqualSlices(u8, &.{20}, checked_sample);
     try std.testing.expectEqual(control.next(), engine.next());
+
+    const index_vec = try sampleWeightedIndexVecFrom(std.testing.allocator, &engine, u32, &weights, 2);
+    defer index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 1), index_vec.len());
+    try std.testing.expectEqual(@as(usize, 1), index_vec.at(0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var u32_out: [3]u32 = undefined;
+    var u32_keys: [3]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 1), try sampleWeightedIndicesU32IntoFrom(&engine, u32, &weights, &u32_out, &u32_keys));
+    try std.testing.expectEqual(@as(u32, 1), u32_out[0]);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "empty optional iterator choices do not consume random stream" {
@@ -5097,6 +5187,15 @@ test "weighted sampling without replacement returns distinct positive-weight ite
         try std.testing.expect(weights[index] > 0);
     }
 
+    var u32_out: [4]u32 = undefined;
+    var u32_keys: [4]f64 = undefined;
+    const u32_count = try sampleWeightedIndicesU32IntoFrom(&engine, f64, &weights, &u32_out, &u32_keys);
+    try std.testing.expectEqual(@as(usize, 3), u32_count);
+    for (u32_out[0..u32_count]) |index| {
+        try std.testing.expect(index < weights.len);
+        try std.testing.expect(weights[index] > 0);
+    }
+
     const checked_indices = try sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, f64, &weights, 3);
     defer std.testing.allocator.free(checked_indices);
     try std.testing.expectEqual(@as(usize, 3), checked_indices.len);
@@ -5104,6 +5203,14 @@ test "weighted sampling without replacement returns distinct positive-weight ite
     const checked_index_vec = try sampleWeightedIndexVecCheckedFrom(std.testing.allocator, &engine, f64, &weights, 3);
     defer checked_index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 3), checked_index_vec.len());
+
+    var checked_u32_out: [3]u32 = undefined;
+    var checked_u32_keys: [3]f64 = undefined;
+    try sampleWeightedIndicesU32IntoCheckedFrom(&engine, f64, &weights, &checked_u32_out, &checked_u32_keys);
+    for (checked_u32_out[0..]) |index| {
+        try std.testing.expect(index < weights.len);
+        try std.testing.expect(weights[index] > 0);
+    }
 
     const direct_sample = try sampleWeightedFrom(std.testing.allocator, &engine, u8, f64, &items, &weights, 2);
     defer std.testing.allocator.free(direct_sample);
@@ -5124,6 +5231,10 @@ test "weighted sampling without replacement returns distinct positive-weight ite
     const empty_checked_index_vec = try sampleWeightedIndexVecCheckedFrom(std.testing.allocator, &engine, f64, &.{std.math.nan(f64)}, 0);
     defer empty_checked_index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), empty_checked_index_vec.len());
+    var empty_u32_out: [0]u32 = .{};
+    var empty_u32_keys: [0]f64 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesU32IntoFrom(&engine, f64, &.{std.math.nan(f64)}, &empty_u32_out, &empty_u32_keys));
+    try sampleWeightedIndicesU32IntoCheckedFrom(&engine, f64, &.{std.math.nan(f64)}, &empty_u32_out, &empty_u32_keys);
     const empty_checked_sample = try sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{}, &.{1}, 0);
     defer std.testing.allocator.free(empty_checked_sample);
     try std.testing.expectEqual(@as(usize, 0), empty_checked_sample.len);
@@ -5134,11 +5245,14 @@ test "weighted sampling without replacement returns distinct positive-weight ite
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndices(std.testing.allocator, rng, u32, &.{}, 1));
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesFrom(std.testing.allocator, &engine, u32, &.{}, 1));
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndexVecFrom(std.testing.allocator, &engine, u32, &.{}, 1));
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesU32IntoFrom(&engine, u32, &.{}, &u32_out, &u32_keys));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesChecked(std.testing.allocator, rng, u32, &.{ 1, 2 }, 3));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesCheckedFrom(std.testing.allocator, &engine, u32, &.{ 1, 2 }, 3));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexVecCheckedFrom(std.testing.allocator, &engine, u32, &.{ 1, 2 }, 3));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32IntoCheckedFrom(&engine, u32, &.{ 1, 2 }, &checked_u32_out, &checked_u32_keys));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndices(std.testing.allocator, rng, f64, &.{ 1.0, std.math.nan(f64) }, 1));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexVecFrom(std.testing.allocator, &engine, f64, &.{ 1.0, std.math.nan(f64) }, 1));
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesU32IntoFrom(&engine, f64, &.{ 1.0, std.math.nan(f64) }, &u32_out, &u32_keys));
     try std.testing.expectError(error.LengthMismatch, sampleWeighted(std.testing.allocator, rng, u8, u32, &.{ 1, 2 }, &.{1}, 1));
     try std.testing.expectError(error.LengthMismatch, sampleWeightedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 1));
     try std.testing.expectError(error.LengthMismatch, sampleWeightedCheckedFrom(std.testing.allocator, &engine, u8, u32, &.{ 1, 2 }, &.{1}, 3));
@@ -5571,12 +5685,43 @@ test "sampleWeightedIndicesInto fills caller-owned index buffers" {
     try std.testing.expectEqual(@as(usize, 2), single_out[0]);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 
+    var optional_u32_engine = alea.ScalarPrng.init(0x5150_ba37);
+    var optional_u32_out: [4]u32 = undefined;
+    var optional_u32_keys: [4]f64 = undefined;
+    const u32_filled = try sampleWeightedIndicesU32IntoFrom(&optional_u32_engine, u32, &weights, &optional_u32_out, &optional_u32_keys);
+    try std.testing.expectEqual(@as(usize, 3), u32_filled);
+    for (optional_u32_out[0..u32_filled]) |index| {
+        try std.testing.expect(index < weights.len);
+        try std.testing.expect(weights[index] > 0);
+    }
+
+    var checked_u32_engine = alea.ScalarPrng.init(0x5150_ba38);
+    var checked_u32_out: [3]u32 = undefined;
+    var checked_u32_keys: [3]f64 = undefined;
+    try sampleWeightedIndicesU32IntoCheckedFrom(&checked_u32_engine, u32, &weights, &checked_u32_out, &checked_u32_keys);
+    for (checked_u32_out[0..]) |index| {
+        try std.testing.expect(index < weights.len);
+        try std.testing.expect(weights[index] > 0);
+    }
+
+    var single_u32_engine = alea.ScalarPrng.init(0x5150_ba39);
+    var single_u32_control = alea.ScalarPrng.init(0x5150_ba39);
+    var single_u32_out: [3]u32 = undefined;
+    var single_u32_keys: [3]f64 = undefined;
+    const single_u32_filled = try sampleWeightedIndicesU32IntoFrom(&single_u32_engine, u32, &.{ 0, 0, 7, 0, 0 }, &single_u32_out, &single_u32_keys);
+    try std.testing.expectEqual(@as(usize, 1), single_u32_filled);
+    try std.testing.expectEqual(@as(u32, 2), single_u32_out[0]);
+    try std.testing.expectEqual(single_u32_control.next(), single_u32_engine.next());
+
     var empty_engine = alea.ScalarPrng.init(0x5150_ba34);
     var empty_control = alea.ScalarPrng.init(0x5150_ba34);
     var empty_out: [0]usize = .{};
     var empty_keys: [0]f64 = .{};
     try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesIntoFrom(&empty_engine, u32, &weights, &empty_out, &empty_keys));
     try sampleWeightedIndicesIntoCheckedFrom(&empty_engine, u32, &weights, &empty_out, &empty_keys);
+    var empty_u32_out: [0]u32 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesU32IntoFrom(&empty_engine, u32, &weights, &empty_u32_out, &empty_keys));
+    try sampleWeightedIndicesU32IntoCheckedFrom(&empty_engine, u32, &weights, &empty_u32_out, &empty_keys);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 }
 
@@ -5605,6 +5750,23 @@ test "sampleWeightedIndicesInto preserves facade/direct stream shape and invalid
         try sampleWeightedIndicesIntoCheckedFrom(&direct_engine, f64, &weights, &checked_direct_out, &checked_direct_keys);
         try std.testing.expectEqualSlices(usize, &checked_facade_out, &checked_direct_out);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_u32_out: [3]u32 = undefined;
+        var direct_u32_out: [3]u32 = undefined;
+        var facade_u32_keys: [3]f64 = undefined;
+        var direct_u32_keys: [3]f64 = undefined;
+        try std.testing.expectEqual(try sampleWeightedIndicesU32Into(rng, f64, &weights, &facade_u32_out, &facade_u32_keys), try sampleWeightedIndicesU32IntoFrom(&direct_engine, f64, &weights, &direct_u32_out, &direct_u32_keys));
+        try std.testing.expectEqualSlices(u32, &facade_u32_out, &direct_u32_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_u32_out: [2]u32 = undefined;
+        var checked_direct_u32_out: [2]u32 = undefined;
+        var checked_facade_u32_keys: [2]f64 = undefined;
+        var checked_direct_u32_keys: [2]f64 = undefined;
+        try sampleWeightedIndicesU32IntoChecked(rng, f64, &weights, &checked_facade_u32_out, &checked_facade_u32_keys);
+        try sampleWeightedIndicesU32IntoCheckedFrom(&direct_engine, f64, &weights, &checked_direct_u32_out, &checked_direct_u32_keys);
+        try std.testing.expectEqualSlices(u32, &checked_facade_u32_out, &checked_direct_u32_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 
     var invalid_engine = alea.ScalarPrng.init(0x5150_ba36);
@@ -5615,6 +5777,11 @@ test "sampleWeightedIndicesInto preserves facade/direct stream shape and invalid
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     var keys: [2]f64 = undefined;
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesIntoCheckedFrom(&invalid_engine, f64, &.{ 1.0, std.math.nan(f64), 2.0 }, &out, &keys));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var u32_out: [2]u32 = undefined;
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedIndicesU32IntoFrom(&invalid_engine, f64, &weights, &u32_out, &short_keys));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesU32IntoCheckedFrom(&invalid_engine, f64, &.{ 1.0, std.math.nan(f64), 2.0 }, &u32_out, &keys));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 

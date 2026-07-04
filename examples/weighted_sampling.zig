@@ -133,6 +133,12 @@ pub fn main(init: std.process.Init) !void {
     _ = try alea.seq.sampleWeightedIndicesIntoFrom(&indices_into_engine, f64, &float_weights, &weighted_indices_into, &weighted_indices_keys);
     try stdout.print("weighted indices into: {any}\n", .{weighted_indices_into});
 
+    var u32_indices_into_engine = alea.ScalarPrng.init(0x7168);
+    var weighted_u32_indices_into: [3]u32 = undefined;
+    var weighted_u32_indices_keys: [3]f64 = undefined;
+    _ = try alea.seq.sampleWeightedIndicesU32IntoFrom(&u32_indices_into_engine, f64, &float_weights, &weighted_u32_indices_into, &weighted_u32_indices_keys);
+    try stdout.print("weighted u32 indices into: {any}\n", .{weighted_u32_indices_into});
+
     var weighted_into_engine = alea.ScalarPrng.init(0x715c);
     var weighted_into_values: [3][]const u8 = undefined;
     var weighted_into_indices: [3]usize = undefined;
@@ -156,6 +162,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_mut_ptrs_into) |score| score.* += 5;
     try stdout.print("weighted mut ptrs into scores: {any}\n", .{weighted_scores_into});
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable for repeated static weights, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }
