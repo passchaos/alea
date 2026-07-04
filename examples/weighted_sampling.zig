@@ -97,6 +97,12 @@ pub fn main(init: std.process.Init) !void {
     const choice_owned_indices_u32 = try choice.indicesU32From(allocator, &choice_engine, 8);
     defer allocator.free(choice_owned_indices_u32);
     try stdout.print("WeightedChoice.indicesU32From: {any}\n", .{choice_owned_indices_u32});
+    const choice_owned_values = try choice.valuesFrom(allocator, &choice_engine, 8);
+    defer allocator.free(choice_owned_values);
+    try printStringSlice(stdout, "WeightedChoice.valuesFrom", choice_owned_values);
+    const choice_owned_ptrs = try choice.ptrsFrom(allocator, &choice_engine, 8);
+    defer allocator.free(choice_owned_ptrs);
+    try stdout.print("WeightedChoice.ptrsFrom: [{s}, {s}, {s}, {s}, {s}, {s}, {s}, {s}]\n", .{ choice_owned_ptrs[0].*, choice_owned_ptrs[1].*, choice_owned_ptrs[2].*, choice_owned_ptrs[3].*, choice_owned_ptrs[4].*, choice_owned_ptrs[5].*, choice_owned_ptrs[6].*, choice_owned_ptrs[7].* });
 
     var no_replace_engine = alea.ScalarPrng.init(0x7156);
     const no_replace = try alea.seq.sampleWeightedFrom(allocator, &no_replace_engine, []const u8, f64, &items, &float_weights, 3);
@@ -195,6 +201,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_mut_ptrs_into) |score| score.* += 5;
     try stdout.print("weighted mut ptrs into scores: {any}\n", .{weighted_scores_into});
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable/WeightedChoice for repeated static weights including owned index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, AliasTable/WeightedChoice for repeated static weights including owned value/pointer/index batches, WeightedTree/WeightedIntTree for dynamic updates, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }

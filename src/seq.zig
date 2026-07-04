@@ -2227,6 +2227,28 @@ pub fn Choice(comptime T: type) type {
             for (dest) |*item| item.* = self.sampleValueFrom(source);
         }
 
+        pub fn ptrs(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
+            return self.ptrsFrom(allocator, rng, amount);
+        }
+
+        pub fn ptrsFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]*const T {
+            const out = try allocator.alloc(*const T, amount);
+            errdefer allocator.free(out);
+            self.fillFrom(source, out);
+            return out;
+        }
+
+        pub fn values(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]T {
+            return self.valuesFrom(allocator, rng, amount);
+        }
+
+        pub fn valuesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]T {
+            const out = try allocator.alloc(T, amount);
+            errdefer allocator.free(out);
+            self.fillValuesFrom(source, out);
+            return out;
+        }
+
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
             self.fillIndicesFrom(rng, dest);
         }
@@ -2436,6 +2458,28 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
                 return;
             }
             for (dest) |*item| item.* = self.sampleValueFrom(source);
+        }
+
+        pub fn ptrs(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
+            return self.ptrsFrom(allocator, rng, amount);
+        }
+
+        pub fn ptrsFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]*const T {
+            const out = try allocator.alloc(*const T, amount);
+            errdefer allocator.free(out);
+            self.fillFrom(source, out);
+            return out;
+        }
+
+        pub fn values(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]T {
+            return self.valuesFrom(allocator, rng, amount);
+        }
+
+        pub fn valuesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]T {
+            const out = try allocator.alloc(T, amount);
+            errdefer allocator.free(out);
+            self.fillValuesFrom(source, out);
+            return out;
         }
 
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
@@ -5426,11 +5470,19 @@ test "choice sampler repeatedly samples slice references" {
     for (pointer_buf) |item| try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
     choice.fillFrom(&engine, &pointer_buf);
     for (pointer_buf) |item| try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
+    const owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &engine, 8);
+    defer std.testing.allocator.free(owned_ptrs);
+    try std.testing.expectEqual(@as(usize, 8), owned_ptrs.len);
+    for (owned_ptrs) |item| try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
     var value_buf: [8]u8 = undefined;
     choice.fillValues(rng, &value_buf);
     for (value_buf) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
     choice.fillValuesFrom(&engine, &value_buf);
     for (value_buf) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
+    const owned_values = try choice.valuesFrom(std.testing.allocator, &engine, 8);
+    defer std.testing.allocator.free(owned_values);
+    try std.testing.expectEqual(@as(usize, 8), owned_values.len);
+    for (owned_values) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
     try std.testing.expect(chooseIter(rng, u8, &.{}) == null);
     try std.testing.expect(chooseIterFrom(&engine, u8, &.{}) == null);
     try std.testing.expectError(error.EmptyInput, chooseIterChecked(rng, u8, &.{}));
@@ -5499,9 +5551,19 @@ test "single-item choice sampler does not consume random stream" {
     for (pointer_buf) |item| try std.testing.expectEqual(&values[0], item);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &engine, 4);
+    defer std.testing.allocator.free(owned_ptrs);
+    for (owned_ptrs) |item| try std.testing.expectEqual(&values[0], item);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var value_buf: [4]u8 = undefined;
     choice.fillValuesFrom(&engine, &value_buf);
     for (value_buf) |item| try std.testing.expectEqual(@as(u8, 42), item);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_values = try choice.valuesFrom(std.testing.allocator, &engine, 4);
+    defer std.testing.allocator.free(owned_values);
+    for (owned_values) |item| try std.testing.expectEqual(@as(u8, 42), item);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var index_buf: [4]usize = undefined;
@@ -5526,6 +5588,25 @@ test "single-item choice sampler does not consume random stream" {
 
     var iter = choice.iterFrom(&engine);
     try std.testing.expectEqual(&values[0], iter.next().?);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "choice owned value and pointer allocation failure does not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_c084);
+    var control = alea.ScalarPrng.init(0x5150_c084);
+
+    const values = [_]u8{ 2, 4, 6, 8 };
+    const choice = Choice(u8).init(&values).?;
+
+    var ptrs_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, choice.ptrsFrom(ptrs_alloc.allocator(), &engine, 4));
+    try std.testing.expect(ptrs_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var values_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, choice.valuesFrom(values_alloc.allocator(), &engine, 4));
+    try std.testing.expect(values_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -5598,9 +5679,17 @@ test "weighted choice sampler maps alias indexes to items" {
     var pointer_buf: [8]*const []const u8 = undefined;
     choice.fillFrom(&engine, &pointer_buf);
     for (pointer_buf) |item| try std.testing.expect(!std.mem.eql(u8, item.*, "never"));
+    const owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &engine, 8);
+    defer std.testing.allocator.free(owned_ptrs);
+    try std.testing.expectEqual(@as(usize, 8), owned_ptrs.len);
+    for (owned_ptrs) |item| try std.testing.expect(!std.mem.eql(u8, item.*, "never"));
     var value_buf: [8][]const u8 = undefined;
     choice.fillValuesFrom(&engine, &value_buf);
     for (value_buf) |value| try std.testing.expect(!std.mem.eql(u8, value, "never"));
+    const owned_values = try choice.valuesFrom(std.testing.allocator, &engine, 8);
+    defer std.testing.allocator.free(owned_values);
+    try std.testing.expectEqual(@as(usize, 8), owned_values.len);
+    for (owned_values) |value| try std.testing.expect(!std.mem.eql(u8, value, "never"));
     var index_buf: [8]usize = undefined;
     choice.fillIndicesFrom(&engine, &index_buf);
     for (index_buf) |index| {
@@ -5684,9 +5773,19 @@ test "single-positive weighted choice does not consume random stream" {
     for (pointer_buf) |item| try std.testing.expectEqual(@as(u8, 20), item.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &engine, 4);
+    defer std.testing.allocator.free(owned_ptrs);
+    for (owned_ptrs) |item| try std.testing.expectEqual(@as(u8, 20), item.*);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var value_buf: [4]u8 = undefined;
     choice.fillValuesFrom(&engine, &value_buf);
     for (value_buf) |item| try std.testing.expectEqual(@as(u8, 20), item);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const owned_values = try choice.valuesFrom(std.testing.allocator, &engine, 4);
+    defer std.testing.allocator.free(owned_values);
+    for (owned_values) |item| try std.testing.expectEqual(@as(u8, 20), item);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var index_buf: [4]usize = undefined;
@@ -5714,7 +5813,7 @@ test "single-positive weighted choice does not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
-test "weighted choice owned index allocation failure does not consume random stream" {
+test "weighted choice owned batch allocation failure does not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_0483);
     var control = alea.ScalarPrng.init(0x5150_0483);
@@ -5722,6 +5821,16 @@ test "weighted choice owned index allocation failure does not consume random str
     const items = [_]u8{ 10, 20, 30 };
     var choice = try WeightedChoice(u8, u32).init(std.testing.allocator, &items, &.{ 1, 2, 3 });
     defer choice.deinit();
+
+    var ptrs_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, choice.ptrsFrom(ptrs_alloc.allocator(), &engine, 4));
+    try std.testing.expect(ptrs_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var values_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, choice.valuesFrom(values_alloc.allocator(), &engine, 4));
+    try std.testing.expect(values_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
 
     var indices_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, choice.indicesFrom(indices_alloc.allocator(), &engine, 4));
