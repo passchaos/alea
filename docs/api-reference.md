@@ -2415,7 +2415,17 @@ Dynamic weighted helpers:
   `sampleIndicesU32IntoChecked`, `sampleIndicesU32IntoCheckedFrom`,
   `sampleArray`, `sampleArrayFrom`, `sampleArrayChecked`,
   `sampleArrayCheckedFrom`, `sampleArrayU32`, `sampleArrayU32From`,
-  `sampleArrayU32Checked`, `sampleArrayU32CheckedFrom`
+  `sampleArrayU32Checked`, `sampleArrayU32CheckedFrom`,
+  `chooseIndex`, `chooseIndexFrom`, `chooseIndexChecked`,
+  `chooseIndexCheckedFrom`, `fillChooseIndex`, `fillChooseIndexFrom`,
+  `fillChooseIndexChecked`, `fillChooseIndexCheckedFrom`,
+  `chooseIndexBatch`, `chooseIndexBatchFrom`, `chooseIndexBatchChecked`,
+  `chooseIndexBatchCheckedFrom`, `chooseIndexU32`, `chooseIndexU32From`,
+  `chooseIndexU32Checked`, `chooseIndexU32CheckedFrom`,
+  `fillChooseIndexU32`, `fillChooseIndexU32From`,
+  `fillChooseIndexU32Checked`, `fillChooseIndexU32CheckedFrom`,
+  `chooseIndexU32Batch`, `chooseIndexU32BatchFrom`,
+  `chooseIndexU32BatchChecked`, `chooseIndexU32BatchCheckedFrom`
 - Collections: `chooseMultiple`, `chooseMultipleFrom`,
   `choose`, `chooseFrom`, `chooseChecked`, `chooseCheckedFrom`,
   `chooseConstPtr`, `chooseConstPtrFrom`, `chooseConstPtrChecked`,
