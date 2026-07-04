@@ -110,6 +110,11 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(no_replace_indices);
     try stdout.print("weighted no-replacement indices: {any}\n", .{no_replace_indices});
 
+    var u32_indices_engine = alea.ScalarPrng.init(0x716a);
+    const no_replace_u32_indices = try alea.seq.sampleWeightedIndicesU32From(allocator, &u32_indices_engine, f64, &float_weights, 3);
+    defer allocator.free(no_replace_u32_indices);
+    try stdout.print("weighted u32 no-replacement indices: {any}\n", .{no_replace_u32_indices});
+
     var index_array_engine = alea.ScalarPrng.init(0x715a);
     const weighted_index_array = (try alea.seq.sampleWeightedIndexArrayFrom(&index_array_engine, f64, 3, &float_weights)).?;
     try stdout.print("weighted index array: {any}\n", .{weighted_index_array});
