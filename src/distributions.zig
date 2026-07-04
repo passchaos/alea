@@ -15795,6 +15795,34 @@ pub fn AliasTable(comptime Weight: type) type {
             return out;
         }
 
+        pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
+            return self.indexArrayFrom(rng, N);
+        }
+
+        pub fn indexArrayFrom(self: Self, source: anytype, comptime N: usize) [N]usize {
+            var out: [N]usize = undefined;
+            self.fillFrom(source, &out);
+            return out;
+        }
+
+        pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) [N]u32 {
+            return self.indexArrayU32Checked(rng, N) catch unreachable;
+        }
+
+        pub fn indexArrayU32Checked(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
+            return self.indexArrayU32CheckedFrom(rng, N);
+        }
+
+        pub fn indexArrayU32From(self: Self, source: anytype, comptime N: usize) [N]u32 {
+            return self.indexArrayU32CheckedFrom(source, N) catch unreachable;
+        }
+
+        pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
+            var out: [N]u32 = undefined;
+            try self.fillU32CheckedFrom(source, &out);
+            return out;
+        }
+
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, usize) {
             return rng.sampleIter(usize, self);
         }
@@ -18243,6 +18271,51 @@ test "alias table iterators produce repeated indices" {
     var single_u32_out: [4]u32 = undefined;
     single_u32_iter.fill(&single_u32_out);
     try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, &single_u32_out);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+}
+
+test "alias table fixed index arrays mirror fills" {
+    const alea = @import("root.zig");
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    var fill_engine = alea.ScalarPrng.init(0x5150_a134);
+    var array_engine = alea.ScalarPrng.init(0x5150_a134);
+    var fill_out: [6]usize = undefined;
+    table.fillFrom(&fill_engine, &fill_out);
+    const array_out = table.indexArrayFrom(&array_engine, 6);
+    try std.testing.expectEqualSlices(usize, &fill_out, &array_out);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+
+    fill_engine = alea.ScalarPrng.init(0x5150_a135);
+    array_engine = alea.ScalarPrng.init(0x5150_a135);
+    var fill_u32: [6]u32 = undefined;
+    try table.fillU32CheckedFrom(&fill_engine, &fill_u32);
+    const array_u32 = try table.indexArrayU32CheckedFrom(&array_engine, 6);
+    try std.testing.expectEqualSlices(u32, &fill_u32, &array_u32);
+    try std.testing.expectEqual(fill_engine.next(), array_engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_a136);
+    var direct_engine = alea.ScalarPrng.init(0x5150_a136);
+    const rng = Rng.init(&facade_engine);
+    const facade_array = table.indexArray(rng, 4);
+    const direct_array = table.indexArrayFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(usize, &direct_array, &facade_array);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    const empty_array = table.indexArrayFrom(&direct_engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_array.len);
+    const empty_u32_array = try table.indexArrayU32CheckedFrom(&direct_engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_u32_array.len);
+
+    try table.update(&.{ 0, 0, 5, 0 });
+    var single_engine = alea.ScalarPrng.init(0x5150_a137);
+    var single_control = alea.ScalarPrng.init(0x5150_a137);
+    const single_array = table.indexArrayFrom(&single_engine, 4);
+    try std.testing.expectEqualSlices(usize, &.{ 2, 2, 2, 2 }, &single_array);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    const single_u32_array = try table.indexArrayU32CheckedFrom(&single_engine, 4);
+    try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, &single_u32_array);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
 }
 

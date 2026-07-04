@@ -2360,6 +2360,12 @@ Alias helpers:
 - `AliasTable.indicesFrom`
 - `AliasTable.indicesU32`
 - `AliasTable.indicesU32From`
+- `AliasTable.indexArray`
+- `AliasTable.indexArrayFrom`
+- `AliasTable.indexArrayU32`
+- `AliasTable.indexArrayU32Checked`
+- `AliasTable.indexArrayU32From`
+- `AliasTable.indexArrayU32CheckedFrom`
 - `AliasTable.iter`
 - `AliasTable.iterFrom`
 - `AliasTable.iterU32`
