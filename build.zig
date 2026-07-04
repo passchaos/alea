@@ -93,6 +93,12 @@ pub fn build(b: *std.Build) void {
     const native_f32_profiles_example_step = b.step("run-native-f32-profiles", "Run the native-f32 profile alea example");
     native_f32_profiles_example_step.dependOn(&run_native_f32_profiles_example.step);
 
+    const examples_step = b.step("examples", "Run all alea examples");
+    examples_step.dependOn(&run_example.step);
+    examples_step.dependOn(&run_vector_profiles_example.step);
+    examples_step.dependOn(&run_lognormal_profiles_example.step);
+    examples_step.dependOn(&run_native_f32_profiles_example.step);
+
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/throughput.zig"),
         .target = target,
@@ -966,6 +972,7 @@ pub fn build(b: *std.Build) void {
 
     const validate_step = b.step("validate", "Run unit, API, statistical, and distribution checks");
     validate_step.dependOn(&run_tests.step);
+    validate_step.dependOn(examples_step);
     validate_step.dependOn(&run_apicheck.step);
     validate_step.dependOn(&run_statcheck.step);
     validate_step.dependOn(&run_distcheck.step);

@@ -35,7 +35,8 @@ complete.
 | S4-M12 accepted vector profile adoption example | `examples/vector_profiles.zig`, `zig build run-vector-profiles`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m12-vector-profile-example.md` | Closed for the current bar: a runnable example demonstrates exact/default vectors versus explicit `Table`/`ApproxLog` opt-ins. |
 | S4-M13 LogNormal opt-in adoption example | `examples/lognormal_profiles.zig`, `zig build run-lognormal-profiles`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m13-lognormal-profile-example.md` | Closed for the current bar: a runnable example demonstrates exact/default, buffered, native/exp2, and platform libc-backed LogNormal profiles. |
 | S4-M14 NativeF32 profile adoption example | `examples/native_f32_profiles.zig`, `zig build run-native-f32-profiles`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m14-native-f32-profile-example.md` | Closed for the current bar: a runnable example demonstrates exact/default f32 outputs versus `NativeF32` scalar/vector profiles. |
-| S4-M15 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M15 examples validation gate | `zig build examples`, `zig build validate`, `build.zig`, `compare/results/s4-m15-examples-validation.md` | Closed for the current bar: all user-facing examples run through a single build step and local validation depends on it. |
+| S4-M16 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -58,7 +59,8 @@ The next unresolved blocked milestone remains S4-M11:
    `rand_distr` core gap has been identified.
 
 S4-M12, S4-M13, and S4-M14 are closed as unblocked adoption/documentation
-improvements, but they do not resolve S4-M11 or complete the long-term objective.
+improvements, and S4-M15 adds an examples validation gate, but they do not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
