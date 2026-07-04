@@ -2509,8 +2509,29 @@ pub fn chooseIndex(self: Rng, length: usize) ?usize {
     return chooseIndexFrom(self, length);
 }
 
+pub fn chooseIndexBatch(self: Rng, allocator: std.mem.Allocator, count: usize, length: usize) ![]usize {
+    return chooseIndexBatchFrom(self, allocator, count, length);
+}
+
+pub fn chooseIndexBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, length: usize) ![]usize {
+    const out = try allocator.alloc(usize, count);
+    errdefer allocator.free(out);
+    fillChooseIndexFrom(source, out, length);
+    return out;
+}
+
 pub fn chooseIndexChecked(self: Rng, length: usize) Error!usize {
     return chooseIndexCheckedFrom(self, length);
+}
+
+pub fn chooseIndexBatchChecked(self: Rng, allocator: std.mem.Allocator, count: usize, length: usize) ![]usize {
+    return chooseIndexBatchCheckedFrom(self, allocator, count, length);
+}
+
+pub fn chooseIndexBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, length: usize) ![]usize {
+    if (count == 0) return allocator.alloc(usize, 0);
+    if (length == 0) return error.EmptyRange;
+    return chooseIndexBatchFrom(source, allocator, count, length);
 }
 
 pub fn chooseIndexCheckedFrom(source: anytype, length: usize) Error!usize {
@@ -2523,12 +2544,56 @@ pub fn chooseIndexFrom(source: anytype, length: usize) ?usize {
     return uintLessThanFrom(source, usize, length);
 }
 
+pub fn fillChooseIndex(self: Rng, dest: []usize, length: usize) void {
+    fillChooseIndexFrom(self, dest, length);
+}
+
+pub fn fillChooseIndexFrom(source: anytype, dest: []usize, length: usize) void {
+    std.debug.assert(length > 0);
+    if (length == 1) {
+        @memset(dest, 0);
+        return;
+    }
+    fillUintLessThanFrom(source, usize, dest, length);
+}
+
+pub fn fillChooseIndexChecked(self: Rng, dest: []usize, length: usize) Error!void {
+    return fillChooseIndexCheckedFrom(self, dest, length);
+}
+
+pub fn fillChooseIndexCheckedFrom(source: anytype, dest: []usize, length: usize) Error!void {
+    if (dest.len == 0) return;
+    if (length == 0) return error.EmptyRange;
+    fillChooseIndexFrom(source, dest, length);
+}
+
 pub fn chooseIndexU32(self: Rng, length: u32) ?u32 {
     return chooseIndexU32From(self, length);
 }
 
+pub fn chooseIndexU32Batch(self: Rng, allocator: std.mem.Allocator, count: usize, length: u32) ![]u32 {
+    return chooseIndexU32BatchFrom(self, allocator, count, length);
+}
+
+pub fn chooseIndexU32BatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, length: u32) ![]u32 {
+    const out = try allocator.alloc(u32, count);
+    errdefer allocator.free(out);
+    fillChooseIndexU32From(source, out, length);
+    return out;
+}
+
 pub fn chooseIndexU32Checked(self: Rng, length: u32) Error!u32 {
     return chooseIndexU32CheckedFrom(self, length);
+}
+
+pub fn chooseIndexU32BatchChecked(self: Rng, allocator: std.mem.Allocator, count: usize, length: u32) ![]u32 {
+    return chooseIndexU32BatchCheckedFrom(self, allocator, count, length);
+}
+
+pub fn chooseIndexU32BatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, length: u32) ![]u32 {
+    if (count == 0) return allocator.alloc(u32, 0);
+    if (length == 0) return error.EmptyRange;
+    return chooseIndexU32BatchFrom(source, allocator, count, length);
 }
 
 pub fn chooseIndexU32CheckedFrom(source: anytype, length: u32) Error!u32 {
@@ -2539,6 +2604,29 @@ pub fn chooseIndexU32From(source: anytype, length: u32) ?u32 {
     if (length == 0) return null;
     if (length == 1) return 0;
     return uintLessThanFrom(source, u32, length);
+}
+
+pub fn fillChooseIndexU32(self: Rng, dest: []u32, length: u32) void {
+    fillChooseIndexU32From(self, dest, length);
+}
+
+pub fn fillChooseIndexU32From(source: anytype, dest: []u32, length: u32) void {
+    std.debug.assert(length > 0);
+    if (length == 1) {
+        @memset(dest, 0);
+        return;
+    }
+    fillUintLessThanFrom(source, u32, dest, length);
+}
+
+pub fn fillChooseIndexU32Checked(self: Rng, dest: []u32, length: u32) Error!void {
+    return fillChooseIndexU32CheckedFrom(self, dest, length);
+}
+
+pub fn fillChooseIndexU32CheckedFrom(source: anytype, dest: []u32, length: u32) Error!void {
+    if (dest.len == 0) return;
+    if (length == 0) return error.EmptyRange;
+    fillChooseIndexU32From(source, dest, length);
 }
 
 pub fn chooseConstPtr(self: Rng, comptime T: type, items: []const T) ?*const T {
@@ -5695,10 +5783,20 @@ test "single-item choice helpers do not consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), try rng.chooseIndexChecked(1));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const single_indices = try rng.chooseIndexBatchChecked(std.testing.allocator, 5, 1);
+    defer std.testing.allocator.free(single_indices);
+    for (single_indices) |sample| try std.testing.expectEqual(@as(usize, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(?u32, 0), chooseIndexU32From(&engine, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(u32, 0), try rng.chooseIndexU32Checked(1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const single_u32_indices = try chooseIndexU32BatchCheckedFrom(&engine, std.testing.allocator, 5, 1);
+    defer std.testing.allocator.free(single_u32_indices);
+    for (single_u32_indices) |sample| try std.testing.expectEqual(@as(u32, 0), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const items = [_]u8{42};
@@ -5737,6 +5835,18 @@ test "empty index choice helpers do not consume random stream" {
     try std.testing.expectError(error.EmptyRange, rng.chooseIndexChecked(0));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.chooseIndexBatchChecked(empty_alloc.allocator(), 0, 0);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.chooseIndexBatchChecked(invalid_alloc.allocator(), 8, 0));
+    try std.testing.expect(!invalid_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(?u32, null), chooseIndexU32From(&engine, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -5744,6 +5854,28 @@ test "empty index choice helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.EmptyRange, rng.chooseIndexU32Checked(0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty_u32 = try rng.chooseIndexU32BatchChecked(empty_u32_alloc.allocator(), 0, 0);
+    defer empty_u32_alloc.allocator().free(empty_u32);
+    try std.testing.expectEqual(@as(usize, 0), empty_u32.len);
+    try std.testing.expect(!empty_u32_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseIndexU32BatchCheckedFrom(&engine, invalid_u32_alloc.allocator(), 8, 0));
+    try std.testing.expect(!invalid_u32_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var index_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.chooseIndexBatchChecked(index_alloc.allocator(), 8, 5));
+    try std.testing.expect(index_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var index_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, chooseIndexU32BatchFrom(&engine, index_u32_alloc.allocator(), 8, 5));
+    try std.testing.expect(index_u32_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -5763,6 +5895,34 @@ test "collection helpers preserve direct stream shape" {
         try std.testing.expectEqual(rng.chooseIndexU32(@intCast(items.len)), Rng.chooseIndexU32From(&direct_engine, @intCast(items.len)));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
         try std.testing.expectEqual(try rng.chooseIndexU32Checked(@intCast(items.len)), try Rng.chooseIndexU32CheckedFrom(&direct_engine, @intCast(items.len)));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_indices = try rng.chooseIndexBatch(std.testing.allocator, 8, items.len);
+        defer std.testing.allocator.free(facade_indices);
+        const direct_indices = try Rng.chooseIndexBatchFrom(&direct_engine, std.testing.allocator, 8, items.len);
+        defer std.testing.allocator.free(direct_indices);
+        try std.testing.expectEqualSlices(usize, facade_indices, direct_indices);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_indices = try rng.chooseIndexBatchChecked(std.testing.allocator, 8, items.len);
+        defer std.testing.allocator.free(facade_checked_indices);
+        const direct_checked_indices = try Rng.chooseIndexBatchCheckedFrom(&direct_engine, std.testing.allocator, 8, items.len);
+        defer std.testing.allocator.free(direct_checked_indices);
+        try std.testing.expectEqualSlices(usize, facade_checked_indices, direct_checked_indices);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_u32_indices = try rng.chooseIndexU32Batch(std.testing.allocator, 8, @intCast(items.len));
+        defer std.testing.allocator.free(facade_u32_indices);
+        const direct_u32_indices = try Rng.chooseIndexU32BatchFrom(&direct_engine, std.testing.allocator, 8, @intCast(items.len));
+        defer std.testing.allocator.free(direct_u32_indices);
+        try std.testing.expectEqualSlices(u32, facade_u32_indices, direct_u32_indices);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_u32_indices = try rng.chooseIndexU32BatchChecked(std.testing.allocator, 8, @intCast(items.len));
+        defer std.testing.allocator.free(facade_checked_u32_indices);
+        const direct_checked_u32_indices = try Rng.chooseIndexU32BatchCheckedFrom(&direct_engine, std.testing.allocator, 8, @intCast(items.len));
+        defer std.testing.allocator.free(direct_checked_u32_indices);
+        try std.testing.expectEqualSlices(u32, facade_checked_u32_indices, direct_checked_u32_indices);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         try std.testing.expectEqual(rng.choose(u8, &items), Rng.chooseFrom(&direct_engine, u8, &items));

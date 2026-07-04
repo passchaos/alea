@@ -65,6 +65,10 @@ pub fn main(init: std.process.Init) !void {
     const colors = [_][]const u8{ "red", "green", "blue", "gold" };
     const color_index = rng.chooseIndex(colors.len).?;
     const compact_color_index = rng.chooseIndexU32(@intCast(colors.len)).?;
+    const color_indices = try rng.chooseIndexBatch(init.gpa, 4, colors.len);
+    defer init.gpa.free(color_indices);
+    const compact_color_indices = try rng.chooseIndexU32Batch(init.gpa, 4, @intCast(colors.len));
+    defer init.gpa.free(compact_color_indices);
     const color_ptr = rng.chooseConstPtr([]const u8, &colors).?;
     const die_sampler = try alea.distributions.Uniform(u8).initInclusive(1, 6);
     const owned_rolls = try rng.sampleBatch(u8, init.gpa, die_sampler, 6);
@@ -112,6 +116,8 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("partial shuffle hand: {any}\n", .{hand});
     try stdout.print("index choice: {} ({s})\n", .{ color_index, colors[color_index] });
     try stdout.print("u32 index choice: {} ({s})\n", .{ compact_color_index, colors[compact_color_index] });
+    try stdout.print("index choice batch: {any}\n", .{color_indices});
+    try stdout.print("u32 index choice batch: {any}\n", .{compact_color_indices});
     try stdout.print("const pointer choice: {s}\n", .{color_ptr.*});
     try stdout.print("sampleBatch dice: {any}\n", .{owned_rolls});
     try stdout.print("iterator choice: {}\n", .{stream_choice});

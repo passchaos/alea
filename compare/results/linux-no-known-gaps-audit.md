@@ -139,6 +139,7 @@ Local Alea evidence:
 - `compare/results/s4-m99-rng-owned-bounded-uint.md`
 - `compare/results/s4-m100-rng-owned-inclusive-ranges.md`
 - `compare/results/s4-m101-rng-owned-vector-inclusive-ranges.md`
+- `compare/results/s4-m102-rng-owned-index-choice-batches.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -159,7 +160,7 @@ Out of scope for this Linux-first audit:
 | Unicode scalar / char-like sampling | Covered in Zig form | `Rng.unicodeScalar`, `Rng.unicodeScalarRangeLessThan`, `Rng.unicodeScalarRangeAtMost`, `Rng.fillUnicodeScalar`, `Rng.fillUnicodeScalarRangeLessThan`, `Rng.fillUnicodeScalarRangeAtMost`, `Rng.unicodeScalarBatch`, `Rng.unicodeScalarRangeLessThanBatch`, `Rng.unicodeScalarRangeAtMostBatch`, `ascii.unicodeUtf8Alloc`, `ascii.unicodeUtf8Into` |
 | durations | Covered in Zig form | `durationRangeLessThan`, `durationRangeAtMost`, and owned duration range batches |
 | strings / alphanumeric | Covered | `ascii` module, Rust alphanumeric benchmark row |
-| choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseIndexU32`, `Rng.chooseConstPtr`, `seq` module, `sampleArrayU32`, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `Choice.sampleIndex`, `Choice.fill`, `Choice.fillValues`, `Choice.ptrs`, `Choice.values`, `Choice.fillIndices`, `Choice.indices`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer and u32 export mapping, Rust sequence benchmark row |
+| choose, shuffle, sample indices, fixed-size slice samples, reservoir fills | Covered | `Rng.chooseIndex`, `Rng.chooseIndexBatch`, `Rng.chooseIndexU32`, `Rng.chooseIndexU32Batch`, `Rng.chooseConstPtr`, `seq` module, `sampleArrayU32`, `chooseArray`, `choosePtrArray`, `chooseMultiple`, `chooseMultiplePtrs`, `chooseMultipleInto`, `chooseMultiplePtrsInto`, `Choice.sampleIndex`, `Choice.fill`, `Choice.fillValues`, `Choice.ptrs`, `Choice.values`, `Choice.fillIndices`, `Choice.indices`, `reservoirSample`, `reservoirSamplePtrs`, `reservoirSampleInto`, `reservoirSamplePtrsInto`, `IndexVec` lazy/caller-owned/allocation-returning value/const-pointer/mutable-pointer and u32 export mapping, Rust sequence benchmark row |
 | weighted index and weighted item choice | Covered | `Rng.weightedIndex`, `Rng.weightedIndexU32`, `seq.weightedIndex`, `seq.weightedIndexU32`, `seq.chooseWeighted`, `seq.chooseWeightedConstPtr`, `seq.chooseWeightedPtr`, `seq.sampleWeightedIndicesInto`, `seq.sampleWeightedIndicesU32`, `seq.sampleWeightedIndicesU32Into`, `seq.sampleWeightedIndexVec`, `seq.sampleWeightedInto`, `seq.sampleWeightedPtrs`, `seq.sampleWeightedPtrsInto`, `seq.sampleWeightedIndexArray`, `seq.sampleWeightedIndexArrayU32`, `seq.sampleWeightedArray`, `seq.sampleWeightedPtrArray`, `AliasTable`, `WeightedChoice.sample`, `WeightedChoice.ptrs`, `WeightedChoice.values`, `WeightedChoice.sampleIndex`, `WeightedChoice.fillIndices`, `WeightedChoice.indices`, `WeightedTree`, benchmark rows |
 
 ## `rand_distr` 0.6.0 Distribution Surface

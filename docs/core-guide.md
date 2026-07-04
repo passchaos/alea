@@ -272,7 +272,9 @@ Use:
 
 - `rng.chooseIndex`, `Rng.chooseIndexFrom`, `Rng.chooseIndexCheckedFrom`,
   `rng.chooseIndexU32`, `Rng.chooseIndexU32From`,
-  `Rng.chooseIndexU32CheckedFrom`, `rng.choose`, `Rng.chooseFrom`,
+  `Rng.chooseIndexU32CheckedFrom`, `Rng.fillChooseIndexFrom`,
+  `Rng.fillChooseIndexU32From`, `Rng.chooseIndexBatchFrom`,
+  `Rng.chooseIndexU32BatchFrom`, `rng.choose`, `Rng.chooseFrom`,
   `Rng.chooseCheckedFrom`,
   `rng.chooseConstPtr`, `Rng.chooseConstPtrFrom`,
   `Rng.chooseConstPtrCheckedFrom`, `rng.choosePtr`, `Rng.choosePtrFrom`,
