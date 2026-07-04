@@ -2694,6 +2694,8 @@ Dynamic weighted helpers:
   `WeightedChoice.fillValues`, `WeightedChoice.fillValuesFrom`,
   `WeightedChoice.ptrs`, `WeightedChoice.ptrsFrom`,
   `WeightedChoice.values`, `WeightedChoice.valuesFrom`,
+  `WeightedChoice.valueArray`, `WeightedChoice.valueArrayFrom`,
+  `WeightedChoice.ptrArray`, `WeightedChoice.ptrArrayFrom`,
   `WeightedChoice.fillIndices`, `WeightedChoice.fillIndicesFrom`,
   `WeightedChoice.fillIndicesU32`, `WeightedChoice.fillIndicesU32From`,
   `WeightedChoice.indices`, `WeightedChoice.indicesFrom`,

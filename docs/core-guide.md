@@ -534,7 +534,8 @@ Use:
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
   `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
   `sampleIndexU32From`, `WeightedChoice.fillValuesFrom` / `fillFrom`,
-  `WeightedChoice.valuesFrom` / `ptrsFrom`, and
+  `WeightedChoice.valuesFrom` / `ptrsFrom`, fixed-size
+  `WeightedChoice.valueArrayFrom` / `ptrArrayFrom`, and
   `WeightedChoice.fillIndicesFrom` / `fillIndicesU32From` plus
   `WeightedChoice.indicesFrom` / `indicesU32From` and fixed-size
   `WeightedChoice.indexArrayFrom` / `indexArrayU32From` repeated index arrays

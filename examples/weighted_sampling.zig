@@ -421,6 +421,10 @@ pub fn main(init: std.process.Init) !void {
     var choice_values: [8][]const u8 = undefined;
     choice.fillValuesFrom(&choice_engine, &choice_values);
     try printStringSlice(stdout, "weighted choice values", &choice_values);
+    const choice_value_array = choice.valueArrayFrom(&choice_engine, 6);
+    try printStringSlice(stdout, "WeightedChoice.valueArrayFrom", &choice_value_array);
+    const choice_ptr_array = choice.ptrArrayFrom(&choice_engine, 6);
+    try stdout.print("WeightedChoice.ptrArrayFrom: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ choice_ptr_array[0].*, choice_ptr_array[1].*, choice_ptr_array[2].*, choice_ptr_array[3].*, choice_ptr_array[4].*, choice_ptr_array[5].* });
     var choice_indices: [8]usize = undefined;
     choice.fillIndicesFrom(&choice_engine, &choice_indices);
     try stdout.print("weighted choice indices: {any}\n", .{choice_indices});
