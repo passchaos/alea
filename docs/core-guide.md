@@ -540,10 +540,12 @@ Use:
   `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
   sampler introspection
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
-  and sampling workloads with weights accumulated as `f64`, including bulk
+  and sampling workloads with weights accumulated as `f64`, including
+  `initByIndex` / `updateAllByIndex` from index-weight accessors and bulk
   `weights` / `weightsInto` export for diagnostics
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
-  update/push/pop/sample throughput matters; weights wider than `u64` are
+  update/push/pop/sample throughput matters, including `initByIndex` /
+  `updateAllByIndex` from index-weight accessors; weights wider than `u64` are
   accepted only when each value fits the `u64` accumulator
   (failed push/update operations preserve the previous tree totals, and
   zero-length checked fills return before validating totals)

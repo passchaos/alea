@@ -15693,6 +15693,35 @@ pub fn WeightedTree(comptime Weight: type) type {
             };
         }
 
+        pub fn initByIndex(
+            allocator: std.mem.Allocator,
+            length: usize,
+            comptime weightFn: fn (usize) Weight,
+        ) !Self {
+            var subtotals = try std.ArrayList(f64).initCapacity(allocator, length);
+            errdefer subtotals.deinit(allocator);
+
+            var positive_count: usize = 0;
+            var positive_index: ?usize = null;
+            var index: usize = 0;
+            while (index < length) : (index += 1) {
+                const value = try weightToF64(weightFn(index));
+                try subtotals.append(allocator, value);
+                if (value > 0) {
+                    positive_count += 1;
+                    if (positive_index == null) positive_index = index;
+                }
+            }
+            try buildSubtotals(subtotals.items);
+
+            return .{
+                .subtotals = subtotals,
+                .positive_count = positive_count,
+                .positive_index = positive_index,
+                .allocator = allocator,
+            };
+        }
+
         pub fn deinit(self: *Self) void {
             self.subtotals.deinit(self.allocator);
             self.* = undefined;
@@ -15814,6 +15843,19 @@ pub fn WeightedTree(comptime Weight: type) type {
                 cursor = (cursor - 1) / 2;
             }
             self.updatePositiveState(index, old, value);
+        }
+
+        pub fn updateAll(self: *Self, input_weights: []const Weight) !void {
+            if (input_weights.len != self.len()) return error.InvalidParameter;
+            const next = try Self.init(self.allocator, input_weights);
+            self.subtotals.deinit(self.allocator);
+            self.* = next;
+        }
+
+        pub fn updateAllByIndex(self: *Self, comptime weightFn: fn (usize) Weight) !void {
+            const next = try Self.initByIndex(self.allocator, self.len(), weightFn);
+            self.subtotals.deinit(self.allocator);
+            self.* = next;
         }
 
         pub fn sample(self: Self, rng: Rng) usize {
@@ -15970,6 +16012,36 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             };
         }
 
+        pub fn initByIndex(
+            allocator: std.mem.Allocator,
+            length: usize,
+            comptime weightFn: fn (usize) Weight,
+        ) !Self {
+            comptime requireUnsignedWeight(Weight);
+            var subtotals = try std.ArrayList(u64).initCapacity(allocator, length);
+            errdefer subtotals.deinit(allocator);
+
+            var positive_count: usize = 0;
+            var positive_index: ?usize = null;
+            var index: usize = 0;
+            while (index < length) : (index += 1) {
+                const value = try weightToU64(weightFn(index));
+                try subtotals.append(allocator, value);
+                if (value > 0) {
+                    positive_count += 1;
+                    if (positive_index == null) positive_index = index;
+                }
+            }
+            try buildSubtotals(subtotals.items);
+
+            return .{
+                .subtotals = subtotals,
+                .positive_count = positive_count,
+                .positive_index = positive_index,
+                .allocator = allocator,
+            };
+        }
+
         pub fn deinit(self: *Self) void {
             self.subtotals.deinit(self.allocator);
             self.* = undefined;
@@ -16098,6 +16170,19 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 }
             }
             self.updatePositiveState(index, old, value);
+        }
+
+        pub fn updateAll(self: *Self, input_weights: []const Weight) !void {
+            if (input_weights.len != self.len()) return error.InvalidParameter;
+            const next = try Self.init(self.allocator, input_weights);
+            self.subtotals.deinit(self.allocator);
+            self.* = next;
+        }
+
+        pub fn updateAllByIndex(self: *Self, comptime weightFn: fn (usize) Weight) !void {
+            const next = try Self.initByIndex(self.allocator, self.len(), weightFn);
+            self.subtotals.deinit(self.allocator);
+            self.* = next;
         }
 
         pub fn sample(self: Self, rng: Rng) usize {
@@ -17562,6 +17647,141 @@ test "weighted tree push allocation failure preserves tree" {
     var out: [8]usize = undefined;
     try tree.fillCheckedFrom(&engine, &out);
     for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+}
+
+test "weighted tree index accessors initialize and refresh trees" {
+    const alea = @import("root.zig");
+    const IndexWeight = struct {
+        fn generic(index: usize) f64 {
+            return switch (index) {
+                1 => 1,
+                2 => 7,
+                else => 0,
+            };
+        }
+
+        fn genericUpdated(index: usize) f64 {
+            return if (index == 0) 5 else 0;
+        }
+
+        fn integer(index: usize) u32 {
+            return switch (index) {
+                1 => 2,
+                3 => 6,
+                else => 0,
+            };
+        }
+
+        fn integerUpdated(index: usize) u32 {
+            return if (index == 2) 11 else 0;
+        }
+    };
+
+    var tree = try WeightedTree(f64).initByIndex(std.testing.allocator, 4, IndexWeight.generic);
+    defer tree.deinit();
+    try std.testing.expectEqual(@as(usize, 4), tree.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 8), tree.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try tree.weightAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try tree.weightAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7), try tree.weightAt(2), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try tree.weightAt(3), 1e-12);
+
+    var engine = alea.ScalarPrng.init(0x5150_d501);
+    var saw_two = false;
+    var i: usize = 0;
+    while (i < 32) : (i += 1) {
+        const index = tree.sampleFrom(&engine);
+        try std.testing.expect(index == 1 or index == 2);
+        saw_two = saw_two or index == 2;
+    }
+    try std.testing.expect(saw_two);
+
+    try tree.updateAllByIndex(IndexWeight.genericUpdated);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), tree.totalWeight(), 1e-12);
+    try std.testing.expectEqual(@as(usize, 0), tree.sampleFrom(&engine));
+
+    var int_tree = try WeightedIntTree(u32).initByIndex(std.testing.allocator, 4, IndexWeight.integer);
+    defer int_tree.deinit();
+    try std.testing.expectEqual(@as(usize, 4), int_tree.len());
+    try std.testing.expectEqual(@as(u64, 8), int_tree.totalWeight());
+    try std.testing.expectEqual(@as(u64, 0), try int_tree.weightAt(0));
+    try std.testing.expectEqual(@as(u64, 2), try int_tree.weightAt(1));
+    try std.testing.expectEqual(@as(u64, 0), try int_tree.weightAt(2));
+    try std.testing.expectEqual(@as(u64, 6), try int_tree.weightAt(3));
+
+    var saw_three = false;
+    i = 0;
+    while (i < 32) : (i += 1) {
+        const index = int_tree.sampleFrom(&engine);
+        try std.testing.expect(index == 1 or index == 3);
+        saw_three = saw_three or index == 3;
+    }
+    try std.testing.expect(saw_three);
+
+    try int_tree.updateAllByIndex(IndexWeight.integerUpdated);
+    try std.testing.expectEqual(@as(u64, 11), int_tree.totalWeight());
+    try std.testing.expectEqual(@as(usize, 2), int_tree.sampleFrom(&engine));
+}
+
+test "weighted tree index accessor failures preserve trees" {
+    const IndexWeight = struct {
+        fn generic(index: usize) f64 {
+            return switch (index) {
+                1 => 1,
+                2 => 7,
+                else => 0,
+            };
+        }
+
+        fn genericInvalid(index: usize) f64 {
+            return if (index == 1) std.math.nan(f64) else generic(index);
+        }
+
+        fn integer(index: usize) u32 {
+            return switch (index) {
+                1 => 2,
+                3 => 6,
+                else => 0,
+            };
+        }
+
+        fn integerOverflow(index: usize) u64 {
+            return if (index == 1) std.math.maxInt(u64) else 1;
+        }
+    };
+
+    try std.testing.expectError(error.InvalidWeight, WeightedTree(f64).initByIndex(std.testing.allocator, 4, IndexWeight.genericInvalid));
+    try std.testing.expectError(error.InvalidWeight, WeightedIntTree(u64).initByIndex(std.testing.allocator, 2, IndexWeight.integerOverflow));
+
+    var tree = try WeightedTree(f64).initByIndex(std.testing.allocator, 4, IndexWeight.generic);
+    defer tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, tree.updateAllByIndex(IndexWeight.genericInvalid));
+    try std.testing.expectApproxEqAbs(@as(f64, 8), tree.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7), try tree.weightAt(2), 1e-12);
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    var failing_tree = try WeightedTree(f64).initByIndex(failing.allocator(), 4, IndexWeight.generic);
+    defer failing_tree.deinit();
+    failing.fail_index = failing.alloc_index;
+    try std.testing.expectError(error.OutOfMemory, failing_tree.updateAllByIndex(IndexWeight.generic));
+    try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectApproxEqAbs(@as(f64, 8), failing_tree.totalWeight(), 1e-12);
+
+    var int_tree = try WeightedIntTree(u32).initByIndex(std.testing.allocator, 4, IndexWeight.integer);
+    defer int_tree.deinit();
+    var overflow_tree = try WeightedIntTree(u64).init(std.testing.allocator, &.{ 0, 2 });
+    defer overflow_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, overflow_tree.updateAllByIndex(IndexWeight.integerOverflow));
+    try std.testing.expectEqual(@as(u64, 2), overflow_tree.totalWeight());
+    try std.testing.expectEqual(@as(u64, 2), try overflow_tree.weightAt(1));
+
+    var failing_int = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    var failing_int_tree = try WeightedIntTree(u32).initByIndex(failing_int.allocator(), 4, IndexWeight.integer);
+    defer failing_int_tree.deinit();
+    failing_int.fail_index = failing_int.alloc_index;
+    try std.testing.expectError(error.OutOfMemory, failing_int_tree.updateAllByIndex(IndexWeight.integer));
+    try std.testing.expect(failing_int.has_induced_failure);
+    try std.testing.expectEqual(@as(u64, 8), failing_int_tree.totalWeight());
 }
 
 test "zero-length weighted tree fills do not validate or consume random stream" {

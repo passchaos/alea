@@ -2337,11 +2337,14 @@ Alias helpers:
 Dynamic weighted helpers:
 
 - `WeightedTree.init`
+- `WeightedTree.initByIndex`
 - `WeightedTree.len`
 - `WeightedTree.isEmpty`
 - `WeightedTree.push`
 - `WeightedTree.pop`
 - `WeightedTree.update`
+- `WeightedTree.updateAll`
+- `WeightedTree.updateAllByIndex`
 - `WeightedTree.get`
 - `WeightedTree.weightAt`
 - `WeightedTree.probabilityAt`
@@ -2363,11 +2366,14 @@ Dynamic weighted helpers:
 - Prefer `WeightedIntTree` when weights are unsigned integers and frequent
   update/push/pop/sample throughput is the priority.
 - `WeightedIntTree.init`
+- `WeightedIntTree.initByIndex`
 - `WeightedIntTree.len`
 - `WeightedIntTree.isEmpty`
 - `WeightedIntTree.push`
 - `WeightedIntTree.pop`
 - `WeightedIntTree.update`
+- `WeightedIntTree.updateAll`
+- `WeightedIntTree.updateAllByIndex`
 - `WeightedIntTree.get`
 - `WeightedIntTree.weightAt`
 - `WeightedIntTree.probabilityAt`
