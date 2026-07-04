@@ -71,6 +71,12 @@ pub fn main(init: std.process.Init) !void {
     var mapped_into: [3][]const u8 = undefined;
     try item_index_vec.valuesIntoChecked([]const u8, &items, &mapped_into);
     try stdout.print("IndexVec.valuesInto: {s}, {s}, {s}\n", .{ mapped_into[0], mapped_into[1], mapped_into[2] });
+    var compact_index_copy: [3]u32 = undefined;
+    try item_index_vec.copyIntoU32(&compact_index_copy);
+    try stdout.print("IndexVec.copyIntoU32: {any}\n", .{compact_index_copy});
+    const compact_owned_copy = try item_index_vec.toOwnedU32Slice(allocator);
+    defer allocator.free(compact_owned_copy);
+    try stdout.print("IndexVec.toOwnedU32Slice: {any}\n", .{compact_owned_copy});
     var mapped_ptrs: [3]*const []const u8 = undefined;
     try item_index_vec.ptrsIntoChecked([]const u8, &items, &mapped_ptrs);
     try stdout.print("IndexVec.ptrsInto: {s}, {s}, {s}\n", .{ mapped_ptrs[0].*, mapped_ptrs[1].*, mapped_ptrs[2].* });

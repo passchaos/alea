@@ -128,10 +128,30 @@ pub const IndexVec = union(enum) {
         }
     }
 
+    pub fn copyIntoU32(self: IndexVec, out: []u32) Error!void {
+        if (out.len != self.len()) return error.LengthMismatch;
+        switch (self) {
+            .u32 => |items| @memcpy(out, items),
+            .usize => |items| {
+                for (items, out) |item, *slot| {
+                    if (item > std.math.maxInt(u32)) return error.InvalidParameter;
+                    slot.* = @intCast(item);
+                }
+            },
+        }
+    }
+
     pub fn toOwnedSlice(self: IndexVec, allocator: std.mem.Allocator) ![]usize {
         const out = try allocator.alloc(usize, self.len());
         errdefer allocator.free(out);
         try self.copyInto(out);
+        return out;
+    }
+
+    pub fn toOwnedU32Slice(self: IndexVec, allocator: std.mem.Allocator) ![]u32 {
+        const out = try allocator.alloc(u32, self.len());
+        errdefer allocator.free(out);
+        try self.copyIntoU32(out);
         return out;
     }
 
@@ -2931,14 +2951,25 @@ test "portable index sampling has stable snapshots" {
     var copied: [8]usize = undefined;
     try index_vec.copyInto(&copied);
     try std.testing.expectEqualSlices(usize, &expected, &copied);
+    var copied_u32: [8]u32 = undefined;
+    try index_vec.copyIntoU32(&copied_u32);
+    try std.testing.expectEqualSlices(u32, &.{ 70, 11, 8, 89, 0, 1, 18, 74 }, &copied_u32);
     var short_copy: [7]usize = undefined;
     try std.testing.expectError(error.LengthMismatch, index_vec.copyInto(&short_copy));
+    var short_copy_u32: [7]u32 = undefined;
+    try std.testing.expectError(error.LengthMismatch, index_vec.copyIntoU32(&short_copy_u32));
     const owned_copy = try index_vec.toOwnedSlice(std.testing.allocator);
     defer std.testing.allocator.free(owned_copy);
     try std.testing.expectEqualSlices(usize, &expected, owned_copy);
+    const owned_copy_u32 = try index_vec.toOwnedU32Slice(std.testing.allocator);
+    defer std.testing.allocator.free(owned_copy_u32);
+    try std.testing.expectEqualSlices(u32, &.{ 70, 11, 8, 89, 0, 1, 18, 74 }, owned_copy_u32);
     var failing_copy = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, index_vec.toOwnedSlice(failing_copy.allocator()));
     try std.testing.expect(failing_copy.has_induced_failure);
+    var failing_copy_u32 = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, index_vec.toOwnedU32Slice(failing_copy_u32.allocator()));
+    try std.testing.expect(failing_copy_u32.has_induced_failure);
     try std.testing.expectEqual(@as(u64, 0xe2fc197c64f3dd72), engine.next());
 }
 
@@ -2964,10 +2995,22 @@ test "index vec conversion supports native backing" {
     var copied: [3]usize = undefined;
     try index_vec.copyInto(&copied);
     try std.testing.expectEqualSlices(usize, &backing, &copied);
+    var copied_u32: [3]u32 = undefined;
+    try index_vec.copyIntoU32(&copied_u32);
+    try std.testing.expectEqualSlices(u32, &.{ 5, 8, 13 }, &copied_u32);
 
     const owned = try index_vec.toOwnedSlice(std.testing.allocator);
     defer std.testing.allocator.free(owned);
     try std.testing.expectEqualSlices(usize, &backing, owned);
+    const owned_u32 = try index_vec.toOwnedU32Slice(std.testing.allocator);
+    defer std.testing.allocator.free(owned_u32);
+    try std.testing.expectEqualSlices(u32, &.{ 5, 8, 13 }, owned_u32);
+
+    var too_large_backing = [_]usize{ 1, std.math.maxInt(u32) + 1 };
+    const too_large = IndexVec{ .usize = &too_large_backing };
+    var too_large_out: [2]u32 = undefined;
+    try std.testing.expectError(error.InvalidParameter, too_large.copyIntoU32(&too_large_out));
+    try std.testing.expectError(error.InvalidParameter, too_large.toOwnedU32Slice(std.testing.allocator));
 }
 
 test "index vec maps sampled indexes to slice items" {
@@ -4124,6 +4167,9 @@ test "zero-count checked sequence helpers do not consume random stream" {
     const empty_owned = try index_vec.toOwnedSlice(std.testing.allocator);
     defer std.testing.allocator.free(empty_owned);
     try std.testing.expectEqual(@as(usize, 0), empty_owned.len);
+    const empty_owned_u32 = try index_vec.toOwnedU32Slice(std.testing.allocator);
+    defer std.testing.allocator.free(empty_owned_u32);
+    try std.testing.expectEqual(@as(usize, 0), empty_owned_u32.len);
     try std.testing.expect(!index_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 

@@ -30,7 +30,7 @@ const examples = [_]Example{
     .{
         .path = "examples/sequence_sampling.zig",
         .step = "zig build run-sequence-sampling",
-        .source_tokens = &.{ "IndexVec.valuesInto", "sampleArrayU32", "chooseMultiplePtrs", "reservoirSamplePtrsInto" },
+        .source_tokens = &.{ "IndexVec.valuesInto", "IndexVec.toOwnedU32Slice", "sampleArrayU32", "chooseMultiplePtrs", "reservoirSamplePtrsInto" },
     },
     .{
         .path = "examples/caller_owned_sampling.zig",
