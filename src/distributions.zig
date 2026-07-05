@@ -139,6 +139,39 @@ pub const Error = error{
     LibmUnavailable,
 };
 
+pub const StandardUniform = struct {
+    pub fn sample(_: StandardUniform, rng: Rng, comptime T: type) T {
+        return rng.value(T);
+    }
+
+    pub fn sampleFrom(_: StandardUniform, source: anytype, comptime T: type) T {
+        return Rng.valueFrom(source, T);
+    }
+
+    pub fn fill(_: StandardUniform, rng: Rng, comptime T: type, dest: []T) void {
+        standardUniformFillFrom(rng, T, dest);
+    }
+
+    pub fn fillFrom(_: StandardUniform, source: anytype, comptime T: type, dest: []T) void {
+        standardUniformFillFrom(source, T, dest);
+    }
+};
+
+fn standardUniformFillFrom(source: anytype, comptime T: type, dest: []T) void {
+    if (comptime standardUniformCanBulkFill(T)) {
+        Rng.fillFrom(source, T, dest);
+        return;
+    }
+    for (dest) |*item| item.* = Rng.valueFrom(source, T);
+}
+
+fn standardUniformCanBulkFill(comptime T: type) bool {
+    return switch (@typeInfo(T)) {
+        .int, .float, .bool, .vector => true,
+        else => false,
+    };
+}
+
 pub fn sampleIter(rng: Rng, comptime T: type, sampler: anytype) Rng.SampleIterator(@TypeOf(sampler), T) {
     return rng.sampleIter(T, sampler);
 }
@@ -30666,4 +30699,51 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         try std.testing.expectEqualSlices(f64, &triangular_unchecked, &triangular_checked);
         try std.testing.expectEqual(unchecked.next(), checked.next());
     }
+}
+
+test "standard uniform sampler mirrors value helpers" {
+    const root = @import("root.zig");
+    const sampler = StandardUniform{};
+
+    var sample_engine = root.DefaultPrng.init(0x5150_57d);
+    var value_engine = root.DefaultPrng.init(0x5150_57d);
+    const sample_rng = Rng.init(&sample_engine);
+    const value_rng = Rng.init(&value_engine);
+    const Value = struct { u16, bool, f32 };
+    try std.testing.expectEqual(value_rng.value(Value), sampler.sample(sample_rng, Value));
+    try std.testing.expectEqual(value_engine.next(), sample_engine.next());
+
+    var direct_sample_engine = root.DefaultPrng.init(0x5150_57d1);
+    var direct_value_engine = root.DefaultPrng.init(0x5150_57d1);
+    try std.testing.expectEqual(Rng.valueFrom(&direct_value_engine, u64), sampler.sampleFrom(&direct_sample_engine, u64));
+    try std.testing.expectEqual(direct_value_engine.next(), direct_sample_engine.next());
+
+    var fill_engine = root.DefaultPrng.init(0x5150_f111);
+    var value_fill_engine = root.DefaultPrng.init(0x5150_f111);
+    const fill_rng = Rng.init(&fill_engine);
+    const value_fill_rng = Rng.init(&value_fill_engine);
+    var sample_values: [5]u64 = undefined;
+    var value_values: [5]u64 = undefined;
+    sampler.fill(fill_rng, u64, &sample_values);
+    value_fill_rng.fill(u64, &value_values);
+    try std.testing.expectEqualSlices(u64, &value_values, &sample_values);
+    try std.testing.expectEqual(value_fill_engine.next(), fill_engine.next());
+
+    var compound_fill_engine = root.DefaultPrng.init(0x5150_c0de);
+    var compound_value_engine = root.DefaultPrng.init(0x5150_c0de);
+    var compound_sample_values: [4]Value = undefined;
+    var compound_value_values: [4]Value = undefined;
+    sampler.fillFrom(&compound_fill_engine, Value, &compound_sample_values);
+    for (&compound_value_values) |*item| item.* = Rng.valueFrom(&compound_value_engine, Value);
+    try std.testing.expectEqualSlices(Value, &compound_value_values, &compound_sample_values);
+    try std.testing.expectEqual(compound_value_engine.next(), compound_fill_engine.next());
+
+    var direct_fill_engine = root.DefaultPrng.init(0x5150_d111);
+    var direct_value_fill_engine = root.DefaultPrng.init(0x5150_d111);
+    var direct_sample_values: [5]u16 = undefined;
+    var direct_value_values: [5]u16 = undefined;
+    sampler.fillFrom(&direct_fill_engine, u16, &direct_sample_values);
+    Rng.fillFrom(&direct_value_fill_engine, u16, &direct_value_values);
+    try std.testing.expectEqualSlices(u16, &direct_value_values, &direct_sample_values);
+    try std.testing.expectEqual(direct_value_fill_engine.next(), direct_fill_engine.next());
 }

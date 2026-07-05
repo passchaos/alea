@@ -47,7 +47,9 @@ The current Linux-first roadmap is intentionally broad:
   bulk-fill throughput
 - `Rng.value(T)` / `Rng.valueChecked(T)` plus Rust-discoverable
   `Rng.randomValue(T)` aliases for scalar, enum, tuple, and array
-  sampling, including fallible empty-enum handling
+  sampling, including fallible empty-enum handling; distribution-namespace
+  `StandardUniform` exposes the same default value sampler for callers looking
+  for local Rust `rand::distr::StandardUniform` discovery
 - `Rng.valueBatch(T)` / `Rng.valueBatchChecked(T)`,
   Rust-discoverable `Rng.sample(T, sampler)`, `Rng.sampleBatch(T, sampler)`, bounded-uint `uintLessThanBatch` /
   `uintAtMostBatch`, `Rng.rangeBatch(T, min, max)` / inclusive integer
@@ -72,7 +74,8 @@ The current Linux-first roadmap is intentionally broad:
   variants for fallible user-supplied counts or empty inputs
 - reusable sampler `map` adapters for Rust-discoverable `Distribution::map`
   style transformations, distribution-namespace `sampleIter` aliases for
-  Rust-discoverable `Distribution::sample_iter` workflows, reusable uniform with Rust-discoverable `new` /
+  Rust-discoverable `Distribution::sample_iter` workflows, `StandardUniform`
+  for default scalar/compound value sampling, reusable uniform with Rust-discoverable `new` /
   `newInclusive` and one-shot `sampleSingle` / `sampleSingleInclusive` aliases, Bernoulli with Rust-discoverable `new` / `fromRatio` / `p()` aliases, non-uniform distribution, opt-in bounded f32
   LogNormal approximation, and alias-table samplers with Rust-discoverable new aliases, Rust-discoverable updateWeights, ordered updateMany, and single-weight updateAt, numChoices, positiveCount, compact `u32` index
   output, `sampleIndex` / `fillIndices` aliases, and owned repeated index

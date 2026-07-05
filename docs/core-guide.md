@@ -203,8 +203,16 @@ Bernoulli/binomial/binomial-approx/negative-binomial/hypergeometric/geometric/st
 and parameterized normal/exponential vectors/fills when the engine type is
 comptime-known.
 Run `zig build run-range-sampling` for a runnable comparison of integer ranges,
-strict float intervals, bulk range fills, reusable `Uniform` samplers, vector
-ranges, duration ranges, collapsed point-masses, and checked range errors.
+strict float intervals, bulk range fills, `StandardUniform`, reusable `Uniform`
+samplers, vector ranges, duration ranges, collapsed point-masses, and checked
+range errors.
+`distributions.StandardUniform` is the distribution-namespace equivalent of
+`Rng.value(T)` / `Rng.valueFrom(source, T)` for local Rust
+`rand::distr::StandardUniform` discovery: `sample` / `sampleFrom` draw any
+supported scalar, vector, enum, array, or tuple value, while `fill` / `fillFrom`
+bulk-fill integer, float, bool, and vector slices through the same
+stream-compatible `Rng.fill` fast paths and fill enum or compound array/tuple
+slices via repeated `valueFrom` draws.
 Reusable scalar and vector uniform samplers keep Zig-native `init` /
 `initInclusive` constructors and also expose Rust-discoverable `new` /
 `newInclusive` aliases matching local Rust `Uniform::new` /

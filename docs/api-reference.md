@@ -350,9 +350,11 @@ self-forking.
 ## Distributions
 
 - Error type: `Error`
-- Reusable sampler adapters: `sampleIter`, `sampleIterFrom`, `map`, `MappedSampler`,
-  `MappedSampler.sample`, `MappedSampler.sampleFrom`, `MappedSampler.fill`,
-  `MappedSampler.fillFrom`, `MappedSampler.map`
+- Reusable sampler adapters: `StandardUniform`, `StandardUniform.sample`,
+  `StandardUniform.sampleFrom`, `StandardUniform.fill`,
+  `StandardUniform.fillFrom`, `sampleIter`, `sampleIterFrom`, `map`,
+  `MappedSampler`, `MappedSampler.sample`, `MappedSampler.sampleFrom`,
+  `MappedSampler.fill`, `MappedSampler.fillFrom`, `MappedSampler.map`
 
 Single-shot helpers:
 

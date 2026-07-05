@@ -551,3 +551,8 @@ S4-M261 adds Rust-discoverable `seq.WeightError` and root `WeightError` aliases
 (`compare/results/s4-m261-weighterror-alias.md`), closing the local Rust
 `rand::seq::WeightError` discovery-name gap while preserving Alea's existing
 weighted-sampling error contract.
+S4-M262 adds distribution-namespace `StandardUniform`
+(`compare/results/s4-m262-standard-uniform.md`), closing the local Rust
+`rand::distr::StandardUniform` discovery gap by exposing Alea's existing
+default-value sampling semantics as a reusable sampler with scalar, direct-source,
+primitive/vector fill, and compound repeated-value workflows.

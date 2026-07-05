@@ -25,11 +25,20 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(duration_batch);
     const sample_single = try alea.distributions.sampleSingleFrom(&engine, u8, 1, 7);
     const sample_single_inclusive = try alea.distributions.sampleSingleInclusiveFrom(&engine, u8, 1, 6);
+    const standard_uniform = alea.distributions.StandardUniform{};
+    const StandardPair = struct { bool, u16 };
+    var standard_engine = alea.ScalarPrng.init(0x7261_6e67_73);
+    const standard_rng = alea.Rng.init(&standard_engine);
+    const standard_pair = standard_rng.sample(StandardPair, standard_uniform);
+    const standard_word = alea.Rng.sampleFrom(&standard_engine, u32, standard_uniform);
+    var standard_units: [3]f32 = undefined;
+    standard_uniform.fillFrom(&standard_engine, f32, &standard_units);
 
     try stdout.print("integer ranges: less-than die={}, inclusive die={}, signed offset={}\n", .{ die_exclusive, die_inclusive, signed_offset });
     try stdout.print("randomRange die={}, randomRangeAtMost die={}\n", .{ random_range_die, random_range_at_most_die });
     try stdout.print("float units: [0,1)={d:.8}, (0,1)={d:.8}, (0,1]={d:.8}, range[-1,1)={d:.8}\n", .{ unit, open, open_closed, centered });
     try stdout.print("sampleSingle die={}, sampleSingleInclusive die={}\n", .{ sample_single, sample_single_inclusive });
+    try stdout.print("StandardUniform pair={any}, u32={}, f32 fill [0,1): {any}\n", .{ standard_pair, standard_word, standard_units });
     try stdout.print("duration range [10ms,20ms]: {} ns\n", .{duration.nanoseconds});
     try stdout.print("durationRangeAtMostBatch [10ms,20ms]: {any}\n", .{duration_batch});
 
