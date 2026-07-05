@@ -278,6 +278,7 @@ Local Alea evidence:
 - `compare/results/s4-m254-stdrng-smallrng-aliases.md`
 - `compare/results/s4-m255-step-rng.md`
 - `compare/results/s4-m256-chacha12rng-alias.md`
+- `compare/results/s4-m257-chacha8-chacha20-rngs.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -525,3 +526,8 @@ S4-M256 adds a Rust-discoverable `ChaCha12Rng` root alias
 (`compare/results/s4-m256-chacha12rng-alias.md`), closing the local Rust
 optional-`chacha` `rand::rngs::ChaCha12Rng` discovery-name gap while preserving
 Alea's existing `ChaCha` / `SecurePrng` engine contract.
+S4-M257 adds Rust-discoverable `ChaCha8Rng` and `ChaCha20Rng` engines
+(`compare/results/s4-m257-chacha8-chacha20-rngs.md`), closing the remaining
+local Rust optional-`chacha` `rand::rngs::{ChaCha8Rng, ChaCha20Rng}`
+discovery/workflow gap while preserving Alea's existing ChaCha12 `SecurePrng`
+and `StdRng` contract.

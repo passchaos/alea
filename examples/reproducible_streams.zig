@@ -28,7 +28,9 @@ pub fn main(init: std.process.Init) !void {
     var scalar_engine = alea.scalar(sampling_seed.stream(2).state);
     var reproducible_engine = alea.reproducible(sampling_seed.stream(3).state);
     var secure_style_engine = alea.secureFromSeed(sampling_seed.stream(4).state);
+    var chacha8_rng = alea.ChaCha8Rng.seedFromU64(sampling_seed.stream(4).state);
     var chacha12_rng_alias = alea.ChaCha12Rng.seedFromU64(sampling_seed.stream(4).state);
+    var chacha20_rng = alea.ChaCha20Rng.seedFromU64(sampling_seed.stream(4).state);
     var std_rng_alias = alea.StdRng.seedFromU64(sampling_seed.stream(4).state);
     var small_rng_alias = alea.SmallRng.seedFromU64(sampling_seed.stream(5).state);
     var raw_alias_engine = alea.DefaultPrng.init(sampling_seed.stream(5).state);
@@ -55,7 +57,9 @@ pub fn main(init: std.process.Init) !void {
     try printNext(stdout, "ScalarPrng/Wyhash64", &scalar_engine, 3);
     try printNext(stdout, "ReproduciblePrng/Pcg64", &reproducible_engine, 3);
     try printNext(stdout, "SecurePrng/ChaCha12-from-seed", &secure_style_engine, 3);
+    try printNext(stdout, "ChaCha8Rng optional-chacha", &chacha8_rng, 2);
     try printNext(stdout, "ChaCha12Rng alias", &chacha12_rng_alias, 2);
+    try printNext(stdout, "ChaCha20Rng optional-chacha", &chacha20_rng, 2);
     try printNext(stdout, "StdRng/ChaCha12 alias", &std_rng_alias, 2);
     try printNext(stdout, "SmallRng/Xoshiro256++ alias", &small_rng_alias, 2);
     try stdout.print("engine raw aliases: nextU64=0x{x}, nextU32=0x{x}, fillBytes={any}\n", .{ engine_raw64, engine_raw32, engine_fill_bytes });
@@ -79,6 +83,6 @@ pub fn main(init: std.process.Init) !void {
     try printNext(stdout, "Pcg64 seed=0x5150 stream=7", &pcg_stream_7, 2);
     try printNext(stdout, "Pcg64 seed=0x5150 stream=8", &pcg_stream_8, 2);
 
-    try stdout.print("\nUse Seed.mix and Seed.stream for stable named substreams; choose Default/Fast/Scalar/Reproducible/Secure-style engines by workload and reproducibility contract, or StdRng/SmallRng aliases when porting local Rust rand naming.\n", .{});
+    try stdout.print("\nUse Seed.mix and Seed.stream for stable named substreams; choose Default/Fast/Scalar/Reproducible/Secure-style engines by workload and reproducibility contract, or StdRng/SmallRng and ChaCha8Rng/ChaCha12Rng/ChaCha20Rng names when porting local Rust rand naming.\n", .{});
     try stdout.flush();
 }

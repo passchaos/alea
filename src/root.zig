@@ -22,6 +22,8 @@ pub const Xoshiro256PlusPlus = @import("engines/xoshiro256plusplus.zig");
 pub const Xoshiro256 = @import("engines/xoshiro256.zig");
 pub const Pcg64 = @import("engines/pcg64.zig");
 pub const ChaCha = @import("engines/chacha.zig");
+pub const ChaCha8Rng = @import("engines/chacha8.zig");
+pub const ChaCha20Rng = @import("engines/chacha20.zig");
 pub const StepRng = @import("engines/step.zig");
 
 pub const ChaCha12Rng = ChaCha;
@@ -117,8 +119,8 @@ pub fn makeRng(comptime Engine: type, io: std.Io) !Engine {
         try std.Io.randomSecure(io, &seed_bytes);
         return Engine.fromSeedBytes(seed_bytes);
     }
-    if (comptime Engine == ChaCha) {
-        var seed_bytes: [ChaCha.seed_length]u8 = undefined;
+    if (comptime Engine == ChaCha or Engine == ChaCha8Rng or Engine == ChaCha20Rng) {
+        var seed_bytes: [Engine.seed_length]u8 = undefined;
         try std.Io.randomSecure(io, &seed_bytes);
         return Engine.fromSeedBytes(seed_bytes);
     }
@@ -145,9 +147,17 @@ test "root hash constructors mirror HashPrng" {
 }
 
 test "root Rust-discoverable rng aliases mirror concrete engines" {
+    var chacha8_rng = ChaCha8Rng.seedFromU64(0x5150_c08);
+    var chacha8_direct = ChaCha8Rng.initFromU64(0x5150_c08);
+    try std.testing.expectEqual(chacha8_direct.next(), chacha8_rng.next());
+
     var chacha12_rng = ChaCha12Rng.seedFromU64(0x5150_c12);
     var chacha_rng = ChaCha.seedFromU64(0x5150_c12);
     try std.testing.expectEqual(chacha_rng.next(), chacha12_rng.next());
+
+    var chacha20_rng = ChaCha20Rng.seedFromU64(0x5150_c20);
+    var chacha20_direct = ChaCha20Rng.initFromU64(0x5150_c20);
+    try std.testing.expectEqual(chacha20_direct.next(), chacha20_rng.next());
 
     var std_rng = StdRng.seedFromU64(0x5150_547d);
     var secure_rng = SecurePrng.seedFromU64(0x5150_547d);
@@ -243,6 +253,12 @@ test "makeRng constructs exported engines from system entropy" {
     var secure_engine = try makeRng(SecurePrng, io);
     _ = secure_engine.next();
 
+    var chacha8_engine = try makeRng(ChaCha8Rng, io);
+    _ = chacha8_engine.next();
+
+    var chacha20_engine = try makeRng(ChaCha20Rng, io);
+    _ = chacha20_engine.next();
+
     var splitmix_engine = try makeRng(SplitMix64, io);
     _ = splitmix_engine.next();
 
@@ -261,7 +277,7 @@ test "root sysRng exposes system entropy source" {
 }
 
 fn engineFromSeed(comptime Engine: type, seed: u64) Engine {
-    if (comptime Engine == ChaCha) return Engine.initFromU64(seed);
+    if (comptime Engine == ChaCha or Engine == ChaCha8Rng or Engine == ChaCha20Rng) return Engine.initFromU64(seed);
     return Engine.init(seed);
 }
 
@@ -302,7 +318,7 @@ fn expectFullEngineRawAliases(comptime Engine: type, seed: u64) !void {
 test "engine raw aliases preserve stream shape" {
     const seed: u64 = 0x5150_f00d_dead_beef;
 
-    inline for (.{ Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha }) |Engine| {
+    inline for (.{ Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha, ChaCha8Rng, ChaCha20Rng }) |Engine| {
         try expectFullEngineRawAliases(Engine, seed);
     }
 
@@ -332,7 +348,7 @@ fn expectEngineSeedFromU64Alias(comptime Engine: type, seed: u64) !void {
 test "engine seedFromU64 aliases mirror constructors" {
     const seed: u64 = 0x5150_5eed_1234_5678;
 
-    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha }) |Engine| {
+    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha, ChaCha8Rng, ChaCha20Rng }) |Engine| {
         try expectEngineSeedFromU64Alias(Engine, seed);
     }
 }
@@ -347,7 +363,7 @@ fn expectEngineFromSeedAlias(comptime Engine: type, seed_value: u64) !void {
 test "engine fromSeed aliases mirror Seed constructors" {
     const seed: u64 = 0x5150_5eed_f00d_cafe;
 
-    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha }) |Engine| {
+    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha, ChaCha8Rng, ChaCha20Rng }) |Engine| {
         try expectEngineFromSeedAlias(Engine, seed);
     }
 }
@@ -381,8 +397,8 @@ fn engineFromSeedBytesReference(comptime Engine: type, seed: anytype) Engine {
     if (comptime Engine == Pcg64) {
         return Pcg64.initTwo(seedWord(seed, 0), seedWord(seed, 1));
     }
-    if (comptime Engine == ChaCha) {
-        return ChaCha.init(seed);
+    if (comptime Engine == ChaCha or Engine == ChaCha8Rng or Engine == ChaCha20Rng) {
+        return Engine.init(seed);
     }
     @compileError("unsupported engine");
 }
@@ -416,6 +432,8 @@ test "engine fromSeedBytes aliases mirror byte seed constructors" {
     try expectEngineFromSeedBytesAlias(Xoshiro256, seed32);
     try expectEngineFromSeedBytesAlias(Xoshiro256PlusPlus, seed32);
     try expectEngineFromSeedBytesAlias(ChaCha, seed32);
+    try expectEngineFromSeedBytesAlias(ChaCha8Rng, seed32);
+    try expectEngineFromSeedBytesAlias(ChaCha20Rng, seed32);
 
     const zero_seed = [_]u8{0} ** 32;
     var xoshiro_zero_direct = Xoshiro256.init(0);
@@ -487,15 +505,15 @@ fn engineFromRngReference(comptime Engine: type, source: anytype) Engine {
     if (comptime Engine == Pcg64) {
         return Pcg64.initTwo(source.next(), source.next());
     }
-    if (comptime Engine == ChaCha) {
-        var key: [ChaCha.seed_length]u8 = undefined;
+    if (comptime Engine == ChaCha or Engine == ChaCha8Rng or Engine == ChaCha20Rng) {
+        var key: [Engine.seed_length]u8 = undefined;
         var i: usize = 0;
         while (i < key.len) : (i += 8) {
             var bytes: [8]u8 = undefined;
             std.mem.writeInt(u64, &bytes, source.next(), .little);
             @memcpy(key[i..][0..8], &bytes);
         }
-        return ChaCha.init(key);
+        return Engine.init(key);
     }
     if (comptime Engine == Wyhash64) {
         return Wyhash64.fromState(source.next());
@@ -516,7 +534,7 @@ test "engine fromRng and fork aliases consume full seed material" {
     try std.testing.expectEqual(direct_seed, alias_seed.state);
     try std.testing.expectEqual(direct_seed_source.next(), alias_seed_source.next());
 
-    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha }) |Engine| {
+    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha, ChaCha8Rng, ChaCha20Rng }) |Engine| {
         try expectEngineFromRngAlias(Engine, seed);
         try expectEngineForkAlias(Engine, seed);
         try expectEngineTryForkAlias(Engine, seed);
@@ -580,15 +598,15 @@ fn engineFromFallibleRngReference(comptime Engine: type, source: anytype) !Engin
         const stream = try source.tryNext();
         return Pcg64.initTwo(seed, stream);
     }
-    if (comptime Engine == ChaCha) {
-        var key: [ChaCha.seed_length]u8 = undefined;
+    if (comptime Engine == ChaCha or Engine == ChaCha8Rng or Engine == ChaCha20Rng) {
+        var key: [Engine.seed_length]u8 = undefined;
         var i: usize = 0;
         while (i < key.len) : (i += 8) {
             var bytes: [8]u8 = undefined;
             std.mem.writeInt(u64, &bytes, try source.tryNext(), .little);
             @memcpy(key[i..][0..8], &bytes);
         }
-        return ChaCha.init(key);
+        return Engine.init(key);
     }
     if (comptime Engine == Wyhash64) {
         return Wyhash64.fromState(try source.tryNext());
@@ -626,7 +644,7 @@ test "engine tryFromRng aliases propagate source failures" {
         try expectEngineTryFromRngFailure(Engine, &words, 1);
     }
 
-    inline for (.{ Alea4x64, Xoshiro256, Xoshiro256PlusPlus, ChaCha }) |Engine| {
+    inline for (.{ Alea4x64, Xoshiro256, Xoshiro256PlusPlus, ChaCha, ChaCha8Rng, ChaCha20Rng }) |Engine| {
         try expectEngineTryFromRngAlias(Engine, &words);
         try expectEngineTryFromRngFailure(Engine, &words, 3);
     }

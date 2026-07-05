@@ -25,11 +25,17 @@ fn runChecks() !void {
     try checkEngine(alea.Xoshiro256, "xoshiro256");
     try checkEngine(alea.Xoshiro256PlusPlus, "xoshiro256++");
     try checkEngine(alea.Pcg64, "pcg64");
+    try checkEngine(alea.ChaCha8Rng, "chacha8");
+    try checkEngine(alea.ChaCha, "chacha12");
+    try checkEngine(alea.ChaCha20Rng, "chacha20");
     try checkDistributions();
 }
 
 fn checkEngine(comptime Engine: type, comptime name: []const u8) !void {
-    var engine = Engine.init(0x51a7_c0de);
+    var engine = if (Engine == alea.ChaCha or Engine == alea.ChaCha8Rng or Engine == alea.ChaCha20Rng)
+        Engine.initFromU64(0x51a7_c0de)
+    else
+        Engine.init(0x51a7_c0de);
     var byte_counts = [_]usize{0} ** 256;
     var low_nibble_counts = [_]usize{0} ** 16;
     var low_nibble_pairs = [_]usize{0} ** 256;

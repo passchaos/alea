@@ -9,7 +9,7 @@ stability expectations.
 
 - Modules: `Rng`, `Seed`, `distributions`, `seq`, `ascii`, `quality`
 - Engines: `SplitMix64`, `Wyhash64`, `Alea4x64`, `Xoshiro256PlusPlus`,
-  `Xoshiro256`, `Pcg64`, `ChaCha`, `StepRng`
+  `Xoshiro256`, `Pcg64`, `ChaCha`, `ChaCha8Rng`, `ChaCha20Rng`, `StepRng`
 - Aliases: `DefaultPrng`, `FastPrng`, `HashPrng`, `ReproduciblePrng`,
   `ScalarPrng`, `SecurePrng`, `ChaCha12Rng`, `StdRng`, `SmallRng`, `SysRng`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
@@ -320,6 +320,14 @@ self-forking.
   `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`, `fromRng`, `tryFromRng`,
   `fork`, `tryFork`
 - `ChaCha`: `seed_length`, `init`, `initFromU64`, `random`, `addEntropy`,
+  `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`, `tryNext`, `nextU64`,
+  `tryNextU64`, `nextU32`, `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`,
+  `fromRng`, `tryFromRng`, `fork`, `tryFork`
+- `ChaCha8Rng`: `seed_length`, `init`, `initFromU64`, `random`, `addEntropy`,
+  `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`, `tryNext`, `nextU64`,
+  `tryNextU64`, `nextU32`, `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`,
+  `fromRng`, `tryFromRng`, `fork`, `tryFork`
+- `ChaCha20Rng`: `seed_length`, `init`, `initFromU64`, `random`, `addEntropy`,
   `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`, `tryNext`, `nextU64`,
   `tryNextU64`, `nextU32`, `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`,
   `fromRng`, `tryFromRng`, `fork`, `tryFork`
