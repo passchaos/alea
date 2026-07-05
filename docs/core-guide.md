@@ -35,6 +35,11 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
   explicit `SecurePrng` name.
 - `SmallRng = Xoshiro256PlusPlus`: Rust-discoverable small fast RNG alias,
   matching the current local Rust 64-bit `SmallRng` family in Zig-native form.
+- `rngs`: a Rust-discoverable namespace for local `rand::rngs::*` comparisons,
+  re-exporting Alea's explicit `StdRng`, `SmallRng`, `SysRng`, `SysError`,
+  `ChaCha8Rng`, `ChaCha12Rng`, `ChaCha20Rng`, `Xoshiro128PlusPlus`, and
+  `Xoshiro256PlusPlus` names without adding Rust's implicit thread-local
+  `ThreadRng` model.
 - `StepRng`: deterministic arithmetic-sequence mock source for tests, byte
   stream adapters, and reproducibility examples; use `stepRng(initial,
   increment)` or `constRng(value)` at the root for Rust-discoverable

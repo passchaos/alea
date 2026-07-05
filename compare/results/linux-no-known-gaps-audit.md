@@ -615,3 +615,7 @@ S4-M276 adds `Uniform(T).tryFromRange` / `tryFromRangeInclusive` and matching
 `VectorUniform` aliases (`compare/results/s4-m276-uniform-range-constructors.md`),
 closing the local Rust `Uniform::try_from(Range)` / `RangeInclusive`
 discoverability gap while preserving Alea's existing constructors.
+S4-M277 adds the root `rngs` namespace
+(`compare/results/s4-m277-rngs-namespace.md`), closing the local Rust
+`rand::rngs::*` namespace discoverability gap for Alea's existing explicit
+engine aliases and `SysRng` source without adding hidden thread-local RNG state.

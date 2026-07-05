@@ -14,6 +14,10 @@ stability expectations.
 - Aliases: `DefaultPrng`, `FastPrng`, `HashPrng`, `ReproduciblePrng`,
   `ScalarPrng`, `SecurePrng`, `ChaCha12Rng`, `StdRng`, `SmallRng`, `SysRng`,
   `SysError`, `WeightError`
+- `rngs` namespace aliases: `rngs.StdRng`, `rngs.SmallRng`, `rngs.SysRng`,
+  `rngs.SysError`, `rngs.ChaCha8Rng`, `rngs.ChaCha12Rng`,
+  `rngs.ChaCha20Rng`, `rngs.Xoshiro128PlusPlus`,
+  `rngs.Xoshiro256PlusPlus`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
   `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
   `secureFromSeed`, `secure`, `secureBytes`, `sysRng`, `stepRng`, `constRng`,

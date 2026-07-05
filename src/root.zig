@@ -40,6 +40,18 @@ pub const SecurePrng = ChaCha;
 pub const StdRng = SecurePrng;
 pub const SmallRng = Xoshiro256PlusPlus;
 
+pub const rngs = struct {
+    pub const StdRng = ChaCha;
+    pub const SmallRng = @import("engines/xoshiro256plusplus.zig");
+    pub const SysRng = Rng.SysRng;
+    pub const SysError = Rng.SysRng.Error;
+    pub const ChaCha8Rng = @import("engines/chacha8.zig");
+    pub const ChaCha12Rng = ChaCha;
+    pub const ChaCha20Rng = @import("engines/chacha20.zig");
+    pub const Xoshiro128PlusPlus = @import("engines/xoshiro128plusplus.zig");
+    pub const Xoshiro256PlusPlus = @import("engines/xoshiro256plusplus.zig");
+};
+
 pub fn default(seed: u64) DefaultPrng {
     return DefaultPrng.init(seed);
 }
@@ -360,6 +372,32 @@ test "root Rust-discoverable rng aliases mirror concrete engines" {
     var small_from_seed = SmallRng.fromSeed(Seed.fromString("small alias"));
     var xoshiro_from_seed = Xoshiro256PlusPlus.fromSeed(Seed.fromString("small alias"));
     try std.testing.expectEqual(xoshiro_from_seed.next(), small_from_seed.next());
+}
+
+test "root rngs namespace mirrors root aliases" {
+    comptime {
+        std.debug.assert(rngs.StdRng == StdRng);
+        std.debug.assert(rngs.SmallRng == SmallRng);
+        std.debug.assert(rngs.SysRng == SysRng);
+        std.debug.assert(rngs.SysError == SysError);
+        std.debug.assert(rngs.ChaCha8Rng == ChaCha8Rng);
+        std.debug.assert(rngs.ChaCha12Rng == ChaCha12Rng);
+        std.debug.assert(rngs.ChaCha20Rng == ChaCha20Rng);
+        std.debug.assert(rngs.Xoshiro128PlusPlus == Xoshiro128PlusPlus);
+        std.debug.assert(rngs.Xoshiro256PlusPlus == Xoshiro256PlusPlus);
+    }
+
+    var namespace_std = rngs.StdRng.seedFromU64(0x5150_0277);
+    var root_std = StdRng.seedFromU64(0x5150_0277);
+    try std.testing.expectEqual(root_std.next(), namespace_std.next());
+
+    var namespace_small = rngs.SmallRng.seedFromU64(0x5150_5277);
+    var root_small = SmallRng.seedFromU64(0x5150_5277);
+    try std.testing.expectEqual(root_small.next(), namespace_small.next());
+
+    var namespace_chacha20 = rngs.ChaCha20Rng.seedFromU64(0x5150_c277);
+    var root_chacha20 = ChaCha20Rng.seedFromU64(0x5150_c277);
+    try std.testing.expectEqual(root_chacha20.next(), namespace_chacha20.next());
 }
 
 test "root StepRng helpers mirror StepRng constructors" {
