@@ -590,7 +590,7 @@ Use:
   repeated `Choice.indexIterFrom` / `indexIterU32From` index streams,
   `WeightedChoice.initBy` / `updateBy`, `WeightedChoice.initByIndex` / `updateByIndex`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
-  `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
+  optional `WeightedChoice.weight`, `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
   `sampleIndexU32From`, `WeightedChoice.fillValuesFrom` / `fillFrom`,
   `WeightedChoice.valuesFrom` / `ptrsFrom`, fixed-size
   `WeightedChoice.valueArrayFrom` / `ptrArrayFrom`, and
@@ -605,7 +605,7 @@ Use:
   `choose_weighted_iter`-style workflows
 - `distributions.AliasTable` for O(1) repeated weighted index sampling,
   including `len`, `totalWeight`, and allocation-returning or caller-buffer
-  `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
+  optional `weight`, `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
   sampler introspection; use `sampleU32` / `fillU32` variants when population
   indexes fit `u32` and compact output is desired, and `indices` /
   `indicesU32` variants for allocation-returning repeated draws; `indexArray`

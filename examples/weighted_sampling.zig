@@ -385,6 +385,8 @@ pub fn main(init: std.process.Init) !void {
     defer alias.deinit();
     var alias_probs: [items.len]f64 = undefined;
     try alias.probabilitiesInto(&alias_probs);
+    const alias_weight = alias.weight(2).?;
+    const alias_missing_weight = alias.weight(items.len) == null;
     var alias_engine = alea.ScalarPrng.init(0x7152);
     var alias_samples: [8]usize = undefined;
     alias.fillFrom(&alias_engine, &alias_samples);
@@ -415,6 +417,7 @@ pub fn main(init: std.process.Init) !void {
     var alias_by_item_samples: [6]usize = undefined;
     alias_by_item.fillFrom(&alias_by_item_engine, &alias_by_item_samples);
     try stdout.print("alias probabilities: {any}\n", .{alias_probs});
+    try stdout.print("alias weight(2)={d:.3} missing={}\n", .{ alias_weight, alias_missing_weight });
     try stdout.print("alias sample indices: {any}\n", .{alias_samples});
     try stdout.print("alias u32 sample indices: {any}\n", .{alias_u32_samples});
     try stdout.print("alias owned u32 indices: {any}\n", .{alias_owned_u32});
@@ -516,6 +519,7 @@ pub fn main(init: std.process.Init) !void {
     var choice = try alea.seq.WeightedChoice([]const u8, f64).init(allocator, &items, &float_weights);
     defer choice.deinit();
     try stdout.print("WeightedChoice.numChoices: {}\n", .{choice.numChoices()});
+    try stdout.print("WeightedChoice.weight(2)={d:.3} missing={}\n", .{ choice.weight(2).?, choice.weight(items.len) == null });
     var choice_engine = alea.ScalarPrng.init(0x7155);
     const choice_index = choice.sampleIndexFrom(&choice_engine);
     try stdout.print("weighted choice sample index: {}\n", .{choice_index});

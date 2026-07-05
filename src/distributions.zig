@@ -15475,10 +15475,10 @@ pub fn AliasTable(comptime Weight: type) type {
             var total: f64 = 0;
             var positive_index: ?usize = null;
             var positive_count: usize = 0;
-            for (input_weights, 0..) |weight, index| {
+            for (input_weights, 0..) |input_weight, index| {
                 const value: f64 = switch (@typeInfo(Weight)) {
-                    .int => @floatFromInt(weight),
-                    .float => @floatCast(weight),
+                    .int => @floatFromInt(input_weight),
+                    .float => @floatCast(input_weight),
                     else => @compileError("alias weights must be numeric"),
                 };
                 if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
@@ -15490,10 +15490,10 @@ pub fn AliasTable(comptime Weight: type) type {
             }
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
 
-            for (input_weights, 0..) |weight, i| {
+            for (input_weights, 0..) |input_weight, i| {
                 const value: f64 = switch (@typeInfo(Weight)) {
-                    .int => @floatFromInt(weight),
-                    .float => @floatCast(weight),
+                    .int => @floatFromInt(input_weight),
+                    .float => @floatCast(input_weight),
                     else => unreachable,
                 };
                 scaled[i] = value * @as(f64, @floatFromInt(input_weights.len)) / total;
@@ -15649,6 +15649,10 @@ pub fn AliasTable(comptime Weight: type) type {
                 if (alias_index == index) value += (1 - probability) * column_scale;
             }
             return value;
+        }
+
+        pub fn weight(self: Self, index: usize) ?f64 {
+            return self.weightAt(index) catch null;
         }
 
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
@@ -18543,6 +18547,11 @@ test "alias table exposes totals and reconstructs weights" {
     try std.testing.expectApproxEqAbs(@as(f64, 5), try table.weightAt(2), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), try table.weightAt(3), 1e-12);
     try std.testing.expectError(error.InvalidParameter, table.weightAt(4));
+    try std.testing.expectApproxEqAbs(@as(f64, 1), table.weight(0).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), table.weight(1).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), table.weight(2).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), table.weight(3).?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), table.weight(4));
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 9.0), try table.probabilityAt(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), try table.probabilityAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 9.0), try table.probabilityAt(2), 1e-12);
@@ -18579,6 +18588,7 @@ test "alias table exposes totals and reconstructs weights" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), stack_weights[2], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), stack_weights[3], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 10), try table.weightAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), table.weight(1).?, 1e-12);
 }
 
 test "zero-length alias table fills do not consume random stream" {

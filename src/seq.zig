@@ -8143,6 +8143,11 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return self.table.weightAt(index) catch unreachable;
         }
 
+        pub fn weight(self: Self, index: usize) ?f64 {
+            if (index >= self.items.len) return null;
+            return self.table.weight(index) orelse unreachable;
+        }
+
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
             if (index >= self.items.len) return error.InvalidParameter;
             return self.table.probabilityAt(index) catch unreachable;
@@ -16980,6 +16985,10 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), try choice.weightAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 7), try choice.weightAt(2), 1e-12);
     try std.testing.expectError(error.InvalidParameter, choice.weightAt(3));
+    try std.testing.expectApproxEqAbs(@as(f64, 0), choice.weight(0).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), choice.weight(1).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7), choice.weight(2).?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), choice.weight(3));
     try std.testing.expectApproxEqAbs(@as(f64, 0), try choice.probabilityAt(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 8.0), try choice.probabilityAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 7.0 / 8.0), try choice.probabilityAt(2), 1e-12);
