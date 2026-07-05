@@ -4668,6 +4668,25 @@ pub fn chooseIteratorCheckedFrom(source: anytype, comptime T: type, iterator: an
     return chooseIteratorFrom(source, T, iterator) orelse error.EmptyInput;
 }
 
+pub fn chooseIteratorHinted(rng: Rng, comptime T: type, iterator: anytype) ?T {
+    return chooseIteratorHintedFrom(rng, T, iterator);
+}
+
+pub fn chooseIteratorHintedChecked(rng: Rng, comptime T: type, iterator: anytype) Error!T {
+    return chooseIteratorHintedCheckedFrom(rng, T, iterator);
+}
+
+pub fn chooseIteratorHintedCheckedFrom(source: anytype, comptime T: type, iterator: anytype) Error!T {
+    return chooseIteratorHintedFrom(source, T, iterator) orelse error.EmptyInput;
+}
+
+pub fn chooseIteratorHintedFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        return chooseIteratorExactRemainingFrom(source, T, iterator, remaining);
+    }
+    return chooseIteratorFrom(source, T, iterator);
+}
+
 pub fn chooseIteratorStable(rng: Rng, comptime T: type, iterator: anytype) ?T {
     return chooseIteratorStableFrom(rng, T, iterator);
 }
@@ -4696,6 +4715,42 @@ pub fn chooseIteratorFrom(source: anytype, comptime T: type, iterator: anytype) 
     }
 
     return result;
+}
+
+fn chooseIteratorExactRemainingFrom(source: anytype, comptime T: type, iterator: anytype, remaining: usize) ?T {
+    if (remaining == 0) return null;
+    if (remaining == 1) return iterator.next();
+
+    const selected = Rng.uintLessThanFrom(source, usize, remaining);
+    var skipped: usize = 0;
+    while (skipped < selected) : (skipped += 1) {
+        _ = iterator.next() orelse return null;
+    }
+    return iterator.next();
+}
+
+fn iteratorExactRemaining(iterator: anytype) ?usize {
+    const Iterator = iteratorType(@TypeOf(iterator));
+    if (comptime @hasDecl(Iterator, "sizeHint")) {
+        const hint = iterator.sizeHint();
+        if (hint.upper) |upper| {
+            if (upper == hint.lower) return upper;
+        }
+    }
+    if (comptime @hasDecl(Iterator, "len")) {
+        return iterator.len();
+    }
+    if (comptime @hasDecl(Iterator, "remaining")) {
+        return iterator.remaining();
+    }
+    return null;
+}
+
+fn iteratorType(comptime Iterator: type) type {
+    return switch (@typeInfo(Iterator)) {
+        .pointer => |pointer| pointer.child,
+        else => Iterator,
+    };
 }
 
 pub fn sampleIterator(allocator: std.mem.Allocator, rng: Rng, comptime T: type, iterator: anytype, amount: usize) ![]T {
@@ -20092,6 +20147,138 @@ test "stable iterator choice aliases reservoir selection" {
     var checked_empty_iter = RangeIter{ .next_value = 0, .end = 0 };
     try std.testing.expectError(error.EmptyInput, chooseIteratorStableCheckedFrom(&empty_engine, u32, &checked_empty_iter));
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "hinted iterator choice uses exact-size hints when available" {
+    const alea = @import("root.zig");
+
+    const ExactIter = struct {
+        next_value: u32,
+        end: u32,
+
+        fn next(self: *@This()) ?u32 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.end - self.next_value;
+        }
+
+        fn len(self: @This()) usize {
+            return self.remaining();
+        }
+
+        fn sizeHint(self: @This()) SizeHint {
+            const length = self.remaining();
+            return .{ .lower = length, .upper = length };
+        }
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c903);
+        var direct_engine = Engine.init(0x5150_c903);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_iter = ExactIter{ .next_value = 0, .end = 100 };
+        var direct_iter = ExactIter{ .next_value = 0, .end = 100 };
+        try std.testing.expectEqual(chooseIteratorHinted(rng, u32, &facade_iter), chooseIteratorHintedFrom(&direct_engine, u32, &direct_iter));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_iter = ExactIter{ .next_value = 0, .end = 100 };
+        var checked_direct_iter = ExactIter{ .next_value = 0, .end = 100 };
+        try std.testing.expectEqual(try chooseIteratorHintedChecked(rng, u32, &checked_iter), try chooseIteratorHintedCheckedFrom(&direct_engine, u32, &checked_direct_iter));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_c904);
+    var empty_control = alea.ScalarPrng.init(0x5150_c904);
+    var empty_iter = ExactIter{ .next_value = 0, .end = 0 };
+    try std.testing.expectEqual(@as(?u32, null), chooseIteratorHintedFrom(&empty_engine, u32, &empty_iter));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    var checked_empty_iter = ExactIter{ .next_value = 0, .end = 0 };
+    try std.testing.expectError(error.EmptyInput, chooseIteratorHintedCheckedFrom(&empty_engine, u32, &checked_empty_iter));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var single_engine = alea.ScalarPrng.init(0x5150_c905);
+    var single_control = alea.ScalarPrng.init(0x5150_c905);
+    var single_iter = ExactIter{ .next_value = 42, .end = 43 };
+    try std.testing.expectEqual(@as(?u32, 42), chooseIteratorHintedFrom(&single_engine, u32, &single_iter));
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+    var checked_single_iter = ExactIter{ .next_value = 42, .end = 43 };
+    try std.testing.expectEqual(@as(u32, 42), try chooseIteratorHintedCheckedFrom(&single_engine, u32, &checked_single_iter));
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    const LenOnlyIter = struct {
+        next_value: u32,
+        end: u32,
+
+        fn next(self: *@This()) ?u32 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn len(self: @This()) usize {
+            return self.end - self.next_value;
+        }
+    };
+
+    var len_engine = alea.ScalarPrng.init(0x5150_c907);
+    var len_direct_engine = alea.ScalarPrng.init(0x5150_c907);
+    var len_iter = LenOnlyIter{ .next_value = 0, .end = 16 };
+    var len_direct_iter = LenOnlyIter{ .next_value = 0, .end = 16 };
+    try std.testing.expectEqual(chooseIteratorHintedFrom(&len_engine, u32, &len_iter), chooseIteratorHintedFrom(&len_direct_engine, u32, &len_direct_iter));
+    try std.testing.expectEqual(len_direct_engine.next(), len_engine.next());
+
+    const RemainingOnlyIter = struct {
+        next_value: u32,
+        end: u32,
+
+        fn next(self: *@This()) ?u32 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.end - self.next_value;
+        }
+    };
+
+    var remaining_engine = alea.ScalarPrng.init(0x5150_c908);
+    var remaining_direct_engine = alea.ScalarPrng.init(0x5150_c908);
+    var remaining_iter = RemainingOnlyIter{ .next_value = 0, .end = 16 };
+    var remaining_direct_iter = RemainingOnlyIter{ .next_value = 0, .end = 16 };
+    try std.testing.expectEqual(chooseIteratorHintedFrom(&remaining_engine, u32, &remaining_iter), chooseIteratorHintedFrom(&remaining_direct_engine, u32, &remaining_direct_iter));
+    try std.testing.expectEqual(remaining_direct_engine.next(), remaining_engine.next());
+}
+
+test "hinted iterator choice falls back for unhinted iterators" {
+    const alea = @import("root.zig");
+
+    const RangeIter = struct {
+        next_value: u32,
+        end: u32,
+
+        fn next(self: *@This()) ?u32 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+
+    var hinted_engine = alea.ScalarPrng.init(0x5150_c906);
+    var stable_engine = alea.ScalarPrng.init(0x5150_c906);
+    var hinted_iter = RangeIter{ .next_value = 0, .end = 100 };
+    var stable_iter = RangeIter{ .next_value = 0, .end = 100 };
+    try std.testing.expectEqual(chooseIteratorFrom(&stable_engine, u32, &stable_iter), chooseIteratorHintedFrom(&hinted_engine, u32, &hinted_iter));
+    try std.testing.expectEqual(stable_engine.next(), hinted_engine.next());
 }
 
 test "iterator sampling works without collecting first" {

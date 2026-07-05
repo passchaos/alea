@@ -13,6 +13,31 @@ const Counter = struct {
     }
 };
 
+const ExactCounter = struct {
+    next_value: u32 = 0,
+    limit: u32,
+
+    pub fn next(self: *@This()) ?u32 {
+        if (self.next_value >= self.limit) return null;
+        const value = self.next_value;
+        self.next_value += 1;
+        return value;
+    }
+
+    pub fn remaining(self: @This()) usize {
+        return self.limit - self.next_value;
+    }
+
+    pub fn len(self: @This()) usize {
+        return self.remaining();
+    }
+
+    pub fn sizeHint(self: @This()) alea.seq.SizeHint {
+        const length = self.remaining();
+        return .{ .lower = length, .upper = length };
+    }
+};
+
 fn printIndexVec(stdout: *std.Io.Writer, index_vec: alea.seq.IndexVec) !void {
     try stdout.print("[", .{});
     var iter = index_vec.iter();
@@ -446,6 +471,11 @@ pub fn main(init: std.process.Init) !void {
     var stream = Counter{ .limit = 20 };
     const picked = alea.seq.chooseIteratorFrom(&iter_choice_engine, u32, &stream).?;
     try stdout.print("chooseIteratorFrom counter[0..20): {}\n", .{picked});
+
+    var hinted_choice_engine = alea.ScalarPrng.init(0x5e11_0036);
+    var hinted_stream = ExactCounter{ .limit = 20 };
+    const hinted_picked = alea.seq.chooseIteratorHintedFrom(&hinted_choice_engine, u32, &hinted_stream).?;
+    try stdout.print("chooseIteratorHintedFrom exact counter[0..20): {}\n", .{hinted_picked});
 
     var stable_choice_engine = alea.ScalarPrng.init(0x5e11_0017);
     var stable_stream = Counter{ .limit = 20 };

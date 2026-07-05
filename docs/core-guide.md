@@ -432,8 +432,11 @@ Use:
   `choosePtrArray` / `chooseMutPtrArray` and `sample*Array` are
   no-replacement)
 - `seq.chooseIterator`, `seq.chooseIteratorFrom`,
-  `seq.chooseIteratorCheckedFrom`, stable aliases `seq.chooseIteratorStableFrom`
-  and `seq.chooseIteratorStableCheckedFrom`, `seq.sampleIterator`, `seq.sampleIteratorFrom`,
+  `seq.chooseIteratorCheckedFrom`, hint-sensitive exact-size aliases
+  `seq.chooseIteratorHintedFrom` / `seq.chooseIteratorHintedCheckedFrom` for
+  local Rust `IteratorRandom::choose`-style workflows, stable aliases
+  `seq.chooseIteratorStableFrom` and `seq.chooseIteratorStableCheckedFrom`,
+  `seq.sampleIterator`, `seq.sampleIteratorFrom`,
   `seq.sampleIteratorCheckedFrom`, `seq.sampleIteratorArrayFrom`,
   `seq.sampleIteratorArrayCheckedFrom`, `seq.sampleIteratorInto`,
   `seq.sampleIteratorIntoFrom`, `seq.sampleIteratorIntoCheckedFrom`,
