@@ -10,6 +10,33 @@ pub const digits = "0123456789";
 pub const Charset = struct {
     bytes: []const u8,
 
+    pub const ProbabilityIterator = struct {
+        const Iterator = @This();
+
+        charset: Charset,
+        index: usize = 0,
+
+        pub fn next(self: *Iterator) ?f64 {
+            const value = self.charset.probability(self.index) orelse return null;
+            self.index += 1;
+            return value;
+        }
+
+        pub fn remaining(self: Iterator) usize {
+            return self.charset.len() - self.index;
+        }
+
+        pub fn len(self: Iterator) usize {
+            return self.remaining();
+        }
+
+        pub fn fill(self: *Iterator, dest: []f64) usize {
+            const count = @min(dest.len, self.remaining());
+            for (dest[0..count]) |*slot| slot.* = self.next().?;
+            return count;
+        }
+    };
+
     pub fn init(bytes: []const u8) Charset {
         std.debug.assert(bytes.len > 0);
         return .{ .bytes = bytes };
@@ -52,6 +79,10 @@ pub const Charset = struct {
 
     pub fn probability(self: Charset, index: usize) ?f64 {
         return self.probabilityAt(index) catch null;
+    }
+
+    pub fn probabilityIter(self: Charset) ProbabilityIterator {
+        return .{ .charset = self };
     }
 
     pub fn probabilities(self: Charset, allocator: std.mem.Allocator) ![]f64 {
@@ -229,6 +260,19 @@ test "ascii charset fills requested length" {
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), Alphanumeric.probability(0).?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), Alphanumeric.probability(alphanumeric.len - 1).?, 1e-12);
     try std.testing.expectEqual(@as(?f64, null), Alphanumeric.probability(alphanumeric.len));
+    var probability_iter = Alphanumeric.probabilityIter();
+    try std.testing.expectEqual(alphanumeric.len, probability_iter.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), probability_iter.next().?, 1e-12);
+    try std.testing.expectEqual(alphanumeric.len - 1, probability_iter.remaining());
+    var iter_probabilities: [3]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), probability_iter.fill(&iter_probabilities));
+    for (iter_probabilities) |probability| {
+        try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), probability, 1e-12);
+    }
+    try std.testing.expectEqual(alphanumeric.len - 4, probability_iter.len());
+    var iter_tail: [alphanumeric.len]f64 = undefined;
+    try std.testing.expectEqual(alphanumeric.len - 4, probability_iter.fill(&iter_tail));
+    try std.testing.expectEqual(@as(?f64, null), probability_iter.next());
     var probabilities_buf: [alphanumeric.len]f64 = undefined;
     try Alphanumeric.probabilitiesInto(&probabilities_buf);
     for (probabilities_buf) |probability| {

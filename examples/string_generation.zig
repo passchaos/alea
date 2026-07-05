@@ -21,6 +21,9 @@ pub fn main(init: std.process.Init) !void {
     try custom.probabilitiesInto(&probabilities);
     const custom_probability = custom.probability(0).?;
     const custom_missing_probability = custom.probability(custom.len()) == null;
+    var custom_probability_iter = custom.probabilityIter();
+    var custom_probability_iter_fill: [4]f64 = undefined;
+    _ = custom_probability_iter.fill(&custom_probability_iter_fill);
     var custom_buf: [16]u8 = undefined;
     custom.fillFrom(&engine, &custom_buf);
     const custom_alloc = try custom.allocFrom(allocator, &engine, 10);
@@ -49,6 +52,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("lowercase fill: {s}\n", .{lower_buf});
     try stdout.print("custom charset probabilities: {any}\n", .{probabilities});
     try stdout.print("custom charset probability(0)={d:.3} missing={}\n", .{ custom_probability, custom_missing_probability });
+    try stdout.print("custom charset probabilityIter fill: {any}\n", .{custom_probability_iter_fill});
     try stdout.print("custom charset fill: {s}\n", .{custom_buf});
     try stdout.print("custom charset alloc: {s}\n", .{custom_alloc});
     try stdout.print("unicode scalar: U+{X:0>4}\n", .{scalar});
