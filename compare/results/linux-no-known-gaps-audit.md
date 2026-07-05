@@ -662,3 +662,8 @@ S4-M287 audits the local Rust `rand::seq::index` namespace path
 concrete index, compact-index, fixed-size, weighted-index, and item-mapping
 workflows are covered by top-level `seq.*` APIs, while a `seq.index` namespace
 would duplicate functionality and collide with existing Zig identifiers.
+S4-M288 adds a consolidated local Rust public-surface manifest
+(`compare/results/s4-m288-local-rand-public-surface-manifest.md`) mapping the
+current root, `rngs`, `distr`, `seq`, and resolved `rand_core` public names to
+Alea evidence or intentional exclusions; the manifest identifies no new
+unblocked local Rust public-surface gap.

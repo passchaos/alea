@@ -308,7 +308,8 @@ complete.
 | S4-M285 uniform namespace audit | `compare/results/s4-m285-uniform-namespace-audit.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: local Rust `rand::distr::uniform::*` is documented as covered by top-level Alea concrete uniform APIs or intentionally not copied where the intermediate Rust namespace would collide with Alea's existing one-shot `uniform(...)` function. |
 | S4-M286 `rand_core` re-export surface audit | `compare/results/s4-m286-rand-core-reexport-audit.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: local Rust root `pub use rand_core` and resolved `rand_core` low-level traits/helpers are documented as covered by Alea concrete APIs or intentionally not copied as Rust implementation machinery. |
 | S4-M287 sequence index namespace audit | `compare/results/s4-m287-seq-index-namespace-audit.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: local Rust `rand::seq::index` is documented as covered by top-level Alea `seq.*` APIs or intentionally not copied where an intermediate `seq.index` namespace would duplicate workflows and collide with Zig identifiers. |
-| S4-M288 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M288 local Rust public-surface manifest | `compare/results/s4-m288-local-rand-public-surface-manifest.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: root, `rngs`, `distr`, `seq`, and resolved `rand_core` public names are mapped to Alea evidence or intentional Zig-native exclusions, with no new unblocked local Rust public-surface gap identified. |
+| S4-M289 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -429,6 +430,8 @@ an audit closure and does not resolve S4-M11 or complete the long-term
 objective.
 S4-M287 additionally audits the local Rust `seq::index` namespace path; it is an
 audit closure and does not resolve S4-M11 or complete the long-term objective.
+S4-M288 additionally adds a local Rust public-surface manifest; it is an audit
+closure and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
