@@ -331,7 +331,8 @@ complete.
 | S4-M308 README surfacecheck guard | `tools/readmecheck.zig`, `README.md`, `compare/results/s4-m308-readme-surfacecheck-guard.md` | Closed for the current bar: README discovery checks now require `zig build surfacecheck`, keeping the local `rand` / `rand_distr` comparison guard visible in the command list. |
 | S4-M309 surfacecheck token matcher tests | `tools/surfacecheck.zig`, `compare/results/s4-m309-surfacecheck-token-tests.md` | Closed for the current bar: helper tests now cover exact code-token matching, identifier-boundary matching, short-token false-positive rejection, and non-identifier fallback behavior. |
 | S4-M310 surfacecheck build-step tests | `build.zig`, `docs/tooling.md`, `tools/surfacecheck.zig`, `compare/results/s4-m310-surfacecheck-build-tests.md` | Closed for the current bar: `zig build surfacecheck` now runs `tools/surfacecheck.zig` unit tests before the local public-surface checker executable. |
-| S4-M311 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M311 toolingcheck surfacecheck dependency guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m311-toolingcheck-surfacecheck-deps.md` | Closed for the current bar: `toolingcheck` now enforces both `surfacecheck` dependencies, keeping helper tests wired before the drift scan. |
+| S4-M312 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -518,6 +519,9 @@ long-term objective.
 S4-M310 additionally wires those tests into `zig build surfacecheck`; it is an
 evidence/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M311 additionally guards the `surfacecheck` build-step dependency shape in
+`toolingcheck`; it is an evidence/tooling improvement and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

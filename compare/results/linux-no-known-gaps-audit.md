@@ -771,3 +771,6 @@ S4-M310 wires those tests into `zig build surfacecheck`
 (`compare/results/s4-m310-surfacecheck-build-tests.md`), so the local
 public-surface checker validates its token-matching helpers before running the
 source/manifest drift scan.
+S4-M311 makes `toolingcheck` enforce that surfacecheck dependency shape
+(`compare/results/s4-m311-toolingcheck-surfacecheck-deps.md`), ensuring the
+helper tests remain wired before the checker executable in future build changes.
