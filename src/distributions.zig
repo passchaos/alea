@@ -16109,6 +16109,10 @@ pub fn WeightedTree(comptime Weight: type) type {
             return current_weight / total;
         }
 
+        pub fn probability(self: Self, index: usize) ?f64 {
+            return self.probabilityAt(index) catch null;
+        }
+
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]f64 {
             const out = try allocator.alloc(f64, self.len());
             errdefer allocator.free(out);
@@ -16696,6 +16700,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
             return @as(f64, @floatFromInt(current_weight)) / @as(f64, @floatFromInt(total));
+        }
+
+        pub fn probability(self: Self, index: usize) ?f64 {
+            return self.probabilityAt(index) catch null;
         }
 
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]u64 {
@@ -18837,6 +18845,10 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.1), try tree.probabilityAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), try tree.probabilityAt(2), 1e-12);
     try std.testing.expectError(error.InvalidParameter, tree.probabilityAt(3));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9), tree.probability(0).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.1), tree.probability(1).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), tree.probability(2).?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), tree.probability(3));
     var probabilities_buf: [3]f64 = undefined;
     try tree.probabilitiesInto(&probabilities_buf);
     try std.testing.expectApproxEqAbs(@as(f64, 0.9), probabilities_buf[0], 1e-12);
@@ -19744,6 +19756,10 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.1), try tree.probabilityAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), try tree.probabilityAt(2), 1e-12);
     try std.testing.expectError(error.InvalidParameter, tree.probabilityAt(3));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9), tree.probability(0).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.1), tree.probability(1).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), tree.probability(2).?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), tree.probability(3));
     var probabilities_buf: [3]f64 = undefined;
     try tree.probabilitiesInto(&probabilities_buf);
     try std.testing.expectApproxEqAbs(@as(f64, 0.9), probabilities_buf[0], 1e-12);

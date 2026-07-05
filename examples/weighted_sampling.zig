@@ -448,6 +448,8 @@ pub fn main(init: std.process.Init) !void {
     try tree.push(4);
     const tree_weight = tree.weight(1).?;
     const tree_missing_weight = tree.weight(tree.len()) == null;
+    const tree_probability = tree.probability(1).?;
+    const tree_missing_probability = tree.probability(tree.len()) == null;
     var tree_probs: [items.len + 1]f64 = undefined;
     try tree.probabilitiesInto(&tree_probs);
     var tree_engine = alea.ScalarPrng.init(0x7153);
@@ -461,6 +463,7 @@ pub fn main(init: std.process.Init) !void {
     var tree_array_engine = alea.ScalarPrng.init(0x71c3);
     const tree_array_u32 = try tree.indexArrayU32CheckedFrom(&tree_array_engine, 4);
     try stdout.print("dynamic tree weight(1)={d:.3} missing={}\n", .{ tree_weight, tree_missing_weight });
+    try stdout.print("dynamic tree probability(1)={d:.3} missing={}\n", .{ tree_probability, tree_missing_probability });
     try stdout.print("dynamic tree probabilities after update/push: {any}\n", .{tree_probs});
     try stdout.print("dynamic tree sample indices: {any}\n", .{tree_samples});
     try stdout.print("dynamic tree sample u32 index: {}\n", .{tree_sample_u32});
@@ -478,6 +481,8 @@ pub fn main(init: std.process.Init) !void {
     try int_tree.update(2, 10);
     const int_tree_weight = int_tree.weight(2).?;
     const int_tree_missing_weight = int_tree.weight(int_tree.len()) == null;
+    const int_tree_probability = int_tree.probability(2).?;
+    const int_tree_missing_probability = int_tree.probability(int_tree.len()) == null;
     var int_tree_engine = alea.ScalarPrng.init(0x7154);
     var int_tree_samples: [8]usize = undefined;
     int_tree.fillFrom(&int_tree_engine, &int_tree_samples);
@@ -491,6 +496,7 @@ pub fn main(init: std.process.Init) !void {
     const int_tree_array_u32 = try int_tree.indexArrayU32CheckedFrom(&int_tree_array_engine, 4);
     try stdout.print("integer tree total weight: {}\n", .{int_tree.totalWeight()});
     try stdout.print("integer tree weight(2)={} missing={}\n", .{ int_tree_weight, int_tree_missing_weight });
+    try stdout.print("integer tree probability(2)={d:.3} missing={}\n", .{ int_tree_probability, int_tree_missing_probability });
     try stdout.print("integer tree sample indices: {any}\n", .{int_tree_samples});
     try stdout.print("integer tree u32 sample indices: {any}\n", .{int_tree_u32_samples});
     try stdout.print("integer tree owned u32 indices: {any}\n", .{int_tree_owned_u32});
