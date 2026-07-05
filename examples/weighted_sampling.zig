@@ -157,6 +157,13 @@ pub fn main(init: std.process.Init) !void {
     try alea.seq.fillChooseWeightedConstPtrByIndexFrom(&index_weight_const_ptr_fill_engine, []const u8, u32, &index_weight_const_ptr_fill, &items, indexWeight);
     try stdout.print("weighted index-weight const ptr fill: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ index_weight_const_ptr_fill[0].?.*, index_weight_const_ptr_fill[1].?.*, index_weight_const_ptr_fill[2].?.*, index_weight_const_ptr_fill[3].?.*, index_weight_const_ptr_fill[4].?.*, index_weight_const_ptr_fill[5].?.* });
 
+    var index_weight_iter_engine = alea.ScalarPrng.init(0x71b4);
+    var index_weight_iter = (try alea.seq.chooseWeightedIterByIndexFrom(allocator, &index_weight_iter_engine, []const u8, u32, &items, indexWeight)).?;
+    defer index_weight_iter.deinit();
+    var index_weight_iter_fill: [6]*const []const u8 = undefined;
+    index_weight_iter.fill(&index_weight_iter_fill);
+    try stdout.print("weighted index-weight iter fill: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ index_weight_iter_fill[0].*, index_weight_iter_fill[1].*, index_weight_iter_fill[2].*, index_weight_iter_fill[3].*, index_weight_iter_fill[4].*, index_weight_iter_fill[5].* });
+
     var index_weight_mut_fill_items = items;
     var index_weight_mut_ptr_fill_engine = alea.ScalarPrng.init(0x71ab);
     var index_weight_mut_ptr_fill: [6]?*[]const u8 = undefined;

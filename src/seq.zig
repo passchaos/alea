@@ -2599,6 +2599,53 @@ pub fn chooseWeightedIterByCheckedFrom(
     return (try chooseWeightedIterByFrom(allocator, source, T, Weight, items, weightFn)) orelse error.EmptyInput;
 }
 
+pub fn chooseWeightedIterByIndex(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !?WeightedChoice(T, Weight).Iterator(Rng) {
+    return chooseWeightedIterByIndexFrom(allocator, rng, T, Weight, items, weightFn);
+}
+
+pub fn chooseWeightedIterByIndexChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !WeightedChoice(T, Weight).Iterator(Rng) {
+    return (try chooseWeightedIterByIndexFrom(allocator, rng, T, Weight, items, weightFn)) orelse error.EmptyInput;
+}
+
+pub fn chooseWeightedIterByIndexFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !?WeightedChoice(T, Weight).Iterator(@TypeOf(source)) {
+    const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, items.len, weightFn);
+    if (validation.total == 0) return null;
+    const choice = try WeightedChoice(T, Weight).initByIndex(allocator, items, weightFn);
+    return choice.ownedIterFrom(source);
+}
+
+pub fn chooseWeightedIterByIndexCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    comptime weightFn: fn (usize) Weight,
+) !WeightedChoice(T, Weight).Iterator(@TypeOf(source)) {
+    return (try chooseWeightedIterByIndexFrom(allocator, source, T, Weight, items, weightFn)) orelse error.EmptyInput;
+}
+
 pub fn chooseWeightedBy(
     rng: Rng,
     comptime T: type,
@@ -19346,6 +19393,99 @@ test "accessor weighted choice iterator streams repeated const pointers" {
 
     var failing_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, chooseWeightedIterByFrom(failing_alloc.allocator(), &invalid_engine, Record, f64, &records, Record.weightOf));
+    try std.testing.expect(failing_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "index-weighted choice iterator streams repeated const pointers" {
+    const alea = @import("root.zig");
+
+    const records = [_][]const u8{ "never", "rare", "often", "bonus" };
+    const IndexWeight = struct {
+        fn weightOf(index: usize) u32 {
+            return switch (index) {
+                1 => 1,
+                2 => 6,
+                3 => 3,
+                else => 0,
+            };
+        }
+
+        fn single(index: usize) u32 {
+            return if (index == 2) 5 else 0;
+        }
+
+        fn zero(_: usize) u32 {
+            return 0;
+        }
+
+        fn invalid(index: usize) f64 {
+            return if (index == 2) std.math.nan(f64) else 1;
+        }
+    };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_1801);
+        var direct_engine = Engine.init(0x5150_1801);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_iter = (try chooseWeightedIterByIndex(std.testing.allocator, rng, []const u8, u32, &records, IndexWeight.weightOf)).?;
+        defer facade_iter.deinit();
+        var direct_choice = try WeightedChoice([]const u8, u32).initByIndex(std.testing.allocator, &records, IndexWeight.weightOf);
+        defer direct_choice.deinit();
+        var direct_iter = direct_choice.iterFrom(&direct_engine);
+
+        var facade_out: [8][]const u8 = undefined;
+        var direct_out: [8][]const u8 = undefined;
+        for (&facade_out, &direct_out) |*facade_slot, *direct_slot| {
+            facade_slot.* = facade_iter.next().?.*;
+            direct_slot.* = direct_iter.next().?.*;
+        }
+        try std.testing.expectEqualSlices([]const u8, &direct_out, &facade_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_engine = Engine.init(0x5150_1802);
+        var checked_direct_engine = Engine.init(0x5150_1802);
+        const checked_rng = Rng.init(&checked_facade_engine);
+        var checked_iter = try chooseWeightedIterByIndexChecked(std.testing.allocator, checked_rng, []const u8, u32, &records, IndexWeight.weightOf);
+        defer checked_iter.deinit();
+        var checked_direct_choice = try WeightedChoice([]const u8, u32).initByIndex(std.testing.allocator, &records, IndexWeight.weightOf);
+        defer checked_direct_choice.deinit();
+        var checked_direct_iter = checked_direct_choice.iterFrom(&checked_direct_engine);
+        var checked_out: [4]*const []const u8 = undefined;
+        var checked_direct_out: [4]*const []const u8 = undefined;
+        checked_iter.fill(&checked_out);
+        checked_direct_iter.fill(&checked_direct_out);
+        for (checked_direct_out, checked_out) |direct_item, facade_item| {
+            try std.testing.expectEqualStrings(direct_item.*, facade_item.*);
+        }
+        try std.testing.expectEqual(checked_facade_engine.next(), checked_direct_engine.next());
+    }
+
+    var single_engine = alea.ScalarPrng.init(0x5150_1803);
+    var single_control = alea.ScalarPrng.init(0x5150_1803);
+    var single_iter = (try chooseWeightedIterByIndexFrom(std.testing.allocator, &single_engine, []const u8, u32, &records, IndexWeight.single)).?;
+    defer single_iter.deinit();
+    try std.testing.expectEqualStrings("often", single_iter.next().?.*);
+    var single_out: [3]*const []const u8 = undefined;
+    single_iter.fill(&single_out);
+    for (single_out) |item| try std.testing.expectEqualStrings("often", item.*);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_1804);
+    var empty_control = alea.ScalarPrng.init(0x5150_1804);
+    try std.testing.expect((try chooseWeightedIterByIndexFrom(std.testing.allocator, &empty_engine, []const u8, u32, &records, IndexWeight.zero)) == null);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseWeightedIterByIndexCheckedFrom(std.testing.allocator, &empty_engine, []const u8, u32, &records, IndexWeight.zero));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_1805);
+    var invalid_control = alea.ScalarPrng.init(0x5150_1805);
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedIterByIndexFrom(std.testing.allocator, &invalid_engine, []const u8, f64, &records, IndexWeight.invalid));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var failing_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, chooseWeightedIterByIndexFrom(failing_alloc.allocator(), &invalid_engine, []const u8, u32, &records, IndexWeight.weightOf));
     try std.testing.expect(failing_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
