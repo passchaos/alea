@@ -128,7 +128,11 @@ ranges, duration ranges, collapsed point-masses, and checked range errors.
 Reusable scalar and vector uniform samplers keep Zig-native `init` /
 `initInclusive` constructors and also expose Rust-discoverable `new` /
 `newInclusive` aliases matching local Rust `Uniform::new` /
-`Uniform::new_inclusive` semantics.
+`Uniform::new_inclusive` semantics. The distribution namespace also exposes
+Rust-discoverable one-shot checked aliases `sampleSingle` /
+`sampleSingleInclusive` (plus direct-source `From` variants), mirroring local
+Rust `UniformSampler::sample_single` naming while preserving the existing
+`uniformChecked*` helpers.
 Zero-length checked scalar and vector fills, including the distribution-namespace
 Bernoulli/uniform/normal/exponential wrappers, return before validating
 user-supplied range, probability, normal, or exponential parameters.

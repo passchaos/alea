@@ -279,8 +279,10 @@ appropriate.
 Single-shot helpers:
 
 - `uniform`, `uniformFrom`, `uniformChecked`, `uniformCheckedFrom`,
-  `uniformInclusive`, `uniformInclusiveFrom`, `uniformInclusiveChecked`,
-  `uniformInclusiveCheckedFrom`, `fillUniform`, `fillUniformFrom`,
+  `sampleSingle`, `sampleSingleFrom`, `uniformInclusive`,
+  `uniformInclusiveFrom`, `uniformInclusiveChecked`,
+  `uniformInclusiveCheckedFrom`, `sampleSingleInclusive`,
+  `sampleSingleInclusiveFrom`, `fillUniform`, `fillUniformFrom`,
   `fillUniformChecked`, `fillUniformCheckedFrom`, `fillUniformInclusive`,
   `fillUniformInclusiveFrom`, `fillUniformInclusiveChecked`,
   `fillUniformInclusiveCheckedFrom`, `vectorUniform`, `vectorUniformFrom`,

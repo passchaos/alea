@@ -21,9 +21,12 @@ pub fn main(init: std.process.Init) !void {
     const duration = rng.durationRangeAtMost(.fromMilliseconds(10), .fromMilliseconds(20));
     const duration_batch = try rng.durationRangeAtMostBatch(allocator, 4, .fromMilliseconds(10), .fromMilliseconds(20));
     defer allocator.free(duration_batch);
+    const sample_single = try alea.distributions.sampleSingleFrom(&engine, u8, 1, 7);
+    const sample_single_inclusive = try alea.distributions.sampleSingleInclusiveFrom(&engine, u8, 1, 6);
 
     try stdout.print("integer ranges: less-than die={}, inclusive die={}, signed offset={}\n", .{ die_exclusive, die_inclusive, signed_offset });
     try stdout.print("float units: [0,1)={d:.8}, (0,1)={d:.8}, (0,1]={d:.8}, range[-1,1)={d:.8}\n", .{ unit, open, open_closed, centered });
+    try stdout.print("sampleSingle die={}, sampleSingleInclusive die={}\n", .{ sample_single, sample_single_inclusive });
     try stdout.print("duration range [10ms,20ms]: {} ns\n", .{duration.nanoseconds});
     try stdout.print("durationRangeAtMostBatch [10ms,20ms]: {any}\n", .{duration_batch});
 

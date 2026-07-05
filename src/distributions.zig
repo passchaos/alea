@@ -189,6 +189,14 @@ pub fn uniformCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Err
     }
 }
 
+pub fn sampleSingle(rng: Rng, comptime T: type, min: T, max: T) Error!T {
+    return uniformChecked(rng, T, min, max);
+}
+
+pub fn sampleSingleFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
+    return uniformCheckedFrom(source, T, min, max);
+}
+
 pub fn fillUniform(rng: Rng, comptime T: type, dest: []T, min: T, max: T) void {
     fillUniformFrom(rng, T, dest, min, max);
 }
@@ -240,6 +248,14 @@ pub fn uniformInclusiveCheckedFrom(source: anytype, comptime T: type, min: T, ma
         },
         else => @compileError("uniformInclusiveChecked supports integer and floating-point types"),
     }
+}
+
+pub fn sampleSingleInclusive(rng: Rng, comptime T: type, min: T, max: T) Error!T {
+    return uniformInclusiveChecked(rng, T, min, max);
+}
+
+pub fn sampleSingleInclusiveFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
+    return uniformInclusiveCheckedFrom(source, T, min, max);
 }
 
 pub fn fillUniformInclusive(rng: Rng, comptime T: type, dest: []T, min: T, max: T) void {
@@ -18433,10 +18449,16 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect(uniform(rng, f64, -1, 1) < 1);
     try std.testing.expect(try uniformChecked(rng, u32, 5, 9) >= 5);
     try std.testing.expect(try uniformCheckedFrom(&engine, f64, -1, 1) < 1);
+    try std.testing.expect(try sampleSingle(rng, u32, 5, 9) < 9);
+    try std.testing.expect(try sampleSingleFrom(&engine, f64, -1, 1) < 1);
     try std.testing.expect(try uniformInclusiveChecked(rng, u32, 5, 9) <= 9);
     try std.testing.expect(try uniformInclusiveCheckedFrom(&engine, f64, -1, 1) <= 1);
+    try std.testing.expect(try sampleSingleInclusive(rng, u32, 5, 9) <= 9);
+    try std.testing.expect(try sampleSingleInclusiveFrom(&engine, f64, -1, 1) <= 1);
     try std.testing.expectError(error.EmptyRange, uniformCheckedFrom(&engine, u32, 9, 5));
+    try std.testing.expectError(error.EmptyRange, sampleSingleFrom(&engine, u32, 9, 5));
     try std.testing.expectError(error.EmptyRange, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.EmptyRange, sampleSingleInclusiveFrom(&engine, f64, std.math.inf(f64), 1));
     var uniform_int_buf: [8]u32 = undefined;
     fillUniform(rng, u32, &uniform_int_buf, 5, 9);
     for (uniform_int_buf) |value| try std.testing.expect(value >= 5 and value < 9);
