@@ -354,6 +354,18 @@ pub fn Choose(comptime T: type) type {
     };
 }
 
+fn SliceChoose(comptime T: type) type {
+    return Choose(T);
+}
+
+pub const slice = struct {
+    pub const Empty = Error;
+
+    pub fn Choose(comptime T: type) type {
+        return SliceChoose(T);
+    }
+};
+
 const LibmvecExpF64x4 = *const fn (@Vector(4, f64)) callconv(.c) @Vector(4, f64);
 const LibmvecExpF32x8 = *const fn (@Vector(8, f32)) callconv(.c) @Vector(8, f32);
 const LibmExpF64 = *const fn (f64) callconv(.c) f64;
@@ -31073,6 +31085,28 @@ test "UniformInt Float Usize aliases mirror Uniform" {
         usize_sampler.sampleFrom(&usize_alias_engine),
     );
     try std.testing.expectEqual(usize_uniform_engine.next(), usize_alias_engine.next());
+}
+
+test "distribution slice aliases mirror Choose and Empty errors" {
+    const root = @import("root.zig");
+    comptime std.debug.assert(slice.Choose(u8) == Choose(u8));
+
+    const items = [_]u8{ 3, 5, 8, 13 };
+    const sampler = try slice.Choose(u8).newChecked(&items);
+    try std.testing.expectEqual(@as(usize, 4), sampler.numChoices());
+
+    var slice_engine = root.DefaultPrng.init(0x51_4d_273);
+    var choose_engine = root.DefaultPrng.init(0x51_4d_273);
+    try std.testing.expectEqual(
+        (try Choose(u8).newChecked(&items)).sampleValueFrom(&choose_engine),
+        sampler.sampleValueFrom(&slice_engine),
+    );
+    try std.testing.expectEqual(choose_engine.next(), slice_engine.next());
+
+    const err: slice.Empty = error.EmptyRange;
+    try std.testing.expectEqual(@as(Error, error.EmptyRange), err);
+    try std.testing.expect(@typeInfo(@TypeOf(slice.Choose(u8).newChecked(&.{}))).error_union.error_set == slice.Empty);
+    try std.testing.expectError(error.EmptyRange, slice.Choose(u8).newChecked(&.{}));
 }
 
 test "distribution weight error aliases mirror Error" {

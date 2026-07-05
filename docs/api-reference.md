@@ -350,7 +350,7 @@ self-forking.
 ## Distributions
 
 - Error types/aliases: `Error`, `UniformError`, `BernoulliError`,
-  `WeightedError`, `WeightError`
+  `WeightedError`, `WeightError`, `slice.Empty`
 - Reusable sampler adapters: `StandardUniform`, `StandardUniform.sample`,
   `StandardUniform.sampleFrom`, `StandardUniform.fill`,
   `StandardUniform.fillFrom`, `Choose(T)`, `Alphanumeric`, `Alphabetic`,
@@ -2922,6 +2922,7 @@ Dynamic weighted helpers:
   `sampleIteratorWeightedIntoFrom`, `sampleIteratorWeightedIntoChecked`,
   `sampleIteratorWeightedIntoCheckedFrom`
 - Reusable samplers: `Choice(T)`, `distributions.Choose(T)`,
+  `distributions.slice.Choose(T)`, `distributions.slice.Empty`,
   `Choose(T).init`, `Choose(T).new`, `Choose(T).initChecked`,
   `Choose(T).newChecked`, `Choose(T).len`, `Choose(T).numChoices`,
   `Choose(T).isEmpty`, `Choose(T).itemsValue`, `Choose(T).sample`,

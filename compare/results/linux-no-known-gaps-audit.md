@@ -599,3 +599,7 @@ S4-M272 adds `UniformInt(T)`, `UniformFloat(T)`, and `UniformUsize`
 (`compare/results/s4-m272-uniform-backend-aliases.md`), closing the local Rust
 `rand::distr::uniform::{UniformInt, UniformFloat, UniformUsize}` discovery-name
 gap while preserving Alea's existing `Uniform(T)` implementation.
+S4-M273 adds `distributions.slice.Choose(T)` and `distributions.slice.Empty`
+(`compare/results/s4-m273-slice-namespace-aliases.md`), closing the local Rust
+`rand::distr::slice::{Choose, Empty}` namespace discovery gap while preserving
+Alea's existing `Choose(T)` sampler and distribution error contract.

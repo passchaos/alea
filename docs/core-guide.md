@@ -702,8 +702,10 @@ Use:
   requested amount; requesting zero samples returns an empty result before
   validating weights; facade and direct-source checked calls validate before
   drawing)
-- `seq.Choice` plus distribution-namespace `distributions.Choose` for local
-  Rust `rand::distr::slice::Choose` discovery, including Rust-discoverable
+- `seq.Choice` plus distribution-namespace `distributions.Choose` and
+  `distributions.slice.Choose` for local Rust `rand::distr::slice::Choose`
+  discovery, with `distributions.slice.Empty` for the local Rust empty-slice
+  error name, including Rust-discoverable
   `Choice.new` / `newChecked`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `Choice.sampleIndexFrom`,
   `Choice.constantIndex`, `Choice.item` / `itemAt` / `get`, `Choice.probability` / `probabilityAt`, lazy `Choice.probabilityIter` size hints,
