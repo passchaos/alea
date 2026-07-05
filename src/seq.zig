@@ -6,6 +6,14 @@ pub const IndexVec = union(enum) {
     u32: []u32,
     usize: []usize,
 
+    pub fn fromOwnedSlice(items: []usize) IndexVec {
+        return .{ .usize = items };
+    }
+
+    pub fn fromOwnedU32Slice(items: []u32) IndexVec {
+        return .{ .u32 = items };
+    }
+
     pub const Iterator = struct {
         index_vec: IndexVec,
         index: usize = 0,
@@ -9110,6 +9118,29 @@ test "index vec equality compares contents across backing types" {
     var empty_u32_backing = [_]u32{};
     var empty_usize_backing = [_]usize{};
     try std.testing.expect((IndexVec{ .u32 = &empty_u32_backing }).eql(IndexVec{ .usize = &empty_usize_backing }));
+}
+
+test "index vec owned-slice constructors adopt backing" {
+    const native_backing = try std.testing.allocator.alloc(usize, 3);
+    native_backing[0..3].* = .{ 2, 4, 6 };
+    const native_vec = IndexVec.fromOwnedSlice(native_backing);
+    defer native_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 3), native_vec.len());
+    try std.testing.expectEqual(@intFromPtr(native_backing.ptr), @intFromPtr(native_vec.usize.ptr));
+    try std.testing.expectEqual(@as(usize, 2), native_vec.at(0));
+    try std.testing.expectEqual(@as(usize, 6), native_vec.at(2));
+
+    const compact_backing = try std.testing.allocator.alloc(u32, 3);
+    compact_backing[0..3].* = .{ 1, 3, 5 };
+    const compact_vec = IndexVec.fromOwnedU32Slice(compact_backing);
+    defer compact_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 3), compact_vec.len());
+    try std.testing.expectEqual(@intFromPtr(compact_backing.ptr), @intFromPtr(compact_vec.u32.ptr));
+    var expected_native = [_]usize{ 1, 3, 5 };
+    try std.testing.expect(compact_vec.eql(IndexVec{ .usize = &expected_native }));
+    var copied: [3]usize = undefined;
+    try compact_vec.copyInto(&copied);
+    try std.testing.expectEqualSlices(usize, &expected_native, &copied);
 }
 
 test "index vec consuming owned conversions transfer or narrow backing" {
