@@ -2577,7 +2577,7 @@ Dynamic weighted helpers:
 - Error type: `Error`; exact-size iterator hint: `SizeHint`
 - Index vectors: `IndexVec.fromOwnedSlice`, `IndexVec.fromOwnedU32Slice`,
   `IndexVec.clone`, `IndexVec.len`, `IndexVec.isEmpty`, `IndexVec.at`,
-  `IndexVec.index`, `IndexVec.indexOf`, `IndexVec.contains`, `IndexVec.eql`, `IndexVec.validateItems`,
+  `IndexVec.index`, `IndexVec.get`, `IndexVec.indexOf`, `IndexVec.contains`, `IndexVec.eql`, `IndexVec.validateItems`,
   `IndexVec.validateDistinctItems`, `IndexVec.copyInto`,
   `IndexVec.copyIntoU32`, `IndexVec.toOwnedSlice`,
   `IndexVec.toOwnedU32Slice`, `IndexVec.intoOwnedSlice`,

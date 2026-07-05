@@ -205,6 +205,11 @@ pub const IndexVec = union(enum) {
         return self.at(position);
     }
 
+    pub fn get(self: IndexVec, position: usize) ?usize {
+        if (position >= self.len()) return null;
+        return self.at(position);
+    }
+
     pub fn indexOf(self: IndexVec, value: usize) ?usize {
         var position: usize = 0;
         while (position < self.len()) : (position += 1) {
@@ -9489,6 +9494,8 @@ test "portable index sampling has stable snapshots" {
     try std.testing.expect(index_vec.contains(18));
     try std.testing.expect(!index_vec.contains(99));
     for (expected, 0..) |value, i| try std.testing.expectEqual(value, index_vec.index(i));
+    for (expected, 0..) |value, i| try std.testing.expectEqual(@as(?usize, value), index_vec.get(i));
+    try std.testing.expectEqual(@as(?usize, null), index_vec.get(expected.len));
     var iter = index_vec.iter();
     try std.testing.expectEqual(@as(usize, expected.len), iter.remaining());
     try std.testing.expectEqual(@as(usize, expected.len), iter.len());
