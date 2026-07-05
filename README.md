@@ -73,8 +73,9 @@ The current Linux-first roadmap is intentionally broad:
   replacement, fixed-size and caller-owned/sample-fill iterator sampling, allocated/caller-owned value and pointer reservoir sampling, adaptive, repeated, and caller-owned usize/u32 index sampling, and checked
   variants for fallible user-supplied counts or empty inputs
 - reusable sampler `map` adapters for Rust-discoverable `Distribution::map`
-  style transformations, distribution-namespace `sampleIter` aliases for
-  Rust-discoverable `Distribution::sample_iter` workflows, `StandardUniform`
+  style transformations, Rust-discoverable `Map` / `Iter` type aliases,
+  distribution-namespace `sampleIter` aliases for Rust-discoverable
+  `Distribution::sample_iter` workflows, `StandardUniform`
   for default scalar/compound value sampling, reusable uniform with Rust-discoverable `new` /
   `newInclusive`, `UniformError`, and one-shot `sampleSingle` / `sampleSingleInclusive` aliases,
   `UniformDuration` for reusable `std.Io.Duration` ranges, Bernoulli with Rust-discoverable `new` / `fromRatio` / `p()` aliases and `BernoulliError` discovery, non-uniform distribution, opt-in bounded f32

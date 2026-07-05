@@ -587,3 +587,7 @@ S4-M269 adds `distributions.UniformError`
 (`compare/results/s4-m269-uniform-error.md`), closing the local Rust
 `rand::distr::uniform::Error` discovery-name gap while preserving Alea's
 uniform-family `Error` semantics.
+S4-M270 adds distribution-namespace `Map` / `Iter` aliases
+(`compare/results/s4-m270-map-iter-aliases.md`), closing the local Rust
+`rand::distr::{Map, Iter}` discovery-name gap while preserving Alea's existing
+mapped sampler and sample iterator implementations.

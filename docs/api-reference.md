@@ -353,7 +353,8 @@ self-forking.
 - Reusable sampler adapters: `StandardUniform`, `StandardUniform.sample`,
   `StandardUniform.sampleFrom`, `StandardUniform.fill`,
   `StandardUniform.fillFrom`, `Choose(T)`, `Alphanumeric`, `Alphabetic`,
-  `sampleIter`, `sampleIterFrom`, `map`, `MappedSampler`, `MappedSampler.sample`,
+  `sampleIter`, `sampleIterFrom`, `Iter(Sampler, Source, T)`, `map`,
+  `Map(Sampler, Mapper, In, Out)`, `MappedSampler`, `MappedSampler.sample`,
   `MappedSampler.sampleFrom`, `MappedSampler.fill`,
   `MappedSampler.fillFrom`, `MappedSampler.map`
 

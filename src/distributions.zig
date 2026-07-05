@@ -223,6 +223,14 @@ pub fn MappedSampler(comptime Sampler: type, comptime Mapper: type, comptime In:
     };
 }
 
+pub fn Map(comptime Sampler: type, comptime Mapper: type, comptime In: type, comptime Out: type) type {
+    return MappedSampler(Sampler, Mapper, In, Out);
+}
+
+pub fn Iter(comptime Sampler: type, comptime Source: type, comptime T: type) type {
+    return Rng.SampleIteratorFrom(Source, Sampler, T);
+}
+
 fn applyMapper(comptime Out: type, mapper: anytype, value: anytype) Out {
     const Mapper = @TypeOf(mapper);
     const Base = switch (@typeInfo(Mapper)) {
@@ -31217,4 +31225,32 @@ test "distribution Choose sampler mirrors slice choices" {
 
     try std.testing.expect(Choose(u8).new(&.{}) == null);
     try std.testing.expectError(error.EmptyRange, Choose(u8).newChecked(&.{}));
+}
+
+test "distribution Map and Iter aliases mirror concrete adapter types" {
+    const root = @import("root.zig");
+    const die = try Uniform(u8).newInclusive(1, 6);
+    const Even = struct {
+        pub fn map(value: u8) bool {
+            return value % 2 == 0;
+        }
+    };
+    const mapper = Even{};
+    const mapped = map(u8, bool, die, mapper);
+
+    try std.testing.expect(@TypeOf(mapped) == Map(@TypeOf(die), @TypeOf(mapper), u8, bool));
+
+    var mapped_engine = root.DefaultPrng.init(0x51_4d_270);
+    var alias_engine = root.DefaultPrng.init(0x51_4d_270);
+    try std.testing.expectEqual(
+        mapped.sampleFrom(&mapped_engine),
+        @as(Map(@TypeOf(die), @TypeOf(mapper), u8, bool), mapped).sampleFrom(&alias_engine),
+    );
+    try std.testing.expectEqual(mapped_engine.next(), alias_engine.next());
+
+    var iter_engine = root.DefaultPrng.init(0x51_4d_271);
+    var namespace_iter = sampleIterFrom(&iter_engine, u8, die);
+    const AliasIter = Iter(@TypeOf(die), *@TypeOf(iter_engine), u8);
+    try std.testing.expect(@TypeOf(namespace_iter) == AliasIter);
+    _ = namespace_iter.next().?;
 }
