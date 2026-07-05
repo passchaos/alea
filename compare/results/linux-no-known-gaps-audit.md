@@ -652,3 +652,8 @@ S4-M285 audits the local Rust `rand::distr::uniform::*` namespace path
 uniform workflows are already covered by top-level `distributions.*` APIs, while
 the intermediate Rust module path is intentionally not copied because it would
 collide with Alea's existing one-shot `uniform(...)` function.
+S4-M286 audits the root `rand_core` re-export and resolved `rand_core` 0.10.1
+surface (`compare/results/s4-m286-rand-core-reexport-audit.md`) and records that
+raw/try/seeding/reader/byte-fill workflows are covered by Alea concrete APIs,
+while the remaining names are Rust trait/adaptor/block-generator implementation
+machinery intentionally not copied.
