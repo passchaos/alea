@@ -690,3 +690,9 @@ manifest (`compare/results/s4-m294-rand-distr-public-surface-manifest.md`)
 mapping root distribution, error, `multi`, `weighted`, utility, and trait
 surfaces to Alea evidence or intentional exclusions; the manifest identifies no
 new unblocked local `rand_distr` public-surface gap.
+S4-M295 adds `roadmapcheck` guardrails over the S4-M288 and S4-M294 public
+surface manifests (`compare/results/s4-m295-public-surface-manifest-guardrails.md`):
+the checker now validates scanned-source/version tokens, major public-surface
+sections, representative Rust-only exclusions, no-new-gap results, and
+non-completion notes so future local `rand` / `rand_distr` comparisons do not
+silently regress to file-existence-only evidence.

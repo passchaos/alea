@@ -3504,6 +3504,7 @@ Tools:
 - `tools/cauchy_probe.zig`
 - `tools/repro.zig`
 - `tools/readmecheck.zig`
-- `tools/roadmapcheck.zig`
+- `tools/roadmapcheck.zig` (roadmap, active-audit evidence,
+  public-surface manifest, and S4-M11 blocker-token coverage)
 - `tools/toolingcheck.zig`
 - `tools/practrand.sh`

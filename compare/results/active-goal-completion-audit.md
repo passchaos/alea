@@ -315,7 +315,8 @@ complete.
 | S4-M292 rand_distr new constructor aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m292-rand-distr-new-aliases.md` | Closed for the current bar: local `rand_distr` `new(...)` constructor discovery is available for matching scalar reusable sampler shapes, with the Geometric trial/failure semantic exception documented. |
 | S4-M293 fromMeanCv constructor aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m293-from-mean-cv-aliases.md` | Closed for the current bar: local `rand_distr::from_mean_cv` discovery now maps to Alea `Normal(T).fromMeanCv` and `LogNormal(T).fromMeanCv` aliases over existing `initMeanCv` constructors. |
 | S4-M294 local rand_distr public-surface manifest | `compare/results/s4-m294-rand-distr-public-surface-manifest.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: cached local `rand_distr 0.6.0` root, `multi`, `weighted`, utility, and trait surfaces are mapped to Alea evidence or intentional Zig-native exclusions, with no new unblocked local `rand_distr` public-surface gap identified. |
-| S4-M295 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M295 public-surface manifest guardrails | `tools/roadmapcheck.zig`, `compare/results/s4-m295-public-surface-manifest-guardrails.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: `roadmapcheck` now verifies scanned-source, major-surface, representative exclusion, no-new-gap result, and non-completion tokens in the local Rust and `rand_distr` public-surface manifests instead of relying only on file existence. |
+| S4-M296 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -455,6 +456,9 @@ it is another closed discovery-name side gap and does not resolve S4-M11 or
 complete the long-term objective.
 S4-M294 additionally adds a local `rand_distr` public-surface manifest; it is an
 audit closure and does not resolve S4-M11 or complete the long-term objective.
+S4-M295 additionally adds manifest guardrails to `roadmapcheck`; it is an
+evidence-quality improvement and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

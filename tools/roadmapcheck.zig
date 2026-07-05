@@ -290,6 +290,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M292", .path = "compare/results/s4-m292-rand-distr-new-aliases.md" },
     .{ .milestone = "S4-M293", .path = "compare/results/s4-m293-from-mean-cv-aliases.md" },
     .{ .milestone = "S4-M294", .path = "compare/results/s4-m294-rand-distr-public-surface-manifest.md" },
+    .{ .milestone = "S4-M295", .path = "compare/results/s4-m295-public-surface-manifest-guardrails.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -297,7 +298,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M295",
+    "S4-M296",
     "No proxy signal is accepted as whole-goal completion",
 };
 
@@ -310,6 +311,42 @@ const blocker_tokens = [_][]const u8{
     "wasmer",
     "no SIMD non-uniform implementation",
     "Do not call `update_goal(status=complete)`",
+};
+
+const local_rand_manifest_tokens = [_][]const u8{
+    "# S4-M288 Local Rust Public Surface Manifest",
+    "~/Work/rand/src/lib.rs",
+    "rand_core 0.10.1",
+    "## Root `rand` Surface",
+    "## RNG Namespace Surface",
+    "## Distribution Surface",
+    "## Sequence Surface",
+    "## `rand_core` Surface",
+    "`ThreadRng`, `rng()`",
+    "`Distribution`, `Iter`, `Map`",
+    "`SampleUniform`, `UniformSampler`, `SampleBorrow`, `SampleRange`",
+    "`seq::index::{IndexVec",
+    "`block::{Generator, BlockRng}`",
+    "No new unblocked local Rust public-surface gap",
+    "not whole-goal completion evidence",
+};
+
+const local_rand_distr_manifest_tokens = [_][]const u8{
+    "# S4-M294 Local `rand_distr` Public Surface Manifest",
+    "rand_distr-0.6.0/src",
+    "## Root Distribution Re-Exports",
+    "## `multi` Module",
+    "## `weighted` Module",
+    "## Utility/Internal Surface",
+    "`Normal`, `StandardNormal`, `LogNormal`",
+    "`Exp`, `Exp1`",
+    "`multi::Dirichlet`",
+    "`WeightedAliasIndex`",
+    "`WeightedTreeIndex`",
+    "`AliasableWeight` trait",
+    "`Distribution<T>` trait implementations",
+    "No new unblocked local `rand_distr 0.6.0` public-surface gap",
+    "not whole-goal completion evidence",
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -337,6 +374,10 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(build);
     const blocker = try readFile(io, allocator, "compare/results/s4-m11-blocker-audit.md");
     defer allocator.free(blocker);
+    const local_rand_manifest = try readFile(io, allocator, "compare/results/s4-m288-local-rand-public-surface-manifest.md");
+    defer allocator.free(local_rand_manifest);
+    const local_rand_distr_manifest = try readFile(io, allocator, "compare/results/s4-m294-rand-distr-public-surface-manifest.md");
+    defer allocator.free(local_rand_distr_manifest);
 
     var missing: usize = 0;
 
@@ -378,12 +419,15 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M295 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M295 next-gap row\n", .{});
+    try checkManifestTokens(stderr, "local Rust public-surface manifest", local_rand_manifest, local_rand_manifest_tokens[0..], &missing);
+    try checkManifestTokens(stderr, "local rand_distr public-surface manifest", local_rand_distr_manifest, local_rand_distr_manifest_tokens[0..], &missing);
+
+    if (std.mem.indexOf(u8, roadmap, "| S4-M296 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M296 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M295 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M295 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M296 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M296 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
@@ -412,4 +456,19 @@ pub fn main(init: std.process.Init) !void {
 
 fn readFile(io: std.Io, allocator: std.mem.Allocator, path: []const u8) ![]u8 {
     return std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(8 * 1024 * 1024));
+}
+
+fn checkManifestTokens(
+    stderr: *std.Io.Writer,
+    label: []const u8,
+    contents: []const u8,
+    tokens: []const []const u8,
+    missing: *usize,
+) !void {
+    for (tokens) |token| {
+        if (std.mem.indexOf(u8, contents, token) == null) {
+            try stderr.print("roadmapcheck: {s} missing manifest token `{s}`\n", .{ label, token });
+            missing.* += 1;
+        }
+    }
 }

@@ -968,6 +968,12 @@ zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/
 sh tools/practrand.sh fast 1073741824
 ```
 
+`zig build roadmapcheck` also guards the local Rust `rand` and cached
+`rand_distr` public-surface manifests: it verifies scanned-source/version
+tokens, major surface sections, representative Zig-native exclusions,
+no-new-gap conclusions, and non-completion notes in addition to the roadmap,
+active audit, and S4-M11 blocker tokens.
+
 PractRand reports are stored under `compare/results/`.
 
 ## Benchmarks
