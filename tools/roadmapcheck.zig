@@ -246,7 +246,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M248", .path = "compare/results/s4-m248-mapped-sampler.md" },
     .{ .milestone = "S4-M249", .path = "compare/results/s4-m249-unbounded-iterator-sizehint.md" },
     .{ .milestone = "S4-M250", .path = "compare/results/s4-m250-distribution-sampleiter.md" },
-    .{ .milestone = "S4-M252", .path = "compare/results/s4-m251-samplestring-aliases.md" },
+    .{ .milestone = "S4-M251", .path = "compare/results/s4-m251-samplestring-aliases.md" },
 };
 
 const required_tokens = [_][]const u8{
