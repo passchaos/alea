@@ -510,6 +510,10 @@ pub const Bernoulli = struct {
         return initRatio(numerator, denominator);
     }
 
+    pub fn fromRatio(numerator: u32, denominator: u32) Error!Bernoulli {
+        return initRatio(numerator, denominator);
+    }
+
     pub fn probability(self: Bernoulli) f64 {
         if (self.p_int == always_true) return 1;
         return @as(f64, @floatFromInt(self.p_int)) / scale;
@@ -608,6 +612,10 @@ pub fn VectorBernoulli(comptime VectorType: type) type {
         }
 
         pub fn newRatio(numerator: u32, denominator: u32) Error!Self {
+            return initRatio(numerator, denominator);
+        }
+
+        pub fn fromRatio(numerator: u32, denominator: u32) Error!Self {
             return initRatio(numerator, denominator);
         }
 
@@ -18472,9 +18480,11 @@ test "basic distributions stay in expected ranges" {
     const fair_bernoulli = try Bernoulli.init(0.5);
     const fair_bernoulli_new = try Bernoulli.new(0.5);
     const ratio_bernoulli_new = try Bernoulli.newRatio(1, 4);
+    const ratio_bernoulli_from = try Bernoulli.fromRatio(1, 4);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), fair_bernoulli.probability(), 1e-12);
     try std.testing.expectApproxEqAbs(fair_bernoulli.probability(), fair_bernoulli_new.probability(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), ratio_bernoulli_new.probability(), 1e-12);
+    try std.testing.expectApproxEqAbs(ratio_bernoulli_new.probability(), ratio_bernoulli_from.probability(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), fair_bernoulli.probabilityValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), fair_bernoulli.expectedValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), fair_bernoulli.varianceValue(), 1e-12);
@@ -18528,6 +18538,7 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expectError(error.InvalidProbability, fillBernoulliCheckedFrom(&direct_bernoulli_engine, &bernoulli_buf, -0.1));
     try std.testing.expectError(error.InvalidProbability, Bernoulli.new(-0.1));
     try std.testing.expectError(error.InvalidProbability, Bernoulli.newRatio(2, 1));
+    try std.testing.expectError(error.InvalidProbability, Bernoulli.fromRatio(2, 1));
     const bernoulli_sampler = try Bernoulli.init(0.5);
     bernoulli_sampler.fillFrom(&direct_bernoulli_engine, &bernoulli_buf);
     try std.testing.expectError(error.InvalidProbability, bernoulliCheckedFrom(&direct_bernoulli_engine, 1.1));
@@ -23872,9 +23883,11 @@ test "distribution vector helpers preserve support and stream shape" {
     const vector_bernoulli_sampler = try VectorBernoulli(@Vector(8, bool)).initRatio(1, 4);
     const vector_bernoulli_new = try VectorBernoulli(@Vector(8, bool)).new(0.25);
     const vector_bernoulli_ratio_new = try VectorBernoulli(@Vector(8, bool)).newRatio(1, 4);
+    const vector_bernoulli_from_ratio = try VectorBernoulli(@Vector(8, bool)).fromRatio(1, 4);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), vector_bernoulli_sampler.probabilityValue(), 1e-15);
     try std.testing.expectApproxEqAbs(vector_bernoulli_sampler.probabilityValue(), vector_bernoulli_new.probabilityValue(), 1e-15);
     try std.testing.expectApproxEqAbs(vector_bernoulli_sampler.probabilityValue(), vector_bernoulli_ratio_new.probabilityValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(vector_bernoulli_sampler.probabilityValue(), vector_bernoulli_from_ratio.probabilityValue(), 1e-15);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), vector_bernoulli_sampler.expectedValue(), 1e-15);
     try std.testing.expectApproxEqAbs(@as(f64, 0.1875), vector_bernoulli_sampler.varianceValue(), 1e-15);
     try std.testing.expectEqual(false, vector_bernoulli_sampler.modeValue().?);
