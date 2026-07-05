@@ -1101,7 +1101,18 @@ pub fn build(b: *std.Build) void {
     const run_surfacecheck = b.addRunArtifact(surfacecheck);
     if (b.args) |args| run_surfacecheck.addArgs(args);
 
+    const surfacecheck_tests = b.addTest(.{
+        .name = "alea-surfacecheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/surfacecheck.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_surfacecheck_tests = b.addRunArtifact(surfacecheck_tests);
+
     const surfacecheck_step = b.step("surfacecheck", "Check local Rust rand/rand_distr public-surface manifest coverage");
+    surfacecheck_step.dependOn(&run_surfacecheck_tests.step);
     surfacecheck_step.dependOn(&run_surfacecheck.step);
 
     const doccheck_step = b.step("doccheck", "Run documentation, catalog, and roadmap coverage checks");

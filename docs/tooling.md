@@ -15,7 +15,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step/checked-in tool file and that doccheck runs every documentation/catalog checker. |
 | `zig build readmecheck` | Verify README discovery links, quick-start API tokens, and core validation commands stay visible. |
 | `zig build roadmapcheck` | Verify roadmap, active-audit milestone evidence, public-surface manifests, and concrete S4-M11 blocker tokens stay synchronized. |
-| `zig build surfacecheck` | Compare the local Rust `rand` / resolved `rand_core` / cached `rand_distr` public surface against the checked-in manifests, guard against unlisted public source files, and print file/token coverage summaries; uses `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` when overriding local paths. |
+| `zig build surfacecheck` | Run surfacecheck helper tests, compare the local Rust `rand` / resolved `rand_core` / cached `rand_distr` public surface against the checked-in manifests, guard against unlisted public source files, and print file/token coverage summaries; uses `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` when overriding local paths. |
 | `zig build doccheck` | Run API, examples, tooling, README, and roadmap documentation checks together. |
 | `zig build statcheck` | Run extended statistical smoke checks. |
 | `zig build distcheck` | Run parameter-grid distribution checks. |

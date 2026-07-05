@@ -767,3 +767,7 @@ S4-M309 adds focused unit tests for `surfacecheck` token matching
 (`compare/results/s4-m309-surfacecheck-token-tests.md`), covering exact
 backtick-wrapped tokens, identifier-boundary matches, short-token false-positive
 rejection, and scoped/phrase fallback behavior.
+S4-M310 wires those tests into `zig build surfacecheck`
+(`compare/results/s4-m310-surfacecheck-build-tests.md`), so the local
+public-surface checker validates its token-matching helpers before running the
+source/manifest drift scan.
