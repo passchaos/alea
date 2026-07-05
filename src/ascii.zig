@@ -60,6 +60,10 @@ pub const Charset = struct {
         return self.bytes.len;
     }
 
+    pub fn numChoices(self: Charset) usize {
+        return self.bytes.len;
+    }
+
     pub fn isEmpty(self: Charset) bool {
         return self.len() == 0;
     }
@@ -257,6 +261,7 @@ test "ascii charset fills requested length" {
 
     try std.testing.expectEqualSlices(u8, alphanumeric, Alphanumeric.bytesValue());
     try std.testing.expectEqual(alphanumeric.len, Alphanumeric.len());
+    try std.testing.expectEqual(alphanumeric.len, Alphanumeric.numChoices());
     try std.testing.expect(!Alphanumeric.isEmpty());
     try std.testing.expectEqual(@as(u8, 'A'), try Alphanumeric.byteAt(0));
     try std.testing.expectError(error.InvalidParameter, Alphanumeric.byteAt(alphanumeric.len));
