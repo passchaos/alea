@@ -118,6 +118,11 @@ pub fn main(init: std.process.Init) !void {
     const consuming_owned = try consuming_index_vec.intoOwnedSlice(allocator);
     defer allocator.free(consuming_owned);
     try stdout.print("IndexVec.intoOwnedSlice: {any}\n", .{consuming_owned});
+    var consuming_vec_engine = alea.ScalarPrng.init(0x5e11_0038);
+    const consuming_vec_index_vec = try alea.seq.sampleIndexVecFrom(allocator, &consuming_vec_engine, items.len, 3);
+    const consuming_vec = try consuming_vec_index_vec.intoVec(allocator);
+    defer allocator.free(consuming_vec);
+    try stdout.print("IndexVec.intoVec: {any}\n", .{consuming_vec});
     var consuming_u32_index_engine = alea.ScalarPrng.init(0x5e11_0037);
     const consuming_u32_index_vec = try alea.seq.sampleIndexVecFrom(allocator, &consuming_u32_index_engine, items.len, 3);
     const consuming_u32_owned = try consuming_u32_index_vec.intoOwnedU32Slice(allocator);

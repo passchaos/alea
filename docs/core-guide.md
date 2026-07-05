@@ -303,8 +303,8 @@ Use:
   representation-preserving deep `clone`, `len`, `isEmpty`, `at` / `index`,
   optional checked positional `get`,
   representation-independent `eql`, `copyInto`, `copyIntoU32`,
-  `toOwnedSlice`, `toOwnedU32Slice`, consuming `intoOwnedSlice` /
-  `intoOwnedU32Slice`, a consuming `intoIter` with `remaining` / `len` /
+  `toOwnedSlice`, `toOwnedU32Slice`, Rust-discoverable consuming `intoVec`,
+  consuming `intoOwnedSlice` / `intoOwnedU32Slice`, a consuming `intoIter` with `remaining` / `len` /
   `sizeHint` / `fill` / `deinit`, and exact-size `iter` / mapped item iterators with
   `remaining` / `len` / `sizeHint` / `fill`, plus
   `values` / `ptrs` / `mutPtrs`, `valuesInto` / `ptrsInto` /

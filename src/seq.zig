@@ -314,6 +314,10 @@ pub const IndexVec = union(enum) {
         }
     }
 
+    pub fn intoVec(self: IndexVec, allocator: std.mem.Allocator) ![]usize {
+        return self.intoOwnedSlice(allocator);
+    }
+
     pub fn intoOwnedU32Slice(self: IndexVec, allocator: std.mem.Allocator) ![]u32 {
         switch (self) {
             .u32 => |items| return items,
@@ -9812,6 +9816,13 @@ test "index vec consuming owned conversions transfer or narrow backing" {
     try std.testing.expectEqual(@intFromPtr(native_backing.ptr), @intFromPtr(native_owned.ptr));
     try std.testing.expectEqualSlices(usize, &.{ 5, 8, 13 }, native_owned);
 
+    const alias_backing = try std.testing.allocator.alloc(u32, 3);
+    alias_backing[0..3].* = .{ 1, 4, 9 };
+    const alias_vec = IndexVec{ .u32 = alias_backing };
+    const alias_owned = try alias_vec.intoVec(std.testing.allocator);
+    defer std.testing.allocator.free(alias_owned);
+    try std.testing.expectEqualSlices(usize, &.{ 1, 4, 9 }, alias_owned);
+
     const compact_backing = try std.testing.allocator.alloc(u32, 3);
     compact_backing[0..3].* = .{ 2, 3, 5 };
     const compact_transfer_vec = IndexVec{ .u32 = compact_backing };
@@ -9840,6 +9851,14 @@ test "index vec consuming owned conversions transfer or narrow backing" {
     const failing_vec = IndexVec{ .u32 = failing_backing };
     try std.testing.expectError(error.OutOfMemory, failing_vec.intoOwnedSlice(failing_alloc.allocator()));
     try std.testing.expect(failing_alloc.has_induced_failure);
+
+    var failing_alias_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const failing_alias_backing = try std.testing.allocator.alloc(u32, 2);
+    defer std.testing.allocator.free(failing_alias_backing);
+    failing_alias_backing[0..2].* = .{ 3, 5 };
+    const failing_alias_vec = IndexVec{ .u32 = failing_alias_backing };
+    try std.testing.expectError(error.OutOfMemory, failing_alias_vec.intoVec(failing_alias_alloc.allocator()));
+    try std.testing.expect(failing_alias_alloc.has_induced_failure);
 }
 
 test "index vec maps sampled indexes to slice items" {
