@@ -247,6 +247,7 @@ const rand_distr_expected_tokens = [_][]const u8{
     "weighted::WeightedIndex",
     "WeightedAliasIndex",
     "WeightedTreeIndex",
+    "is_valid",
     "AliasableWeight",
     "num_traits",
 };

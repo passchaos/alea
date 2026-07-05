@@ -791,7 +791,9 @@ Use:
   `initBy` / `updateAllBy` from item weight accessors,
   `initByIndex` / `updateAllByIndex` from index-weight accessors,
   `updateWeights` / `updateMany` ordered partial updates, `numChoices` / `len` count diagnostics,
-  `positiveCount`, `constantIndex` for single-positive deterministic paths, and
+  `positiveCount`, `constantIndex` for single-positive deterministic paths,
+  `isValid` for local `rand_distr::WeightedTreeIndex::is_valid`-style
+  sampling readiness diagnostics, and
   optional `weight` / `probability`, lazy `weightIter` / `probabilityIter`,
   checked `weightAt` / `probabilityAt` lookup, and bulk
   `weights` / `weightsInto` export for diagnostics; use `sampleU32` /
@@ -806,7 +808,7 @@ Use:
   `updateMany`,
   `initBy` /
   `updateAllBy` from item weight accessors and `initByIndex` /
-  `updateAllByIndex` from index-weight accessors; `numChoices` / `len`, `positiveCount`, `constantIndex`, optional `weight` / `probability`, lazy `weightIter` / `probabilityIter`, and checked `weightAt` / `probabilityAt` lookup mirrors generic trees, and weights wider than `u64` are
+  `updateAllByIndex` from index-weight accessors; `numChoices` / `len`, `positiveCount`, `constantIndex`, `isValid`, optional `weight` / `probability`, lazy `weightIter` / `probabilityIter`, and checked `weightAt` / `probabilityAt` lookup mirrors generic trees, and weights wider than `u64` are
   accepted only when each value fits the `u64` accumulator
   (failed push/update operations preserve the previous tree totals, `sampleU32`
   / `fillU32` and `indicesU32` variants mirror compact index output,

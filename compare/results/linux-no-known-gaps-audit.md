@@ -715,3 +715,8 @@ S4-M298 adds SkewNormal parameter discovery aliases
 `locationValue`, `scaleValue`, and `shapeValue` accessors on scalar and vector
 samplers while avoiding exact Rust method names that collide with public Zig
 fields.
+S4-M299 documents the local `rand_distr::weighted::WeightedTreeIndex::is_valid`
+surface (`compare/results/s4-m299-weighted-tree-is-valid.md`) as covered by
+existing `WeightedTree.isValid` and `WeightedIntTree.isValid` readiness
+diagnostics, and makes `surfacecheck` require the manifest token so this mapping
+does not silently regress.
