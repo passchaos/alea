@@ -385,6 +385,28 @@ pub fn SampledPtrIterator(comptime T: type) type {
     };
 }
 
+pub fn SampledValueIterator(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        items: []const T,
+        index_iter: IndexVec.IntoIterator,
+
+        pub fn next(self: *Self) ?T {
+            const index = self.index_iter.next() orelse return null;
+            return self.items[index];
+        }
+
+        pub fn remaining(self: Self) usize {
+            return self.index_iter.remaining();
+        }
+
+        pub fn deinit(self: Self) void {
+            self.index_iter.deinit();
+        }
+    };
+}
+
 pub fn sampleIndexVec(allocator: std.mem.Allocator, rng: Rng, length: usize, amount: usize) !IndexVec {
     return sampleIndexVecCheckedFrom(allocator, rng, length, amount);
 }
@@ -1012,6 +1034,16 @@ pub fn sampleItemsFrom(allocator: std.mem.Allocator, source: anytype, comptime T
     return chooseMultipleFrom(allocator, source, T, items, amount);
 }
 
+pub fn sampleItemsIter(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) !SampledValueIterator(T) {
+    return sampleItemsIterFrom(allocator, rng, T, items, amount);
+}
+
+pub fn sampleItemsIterFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) !SampledValueIterator(T) {
+    const count = @min(amount, items.len);
+    const index_vec = try sampleIndexVecFrom(allocator, source, items.len, count);
+    return .{ .items = items, .index_iter = index_vec.intoIter(allocator) };
+}
+
 pub fn chooseMultipleChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
     return chooseMultipleCheckedFrom(allocator, rng, T, items, amount);
 }
@@ -1022,6 +1054,15 @@ pub fn sampleItemsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: ty
 
 pub fn sampleItemsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
     return chooseMultipleCheckedFrom(allocator, source, T, items, amount);
+}
+
+pub fn sampleItemsIterChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) !SampledValueIterator(T) {
+    return sampleItemsIterCheckedFrom(allocator, rng, T, items, amount);
+}
+
+pub fn sampleItemsIterCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) !SampledValueIterator(T) {
+    if (amount > items.len) return error.InvalidParameter;
+    return sampleItemsIterFrom(allocator, source, T, items, amount);
 }
 
 pub fn chooseMultipleCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
@@ -11929,6 +11970,65 @@ test "chooseMultiple pointer slices preserve stream shape and invalid paths do n
     var index_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
     try std.testing.expectError(error.OutOfMemory, chooseMultiplePtrsFrom(index_alloc.allocator(), &invalid_engine, u8, &items, 3));
     try std.testing.expect(index_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "sampleItemsIter owns sampled indices and streams values" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+
+    var optional_engine = alea.ScalarPrng.init(0x5150_c30c);
+    var optional_iter = try sampleItemsIterFrom(std.testing.allocator, &optional_engine, u8, &items, 3);
+    defer optional_iter.deinit();
+    try std.testing.expectEqual(@as(usize, 3), optional_iter.remaining());
+    var seen = [_]bool{false} ** items.len;
+    var count: usize = 0;
+    while (optional_iter.next()) |value| : (count += 1) {
+        const index = std.mem.indexOfScalar(u8, &items, value).?;
+        try std.testing.expect(!seen[index]);
+        seen[index] = true;
+    }
+    try std.testing.expectEqual(@as(usize, 3), count);
+    try std.testing.expectEqual(@as(usize, 0), optional_iter.remaining());
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_c30d);
+    var checked_iter = try sampleItemsIterCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 5);
+    defer checked_iter.deinit();
+    var checked_count: usize = 0;
+    while (checked_iter.next()) |value| : (checked_count += 1) {
+        try std.testing.expect(std.mem.indexOfScalar(u8, &items, value) != null);
+    }
+    try std.testing.expectEqual(@as(usize, items.len), checked_count);
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_c30e);
+    var empty_control = alea.ScalarPrng.init(0x5150_c30e);
+    var empty_iter = try sampleItemsIterFrom(std.testing.allocator, &empty_engine, u8, &items, 0);
+    defer empty_iter.deinit();
+    try std.testing.expectEqual(@as(usize, 0), empty_iter.remaining());
+    try std.testing.expectEqual(@as(?u8, null), empty_iter.next());
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_c30f);
+        var direct_engine = Engine.init(0x5150_c30f);
+        const rng = Rng.init(&facade_engine);
+        var facade_iter = try sampleItemsIter(std.testing.allocator, rng, u8, &items, 3);
+        defer facade_iter.deinit();
+        const direct = try chooseMultipleFrom(std.testing.allocator, &direct_engine, u8, &items, 3);
+        defer std.testing.allocator.free(direct);
+        for (direct) |direct_item| try std.testing.expectEqual(direct_item, facade_iter.next().?);
+        try std.testing.expectEqual(@as(?u8, null), facade_iter.next());
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_c310);
+    var invalid_control = alea.ScalarPrng.init(0x5150_c310);
+    try std.testing.expectError(error.InvalidParameter, sampleItemsIterCheckedFrom(std.testing.allocator, &invalid_engine, u8, &items, 6));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var failing_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleItemsIterFrom(failing_alloc.allocator(), &invalid_engine, u8, &items, 3));
+    try std.testing.expect(failing_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
