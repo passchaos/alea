@@ -452,6 +452,7 @@ pub const Error = error{
     LengthMismatch,
     InvalidWeight,
 };
+pub const WeightError = Error;
 
 pub fn SampledPtrIterator(comptime T: type) type {
     return struct {

@@ -13,7 +13,7 @@ stability expectations.
   `ChaCha20Rng`, `StepRng`
 - Aliases: `DefaultPrng`, `FastPrng`, `HashPrng`, `ReproduciblePrng`,
   `ScalarPrng`, `SecurePrng`, `ChaCha12Rng`, `StdRng`, `SmallRng`, `SysRng`,
-  `SysError`
+  `SysError`, `WeightError`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
   `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
   `secureFromSeed`, `secure`, `secureBytes`, `sysRng`, `stepRng`, `constRng`,
@@ -2732,6 +2732,9 @@ Dynamic weighted helpers:
 - `WeightedIntTree.deinit`
 
 ## Sequence Sampling
+
+- Error aliases: `seq.Error`, `seq.WeightError`; root `WeightError` mirrors
+  `seq.WeightError` for local Rust `rand::seq::WeightError` discovery.
 
 - Error type: `Error`; exact-size iterator hint: `SizeHint`
 - Index vectors: `IndexVec.fromOwnedSlice`, `IndexVec.fromOwnedU32Slice`,

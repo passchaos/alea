@@ -15,6 +15,7 @@ pub const ascii = @import("ascii.zig");
 pub const quality = @import("quality.zig");
 pub const SysRng = Rng.SysRng;
 pub const SysError = SysRng.Error;
+pub const WeightError = seq.WeightError;
 
 pub const SplitMix64 = @import("engines/splitmix64.zig");
 pub const Wyhash64 = @import("engines/wyhash64.zig");
@@ -465,6 +466,11 @@ test "root sysRng exposes system entropy source" {
 
     const sys_error: SysError = error.EntropyUnavailable;
     try std.testing.expectEqual(@as(SysRng.Error, error.EntropyUnavailable), sys_error);
+}
+
+test "root WeightError mirrors seq WeightError" {
+    const weight_error: WeightError = error.InvalidWeight;
+    try std.testing.expectEqual(@as(seq.WeightError, error.InvalidWeight), weight_error);
 }
 
 test "root random helpers use explicit system entropy" {
