@@ -86,7 +86,7 @@ toolkit functionality and reduce reliance on companion crates:
 
 | Rust ecosystem feature | Rationale |
 | --- | --- |
-| `Distribution<T>` trait mirroring | Zig-native sampler structs and `Rng.sampleIter` provide the reusable-sampler workflow without copying Rust traits |
+| `Distribution<T>` trait mirroring | Zig-native sampler structs plus `Rng.sample`, `Rng.sampleIter`, and `Rng.sampleBatch` provide one-shot, iterator, and owned-batch reusable-sampler workflows without copying Rust traits |
 | serde integration | Rust ecosystem-specific; not core RNG functionality for Zig |
 | crate feature matrices | Rust packaging-specific |
 | Rust SIMD `std::simd` distribution implementations | Zig vector/SIMD support should be designed as a separate Zig-native milestone if needed |

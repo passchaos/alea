@@ -85,6 +85,7 @@ pub fn main(init: std.process.Init) !void {
     const mutable_color_ptrs = try rng.choosePtrBatch([]const u8, init.gpa, 4, &mutable_colors);
     defer init.gpa.free(mutable_color_ptrs);
     const die_sampler = try alea.distributions.Uniform(u8).initInclusive(1, 6);
+    const sample_roll = rng.sample(u8, die_sampler);
     const owned_rolls = try rng.sampleBatch(u8, init.gpa, die_sampler, 6);
     defer init.gpa.free(owned_rolls);
 
@@ -142,6 +143,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("const pointer choice batch: {s}, {s}, {s}, {s}\n", .{ color_ptrs[0].*, color_ptrs[1].*, color_ptrs[2].*, color_ptrs[3].* });
     try stdout.print("mutable pointer choice array: {s}, {s}, {s}, {s}\n", .{ mutable_color_ptr_array[0].*, mutable_color_ptr_array[1].*, mutable_color_ptr_array[2].*, mutable_color_ptr_array[3].* });
     try stdout.print("mutable pointer choice batch: {s}, {s}, {s}, {s}\n", .{ mutable_color_ptrs[0].*, mutable_color_ptrs[1].*, mutable_color_ptrs[2].*, mutable_color_ptrs[3].* });
+    try stdout.print("sample die: {}\n", .{sample_roll});
     try stdout.print("sampleBatch dice: {any}\n", .{owned_rolls});
     try stdout.print("iterator choice: {}\n", .{stream_choice});
     try stdout.print("child stream u64: {}\n", .{child_rng.next()});

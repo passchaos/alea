@@ -226,6 +226,14 @@ pub fn sampleIterFrom(source: anytype, comptime T: type, sampler: anytype) Sampl
     };
 }
 
+pub fn sample(self: Rng, comptime T: type, sampler: anytype) T {
+    return sampleWith(T, sampler, self);
+}
+
+pub fn sampleFrom(source: anytype, comptime T: type, sampler: anytype) T {
+    return sampleFromWith(T, sampler, source);
+}
+
 pub fn sampleBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, sampler: anytype, count: usize) ![]T {
     return sampleBatchFrom(self, T, allocator, sampler, count);
 }
@@ -4819,7 +4827,7 @@ test "owned strict interval batches preserve fill stream shape" {
         var direct_open_values: [32]f64 = undefined;
         fillOpenFrom(&direct_engine, f64, &direct_open_values);
         try std.testing.expectEqualSlices(f64, &direct_open_values, open_values);
-        for (open_values) |sample| try std.testing.expect(sample > 0 and sample < 1);
+        for (open_values) |draw| try std.testing.expect(draw > 0 and draw < 1);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         const open_closed_values = try rng.openClosedBatch(f32, std.testing.allocator, 32);
@@ -4827,7 +4835,7 @@ test "owned strict interval batches preserve fill stream shape" {
         var direct_open_closed_values: [32]f32 = undefined;
         fillOpenClosedFrom(&direct_engine, f32, &direct_open_closed_values);
         try std.testing.expectEqualSlices(f32, &direct_open_closed_values, open_closed_values);
-        for (open_closed_values) |sample| try std.testing.expect(sample > 0 and sample <= 1);
+        for (open_closed_values) |draw| try std.testing.expect(draw > 0 and draw <= 1);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     }
 }
@@ -4971,9 +4979,9 @@ test "unicode scalar range helpers preserve checked stream shape" {
         fillUnicodeScalarRangeLessThanFrom(&unchecked, &less_than_unchecked, 0xD7F0, 0xE010);
         try fillUnicodeScalarRangeLessThanCheckedFrom(&checked, &less_than_checked, 0xD7F0, 0xE010);
         try std.testing.expectEqualSlices(u21, &less_than_unchecked, &less_than_checked);
-        for (less_than_unchecked) |sample| {
-            try std.testing.expect(sample >= 0xD7F0 and sample < 0xE010);
-            try std.testing.expect(sample < 0xD800 or sample > 0xDFFF);
+        for (less_than_unchecked) |draw| {
+            try std.testing.expect(draw >= 0xD7F0 and draw < 0xE010);
+            try std.testing.expect(draw < 0xD800 or draw > 0xDFFF);
         }
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
@@ -4989,7 +4997,7 @@ test "unicode scalar range helpers preserve checked stream shape" {
         fillUnicodeScalarRangeAtMostFrom(&unchecked, &at_most_unchecked, 0x41, 0x5A);
         try fillUnicodeScalarRangeAtMostCheckedFrom(&checked, &at_most_checked, 0x41, 0x5A);
         try std.testing.expectEqualSlices(u21, &at_most_unchecked, &at_most_checked);
-        for (at_most_unchecked) |sample| try std.testing.expect(sample >= 0x41 and sample <= 0x5A);
+        for (at_most_unchecked) |draw| try std.testing.expect(draw >= 0x41 and draw <= 0x5A);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         const at_most_owned = try unicodeScalarRangeAtMostBatchFrom(&unchecked, std.testing.allocator, 16, 0x41, 0x5A);
@@ -5017,14 +5025,14 @@ test "unicode scalar ranges handle surrogate gap and degenerate ranges" {
     const gap_rng = Rng.init(&gap_engine);
     var gap_crossing: [64]u21 = undefined;
     gap_rng.fillUnicodeScalarRangeLessThan(&gap_crossing, 0xD7F0, 0xE010);
-    for (gap_crossing) |sample| {
-        try std.testing.expect(sample >= 0xD7F0 and sample < 0xE010);
-        try std.testing.expect(isUnicodeScalar(sample));
+    for (gap_crossing) |draw| {
+        try std.testing.expect(draw >= 0xD7F0 and draw < 0xE010);
+        try std.testing.expect(isUnicodeScalar(draw));
     }
 
     var degenerate: [5]u21 = undefined;
     try fillUnicodeScalarRangeAtMostCheckedFrom(&engine, &degenerate, 0x10FFFF, 0x10FFFF);
-    for (degenerate) |sample| try std.testing.expectEqual(@as(u21, 0x10FFFF), sample);
+    for (degenerate) |draw| try std.testing.expectEqual(@as(u21, 0x10FFFF), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -5078,9 +5086,9 @@ test "owned duration range batches preserve checked stream shape" {
         const checked_less_than = try durationRangeLessThanBatchCheckedFrom(&checked, std.testing.allocator, 8, min, max);
         defer std.testing.allocator.free(checked_less_than);
         try std.testing.expectEqualSlices(std.Io.Duration, less_than, checked_less_than);
-        for (less_than) |sample| {
-            try std.testing.expect(sample.nanoseconds >= min.nanoseconds);
-            try std.testing.expect(sample.nanoseconds < max.nanoseconds);
+        for (less_than) |draw| {
+            try std.testing.expect(draw.nanoseconds >= min.nanoseconds);
+            try std.testing.expect(draw.nanoseconds < max.nanoseconds);
         }
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
@@ -5089,9 +5097,9 @@ test "owned duration range batches preserve checked stream shape" {
         const checked_at_most = try durationRangeAtMostBatchCheckedFrom(&checked, std.testing.allocator, 8, min, max);
         defer std.testing.allocator.free(checked_at_most);
         try std.testing.expectEqualSlices(std.Io.Duration, at_most, checked_at_most);
-        for (at_most) |sample| {
-            try std.testing.expect(sample.nanoseconds >= min.nanoseconds);
-            try std.testing.expect(sample.nanoseconds <= max.nanoseconds);
+        for (at_most) |draw| {
+            try std.testing.expect(draw.nanoseconds >= min.nanoseconds);
+            try std.testing.expect(draw.nanoseconds <= max.nanoseconds);
         }
         try std.testing.expectEqual(unchecked.next(), checked.next());
     }
@@ -5151,9 +5159,9 @@ test "shuffle and sampling keep item set" {
     const weighted = Rng.weightedIndexFrom(&engine, &.{ 0.0, 1.0, 3.0 }).?;
     try std.testing.expect(weighted == 1 or weighted == 2);
 
-    const sample = try rng.sampleWithoutReplacement(u8, std.testing.allocator, &values, 3);
-    defer std.testing.allocator.free(sample);
-    try std.testing.expectEqual(@as(usize, 3), sample.len);
+    const sampled_items = try rng.sampleWithoutReplacement(u8, std.testing.allocator, &values, 3);
+    defer std.testing.allocator.free(sampled_items);
+    try std.testing.expectEqual(@as(usize, 3), sampled_items.len);
 
     const direct_sample = try Rng.sampleWithoutReplacementFrom(&engine, u8, std.testing.allocator, &values, 3);
     defer std.testing.allocator.free(direct_sample);
@@ -5672,11 +5680,11 @@ test "checked weighted sampling preserves valid-parameter stream shape" {
         try std.testing.expectEqualSlices(usize, &weighted_index_array, &checked_weighted_index_array);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
-        const sample = try sampleWithoutReplacementFrom(&unchecked, u8, std.testing.allocator, &items, 3);
-        defer std.testing.allocator.free(sample);
+        const sampled_items = try sampleWithoutReplacementFrom(&unchecked, u8, std.testing.allocator, &items, 3);
+        defer std.testing.allocator.free(sampled_items);
         const checked_sample = try sampleWithoutReplacementCheckedFrom(&checked, u8, std.testing.allocator, &items, 3);
         defer std.testing.allocator.free(checked_sample);
-        try std.testing.expectEqualSlices(u8, sample, checked_sample);
+        try std.testing.expectEqualSlices(u8, sampled_items, checked_sample);
         try std.testing.expectEqual(unchecked.next(), checked.next());
     }
 }
@@ -5973,9 +5981,9 @@ test "zero-count sample without replacement does not build pool or consume rando
 
     const items = [_]u8{ 1, 2, 3, 4 };
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    const sample = try sampleWithoutReplacementCheckedFrom(&engine, u8, failing.allocator(), &items, 0);
-    defer failing.allocator().free(sample);
-    try std.testing.expectEqual(@as(usize, 0), sample.len);
+    const sampled_items = try sampleWithoutReplacementCheckedFrom(&engine, u8, failing.allocator(), &items, 0);
+    defer failing.allocator().free(sampled_items);
+    try std.testing.expectEqual(@as(usize, 0), sampled_items.len);
     try std.testing.expect(!failing.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -5996,9 +6004,9 @@ test "sample without replacement avoids post-sampling ownership allocation" {
         .fail_index = 2,
         .resize_fail_index = 0,
     });
-    const sample = try sampleWithoutReplacementCheckedFrom(&engine, u8, failing.allocator(), &items, 3);
-    defer failing.allocator().free(sample);
-    try std.testing.expectEqual(@as(usize, 3), sample.len);
+    const sampled_items = try sampleWithoutReplacementCheckedFrom(&engine, u8, failing.allocator(), &items, 3);
+    defer failing.allocator().free(sampled_items);
+    try std.testing.expectEqual(@as(usize, 3), sampled_items.len);
     try std.testing.expect(!failing.has_induced_failure);
 }
 
@@ -6144,12 +6152,12 @@ test "degenerate range helpers do not consume random stream" {
 
     var uint_less: [5]u32 = undefined;
     rng.fillUintLessThan(u32, &uint_less, 1);
-    for (uint_less) |sample| try std.testing.expectEqual(@as(u32, 0), sample);
+    for (uint_less) |draw| try std.testing.expectEqual(@as(u32, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_uint_less = try uintLessThanBatchCheckedFrom(&engine, u32, std.testing.allocator, 5, 1);
     defer std.testing.allocator.free(owned_uint_less);
-    for (owned_uint_less) |sample| try std.testing.expectEqual(@as(u32, 0), sample);
+    for (owned_uint_less) |draw| try std.testing.expectEqual(@as(u32, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(u32, 0), uintAtMostFrom(&engine, u32, 0));
@@ -6157,12 +6165,12 @@ test "degenerate range helpers do not consume random stream" {
 
     var uint_at_most: [5]u32 = undefined;
     fillUintAtMostFrom(&engine, u32, &uint_at_most, 0);
-    for (uint_at_most) |sample| try std.testing.expectEqual(@as(u32, 0), sample);
+    for (uint_at_most) |draw| try std.testing.expectEqual(@as(u32, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_uint_at_most = try rng.uintAtMostBatch(u32, std.testing.allocator, 5, 0);
     defer std.testing.allocator.free(owned_uint_at_most);
-    for (owned_uint_at_most) |sample| try std.testing.expectEqual(@as(u32, 0), sample);
+    for (owned_uint_at_most) |draw| try std.testing.expectEqual(@as(u32, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(u32, 7), intRangeAtMostFrom(&engine, u32, 7, 7));
@@ -6182,7 +6190,7 @@ test "degenerate range helpers do not consume random stream" {
 
     const owned_duration = try rng.durationRangeAtMostBatch(std.testing.allocator, 5, .fromSeconds(3), .fromSeconds(3));
     defer std.testing.allocator.free(owned_duration);
-    for (owned_duration) |sample| try std.testing.expectEqual(std.Io.Duration.fromSeconds(3), sample);
+    for (owned_duration) |draw| try std.testing.expectEqual(std.Io.Duration.fromSeconds(3), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(f64, 2.5), rng.floatRange(f64, 2.5, 2.5));
@@ -6193,41 +6201,41 @@ test "degenerate range helpers do not consume random stream" {
 
     var ints: [5]u32 = undefined;
     fillRangeFrom(&engine, u32, &ints, 10, 11);
-    for (ints) |sample| try std.testing.expectEqual(@as(u32, 10), sample);
+    for (ints) |draw| try std.testing.expectEqual(@as(u32, 10), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_ints = try rangeBatchCheckedFrom(&engine, u32, std.testing.allocator, 5, 10, 11);
     defer std.testing.allocator.free(owned_ints);
-    for (owned_ints) |sample| try std.testing.expectEqual(@as(u32, 10), sample);
+    for (owned_ints) |draw| try std.testing.expectEqual(@as(u32, 10), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var signed_ints: [5]i32 = undefined;
     try rng.fillRangeChecked(i32, &signed_ints, -12, -11);
-    for (signed_ints) |sample| try std.testing.expectEqual(@as(i32, -12), sample);
+    for (signed_ints) |draw| try std.testing.expectEqual(@as(i32, -12), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var inclusive_signed_ints: [5]i32 = undefined;
     rng.fillRangeAtMost(i32, &inclusive_signed_ints, -12, -12);
-    for (inclusive_signed_ints) |sample| try std.testing.expectEqual(@as(i32, -12), sample);
+    for (inclusive_signed_ints) |draw| try std.testing.expectEqual(@as(i32, -12), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_inclusive_signed_ints = try rangeAtMostBatchCheckedFrom(&engine, i32, std.testing.allocator, 5, -12, -12);
     defer std.testing.allocator.free(owned_inclusive_signed_ints);
-    for (owned_inclusive_signed_ints) |sample| try std.testing.expectEqual(@as(i32, -12), sample);
+    for (owned_inclusive_signed_ints) |draw| try std.testing.expectEqual(@as(i32, -12), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var floats: [5]f64 = undefined;
     fillRangeFrom(&engine, f64, &floats, 4.75, 4.75);
-    for (floats) |sample| try std.testing.expectEqual(@as(f64, 4.75), sample);
+    for (floats) |draw| try std.testing.expectEqual(@as(f64, 4.75), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_floats = try rng.rangeBatch(f64, std.testing.allocator, 5, 4.75, 4.75);
     defer std.testing.allocator.free(owned_floats);
-    for (owned_floats) |sample| try std.testing.expectEqual(@as(f64, 4.75), sample);
+    for (owned_floats) |draw| try std.testing.expectEqual(@as(f64, 4.75), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try rng.fillRangeChecked(f64, &floats, -3.5, -3.5);
-    for (floats) |sample| try std.testing.expectEqual(@as(f64, -3.5), sample);
+    for (floats) |draw| try std.testing.expectEqual(@as(f64, -3.5), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(@Vector(4, u32), @splat(13)), vectorRangeFrom(&engine, @Vector(4, u32), 13, 14));
@@ -6235,7 +6243,7 @@ test "degenerate range helpers do not consume random stream" {
 
     const owned_vec_ints = try vectorRangeBatchCheckedFrom(&engine, @Vector(4, u32), std.testing.allocator, 3, 13, 14);
     defer std.testing.allocator.free(owned_vec_ints);
-    for (owned_vec_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, u32), @splat(13)), sample);
+    for (owned_vec_ints) |draw| try std.testing.expectEqual(@as(@Vector(4, u32), @splat(13)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-14)), try rng.vectorRangeChecked(@Vector(4, i32), -14, -13));
@@ -6246,7 +6254,7 @@ test "degenerate range helpers do not consume random stream" {
 
     const owned_vec_floats = try rng.vectorRangeBatch(@Vector(4, f64), std.testing.allocator, 3, 6.25, 6.25);
     defer std.testing.allocator.free(owned_vec_floats);
-    for (owned_vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(6.25)), sample);
+    for (owned_vec_floats) |draw| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(6.25)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(@Vector(8, f32), @splat(-2.5)), try rng.vectorRangeChecked(@Vector(8, f32), -2.5, -2.5));
@@ -6254,31 +6262,31 @@ test "degenerate range helpers do not consume random stream" {
 
     var vec_ints: [3]@Vector(4, u32) = undefined;
     fillVectorRangeFrom(&engine, @Vector(4, u32), &vec_ints, 15, 16);
-    for (vec_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, u32), @splat(15)), sample);
+    for (vec_ints) |draw| try std.testing.expectEqual(@as(@Vector(4, u32), @splat(15)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var vec_signed_ints: [3]@Vector(4, i32) = undefined;
     try rng.fillVectorRangeChecked(@Vector(4, i32), &vec_signed_ints, -16, -15);
-    for (vec_signed_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-16)), sample);
+    for (vec_signed_ints) |draw| try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-16)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var vec_inclusive_signed_ints: [3]@Vector(4, i32) = undefined;
     rng.fillVectorRangeAtMost(@Vector(4, i32), &vec_inclusive_signed_ints, -16, -16);
-    for (vec_inclusive_signed_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-16)), sample);
+    for (vec_inclusive_signed_ints) |draw| try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-16)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_vec_inclusive_signed_ints = try vectorRangeAtMostBatchCheckedFrom(&engine, @Vector(4, i32), std.testing.allocator, 3, -16, -16);
     defer std.testing.allocator.free(owned_vec_inclusive_signed_ints);
-    for (owned_vec_inclusive_signed_ints) |sample| try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-16)), sample);
+    for (owned_vec_inclusive_signed_ints) |draw| try std.testing.expectEqual(@as(@Vector(4, i32), @splat(-16)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var vec_floats: [3]@Vector(4, f64) = undefined;
     fillVectorRangeFrom(&engine, @Vector(4, f64), &vec_floats, 9.125, 9.125);
-    for (vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(9.125)), sample);
+    for (vec_floats) |draw| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(9.125)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try rng.fillVectorRangeChecked(@Vector(4, f64), &vec_floats, -8.25, -8.25);
-    for (vec_floats) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(-8.25)), sample);
+    for (vec_floats) |draw| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(-8.25)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -6321,19 +6329,19 @@ test "degenerate exponential helpers do not consume random stream" {
 
     var out: [5]f64 = undefined;
     rng.fillExponential(f64, &out, std.math.inf(f64));
-    for (out) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    for (out) |draw| try std.testing.expectEqual(@as(f64, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     fillExponentialFrom(&engine, f64, &out, std.math.inf(f64));
-    for (out) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    for (out) |draw| try std.testing.expectEqual(@as(f64, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try rng.fillExponentialChecked(f64, &out, std.math.inf(f64));
-    for (out) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    for (out) |draw| try std.testing.expectEqual(@as(f64, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try fillExponentialCheckedFrom(&engine, f64, &out, std.math.inf(f64));
-    for (out) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    for (out) |draw| try std.testing.expectEqual(@as(f64, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), rng.vectorExponential(@Vector(4, f64), std.math.inf(f64)));
@@ -6350,29 +6358,29 @@ test "degenerate exponential helpers do not consume random stream" {
 
     var vec_out: [3]@Vector(8, f32) = undefined;
     rng.fillVectorExponential(@Vector(8, f32), &vec_out, std.math.inf(f32));
-    for (vec_out) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), sample);
+    for (vec_out) |draw| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     fillVectorExponentialFrom(&engine, @Vector(8, f32), &vec_out, std.math.inf(f32));
-    for (vec_out) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), sample);
+    for (vec_out) |draw| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_out, std.math.inf(f32));
-    for (vec_out) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), sample);
+    for (vec_out) |draw| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try fillVectorExponentialCheckedFrom(&engine, @Vector(8, f32), &vec_out, std.math.inf(f32));
-    for (vec_out) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), sample);
+    for (vec_out) |draw| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const vector_owned = try rng.vectorExponentialBatch(@Vector(8, f32), std.testing.allocator, 3, std.math.inf(f32));
     defer std.testing.allocator.free(vector_owned);
-    for (vector_owned) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), sample);
+    for (vector_owned) |draw| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(0)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const vector_checked_owned = try vectorExponentialBatchCheckedFrom(&engine, @Vector(4, f64), std.testing.allocator, 3, std.math.inf(f64));
     defer std.testing.allocator.free(vector_checked_owned);
-    for (vector_checked_owned) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    for (vector_checked_owned) |draw| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -6393,21 +6401,21 @@ test "degenerate normal helpers do not consume random stream" {
 
     var out: [5]f64 = undefined;
     rng.fillNormal(f64, &out, -7.125, 0);
-    for (out) |sample| try std.testing.expectEqual(@as(f64, -7.125), sample);
+    for (out) |draw| try std.testing.expectEqual(@as(f64, -7.125), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try fillNormalCheckedFrom(&engine, f64, &out, 9.5, 0);
-    for (out) |sample| try std.testing.expectEqual(@as(f64, 9.5), sample);
+    for (out) |draw| try std.testing.expectEqual(@as(f64, 9.5), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned = try rng.normalBatch(f64, std.testing.allocator, 5, -3.25, 0);
     defer std.testing.allocator.free(owned);
-    for (owned) |sample| try std.testing.expectEqual(@as(f64, -3.25), sample);
+    for (owned) |draw| try std.testing.expectEqual(@as(f64, -3.25), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const checked_owned = try normalBatchCheckedFrom(&engine, f64, std.testing.allocator, 5, 6.25, 0);
     defer std.testing.allocator.free(checked_owned);
-    for (checked_owned) |sample| try std.testing.expectEqual(@as(f64, 6.25), sample);
+    for (checked_owned) |draw| try std.testing.expectEqual(@as(f64, 6.25), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(2.25)), rng.vectorNormal(@Vector(4, f64), 2.25, 0));
@@ -6443,12 +6451,12 @@ test "degenerate exponential owned batches do not consume random stream" {
 
     const owned = try rng.exponentialBatch(f64, std.testing.allocator, 5, std.math.inf(f64));
     defer std.testing.allocator.free(owned);
-    for (owned) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    for (owned) |draw| try std.testing.expectEqual(@as(f64, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const checked_owned = try exponentialBatchCheckedFrom(&engine, f32, std.testing.allocator, 5, std.math.inf(f32));
     defer std.testing.allocator.free(checked_owned);
-    for (checked_owned) |sample| try std.testing.expectEqual(@as(f32, 0), sample);
+    for (checked_owned) |draw| try std.testing.expectEqual(@as(f32, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -6727,22 +6735,22 @@ test "degenerate owned probability batches do not consume random stream" {
 
     const all_false = try rng.chanceBatchChecked(std.testing.allocator, 8, 0);
     defer std.testing.allocator.free(all_false);
-    for (all_false) |sample| try std.testing.expect(!sample);
+    for (all_false) |draw| try std.testing.expect(!draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const all_true = try chanceBatchCheckedFrom(&engine, std.testing.allocator, 8, 1);
     defer std.testing.allocator.free(all_true);
-    for (all_true) |sample| try std.testing.expect(sample);
+    for (all_true) |draw| try std.testing.expect(draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const ratio_false = try rng.ratioBatchChecked(std.testing.allocator, 8, 0, 7);
     defer std.testing.allocator.free(ratio_false);
-    for (ratio_false) |sample| try std.testing.expect(!sample);
+    for (ratio_false) |draw| try std.testing.expect(!draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const ratio_true = try ratioBatchCheckedFrom(&engine, std.testing.allocator, 8, 7, 7);
     defer std.testing.allocator.free(ratio_true);
-    for (ratio_true) |sample| try std.testing.expect(sample);
+    for (ratio_true) |draw| try std.testing.expect(draw);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -6754,22 +6762,22 @@ test "degenerate owned vector probability batches do not consume random stream" 
 
     const all_false = try rng.vectorChanceBatchChecked(@Vector(8, bool), std.testing.allocator, 4, 0);
     defer std.testing.allocator.free(all_false);
-    for (all_false) |sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(false)), sample);
+    for (all_false) |draw| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(false)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const all_true = try vectorChanceBatchCheckedFrom(&engine, @Vector(8, bool), std.testing.allocator, 4, 1);
     defer std.testing.allocator.free(all_true);
-    for (all_true) |sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), sample);
+    for (all_true) |draw| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const ratio_false = try rng.vectorRatioBatchChecked(@Vector(8, bool), std.testing.allocator, 4, 0, 7);
     defer std.testing.allocator.free(ratio_false);
-    for (ratio_false) |sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(false)), sample);
+    for (ratio_false) |draw| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(false)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const ratio_true = try vectorRatioBatchCheckedFrom(&engine, @Vector(8, bool), std.testing.allocator, 4, 7, 7);
     defer std.testing.allocator.free(ratio_true);
-    for (ratio_true) |sample| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), sample);
+    for (ratio_true) |draw| try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -6837,76 +6845,76 @@ test "single-positive weighted index does not consume random stream" {
 
     var weighted_indices: [5]usize = undefined;
     try rng.fillWeightedIndexChecked(&weighted_indices, &.{ 0.0, 5.0, 0.0 });
-    for (weighted_indices) |sample| try std.testing.expectEqual(@as(usize, 1), sample);
+    for (weighted_indices) |draw| try std.testing.expectEqual(@as(usize, 1), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_weighted_indices = try weightedIndexBatchCheckedFrom(&engine, std.testing.allocator, 5, &.{ 0.0, 0.0, 7.0 });
     defer std.testing.allocator.free(owned_weighted_indices);
-    for (owned_weighted_indices) |sample| try std.testing.expectEqual(@as(usize, 2), sample);
+    for (owned_weighted_indices) |draw| try std.testing.expectEqual(@as(usize, 2), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const weighted_index_array = try rng.weightedIndexArrayChecked(5, &.{ 0.0, 5.0, 0.0 });
-    for (weighted_index_array) |sample| try std.testing.expectEqual(@as(usize, 1), sample);
+    for (weighted_index_array) |draw| try std.testing.expectEqual(@as(usize, 1), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const direct_weighted_index_array = weightedIndexArrayFrom(&engine, 5, &.{ 0.0, 0.0, 7.0 }).?;
-    for (direct_weighted_index_array) |sample| try std.testing.expectEqual(@as(usize, 2), sample);
+    for (direct_weighted_index_array) |draw| try std.testing.expectEqual(@as(usize, 2), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const labels = [_]u8{ 10, 20, 30 };
     var weighted_values: [5]u8 = undefined;
     try rng.fillChooseWeightedChecked(u8, &weighted_values, &labels, &.{ 0.0, 5.0, 0.0 });
-    for (weighted_values) |sample| try std.testing.expectEqual(@as(u8, 20), sample);
+    for (weighted_values) |draw| try std.testing.expectEqual(@as(u8, 20), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_weighted_values = try chooseWeightedBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &labels, &.{ 0.0, 0.0, 7.0 });
     defer std.testing.allocator.free(owned_weighted_values);
-    for (owned_weighted_values) |sample| try std.testing.expectEqual(@as(u8, 30), sample);
+    for (owned_weighted_values) |draw| try std.testing.expectEqual(@as(u8, 30), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const weighted_value_array = try rng.chooseWeightedValueArrayChecked(u8, 5, &labels, &.{ 0.0, 5.0, 0.0 });
-    for (weighted_value_array) |sample| try std.testing.expectEqual(@as(u8, 20), sample);
+    for (weighted_value_array) |draw| try std.testing.expectEqual(@as(u8, 20), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const direct_weighted_value_array = (try chooseWeightedValueArrayFrom(&engine, u8, 5, &labels, &.{ 0.0, 0.0, 7.0 })).?;
-    for (direct_weighted_value_array) |sample| try std.testing.expectEqual(@as(u8, 30), sample);
+    for (direct_weighted_value_array) |draw| try std.testing.expectEqual(@as(u8, 30), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var weighted_const_ptrs: [5]*const u8 = undefined;
     try rng.fillChooseWeightedConstPtrChecked(u8, &weighted_const_ptrs, &labels, &.{ 0.0, 5.0, 0.0 });
-    for (weighted_const_ptrs) |sample| try std.testing.expectEqual(@as(u8, 20), sample.*);
+    for (weighted_const_ptrs) |draw| try std.testing.expectEqual(@as(u8, 20), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_weighted_const_ptrs = try chooseWeightedConstPtrBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &labels, &.{ 0.0, 0.0, 7.0 });
     defer std.testing.allocator.free(owned_weighted_const_ptrs);
-    for (owned_weighted_const_ptrs) |sample| try std.testing.expectEqual(@as(u8, 30), sample.*);
+    for (owned_weighted_const_ptrs) |draw| try std.testing.expectEqual(@as(u8, 30), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const weighted_const_ptr_array = try rng.chooseWeightedConstPtrArrayChecked(u8, 5, &labels, &.{ 0.0, 5.0, 0.0 });
-    for (weighted_const_ptr_array) |sample| try std.testing.expectEqual(@as(u8, 20), sample.*);
+    for (weighted_const_ptr_array) |draw| try std.testing.expectEqual(@as(u8, 20), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const direct_weighted_const_ptr_array = (try chooseWeightedConstPtrArrayFrom(&engine, u8, 5, &labels, &.{ 0.0, 0.0, 7.0 })).?;
-    for (direct_weighted_const_ptr_array) |sample| try std.testing.expectEqual(@as(u8, 30), sample.*);
+    for (direct_weighted_const_ptr_array) |draw| try std.testing.expectEqual(@as(u8, 30), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var mutable_labels = [_]u8{ 10, 20, 30 };
     var weighted_ptrs: [5]*u8 = undefined;
     try rng.fillChooseWeightedPtrChecked(u8, &weighted_ptrs, &mutable_labels, &.{ 0.0, 5.0, 0.0 });
-    for (weighted_ptrs) |sample| try std.testing.expectEqual(@as(u8, 20), sample.*);
+    for (weighted_ptrs) |draw| try std.testing.expectEqual(@as(u8, 20), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_weighted_ptrs = try chooseWeightedPtrBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &mutable_labels, &.{ 0.0, 0.0, 7.0 });
     defer std.testing.allocator.free(owned_weighted_ptrs);
-    for (owned_weighted_ptrs) |sample| try std.testing.expectEqual(@as(u8, 30), sample.*);
+    for (owned_weighted_ptrs) |draw| try std.testing.expectEqual(@as(u8, 30), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const weighted_ptr_array = try rng.chooseWeightedPtrArrayChecked(u8, 5, &mutable_labels, &.{ 0.0, 5.0, 0.0 });
-    for (weighted_ptr_array) |sample| try std.testing.expectEqual(@as(u8, 20), sample.*);
+    for (weighted_ptr_array) |draw| try std.testing.expectEqual(@as(u8, 20), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const direct_weighted_ptr_array = (try chooseWeightedPtrArrayFrom(&engine, u8, 5, &mutable_labels, &.{ 0.0, 0.0, 7.0 })).?;
-    for (direct_weighted_ptr_array) |sample| try std.testing.expectEqual(@as(u8, 30), sample.*);
+    for (direct_weighted_ptr_array) |draw| try std.testing.expectEqual(@as(u8, 30), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(?u32, 1), try weightedIndexU32From(&engine, &.{ 0.0, 5.0, 0.0 }));
@@ -6917,20 +6925,20 @@ test "single-positive weighted index does not consume random stream" {
 
     var weighted_u32_indices: [5]u32 = undefined;
     try rng.fillWeightedIndexU32Checked(&weighted_u32_indices, &.{ 0.0, 5.0, 0.0 });
-    for (weighted_u32_indices) |sample| try std.testing.expectEqual(@as(u32, 1), sample);
+    for (weighted_u32_indices) |draw| try std.testing.expectEqual(@as(u32, 1), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_weighted_u32_indices = try weightedIndexU32BatchCheckedFrom(&engine, std.testing.allocator, 5, &.{ 0.0, 0.0, 7.0 });
     defer std.testing.allocator.free(owned_weighted_u32_indices);
-    for (owned_weighted_u32_indices) |sample| try std.testing.expectEqual(@as(u32, 2), sample);
+    for (owned_weighted_u32_indices) |draw| try std.testing.expectEqual(@as(u32, 2), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const weighted_u32_index_array = try rng.weightedIndexU32ArrayChecked(5, &.{ 0.0, 5.0, 0.0 });
-    for (weighted_u32_index_array) |sample| try std.testing.expectEqual(@as(u32, 1), sample);
+    for (weighted_u32_index_array) |draw| try std.testing.expectEqual(@as(u32, 1), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const direct_weighted_u32_index_array = (try weightedIndexU32ArrayFrom(&engine, 5, &.{ 0.0, 0.0, 7.0 })).?;
-    for (direct_weighted_u32_index_array) |sample| try std.testing.expectEqual(@as(u32, 2), sample);
+    for (direct_weighted_u32_index_array) |draw| try std.testing.expectEqual(@as(u32, 2), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -7329,7 +7337,7 @@ test "single-item choice helpers do not consume random stream" {
 
     const single_indices = try rng.chooseIndexBatchChecked(std.testing.allocator, 5, 1);
     defer std.testing.allocator.free(single_indices);
-    for (single_indices) |sample| try std.testing.expectEqual(@as(usize, 0), sample);
+    for (single_indices) |draw| try std.testing.expectEqual(@as(usize, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(?u32, 0), chooseIndexU32From(&engine, 1));
@@ -7344,7 +7352,7 @@ test "single-item choice helpers do not consume random stream" {
 
     const single_u32_indices = try chooseIndexU32BatchCheckedFrom(&engine, std.testing.allocator, 5, 1);
     defer std.testing.allocator.free(single_u32_indices);
-    for (single_u32_indices) |sample| try std.testing.expectEqual(@as(u32, 0), sample);
+    for (single_u32_indices) |draw| try std.testing.expectEqual(@as(u32, 0), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const items = [_]u8{42};
@@ -7359,16 +7367,16 @@ test "single-item choice helpers do not consume random stream" {
 
     var chosen_const_ptrs: [5]*const u8 = undefined;
     try rng.fillChooseConstPtrChecked(u8, &chosen_const_ptrs, &items);
-    for (chosen_const_ptrs) |sample| try std.testing.expectEqual(@as(u8, 42), sample.*);
+    for (chosen_const_ptrs) |draw| try std.testing.expectEqual(@as(u8, 42), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const single_const_ptr_array = try rng.chooseConstPtrArrayChecked(u8, 5, &items);
-    for (single_const_ptr_array) |sample| try std.testing.expectEqual(@as(u8, 42), sample.*);
+    for (single_const_ptr_array) |draw| try std.testing.expectEqual(@as(u8, 42), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_chosen_const_ptrs = try chooseConstPtrBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &items);
     defer std.testing.allocator.free(owned_chosen_const_ptrs);
-    for (owned_chosen_const_ptrs) |sample| try std.testing.expectEqual(@as(u8, 42), sample.*);
+    for (owned_chosen_const_ptrs) |draw| try std.testing.expectEqual(@as(u8, 42), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(u8, 42), try rng.chooseChecked(u8, &items));
@@ -7376,7 +7384,7 @@ test "single-item choice helpers do not consume random stream" {
 
     var chosen_values: [5]u8 = undefined;
     try rng.fillChooseChecked(u8, &chosen_values, &items);
-    for (chosen_values) |sample| try std.testing.expectEqual(@as(u8, 42), sample);
+    for (chosen_values) |draw| try std.testing.expectEqual(@as(u8, 42), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const single_value_array = try rng.chooseValueArrayChecked(u8, 5, &items);
@@ -7385,7 +7393,7 @@ test "single-item choice helpers do not consume random stream" {
 
     const owned_chosen_values = try chooseBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &items);
     defer std.testing.allocator.free(owned_chosen_values);
-    for (owned_chosen_values) |sample| try std.testing.expectEqual(@as(u8, 42), sample);
+    for (owned_chosen_values) |draw| try std.testing.expectEqual(@as(u8, 42), draw);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var mutable_items = [_]u8{99};
@@ -7397,16 +7405,16 @@ test "single-item choice helpers do not consume random stream" {
 
     var chosen_mut_ptrs: [5]*u8 = undefined;
     try rng.fillChoosePtrChecked(u8, &chosen_mut_ptrs, &mutable_items);
-    for (chosen_mut_ptrs) |sample| try std.testing.expectEqual(@as(u8, 99), sample.*);
+    for (chosen_mut_ptrs) |draw| try std.testing.expectEqual(@as(u8, 99), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const single_mut_ptr_array = try rng.choosePtrArrayChecked(u8, 5, &mutable_items);
-    for (single_mut_ptr_array) |sample| try std.testing.expectEqual(@as(u8, 99), sample.*);
+    for (single_mut_ptr_array) |draw| try std.testing.expectEqual(@as(u8, 99), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const owned_chosen_mut_ptrs = try choosePtrBatchCheckedFrom(&engine, u8, std.testing.allocator, 5, &mutable_items);
     defer std.testing.allocator.free(owned_chosen_mut_ptrs);
-    for (owned_chosen_mut_ptrs) |sample| try std.testing.expectEqual(@as(u8, 99), sample.*);
+    for (owned_chosen_mut_ptrs) |draw| try std.testing.expectEqual(@as(u8, 99), draw.*);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -7736,6 +7744,9 @@ test "value and iterator helpers preserve direct stream shape" {
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         const die = try alea.distributions.Uniform(u8).initInclusive(1, 6);
+        try std.testing.expectEqual(rng.sample(u8, die), sampleFrom(&direct_engine, u8, die));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         var sample_iter = rng.sampleIter(u8, die);
         var direct_sample_iter = sampleIterFrom(&direct_engine, u8, die);
         var sample_buf: [8]u8 = undefined;

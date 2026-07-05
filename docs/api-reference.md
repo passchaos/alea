@@ -23,7 +23,7 @@ stability expectations.
 - Values: `value`, `valueFrom`, `valueChecked`, `valueCheckedFrom`,
   `valueBatch`, `valueBatchFrom`, `valueBatchChecked`,
   `valueBatchCheckedFrom`, `valueIter`, `valueIterFrom`, `randomIter`,
-  `randomIterFrom`, `sampleIter`, `sampleIterFrom`, `sampleBatch`,
+  `randomIterFrom`, `sample`, `sampleFrom`, `sampleIter`, `sampleIterFrom`, `sampleBatch`,
   `sampleBatchFrom`
 - Bytes/fill: `bytes`, `bytesAlloc`, `bytesAllocFrom`, `fill` and `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`,

@@ -245,7 +245,9 @@ rank-one behavior.
 
 Reusable samplers expose `sample(rng)`, and direct-source samplers expose
 `sampleFrom(source)` where comptime-known engine dispatch is useful. They can be
-used with `rng.sampleIter(T, sampler)` or
+called through the Rust-discoverable `rng.sample(T, sampler)` /
+`Rng.sampleFrom(source, T, sampler)` facade aliases, or used with
+`rng.sampleIter(T, sampler)` /
 `Rng.sampleIterFrom(source, T, sampler)` when the sample type is scalar, and
 their iterator `fill` methods inherit sampler-specific bulk fills where
 available. `valueIter(T)` / `valueIterFrom(source, T)` likewise delegate
