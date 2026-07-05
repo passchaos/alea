@@ -2805,7 +2805,7 @@ Dynamic weighted helpers:
 - Reusable samplers: `Choice(T)`, `chooseIter`, `chooseIterFrom`,
   `chooseIterChecked`, `chooseIterCheckedFrom`,
   `WeightedChoice(T, Weight)`,
-  `Choice.init`, `Choice.initChecked`, `Choice.len`, `Choice.numChoices`,
+  `Choice.init`, `Choice.new`, `Choice.initChecked`, `Choice.newChecked`, `Choice.len`, `Choice.numChoices`,
   `Choice.constantIndex`, `Choice.isEmpty`, `Choice.itemsValue`, `Choice.itemAt`, `Choice.item`, `Choice.get`, `Choice.probabilityAt`,
   `Choice.probability`, `Choice.probabilityIter`, `Choice.ProbabilityIterator`, `Choice.ProbabilityIterator.next`, `Choice.ProbabilityIterator.remaining`, `Choice.ProbabilityIterator.len`, `Choice.ProbabilityIterator.sizeHint`, `Choice.ProbabilityIterator.fill`, `Choice.probabilities`, `Choice.probabilitiesInto`,
   `Choice.sample`,

@@ -7773,8 +7773,16 @@ pub fn Choice(comptime T: type) type {
             return .{ .items = items };
         }
 
+        pub fn new(items: []const T) ?Self {
+            return init(items);
+        }
+
         pub fn initChecked(items: []const T) Error!Self {
             return init(items) orelse error.EmptyInput;
+        }
+
+        pub fn newChecked(items: []const T) Error!Self {
+            return initChecked(items);
         }
 
         pub fn len(self: Self) usize {
@@ -16483,13 +16491,19 @@ test "choice sampler repeatedly samples slice references" {
     const values = [_]u8{ 2, 4, 6, 8 };
     const choice = Choice(u8).init(&values).?;
     const checked_choice = try Choice(u8).initChecked(&values);
+    const new_choice = Choice(u8).new(&values).?;
+    const new_checked_choice = try Choice(u8).newChecked(&values);
     try std.testing.expectEqual(@as(usize, 4), choice.len());
     try std.testing.expectEqual(@as(usize, 4), choice.numChoices());
     try std.testing.expect(!choice.isEmpty());
     try std.testing.expectEqual(@as(?usize, null), choice.constantIndex());
     try std.testing.expectEqual(@as(usize, 4), checked_choice.len());
     try std.testing.expectEqual(@as(usize, 4), checked_choice.numChoices());
+    try std.testing.expectEqual(@as(usize, 4), new_choice.numChoices());
+    try std.testing.expectEqual(@as(usize, 4), new_checked_choice.numChoices());
     try std.testing.expectEqualSlices(u8, &values, choice.itemsValue());
+    try std.testing.expectEqualSlices(u8, choice.itemsValue(), new_choice.itemsValue());
+    try std.testing.expectEqualSlices(u8, choice.itemsValue(), new_checked_choice.itemsValue());
     try std.testing.expectEqual(&values[2], try choice.itemAt(2));
     try std.testing.expectError(error.InvalidParameter, choice.itemAt(4));
     try std.testing.expectEqual(&values[2], try choice.item(2));
@@ -16522,7 +16536,9 @@ test "choice sampler repeatedly samples slice references" {
     defer std.testing.allocator.free(owned_probabilities);
     try std.testing.expectEqualSlices(f64, &choice_probabilities, owned_probabilities);
     try std.testing.expect(Choice(u8).init(&.{}) == null);
+    try std.testing.expect(Choice(u8).new(&.{}) == null);
     try std.testing.expectError(error.EmptyInput, Choice(u8).initChecked(&.{}));
+    try std.testing.expectError(error.EmptyInput, Choice(u8).newChecked(&.{}));
 
     var iter = choice.iter(rng);
     var i: usize = 0;
