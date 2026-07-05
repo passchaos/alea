@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const Rng = @import("rng.zig");
 const Alea4x64 = @import("engines/alea4x64.zig");
+const ascii = @import("ascii.zig");
 const std_ziggurat = std.Random.ziggurat;
 
 const native_f32_norm_r: f32 = @floatCast(std_ziggurat.norm_r);
@@ -142,6 +143,9 @@ pub const Error = error{
 pub const BernoulliError = error{
     InvalidProbability,
 };
+
+pub const Alphanumeric = ascii.Alphanumeric;
+pub const Alphabetic = ascii.Alphabetic;
 
 pub const StandardUniform = struct {
     pub fn sample(_: StandardUniform, rng: Rng, comptime T: type) T {
@@ -30759,4 +30763,32 @@ test "BernoulliError mirrors local rand error shape" {
     try std.testing.expect(@typeInfo(@TypeOf(VectorBernoulli(@Vector(4, bool)).fromRatio(1, 4))).error_union.error_set == BernoulliError);
     try std.testing.expectError(error.InvalidProbability, Bernoulli.new(-0.1));
     try std.testing.expectError(error.InvalidProbability, Bernoulli.fromRatio(2, 1));
+}
+
+test "distribution ascii aliases mirror ascii namespace" {
+    const root = @import("root.zig");
+
+    try std.testing.expectEqualStrings(ascii.Alphanumeric.bytesValue(), Alphanumeric.bytesValue());
+    try std.testing.expectEqualStrings(ascii.Alphabetic.bytesValue(), Alphabetic.bytesValue());
+
+    var alias_facade_engine = root.DefaultPrng.init(0xa1fa_b37);
+    var ascii_facade_engine = root.DefaultPrng.init(0xa1fa_b37);
+    const alias_rng = Rng.init(&alias_facade_engine);
+    const ascii_rng = Rng.init(&ascii_facade_engine);
+    try std.testing.expectEqual(ascii.Alphanumeric.sample(ascii_rng), alias_rng.sample(u8, Alphanumeric));
+    try std.testing.expectEqual(ascii_facade_engine.next(), alias_facade_engine.next());
+
+    var alias_engine = root.DefaultPrng.init(0xa1fa_b38);
+    var ascii_engine = root.DefaultPrng.init(0xa1fa_b38);
+    try std.testing.expectEqual(ascii.Alphabetic.sampleFrom(&ascii_engine), Rng.sampleFrom(&alias_engine, u8, Alphabetic));
+    try std.testing.expectEqual(ascii_engine.next(), alias_engine.next());
+
+    var alias_fill_engine = root.DefaultPrng.init(0xa1fa_f111);
+    var ascii_fill_engine = root.DefaultPrng.init(0xa1fa_f111);
+    var alias_buf: [12]u8 = undefined;
+    var ascii_buf: [12]u8 = undefined;
+    Alphanumeric.fillFrom(&alias_fill_engine, &alias_buf);
+    ascii.Alphanumeric.fillFrom(&ascii_fill_engine, &ascii_buf);
+    try std.testing.expectEqualSlices(u8, &ascii_buf, &alias_buf);
+    try std.testing.expectEqual(ascii_fill_engine.next(), alias_fill_engine.next());
 }

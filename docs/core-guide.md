@@ -844,7 +844,10 @@ already consumed randomness for earlier accepted candidates.
 
 `ascii.zig` includes ASCII `Alphanumeric`, `Alphabetic`, `Lowercase`,
 `Uppercase`, `Digits`, custom byte `Charset`, reusable Unicode scalar
-`UnicodeCharset`, and Unicode scalar UTF-8 string generation. Use
+`UnicodeCharset`, and Unicode scalar UTF-8 string generation. The distributions
+namespace re-exports `Alphanumeric` and `Alphabetic` as aliases for local Rust
+`rand::distr::{Alphanumeric, Alphabetic}` discovery, while the canonical
+charset diagnostics remain on `ascii.Charset`. Use
 `Charset.sampleFrom`, `Charset.fillFrom`,
 `Charset.allocFrom`, Rust-discoverable `Charset.sampleStringFrom` /
 `Charset.appendStringFrom`, `Charset.numChoices` / `len`,
@@ -879,9 +882,10 @@ want codepoint-level batches instead of UTF-8 strings; use the range variants
 when you need a bounded Unicode scalar interval while still skipping UTF-16
 surrogate code points.
 Run `zig build run-string-generation` for a runnable comparison of predefined
-ASCII charsets, custom `Charset` count, checked-item, optional-item, probability, probability-iterator, and size-hint diagnostics, allocation-returning strings,
-Unicode scalar batches and range batches, reusable Unicode scalar charsets, and
-caller-owned UTF-8 buffers.
+ASCII charsets, distribution-namespace ASCII aliases, custom `Charset` count,
+checked-item, optional-item, probability, probability-iterator, and size-hint
+diagnostics, allocation-returning strings, Unicode scalar batches and range
+batches, reusable Unicode scalar charsets, and caller-owned UTF-8 buffers.
 
 ## Validation
 

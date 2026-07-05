@@ -560,3 +560,7 @@ S4-M263 adds `distributions.BernoulliError`
 (`compare/results/s4-m263-bernoulli-error.md`), closing the local Rust
 `rand::distr::BernoulliError` discovery-name gap while preserving Alea's
 invalid-probability semantics for scalar and vector Bernoulli construction.
+S4-M264 adds distribution-namespace `Alphanumeric` / `Alphabetic` aliases
+(`compare/results/s4-m264-distribution-ascii-aliases.md`), closing the local
+Rust `rand::distr::{Alphanumeric, Alphabetic}` discovery-name gap while
+preserving Alea's canonical `ascii.Charset` implementation and string APIs.

@@ -14,6 +14,8 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(token);
     const sample_string = try alea.ascii.Alphanumeric.sampleStringFrom(allocator, &engine, 12);
     defer allocator.free(sample_string);
+    const dist_alpha = alea.Rng.sampleFrom(&engine, u8, alea.distributions.Alphanumeric);
+    const dist_letter = alea.Rng.sampleFrom(&engine, u8, alea.distributions.Alphabetic);
     var appended = try std.ArrayList(u8).initCapacity(allocator, 8);
     defer appended.deinit(allocator);
     try appended.appendSlice(allocator, "tag:");
@@ -74,6 +76,7 @@ pub fn main(init: std.process.Init) !void {
 
     try stdout.print("alphanumeric string: {s}\n", .{token});
     try stdout.print("sampleString alphanumeric: {s}\n", .{sample_string});
+    try stdout.print("distribution Alphanumeric/Alphabetic bytes: {c}/{c}\n", .{ dist_alpha, dist_letter });
     try stdout.print("appendString alphanumeric: {s}\n", .{appended.items});
     try stdout.print("lowercase fill: {s}\n", .{lower_buf});
     try stdout.print("custom charset probabilities: {any}\n", .{probabilities});

@@ -352,9 +352,10 @@ self-forking.
 - Error types/aliases: `Error`, `BernoulliError`
 - Reusable sampler adapters: `StandardUniform`, `StandardUniform.sample`,
   `StandardUniform.sampleFrom`, `StandardUniform.fill`,
-  `StandardUniform.fillFrom`, `sampleIter`, `sampleIterFrom`, `map`,
-  `MappedSampler`, `MappedSampler.sample`, `MappedSampler.sampleFrom`,
-  `MappedSampler.fill`, `MappedSampler.fillFrom`, `MappedSampler.map`
+  `StandardUniform.fillFrom`, `Alphanumeric`, `Alphabetic`, `sampleIter`,
+  `sampleIterFrom`, `map`, `MappedSampler`, `MappedSampler.sample`,
+  `MappedSampler.sampleFrom`, `MappedSampler.fill`,
+  `MappedSampler.fillFrom`, `MappedSampler.map`
 
 Single-shot helpers:
 

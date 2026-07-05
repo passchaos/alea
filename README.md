@@ -86,7 +86,8 @@ The current Linux-first roadmap is intentionally broad:
   helpers, `updateWeights` / `updateMany`, `numChoices`, `positiveCount`, `constantIndex`, `sampleIndex` / `fillIndices` aliases, compact `u32` index
   sampling/fills, optional weight diagnostics, owned repeated index batches, fixed-size index arrays, and
   repeated index iterators
-- ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, direct-source charset
+- ASCII `Alphanumeric`, `Alphabetic`, distribution-namespace aliases for local
+  Rust `rand::distr::{Alphanumeric, Alphabetic}` discovery, custom `Charset`, direct-source charset
   helpers, Rust-discoverable `sampleString` / `appendString` aliases,
   checked charset methods plus numChoices, constantIndex, and checked item alias, optional item, probability, probability-iterator, and size-hint diagnostics for fallible custom charsets, `UnicodeCharset` reusable Unicode scalar alphabets with SampleString-style UTF-8 output, and Unicode
   scalar fill/owned/range batches plus string generation with
