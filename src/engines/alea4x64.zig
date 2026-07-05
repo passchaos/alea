@@ -25,6 +25,10 @@ pub fn fromSeed(seed: anytype) Alea4x64 {
     return init(seed.state);
 }
 
+pub fn fromRng(source: anytype) Alea4x64 {
+    return init(source.next());
+}
+
 pub fn random(self: *Alea4x64) std.Random {
     return std.Random.init(self, fill);
 }
@@ -67,6 +71,10 @@ pub fn fill(self: *Alea4x64, buf: []u8) void {
 
 pub fn fillBytes(self: *Alea4x64, buf: []u8) void {
     self.fill(buf);
+}
+
+pub fn fork(self: *Alea4x64) Alea4x64 {
+    return fromRng(self);
 }
 
 inline fn lane(self: *Alea4x64, comptime i: usize) u64 {

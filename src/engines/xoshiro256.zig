@@ -19,6 +19,10 @@ pub fn fromSeed(seed_value: anytype) Xoshiro256 {
     return init(seed_value.state);
 }
 
+pub fn fromRng(source: anytype) Xoshiro256 {
+    return init(source.next());
+}
+
 pub fn seed(self: *Xoshiro256, seed_value: u64) void {
     var sm = SplitMix64.init(seed_value);
     inline for (0..4) |i| self.state[i] = sm.next();
@@ -86,6 +90,10 @@ pub fn fill(self: *Xoshiro256, buf: []u8) void {
 
 pub fn fillBytes(self: *Xoshiro256, buf: []u8) void {
     self.fill(buf);
+}
+
+pub fn fork(self: *Xoshiro256) Xoshiro256 {
+    return fromRng(self);
 }
 
 fn step(self: *Xoshiro256) void {

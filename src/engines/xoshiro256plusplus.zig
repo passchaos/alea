@@ -20,6 +20,10 @@ pub fn fromSeed(seed_value: anytype) Xoshiro256PlusPlus {
     return init(seed_value.state);
 }
 
+pub fn fromRng(source: anytype) Xoshiro256PlusPlus {
+    return init(source.next());
+}
+
 pub fn random(self: *Xoshiro256PlusPlus) std.Random {
     return std.Random.init(self, fill);
 }
@@ -66,6 +70,10 @@ pub fn fill(self: *Xoshiro256PlusPlus, buf: []u8) void {
 
 pub fn fillBytes(self: *Xoshiro256PlusPlus, buf: []u8) void {
     self.fill(buf);
+}
+
+pub fn fork(self: *Xoshiro256PlusPlus) Xoshiro256PlusPlus {
+    return fromRng(self);
 }
 
 inline fn step(self: *Xoshiro256PlusPlus) void {

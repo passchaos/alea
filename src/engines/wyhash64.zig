@@ -25,6 +25,10 @@ pub fn fromSeed(seed: anytype) Wyhash64 {
     return init(seed.state);
 }
 
+pub fn fromRng(source: anytype) Wyhash64 {
+    return init(source.next());
+}
+
 pub fn fromState(state: u64) Wyhash64 {
     return .{ .state = state };
 }
@@ -65,6 +69,10 @@ pub fn fill(self: *Wyhash64, buf: []u8) void {
 
 pub fn fillBytes(self: *Wyhash64, buf: []u8) void {
     self.fill(buf);
+}
+
+pub fn fork(self: *Wyhash64) Wyhash64 {
+    return fromRng(self);
 }
 
 fn wymix(a: u64, b: u64) u64 {

@@ -21,6 +21,10 @@ pub fn fromSeed(seed: anytype) Pcg64 {
     return init(seed.state);
 }
 
+pub fn fromRng(source: anytype) Pcg64 {
+    return init(source.next());
+}
+
 pub fn initTwo(seed: u64, stream: u64) Pcg64 {
     var self: Pcg64 = .{
         .state = 0,
@@ -72,6 +76,10 @@ pub fn fill(self: *Pcg64, buf: []u8) void {
 
 pub fn fillBytes(self: *Pcg64, buf: []u8) void {
     self.fill(buf);
+}
+
+pub fn fork(self: *Pcg64) Pcg64 {
+    return fromRng(self);
 }
 
 test "pcg64 stream selection is deterministic" {

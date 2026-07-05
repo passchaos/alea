@@ -17,6 +17,10 @@ pub fn fromString(input: []const u8) Seed {
     return fromBytes(input);
 }
 
+pub fn fromRng(source: anytype) Seed {
+    return .{ .state = source.next() };
+}
+
 pub fn secure(io: std.Io) !Seed {
     var bytes_buf: [8]u8 = undefined;
     try std.Io.randomSecure(io, &bytes_buf);

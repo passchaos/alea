@@ -14,6 +14,10 @@ pub fn fromSeed(seed: anytype) SplitMix64 {
     return init(seed.state);
 }
 
+pub fn fromRng(source: anytype) SplitMix64 {
+    return init(source.next());
+}
+
 pub fn next(self: *SplitMix64) u64 {
     self.state +%= 0x9e3779b97f4a7c15;
 
@@ -29,6 +33,10 @@ pub fn nextU64(self: *SplitMix64) u64 {
 
 pub fn nextU32(self: *SplitMix64) u32 {
     return @truncate(self.next() >> 32);
+}
+
+pub fn fork(self: *SplitMix64) SplitMix64 {
+    return fromRng(self);
 }
 
 test "splitmix64 next has stable snapshots" {

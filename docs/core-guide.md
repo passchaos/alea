@@ -32,6 +32,10 @@ deterministic `u64` constructors, mirroring local Rust
 They also expose `fromSeed(seed)` aliases for Alea `Seed` values, mirroring
 local Rust `SeedableRng::from_seed` naming while keeping `Seed.stream(...)`
 and `Seed.mix(...)` as the Zig-native derivation tools.
+`Seed.fromRng(source)`, direct-engine `fromRng(source)`, and engine `fork()`
+mirror local Rust `SeedableRng::from_rng` / `fork` naming for deterministic
+child derivation from an existing generator; each consumes one `u64` seed draw
+from the source and then uses the engine's normal `u64` constructor.
 Direct engines also expose Rust-discoverable `nextU64()` / `nextU32()` aliases
 (`fillBytes(out)` where the engine has byte fills), so callers can use local
 Rust raw-RNG terminology without wrapping in `Rng`.

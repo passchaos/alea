@@ -42,6 +42,10 @@ pub fn fromSeed(seed: anytype) ChaCha {
     return initFromU64(seed.state);
 }
 
+pub fn fromRng(source: anytype) ChaCha {
+    return initFromU64(source.next());
+}
+
 pub fn random(self: *ChaCha) std.Random {
     return std.Random.init(self, fill);
 }
@@ -86,6 +90,10 @@ pub fn fill(self: *ChaCha, out: []u8) void {
 
 pub fn fillBytes(self: *ChaCha, out: []u8) void {
     self.fill(out);
+}
+
+pub fn fork(self: *ChaCha) ChaCha {
+    return fromRng(self);
 }
 
 fn refill(self: *ChaCha) void {

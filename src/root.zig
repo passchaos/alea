@@ -211,3 +211,37 @@ test "engine fromSeed aliases mirror Seed constructors" {
         try expectEngineFromSeedAlias(Engine, seed);
     }
 }
+
+fn expectEngineFromRngAlias(comptime Engine: type, seed: u64) !void {
+    var direct_source = ScalarPrng.init(seed);
+    var alias_source = ScalarPrng.init(seed);
+    var direct = engineFromSeed(Engine, direct_source.next());
+    var alias = Engine.fromRng(&alias_source);
+    try std.testing.expectEqual(direct.next(), alias.next());
+    try std.testing.expectEqual(direct_source.next(), alias_source.next());
+}
+
+fn expectEngineForkAlias(comptime Engine: type, seed: u64) !void {
+    var direct_parent = engineFromSeed(Engine, seed);
+    var alias_parent = engineFromSeed(Engine, seed);
+    var direct_child = engineFromSeed(Engine, direct_parent.next());
+    var alias_child = alias_parent.fork();
+    try std.testing.expectEqual(direct_child.next(), alias_child.next());
+    try std.testing.expectEqual(direct_parent.next(), alias_parent.next());
+}
+
+test "engine fromRng and fork aliases consume one seed draw" {
+    const seed: u64 = 0x5150_f04b_1234_abcd;
+
+    var direct_seed_source = ScalarPrng.init(seed);
+    var alias_seed_source = ScalarPrng.init(seed);
+    const direct_seed = direct_seed_source.next();
+    const alias_seed = Seed.fromRng(&alias_seed_source);
+    try std.testing.expectEqual(direct_seed, alias_seed.state);
+    try std.testing.expectEqual(direct_seed_source.next(), alias_seed_source.next());
+
+    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha }) |Engine| {
+        try expectEngineFromRngAlias(Engine, seed);
+        try expectEngineForkAlias(Engine, seed);
+    }
+}
