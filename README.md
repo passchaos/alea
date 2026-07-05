@@ -33,8 +33,9 @@ The current Linux-first roadmap is intentionally broad:
   `tryNext() !u64`
 - Rust-discoverable generic `makeRng(Engine, io)` for system-entropy
   construction of any exported deterministic engine
-- Rust-discoverable `Rng.SysRng` / root `sysRng(io)` system-entropy source
-  with `tryNextU64`, `tryNextU32`, `tryFillBytes`, and `RngReader` support
+- Rust-discoverable `Rng.SysRng` / root `SysRng` / root `SysError` /
+  `sysRng(io)` system-entropy source with `tryNextU64`, `tryNextU32`,
+  `tryFillBytes`, and `RngReader` support
 - Rust-discoverable root `random(T, io)`, `randomIter(T, io)`,
   `randomRange`, `randomBool`, `randomRatio`, and `fill(T, io, dest)`
   helpers for local Rust top-level helper workflows, using explicit `std.Io`

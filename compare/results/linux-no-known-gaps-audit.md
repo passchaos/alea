@@ -281,6 +281,7 @@ Local Alea evidence:
 - `compare/results/s4-m257-chacha8-chacha20-rngs.md`
 - `compare/results/s4-m258-xoshiro128plusplus.md`
 - `compare/results/s4-m259-root-random-helpers.md`
+- `compare/results/s4-m260-syserror-alias.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -541,3 +542,7 @@ S4-M259 adds explicit-I/O root `random` / `randomIter` / `randomRange` /
 `randomBool` / `randomRatio` / `fill` helpers
 (`compare/results/s4-m259-root-random-helpers.md`), closing the local Rust
 top-level helper workflow gap without introducing hidden thread-local RNG state.
+S4-M260 adds a Rust-discoverable root `SysError` alias
+(`compare/results/s4-m260-syserror-alias.md`), closing the local Rust
+`rand::rngs::SysError` discovery-name gap while preserving Alea's explicit
+`SysRng.Error = std.Io.RandomSecureError` contract.

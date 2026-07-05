@@ -12,7 +12,8 @@ stability expectations.
   `Xoshiro128PlusPlus`, `Xoshiro256`, `Pcg64`, `ChaCha`, `ChaCha8Rng`,
   `ChaCha20Rng`, `StepRng`
 - Aliases: `DefaultPrng`, `FastPrng`, `HashPrng`, `ReproduciblePrng`,
-  `ScalarPrng`, `SecurePrng`, `ChaCha12Rng`, `StdRng`, `SmallRng`, `SysRng`
+  `ScalarPrng`, `SecurePrng`, `ChaCha12Rng`, `StdRng`, `SmallRng`, `SysRng`,
+  `SysError`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
   `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
   `secureFromSeed`, `secure`, `secureBytes`, `sysRng`, `stepRng`, `constRng`,
@@ -27,7 +28,7 @@ stability expectations.
 ## Rng
 
 - Error type: `Error`
-- System entropy source: `SysRng`, `SysRng.Error`, `SysRng.init`,
+- System entropy source: `SysRng`, `SysError`, `SysRng.Error`, `SysRng.init`,
   `SysRng.reader`, `SysRng.tryNext`, `SysRng.tryNextU64`,
   `SysRng.tryNextU32`, `SysRng.tryFillBytes`
 - Construction and interop: `init`, `fromRandom`, `random`, `reader`,

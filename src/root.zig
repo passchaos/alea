@@ -14,6 +14,7 @@ pub const seq = @import("seq.zig");
 pub const ascii = @import("ascii.zig");
 pub const quality = @import("quality.zig");
 pub const SysRng = Rng.SysRng;
+pub const SysError = SysRng.Error;
 
 pub const SplitMix64 = @import("engines/splitmix64.zig");
 pub const Wyhash64 = @import("engines/wyhash64.zig");
@@ -461,6 +462,9 @@ test "root sysRng exposes system entropy source" {
 
     var from_alias = SysRng.init(io);
     _ = try from_alias.tryNextU64();
+
+    const sys_error: SysError = error.EntropyUnavailable;
+    try std.testing.expectEqual(@as(SysRng.Error, error.EntropyUnavailable), sys_error);
 }
 
 test "root random helpers use explicit system entropy" {

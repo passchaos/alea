@@ -92,9 +92,11 @@ stable named streams. Use `Seed.secure(io)`, `defaultSecure`, `fastSecure`,
 `makeRng(Engine, io)` when you want the Rust-discoverable generic
 `rand::make_rng` style entry point for any exported deterministic engine; it
 fills the target engine's fixed byte seed from system entropy where possible.
-Use `Rng.SysRng.init(io)` or the root `sysRng(io)` alias when you want a
-Rust-discoverable `rand::rngs::SysRng` style source over `std.Io.randomSecure`
-itself. It exposes `tryNextU64`, `tryNextU32`, `tryFillBytes`, and
+Use `Rng.SysRng.init(io)`, the root `SysRng` alias, or the root `sysRng(io)`
+constructor when you want a Rust-discoverable `rand::rngs::SysRng` style source
+over `std.Io.randomSecure` itself. The root `SysError` alias mirrors local
+Rust's `rand::rngs::SysError` discovery name as `SysRng.Error`. `SysRng`
+exposes `tryNextU64`, `tryNextU32`, `tryFillBytes`, and
 `reader(buffer)`, so it can seed engines through `tryFromRng`, fill direct
 buffers, or stream entropy through the `RngReader` adapter while preserving
 `std.Io.RandomSecureError` failures.
