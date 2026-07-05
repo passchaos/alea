@@ -1,6 +1,6 @@
 # S4-M11 Blocker Audit
 
-Date: 2026-07-04
+Date: 2026-07-06
 
 S4-M11 asks for one of three ways to keep raising the accepted vector profile bar:
 
@@ -15,7 +15,8 @@ S4-M11 asks for one of three ways to keep raising the accepted vector profile ba
 | Check | Result |
 | --- | --- |
 | Exact/default-compatible dense SIMD kernel | No new winning candidate is available. Prior ziggurat repair, block-fallback, all-accepted, mask-redraw, lane-local, Marsaglia polar, ratio-of-uniforms, inverse-CDF, CLT, libmvec vector-log, and f64 approx-log attempts remain rejected in `simd-distribution-kernel-notes.md` and `performance-triage.md`. Default vector normal/exponential APIs still intentionally use scalar ziggurat lane-fill. |
-| Additional architecture/runtime runner | `command -v` found `node`, `cargo`, and `rustc`, but not `qemu-aarch64`, `qemu-riscv64`, `qemu-x86_64`, `wine`, `wine64`, `wasmtime`, or `wasmer`. Current executed targets are native glibc Linux, x86_64-linux-musl via Zig's runnable target, and Node WASI. Other targets remain compile-only through `zig build crosscheck`. |
+| Additional architecture/runtime runner | Refreshed `command -v` audit found `node`, `cargo`, and `rustc`, but still not `qemu-aarch64`, `qemu-riscv64`, `qemu-x86_64`, `wine`, `wine64`, `wasmtime`, or `wasmer`. Current executed targets remain native glibc Linux, x86_64-linux-musl via Zig's runnable target, and Node WASI. Other targets remain compile-only through `zig build crosscheck`. |
+| Local `rand` / `rand_distr` public-surface gap | `zig build surfacecheck` now passes with source-driven coverage summaries for 25 local `rand` files, 6 resolved `rand_core` files, and 34 cached `rand_distr` files. The checker has been hardened through S4-M296..S4-M306 to scan multiline re-exports, impl methods, Bernoulli implementation methods, stricter token boundaries, and unlisted public files. No new unblocked public-surface gap is identified by this current local scan. |
 | Local `rand` SIMD/non-uniform surface | Re-auditing `~/Work/rand` still finds `simd_support` for uniform/integer/wide values and uniform float/range APIs only. Cached `rand_distr 0.6.0` still has scalar ZIGNOR `StandardNormal`/`Exp1` with f32 delegating through f64 and no SIMD non-uniform implementation. |
 
 ## Decision

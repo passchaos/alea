@@ -754,3 +754,8 @@ S4-M306 adds an unlisted-public-file guard to `surfacecheck`
 (`compare/results/s4-m306-surfacecheck-public-file-guard.md`): the checker now
 recursively reports `.rs` files under each local baseline root that contain
 public declarations or methods but are neither scanned nor explicitly ignored.
+S4-M307 refreshes the S4-M11 blocker audit
+(`compare/results/s4-m307-blocker-refresh.md`): current runtime command
+availability still lacks QEMU/Wine/wasmtime/wasmer runners, `zig build
+surfacecheck` passes with the hardened local public-surface scan, and no new
+unblocked local `rand` / `rand_distr` public-surface gap is identified.
