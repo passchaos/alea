@@ -380,6 +380,7 @@ pub fn main(init: std.process.Init) !void {
 
     const choice = alea.seq.Choice([]const u8).init(&items).?;
     try stdout.print("Choice.numChoices: {}\n", .{choice.numChoices()});
+    try stdout.print("Choice.constantIndex: {?}\n", .{choice.constantIndex()});
     try stdout.print("Choice.item(2)={s}\n", .{(try choice.item(2)).*});
     try stdout.print("Choice.probability(0)={d:.3} missing={}\n", .{ choice.probability(0).?, choice.probability(items.len) == null });
     try stdout.print("Choice.get(2)={s} missing={}\n", .{ choice.get(2).?.*, choice.get(items.len) == null });
@@ -431,6 +432,8 @@ pub fn main(init: std.process.Init) !void {
     const choice_owned_ptrs = try choice.ptrsFrom(allocator, &choice_engine, 5);
     defer allocator.free(choice_owned_ptrs);
     try stdout.print("Choice.ptrsFrom: {s}, {s}, {s}, {s}, {s}\n", .{ choice_owned_ptrs[0].*, choice_owned_ptrs[1].*, choice_owned_ptrs[2].*, choice_owned_ptrs[3].*, choice_owned_ptrs[4].* });
+    const singleton_choice = alea.seq.Choice([]const u8).init(items[2..3]).?;
+    try stdout.print("Choice.single-item constantIndex: {?}\n", .{singleton_choice.constantIndex()});
 
     var iter_choice_engine = alea.ScalarPrng.init(0x5e11_0008);
     var stream = Counter{ .limit = 20 };

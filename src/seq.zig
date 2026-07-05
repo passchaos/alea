@@ -7781,6 +7781,10 @@ pub fn Choice(comptime T: type) type {
             return self.items.len;
         }
 
+        pub fn constantIndex(self: Self) ?usize {
+            return if (self.items.len == 1) 0 else null;
+        }
+
         pub fn isEmpty(self: Self) bool {
             return self.len() == 0;
         }
@@ -16444,6 +16448,7 @@ test "choice sampler repeatedly samples slice references" {
     try std.testing.expectEqual(@as(usize, 4), choice.len());
     try std.testing.expectEqual(@as(usize, 4), choice.numChoices());
     try std.testing.expect(!choice.isEmpty());
+    try std.testing.expectEqual(@as(?usize, null), choice.constantIndex());
     try std.testing.expectEqual(@as(usize, 4), checked_choice.len());
     try std.testing.expectEqual(@as(usize, 4), checked_choice.numChoices());
     try std.testing.expectEqualSlices(u8, &values, choice.itemsValue());
@@ -16786,6 +16791,7 @@ test "single-item choice sampler does not consume random stream" {
 
     const values = [_]u8{42};
     const choice = Choice(u8).init(&values).?;
+    try std.testing.expectEqual(@as(?usize, 0), choice.constantIndex());
 
     try std.testing.expectEqual(&values[0], choice.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
