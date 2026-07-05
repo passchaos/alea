@@ -997,6 +997,10 @@ pub const Binomial = struct {
         return .{ .trials = trials, .p = p };
     }
 
+    pub fn new(trials: u64, p: f64) Error!Binomial {
+        return init(trials, p);
+    }
+
     pub fn trialsValue(self: Binomial) u64 {
         return self.trials;
     }
@@ -1789,6 +1793,10 @@ pub const Hypergeometric = struct {
             self.rejection_acceptance = method;
         }
         return self;
+    }
+
+    pub fn new(population: u64, successes: u64, draws: u64) Error!Hypergeometric {
+        return init(population, successes, draws);
     }
 
     pub fn populationValue(self: Hypergeometric) u64 {
@@ -4143,6 +4151,10 @@ pub fn Normal(comptime T: type) type {
             return .{ .mean = mean, .stddev = stddev };
         }
 
+        pub fn new(mean: T, stddev: T) Error!Self {
+            return Self.init(mean, stddev);
+        }
+
         pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
             comptime requireFloat(T);
             if (!(coefficient_of_variation >= 0) or !std.math.isFinite(coefficient_of_variation)) return error.InvalidParameter;
@@ -4990,6 +5002,10 @@ pub fn Exponential(comptime T: type) type {
             comptime requireFloat(T);
             if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(T))) return error.InvalidParameter;
             return .{ .inverse_rate = 1 / rate };
+        }
+
+        pub fn new(rate: T) Error!Self {
+            return Self.init(rate);
         }
 
         pub fn rateValue(self: Self) T {
@@ -6001,6 +6017,10 @@ pub fn LogNormal(comptime T: type) type {
 
         pub fn init(mean: T, stddev: T) Error!Self {
             return .{ .normal_sampler = try Normal(T).init(mean, stddev) };
+        }
+
+        pub fn new(mean: T, stddev: T) Error!Self {
+            return Self.init(mean, stddev);
         }
 
         pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
@@ -7194,6 +7214,10 @@ pub const Poisson = struct {
         return .{ .method = .{ .ahrens_dieter = PoissonAhrensDieter.init(lambda) } };
     }
 
+    pub fn new(lambda: f64) Error!Poisson {
+        return init(lambda);
+    }
+
     pub fn lambdaValue(self: Poisson) f64 {
         return switch (self.method) {
             .zero => 0,
@@ -7873,6 +7897,10 @@ pub const GeometricFailures = struct {
         return .{ .p = p };
     }
 
+    pub fn new(p: f64) Error!GeometricFailures {
+        return init(p);
+    }
+
     pub fn probabilityValue(self: GeometricFailures) f64 {
         return self.p;
     }
@@ -8333,6 +8361,10 @@ pub fn Gamma(comptime T: type) type {
             return Self.initInternal(shape, scale);
         }
 
+        pub fn new(shape: T, scale: T) Error!Self {
+            return Self.init(shape, scale);
+        }
+
         pub fn shapeValue(self: Self) T {
             return self.shape;
         }
@@ -8605,6 +8637,10 @@ pub fn ChiSquared(comptime T: type) type {
                 else
                     try Gamma(T).init(dof / 2, 2),
             };
+        }
+
+        pub fn new(dof: T) Error!Self {
+            return Self.init(dof);
         }
 
         pub fn dofValue(self: Self) T {
@@ -9337,6 +9373,10 @@ pub fn Beta(comptime T: type) type {
             };
         }
 
+        pub fn new(alpha: T, beta_param: T) Error!Self {
+            return Self.init(alpha, beta_param);
+        }
+
         pub fn alphaValue(self: Self) T {
             return self.alpha;
         }
@@ -9623,6 +9663,10 @@ pub fn FisherF(comptime T: type) type {
             };
         }
 
+        pub fn new(d1: T, d2: T) Error!Self {
+            return Self.init(d1, d2);
+        }
+
         pub fn d1Value(self: Self) T {
             return self.d1;
         }
@@ -9841,6 +9885,10 @@ pub fn StudentT(comptime T: type) type {
                 else
                     try ChiSquared(T).init(dof),
             };
+        }
+
+        pub fn new(dof: T) Error!Self {
+            return Self.init(dof);
         }
 
         pub fn dofValue(self: Self) T {
@@ -10070,6 +10118,10 @@ pub fn Triangular(comptime T: type) type {
             if (!(min <= mode and mode <= max and min <= max)) return error.InvalidParameter;
             if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) return error.InvalidParameter;
             return .{ .min = min, .mode = mode, .max = max };
+        }
+
+        pub fn new(min: T, mode: T, max: T) Error!Self {
+            return Self.init(min, mode, max);
         }
 
         pub fn minValue(self: Self) T {
@@ -10501,6 +10553,10 @@ pub fn Cauchy(comptime T: type) type {
             if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             if (!std.math.isFinite(median)) return error.InvalidParameter;
             return .{ .median = median, .scale = scale };
+        }
+
+        pub fn new(median: T, scale: T) Error!Self {
+            return Self.init(median, scale);
         }
 
         pub fn medianValue(self: Self) T {
@@ -12573,6 +12629,10 @@ pub fn Pareto(comptime T: type) type {
             return .{ .scale = scale, .shape = shape };
         }
 
+        pub fn new(scale: T, shape: T) Error!Self {
+            return Self.init(scale, shape);
+        }
+
         pub fn scaleValue(self: Self) T {
             return self.scale;
         }
@@ -12826,6 +12886,10 @@ pub fn Weibull(comptime T: type) type {
             return .{ .scale = scale, .shape = shape };
         }
 
+        pub fn new(scale: T, shape: T) Error!Self {
+            return Self.init(scale, shape);
+        }
+
         pub fn scaleValue(self: Self) T {
             return self.scale;
         }
@@ -13068,6 +13132,10 @@ pub fn Gumbel(comptime T: type) type {
             if (!std.math.isFinite(location)) return error.InvalidParameter;
             if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale };
+        }
+
+        pub fn new(location: T, scale: T) Error!Self {
+            return Self.init(location, scale);
         }
 
         pub fn locationValue(self: Self) T {
@@ -13327,6 +13395,10 @@ pub fn Frechet(comptime T: type) type {
             comptime requireFloat(T);
             if (!frechetParametersValid(T, location, scale, shape)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale, .shape = shape };
+        }
+
+        pub fn new(location: T, scale: T, shape: T) Error!Self {
+            return Self.init(location, scale, shape);
         }
 
         pub fn locationValue(self: Self) T {
@@ -13632,6 +13704,10 @@ pub fn SkewNormal(comptime T: type) type {
             return .{ .location = location, .scale = scale, .shape = shape };
         }
 
+        pub fn new(location: T, scale: T, shape: T) Error!Self {
+            return Self.init(location, scale, shape);
+        }
+
         pub fn locationValue(self: Self) T {
             return self.location;
         }
@@ -13917,6 +13993,10 @@ pub fn Pert(comptime T: type) type {
         pub fn initRange(min: T, max: T) PertBuilder(T) {
             comptime requireFloat(T);
             return .{ .min = min, .max = max, .shape = 4 };
+        }
+
+        pub fn new(min: T, max: T) PertBuilder(T) {
+            return Self.initRange(min, max);
         }
 
         pub fn initMean(min: T, mean: T, max: T, shape: T) Error!Self {
@@ -15003,6 +15083,10 @@ pub fn InverseGaussian(comptime T: type) type {
             };
         }
 
+        pub fn new(mean: T, shape: T) Error!Self {
+            return Self.init(mean, shape);
+        }
+
         pub fn meanValue(self: Self) T {
             return self.mean;
         }
@@ -15253,6 +15337,10 @@ pub fn NormalInverseGaussian(comptime T: type) type {
             };
         }
 
+        pub fn new(alpha: T, beta_param: T) Error!Self {
+            return Self.init(alpha, beta_param);
+        }
+
         pub fn alphaValue(self: Self) T {
             if (self.isDegenerate()) return std.math.inf(T);
             const gamma_param = 1 / self.inverse_mean;
@@ -15478,6 +15566,10 @@ pub fn Zipf(comptime T: type) type {
             return .{ .exponent = exponent, .t = t, .q = q };
         }
 
+        pub fn new(n: T, exponent: T) Error!Self {
+            return Self.init(n, exponent);
+        }
+
         pub fn nValue(self: Self) ?T {
             if (std.math.isInf(self.exponent)) return null;
             if (self.exponent == 1) return @exp(self.t - 1);
@@ -15687,6 +15779,10 @@ pub fn Zeta(comptime T: type) type {
             };
         }
 
+        pub fn new(exponent: T) Error!Self {
+            return Self.init(exponent);
+        }
+
         pub fn exponentValue(self: Self) T {
             return self.exponent_minus_one + 1;
         }
@@ -15752,6 +15848,10 @@ pub fn Dirichlet(comptime T: type) type {
             }
             if (infinite_count > 1) return error.InvalidParameter;
             return .{ .alpha = alpha };
+        }
+
+        pub fn new(alpha: []const T) Error!Self {
+            return Self.init(alpha);
         }
 
         pub fn alphaValues(self: Self) []const T {
@@ -31234,6 +31334,34 @@ test "rand_distr multi Dirichlet namespace alias mirrors Dirichlet" {
     canonical_sampler.sampleIntoFrom(&canonical_engine, &canonical_sample);
     try std.testing.expectEqualSlices(f64, &canonical_sample, &namespace_sample);
     try std.testing.expectEqual(canonical_engine.next(), namespace_engine.next());
+}
+
+test "rand_distr new aliases mirror init constructors" {
+    try std.testing.expectEqual((try Binomial.new(8, 0.5)).trialsValue(), (try Binomial.init(8, 0.5)).trialsValue());
+    try std.testing.expectEqual((try Hypergeometric.new(20, 7, 5)).drawsValue(), (try Hypergeometric.init(20, 7, 5)).drawsValue());
+    try std.testing.expectApproxEqAbs((try Normal(f64).new(1, 2)).stddevValue(), (try Normal(f64).init(1, 2)).stddevValue(), 0);
+    try std.testing.expectApproxEqAbs((try Exponential(f64).new(2)).rateValue(), (try Exponential(f64).init(2)).rateValue(), 0);
+    try std.testing.expectApproxEqAbs((try LogNormal(f64).new(0.5, 0.25)).logStddevValue(), (try LogNormal(f64).init(0.5, 0.25)).logStddevValue(), 0);
+    try std.testing.expectApproxEqAbs((try Poisson.new(4)).lambdaValue(), (try Poisson.init(4)).lambdaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs((try GeometricFailures.new(0.25)).probabilityValue(), (try GeometricFailures.init(0.25)).probabilityValue(), 0);
+    try std.testing.expectApproxEqAbs((try Gamma(f64).new(2, 3)).scaleValue(), (try Gamma(f64).init(2, 3)).scaleValue(), 0);
+    try std.testing.expectApproxEqAbs((try ChiSquared(f64).new(4)).dofValue(), (try ChiSquared(f64).init(4)).dofValue(), 0);
+    try std.testing.expectApproxEqAbs((try Beta(f64).new(2, 5)).betaValue(), (try Beta(f64).init(2, 5)).betaValue(), 0);
+    try std.testing.expectApproxEqAbs((try FisherF(f64).new(5, 20)).d2Value(), (try FisherF(f64).init(5, 20)).d2Value(), 0);
+    try std.testing.expectApproxEqAbs((try StudentT(f64).new(8)).dofValue(), (try StudentT(f64).init(8)).dofValue(), 0);
+    try std.testing.expectApproxEqAbs((try Triangular(f64).new(-1, 0.25, 2)).modeValue(), (try Triangular(f64).init(-1, 0.25, 2)).modeValue(), 0);
+    try std.testing.expectApproxEqAbs((try Cauchy(f64).new(0, 1)).scaleValue(), (try Cauchy(f64).init(0, 1)).scaleValue(), 0);
+    try std.testing.expectApproxEqAbs((try Pareto(f64).new(1, 3)).shapeValue(), (try Pareto(f64).init(1, 3)).shapeValue(), 0);
+    try std.testing.expectApproxEqAbs((try Weibull(f64).new(2, 1.5)).shapeValue(), (try Weibull(f64).init(2, 1.5)).shapeValue(), 0);
+    try std.testing.expectApproxEqAbs((try Gumbel(f64).new(0, 2)).scaleValue(), (try Gumbel(f64).init(0, 2)).scaleValue(), 0);
+    try std.testing.expectApproxEqAbs((try Frechet(f64).new(0, 2, 3)).shapeValue(), (try Frechet(f64).init(0, 2, 3)).shapeValue(), 0);
+    try std.testing.expectApproxEqAbs((try SkewNormal(f64).new(0, 1, 4)).shapeValue(), (try SkewNormal(f64).init(0, 1, 4)).shapeValue(), 0);
+    try std.testing.expectApproxEqAbs((try Pert(f64).new(-1, 2).withShape(4).withMean(0.5)).expectedValue(), (try Pert(f64).initRange(-1, 2).withShape(4).withMean(0.5)).expectedValue(), 0);
+    try std.testing.expectApproxEqAbs((try InverseGaussian(f64).new(2, 5)).shapeValue(), (try InverseGaussian(f64).init(2, 5)).shapeValue(), 0);
+    try std.testing.expectApproxEqAbs((try NormalInverseGaussian(f64).new(3, 1)).betaValue(), (try NormalInverseGaussian(f64).init(3, 1)).betaValue(), 0);
+    try std.testing.expectApproxEqAbs((try Zipf(f64).new(10, 1.5)).exponentValue(), (try Zipf(f64).init(10, 1.5)).exponentValue(), 0);
+    try std.testing.expectApproxEqAbs((try Zeta(f64).new(3)).exponentValue(), (try Zeta(f64).init(3)).exponentValue(), 0);
+    try std.testing.expectApproxEqAbs((try Dirichlet(f64).new(&.{ 1, 2, 3 })).totalAlphaValue(), (try Dirichlet(f64).init(&.{ 1, 2, 3 })).totalAlphaValue(), 0);
 }
 
 test "UniformInt Float Usize aliases mirror Uniform" {

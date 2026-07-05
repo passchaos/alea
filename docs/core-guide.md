@@ -390,6 +390,10 @@ such as `NormalError`, `ExpError`, `GammaError`, `BetaError`, `PoissonError`,
 Alea's shared distribution `Error` set while constructors keep Zig-native
 diagnostics like `InvalidParameter`, `InvalidProbability`, and
 `InvalidLength`.
+Most scalar reusable samplers that correspond to local `rand_distr` types also
+expose Rust-discoverable `new(...)` aliases over Alea's canonical `init(...)`
+constructors; PERT keeps the local `Pert::new(min, max)` builder shape via
+`Pert(T).new(min, max).withShape(...).withMode(...)` / `.withMean(...)`.
 `Normal(T).initMeanCv` and
 `LogNormal(T).initMeanCv` cover coefficient-of-variation parameterization
 without requiring users to hand-convert to log-space parameters; both samplers

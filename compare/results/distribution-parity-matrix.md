@@ -18,6 +18,11 @@ error aliases over the shared `distributions.Error` set, including
 `NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
 `SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`, and
 `ZipfError`.
+Local `rand_distr` scalar sampler `new(...)` constructor names are covered by
+Rust-discoverable `new` aliases over Alea's canonical `init` constructors where
+the parameter semantics match. `Geometric` intentionally keeps Alea's one-based
+trial-count semantics and exposes local `rand_distr` failure-count construction
+through `GeometricFailures.new`.
 
 ## Current Rust `rand` Default Crate
 

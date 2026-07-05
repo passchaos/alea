@@ -678,3 +678,7 @@ S4-M291 adds local `rand_distr::multi::Dirichlet` discovery
 (`compare/results/s4-m291-multi-dirichlet-alias.md`) over Alea's existing
 `Dirichlet(T)` sampler while intentionally not copying Rust multivariate trait
 machinery.
+S4-M292 adds local `rand_distr` `new(...)` constructor discovery aliases
+(`compare/results/s4-m292-rand-distr-new-aliases.md`) for matching scalar
+sampler shapes while documenting the Geometric trial/failure semantic
+exception.

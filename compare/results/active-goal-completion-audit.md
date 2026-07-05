@@ -312,7 +312,8 @@ complete.
 | S4-M289 rand_distr error alias names | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m289-rand-distr-error-aliases.md` | Closed for the current bar: local `rand_distr::*Error` root discovery names now alias Alea's shared distribution error set while preserving Zig-native diagnostics. |
 | S4-M290 rand_distr Exp aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m290-exp-aliases.md` | Closed for the current bar: local `rand_distr::Exp` and `rand_distr::Exp1` root discovery names now alias Alea's existing `Exponential(T)` and `StandardExponential(T)` samplers. |
 | S4-M291 multi Dirichlet alias | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m291-multi-dirichlet-alias.md` | Closed for the current bar: local `rand_distr::multi::Dirichlet` discovery now aliases Alea's existing concrete `Dirichlet(T)` sampler without copying Rust multivariate trait machinery. |
-| S4-M292 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M292 rand_distr new constructor aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m292-rand-distr-new-aliases.md` | Closed for the current bar: local `rand_distr` `new(...)` constructor discovery is available for matching scalar reusable sampler shapes, with the Geometric trial/failure semantic exception documented. |
+| S4-M293 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -444,6 +445,9 @@ the long-term objective.
 S4-M291 additionally adds a local `rand_distr::multi::Dirichlet` namespace
 alias; it is another closed discovery-name side gap and does not resolve S4-M11
 or complete the long-term objective.
+S4-M292 additionally adds local `rand_distr` `new(...)` constructor aliases; it
+is another closed discovery-name side gap and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

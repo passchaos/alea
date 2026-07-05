@@ -823,6 +823,7 @@ Reusable samplers:
 - `VectorBernoulli(VectorType).fillFrom`
 - `Binomial`
 - `Binomial.init`
+- `Binomial.new`
 - `Binomial.trialsValue`
 - `Binomial.probabilityValue`
 - `Binomial.expectedValue`
@@ -912,6 +913,7 @@ Reusable samplers:
 - `VectorNegativeBinomial(VectorType).fillFrom`
 - `Hypergeometric`
 - `Hypergeometric.init`
+- `Hypergeometric.new`
 - `Hypergeometric.populationValue`
 - `Hypergeometric.successesValue`
 - `Hypergeometric.drawsValue`
@@ -1085,6 +1087,7 @@ Reusable samplers:
 - `VectorStandardNormalTableF64(VectorType).fillFrom`
 - `Normal(T)`
 - `Normal(T).init`
+- `Normal(T).new`
 - `Normal(T).initMeanCv`
 - `Normal(T).fromZScore`
 - `Normal(T).meanValue`
@@ -1280,6 +1283,7 @@ Reusable samplers:
 - `Exponential(T)`
 - `Exp(T)`
 - `Exponential(T).init`
+- `Exponential(T).new`
 - `Exponential(T).rateValue`
 - `Exponential(T).inverseRateValue`
 - `Exponential(T).expectedValue`
@@ -1391,6 +1395,7 @@ Reusable samplers:
 - `VectorExponential(VectorType).fillFrom`
 - `LogNormal(T)`
 - `LogNormal(T).init`
+- `LogNormal(T).new`
 - `LogNormal(T).initMeanCv`
 - `LogNormal(T).fromZScore`
 - `LogNormal(T).logMean`
@@ -1577,6 +1582,7 @@ Reusable samplers:
 - `VectorHalfNormal(VectorType).fillFrom`
 - `Poisson`
 - `Poisson.init`
+- `Poisson.new`
 - `Poisson.lambdaValue`
 - `Poisson.expectedValue`
 - `Poisson.varianceValue`
@@ -1623,6 +1629,7 @@ Reusable samplers:
 - `VectorGeometric(VectorType).fillFrom`
 - `GeometricFailures`
 - `GeometricFailures.init`
+- `GeometricFailures.new`
 - `GeometricFailures.probabilityValue`
 - `GeometricFailures.expectedValue`
 - `GeometricFailures.varianceValue`
@@ -1669,6 +1676,7 @@ Reusable samplers:
 - `VectorStandardGeometric(VectorType).fillFrom`
 - `Gamma(T)`
 - `Gamma(T).init`
+- `Gamma(T).new`
 - `Gamma(T).shapeValue`
 - `Gamma(T).scaleValue`
 - `Gamma(T).expectedValue`
@@ -1695,6 +1703,7 @@ Reusable samplers:
 - `VectorGamma(VectorType).fillFrom`
 - `ChiSquared(T)`
 - `ChiSquared(T).init`
+- `ChiSquared(T).new`
 - `ChiSquared(T).dofValue`
 - `ChiSquared(T).expectedValue`
 - `ChiSquared(T).varianceValue`
@@ -1769,6 +1778,7 @@ Reusable samplers:
 - `VectorErlang(VectorType).fillFrom`
 - `Beta(T)`
 - `Beta(T).init`
+- `Beta(T).new`
 - `Beta(T).alphaValue`
 - `Beta(T).betaValue`
 - `Beta(T).expectedValue`
@@ -1795,6 +1805,7 @@ Reusable samplers:
 - `VectorBeta(VectorType).fillFrom`
 - `FisherF(T)`
 - `FisherF(T).init`
+- `FisherF(T).new`
 - `FisherF(T).d1Value`
 - `FisherF(T).d2Value`
 - `FisherF(T).expectedValue`
@@ -1819,6 +1830,7 @@ Reusable samplers:
 - `VectorFisherF(VectorType).fillFrom`
 - `StudentT(T)`
 - `StudentT(T).init`
+- `StudentT(T).new`
 - `StudentT(T).dofValue`
 - `StudentT(T).expectedValue`
 - `StudentT(T).varianceValue`
@@ -1841,6 +1853,7 @@ Reusable samplers:
 - `VectorStudentT(VectorType).fillFrom`
 - `Triangular(T)`
 - `Triangular(T).init`
+- `Triangular(T).new`
 - `Triangular(T).minValue`
 - `Triangular(T).modeValue`
 - `Triangular(T).maxValue`
@@ -1887,6 +1900,7 @@ Reusable samplers:
 - `VectorArcsine(VectorType).fillFrom`
 - `Cauchy(T)`
 - `Cauchy(T).init`
+- `Cauchy(T).new`
 - `Cauchy(T).medianValue`
 - `Cauchy(T).modeValue`
 - `Cauchy(T).scaleValue`
@@ -2099,6 +2113,7 @@ Reusable samplers:
 - `VectorMaxwell(VectorType).fillFrom`
 - `Pareto(T)`
 - `Pareto(T).init`
+- `Pareto(T).new`
 - `Pareto(T).scaleValue`
 - `Pareto(T).shapeValue`
 - `Pareto(T).expectedValue`
@@ -2127,6 +2142,7 @@ Reusable samplers:
 - `VectorPareto(VectorType).fillFrom`
 - `Weibull(T)`
 - `Weibull(T).init`
+- `Weibull(T).new`
 - `Weibull(T).scaleValue`
 - `Weibull(T).shapeValue`
 - `Weibull(T).expectedValue`
@@ -2155,6 +2171,7 @@ Reusable samplers:
 - `VectorWeibull(VectorType).fillFrom`
 - `Gumbel(T)`
 - `Gumbel(T).init`
+- `Gumbel(T).new`
 - `Gumbel(T).locationValue`
 - `Gumbel(T).scaleValue`
 - `Gumbel(T).expectedValue`
@@ -2183,6 +2200,7 @@ Reusable samplers:
 - `VectorGumbel(VectorType).fillFrom`
 - `Frechet(T)`
 - `Frechet(T).init`
+- `Frechet(T).new`
 - `Frechet(T).locationValue`
 - `Frechet(T).scaleValue`
 - `Frechet(T).shapeValue`
@@ -2213,6 +2231,7 @@ Reusable samplers:
 - `VectorFrechet(VectorType).fillFrom`
 - `SkewNormal(T)`
 - `SkewNormal(T).init`
+- `SkewNormal(T).new`
 - `SkewNormal(T).locationValue`
 - `SkewNormal(T).scaleValue`
 - `SkewNormal(T).shapeValue`
@@ -2239,6 +2258,7 @@ Reusable samplers:
 - `VectorSkewNormal(VectorType).fillFrom`
 - `Pert(T)`
 - `Pert(T).init`
+- `Pert(T).new`
 - `Pert(T).initDefault`
 - `Pert(T).initRange`
 - `Pert(T).initMean`
@@ -2278,6 +2298,7 @@ Reusable samplers:
 - `VectorPert(VectorType).fillFrom`
 - `InverseGaussian(T)`
 - `InverseGaussian(T).init`
+- `InverseGaussian(T).new`
 - `InverseGaussian(T).meanValue`
 - `InverseGaussian(T).shapeValue`
 - `InverseGaussian(T).expectedValue`
@@ -2302,6 +2323,7 @@ Reusable samplers:
 - `VectorInverseGaussian(VectorType).fillFrom`
 - `NormalInverseGaussian(T)`
 - `NormalInverseGaussian(T).init`
+- `NormalInverseGaussian(T).new`
 - `NormalInverseGaussian(T).alphaValue`
 - `NormalInverseGaussian(T).betaValue`
 - `NormalInverseGaussian(T).gammaValue`
@@ -2328,6 +2350,7 @@ Reusable samplers:
 - `VectorNormalInverseGaussian(VectorType).fillFrom`
 - `Zipf(T)`
 - `Zipf(T).init`
+- `Zipf(T).new`
 - `Zipf(T).nValue`
 - `Zipf(T).minValue`
 - `Zipf(T).maxValue`
@@ -2348,6 +2371,7 @@ Reusable samplers:
 - `VectorZipf(VectorType).fillFrom`
 - `Zeta(T)`
 - `Zeta(T).init`
+- `Zeta(T).new`
 - `Zeta(T).exponentValue`
 - `Zeta(T).minValue`
 - `Zeta(T).maxValue`
@@ -2464,6 +2488,7 @@ Reusable samplers:
 - `multi`
 - `multi.Dirichlet(T)`
 - `Dirichlet(T).init`
+- `Dirichlet(T).new`
 - `Dirichlet(T).alphaValues`
 - `Dirichlet(T).alphaAt`
 - `Dirichlet(T).meanAt`
