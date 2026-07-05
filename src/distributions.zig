@@ -139,6 +139,10 @@ pub const Error = error{
     LibmUnavailable,
 };
 
+pub const BernoulliError = error{
+    InvalidProbability,
+};
+
 pub const StandardUniform = struct {
     pub fn sample(_: StandardUniform, rng: Rng, comptime T: type) T {
         return rng.value(T);
@@ -607,28 +611,28 @@ pub const Bernoulli = struct {
 
     p_int: u64,
 
-    pub fn init(probability_param: f64) Error!Bernoulli {
+    pub fn init(probability_param: f64) BernoulliError!Bernoulli {
         if (!(probability_param >= 0 and probability_param <= 1)) return error.InvalidProbability;
         if (probability_param == 1) return .{ .p_int = always_true };
         return .{ .p_int = Rng.probabilityThreshold(probability_param) };
     }
 
-    pub fn new(probability_param: f64) Error!Bernoulli {
+    pub fn new(probability_param: f64) BernoulliError!Bernoulli {
         return init(probability_param);
     }
 
-    pub fn initRatio(numerator: u32, denominator: u32) Error!Bernoulli {
+    pub fn initRatio(numerator: u32, denominator: u32) BernoulliError!Bernoulli {
         if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
         if (numerator == denominator) return .{ .p_int = always_true };
         const probability_param = @as(f64, @floatFromInt(numerator)) / @as(f64, @floatFromInt(denominator));
         return .{ .p_int = Rng.probabilityThreshold(probability_param) };
     }
 
-    pub fn newRatio(numerator: u32, denominator: u32) Error!Bernoulli {
+    pub fn newRatio(numerator: u32, denominator: u32) BernoulliError!Bernoulli {
         return initRatio(numerator, denominator);
     }
 
-    pub fn fromRatio(numerator: u32, denominator: u32) Error!Bernoulli {
+    pub fn fromRatio(numerator: u32, denominator: u32) BernoulliError!Bernoulli {
         return initRatio(numerator, denominator);
     }
 
@@ -716,28 +720,28 @@ pub fn VectorBernoulli(comptime VectorType: type) type {
 
         p_int: u64,
 
-        pub fn init(probability_param: f64) Error!Self {
+        pub fn init(probability_param: f64) BernoulliError!Self {
             if (!(probability_param >= 0 and probability_param <= 1)) return error.InvalidProbability;
             if (probability_param == 1) return .{ .p_int = always_true };
             return .{ .p_int = Rng.probabilityThreshold(probability_param) };
         }
 
-        pub fn new(probability_param: f64) Error!Self {
+        pub fn new(probability_param: f64) BernoulliError!Self {
             return init(probability_param);
         }
 
-        pub fn initRatio(numerator: u32, denominator: u32) Error!Self {
+        pub fn initRatio(numerator: u32, denominator: u32) BernoulliError!Self {
             if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
             if (numerator == denominator) return .{ .p_int = always_true };
             const probability_param = @as(f64, @floatFromInt(numerator)) / @as(f64, @floatFromInt(denominator));
             return .{ .p_int = Rng.probabilityThreshold(probability_param) };
         }
 
-        pub fn newRatio(numerator: u32, denominator: u32) Error!Self {
+        pub fn newRatio(numerator: u32, denominator: u32) BernoulliError!Self {
             return initRatio(numerator, denominator);
         }
 
-        pub fn fromRatio(numerator: u32, denominator: u32) Error!Self {
+        pub fn fromRatio(numerator: u32, denominator: u32) BernoulliError!Self {
             return initRatio(numerator, denominator);
         }
 
@@ -30746,4 +30750,13 @@ test "standard uniform sampler mirrors value helpers" {
     Rng.fillFrom(&direct_value_fill_engine, u16, &direct_value_values);
     try std.testing.expectEqualSlices(u16, &direct_value_values, &direct_sample_values);
     try std.testing.expectEqual(direct_value_fill_engine.next(), direct_fill_engine.next());
+}
+
+test "BernoulliError mirrors local rand error shape" {
+    const err: BernoulliError = error.InvalidProbability;
+    try std.testing.expectEqual(@as(BernoulliError, error.InvalidProbability), err);
+    try std.testing.expect(@typeInfo(@TypeOf(Bernoulli.init(0.5))).error_union.error_set == BernoulliError);
+    try std.testing.expect(@typeInfo(@TypeOf(VectorBernoulli(@Vector(4, bool)).fromRatio(1, 4))).error_union.error_set == BernoulliError);
+    try std.testing.expectError(error.InvalidProbability, Bernoulli.new(-0.1));
+    try std.testing.expectError(error.InvalidProbability, Bernoulli.fromRatio(2, 1));
 }

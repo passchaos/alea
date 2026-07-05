@@ -283,7 +283,8 @@ complete.
 | S4-M260 SysError alias | `src/root.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m260-syserror-alias.md` | Closed for the current bar: root `SysError = SysRng.Error` now exposes local Rust `rand::rngs::SysError` discovery naming over Alea's explicit `std.Io.RandomSecureError` system-entropy error contract. |
 | S4-M261 WeightError alias | `src/seq.zig`, `src/root.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m261-weighterror-alias.md` | Closed for the current bar: `seq.WeightError = seq.Error` and root `WeightError = seq.WeightError` now expose local Rust `rand::seq::WeightError` discovery naming over Alea's existing weighted-sampling error contract. |
 | S4-M262 StandardUniform sampler | `src/distributions.zig`, `examples/range_sampling.zig`, `tools/examplecheck.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/examples.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m262-standard-uniform.md` | Closed for the current bar: `distributions.StandardUniform` now exposes local Rust `rand::distr::StandardUniform` discovery over Alea's existing default-value sampling semantics, with focused stream-shape tests and a range-example demonstration. |
-| S4-M263 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M263 BernoulliError discovery | `src/distributions.zig`, `examples/discrete_distributions.zig`, `tools/examplecheck.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/examples.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m263-bernoulli-error.md` | Closed for the current bar: `distributions.BernoulliError` now exposes local Rust `rand::distr::BernoulliError` discovery naming, and scalar/vector Bernoulli constructors return the dedicated invalid-probability error set. |
+| S4-M264 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -330,6 +331,9 @@ mapping, and S4-M51 adds checked mutable-pointer IndexVec mapping, and S4-M52 ad
 
 S4-M262 additionally adds the distribution-namespace `StandardUniform` sampler;
 it is another closed side gap and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M263 additionally adds `distributions.BernoulliError`; it is another closed
+local Rust discovery-name side gap and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

@@ -556,3 +556,7 @@ S4-M262 adds distribution-namespace `StandardUniform`
 `rand::distr::StandardUniform` discovery gap by exposing Alea's existing
 default-value sampling semantics as a reusable sampler with scalar, direct-source,
 primitive/vector fill, and compound repeated-value workflows.
+S4-M263 adds `distributions.BernoulliError`
+(`compare/results/s4-m263-bernoulli-error.md`), closing the local Rust
+`rand::distr::BernoulliError` discovery-name gap while preserving Alea's
+invalid-probability semantics for scalar and vector Bernoulli construction.

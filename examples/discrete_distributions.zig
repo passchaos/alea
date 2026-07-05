@@ -16,11 +16,13 @@ pub fn main(init: std.process.Init) !void {
     const bernoulli = try alea.distributions.Bernoulli.init(0.25);
     const bernoulli_new = try alea.distributions.Bernoulli.new(0.25);
     const bernoulli_from_ratio = try alea.distributions.Bernoulli.fromRatio(1, 4);
+    const bernoulli_error: alea.distributions.BernoulliError = error.InvalidProbability;
     var bernoulli_fill: [12]bool = undefined;
     bernoulli.fillFrom(&engine, &bernoulli_fill);
     try stdout.print("Bernoulli(p=.25): p()={d:.2}, expected={d:.2}, variance={d:.4}, sample={}, fill={any}\n", .{ bernoulli.p(), bernoulli.expectedValue(), bernoulli.varianceValue(), bernoulli.sampleFrom(&engine), bernoulli_fill });
     try stdout.print("Bernoulli.new(p=.25): expected={d:.2}\n", .{bernoulli_new.expectedValue()});
     try stdout.print("Bernoulli.fromRatio(1,4): expected={d:.2}\n", .{bernoulli_from_ratio.expectedValue()});
+    try stdout.print("BernoulliError alias -> {s}\n", .{@errorName(bernoulli_error)});
 
     const binomial = try alea.distributions.Binomial.init(40, 0.25);
     var binomial_fill: [6]u64 = undefined;
