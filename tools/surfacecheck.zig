@@ -10,6 +10,12 @@ const SourceGroup = struct {
     ignored_tokens: []const []const u8 = &.{},
 };
 
+const GroupStats = struct {
+    files: usize = 0,
+    expected_tokens: usize = 0,
+    source_tokens: usize = 0,
+};
+
 const local_rand_files = [_][]const u8{
     "lib.rs",
     "rng.rs",
@@ -302,9 +308,10 @@ pub fn main(init: std.process.Init) !void {
     const stderr = &stderr_file.interface;
 
     var missing: usize = 0;
+    var stats: [groups.len]GroupStats = undefined;
 
-    inline for (groups) |group| {
-        try checkGroup(io, allocator, stderr, init.environ_map, group, &missing);
+    inline for (groups, 0..) |group, index| {
+        stats[index] = try checkGroup(io, allocator, stderr, init.environ_map, group, &missing);
     }
 
     if (missing != 0) {
@@ -312,6 +319,12 @@ pub fn main(init: std.process.Init) !void {
         return error.SurfaceManifestDrift;
     }
 
+    inline for (groups, 0..) |group, index| {
+        try stdout.print(
+            "surfacecheck {s}: files={d} expected-tokens={d} source-tokens={d}\n",
+            .{ group.label, stats[index].files, stats[index].expected_tokens, stats[index].source_tokens },
+        );
+    }
     try stdout.print("surfacecheck ok\n", .{});
     try stdout.flush();
 }
@@ -323,7 +336,12 @@ fn checkGroup(
     env: *std.process.Environ.Map,
     group: SourceGroup,
     missing: *usize,
-) !void {
+) !GroupStats {
+    var stats: GroupStats = .{
+        .files = group.files.len,
+        .expected_tokens = group.expected_tokens.len,
+    };
+
     const root = env.get(group.root_env) orelse group.default_root;
     std.Io.Dir.accessAbsolute(io, root, .{}) catch |err| {
         try stderr.print(
@@ -331,13 +349,13 @@ fn checkGroup(
             .{ group.label, root, @errorName(err), group.root_env },
         );
         missing.* += 1;
-        return;
+        return stats;
     };
 
     const manifest = std.Io.Dir.cwd().readFileAlloc(io, group.manifest_path, allocator, .limited(8 * 1024 * 1024)) catch |err| {
         try stderr.print("surfacecheck: unable to read manifest `{s}`: {s}\n", .{ group.manifest_path, @errorName(err) });
         missing.* += 1;
-        return;
+        return stats;
     };
     defer allocator.free(manifest);
 
@@ -361,8 +379,10 @@ fn checkGroup(
         };
         defer allocator.free(source);
 
-        try checkSourcePublicTokens(stderr, group, relative, source, manifest, missing);
+        try checkSourcePublicTokens(stderr, group, relative, source, manifest, missing, &stats);
     }
+
+    return stats;
 }
 
 fn checkSourcePublicTokens(
@@ -372,6 +392,7 @@ fn checkSourcePublicTokens(
     source: []const u8,
     manifest: []const u8,
     missing: *usize,
+    stats: *GroupStats,
 ) !void {
     var in_cfg_test_module = false;
     var test_module_brace_depth: usize = 0;
@@ -408,7 +429,7 @@ fn checkSourcePublicTokens(
                 continue;
             };
             if (std.mem.indexOfScalar(u8, trimmed, ';') != null) {
-                try checkPubUseLine(stderr, group, relative, pub_use_buffer[0..pub_use_len], manifest, missing);
+                try checkPubUseLine(stderr, group, relative, pub_use_buffer[0..pub_use_len], manifest, missing, stats);
                 collecting_pub_use = false;
                 pub_use_len = 0;
             }
@@ -426,10 +447,10 @@ fn checkSourcePublicTokens(
                     pub_use_len = 0;
                 };
             } else {
-                try checkPublicLine(stderr, group, relative, trimmed, manifest, missing);
+                try checkPublicLine(stderr, group, relative, trimmed, manifest, missing, stats);
             }
         } else {
-            try checkPublicMethodLine(stderr, group, relative, trimmed, manifest, missing);
+            try checkPublicMethodLine(stderr, group, relative, trimmed, manifest, missing, stats);
         }
 
         brace_depth = updateBraceDepth(brace_depth, line);
@@ -459,14 +480,15 @@ fn checkPublicLine(
     trimmed: []const u8,
     manifest: []const u8,
     missing: *usize,
+    stats: *GroupStats,
 ) !void {
     if (trimmed.len == 0) return;
     if (extractPublicDeclName(trimmed)) |name| {
         if (isIgnored(group, name)) return;
-        try requireManifestToken(stderr, group, relative, manifest, name, missing);
+        try requireManifestToken(stderr, group, relative, manifest, name, missing, stats);
         return;
     }
-    try checkPubUseLine(stderr, group, relative, trimmed, manifest, missing);
+    try checkPubUseLine(stderr, group, relative, trimmed, manifest, missing, stats);
 }
 
 fn checkPublicMethodLine(
@@ -476,10 +498,11 @@ fn checkPublicMethodLine(
     trimmed: []const u8,
     manifest: []const u8,
     missing: *usize,
+    stats: *GroupStats,
 ) !void {
     if (extractPublicFnName(trimmed)) |name| {
         if (isIgnored(group, name)) return;
-        try requireManifestToken(stderr, group, relative, manifest, name, missing);
+        try requireManifestToken(stderr, group, relative, manifest, name, missing, stats);
     }
 }
 
@@ -508,7 +531,9 @@ fn requireManifestToken(
     manifest: []const u8,
     token: []const u8,
     missing: *usize,
+    stats: *GroupStats,
 ) !void {
+    stats.source_tokens += 1;
     if (std.mem.indexOf(u8, manifest, token) != null) return;
     try stderr.print(
         "surfacecheck: {s} source `{s}` exposes public token `{s}` not mapped in `{s}`\n",
@@ -553,6 +578,7 @@ fn checkPubUseLine(
     trimmed: []const u8,
     manifest: []const u8,
     missing: *usize,
+    stats: *GroupStats,
 ) !void {
     if (!std.mem.startsWith(u8, trimmed, "pub use ")) return;
     const body = std.mem.trimEnd(u8, trimmed["pub use ".len..], "; \t\r");
@@ -585,7 +611,7 @@ fn checkPubUseLine(
         if (index + 2 < count and std.mem.eql(u8, parts[index + 1], "as")) {
             const alias = leafName(parts[index + 2]);
             if (alias.len != 0 and !isIgnored(group, alias)) {
-                try requireManifestToken(stderr, group, relative, manifest, alias, missing);
+                try requireManifestToken(stderr, group, relative, manifest, alias, missing, stats);
             }
             index += 2;
             continue;
@@ -593,7 +619,7 @@ fn checkPubUseLine(
 
         const leaf = leafName(part);
         if (leaf.len == 0 or isIgnored(group, leaf)) continue;
-        try requireManifestToken(stderr, group, relative, manifest, leaf, missing);
+        try requireManifestToken(stderr, group, relative, manifest, leaf, missing, stats);
     }
 }
 

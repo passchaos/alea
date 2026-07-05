@@ -735,3 +735,7 @@ S4-M302 extends that checker
 (`compare/results/s4-m302-surfacecheck-bernoulli-impl.md`) to local
 `rand/src/distr/bernoulli.rs`, ensuring the re-exported `Bernoulli::from_ratio`
 and `Bernoulli::p` methods remain mapped to Alea `fromRatio` and `p()`.
+S4-M303 adds coverage summaries to `zig build surfacecheck`
+(`compare/results/s4-m303-surfacecheck-summary.md`), so local `rand`, resolved
+`rand_core`, and cached `rand_distr` checks report the number of source files,
+manifest expected tokens, and source-discovered tokens validated.

@@ -15,7 +15,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step/checked-in tool file and that doccheck runs every documentation/catalog checker. |
 | `zig build readmecheck` | Verify README discovery links, quick-start API tokens, and core validation commands stay visible. |
 | `zig build roadmapcheck` | Verify roadmap, active-audit milestone evidence, public-surface manifests, and concrete S4-M11 blocker tokens stay synchronized. |
-| `zig build surfacecheck` | Compare the local Rust `rand` / resolved `rand_core` / cached `rand_distr` public surface against the checked-in manifests; uses `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` when overriding local paths. |
+| `zig build surfacecheck` | Compare the local Rust `rand` / resolved `rand_core` / cached `rand_distr` public surface against the checked-in manifests and print file/token coverage summaries; uses `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` when overriding local paths. |
 | `zig build doccheck` | Run API, examples, tooling, README, and roadmap documentation checks together. |
 | `zig build statcheck` | Run extended statistical smoke checks. |
 | `zig build distcheck` | Run parameter-grid distribution checks. |
@@ -187,7 +187,7 @@ new helpers that need documentation.
 | `tools/statcheck.zig` | Statistical smoke checker. |
 | `tools/stream.zig` | Raw RNG byte stream exporter. |
 | `tools/student_t_probe.zig` | StudentT special-case performance probe. |
-| `tools/surfacecheck.zig` | Local Rust `rand` / `rand_core` / `rand_distr` public-surface manifest drift checker. |
+| `tools/surfacecheck.zig` | Local Rust `rand` / `rand_core` / `rand_distr` public-surface manifest drift checker with coverage summaries. |
 | `tools/toolingcheck.zig` | Build/tooling catalog and doccheck dependency checker. |
 | `tools/triangular_probe.zig` | Triangular performance probe. |
 | `tools/unit_geometry_probe.zig` | Unit geometry performance probe. |
