@@ -449,6 +449,7 @@ pub fn main(init: std.process.Init) !void {
     try tree.update(1, 8);
     try tree.push(4);
     const tree_num_choices = tree.numChoices();
+    const tree_positive_count = tree.positiveCount();
     const tree_constant_index = tree.constantIndex();
     const tree_weight = tree.weight(1).?;
     const tree_missing_weight = tree.weight(tree.len()) == null;
@@ -475,6 +476,7 @@ pub fn main(init: std.process.Init) !void {
     var tree_array_engine = alea.ScalarPrng.init(0x71c3);
     const tree_array_u32 = try tree.indexArrayU32CheckedFrom(&tree_array_engine, 4);
     try stdout.print("dynamic tree numChoices: {}\n", .{tree_num_choices});
+    try stdout.print("dynamic tree positiveCount: {}\n", .{tree_positive_count});
     try stdout.print("dynamic tree constantIndex: {?}\n", .{tree_constant_index});
     try stdout.print("dynamic tree weight(1)={d:.3} missing={}\n", .{ tree_weight, tree_missing_weight });
     try stdout.print("dynamic tree probability(1)={d:.3} missing={}\n", .{ tree_probability, tree_missing_probability });
@@ -500,6 +502,7 @@ pub fn main(init: std.process.Init) !void {
     defer int_tree.deinit();
     try int_tree.update(2, 10);
     const int_tree_num_choices = int_tree.numChoices();
+    const int_tree_positive_count = int_tree.positiveCount();
     const int_tree_constant_index = int_tree.constantIndex();
     const int_tree_weight = int_tree.weight(2).?;
     const int_tree_missing_weight = int_tree.weight(int_tree.len()) == null;
@@ -525,6 +528,7 @@ pub fn main(init: std.process.Init) !void {
     var int_tree_array_engine = alea.ScalarPrng.init(0x71c4);
     const int_tree_array_u32 = try int_tree.indexArrayU32CheckedFrom(&int_tree_array_engine, 4);
     try stdout.print("integer tree numChoices: {}\n", .{int_tree_num_choices});
+    try stdout.print("integer tree positiveCount: {}\n", .{int_tree_positive_count});
     try stdout.print("integer tree constantIndex: {?}\n", .{int_tree_constant_index});
     try stdout.print("integer tree total weight: {}\n", .{int_tree.totalWeight()});
     try stdout.print("integer tree weight(2)={} missing={}\n", .{ int_tree_weight, int_tree_missing_weight });
