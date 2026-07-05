@@ -810,6 +810,29 @@ test "manifest token matching keeps non-identifier fallback for scoped phrases" 
     try std.testing.expect(manifestHasToken("No new unblocked local Rust public-surface gap", "No new unblocked local Rust public-surface gap"));
 }
 
+test "public file guard helpers distinguish scanned ignored and public files" {
+    const group = SourceGroup{
+        .label = "test",
+        .root_env = "TEST_ROOT",
+        .default_root = "/tmp",
+        .manifest_path = "manifest",
+        .files = &.{ "listed.rs", "nested/listed.rs" },
+        .expected_tokens = &.{},
+        .ignored_public_files = &.{"private/helper.rs"},
+    };
+
+    try std.testing.expect(knownFile(group, "listed.rs"));
+    try std.testing.expect(knownFile(group, "nested/listed.rs"));
+    try std.testing.expect(!knownFile(group, "private/helper.rs"));
+    try std.testing.expect(ignoredPublicFile(group, "private/helper.rs"));
+    try std.testing.expect(!ignoredPublicFile(group, "other.rs"));
+
+    try std.testing.expect(hasPublicLine("impl T {\n    pub fn visible() {}\n}\n"));
+    try std.testing.expect(hasPublicLine("pub struct Visible;\n"));
+    try std.testing.expect(!hasPublicLine("pub(crate) struct Private;\n"));
+    try std.testing.expect(!hasPublicLine("    // pub fn comment_only() {}\n"));
+}
+
 fn readAbsoluteFile(io: std.Io, allocator: std.mem.Allocator, path: []const u8) ![]u8 {
     const directory_name = std.fs.path.dirname(path) orelse return error.InvalidPath;
     const file_name = std.fs.path.basename(path);

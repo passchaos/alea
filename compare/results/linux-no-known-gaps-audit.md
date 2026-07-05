@@ -774,3 +774,7 @@ source/manifest drift scan.
 S4-M311 makes `toolingcheck` enforce that surfacecheck dependency shape
 (`compare/results/s4-m311-toolingcheck-surfacecheck-deps.md`), ensuring the
 helper tests remain wired before the checker executable in future build changes.
+S4-M312 adds focused tests for `surfacecheck` public-file guard helpers
+(`compare/results/s4-m312-surfacecheck-public-file-tests.md`), covering scanned
+file recognition, explicit private-helper ignores, public-looking lines,
+`pub(crate)` non-public helpers, and comments.
