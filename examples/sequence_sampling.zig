@@ -300,6 +300,13 @@ pub fn main(init: std.process.Init) !void {
     for (sampled_mut_ptr_array) |score| score.* += 4;
     try stdout.print("sampleMutPtrArrayFrom updated scores: {any}\n", .{mutable_sample_array_scores});
 
+    var sample_mut_ptr_iter_engine = alea.ScalarPrng.init(0x5e11_003a);
+    var mutable_sample_iter_scores = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
+    var sampled_mut_ptr_iter = try alea.seq.sampleMutPtrsIterFrom(allocator, &sample_mut_ptr_iter_engine, u8, &mutable_sample_iter_scores, 3);
+    defer sampled_mut_ptr_iter.deinit();
+    while (sampled_mut_ptr_iter.next()) |score| score.* += 7;
+    try stdout.print("sampleMutPtrsIter updated scores: {any}\n", .{mutable_sample_iter_scores});
+
     var swr_engine = alea.ScalarPrng.init(0x5e11_0004);
     const sample = try alea.Rng.sampleWithoutReplacementFrom(&swr_engine, []const u8, allocator, &items, 3);
     defer allocator.free(sample);
