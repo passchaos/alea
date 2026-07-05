@@ -265,6 +265,10 @@ pub fn bytes(self: Rng, buf: []u8) void {
     self.fillFn(self.ptr, buf);
 }
 
+pub fn fillBytes(self: Rng, buf: []u8) void {
+    self.bytes(buf);
+}
+
 pub fn bytesAlloc(self: Rng, allocator: std.mem.Allocator, count: usize) ![]u8 {
     return bytesAllocFrom(self, allocator, count);
 }
@@ -1386,7 +1390,7 @@ fn fillBools(self: Rng, dest: []bool) void {
     fillBoolsFrom(self, dest);
 }
 
-fn fillBytesFrom(source: anytype, buf: []u8) void {
+pub fn fillBytesFrom(source: anytype, buf: []u8) void {
     if (@TypeOf(source) == Rng) {
         source.bytes(buf);
     } else {
@@ -1648,6 +1652,22 @@ fn fillRangeF64From(source: anytype, dest: []f64, min: f64, max: f64) void {
 
 pub fn next(self: Rng) u64 {
     return self.nextFn(self.ptr);
+}
+
+pub fn nextU64(self: Rng) u64 {
+    return self.next();
+}
+
+pub fn nextU64From(source: anytype) u64 {
+    return nextFrom(source);
+}
+
+pub fn nextU32(self: Rng) u32 {
+    return nextU32From(self);
+}
+
+pub fn nextU32From(source: anytype) u32 {
+    return @truncate(nextFrom(source) >> 32);
 }
 
 pub fn boolean(self: Rng) bool {
@@ -4164,6 +4184,10 @@ test "rng facade covers scalar APIs" {
     var engine = Xoshiro256.init(7);
     const rng = Rng.init(&engine);
 
+    _ = rng.nextU64();
+    _ = rng.nextU32();
+    _ = Rng.nextU64From(&engine);
+    _ = Rng.nextU32From(&engine);
     _ = rng.randomValue(u64);
     _ = Rng.randomValueFrom(&engine, u32);
     _ = try rng.randomValueChecked(bool);
@@ -7732,6 +7756,11 @@ test "value and iterator helpers preserve direct stream shape" {
         var direct_engine = Engine.init(0x5150_0a1e);
         const rng = Rng.init(&facade_engine);
 
+        try std.testing.expectEqual(rng.nextU64(), Rng.nextU64From(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        try std.testing.expectEqual(rng.nextU32(), Rng.nextU32From(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         try std.testing.expectEqual(rng.value(ValueType), valueFrom(&direct_engine, ValueType));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
@@ -7740,6 +7769,13 @@ test "value and iterator helpers preserve direct stream shape" {
         rng.fill(u8, &facade_bytes);
         fillFrom(&direct_engine, u8, &direct_bytes);
         try std.testing.expectEqualSlices(u8, &facade_bytes, &direct_bytes);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_fill_bytes: [13]u8 = undefined;
+        var direct_fill_bytes: [13]u8 = undefined;
+        rng.fillBytes(&facade_fill_bytes);
+        fillBytesFrom(&direct_engine, &direct_fill_bytes);
+        try std.testing.expectEqualSlices(u8, &facade_fill_bytes, &direct_fill_bytes);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
         const owned_bytes = try rng.bytesAlloc(std.testing.allocator, 16);

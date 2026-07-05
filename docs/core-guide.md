@@ -25,6 +25,10 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
 Every engine exposes `next() u64`, `fill([]u8)`, and `random() std.Random`.
 Use `alea.Rng.init(&engine)` when you want the ergonomic facade, and direct
 engine helpers when benchmark shape matters.
+The `Rng` facade also exposes Rust-discoverable raw aliases `nextU64()`,
+`nextU32()`, and `fillBytes(out)` (plus `nextU64From`, `nextU32From`, and
+`fillBytesFrom` for direct sources) for users mapping local Rust
+`Rng::next_u64`, `Rng::next_u32`, and `Rng::fill_bytes` terminology.
 
 ## Seeding
 
@@ -106,7 +110,7 @@ selection.
   `vectorExponentialBatchCheckedFrom` allocate owned slices after validating
   no-consume checked cases; use these when an owned result is more ergonomic
   than a caller buffer or iterator loop
-- owned byte buffers: `bytesAlloc` / `bytesAllocFrom` allocate random byte slices after allocation succeeds; use `bytes` or `fill(u8, ...)` for caller-owned buffers
+- owned byte buffers: `bytesAlloc` / `bytesAllocFrom` allocate random byte slices after allocation succeeds; use `bytes`, Rust-discoverable `fillBytes`, or `fill(u8, ...)` for caller-owned buffers
 - bulk sampling: `fill` / `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`, `fillOpen`, `fillOpenClosed`, `fillChance`, `fillRatio`,
   `fillVectorChance`, `fillVectorRatio`, `fillVectorRange`,
