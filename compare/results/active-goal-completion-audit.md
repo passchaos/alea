@@ -320,7 +320,8 @@ complete.
 | S4-M297 surfacecheck multiline re-exports | `tools/surfacecheck.zig`, `compare/results/s4-m297-surfacecheck-multiline-reexports.md` | Closed for the current bar: `surfacecheck` now collects Rust multiline `pub use ... { ... };` blocks, checks aliases/names after the terminator, and detects unterminated or oversized re-export blocks while preserving test-helper exclusions. |
 | S4-M298 SkewNormal parameter discovery aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m298-skewnormal-parameter-aliases.md` | Closed for the current bar: `SkewNormal(T)` and `VectorSkewNormal(VectorType)` now expose `locationParameter`, `scaleParameter`, and `shapeParameter` aliases over existing parameter accessors, with exact Rust method-name copying intentionally avoided because it would collide with public Zig fields. |
 | S4-M299 WeightedTree is_valid manifest mapping | `compare/results/s4-m299-weighted-tree-is-valid.md`, `compare/results/s4-m294-rand-distr-public-surface-manifest.md`, `compare/results/distribution-parity-matrix.md`, `tools/surfacecheck.zig` | Closed for the current bar: local `rand_distr::WeightedTreeIndex::is_valid` is explicitly mapped to Alea `WeightedTree.isValid` / `WeightedIntTree.isValid`, and `surfacecheck` now requires the `is_valid` token in the manifest. |
-| S4-M300 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M300 Normal parameter discovery aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m300-normal-parameter-aliases.md` | Closed for the current bar: `Normal(T)` now exposes `meanParameter`, `stddevParameter`, and `stdDevParameter` aliases over existing parameter accessors, with exact Rust method names intentionally avoided because they collide with public Zig fields. |
+| S4-M301 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -475,6 +476,9 @@ complete the long-term objective.
 S4-M299 additionally maps local `rand_distr::WeightedTreeIndex::is_valid` to
 existing Alea dynamic-tree readiness diagnostics; it is an evidence/manifest
 closure and does not resolve S4-M11 or complete the long-term objective.
+S4-M300 additionally adds Normal parameter discovery aliases; it is another
+closed local `rand_distr` accessor side gap and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

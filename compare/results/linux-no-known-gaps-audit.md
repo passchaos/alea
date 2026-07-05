@@ -720,3 +720,9 @@ surface (`compare/results/s4-m299-weighted-tree-is-valid.md`) as covered by
 existing `WeightedTree.isValid` and `WeightedIntTree.isValid` readiness
 diagnostics, and makes `surfacecheck` require the manifest token so this mapping
 does not silently regress.
+S4-M300 adds Normal parameter discovery aliases
+(`compare/results/s4-m300-normal-parameter-aliases.md`) for local
+`rand_distr::Normal::{mean, std_dev}` accessor workflows:
+`meanParameter`, `stddevParameter`, and `stdDevParameter` mirror existing
+`meanValue` and `stddevValue` accessors while avoiding exact Rust method names
+that collide with public Zig fields.

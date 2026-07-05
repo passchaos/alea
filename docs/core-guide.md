@@ -398,7 +398,11 @@ constructors; PERT keeps the local `Pert::new(min, max)` builder shape via
 `LogNormal(T).initMeanCv` cover coefficient-of-variation parameterization
 without requiring users to hand-convert to log-space parameters; both samplers
 also expose local `rand_distr::from_mean_cv`-style `fromMeanCv` aliases and
-z-score conversion helpers for correlated draws. `SkewNormal(T)` and
+z-score conversion helpers for correlated draws. `Normal(T)` keeps public
+`mean` / `stddev` fields and Zig-native `meanValue` / `stddevValue` accessors,
+plus `meanParameter`, `stddevParameter`, and `stdDevParameter` aliases for local
+`rand_distr::Normal::{mean, std_dev}` discovery without copying exact method
+names that would collide with those fields. `SkewNormal(T)` and
 `VectorSkewNormal(VectorType)` expose Zig-native `locationValue` /
 `scaleValue` / `shapeValue` accessors plus `locationParameter` /
 `scaleParameter` / `shapeParameter` aliases for local `rand_distr`

@@ -4173,8 +4173,20 @@ pub fn Normal(comptime T: type) type {
             return self.mean;
         }
 
+        pub fn meanParameter(self: Self) T {
+            return self.meanValue();
+        }
+
         pub fn stddevValue(self: Self) T {
             return self.stddev;
+        }
+
+        pub fn stddevParameter(self: Self) T {
+            return self.stddevValue();
+        }
+
+        pub fn stdDevParameter(self: Self) T {
+            return self.stddevValue();
         }
 
         pub fn expectedValue(self: Self) T {
@@ -31420,6 +31432,13 @@ test "rand_distr SkewNormal parameter aliases mirror value accessors" {
     try std.testing.expectEqual(vector_sampler.locationValue(), vector_sampler.locationParameter());
     try std.testing.expectEqual(vector_sampler.scaleValue(), vector_sampler.scaleParameter());
     try std.testing.expectEqual(vector_sampler.shapeValue(), vector_sampler.shapeParameter());
+}
+
+test "rand_distr Normal parameter aliases mirror value accessors" {
+    const sampler = try Normal(f64).init(-2, 3);
+    try std.testing.expectApproxEqAbs(sampler.meanValue(), sampler.meanParameter(), 0);
+    try std.testing.expectApproxEqAbs(sampler.stddevValue(), sampler.stddevParameter(), 0);
+    try std.testing.expectApproxEqAbs(sampler.stddevValue(), sampler.stdDevParameter(), 0);
 }
 
 test "UniformInt Float Usize aliases mirror Uniform" {

@@ -1092,7 +1092,10 @@ Reusable samplers:
 - `Normal(T).fromMeanCv`
 - `Normal(T).fromZScore`
 - `Normal(T).meanValue`
+- `Normal(T).meanParameter`
 - `Normal(T).stddevValue`
+- `Normal(T).stddevParameter`
+- `Normal(T).stdDevParameter`
 - `Normal(T).expectedValue`
 - `Normal(T).varianceValue`
 - `Normal(T).medianValue`

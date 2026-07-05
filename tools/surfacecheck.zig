@@ -238,6 +238,8 @@ const rand_distr_expected_tokens = [_][]const u8{
     "new",
     "from_mean_cv",
     "from_zscore",
+    "mean",
+    "std_dev",
     "with_shape",
     "with_mean",
     "with_mode",
