@@ -8162,6 +8162,10 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return self.table.probability(index) orelse unreachable;
         }
 
+        pub fn probabilityIter(self: Self) Table.ProbabilityIterator {
+            return self.table.probabilityIter();
+        }
+
         pub fn update(self: *Self, input_weights: []const Weight) !void {
             if (input_weights.len != self.items.len) return error.LengthMismatch;
             try self.table.update(input_weights);
@@ -17015,6 +17019,15 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 8.0), choice.probability(1).?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 7.0 / 8.0), choice.probability(2).?, 1e-12);
     try std.testing.expectEqual(@as(?f64, null), choice.probability(3));
+    var probability_iter = choice.probabilityIter();
+    try std.testing.expectEqual(@as(usize, 3), probability_iter.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), probability_iter.next().?, 1e-12);
+    try std.testing.expectEqual(@as(usize, 2), probability_iter.remaining());
+    var iter_probabilities: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), probability_iter.fill(&iter_probabilities));
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 8.0), iter_probabilities[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7.0 / 8.0), iter_probabilities[1], 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), probability_iter.next());
     var reconstructed_probabilities: [3]f64 = undefined;
     try choice.probabilitiesInto(&reconstructed_probabilities);
     try std.testing.expectApproxEqAbs(@as(f64, 0), reconstructed_probabilities[0], 1e-12);
