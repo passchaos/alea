@@ -1,3 +1,5 @@
+const std = @import("std");
+
 const SplitMix64 = @This();
 
 state: u64,
@@ -12,6 +14,10 @@ pub fn seedFromU64(seed: u64) SplitMix64 {
 
 pub fn fromSeed(seed: anytype) SplitMix64 {
     return init(seed.state);
+}
+
+pub fn fromSeedBytes(seed: [8]u8) SplitMix64 {
+    return init(std.mem.readInt(u64, &seed, .little));
 }
 
 pub fn fromRng(source: anytype) SplitMix64 {
@@ -41,8 +47,8 @@ pub fn fork(self: *SplitMix64) SplitMix64 {
 
 test "splitmix64 next has stable snapshots" {
     var rng = SplitMix64.init(0x1234_5678_9abc_def0);
-    try @import("std").testing.expectEqual(@as(u64, 0x161922c645ce50e8), rng.next());
-    try @import("std").testing.expectEqual(@as(u64, 0xad760cafa1697b60), rng.next());
-    try @import("std").testing.expectEqual(@as(u64, 0x3501ff44902ca50d), rng.next());
-    try @import("std").testing.expectEqual(@as(u64, 0xecdac3a5189c532f), rng.state);
+    try std.testing.expectEqual(@as(u64, 0x161922c645ce50e8), rng.next());
+    try std.testing.expectEqual(@as(u64, 0xad760cafa1697b60), rng.next());
+    try std.testing.expectEqual(@as(u64, 0x3501ff44902ca50d), rng.next());
+    try std.testing.expectEqual(@as(u64, 0xecdac3a5189c532f), rng.state);
 }

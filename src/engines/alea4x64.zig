@@ -25,6 +25,15 @@ pub fn fromSeed(seed: anytype) Alea4x64 {
     return init(seed.state);
 }
 
+pub fn fromSeedBytes(seed: [32]u8) Alea4x64 {
+    return .{ .state = .{
+        std.mem.readInt(u64, seed[0..8], .little),
+        std.mem.readInt(u64, seed[8..16], .little),
+        std.mem.readInt(u64, seed[16..24], .little),
+        std.mem.readInt(u64, seed[24..32], .little),
+    } };
+}
+
 pub fn fromRng(source: anytype) Alea4x64 {
     return .{ .state = .{ source.next(), source.next(), source.next(), source.next() } };
 }

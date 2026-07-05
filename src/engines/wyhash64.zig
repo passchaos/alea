@@ -25,6 +25,10 @@ pub fn fromSeed(seed: anytype) Wyhash64 {
     return init(seed.state);
 }
 
+pub fn fromSeedBytes(seed: [8]u8) Wyhash64 {
+    return fromState(std.mem.readInt(u64, &seed, .little));
+}
+
 pub fn fromRng(source: anytype) Wyhash64 {
     return fromState(source.next());
 }

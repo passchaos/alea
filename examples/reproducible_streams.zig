@@ -35,6 +35,13 @@ pub fn main(init: std.process.Init) !void {
     raw_alias_engine.fillBytes(&engine_fill_bytes);
     var seed_alias_engine = alea.DefaultPrng.seedFromU64(sampling_seed.stream(6).state);
     var from_seed_alias_engine = alea.DefaultPrng.fromSeed(sampling_seed.stream(7));
+    const byte_seed = [_]u8{
+        0x30, 0x65, 0x6c, 0x61, 0x2d, 0x73, 0x65, 0x65,
+        0x64, 0x2d, 0x62, 0x79, 0x74, 0x65, 0x73, 0x21,
+        0x5a, 0x69, 0x67, 0x2d, 0x72, 0x6e, 0x67, 0x21,
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+    };
+    var from_seed_bytes_alias_engine = alea.DefaultPrng.fromSeedBytes(byte_seed);
     var from_rng_source = alea.ScalarPrng.init(sampling_seed.stream(8).state);
     var from_rng_alias_engine = alea.DefaultPrng.fromRng(&from_rng_source);
     var fork_parent = alea.DefaultPrng.init(sampling_seed.stream(9).state);
@@ -48,6 +55,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("engine raw aliases: nextU64=0x{x}, nextU32=0x{x}, fillBytes={any}\n", .{ engine_raw64, engine_raw32, engine_fill_bytes });
     try stdout.print("engine seedFromU64 alias next: 0x{x}\n", .{seed_alias_engine.next()});
     try stdout.print("engine fromSeed alias next: 0x{x}\n", .{from_seed_alias_engine.next()});
+    try stdout.print("engine fromSeedBytes alias next: 0x{x}\n", .{from_seed_bytes_alias_engine.next()});
     try stdout.print("engine fromRng alias next: 0x{x}, fork child next: 0x{x}\n", .{ from_rng_alias_engine.next(), fork_child.next() });
 
     var parent_a = alea.Xoshiro256.init(0x5150);

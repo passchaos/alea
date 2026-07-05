@@ -19,17 +19,21 @@ pub fn fromSeed(seed_value: anytype) Xoshiro256 {
     return init(seed_value.state);
 }
 
+pub fn fromSeedBytes(seed_bytes: [32]u8) Xoshiro256 {
+    var self: Xoshiro256 = .{ .state = .{
+        std.mem.readInt(u64, seed_bytes[0..8], .little),
+        std.mem.readInt(u64, seed_bytes[8..16], .little),
+        std.mem.readInt(u64, seed_bytes[16..24], .little),
+        std.mem.readInt(u64, seed_bytes[24..32], .little),
+    } };
+    if (self.isZeroState()) return init(0);
+    return self;
+}
+
 pub fn fromRng(source: anytype) Xoshiro256 {
     var self: Xoshiro256 = .{ .state = undefined };
     inline for (0..4) |i| self.state[i] = source.next();
-    var all_zero = true;
-    for (self.state) |word| {
-        if (word != 0) {
-            all_zero = false;
-            break;
-        }
-    }
-    if (all_zero) return init(0);
+    if (self.isZeroState()) return init(0);
     return self;
 }
 
@@ -104,6 +108,13 @@ pub fn fillBytes(self: *Xoshiro256, buf: []u8) void {
 
 pub fn fork(self: *Xoshiro256) Xoshiro256 {
     return fromRng(self);
+}
+
+fn isZeroState(self: Xoshiro256) bool {
+    for (self.state) |word| {
+        if (word != 0) return false;
+    }
+    return true;
 }
 
 fn step(self: *Xoshiro256) void {

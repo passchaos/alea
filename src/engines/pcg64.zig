@@ -21,6 +21,13 @@ pub fn fromSeed(seed: anytype) Pcg64 {
     return init(seed.state);
 }
 
+pub fn fromSeedBytes(seed: [16]u8) Pcg64 {
+    return initTwo(
+        std.mem.readInt(u64, seed[0..8], .little),
+        std.mem.readInt(u64, seed[8..16], .little),
+    );
+}
+
 pub fn fromRng(source: anytype) Pcg64 {
     return initTwo(source.next(), source.next());
 }

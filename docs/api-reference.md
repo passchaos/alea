@@ -273,26 +273,30 @@ All engines expose deterministic construction and `random()` interop where
 appropriate. Engines with byte fills expose Rust-discoverable `fillBytes`
 aliases; all deterministic engines expose Rust-discoverable `nextU64` /
 `nextU32` raw aliases alongside `next`, plus Rust-discoverable `seedFromU64`
-and `fromSeed` constructor aliases alongside their Zig-native seed constructors.
+`fromSeed`, and `fromSeedBytes` constructor aliases alongside their Zig-native
+seed constructors.
 Engines also expose Rust-discoverable `fromRng` and `fork` helpers for
 deriving child streams from existing generators.
 
-- `SplitMix64`: `init`, `seedFromU64`, `fromSeed`, `next`, `nextU64`,
-  `nextU32`, `fromRng`, `fork`
-- `Wyhash64`: `init`, `seedFromU64`, `fromSeed`, `fromState`, `random`,
+- `SplitMix64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`,
+  `nextU64`, `nextU32`, `fromRng`, `fork`
+- `Wyhash64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`,
+  `fromState`, `random`, `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`,
+  `fromRng`, `fork`
+- `Alea4x64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `random`,
   `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`, `fork`
-- `Alea4x64`: `init`, `seedFromU64`, `fromSeed`, `random`, `next`,
-  `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`, `fork`
-- `Xoshiro256`: `init`, `seedFromU64`, `fromSeed`, `seed`, `random`,
-  `next`, `nextU64`, `nextU32`, `split`, `jump`, `longJump`, `fill`,
-  `fillBytes`, `fromRng`, `fork`
-- `Xoshiro256PlusPlus`: `init`, `seedFromU64`, `fromSeed`, `random`, `next`,
-  `nextU64`, `nextU32`, `jump`, `fill`, `fillBytes`, `fromRng`, `fork`
-- `Pcg64`: `init`, `seedFromU64`, `fromSeed`, `initTwo`, `random`, `next`,
-  `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`, `fork`
+- `Xoshiro256`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `seed`,
+  `random`, `next`, `nextU64`, `nextU32`, `split`, `jump`, `longJump`,
+  `fill`, `fillBytes`, `fromRng`, `fork`
+- `Xoshiro256PlusPlus`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`,
+  `random`, `next`, `nextU64`, `nextU32`, `jump`, `fill`, `fillBytes`,
+  `fromRng`, `fork`
+- `Pcg64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `initTwo`,
+  `random`, `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`,
+  `fork`
 - `ChaCha`: `seed_length`, `init`, `initFromU64`, `random`, `addEntropy`,
-  `seedFromU64`, `fromSeed`, `next`, `nextU64`, `nextU32`, `fill`,
-  `fillBytes`, `fromRng`, `fork`
+  `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`, `nextU64`, `nextU32`,
+  `fill`, `fillBytes`, `fromRng`, `fork`
 
 ## Distributions
 

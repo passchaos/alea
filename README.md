@@ -15,6 +15,8 @@ The current Linux-first roadmap is intentionally broad:
   Zig-native `init` / `initFromU64`
 - Rust-discoverable engine `fromSeed(seed)` aliases for Alea `Seed` values
   alongside direct `u64` constructors
+- Rust-discoverable engine `fromSeedBytes(seed)` constructors for fixed-size
+  little-endian byte-array seeds
 - Rust-discoverable `Seed.fromRng(source)`, engine `fromRng(source)`, and
   engine `fork()` helpers for deriving child streams from existing generators
 - `ScalarPrng = Wyhash64` for scalar-heavy distribution workloads such as

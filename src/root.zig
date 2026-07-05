@@ -212,6 +212,81 @@ test "engine fromSeed aliases mirror Seed constructors" {
     }
 }
 
+fn expectEngineFromSeedBytesAlias(comptime Engine: type, seed: anytype) !void {
+    var direct = engineFromSeedBytesReference(Engine, seed);
+    var alias = Engine.fromSeedBytes(seed);
+    try std.testing.expectEqual(direct.next(), alias.next());
+}
+
+fn engineFromSeedBytesReference(comptime Engine: type, seed: anytype) Engine {
+    if (comptime Engine == SplitMix64) {
+        return SplitMix64.init(seedWord(seed, 0));
+    }
+    if (comptime Engine == Wyhash64) {
+        return Wyhash64.fromState(seedWord(seed, 0));
+    }
+    if (comptime Engine == Alea4x64) {
+        return .{ .state = .{ seedWord(seed, 0), seedWord(seed, 1), seedWord(seed, 2), seedWord(seed, 3) } };
+    }
+    if (comptime Engine == Xoshiro256) {
+        const out: Xoshiro256 = .{ .state = .{ seedWord(seed, 0), seedWord(seed, 1), seedWord(seed, 2), seedWord(seed, 3) } };
+        if (xoshiro256StateIsZero(out.state)) return Xoshiro256.init(0);
+        return out;
+    }
+    if (comptime Engine == Xoshiro256PlusPlus) {
+        const out: Xoshiro256PlusPlus = .{ .state = .{ seedWord(seed, 0), seedWord(seed, 1), seedWord(seed, 2), seedWord(seed, 3) } };
+        if (xoshiro256StateIsZero(out.state)) return Xoshiro256PlusPlus.init(0);
+        return out;
+    }
+    if (comptime Engine == Pcg64) {
+        return Pcg64.initTwo(seedWord(seed, 0), seedWord(seed, 1));
+    }
+    if (comptime Engine == ChaCha) {
+        return ChaCha.init(seed);
+    }
+    @compileError("unsupported engine");
+}
+
+fn seedWord(seed: anytype, comptime index: usize) u64 {
+    return std.mem.readInt(u64, seed[index * 8 ..][0..8], .little);
+}
+
+fn xoshiro256StateIsZero(state: [4]u64) bool {
+    for (state) |word| {
+        if (word != 0) return false;
+    }
+    return true;
+}
+
+fn patternedSeedBytes(comptime N: usize) [N]u8 {
+    var out: [N]u8 = undefined;
+    for (&out, 0..) |*byte, i| byte.* = @truncate(i *% 37 +% 11);
+    return out;
+}
+
+test "engine fromSeedBytes aliases mirror byte seed constructors" {
+    const seed8 = patternedSeedBytes(8);
+    const seed16 = patternedSeedBytes(16);
+    const seed32 = patternedSeedBytes(32);
+
+    try expectEngineFromSeedBytesAlias(SplitMix64, seed8);
+    try expectEngineFromSeedBytesAlias(Wyhash64, seed8);
+    try expectEngineFromSeedBytesAlias(Pcg64, seed16);
+    try expectEngineFromSeedBytesAlias(Alea4x64, seed32);
+    try expectEngineFromSeedBytesAlias(Xoshiro256, seed32);
+    try expectEngineFromSeedBytesAlias(Xoshiro256PlusPlus, seed32);
+    try expectEngineFromSeedBytesAlias(ChaCha, seed32);
+
+    const zero_seed = [_]u8{0} ** 32;
+    var xoshiro_zero_direct = Xoshiro256.init(0);
+    var xoshiro_zero_alias = Xoshiro256.fromSeedBytes(zero_seed);
+    try std.testing.expectEqual(xoshiro_zero_direct.next(), xoshiro_zero_alias.next());
+
+    var xoshiro_pp_zero_direct = Xoshiro256PlusPlus.init(0);
+    var xoshiro_pp_zero_alias = Xoshiro256PlusPlus.fromSeedBytes(zero_seed);
+    try std.testing.expectEqual(xoshiro_pp_zero_direct.next(), xoshiro_pp_zero_alias.next());
+}
+
 fn expectEngineFromRngAlias(comptime Engine: type, seed: u64) !void {
     var direct_source = ScalarPrng.init(seed);
     var alias_source = ScalarPrng.init(seed);

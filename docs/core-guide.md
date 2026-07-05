@@ -32,6 +32,10 @@ deterministic `u64` constructors, mirroring local Rust
 They also expose `fromSeed(seed)` aliases for Alea `Seed` values, mirroring
 local Rust `SeedableRng::from_seed` naming while keeping `Seed.stream(...)`
 and `Seed.mix(...)` as the Zig-native derivation tools.
+Use `fromSeedBytes(seed)` when you need the Rust-style fixed byte-array seed
+shape directly: scalar engines accept 8 bytes, `Pcg64` accepts 16 bytes, and
+32-byte-state/key engines accept 32 bytes, all interpreted as little-endian
+`u64` words with Xoshiro all-zero states remapped through `init(0)`.
 `Seed.fromRng(source)`, direct-engine `fromRng(source)`, and engine `fork()`
 mirror local Rust `SeedableRng::from_rng` / `fork` naming for deterministic
 child derivation from an existing generator; `Seed.fromRng` consumes one `u64`

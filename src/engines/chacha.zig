@@ -42,6 +42,10 @@ pub fn fromSeed(seed: anytype) ChaCha {
     return initFromU64(seed.state);
 }
 
+pub fn fromSeedBytes(seed: [seed_length]u8) ChaCha {
+    return init(seed);
+}
+
 pub fn fromRng(source: anytype) ChaCha {
     var key: [seed_length]u8 = undefined;
     var i: usize = 0;
