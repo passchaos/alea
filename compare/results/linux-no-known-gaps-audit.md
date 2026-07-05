@@ -789,3 +789,7 @@ S4-M315 hardens `roadmapcheck`
 (`compare/results/s4-m315-roadmapcheck-surface-blocker.md`) so the S4-M11
 blocker audit must continue to mention the current `surfacecheck` coverage and
 the absence of a new unblocked public-surface gap.
+S4-M316 adds a stale-ignore guard to `surfacecheck`
+(`compare/results/s4-m316-surfacecheck-ignore-guard.md`), validating that
+explicitly ignored public-looking helper files still exist and still contain
+public-looking lines.

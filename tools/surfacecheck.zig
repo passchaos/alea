@@ -398,8 +398,34 @@ fn checkGroup(
     }
 
     try checkUnlistedPublicFiles(io, allocator, stderr, group, root, "", missing);
+    try checkIgnoredPublicFiles(io, allocator, stderr, group, root, missing);
 
     return stats;
+}
+
+fn checkIgnoredPublicFiles(
+    io: std.Io,
+    allocator: std.mem.Allocator,
+    stderr: *std.Io.Writer,
+    group: SourceGroup,
+    root: []const u8,
+    missing: *usize,
+) !void {
+    for (group.ignored_public_files) |relative| {
+        const path = try std.fs.path.join(allocator, &.{ root, relative });
+        defer allocator.free(path);
+        const source = readAbsoluteFile(io, allocator, path) catch |err| {
+            try stderr.print("surfacecheck: ignored {s} public source `{s}` is unavailable: {s}\n", .{ group.label, relative, @errorName(err) });
+            missing.* += 1;
+            continue;
+        };
+        defer allocator.free(source);
+
+        if (!hasPublicLine(source)) {
+            try stderr.print("surfacecheck: ignored {s} public source `{s}` no longer has public-looking lines\n", .{ group.label, relative });
+            missing.* += 1;
+        }
+    }
 }
 
 fn checkUnlistedPublicFiles(
