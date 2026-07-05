@@ -2235,8 +2235,11 @@ Reusable samplers:
 - `SkewNormal(T).init`
 - `SkewNormal(T).new`
 - `SkewNormal(T).locationValue`
+- `SkewNormal(T).locationParameter`
 - `SkewNormal(T).scaleValue`
+- `SkewNormal(T).scaleParameter`
 - `SkewNormal(T).shapeValue`
+- `SkewNormal(T).shapeParameter`
 - `SkewNormal(T).expectedValue`
 - `SkewNormal(T).varianceValue`
 - `SkewNormal(T).minValue`
@@ -2248,8 +2251,11 @@ Reusable samplers:
 - `VectorSkewNormal(VectorType)`
 - `VectorSkewNormal(VectorType).init`
 - `VectorSkewNormal(VectorType).locationValue`
+- `VectorSkewNormal(VectorType).locationParameter`
 - `VectorSkewNormal(VectorType).scaleValue`
+- `VectorSkewNormal(VectorType).scaleParameter`
 - `VectorSkewNormal(VectorType).shapeValue`
+- `VectorSkewNormal(VectorType).shapeParameter`
 - `VectorSkewNormal(VectorType).expectedValue`
 - `VectorSkewNormal(VectorType).varianceValue`
 - `VectorSkewNormal(VectorType).minValue`

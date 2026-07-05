@@ -708,3 +708,10 @@ S4-M297 strengthens that checker
 and validates Rust multiline `pub use ... { ... };` re-export blocks from the
 local `rand` / `rand_distr` sources, reducing reliance on manual expected-token
 lists when checking manifest drift.
+S4-M298 adds SkewNormal parameter discovery aliases
+(`compare/results/s4-m298-skewnormal-parameter-aliases.md`) for local
+`rand_distr::SkewNormal::{location, scale, shape}` accessor workflows:
+`locationParameter`, `scaleParameter`, and `shapeParameter` mirror existing
+`locationValue`, `scaleValue`, and `shapeValue` accessors on scalar and vector
+samplers while avoiding exact Rust method names that collide with public Zig
+fields.

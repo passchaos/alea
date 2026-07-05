@@ -398,7 +398,12 @@ constructors; PERT keeps the local `Pert::new(min, max)` builder shape via
 `LogNormal(T).initMeanCv` cover coefficient-of-variation parameterization
 without requiring users to hand-convert to log-space parameters; both samplers
 also expose local `rand_distr::from_mean_cv`-style `fromMeanCv` aliases and
-z-score conversion helpers for correlated draws. `Pert(T).initRange`
+z-score conversion helpers for correlated draws. `SkewNormal(T)` and
+`VectorSkewNormal(VectorType)` expose Zig-native `locationValue` /
+`scaleValue` / `shapeValue` accessors plus `locationParameter` /
+`scaleParameter` / `shapeParameter` aliases for local `rand_distr`
+location/scale/shape discovery without colliding with their public fields.
+`Pert(T).initRange`
 offers a builder-style range-first constructor with `withShape`, `withMode`,
 and `withMean` for workflows that choose range before mode/mean. Unit geometry samplers also
 Run `zig build run-distribution-diagnostics` for a runnable tour of

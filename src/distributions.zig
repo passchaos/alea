@@ -13642,12 +13642,24 @@ pub fn VectorSkewNormal(comptime VectorType: type) type {
             return self.sampler.locationValue();
         }
 
+        pub fn locationParameter(self: Self) Child {
+            return self.locationValue();
+        }
+
         pub fn scaleValue(self: Self) Child {
             return self.sampler.scaleValue();
         }
 
+        pub fn scaleParameter(self: Self) Child {
+            return self.scaleValue();
+        }
+
         pub fn shapeValue(self: Self) Child {
             return self.sampler.shapeValue();
+        }
+
+        pub fn shapeParameter(self: Self) Child {
+            return self.shapeValue();
         }
 
         pub fn expectedValue(self: Self) Child {
@@ -13720,12 +13732,24 @@ pub fn SkewNormal(comptime T: type) type {
             return self.location;
         }
 
+        pub fn locationParameter(self: Self) T {
+            return self.locationValue();
+        }
+
         pub fn scaleValue(self: Self) T {
             return self.scale;
         }
 
+        pub fn scaleParameter(self: Self) T {
+            return self.scaleValue();
+        }
+
         pub fn shapeValue(self: Self) T {
             return self.shape;
+        }
+
+        pub fn shapeParameter(self: Self) T {
+            return self.shapeValue();
         }
 
         pub fn expectedValue(self: Self) T {
@@ -31384,6 +31408,18 @@ test "rand_distr fromMeanCv aliases mirror initMeanCv constructors" {
     try std.testing.expectApproxEqAbs(log_canonical.logStddevValue(), log_alias.logStddevValue(), 0);
     try std.testing.expectError(error.InvalidParameter, Normal(f64).fromMeanCv(1, -0.5));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).fromMeanCv(-1, 0.5));
+}
+
+test "rand_distr SkewNormal parameter aliases mirror value accessors" {
+    const sampler = try SkewNormal(f64).init(-2, 3, 4);
+    try std.testing.expectApproxEqAbs(sampler.locationValue(), sampler.locationParameter(), 0);
+    try std.testing.expectApproxEqAbs(sampler.scaleValue(), sampler.scaleParameter(), 0);
+    try std.testing.expectApproxEqAbs(sampler.shapeValue(), sampler.shapeParameter(), 0);
+
+    const vector_sampler = try VectorSkewNormal(@Vector(4, f32)).init(-2, 3, 4);
+    try std.testing.expectEqual(vector_sampler.locationValue(), vector_sampler.locationParameter());
+    try std.testing.expectEqual(vector_sampler.scaleValue(), vector_sampler.scaleParameter());
+    try std.testing.expectEqual(vector_sampler.shapeValue(), vector_sampler.shapeParameter());
 }
 
 test "UniformInt Float Usize aliases mirror Uniform" {
