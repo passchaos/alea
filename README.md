@@ -78,7 +78,7 @@ The current Linux-first roadmap is intentionally broad:
   `Distribution::sample_iter` workflows, `StandardUniform`
   for default scalar/compound value sampling, reusable uniform with Rust-discoverable `new` /
   `newInclusive`, backend discovery aliases `UniformInt` / `UniformFloat` /
-  `UniformUsize`, `UniformError` with `NonFinite` float-range diagnostics, and one-shot `sampleSingle` / `sampleSingleInclusive` aliases,
+  `UniformUsize`, `tryFromRange` / `tryFromRangeInclusive`, `UniformError` with `NonFinite` float-range diagnostics, and one-shot `sampleSingle` / `sampleSingleInclusive` aliases,
   `UniformDuration` for reusable `std.Io.Duration` ranges, Bernoulli with Rust-discoverable `new` / `fromRatio` / `p()` aliases and `BernoulliError` discovery, non-uniform distribution, opt-in bounded f32
   LogNormal approximation, and alias-table samplers with a Rust-discoverable
   `WeightedIndex` alias, Rust-discoverable new aliases, Rust-discoverable updateWeights, ordered updateMany, and single-weight updateAt, numChoices, positiveCount, compact `u32` index

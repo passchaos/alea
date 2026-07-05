@@ -217,7 +217,9 @@ Reusable scalar and vector uniform samplers keep Zig-native `init` /
 `initInclusive` constructors and also expose Rust-discoverable `new` /
 `newInclusive` aliases and `UniformError` discovery matching local Rust `Uniform::new` /
 `Uniform::new_inclusive` semantics, including separate `NonFinite` errors for
-non-finite floating-point endpoints or widths. `UniformInt(T)`, `UniformFloat(T)`, and
+non-finite floating-point endpoints or widths. Rust `Uniform::try_from(range)`
+workflows map to Zig-native `tryFromRange` / `tryFromRangeInclusive` aliases on
+scalar and vector `Uniform` samplers. `UniformInt(T)`, `UniformFloat(T)`, and
 `UniformUsize` are discovery aliases over `Uniform(T)` for callers comparing
 against local Rust uniform backend names. `UniformDuration` provides the same reusable
 half-open/inclusive sampler shape for `std.Io.Duration`, matching local Rust

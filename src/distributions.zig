@@ -2423,12 +2423,20 @@ pub fn Uniform(comptime T: type) type {
             return init(low, high);
         }
 
+        pub fn tryFromRange(low: T, high: T) Error!Self {
+            return init(low, high);
+        }
+
         pub fn initInclusive(low: T, high: T) Error!Self {
             try validateUniformRange(T, low, high, true);
             return .{ .low = low, .high = high, .inclusive = true };
         }
 
         pub fn newInclusive(low: T, high: T) Error!Self {
+            return initInclusive(low, high);
+        }
+
+        pub fn tryFromRangeInclusive(low: T, high: T) Error!Self {
             return initInclusive(low, high);
         }
 
@@ -2676,12 +2684,20 @@ pub fn VectorUniform(comptime VectorType: type) type {
             return init(low, high);
         }
 
+        pub fn tryFromRange(low: Child, high: Child) Error!Self {
+            return init(low, high);
+        }
+
         pub fn initInclusive(low: Child, high: Child) Error!Self {
             try validateUniformRange(Child, low, high, true);
             return .{ .low = low, .high = high, .inclusive = true };
         }
 
         pub fn newInclusive(low: Child, high: Child) Error!Self {
+            return initInclusive(low, high);
+        }
+
+        pub fn tryFromRangeInclusive(low: Child, high: Child) Error!Self {
             return initInclusive(low, high);
         }
 
@@ -31122,6 +31138,41 @@ test "UniformChar alias mirrors UniformUnicodeScalar" {
     try std.testing.expectEqual(unicode_fill_engine.next(), alias_fill_engine.next());
 
     try std.testing.expectError(error.InvalidParameter, UniformChar.new(0xD800, 0xE000));
+}
+
+test "Uniform tryFromRange aliases mirror constructors" {
+    const root = @import("root.zig");
+
+    const range_sampler = try Uniform(u32).tryFromRange(10, 20);
+    const init_sampler = try Uniform(u32).init(10, 20);
+    try std.testing.expectEqual(init_sampler.lowValue(), range_sampler.lowValue());
+    try std.testing.expectEqual(init_sampler.highValue(), range_sampler.highValue());
+    try std.testing.expectEqual(init_sampler.isInclusive(), range_sampler.isInclusive());
+
+    var range_engine = root.DefaultPrng.init(0x51_4d_276);
+    var init_engine = root.DefaultPrng.init(0x51_4d_276);
+    try std.testing.expectEqual(init_sampler.sampleFrom(&init_engine), range_sampler.sampleFrom(&range_engine));
+    try std.testing.expectEqual(init_engine.next(), range_engine.next());
+
+    const inclusive_sampler = try Uniform(i16).tryFromRangeInclusive(-3, 3);
+    const init_inclusive_sampler = try Uniform(i16).initInclusive(-3, 3);
+    try std.testing.expect(inclusive_sampler.isInclusive());
+    try std.testing.expectEqual(init_inclusive_sampler.lowValue(), inclusive_sampler.lowValue());
+    try std.testing.expectEqual(init_inclusive_sampler.highValue(), inclusive_sampler.highValue());
+
+    const vector_sampler = try VectorUniform(@Vector(4, f32)).tryFromRange(-1, 1);
+    const vector_init_sampler = try VectorUniform(@Vector(4, f32)).init(-1, 1);
+    var vector_range_engine = root.DefaultPrng.init(0x51_4d_277);
+    var vector_init_engine = root.DefaultPrng.init(0x51_4d_277);
+    try std.testing.expectEqual(vector_init_sampler.sampleFrom(&vector_init_engine), vector_sampler.sampleFrom(&vector_range_engine));
+    try std.testing.expectEqual(vector_init_engine.next(), vector_range_engine.next());
+
+    const vector_inclusive_sampler = try VectorUniform(@Vector(4, i32)).tryFromRangeInclusive(-2, 2);
+    try std.testing.expect(vector_inclusive_sampler.isInclusive());
+
+    try std.testing.expectError(error.EmptyRange, Uniform(u32).tryFromRange(4, 4));
+    try std.testing.expectError(error.NonFinite, Uniform(f64).tryFromRange(0, std.math.inf(f64)));
+    try std.testing.expectError(error.EmptyRange, VectorUniform(@Vector(4, i32)).tryFromRangeInclusive(5, 4));
 }
 
 test "distribution slice aliases mirror Choose and Empty errors" {

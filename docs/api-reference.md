@@ -923,8 +923,10 @@ Reusable samplers:
 - `UniformUsize`
 - `Uniform(T).init`
 - `Uniform(T).new`
+- `Uniform(T).tryFromRange`
 - `Uniform(T).initInclusive`
 - `Uniform(T).newInclusive`
+- `Uniform(T).tryFromRangeInclusive`
 - `Uniform(T).lowValue`
 - `Uniform(T).highValue`
 - `Uniform(T).isInclusive`
@@ -960,8 +962,10 @@ Reusable samplers:
 - `VectorUniform(VectorType)`
 - `VectorUniform(VectorType).init`
 - `VectorUniform(VectorType).new`
+- `VectorUniform(VectorType).tryFromRange`
 - `VectorUniform(VectorType).initInclusive`
 - `VectorUniform(VectorType).newInclusive`
+- `VectorUniform(VectorType).tryFromRangeInclusive`
 - `VectorUniform(VectorType).lowValue`
 - `VectorUniform(VectorType).highValue`
 - `VectorUniform(VectorType).isInclusive`

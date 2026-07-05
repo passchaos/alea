@@ -296,7 +296,8 @@ complete.
 | S4-M273 distribution slice namespace aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m273-slice-namespace-aliases.md` | Closed for the current bar: `distributions.slice.Choose(T)` and `distributions.slice.Empty` now expose local Rust `rand::distr::slice::{Choose, Empty}` discovery naming while preserving Alea's existing `Choose(T)` sampler and error contract. |
 | S4-M274 UniformChar discovery alias | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m274-uniform-char-alias.md` | Closed for the current bar: `distributions.UniformChar` now exposes local Rust `rand::distr::uniform::UniformChar` discovery naming while aliasing Alea's existing `UniformUnicodeScalar` reusable `u21` scalar sampler. |
 | S4-M275 Uniform NonFinite error parity | `src/rng.zig`, `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m275-uniform-nonfinite.md` | Closed for the current bar: checked scalar/vector float range and uniform paths now return `NonFinite` for non-finite endpoints or widths, matching local Rust `rand::distr::uniform::Error::NonFinite` while preserving no-consume validation. |
-| S4-M276 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M276 Uniform range-constructor aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m276-uniform-range-constructors.md` | Closed for the current bar: `Uniform(T)` and `VectorUniform(VectorType)` now expose `tryFromRange` / `tryFromRangeInclusive` aliases for local Rust `Uniform::try_from(Range)` / `RangeInclusive` discovery while preserving existing constructors. |
+| S4-M277 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -383,6 +384,9 @@ long-term objective.
 S4-M275 additionally adds Uniform `NonFinite` error parity; it is another closed
 local Rust uniform diagnostics side gap and does not resolve S4-M11 or complete
 the long-term objective.
+S4-M276 additionally adds Uniform range-constructor aliases; it is another
+closed local Rust discovery-name side gap and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

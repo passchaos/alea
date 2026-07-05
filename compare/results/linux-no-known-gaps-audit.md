@@ -611,3 +611,7 @@ S4-M275 adds `NonFinite` to checked scalar/vector float range and uniform error
 paths (`compare/results/s4-m275-uniform-nonfinite.md`), closing the local Rust
 `rand::distr::uniform::Error::NonFinite` diagnostics gap while preserving
 checked validation before random-stream consumption.
+S4-M276 adds `Uniform(T).tryFromRange` / `tryFromRangeInclusive` and matching
+`VectorUniform` aliases (`compare/results/s4-m276-uniform-range-constructors.md`),
+closing the local Rust `Uniform::try_from(Range)` / `RangeInclusive`
+discoverability gap while preserving Alea's existing constructors.
