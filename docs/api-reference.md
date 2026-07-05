@@ -1089,6 +1089,7 @@ Reusable samplers:
 - `Normal(T).init`
 - `Normal(T).new`
 - `Normal(T).initMeanCv`
+- `Normal(T).fromMeanCv`
 - `Normal(T).fromZScore`
 - `Normal(T).meanValue`
 - `Normal(T).stddevValue`
@@ -1397,6 +1398,7 @@ Reusable samplers:
 - `LogNormal(T).init`
 - `LogNormal(T).new`
 - `LogNormal(T).initMeanCv`
+- `LogNormal(T).fromMeanCv`
 - `LogNormal(T).fromZScore`
 - `LogNormal(T).logMean`
 - `LogNormal(T).logMeanValue`

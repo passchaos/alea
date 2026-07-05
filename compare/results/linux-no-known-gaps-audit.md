@@ -682,3 +682,6 @@ S4-M292 adds local `rand_distr` `new(...)` constructor discovery aliases
 (`compare/results/s4-m292-rand-distr-new-aliases.md`) for matching scalar
 sampler shapes while documenting the Geometric trial/failure semantic
 exception.
+S4-M293 adds local `rand_distr` `from_mean_cv` constructor discovery aliases
+(`compare/results/s4-m293-from-mean-cv-aliases.md`) for `Normal(T)` and
+`LogNormal(T)` over Alea's existing `initMeanCv` constructors.

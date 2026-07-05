@@ -4161,6 +4161,10 @@ pub fn Normal(comptime T: type) type {
             return Self.init(mean, @abs(mean) * coefficient_of_variation);
         }
 
+        pub fn fromMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
+            return Self.initMeanCv(mean, coefficient_of_variation);
+        }
+
         pub fn fromZScore(self: Self, z_score: T) T {
             return self.mean + self.stddev * z_score;
         }
@@ -6039,6 +6043,10 @@ pub fn LogNormal(comptime T: type) type {
             const stddev = @sqrt(std.math.log1p(variance_ratio));
             const log_mean = @log(mean) - 0.5 * stddev * stddev;
             return .{ .normal_sampler = try Normal(T).init(log_mean, stddev) };
+        }
+
+        pub fn fromMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
+            return Self.initMeanCv(mean, coefficient_of_variation);
         }
 
         pub fn sample(self: *Self, rng: Rng) T {
@@ -31362,6 +31370,20 @@ test "rand_distr new aliases mirror init constructors" {
     try std.testing.expectApproxEqAbs((try Zipf(f64).new(10, 1.5)).exponentValue(), (try Zipf(f64).init(10, 1.5)).exponentValue(), 0);
     try std.testing.expectApproxEqAbs((try Zeta(f64).new(3)).exponentValue(), (try Zeta(f64).init(3)).exponentValue(), 0);
     try std.testing.expectApproxEqAbs((try Dirichlet(f64).new(&.{ 1, 2, 3 })).totalAlphaValue(), (try Dirichlet(f64).init(&.{ 1, 2, 3 })).totalAlphaValue(), 0);
+}
+
+test "rand_distr fromMeanCv aliases mirror initMeanCv constructors" {
+    const normal_alias = try Normal(f64).fromMeanCv(-10, 0.2);
+    const normal_canonical = try Normal(f64).initMeanCv(-10, 0.2);
+    try std.testing.expectApproxEqAbs(normal_canonical.meanValue(), normal_alias.meanValue(), 0);
+    try std.testing.expectApproxEqAbs(normal_canonical.stddevValue(), normal_alias.stddevValue(), 0);
+
+    const log_alias = try LogNormal(f64).fromMeanCv(2, 0.5);
+    const log_canonical = try LogNormal(f64).initMeanCv(2, 0.5);
+    try std.testing.expectApproxEqAbs(log_canonical.logMeanValue(), log_alias.logMeanValue(), 0);
+    try std.testing.expectApproxEqAbs(log_canonical.logStddevValue(), log_alias.logStddevValue(), 0);
+    try std.testing.expectError(error.InvalidParameter, Normal(f64).fromMeanCv(1, -0.5));
+    try std.testing.expectError(error.InvalidParameter, LogNormal(f64).fromMeanCv(-1, 0.5));
 }
 
 test "UniformInt Float Usize aliases mirror Uniform" {

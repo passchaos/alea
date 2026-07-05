@@ -397,7 +397,8 @@ constructors; PERT keeps the local `Pert::new(min, max)` builder shape via
 `Normal(T).initMeanCv` and
 `LogNormal(T).initMeanCv` cover coefficient-of-variation parameterization
 without requiring users to hand-convert to log-space parameters; both samplers
-also expose z-score conversion helpers for correlated draws. `Pert(T).initRange`
+also expose local `rand_distr::from_mean_cv`-style `fromMeanCv` aliases and
+z-score conversion helpers for correlated draws. `Pert(T).initRange`
 offers a builder-style range-first constructor with `withShape`, `withMode`,
 and `withMean` for workflows that choose range before mode/mean. Unit geometry samplers also
 Run `zig build run-distribution-diagnostics` for a runnable tour of
