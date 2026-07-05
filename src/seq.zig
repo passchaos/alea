@@ -100,6 +100,30 @@ pub const IndexVec = union(enum) {
         return self.indexOf(value) != null;
     }
 
+    pub fn eql(self: IndexVec, other: IndexVec) bool {
+        if (self.len() != other.len()) return false;
+        switch (self) {
+            .u32 => |self_items| switch (other) {
+                .u32 => |other_items| return std.mem.eql(u32, self_items, other_items),
+                .usize => |other_items| {
+                    for (self_items, other_items) |self_item, other_item| {
+                        if (@as(usize, self_item) != other_item) return false;
+                    }
+                    return true;
+                },
+            },
+            .usize => |self_items| switch (other) {
+                .u32 => |other_items| {
+                    for (self_items, other_items) |self_item, other_item| {
+                        if (self_item != @as(usize, other_item)) return false;
+                    }
+                    return true;
+                },
+                .usize => |other_items| return std.mem.eql(usize, self_items, other_items),
+            },
+        }
+    }
+
     pub fn validateItems(self: IndexVec, item_len: usize) Error!void {
         var index: usize = 0;
         while (index < self.len()) : (index += 1) {
@@ -9060,6 +9084,32 @@ test "index vec conversion supports native backing" {
     var too_large_out: [2]u32 = undefined;
     try std.testing.expectError(error.InvalidParameter, too_large.copyIntoU32(&too_large_out));
     try std.testing.expectError(error.InvalidParameter, too_large.toOwnedU32Slice(std.testing.allocator));
+}
+
+test "index vec equality compares contents across backing types" {
+    var compact_a_backing = [_]u32{ 5, 8, 13 };
+    var compact_b_backing = [_]u32{ 5, 8, 13 };
+    var native_backing = [_]usize{ 5, 8, 13 };
+    var different_value_backing = [_]usize{ 5, 8, 21 };
+    var different_len_backing = [_]u32{ 5, 8 };
+
+    const compact_a = IndexVec{ .u32 = &compact_a_backing };
+    const compact_b = IndexVec{ .u32 = &compact_b_backing };
+    const native = IndexVec{ .usize = &native_backing };
+    const different_value = IndexVec{ .usize = &different_value_backing };
+    const different_len = IndexVec{ .u32 = &different_len_backing };
+
+    try std.testing.expect(compact_a.eql(compact_b));
+    try std.testing.expect(compact_a.eql(native));
+    try std.testing.expect(native.eql(compact_a));
+    try std.testing.expect(!compact_a.eql(different_value));
+    try std.testing.expect(!native.eql(different_value));
+    try std.testing.expect(!compact_a.eql(different_len));
+    try std.testing.expect(!different_len.eql(native));
+
+    var empty_u32_backing = [_]u32{};
+    var empty_usize_backing = [_]usize{};
+    try std.testing.expect((IndexVec{ .u32 = &empty_u32_backing }).eql(IndexVec{ .usize = &empty_usize_backing }));
 }
 
 test "index vec consuming owned conversions transfer or narrow backing" {

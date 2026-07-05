@@ -80,6 +80,9 @@ pub fn main(init: std.process.Init) !void {
     const compact_owned_copy = try item_index_vec.toOwnedU32Slice(allocator);
     defer allocator.free(compact_owned_copy);
     try stdout.print("IndexVec.toOwnedU32Slice: {any}\n", .{compact_owned_copy});
+    var equality_backing = [_]u32{ 0, 2, 4 };
+    const equality_index_vec = alea.seq.IndexVec{ .u32 = &equality_backing };
+    try stdout.print("IndexVec.eql cross-backing: {}\n", .{item_index_vec.eql(equality_index_vec)});
     var consuming_index_engine = alea.ScalarPrng.init(0x5e11_0036);
     const consuming_index_vec = try alea.seq.sampleIndexVecFrom(allocator, &consuming_index_engine, items.len, 3);
     const consuming_owned = try consuming_index_vec.intoOwnedSlice(allocator);
