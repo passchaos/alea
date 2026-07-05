@@ -759,3 +759,7 @@ S4-M307 refreshes the S4-M11 blocker audit
 availability still lacks QEMU/Wine/wasmtime/wasmer runners, `zig build
 surfacecheck` passes with the hardened local public-surface scan, and no new
 unblocked local `rand` / `rand_distr` public-surface gap is identified.
+S4-M308 adds a README discovery guard
+(`compare/results/s4-m308-readme-surfacecheck-guard.md`) so `zig build
+readmecheck` requires the `zig build surfacecheck` command to stay visible with
+the other validation/local-comparison commands.
