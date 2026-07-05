@@ -15985,6 +15985,38 @@ pub fn WeightedTree(comptime Weight: type) type {
         positive_index: ?usize = null,
         allocator: std.mem.Allocator,
 
+        pub const WeightIterator = struct {
+            const Iterator = @This();
+
+            tree: Self,
+            index: usize = 0,
+
+            pub fn next(self: *Iterator) ?f64 {
+                const value = self.tree.weight(self.index) orelse return null;
+                self.index += 1;
+                return value;
+            }
+
+            pub fn remaining(self: Iterator) usize {
+                return self.tree.len() - self.index;
+            }
+
+            pub fn len(self: Iterator) usize {
+                return self.remaining();
+            }
+
+            pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
+            }
+
+            pub fn fill(self: *Iterator, dest: []f64) usize {
+                const count = @min(dest.len, self.remaining());
+                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                return count;
+            }
+        };
+
         pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
             var subtotals = try std.ArrayList(f64).initCapacity(allocator, input_weights.len);
             errdefer subtotals.deinit(allocator);
@@ -16100,6 +16132,10 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn weight(self: Self, index: usize) ?f64 {
             return self.weightAt(index) catch null;
+        }
+
+        pub fn weightIter(self: Self) WeightIterator {
+            return .{ .tree = self };
         }
 
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
@@ -16576,6 +16612,38 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         positive_index: ?usize = null,
         allocator: std.mem.Allocator,
 
+        pub const WeightIterator = struct {
+            const Iterator = @This();
+
+            tree: Self,
+            index: usize = 0,
+
+            pub fn next(self: *Iterator) ?u64 {
+                const value = self.tree.weight(self.index) orelse return null;
+                self.index += 1;
+                return value;
+            }
+
+            pub fn remaining(self: Iterator) usize {
+                return self.tree.len() - self.index;
+            }
+
+            pub fn len(self: Iterator) usize {
+                return self.remaining();
+            }
+
+            pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
+            }
+
+            pub fn fill(self: *Iterator, dest: []u64) usize {
+                const count = @min(dest.len, self.remaining());
+                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                return count;
+            }
+        };
+
         pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
             comptime requireUnsignedWeight(Weight);
             var subtotals = try std.ArrayList(u64).initCapacity(allocator, input_weights.len);
@@ -16693,6 +16761,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn weight(self: Self, index: usize) ?u64 {
             return self.weightAt(index) catch null;
+        }
+
+        pub fn weightIter(self: Self) WeightIterator {
+            return .{ .tree = self };
         }
 
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
@@ -18839,6 +18911,21 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), tree.weight(1).?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), tree.weight(2).?, 1e-12);
     try std.testing.expectEqual(@as(?f64, null), tree.weight(3));
+    var weight_iter = tree.weightIter();
+    try std.testing.expectEqual(@as(usize, 3), weight_iter.len());
+    var weight_hint = weight_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 3), weight_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 3), weight_hint.upper);
+    try std.testing.expectApproxEqAbs(@as(f64, 9), weight_iter.next().?, 1e-12);
+    try std.testing.expectEqual(@as(usize, 2), weight_iter.remaining());
+    var iter_weights: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), weight_iter.fill(&iter_weights));
+    try std.testing.expectApproxEqAbs(@as(f64, 1), iter_weights[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), iter_weights[1], 1e-12);
+    weight_hint = weight_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 0), weight_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 0), weight_hint.upper);
+    try std.testing.expectEqual(@as(?f64, null), weight_iter.next());
     try std.testing.expectApproxEqAbs(@as(f64, 1), try tree.weightAt(1), 1e-12);
     try std.testing.expectError(error.InvalidParameter, tree.weightAt(3));
     try std.testing.expectApproxEqAbs(@as(f64, 0.9), try tree.probabilityAt(0), 1e-12);
@@ -19750,6 +19837,20 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectEqual(@as(?u64, 1), tree.weight(1));
     try std.testing.expectEqual(@as(?u64, 0), tree.weight(2));
     try std.testing.expectEqual(@as(?u64, null), tree.weight(3));
+    var weight_iter = tree.weightIter();
+    try std.testing.expectEqual(@as(usize, 3), weight_iter.len());
+    var weight_hint = weight_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 3), weight_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 3), weight_hint.upper);
+    try std.testing.expectEqual(@as(u64, 9), weight_iter.next().?);
+    try std.testing.expectEqual(@as(usize, 2), weight_iter.remaining());
+    var iter_weights: [2]u64 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), weight_iter.fill(&iter_weights));
+    try std.testing.expectEqualSlices(u64, &.{ 1, 0 }, &iter_weights);
+    weight_hint = weight_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 0), weight_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 0), weight_hint.upper);
+    try std.testing.expectEqual(@as(?u64, null), weight_iter.next());
     try std.testing.expectEqual(@as(u64, 1), try tree.weightAt(1));
     try std.testing.expectError(error.InvalidParameter, tree.weightAt(3));
     try std.testing.expectApproxEqAbs(@as(f64, 0.9), try tree.probabilityAt(0), 1e-12);

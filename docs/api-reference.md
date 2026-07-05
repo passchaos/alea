@@ -2445,6 +2445,13 @@ Dynamic weighted helpers:
 - `WeightedTree.get`
 - `WeightedTree.weightAt`
 - `WeightedTree.weight`
+- `WeightedTree.weightIter`
+- `WeightedTree.WeightIterator`
+- `WeightedTree.WeightIterator.next`
+- `WeightedTree.WeightIterator.remaining`
+- `WeightedTree.WeightIterator.len`
+- `WeightedTree.WeightIterator.sizeHint`
+- `WeightedTree.WeightIterator.fill`
 - `WeightedTree.probabilityAt`
 - `WeightedTree.probability`
 - `WeightedTree.sample`
@@ -2526,6 +2533,13 @@ Dynamic weighted helpers:
 - `WeightedIntTree.get`
 - `WeightedIntTree.weightAt`
 - `WeightedIntTree.weight`
+- `WeightedIntTree.weightIter`
+- `WeightedIntTree.WeightIterator`
+- `WeightedIntTree.WeightIterator.next`
+- `WeightedIntTree.WeightIterator.remaining`
+- `WeightedIntTree.WeightIterator.len`
+- `WeightedIntTree.WeightIterator.sizeHint`
+- `WeightedIntTree.WeightIterator.fill`
 - `WeightedIntTree.probabilityAt`
 - `WeightedIntTree.probability`
 - `WeightedIntTree.sample`
