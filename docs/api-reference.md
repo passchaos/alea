@@ -352,8 +352,8 @@ self-forking.
 - Error types/aliases: `Error`, `BernoulliError`
 - Reusable sampler adapters: `StandardUniform`, `StandardUniform.sample`,
   `StandardUniform.sampleFrom`, `StandardUniform.fill`,
-  `StandardUniform.fillFrom`, `Alphanumeric`, `Alphabetic`, `sampleIter`,
-  `sampleIterFrom`, `map`, `MappedSampler`, `MappedSampler.sample`,
+  `StandardUniform.fillFrom`, `Choose(T)`, `Alphanumeric`, `Alphabetic`,
+  `sampleIter`, `sampleIterFrom`, `map`, `MappedSampler`, `MappedSampler.sample`,
   `MappedSampler.sampleFrom`, `MappedSampler.fill`,
   `MappedSampler.fillFrom`, `MappedSampler.map`
 
@@ -2916,7 +2916,14 @@ Dynamic weighted helpers:
   `sampleIteratorWeightedArrayCheckedFrom`, `sampleIteratorWeightedInto`,
   `sampleIteratorWeightedIntoFrom`, `sampleIteratorWeightedIntoChecked`,
   `sampleIteratorWeightedIntoCheckedFrom`
-- Reusable samplers: `Choice(T)`, `chooseIter`, `chooseIterFrom`,
+- Reusable samplers: `Choice(T)`, `distributions.Choose(T)`,
+  `Choose(T).init`, `Choose(T).new`, `Choose(T).initChecked`,
+  `Choose(T).newChecked`, `Choose(T).len`, `Choose(T).numChoices`,
+  `Choose(T).isEmpty`, `Choose(T).itemsValue`, `Choose(T).sample`,
+  `Choose(T).sampleFrom`, `Choose(T).sampleValue`,
+  `Choose(T).sampleValueFrom`, `Choose(T).fill`, `Choose(T).fillFrom`,
+  `Choose(T).fillValues`, `Choose(T).fillValuesFrom`, `Choose(T).iter`,
+  `Choose(T).iterFrom`, `chooseIter`, `chooseIterFrom`,
   `chooseIterChecked`, `chooseIterCheckedFrom`,
   `WeightedChoice(T, Weight)`,
   `Choice.init`, `Choice.new`, `Choice.initChecked`, `Choice.newChecked`, `Choice.len`, `Choice.numChoices`,

@@ -288,7 +288,8 @@ complete.
 | S4-M265 WeightedIndex alias | `src/distributions.zig`, `examples/weighted_sampling.zig`, `tools/examplecheck.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/examples.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m265-weightedindex-alias.md` | Closed for the current bar: `distributions.WeightedIndex(Weight)` now exposes local Rust `rand::distr::weighted::WeightedIndex` discovery naming while aliasing Alea's existing `AliasTable(Weight)` static weighted sampler. |
 | S4-M266 UniformDuration sampler | `src/distributions.zig`, `examples/range_sampling.zig`, `tools/examplecheck.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/examples.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m266-uniform-duration.md` | Closed for the current bar: `distributions.UniformDuration` now exposes local Rust `rand::distr::uniform::UniformDuration` discovery naming over Alea's existing `std.Io.Duration` range helper semantics. |
 | S4-M267 Uniform Unicode scalar sampler | `src/distributions.zig`, `examples/string_generation.zig`, `tools/examplecheck.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/examples.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m267-uniform-unicode-scalar.md` | Closed for the current bar: `distributions.UniformUnicodeScalar` now exposes local Rust `rand::distr::uniform::UniformChar`-style reusable range sampling in Alea's Zig-native `u21` Unicode scalar form. |
-| S4-M268 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M268 distribution Choose sampler | `src/distributions.zig`, `examples/sequence_sampling.zig`, `tools/examplecheck.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/examples.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m268-distribution-choose.md` | Closed for the current bar: `distributions.Choose(T)` now exposes local Rust `rand::distr::slice::Choose` discovery naming with Zig-native pointer/value sampling over `[]const T`. |
+| S4-M269 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -350,6 +351,9 @@ local Rust discovery-name side gap and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M267 additionally adds `distributions.UniformUnicodeScalar`; it is another
 closed local Rust workflow side gap and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M268 additionally adds `distributions.Choose`; it is another closed local
+Rust discovery-name side gap and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

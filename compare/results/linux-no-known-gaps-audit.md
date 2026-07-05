@@ -579,3 +579,7 @@ S4-M267 adds `distributions.UniformUnicodeScalar`
 `rand::distr::uniform::UniformChar` reusable-sampler workflow in Zig-native
 `u21` form while preserving surrogate-gap validation and Unicode scalar range
 helper stream shape.
+S4-M268 adds distribution-namespace `Choose(T)`
+(`compare/results/s4-m268-distribution-choose.md`), closing the local Rust
+`rand::distr::slice::Choose` discovery-name gap while preserving Alea's
+sequence-choice semantics over `[]const T`.

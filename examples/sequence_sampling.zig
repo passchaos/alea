@@ -410,8 +410,10 @@ pub fn main(init: std.process.Init) !void {
 
     const choice = alea.seq.Choice([]const u8).init(&items).?;
     const choice_new = alea.seq.Choice([]const u8).new(&items).?;
+    const dist_choose = alea.distributions.Choose([]const u8).new(&items).?;
     try stdout.print("Choice.numChoices: {}\n", .{choice.numChoices()});
     try stdout.print("Choice.new numChoices: {}\n", .{choice_new.numChoices()});
+    try stdout.print("distribution Choose numChoices: {}\n", .{dist_choose.numChoices()});
     try stdout.print("Choice.constantIndex: {?}\n", .{choice.constantIndex()});
     try stdout.print("Choice.item(2)={s}\n", .{(try choice.item(2)).*});
     try stdout.print("Choice.probability(0)={d:.3} missing={}\n", .{ choice.probability(0).?, choice.probability(items.len) == null });

@@ -249,6 +249,99 @@ fn applyMapper(comptime Out: type, mapper: anytype, value: anytype) Out {
     @compileError("mapped sampler mapper must expose map, apply, or call");
 }
 
+pub fn Choose(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        items: []const T,
+
+        pub fn init(items: []const T) ?Self {
+            if (items.len == 0) return null;
+            return .{ .items = items };
+        }
+
+        pub fn new(items: []const T) ?Self {
+            return init(items);
+        }
+
+        pub fn initChecked(items: []const T) Error!Self {
+            return init(items) orelse error.EmptyRange;
+        }
+
+        pub fn newChecked(items: []const T) Error!Self {
+            return initChecked(items);
+        }
+
+        pub fn len(self: Self) usize {
+            return self.items.len;
+        }
+
+        pub fn numChoices(self: Self) usize {
+            return self.items.len;
+        }
+
+        pub fn isEmpty(self: Self) bool {
+            return self.items.len == 0;
+        }
+
+        pub fn itemsValue(self: Self) []const T {
+            return self.items;
+        }
+
+        pub fn sample(self: Self, rng: Rng) *const T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) *const T {
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return &self.items[0];
+            return &self.items[Rng.uintLessThanFrom(source, usize, self.items.len)];
+        }
+
+        pub fn sampleValue(self: Self, rng: Rng) T {
+            return self.sample(rng).*;
+        }
+
+        pub fn sampleValueFrom(self: Self, source: anytype) T {
+            return self.sampleFrom(source).*;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []*const T) void {
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) {
+                @memset(dest, &self.items[0]);
+                return;
+            }
+            for (dest) |*slot| slot.* = self.sampleFrom(source);
+        }
+
+        pub fn fillValues(self: Self, rng: Rng, dest: []T) void {
+            self.fillValuesFrom(rng, dest);
+        }
+
+        pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) {
+                @memset(dest, self.items[0]);
+                return;
+            }
+            for (dest) |*slot| slot.* = self.sampleValueFrom(source);
+        }
+
+        pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
+            return rng.sampleIter(*const T, self);
+        }
+
+        pub fn iterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
+            return Rng.sampleIterFrom(source, *const T, self);
+        }
+    };
+}
+
 const LibmvecExpF64x4 = *const fn (@Vector(4, f64)) callconv(.c) @Vector(4, f64);
 const LibmvecExpF32x8 = *const fn (@Vector(8, f32)) callconv(.c) @Vector(8, f32);
 const LibmExpF64 = *const fn (f64) callconv(.c) f64;
@@ -31066,4 +31159,49 @@ test "UniformUnicodeScalar sampler mirrors unicode range helpers" {
     try std.testing.expectError(error.InvalidParameter, UniformUnicodeScalar.new(0xD800, 0xE000));
     try std.testing.expectError(error.EmptyRange, UniformUnicodeScalar.new('A', 'A'));
     try std.testing.expectError(error.EmptyRange, UniformUnicodeScalar.newInclusive('Z', 'A'));
+}
+
+test "distribution Choose sampler mirrors slice choices" {
+    const root = @import("root.zig");
+    const items = [_]u8{ 10, 20, 30, 40 };
+    const choice = Choose(u8).new(&items).?;
+
+    try std.testing.expectEqual(@as(usize, items.len), choice.len());
+    try std.testing.expectEqual(@as(usize, items.len), choice.numChoices());
+    try std.testing.expect(!choice.isEmpty());
+    try std.testing.expectEqualSlices(u8, &items, choice.itemsValue());
+
+    var choice_engine = root.DefaultPrng.init(0xc0_267);
+    var index_engine = root.DefaultPrng.init(0xc0_267);
+    try std.testing.expectEqual(
+        items[Rng.chooseIndexFrom(&index_engine, items.len).?],
+        choice.sampleValueFrom(&choice_engine),
+    );
+    try std.testing.expectEqual(index_engine.next(), choice_engine.next());
+
+    var fill_engine = root.DefaultPrng.init(0xc0_268);
+    var helper_engine = root.DefaultPrng.init(0xc0_268);
+    var values: [6]u8 = undefined;
+    var helper_values: [6]u8 = undefined;
+    choice.fillValuesFrom(&fill_engine, &values);
+    for (&helper_values) |*value| value.* = Rng.chooseFrom(&helper_engine, u8, &items).?;
+    try std.testing.expectEqualSlices(u8, &helper_values, &values);
+    try std.testing.expectEqual(helper_engine.next(), fill_engine.next());
+
+    var iter_engine = root.DefaultPrng.init(0xc0_269);
+    var helper_iter_engine = root.DefaultPrng.init(0xc0_269);
+    var iter = choice.iterFrom(&iter_engine);
+    try std.testing.expectEqual(Rng.chooseConstPtrFrom(&helper_iter_engine, u8, &items).?, iter.next().?);
+    try std.testing.expectEqual(helper_iter_engine.next(), iter_engine.next());
+
+    const singleton = Choose(u8).new(items[2..3]).?;
+    var singleton_engine = root.DefaultPrng.init(0xc0_270);
+    var singleton_control = root.DefaultPrng.init(0xc0_270);
+    var singleton_values: [4]u8 = undefined;
+    singleton.fillValuesFrom(&singleton_engine, &singleton_values);
+    for (singleton_values) |value| try std.testing.expectEqual(@as(u8, 30), value);
+    try std.testing.expectEqual(singleton_control.next(), singleton_engine.next());
+
+    try std.testing.expect(Choose(u8).new(&.{}) == null);
+    try std.testing.expectError(error.EmptyRange, Choose(u8).newChecked(&.{}));
 }

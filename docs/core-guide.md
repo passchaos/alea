@@ -697,7 +697,9 @@ Use:
   requested amount; requesting zero samples returns an empty result before
   validating weights; facade and direct-source checked calls validate before
   drawing)
-- `seq.Choice`, including Rust-discoverable `Choice.new` / `newChecked`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
+- `seq.Choice` plus distribution-namespace `distributions.Choose` for local
+  Rust `rand::distr::slice::Choose` discovery, including Rust-discoverable
+  `Choice.new` / `newChecked`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `Choice.sampleIndexFrom`,
   `Choice.constantIndex`, `Choice.item` / `itemAt` / `get`, `Choice.probability` / `probabilityAt`, lazy `Choice.probabilityIter` size hints,
   `Choice.sampleIndexU32From`, `Choice.fillValuesFrom` / `fillFrom`,
