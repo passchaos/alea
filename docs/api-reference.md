@@ -1199,6 +1199,7 @@ Reusable samplers:
 - `VectorNormal(VectorType).fill`
 - `VectorNormal(VectorType).fillFrom`
 - `StandardExponential(T)`
+- `Exp1(T)`
 - `StandardExponential(T).rateValue`
 - `StandardExponential(T).inverseRateValue`
 - `StandardExponential(T).expectedValue`
@@ -1277,6 +1278,7 @@ Reusable samplers:
 - `VectorStandardExponentialApproxLogF32(VectorType).fill`
 - `VectorStandardExponentialApproxLogF32(VectorType).fillFrom`
 - `Exponential(T)`
+- `Exp(T)`
 - `Exponential(T).init`
 - `Exponential(T).rateValue`
 - `Exponential(T).inverseRateValue`

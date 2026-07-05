@@ -310,7 +310,8 @@ complete.
 | S4-M287 sequence index namespace audit | `compare/results/s4-m287-seq-index-namespace-audit.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: local Rust `rand::seq::index` is documented as covered by top-level Alea `seq.*` APIs or intentionally not copied where an intermediate `seq.index` namespace would duplicate workflows and collide with Zig identifiers. |
 | S4-M288 local Rust public-surface manifest | `compare/results/s4-m288-local-rand-public-surface-manifest.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: root, `rngs`, `distr`, `seq`, and resolved `rand_core` public names are mapped to Alea evidence or intentional Zig-native exclusions, with no new unblocked local Rust public-surface gap identified. |
 | S4-M289 rand_distr error alias names | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m289-rand-distr-error-aliases.md` | Closed for the current bar: local `rand_distr::*Error` root discovery names now alias Alea's shared distribution error set while preserving Zig-native diagnostics. |
-| S4-M290 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M290 rand_distr Exp aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m290-exp-aliases.md` | Closed for the current bar: local `rand_distr::Exp` and `rand_distr::Exp1` root discovery names now alias Alea's existing `Exponential(T)` and `StandardExponential(T)` samplers. |
+| S4-M291 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -436,6 +437,9 @@ closure and does not resolve S4-M11 or complete the long-term objective.
 S4-M289 additionally adds local `rand_distr` error alias names; it is another
 closed discovery-name side gap and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M290 additionally adds local `rand_distr` `Exp` / `Exp1` aliases; it is
+another closed discovery-name side gap and does not resolve S4-M11 or complete
+the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

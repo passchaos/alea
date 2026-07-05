@@ -341,7 +341,8 @@ of half/chi/Maxwell/skew/inverse-Gaussian and other advanced shape/tail
 families.
 - standard normal, normal, exact/vector log-normal plus opt-in bounded f32
   approximate log-normal/vector approximate log-normal, half-normal/vector half-normal, standard exponential,
-  exponential
+  exponential; local `rand_distr` `Exp1` / `Exp` discovery names are available
+  as aliases for `StandardExponential(T)` / `Exponential(T)`
 - poisson, vector poisson/Poisson-AD, geometric, vector geometric/failures
 - gamma/vector gamma, chi-squared/vector chi-squared, chi/vector chi, erlang/vector erlang,
   beta/vector beta, Fisher F/vector Fisher F, Student t/vector Student t

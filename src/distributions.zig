@@ -4645,6 +4645,10 @@ pub fn StandardExponential(comptime T: type) type {
     };
 }
 
+pub fn Exp1(comptime T: type) type {
+    return StandardExponential(T);
+}
+
 pub const StandardExponentialNativeF32 = struct {
     pub fn rateValue(_: StandardExponentialNativeF32) f32 {
         return 1;
@@ -5041,6 +5045,10 @@ pub fn Exponential(comptime T: type) type {
             return self.inverse_rate == 0;
         }
     };
+}
+
+pub fn Exp(comptime T: type) type {
+    return Exponential(T);
 }
 
 pub const ExponentialNativeF32 = struct {
@@ -31168,6 +31176,38 @@ test "rand_distr error aliases mirror distribution Error" {
     try std.testing.expect(@typeInfo(@TypeOf(Binomial.init(8, 0.5))).error_union.error_set == BinomialError);
     try std.testing.expect(@typeInfo(@TypeOf(Hypergeometric.init(10, 5, 2))).error_union.error_set == HyperGeoError);
     try std.testing.expect(@typeInfo(@TypeOf(Poisson.init(2))).error_union.error_set == PoissonError);
+}
+
+test "rand_distr Exp and Exp1 aliases mirror exponential samplers" {
+    const root = @import("root.zig");
+    comptime {
+        std.debug.assert(Exp(f64) == Exponential(f64));
+        std.debug.assert(Exp1(f64) == StandardExponential(f64));
+    }
+
+    const exp_alias = try Exp(f64).init(2);
+    const exponential_sampler = try Exponential(f64).init(2);
+    try std.testing.expectApproxEqAbs(exponential_sampler.rateValue(), exp_alias.rateValue(), 0);
+    try std.testing.expectApproxEqAbs(exponential_sampler.inverseRateValue(), exp_alias.inverseRateValue(), 0);
+
+    var exp_alias_engine = root.DefaultPrng.init(0x51_4d_290);
+    var exponential_engine = root.DefaultPrng.init(0x51_4d_290);
+    try std.testing.expectEqual(exponential_sampler.sampleFrom(&exponential_engine), exp_alias.sampleFrom(&exp_alias_engine));
+    try std.testing.expectEqual(exponential_engine.next(), exp_alias_engine.next());
+
+    var exp1_alias_engine = root.DefaultPrng.init(0x51_4d_291);
+    var standard_engine = root.DefaultPrng.init(0x51_4d_291);
+    try std.testing.expectEqual((StandardExponential(f64){}).sampleFrom(&standard_engine), (Exp1(f64){}).sampleFrom(&exp1_alias_engine));
+    try std.testing.expectEqual(standard_engine.next(), exp1_alias_engine.next());
+
+    var exp1_alias_buf: [6]f64 = undefined;
+    var standard_buf: [6]f64 = undefined;
+    var exp1_fill_engine = root.DefaultPrng.init(0x51_4d_292);
+    var standard_fill_engine = root.DefaultPrng.init(0x51_4d_292);
+    (Exp1(f64){}).fillFrom(&exp1_fill_engine, &exp1_alias_buf);
+    (StandardExponential(f64){}).fillFrom(&standard_fill_engine, &standard_buf);
+    try std.testing.expectEqualSlices(f64, &standard_buf, &exp1_alias_buf);
+    try std.testing.expectEqual(standard_fill_engine.next(), exp1_fill_engine.next());
 }
 
 test "UniformInt Float Usize aliases mirror Uniform" {

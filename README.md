@@ -105,7 +105,7 @@ The current Linux-first roadmap is intentionally broad:
   allocation-returning and caller-owned-buffer UTF-8 helpers
 - distributions: uniform, bernoulli, binomial, negative-binomial,
   hypergeometric, standard normal, normal, log-normal, half-normal, standard exponential,
-  exponential, poisson, gamma,
+  exponential (with local `rand_distr` `Exp1` / `Exp` discovery aliases), poisson, gamma,
   chi-squared, chi, erlang, beta, Fisher F, Student t, triangular, arcsine,
   cauchy, laplace, logistic, log-logistic, kumaraswamy, power-function,
   rayleigh, maxwell, pareto, weibull, gumbel, frechet, skew-normal, PERT,
