@@ -147,7 +147,7 @@ core continuous families, derived/tail continuous families, inverse-Gaussian
 family, and Zipf/Zeta fills return before validating user parameters.
 Run `zig build run-discrete-distributions` for a runnable comparison of
 Bernoulli (`new` / `newRatio` / `fromRatio` aliases plus `init` /
-`initRatio`), Binomial, NegativeBinomial, Poisson, Geometric
+`initRatio`, and Rust-discoverable `p()` probability lookup), Binomial, NegativeBinomial, Poisson, Geometric
 trial/failure counts, Hypergeometric, and vector discrete samplers.
 The distributions module also mirrors `Rng.fillNormal*` and
 `Rng.fillExponential*` as top-level helpers for callers who prefer the

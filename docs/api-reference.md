@@ -686,6 +686,7 @@ Reusable samplers:
 - `Bernoulli.newRatio`
 - `Bernoulli.fromRatio`
 - `Bernoulli.probability`
+- `Bernoulli.p`
 - `Bernoulli.probabilityValue`
 - `Bernoulli.expectedValue`
 - `Bernoulli.varianceValue`
@@ -703,6 +704,7 @@ Reusable samplers:
 - `VectorBernoulli(VectorType).newRatio`
 - `VectorBernoulli(VectorType).fromRatio`
 - `VectorBernoulli(VectorType).probability`
+- `VectorBernoulli(VectorType).p`
 - `VectorBernoulli(VectorType).probabilityValue`
 - `VectorBernoulli(VectorType).expectedValue`
 - `VectorBernoulli(VectorType).varianceValue`

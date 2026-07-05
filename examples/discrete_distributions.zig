@@ -18,7 +18,7 @@ pub fn main(init: std.process.Init) !void {
     const bernoulli_from_ratio = try alea.distributions.Bernoulli.fromRatio(1, 4);
     var bernoulli_fill: [12]bool = undefined;
     bernoulli.fillFrom(&engine, &bernoulli_fill);
-    try stdout.print("Bernoulli(p=.25): expected={d:.2}, variance={d:.4}, sample={}, fill={any}\n", .{ bernoulli.expectedValue(), bernoulli.varianceValue(), bernoulli.sampleFrom(&engine), bernoulli_fill });
+    try stdout.print("Bernoulli(p=.25): p()={d:.2}, expected={d:.2}, variance={d:.4}, sample={}, fill={any}\n", .{ bernoulli.p(), bernoulli.expectedValue(), bernoulli.varianceValue(), bernoulli.sampleFrom(&engine), bernoulli_fill });
     try stdout.print("Bernoulli.new(p=.25): expected={d:.2}\n", .{bernoulli_new.expectedValue()});
     try stdout.print("Bernoulli.fromRatio(1,4): expected={d:.2}\n", .{bernoulli_from_ratio.expectedValue()});
 

@@ -489,21 +489,21 @@ pub const Bernoulli = struct {
 
     p_int: u64,
 
-    pub fn init(p: f64) Error!Bernoulli {
-        if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
-        if (p == 1) return .{ .p_int = always_true };
-        return .{ .p_int = Rng.probabilityThreshold(p) };
+    pub fn init(probability_param: f64) Error!Bernoulli {
+        if (!(probability_param >= 0 and probability_param <= 1)) return error.InvalidProbability;
+        if (probability_param == 1) return .{ .p_int = always_true };
+        return .{ .p_int = Rng.probabilityThreshold(probability_param) };
     }
 
-    pub fn new(p: f64) Error!Bernoulli {
-        return init(p);
+    pub fn new(probability_param: f64) Error!Bernoulli {
+        return init(probability_param);
     }
 
     pub fn initRatio(numerator: u32, denominator: u32) Error!Bernoulli {
         if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
         if (numerator == denominator) return .{ .p_int = always_true };
-        const p = @as(f64, @floatFromInt(numerator)) / @as(f64, @floatFromInt(denominator));
-        return .{ .p_int = Rng.probabilityThreshold(p) };
+        const probability_param = @as(f64, @floatFromInt(numerator)) / @as(f64, @floatFromInt(denominator));
+        return .{ .p_int = Rng.probabilityThreshold(probability_param) };
     }
 
     pub fn newRatio(numerator: u32, denominator: u32) Error!Bernoulli {
@@ -519,6 +519,10 @@ pub const Bernoulli = struct {
         return @as(f64, @floatFromInt(self.p_int)) / scale;
     }
 
+    pub fn p(self: Bernoulli) f64 {
+        return self.probability();
+    }
+
     pub fn probabilityValue(self: Bernoulli) f64 {
         return self.probability();
     }
@@ -528,14 +532,14 @@ pub const Bernoulli = struct {
     }
 
     pub fn varianceValue(self: Bernoulli) f64 {
-        const p = self.probability();
-        return p * (1 - p);
+        const probability_param = self.probability();
+        return probability_param * (1 - probability_param);
     }
 
     pub fn modeValue(self: Bernoulli) ?bool {
-        const p = self.probability();
-        if (p == 0.5) return null;
-        return p > 0.5;
+        const probability_param = self.probability();
+        if (probability_param == 0.5) return null;
+        return probability_param > 0.5;
     }
 
     pub fn minValue(self: Bernoulli) bool {
@@ -594,21 +598,21 @@ pub fn VectorBernoulli(comptime VectorType: type) type {
 
         p_int: u64,
 
-        pub fn init(p: f64) Error!Self {
-            if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
-            if (p == 1) return .{ .p_int = always_true };
-            return .{ .p_int = Rng.probabilityThreshold(p) };
+        pub fn init(probability_param: f64) Error!Self {
+            if (!(probability_param >= 0 and probability_param <= 1)) return error.InvalidProbability;
+            if (probability_param == 1) return .{ .p_int = always_true };
+            return .{ .p_int = Rng.probabilityThreshold(probability_param) };
         }
 
-        pub fn new(p: f64) Error!Self {
-            return init(p);
+        pub fn new(probability_param: f64) Error!Self {
+            return init(probability_param);
         }
 
         pub fn initRatio(numerator: u32, denominator: u32) Error!Self {
             if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
             if (numerator == denominator) return .{ .p_int = always_true };
-            const p = @as(f64, @floatFromInt(numerator)) / @as(f64, @floatFromInt(denominator));
-            return .{ .p_int = Rng.probabilityThreshold(p) };
+            const probability_param = @as(f64, @floatFromInt(numerator)) / @as(f64, @floatFromInt(denominator));
+            return .{ .p_int = Rng.probabilityThreshold(probability_param) };
         }
 
         pub fn newRatio(numerator: u32, denominator: u32) Error!Self {
@@ -624,6 +628,10 @@ pub fn VectorBernoulli(comptime VectorType: type) type {
             return @as(f64, @floatFromInt(self.p_int)) / scale;
         }
 
+        pub fn p(self: Self) f64 {
+            return self.probability();
+        }
+
         pub fn probabilityValue(self: Self) f64 {
             return self.probability();
         }
@@ -633,14 +641,14 @@ pub fn VectorBernoulli(comptime VectorType: type) type {
         }
 
         pub fn varianceValue(self: Self) f64 {
-            const p = self.probability();
-            return p * (1 - p);
+            const probability_param = self.probability();
+            return probability_param * (1 - probability_param);
         }
 
         pub fn modeValue(self: Self) ?bool {
-            const p = self.probability();
-            if (p == 0.5) return null;
-            return p > 0.5;
+            const probability_param = self.probability();
+            if (probability_param == 0.5) return null;
+            return probability_param > 0.5;
         }
 
         pub fn minValue(self: Self) bool {
@@ -18482,6 +18490,7 @@ test "basic distributions stay in expected ranges" {
     const ratio_bernoulli_new = try Bernoulli.newRatio(1, 4);
     const ratio_bernoulli_from = try Bernoulli.fromRatio(1, 4);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), fair_bernoulli.probability(), 1e-12);
+    try std.testing.expectApproxEqAbs(fair_bernoulli.probability(), fair_bernoulli.p(), 1e-12);
     try std.testing.expectApproxEqAbs(fair_bernoulli.probability(), fair_bernoulli_new.probability(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), ratio_bernoulli_new.probability(), 1e-12);
     try std.testing.expectApproxEqAbs(ratio_bernoulli_new.probability(), ratio_bernoulli_from.probability(), 1e-12);
@@ -23885,6 +23894,7 @@ test "distribution vector helpers preserve support and stream shape" {
     const vector_bernoulli_ratio_new = try VectorBernoulli(@Vector(8, bool)).newRatio(1, 4);
     const vector_bernoulli_from_ratio = try VectorBernoulli(@Vector(8, bool)).fromRatio(1, 4);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), vector_bernoulli_sampler.probabilityValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(vector_bernoulli_sampler.probabilityValue(), vector_bernoulli_sampler.p(), 1e-15);
     try std.testing.expectApproxEqAbs(vector_bernoulli_sampler.probabilityValue(), vector_bernoulli_new.probabilityValue(), 1e-15);
     try std.testing.expectApproxEqAbs(vector_bernoulli_sampler.probabilityValue(), vector_bernoulli_ratio_new.probabilityValue(), 1e-15);
     try std.testing.expectApproxEqAbs(vector_bernoulli_sampler.probabilityValue(), vector_bernoulli_from_ratio.probabilityValue(), 1e-15);
