@@ -20,6 +20,8 @@ pub fn main(init: std.process.Init) !void {
     var probabilities: [8]f64 = undefined;
     try custom.probabilitiesInto(&probabilities);
     const custom_num_choices = custom.numChoices();
+    const custom_item = try custom.item(0);
+    const custom_item_buf = [_]u8{custom_item};
     const custom_get = custom.get(0).?;
     const custom_get_missing = custom.get(custom.len()) == null;
     const custom_get_buf = [_]u8{custom_get};
@@ -57,6 +59,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("lowercase fill: {s}\n", .{lower_buf});
     try stdout.print("custom charset probabilities: {any}\n", .{probabilities});
     try stdout.print("custom charset numChoices: {}\n", .{custom_num_choices});
+    try stdout.print("custom charset item(0)={s}\n", .{&custom_item_buf});
     try stdout.print("custom charset get(0)={s} missing={}\n", .{ &custom_get_buf, custom_get_missing });
     try stdout.print("custom charset probability(0)={d:.3} missing={}\n", .{ custom_probability, custom_missing_probability });
     try stdout.print("custom charset probabilityIter fill: {any}\n", .{custom_probability_iter_fill});

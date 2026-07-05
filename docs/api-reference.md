@@ -3158,7 +3158,7 @@ Dynamic weighted helpers:
 - Raw charset byte sets: `alphanumeric`, `alphabetic`, `lowercase`,
   `uppercase`, `digits`
 - Charset type: `Charset.init`, `Charset.initChecked`, `Charset.bytesValue`,
-  `Charset.len`, `Charset.numChoices`, `Charset.isEmpty`, `Charset.byteAt`, `Charset.get`, `Charset.indexOf`,
+  `Charset.len`, `Charset.numChoices`, `Charset.isEmpty`, `Charset.byteAt`, `Charset.item`, `Charset.get`, `Charset.indexOf`,
   `Charset.contains`, `Charset.probabilityAt`, `Charset.probability`,
   `Charset.probabilityIter`, `Charset.ProbabilityIterator`,
   `Charset.ProbabilityIterator.next`, `Charset.ProbabilityIterator.remaining`,

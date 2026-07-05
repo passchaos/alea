@@ -41,7 +41,7 @@ const examples = [_]Example{
     .{
         .path = "examples/string_generation.zig",
         .step = "zig build run-string-generation",
-        .source_tokens = &.{ "custom charset numChoices", "custom charset get(0)", "custom charset probability(0)", "custom charset probabilityIter fill", "custom charset probabilityIter sizeHint", "unicode scalar fill", "unicode scalar batch", "unicode scalar range fill", "unicode scalar range batch", "unicodeScalarBatch", "fillUnicodeScalar", "unicodeScalarRangeAtMostBatchChecked", "fillUnicodeScalarRangeLessThanChecked" },
+        .source_tokens = &.{ "custom charset numChoices", "custom charset item(0)", "custom charset get(0)", "custom charset probability(0)", "custom charset probabilityIter fill", "custom charset probabilityIter sizeHint", "unicode scalar fill", "unicode scalar batch", "unicode scalar range fill", "unicode scalar range batch", "unicodeScalarBatch", "fillUnicodeScalar", "unicodeScalarRangeAtMostBatchChecked", "fillUnicodeScalarRangeLessThanChecked" },
     },
     .{ .path = "examples/unit_geometry.zig", .step = "zig build run-unit-geometry" },
 };

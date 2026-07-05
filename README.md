@@ -44,7 +44,7 @@ The current Linux-first roadmap is intentionally broad:
   sampling/fills, owned repeated index batches, fixed-size index arrays, and
   repeated index iterators
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, direct-source charset
-  helpers, checked charset methods plus numChoices and optional item, probability, probability-iterator, and size-hint diagnostics for fallible custom charsets, and Unicode
+  helpers, checked charset methods plus numChoices and checked item alias, optional item, probability, probability-iterator, and size-hint diagnostics for fallible custom charsets, and Unicode
   scalar fill/owned/range batches plus string generation with
   allocation-returning and caller-owned-buffer UTF-8 helpers
 - distributions: uniform, bernoulli, binomial, negative-binomial,
