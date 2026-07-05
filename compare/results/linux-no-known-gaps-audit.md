@@ -272,6 +272,7 @@ Local Alea evidence:
 - `compare/results/s4-m248-mapped-sampler.md`
 - `compare/results/s4-m249-unbounded-iterator-sizehint.md`
 - `compare/results/s4-m250-distribution-sampleiter.md`
+- `compare/results/s4-m251-samplestring-aliases.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -496,3 +497,7 @@ S4-M250 adds distribution-namespace `sampleIter` / `sampleIterFrom` aliases
 (`compare/results/s4-m250-distribution-sampleiter.md`), closing the local Rust
 `Distribution::sample_iter` naming/discoverability gap for the current Linux
 bar.
+S4-M251 adds `sampleString` / `appendString` ASCII aliases
+(`compare/results/s4-m251-samplestring-aliases.md`), closing the local Rust
+`SampleString::sample_string` / `append_string` discoverability gap for the
+current Linux bar.

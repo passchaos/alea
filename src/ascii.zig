@@ -184,6 +184,42 @@ pub const Charset = struct {
         self.fillFrom(source, out);
         return out;
     }
+
+    pub fn sampleString(self: Charset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
+        return self.sampleStringFrom(allocator, rng, length);
+    }
+
+    pub fn sampleStringFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {
+        return self.allocFrom(allocator, source, length);
+    }
+
+    pub fn sampleStringChecked(self: Charset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
+        return self.sampleStringCheckedFrom(allocator, rng, length);
+    }
+
+    pub fn sampleStringCheckedFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {
+        return self.allocCheckedFrom(allocator, source, length);
+    }
+
+    pub fn appendString(self: Charset, allocator: std.mem.Allocator, rng: Rng, string_buffer: *std.ArrayList(u8), length: usize) !void {
+        try self.appendStringFrom(allocator, rng, string_buffer, length);
+    }
+
+    pub fn appendStringFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), length: usize) !void {
+        const old_len = string_buffer.items.len;
+        try string_buffer.resize(allocator, old_len + length);
+        self.fillFrom(source, string_buffer.items[old_len..]);
+    }
+
+    pub fn appendStringChecked(self: Charset, allocator: std.mem.Allocator, rng: Rng, string_buffer: *std.ArrayList(u8), length: usize) !void {
+        try self.appendStringCheckedFrom(allocator, rng, string_buffer, length);
+    }
+
+    pub fn appendStringCheckedFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), length: usize) !void {
+        if (length == 0) return;
+        if (self.bytes.len == 0) return error.EmptyCharset;
+        try self.appendStringFrom(allocator, source, string_buffer, length);
+    }
 };
 
 pub const Alphanumeric = Charset{ .bytes = alphanumeric };
@@ -206,6 +242,22 @@ pub fn string(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
 
 pub fn stringFrom(allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
     return Alphanumeric.allocFrom(allocator, source, len);
+}
+
+pub fn sampleString(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
+    return sampleStringFrom(allocator, rng, len);
+}
+
+pub fn sampleStringFrom(allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
+    return Alphanumeric.sampleStringFrom(allocator, source, len);
+}
+
+pub fn appendString(allocator: std.mem.Allocator, rng: Rng, string_buffer: *std.ArrayList(u8), len: usize) !void {
+    try appendStringFrom(allocator, rng, string_buffer, len);
+}
+
+pub fn appendStringFrom(allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), len: usize) !void {
+    try Alphanumeric.appendStringFrom(allocator, source, string_buffer, len);
 }
 
 pub fn unicodeScalar(rng: Rng) u21 {
@@ -344,6 +396,17 @@ test "ascii charset fills requested length" {
     defer std.testing.allocator.free(direct_string);
     for (direct_string) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
 
+    const direct_sample_string = try sampleStringFrom(std.testing.allocator, &engine, 16);
+    defer std.testing.allocator.free(direct_sample_string);
+    for (direct_sample_string) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
+
+    var append_list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 3);
+    defer append_list.deinit(std.testing.allocator);
+    try append_list.appendSlice(std.testing.allocator, "id:");
+    try Alphanumeric.appendStringFrom(std.testing.allocator, &engine, &append_list, 8);
+    try std.testing.expectEqualStrings("id:", append_list.items[0..3]);
+    for (append_list.items[3..]) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
+
     const checked_char = try Alphanumeric.sampleCheckedFrom(&engine);
     try std.testing.expect(std.ascii.isAlphanumeric(checked_char));
     var checked_buf: [8]u8 = undefined;
@@ -352,6 +415,9 @@ test "ascii charset fills requested length" {
     const checked_alloc = try Alphanumeric.allocCheckedFrom(std.testing.allocator, &engine, 8);
     defer std.testing.allocator.free(checked_alloc);
     for (checked_alloc) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
+    const checked_sample_string = try Alphanumeric.sampleStringCheckedFrom(std.testing.allocator, &engine, 8);
+    defer std.testing.allocator.free(checked_sample_string);
+    for (checked_sample_string) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
 
     try std.testing.expectError(error.EmptyCharset, Charset.initChecked(""));
 }
@@ -435,6 +501,24 @@ test "ascii helpers preserve direct stream shape" {
         try std.testing.expectEqualSlices(u8, facade_string, direct_string);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+        const facade_sample_string = try sampleString(std.testing.allocator, rng, 16);
+        defer std.testing.allocator.free(facade_sample_string);
+        const direct_sample_string = try sampleStringFrom(std.testing.allocator, &direct_engine, 16);
+        defer std.testing.allocator.free(direct_sample_string);
+        try std.testing.expectEqualSlices(u8, facade_sample_string, direct_sample_string);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+        defer facade_list.deinit(std.testing.allocator);
+        try facade_list.appendSlice(std.testing.allocator, "x=");
+        var direct_list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+        defer direct_list.deinit(std.testing.allocator);
+        try direct_list.appendSlice(std.testing.allocator, "x=");
+        try appendString(std.testing.allocator, rng, &facade_list, 12);
+        try appendStringFrom(std.testing.allocator, &direct_engine, &direct_list, 12);
+        try std.testing.expectEqualSlices(u8, facade_list.items, direct_list.items);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
         try std.testing.expectEqual(unicodeScalar(rng), unicodeScalarFrom(&direct_engine));
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
@@ -483,6 +567,30 @@ test "invalid charset init does not consume random stream" {
     const owned_empty_probabilities = try empty.probabilities(std.testing.allocator);
     defer std.testing.allocator.free(owned_empty_probabilities);
     try std.testing.expectEqual(@as(usize, 0), owned_empty_probabilities.len);
+}
+
+test "sampleString checked aliases handle empty charsets without consuming" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a551);
+    var control = alea.ScalarPrng.init(0x5150_a551);
+    const empty = Charset{ .bytes = "" };
+
+    try std.testing.expectError(error.EmptyCharset, empty.sampleStringCheckedFrom(std.testing.allocator, &engine, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 0);
+    defer list.deinit(std.testing.allocator);
+    try std.testing.expectError(error.EmptyCharset, empty.appendStringCheckedFrom(std.testing.allocator, &engine, &list, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const empty_string = try empty.sampleStringCheckedFrom(std.testing.allocator, &engine, 0);
+    defer std.testing.allocator.free(empty_string);
+    try std.testing.expectEqual(@as(usize, 0), empty_string.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try empty.appendStringCheckedFrom(std.testing.allocator, &engine, &list, 0);
+    try std.testing.expectEqual(@as(usize, 0), list.items.len);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "invalid charset facade helpers do not consume random stream" {

@@ -12,6 +12,12 @@ pub fn main(init: std.process.Init) !void {
 
     const token = try alea.ascii.stringFrom(allocator, &engine, 16);
     defer allocator.free(token);
+    const sample_string = try alea.ascii.Alphanumeric.sampleStringFrom(allocator, &engine, 12);
+    defer allocator.free(sample_string);
+    var appended = try std.ArrayList(u8).initCapacity(allocator, 8);
+    defer appended.deinit(allocator);
+    try appended.appendSlice(allocator, "tag:");
+    try alea.ascii.Alphanumeric.appendStringFrom(allocator, &engine, &appended, 8);
 
     var lower_buf: [12]u8 = undefined;
     alea.ascii.Lowercase.fillFrom(&engine, &lower_buf);
@@ -58,6 +64,8 @@ pub fn main(init: std.process.Init) !void {
     const single_charset = alea.ascii.Charset.init("Z");
 
     try stdout.print("alphanumeric string: {s}\n", .{token});
+    try stdout.print("sampleString alphanumeric: {s}\n", .{sample_string});
+    try stdout.print("appendString alphanumeric: {s}\n", .{appended.items});
     try stdout.print("lowercase fill: {s}\n", .{lower_buf});
     try stdout.print("custom charset probabilities: {any}\n", .{probabilities});
     try stdout.print("custom charset numChoices: {}\n", .{custom_num_choices});

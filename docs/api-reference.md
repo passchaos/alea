@@ -3286,8 +3286,13 @@ Dynamic weighted helpers:
   `Charset.sampleChecked`, `Charset.sampleFrom`, `Charset.sampleCheckedFrom`,
   `Charset.fill`, `Charset.fillChecked`, `Charset.fillFrom`,
   `Charset.fillCheckedFrom`, `Charset.alloc`, `Charset.allocChecked`,
-  `Charset.allocFrom`, `Charset.allocCheckedFrom`
-- Helpers: `char`, `charFrom`, `string`, `stringFrom`, `unicodeScalar`,
+  `Charset.allocFrom`, `Charset.allocCheckedFrom`, `Charset.sampleString`,
+  `Charset.sampleStringFrom`, `Charset.sampleStringChecked`,
+  `Charset.sampleStringCheckedFrom`, `Charset.appendString`,
+  `Charset.appendStringFrom`, `Charset.appendStringChecked`,
+  `Charset.appendStringCheckedFrom`
+- Helpers: `char`, `charFrom`, `string`, `stringFrom`, `sampleString`,
+  `sampleStringFrom`, `appendString`, `appendStringFrom`, `unicodeScalar`,
   `unicodeScalarFrom`, `unicodeUtf8Alloc`, `unicodeUtf8AllocFrom`,
   `unicodeUtf8Capacity`, `unicodeUtf8Into`, `unicodeUtf8IntoFrom`
 

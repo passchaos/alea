@@ -800,7 +800,12 @@ already consumed randomness for earlier accepted candidates.
 `ascii.zig` includes ASCII `Alphanumeric`, `Alphabetic`, `Lowercase`,
 `Uppercase`, `Digits`, custom `Charset`, and Unicode scalar UTF-8 string
 generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
-`Charset.allocFrom`, `Charset.numChoices` / `len`, `Charset.constantIndex`, `Charset.item` / `byteAt` / `get`, `Charset.probability` / `probabilityAt`, `Charset.probabilityIter` size hints, `charFrom`, `stringFrom`, `unicodeScalarFrom`,
+`Charset.allocFrom`, Rust-discoverable `Charset.sampleStringFrom` /
+`Charset.appendStringFrom`, `Charset.numChoices` / `len`,
+`Charset.constantIndex`, `Charset.item` / `byteAt` / `get`,
+`Charset.probability` / `probabilityAt`, `Charset.probabilityIter` size hints,
+`charFrom`, `stringFrom`, `sampleStringFrom`, `appendStringFrom`,
+`unicodeScalarFrom`,
 `unicodeScalarRangeLessThanFrom`, `unicodeScalarRangeAtMostFrom`,
 `fillUnicodeScalarFrom`, `fillUnicodeScalarRangeLessThanFrom`,
 `fillUnicodeScalarRangeAtMostFrom`, `unicodeScalarBatchFrom`,
@@ -808,8 +813,9 @@ generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
 `unicodeUtf8AllocFrom`, `unicodeUtf8Capacity`, and `unicodeUtf8IntoFrom` when
 the engine type is comptime-known. Use
 `Charset.sampleChecked`, `Charset.sampleCheckedFrom`, `Charset.fillChecked`,
-`Charset.fillCheckedFrom`, `Charset.allocChecked`, and
-`Charset.allocCheckedFrom` when a manually constructed charset may be empty;
+`Charset.fillCheckedFrom`, `Charset.allocChecked`, `Charset.allocCheckedFrom`,
+`Charset.sampleStringChecked`, and `Charset.appendStringChecked` when a
+manually constructed charset may be empty;
 zero-length fills and allocations return empty results before validating charset
 contents. Initial allocation failures in ASCII and Unicode string helpers are
 reported before any scalar is drawn, so retry/error paths do not silently
