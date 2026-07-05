@@ -785,3 +785,7 @@ so the local comparison checker is less tied to one absolute home directory.
 S4-M314 adds focused tests for that root-resolution helper
 (`compare/results/s4-m314-surfacecheck-root-tests.md`), covering `$HOME` suffix
 resolution and fallback behavior.
+S4-M315 hardens `roadmapcheck`
+(`compare/results/s4-m315-roadmapcheck-surface-blocker.md`) so the S4-M11
+blocker audit must continue to mention the current `surfacecheck` coverage and
+the absence of a new unblocked public-surface gap.
