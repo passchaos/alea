@@ -270,6 +270,7 @@ Local Alea evidence:
 - `compare/results/s4-m246-rng-reader.md`
 - `compare/results/s4-m247-sysrng.md`
 - `compare/results/s4-m248-mapped-sampler.md`
+- `compare/results/s4-m249-unbounded-iterator-sizehint.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -486,3 +487,7 @@ S4-M248 adds a mapped reusable-sampler adapter
 (`compare/results/s4-m248-mapped-sampler.md`), closing the local Rust
 `Distribution::map` ergonomics gap for the current Linux bar without importing
 trait machinery.
+S4-M249 adds unbounded `sizeHint()` diagnostics to value/random/sample iterators
+(`compare/results/s4-m249-unbounded-iterator-sizehint.md`), closing the local
+Rust `Distribution::Iter::size_hint` / `random_iter` discoverability gap for
+the current Linux bar.

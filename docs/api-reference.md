@@ -258,11 +258,15 @@ stability expectations.
   `sampleWithoutReplacementChecked`, `sampleWithoutReplacementCheckedFrom`
 - Iterator types: `ValueIterator(T)`, `ValueIteratorFrom(Source, T)`,
   `ValueIterator.next`, `ValueIterator.nextValue`, `ValueIterator.fill`,
+  `ValueIterator.sizeHint`,
   `ValueIteratorFrom.next`, `ValueIteratorFrom.nextValue`,
-  `ValueIteratorFrom.fill`, `SampleIterator(Sampler, T)`,
+  `ValueIteratorFrom.fill`, `ValueIteratorFrom.sizeHint`,
+  `SampleIterator(Sampler, T)`,
   `SampleIterator.next`, `SampleIterator.nextValue`, `SampleIterator.fill`,
+  `SampleIterator.sizeHint`,
   `SampleIteratorFrom(Source, Sampler, T)`, `SampleIteratorFrom.next`,
-  `SampleIteratorFrom.nextValue`, `SampleIteratorFrom.fill`
+  `SampleIteratorFrom.nextValue`, `SampleIteratorFrom.fill`,
+  `SampleIteratorFrom.sizeHint`
 
 ## Seed
 

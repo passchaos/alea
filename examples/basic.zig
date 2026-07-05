@@ -109,6 +109,9 @@ pub fn main(init: std.process.Init) !void {
     };
     var iter = Iter{};
     const stream_choice = alea.seq.chooseIterator(rng, u8, &iter).?;
+    var die_iter = rng.sampleIter(u8, die_sampler);
+    const die_iter_hint = die_iter.sizeHint();
+    const die_iter_roll = die_iter.next().?;
 
     seed = seed.mix("child-stream");
     var child_engine = alea.FastPrng.init(seed.stream(42).state);
@@ -159,6 +162,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("sample die: {}\n", .{sample_roll});
     try stdout.print("sampleBatch dice: {any}\n", .{owned_rolls});
     try stdout.print("iterator choice: {}\n", .{stream_choice});
+    try stdout.print("sampleIter sizeHint: {}..unbounded={}, next={}\n", .{ die_iter_hint.lower, die_iter_hint.upper == null, die_iter_roll });
     try stdout.print("child stream u64: {}\n", .{child_rng.next()});
     try stdout.flush();
 }

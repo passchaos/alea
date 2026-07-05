@@ -3,6 +3,11 @@ const std_ziggurat = std.Random.ziggurat;
 
 const Rng = @This();
 
+const IteratorSizeHint = struct {
+    lower: usize,
+    upper: ?usize,
+};
+
 const norm_ziggurat_ratio = blk: {
     var out: [256]f64 = undefined;
     for (&out, 0..) |*item, i| item.* = std_ziggurat.NormDist.x[i + 1] / std_ziggurat.NormDist.x[i];
@@ -3903,6 +3908,10 @@ pub fn ValueIterator(comptime T: type) type {
             }
             for (dest) |*item| item.* = self.nextValue();
         }
+
+        pub fn sizeHint(_: Self) IteratorSizeHint {
+            return unboundedSizeHint();
+        }
     };
 }
 
@@ -3927,7 +3936,15 @@ pub fn ValueIteratorFrom(comptime Source: type, comptime T: type) type {
             }
             for (dest) |*item| item.* = self.nextValue();
         }
+
+        pub fn sizeHint(_: Self) IteratorSizeHint {
+            return unboundedSizeHint();
+        }
     };
+}
+
+fn unboundedSizeHint() IteratorSizeHint {
+    return .{ .lower = std.math.maxInt(usize), .upper = null };
 }
 
 fn valueIteratorCanFill(comptime T: type) bool {
@@ -3966,6 +3983,10 @@ pub fn SampleIterator(comptime Sampler: type, comptime T: type) type {
         pub fn fill(self: *Self, dest: []T) void {
             fillSample(self.rng, T, dest, self.sampler);
         }
+
+        pub fn sizeHint(_: Self) IteratorSizeHint {
+            return unboundedSizeHint();
+        }
     };
 }
 
@@ -3986,6 +4007,10 @@ pub fn SampleIteratorFrom(comptime Source: type, comptime Sampler: type, comptim
 
         pub fn fill(self: *Self, dest: []T) void {
             fillSampleFrom(self.source, T, dest, self.sampler);
+        }
+
+        pub fn sizeHint(_: Self) IteratorSizeHint {
+            return unboundedSizeHint();
         }
     };
 }
@@ -8383,16 +8408,31 @@ test "value and sampler iterators produce unbounded samples" {
     const rng = Rng.init(&engine);
 
     var values = rng.valueIter(u16);
+    var value_hint = values.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), value_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), value_hint.upper);
     const first = values.next().?;
     const second = values.nextValue();
     try std.testing.expect(first != second);
+    value_hint = values.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), value_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), value_hint.upper);
 
     var direct_values = Rng.valueIterFrom(&engine, u16);
+    var direct_value_hint = direct_values.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), direct_value_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), direct_value_hint.upper);
     const direct_first = direct_values.next().?;
     const direct_second = direct_values.nextValue();
     try std.testing.expect(direct_first != direct_second);
+    direct_value_hint = direct_values.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), direct_value_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), direct_value_hint.upper);
 
     var bool_iter = rng.randomIter(bool);
+    const bool_hint = bool_iter.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), bool_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), bool_hint.upper);
     var bools: [8]bool = undefined;
     bool_iter.fill(&bools);
 
@@ -8401,6 +8441,9 @@ test "value and sampler iterators produce unbounded samples" {
     direct_bool_iter.fill(&direct_bools);
 
     var direct_random_iter = Rng.randomIterFrom(&engine, bool);
+    const direct_random_hint = direct_random_iter.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), direct_random_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), direct_random_hint.upper);
     var direct_random_bools: [8]bool = undefined;
     direct_random_iter.fill(&direct_random_bools);
 
@@ -8414,16 +8457,28 @@ test "value and sampler iterators produce unbounded samples" {
 
     const die = try alea.distributions.Uniform(u8).initInclusive(1, 6);
     var rolls = rng.sampleIter(u8, die);
+    var roll_hint = rolls.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), roll_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), roll_hint.upper);
     var i: usize = 0;
     while (i < 16) : (i += 1) {
         const roll = rolls.next().?;
         try std.testing.expect(roll >= 1 and roll <= 6);
     }
+    roll_hint = rolls.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), roll_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), roll_hint.upper);
 
     var direct_rolls = Rng.sampleIterFrom(&engine, u8, die);
+    var direct_roll_hint = direct_rolls.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), direct_roll_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), direct_roll_hint.upper);
     var direct_roll_buf: [16]u8 = undefined;
     direct_rolls.fill(&direct_roll_buf);
     for (direct_roll_buf) |roll| try std.testing.expect(roll >= 1 and roll <= 6);
+    direct_roll_hint = direct_rolls.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), direct_roll_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), direct_roll_hint.upper);
 
     var open_iter = rng.sampleIter(f64, alea.distributions.Open01{});
     const open_value = open_iter.nextValue();

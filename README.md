@@ -45,7 +45,8 @@ The current Linux-first roadmap is intentionally broad:
   `ratioBatch` / vector probability batches, duration/vector range batches, vector strict-interval batches, and scalar/vector standard-or-parameterized normal/exponential batches for
   allocation-returning repeated samples
 - `Rng.valueIter(T)` and `Rng.sampleIter(T, sampler)` for repeated sampling,
-  including bulk `fill` methods where stream policy permits
+  unbounded `sizeHint` diagnostics, and bulk `fill` methods where stream
+  policy permits
 - bulk `fillSample`, `fillRange`, strict-interval scalar and vector float
   fill, distribution-namespace vector Bernoulli/binomial/binomial-approx/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/Poisson-AD/uniform/strict-interval/normal/log-normal/approx-log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/cauchy/laplace/logistic/log-logistic/kumaraswamy/power-function/rayleigh/maxwell/pareto/weibull/gumbel/frechet/skew-normal/PERT/inverse-Gaussian/normal-inverse-Gaussian/Zipf/Zeta/unit-circle/unit-disc/unit-sphere/unit-ball/exponential
   wrappers and reusable vector samplers, `fillNormal`, `fillExponential`, and unit geometry fill APIs for
