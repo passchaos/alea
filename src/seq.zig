@@ -7767,6 +7767,10 @@ pub fn Choice(comptime T: type) type {
             return 1.0 / @as(f64, @floatFromInt(self.items.len));
         }
 
+        pub fn probability(self: Self, index: usize) ?f64 {
+            return self.probabilityAt(index) catch null;
+        }
+
         pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
             const out = try allocator.alloc(f64, self.items.len);
             errdefer allocator.free(out);
@@ -16390,6 +16394,9 @@ test "choice sampler repeatedly samples slice references" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), try choice.probabilityAt(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), try choice.probabilityAt(3), 1e-12);
     try std.testing.expectError(error.InvalidParameter, choice.probabilityAt(4));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), choice.probability(0).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), choice.probability(3).?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), choice.probability(4));
     var choice_probabilities: [4]f64 = undefined;
     try choice.probabilitiesInto(&choice_probabilities);
     for (choice_probabilities) |probability| try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability, 1e-12);

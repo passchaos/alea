@@ -380,6 +380,7 @@ pub fn main(init: std.process.Init) !void {
 
     const choice = alea.seq.Choice([]const u8).init(&items).?;
     try stdout.print("Choice.numChoices: {}\n", .{choice.numChoices()});
+    try stdout.print("Choice.probability(0)={d:.3} missing={}\n", .{ choice.probability(0).?, choice.probability(items.len) == null });
     var choice_engine = alea.ScalarPrng.init(0x5e11_0007);
     const choice_index = choice.sampleIndexFrom(&choice_engine);
     try stdout.print("Choice.sampleIndexFrom: {}\n", .{choice_index});

@@ -582,6 +582,7 @@ Use:
   drawing)
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `Choice.sampleIndexFrom`,
+  `Choice.probability` / `probabilityAt`,
   `Choice.sampleIndexU32From`, `Choice.fillValuesFrom` / `fillFrom`,
   `Choice.valuesFrom` / `ptrsFrom`, fixed-size `Choice.valueArrayFrom` /
   `ptrArrayFrom`, `Choice.fillIndicesFrom`,
