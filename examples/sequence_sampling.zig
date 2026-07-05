@@ -59,6 +59,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("sampleIndexVec len={} values=", .{index_vec.len()});
     try printIndexVec(stdout, index_vec);
     try stdout.print("\n", .{});
+    try stdout.print("IndexVec.index(0)={} at(0)={}\n", .{ index_vec.index(0), index_vec.at(0) });
 
     var item_index_engine = alea.ScalarPrng.init(0x5e11_0014);
     const item_index_vec = try alea.seq.sampleIndexVecFrom(allocator, &item_index_engine, items.len, 3);

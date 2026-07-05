@@ -99,8 +99,8 @@ pub const IndexVec = union(enum) {
             items: []const T,
 
             pub fn next(self: *@This()) ?T {
-                const index = self.index_iter.next() orelse return null;
-                return self.items[index];
+                const item_index = self.index_iter.next() orelse return null;
+                return self.items[item_index];
             }
 
             pub fn remaining(self: @This()) usize {
@@ -129,8 +129,8 @@ pub const IndexVec = union(enum) {
             items: []const T,
 
             pub fn next(self: *@This()) ?*const T {
-                const index = self.index_iter.next() orelse return null;
-                return &self.items[index];
+                const item_index = self.index_iter.next() orelse return null;
+                return &self.items[item_index];
             }
 
             pub fn remaining(self: @This()) usize {
@@ -159,8 +159,8 @@ pub const IndexVec = union(enum) {
             items: []T,
 
             pub fn next(self: *@This()) ?*T {
-                const index = self.index_iter.next() orelse return null;
-                return &self.items[index];
+                const item_index = self.index_iter.next() orelse return null;
+                return &self.items[item_index];
             }
 
             pub fn remaining(self: @This()) usize {
@@ -194,17 +194,21 @@ pub const IndexVec = union(enum) {
         return self.len() == 0;
     }
 
-    pub fn at(self: IndexVec, index: usize) usize {
+    pub fn at(self: IndexVec, position: usize) usize {
         return switch (self) {
-            .u32 => |items| items[index],
-            .usize => |items| items[index],
+            .u32 => |items| items[position],
+            .usize => |items| items[position],
         };
     }
 
+    pub fn index(self: IndexVec, position: usize) usize {
+        return self.at(position);
+    }
+
     pub fn indexOf(self: IndexVec, value: usize) ?usize {
-        var index: usize = 0;
-        while (index < self.len()) : (index += 1) {
-            if (self.at(index) == value) return index;
+        var position: usize = 0;
+        while (position < self.len()) : (position += 1) {
+            if (self.at(position) == value) return position;
         }
         return null;
     }
@@ -238,19 +242,19 @@ pub const IndexVec = union(enum) {
     }
 
     pub fn validateItems(self: IndexVec, item_len: usize) Error!void {
-        var index: usize = 0;
-        while (index < self.len()) : (index += 1) {
-            if (self.at(index) >= item_len) return error.InvalidParameter;
+        var position: usize = 0;
+        while (position < self.len()) : (position += 1) {
+            if (self.at(position) >= item_len) return error.InvalidParameter;
         }
     }
 
     pub fn validateDistinctItems(self: IndexVec, item_len: usize) Error!void {
         try self.validateItems(item_len);
-        var index: usize = 0;
-        while (index < self.len()) : (index += 1) {
-            var other = index + 1;
+        var position: usize = 0;
+        while (position < self.len()) : (position += 1) {
+            var other = position + 1;
             while (other < self.len()) : (other += 1) {
-                if (self.at(index) == self.at(other)) return error.InvalidParameter;
+                if (self.at(position) == self.at(other)) return error.InvalidParameter;
             }
         }
     }
@@ -350,8 +354,8 @@ pub const IndexVec = union(enum) {
 
     pub fn valuesInto(self: IndexVec, comptime T: type, items: []const T, out: []T) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
-        var index: usize = 0;
-        while (index < self.len()) : (index += 1) out[index] = items[self.at(index)];
+        var position: usize = 0;
+        while (position < self.len()) : (position += 1) out[position] = items[self.at(position)];
     }
 
     pub fn valuesIntoChecked(self: IndexVec, comptime T: type, items: []const T, out: []T) Error!void {
@@ -373,8 +377,8 @@ pub const IndexVec = union(enum) {
 
     pub fn ptrsInto(self: IndexVec, comptime T: type, items: []const T, out: []*const T) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
-        var index: usize = 0;
-        while (index < self.len()) : (index += 1) out[index] = &items[self.at(index)];
+        var position: usize = 0;
+        while (position < self.len()) : (position += 1) out[position] = &items[self.at(position)];
     }
 
     pub fn ptrsIntoChecked(self: IndexVec, comptime T: type, items: []const T, out: []*const T) Error!void {
@@ -396,8 +400,8 @@ pub const IndexVec = union(enum) {
 
     pub fn mutPtrsInto(self: IndexVec, comptime T: type, items: []T, out: []*T) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
-        var index: usize = 0;
-        while (index < self.len()) : (index += 1) out[index] = &items[self.at(index)];
+        var position: usize = 0;
+        while (position < self.len()) : (position += 1) out[position] = &items[self.at(position)];
     }
 
     pub fn mutPtrsIntoChecked(self: IndexVec, comptime T: type, items: []T, out: []*T) Error!void {
@@ -9484,6 +9488,7 @@ test "portable index sampling has stable snapshots" {
     try std.testing.expectEqual(@as(?usize, 4), index_vec.indexOf(0));
     try std.testing.expect(index_vec.contains(18));
     try std.testing.expect(!index_vec.contains(99));
+    for (expected, 0..) |value, i| try std.testing.expectEqual(value, index_vec.index(i));
     var iter = index_vec.iter();
     try std.testing.expectEqual(@as(usize, expected.len), iter.remaining());
     try std.testing.expectEqual(@as(usize, expected.len), iter.len());
