@@ -272,21 +272,24 @@ All engines expose deterministic construction and `random()` interop where
 appropriate. Engines with byte fills expose Rust-discoverable `fillBytes`
 aliases; all deterministic engines expose Rust-discoverable `nextU64` /
 `nextU32` raw aliases alongside `next`, plus Rust-discoverable `seedFromU64`
-constructor aliases alongside their Zig-native seed constructors.
+and `fromSeed` constructor aliases alongside their Zig-native seed constructors.
 
-- `SplitMix64`: `init`, `seedFromU64`, `next`, `nextU64`, `nextU32`
-- `Wyhash64`: `init`, `seedFromU64`, `fromState`, `random`, `next`,
+- `SplitMix64`: `init`, `seedFromU64`, `fromSeed`, `next`, `nextU64`,
+  `nextU32`
+- `Wyhash64`: `init`, `seedFromU64`, `fromSeed`, `fromState`, `random`,
+  `next`,
   `nextU64`, `nextU32`, `fill`, `fillBytes`
-- `Alea4x64`: `init`, `seedFromU64`, `random`, `next`, `nextU64`,
-  `nextU32`, `fill`, `fillBytes`
-- `Xoshiro256`: `init`, `seedFromU64`, `seed`, `random`, `next`, `nextU64`,
-  `nextU32`, `split`, `jump`, `longJump`, `fill`, `fillBytes`
-- `Xoshiro256PlusPlus`: `init`, `seedFromU64`, `random`, `next`,
+- `Alea4x64`: `init`, `seedFromU64`, `fromSeed`, `random`, `next`,
+  `nextU64`, `nextU32`, `fill`, `fillBytes`
+- `Xoshiro256`: `init`, `seedFromU64`, `fromSeed`, `seed`, `random`,
+  `next`, `nextU64`, `nextU32`, `split`, `jump`, `longJump`, `fill`,
+  `fillBytes`
+- `Xoshiro256PlusPlus`: `init`, `seedFromU64`, `fromSeed`, `random`, `next`,
   `nextU64`, `nextU32`, `jump`, `fill`, `fillBytes`
-- `Pcg64`: `init`, `seedFromU64`, `initTwo`, `random`, `next`, `nextU64`,
-  `nextU32`, `fill`, `fillBytes`
+- `Pcg64`: `init`, `seedFromU64`, `fromSeed`, `initTwo`, `random`, `next`,
+  `nextU64`, `nextU32`, `fill`, `fillBytes`
 - `ChaCha`: `seed_length`, `init`, `initFromU64`, `random`, `addEntropy`,
-  `seedFromU64`, `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`
+  `seedFromU64`, `fromSeed`, `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`
 
 ## Distributions
 

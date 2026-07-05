@@ -15,6 +15,10 @@ pub fn seedFromU64(seed_value: u64) Xoshiro256 {
     return init(seed_value);
 }
 
+pub fn fromSeed(seed_value: anytype) Xoshiro256 {
+    return init(seed_value.state);
+}
+
 pub fn seed(self: *Xoshiro256, seed_value: u64) void {
     var sm = SplitMix64.init(seed_value);
     inline for (0..4) |i| self.state[i] = sm.next();

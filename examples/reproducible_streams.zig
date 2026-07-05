@@ -34,6 +34,7 @@ pub fn main(init: std.process.Init) !void {
     var engine_fill_bytes: [8]u8 = undefined;
     raw_alias_engine.fillBytes(&engine_fill_bytes);
     var seed_alias_engine = alea.DefaultPrng.seedFromU64(sampling_seed.stream(6).state);
+    var from_seed_alias_engine = alea.DefaultPrng.fromSeed(sampling_seed.stream(7));
 
     try printNext(stdout, "DefaultPrng/Xoshiro256", &default_engine, 3);
     try printNext(stdout, "FastPrng/Alea4x64", &fast_engine, 3);
@@ -42,6 +43,7 @@ pub fn main(init: std.process.Init) !void {
     try printNext(stdout, "SecurePrng/ChaCha12-from-seed", &secure_style_engine, 3);
     try stdout.print("engine raw aliases: nextU64=0x{x}, nextU32=0x{x}, fillBytes={any}\n", .{ engine_raw64, engine_raw32, engine_fill_bytes });
     try stdout.print("engine seedFromU64 alias next: 0x{x}\n", .{seed_alias_engine.next()});
+    try stdout.print("engine fromSeed alias next: 0x{x}\n", .{from_seed_alias_engine.next()});
 
     var parent_a = alea.Xoshiro256.init(0x5150);
     var parent_b = alea.Xoshiro256.init(0x5150);

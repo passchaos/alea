@@ -10,6 +10,10 @@ pub fn seedFromU64(seed: u64) SplitMix64 {
     return init(seed);
 }
 
+pub fn fromSeed(seed: anytype) SplitMix64 {
+    return init(seed.state);
+}
+
 pub fn next(self: *SplitMix64) u64 {
     self.state +%= 0x9e3779b97f4a7c15;
 

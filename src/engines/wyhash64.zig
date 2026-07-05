@@ -21,6 +21,10 @@ pub fn seedFromU64(seed: u64) Wyhash64 {
     return init(seed);
 }
 
+pub fn fromSeed(seed: anytype) Wyhash64 {
+    return init(seed.state);
+}
+
 pub fn fromState(state: u64) Wyhash64 {
     return .{ .state = state };
 }

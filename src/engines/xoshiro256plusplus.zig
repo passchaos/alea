@@ -16,6 +16,10 @@ pub fn seedFromU64(seed_value: u64) Xoshiro256PlusPlus {
     return init(seed_value);
 }
 
+pub fn fromSeed(seed_value: anytype) Xoshiro256PlusPlus {
+    return init(seed_value.state);
+}
+
 pub fn random(self: *Xoshiro256PlusPlus) std.Random {
     return std.Random.init(self, fill);
 }

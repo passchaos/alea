@@ -38,6 +38,10 @@ pub fn seedFromU64(seed: u64) ChaCha {
     return initFromU64(seed);
 }
 
+pub fn fromSeed(seed: anytype) ChaCha {
+    return initFromU64(seed.state);
+}
+
 pub fn random(self: *ChaCha) std.Random {
     return std.Random.init(self, fill);
 }

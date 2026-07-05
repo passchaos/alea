@@ -21,6 +21,10 @@ pub fn seedFromU64(seed: u64) Alea4x64 {
     return init(seed);
 }
 
+pub fn fromSeed(seed: anytype) Alea4x64 {
+    return init(seed.state);
+}
+
 pub fn random(self: *Alea4x64) std.Random {
     return std.Random.init(self, fill);
 }

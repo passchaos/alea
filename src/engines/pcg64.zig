@@ -17,6 +17,10 @@ pub fn seedFromU64(seed: u64) Pcg64 {
     return init(seed);
 }
 
+pub fn fromSeed(seed: anytype) Pcg64 {
+    return init(seed.state);
+}
+
 pub fn initTwo(seed: u64, stream: u64) Pcg64 {
     var self: Pcg64 = .{
         .state = 0,

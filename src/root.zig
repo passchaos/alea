@@ -196,3 +196,18 @@ test "engine seedFromU64 aliases mirror constructors" {
         try expectEngineSeedFromU64Alias(Engine, seed);
     }
 }
+
+fn expectEngineFromSeedAlias(comptime Engine: type, seed_value: u64) !void {
+    const seed = Seed.init(seed_value);
+    var direct = engineFromSeed(Engine, seed_value);
+    var alias = Engine.fromSeed(seed);
+    try std.testing.expectEqual(direct.next(), alias.next());
+}
+
+test "engine fromSeed aliases mirror Seed constructors" {
+    const seed: u64 = 0x5150_5eed_f00d_cafe;
+
+    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha }) |Engine| {
+        try expectEngineFromSeedAlias(Engine, seed);
+    }
+}
