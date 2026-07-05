@@ -448,6 +448,7 @@ pub fn main(init: std.process.Init) !void {
     defer tree.deinit();
     try tree.update(1, 8);
     try tree.push(4);
+    const tree_num_choices = tree.numChoices();
     const tree_weight = tree.weight(1).?;
     const tree_missing_weight = tree.weight(tree.len()) == null;
     const tree_probability = tree.probability(1).?;
@@ -472,6 +473,7 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(tree_owned_indices);
     var tree_array_engine = alea.ScalarPrng.init(0x71c3);
     const tree_array_u32 = try tree.indexArrayU32CheckedFrom(&tree_array_engine, 4);
+    try stdout.print("dynamic tree numChoices: {}\n", .{tree_num_choices});
     try stdout.print("dynamic tree weight(1)={d:.3} missing={}\n", .{ tree_weight, tree_missing_weight });
     try stdout.print("dynamic tree probability(1)={d:.3} missing={}\n", .{ tree_probability, tree_missing_probability });
     try stdout.print("dynamic tree weightIter fill: {any}\n", .{tree_weight_iter_fill});
@@ -493,6 +495,7 @@ pub fn main(init: std.process.Init) !void {
     var int_tree = try alea.distributions.WeightedIntTree(u32).init(allocator, &int_weights);
     defer int_tree.deinit();
     try int_tree.update(2, 10);
+    const int_tree_num_choices = int_tree.numChoices();
     const int_tree_weight = int_tree.weight(2).?;
     const int_tree_missing_weight = int_tree.weight(int_tree.len()) == null;
     const int_tree_probability = int_tree.probability(2).?;
@@ -516,6 +519,7 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(int_tree_owned_u32);
     var int_tree_array_engine = alea.ScalarPrng.init(0x71c4);
     const int_tree_array_u32 = try int_tree.indexArrayU32CheckedFrom(&int_tree_array_engine, 4);
+    try stdout.print("integer tree numChoices: {}\n", .{int_tree_num_choices});
     try stdout.print("integer tree total weight: {}\n", .{int_tree.totalWeight()});
     try stdout.print("integer tree weight(2)={} missing={}\n", .{ int_tree_weight, int_tree_missing_weight });
     try stdout.print("integer tree probability(2)={d:.3} missing={}\n", .{ int_tree_probability, int_tree_missing_probability });

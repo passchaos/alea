@@ -16144,6 +16144,10 @@ pub fn WeightedTree(comptime Weight: type) type {
             return self.subtotals.items.len;
         }
 
+        pub fn numChoices(self: Self) usize {
+            return self.subtotals.items.len;
+        }
+
         pub fn isEmpty(self: Self) bool {
             return self.len() == 0;
         }
@@ -16807,6 +16811,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn len(self: Self) usize {
+            return self.subtotals.items.len;
+        }
+
+        pub fn numChoices(self: Self) usize {
             return self.subtotals.items.len;
         }
 
@@ -18979,6 +18987,7 @@ test "weighted tree supports dynamic updates" {
     defer tree.deinit();
 
     try std.testing.expectEqual(@as(usize, 3), tree.len());
+    try std.testing.expectEqual(@as(usize, 3), tree.numChoices());
     try std.testing.expect(tree.isValid());
     try std.testing.expectApproxEqAbs(@as(f64, 10), tree.totalWeight(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 9), try tree.get(0), 1e-12);
@@ -19059,6 +19068,7 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectError(error.InvalidWeight, tree.probabilitiesInto(&probabilities_buf));
 
     try tree.push(7);
+    try std.testing.expectEqual(@as(usize, 4), tree.numChoices());
     var i: usize = 0;
     while (i < 16) : (i += 1) {
         try std.testing.expectEqual(@as(usize, 3), tree.sampleFrom(&engine));
@@ -19079,6 +19089,7 @@ test "weighted tree supports dynamic updates" {
 
     try std.testing.expectApproxEqAbs(@as(f64, 7), tree.pop().?, 1e-12);
     try std.testing.expectEqual(@as(usize, 3), tree.len());
+    try std.testing.expectEqual(@as(usize, 3), tree.numChoices());
     try std.testing.expectEqual(@as(usize, 2), tree.sample(rng));
     try tree.weightsInto(&weights_buf);
     try std.testing.expectApproxEqAbs(@as(f64, 0), weights_buf[0], 1e-12);
@@ -19088,6 +19099,7 @@ test "weighted tree supports dynamic updates" {
 
     var empty_tree = try WeightedTree(u32).init(std.testing.allocator, &.{});
     defer empty_tree.deinit();
+    try std.testing.expectEqual(@as(usize, 0), empty_tree.numChoices());
     try std.testing.expect(empty_tree.isEmpty());
     try std.testing.expect(!empty_tree.isValid());
     try std.testing.expectEqual(@as(?f64, null), empty_tree.pop());
@@ -19095,11 +19107,13 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expect(empty_tree.isEmpty());
     try empty_tree.push(6);
     try std.testing.expect(!empty_tree.isEmpty());
+    try std.testing.expectEqual(@as(usize, 1), empty_tree.numChoices());
     try std.testing.expect(empty_tree.isValid());
     try std.testing.expectApproxEqAbs(@as(f64, 6), empty_tree.totalWeight(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 6), try empty_tree.get(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 6), empty_tree.pop().?, 1e-12);
     try std.testing.expect(empty_tree.isEmpty());
+    try std.testing.expectEqual(@as(usize, 0), empty_tree.numChoices());
     try std.testing.expect(!empty_tree.isValid());
     try std.testing.expectError(error.InvalidParameter, empty_tree.get(0));
     var empty_probabilities: [0]f64 = .{};
@@ -19919,6 +19933,7 @@ test "weighted int tree supports dynamic updates" {
     defer tree.deinit();
 
     try std.testing.expectEqual(@as(usize, 3), tree.len());
+    try std.testing.expectEqual(@as(usize, 3), tree.numChoices());
     try std.testing.expect(!tree.isEmpty());
     try std.testing.expect(tree.isValid());
     try std.testing.expectEqual(@as(u64, 10), tree.totalWeight());
@@ -19999,6 +20014,7 @@ test "weighted int tree supports dynamic updates" {
 
     try tree.push(5);
     try std.testing.expectEqual(@as(usize, 4), tree.len());
+    try std.testing.expectEqual(@as(usize, 4), tree.numChoices());
     try std.testing.expectEqual(@as(u64, 5), tree.totalWeight());
     try std.testing.expectEqual(@as(u64, 5), try tree.get(3));
     var i: usize = 0;
@@ -20013,6 +20029,7 @@ test "weighted int tree supports dynamic updates" {
     const popped = tree.pop().?;
     try std.testing.expectEqual(@as(u64, 5), popped);
     try std.testing.expectEqual(@as(usize, 3), tree.len());
+    try std.testing.expectEqual(@as(usize, 3), tree.numChoices());
     try std.testing.expectEqual(@as(u64, 5), tree.totalWeight());
     try std.testing.expectEqual(@as(usize, 2), tree.sample(rng));
     try tree.weightsInto(&weights_buf);
@@ -20022,6 +20039,7 @@ test "weighted int tree supports dynamic updates" {
 
     var empty_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{});
     defer empty_tree.deinit();
+    try std.testing.expectEqual(@as(usize, 0), empty_tree.numChoices());
     try std.testing.expect(empty_tree.isEmpty());
     try std.testing.expect(!empty_tree.isValid());
     try std.testing.expectEqual(@as(?u64, null), empty_tree.pop());
@@ -20029,11 +20047,13 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expect(empty_tree.isEmpty());
     try empty_tree.push(6);
     try std.testing.expect(!empty_tree.isEmpty());
+    try std.testing.expectEqual(@as(usize, 1), empty_tree.numChoices());
     try std.testing.expect(empty_tree.isValid());
     try std.testing.expectEqual(@as(u64, 6), empty_tree.totalWeight());
     try std.testing.expectEqual(@as(u64, 6), try empty_tree.get(0));
     try std.testing.expectEqual(@as(u64, 6), empty_tree.pop().?);
     try std.testing.expect(empty_tree.isEmpty());
+    try std.testing.expectEqual(@as(usize, 0), empty_tree.numChoices());
     try std.testing.expect(!empty_tree.isValid());
     try std.testing.expectError(error.InvalidParameter, empty_tree.get(0));
     var empty_probabilities: [0]f64 = .{};

@@ -2436,6 +2436,7 @@ Dynamic weighted helpers:
 - `WeightedTree.initByIndex`
 - `WeightedTree.initBy`
 - `WeightedTree.len`
+- `WeightedTree.numChoices`
 - `WeightedTree.isEmpty`
 - `WeightedTree.push`
 - `WeightedTree.pop`
@@ -2531,6 +2532,7 @@ Dynamic weighted helpers:
 - `WeightedIntTree.initByIndex`
 - `WeightedIntTree.initBy`
 - `WeightedIntTree.len`
+- `WeightedIntTree.numChoices`
 - `WeightedIntTree.isEmpty`
 - `WeightedIntTree.push`
 - `WeightedIntTree.pop`
