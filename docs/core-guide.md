@@ -781,8 +781,9 @@ Slice weighted sampling validates all weights before drawing, so invalid
 weights leave the stream untouched.
 The remaining allocation-returning streaming helpers whose result length is not
 known until the stream is inspected are explicitly different: short
-`sampleIteratorFrom` results, partial weighted-iterator samples, and Unicode
-UTF-8 string allocation may need to finalize storage after reading/drawing, so
+`sampleIteratorFrom` results, partial weighted-iterator samples, and allocation-returning
+Unicode UTF-8 strings (including `UnicodeCharset.sampleString*`) may need to
+finalize storage after reading/drawing, so
 prefer checked exact-count or caller-owned-buffer forms when no-consume
 allocation-failure behavior matters.
 `AliasTable.update`, `AliasTable.updateWeights` / `updateMany`,
@@ -798,13 +799,18 @@ already consumed randomness for earlier accepted candidates.
 ## Strings
 
 `ascii.zig` includes ASCII `Alphanumeric`, `Alphabetic`, `Lowercase`,
-`Uppercase`, `Digits`, custom `Charset`, and Unicode scalar UTF-8 string
-generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
+`Uppercase`, `Digits`, custom byte `Charset`, reusable Unicode scalar
+`UnicodeCharset`, and Unicode scalar UTF-8 string generation. Use
+`Charset.sampleFrom`, `Charset.fillFrom`,
 `Charset.allocFrom`, Rust-discoverable `Charset.sampleStringFrom` /
 `Charset.appendStringFrom`, `Charset.numChoices` / `len`,
 `Charset.constantIndex`, `Charset.item` / `byteAt` / `get`,
 `Charset.probability` / `probabilityAt`, `Charset.probabilityIter` size hints,
 `charFrom`, `stringFrom`, `sampleStringFrom`, `appendStringFrom`,
+`UnicodeCharset.init`, `UnicodeCharset.initChecked`,
+`UnicodeCharset.sampleFrom`, `UnicodeCharset.fillFrom`,
+`UnicodeCharset.sampleStringFrom`, `UnicodeCharset.appendStringFrom`,
+`UnicodeCharset.maxUtf8Len` / `utf8Capacity`, Unicode charset diagnostics,
 `unicodeScalarFrom`,
 `unicodeScalarRangeLessThanFrom`, `unicodeScalarRangeAtMostFrom`,
 `fillUnicodeScalarFrom`, `fillUnicodeScalarRangeLessThanFrom`,
@@ -814,8 +820,10 @@ generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
 the engine type is comptime-known. Use
 `Charset.sampleChecked`, `Charset.sampleCheckedFrom`, `Charset.fillChecked`,
 `Charset.fillCheckedFrom`, `Charset.allocChecked`, `Charset.allocCheckedFrom`,
-`Charset.sampleStringChecked`, and `Charset.appendStringChecked` when a
-manually constructed charset may be empty;
+`Charset.sampleStringChecked`, `Charset.appendStringChecked`,
+`UnicodeCharset.sampleStringChecked`, and `UnicodeCharset.appendStringChecked`
+when a manually constructed charset may be empty or contain invalid Unicode
+scalar values;
 zero-length fills and allocations return empty results before validating charset
 contents. Initial allocation failures in ASCII and Unicode string helpers are
 reported before any scalar is drawn, so retry/error paths do not silently
@@ -828,7 +836,8 @@ when you need a bounded Unicode scalar interval while still skipping UTF-16
 surrogate code points.
 Run `zig build run-string-generation` for a runnable comparison of predefined
 ASCII charsets, custom `Charset` count, checked-item, optional-item, probability, probability-iterator, and size-hint diagnostics, allocation-returning strings,
-Unicode scalar batches and range batches, and caller-owned UTF-8 buffers.
+Unicode scalar batches and range batches, reusable Unicode scalar charsets, and
+caller-owned UTF-8 buffers.
 
 ## Validation
 

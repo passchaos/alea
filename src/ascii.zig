@@ -222,6 +222,241 @@ pub const Charset = struct {
     }
 };
 
+pub const UnicodeCharset = struct {
+    scalars: []const u21,
+
+    pub const ProbabilityIterator = struct {
+        const Iterator = @This();
+
+        charset: UnicodeCharset,
+        index: usize = 0,
+
+        pub fn next(self: *Iterator) ?f64 {
+            const value = self.charset.probability(self.index) orelse return null;
+            self.index += 1;
+            return value;
+        }
+
+        pub fn remaining(self: Iterator) usize {
+            return self.charset.len() - self.index;
+        }
+
+        pub fn len(self: Iterator) usize {
+            return self.remaining();
+        }
+
+        pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+            const length = self.remaining();
+            return .{ .lower = length, .upper = length };
+        }
+
+        pub fn fill(self: *Iterator, dest: []f64) usize {
+            const count = @min(dest.len, self.remaining());
+            for (dest[0..count]) |*slot| slot.* = self.next().?;
+            return count;
+        }
+    };
+
+    pub fn init(scalars: []const u21) UnicodeCharset {
+        std.debug.assert(scalars.len > 0);
+        for (scalars) |scalar| std.debug.assert(std.unicode.utf8ValidCodepoint(scalar));
+        return .{ .scalars = scalars };
+    }
+
+    pub fn initChecked(scalars: []const u21) error{ EmptyCharset, InvalidParameter }!UnicodeCharset {
+        try validateScalars(scalars);
+        return .{ .scalars = scalars };
+    }
+
+    pub fn scalarsValue(self: UnicodeCharset) []const u21 {
+        return self.scalars;
+    }
+
+    pub fn len(self: UnicodeCharset) usize {
+        return self.scalars.len;
+    }
+
+    pub fn numChoices(self: UnicodeCharset) usize {
+        return self.scalars.len;
+    }
+
+    pub fn constantIndex(self: UnicodeCharset) ?usize {
+        return if (self.scalars.len == 1) 0 else null;
+    }
+
+    pub fn isEmpty(self: UnicodeCharset) bool {
+        return self.len() == 0;
+    }
+
+    pub fn scalarAt(self: UnicodeCharset, index: usize) error{InvalidParameter}!u21 {
+        if (index >= self.scalars.len) return error.InvalidParameter;
+        return self.scalars[index];
+    }
+
+    pub fn item(self: UnicodeCharset, index: usize) error{InvalidParameter}!u21 {
+        return self.scalarAt(index);
+    }
+
+    pub fn get(self: UnicodeCharset, index: usize) ?u21 {
+        if (index >= self.scalars.len) return null;
+        return self.scalars[index];
+    }
+
+    pub fn indexOf(self: UnicodeCharset, scalar: u21) ?usize {
+        return std.mem.indexOfScalar(u21, self.scalars, scalar);
+    }
+
+    pub fn contains(self: UnicodeCharset, scalar: u21) bool {
+        return self.indexOf(scalar) != null;
+    }
+
+    pub fn maxUtf8Len(self: UnicodeCharset) usize {
+        var max_len: usize = 0;
+        for (self.scalars) |scalar| {
+            const scalar_len: usize = std.unicode.utf8CodepointSequenceLength(scalar) catch unreachable;
+            max_len = @max(max_len, scalar_len);
+        }
+        return max_len;
+    }
+
+    pub fn utf8Capacity(self: UnicodeCharset, length: usize) error{OutOfMemory}!usize {
+        return std.math.mul(usize, self.maxUtf8Len(), length) catch return error.OutOfMemory;
+    }
+
+    pub fn probabilityAt(self: UnicodeCharset, index: usize) error{InvalidParameter}!f64 {
+        if (index >= self.scalars.len) return error.InvalidParameter;
+        return 1.0 / @as(f64, @floatFromInt(self.scalars.len));
+    }
+
+    pub fn probability(self: UnicodeCharset, index: usize) ?f64 {
+        return self.probabilityAt(index) catch null;
+    }
+
+    pub fn probabilityIter(self: UnicodeCharset) ProbabilityIterator {
+        return .{ .charset = self };
+    }
+
+    pub fn probabilities(self: UnicodeCharset, allocator: std.mem.Allocator) ![]f64 {
+        const out = try allocator.alloc(f64, self.scalars.len);
+        errdefer allocator.free(out);
+        try self.probabilitiesInto(out);
+        return out;
+    }
+
+    pub fn probabilitiesInto(self: UnicodeCharset, out: []f64) error{InvalidParameter}!void {
+        if (out.len != self.scalars.len) return error.InvalidParameter;
+        if (out.len == 0) return;
+        @memset(out, 1.0 / @as(f64, @floatFromInt(self.scalars.len)));
+    }
+
+    pub fn sample(self: UnicodeCharset, rng: Rng) u21 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleChecked(self: UnicodeCharset, rng: Rng) error{ EmptyCharset, InvalidParameter }!u21 {
+        return self.sampleCheckedFrom(rng);
+    }
+
+    pub fn sampleCheckedFrom(self: UnicodeCharset, source: anytype) error{ EmptyCharset, InvalidParameter }!u21 {
+        try self.validateNonEmpty();
+        return self.sampleFrom(source);
+    }
+
+    pub fn sampleFrom(self: UnicodeCharset, source: anytype) u21 {
+        std.debug.assert(self.scalars.len > 0);
+        if (self.scalars.len == 1) return self.scalars[0];
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const scalar_count: u64 = @intCast(self.scalars.len);
+            const index = Rng.uintLessThanFrom(source, u64, scalar_count);
+            return self.scalars[@intCast(index)];
+        }
+        return self.scalars[Rng.uintLessThanFrom(source, usize, self.scalars.len)];
+    }
+
+    pub fn fill(self: UnicodeCharset, rng: Rng, out: []u21) void {
+        self.fillFrom(rng, out);
+    }
+
+    pub fn fillChecked(self: UnicodeCharset, rng: Rng, out: []u21) error{ EmptyCharset, InvalidParameter }!void {
+        try self.fillCheckedFrom(rng, out);
+    }
+
+    pub fn fillCheckedFrom(self: UnicodeCharset, source: anytype, out: []u21) error{ EmptyCharset, InvalidParameter }!void {
+        if (out.len == 0) return;
+        try self.validateNonEmpty();
+        self.fillFrom(source, out);
+    }
+
+    pub fn fillFrom(self: UnicodeCharset, source: anytype, out: []u21) void {
+        std.debug.assert(self.scalars.len > 0 or out.len == 0);
+        if (self.scalars.len == 1) {
+            @memset(out, self.scalars[0]);
+            return;
+        }
+        for (out) |*scalar| scalar.* = self.sampleFrom(source);
+    }
+
+    pub fn sampleString(self: UnicodeCharset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
+        return self.sampleStringFrom(allocator, rng, length);
+    }
+
+    pub fn sampleStringFrom(self: UnicodeCharset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {
+        const capacity = try self.utf8Capacity(length);
+        var out = try std.ArrayList(u8).initCapacity(allocator, capacity);
+        errdefer out.deinit(allocator);
+        try self.appendStringFrom(allocator, source, &out, length);
+        return out.toOwnedSlice(allocator);
+    }
+
+    pub fn sampleStringChecked(self: UnicodeCharset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
+        return self.sampleStringCheckedFrom(allocator, rng, length);
+    }
+
+    pub fn sampleStringCheckedFrom(self: UnicodeCharset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {
+        if (length == 0) return allocator.alloc(u8, 0);
+        try self.validateNonEmpty();
+        return self.sampleStringFrom(allocator, source, length);
+    }
+
+    pub fn appendString(self: UnicodeCharset, allocator: std.mem.Allocator, rng: Rng, string_buffer: *std.ArrayList(u8), length: usize) !void {
+        try self.appendStringFrom(allocator, rng, string_buffer, length);
+    }
+
+    pub fn appendStringFrom(self: UnicodeCharset, allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), length: usize) !void {
+        if (length == 0) return;
+        std.debug.assert(self.scalars.len > 0);
+        try string_buffer.ensureUnusedCapacity(allocator, try self.utf8Capacity(length));
+
+        var i: usize = 0;
+        while (i < length) : (i += 1) {
+            var buf: [4]u8 = undefined;
+            const written = std.unicode.utf8Encode(self.sampleFrom(source), &buf) catch unreachable;
+            string_buffer.appendSliceAssumeCapacity(buf[0..written]);
+        }
+    }
+
+    pub fn appendStringChecked(self: UnicodeCharset, allocator: std.mem.Allocator, rng: Rng, string_buffer: *std.ArrayList(u8), length: usize) !void {
+        try self.appendStringCheckedFrom(allocator, rng, string_buffer, length);
+    }
+
+    pub fn appendStringCheckedFrom(self: UnicodeCharset, allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), length: usize) !void {
+        if (length == 0) return;
+        try self.validateNonEmpty();
+        try self.appendStringFrom(allocator, source, string_buffer, length);
+    }
+
+    fn validateNonEmpty(self: UnicodeCharset) error{ EmptyCharset, InvalidParameter }!void {
+        try validateScalars(self.scalars);
+    }
+
+    fn validateScalars(scalars: []const u21) error{ EmptyCharset, InvalidParameter }!void {
+        if (scalars.len == 0) return error.EmptyCharset;
+        for (scalars) |scalar| {
+            if (!std.unicode.utf8ValidCodepoint(scalar)) return error.InvalidParameter;
+        }
+    }
+};
+
 pub const Alphanumeric = Charset{ .bytes = alphanumeric };
 pub const Alphabetic = Charset{ .bytes = alphabetic };
 pub const Lowercase = Charset{ .bytes = lowercase };
@@ -591,6 +826,258 @@ test "sampleString checked aliases handle empty charsets without consuming" {
     try empty.appendStringCheckedFrom(std.testing.allocator, &engine, &list, 0);
     try std.testing.expectEqual(@as(usize, 0), list.items.len);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "unicode charset strings sample from scalar choices" {
+    const alea = @import("root.zig");
+    const symbols = UnicodeCharset.init(&.{ 'α', 'β', 'γ', 0x1F600 });
+    var engine = alea.ScalarPrng.init(0x5150_b001);
+    const rng = alea.Rng.init(&engine);
+
+    try std.testing.expectEqual(@as([]const u21, &.{ 'α', 'β', 'γ', 0x1F600 }), symbols.scalarsValue());
+    try std.testing.expectEqual(@as(usize, 4), symbols.len());
+    try std.testing.expectEqual(@as(usize, 4), symbols.numChoices());
+    try std.testing.expectEqual(@as(?usize, null), symbols.constantIndex());
+    try std.testing.expect(!symbols.isEmpty());
+    try std.testing.expectEqual(@as(u21, 'α'), try symbols.scalarAt(0));
+    try std.testing.expectEqual(@as(u21, 0x1F600), try symbols.item(3));
+    try std.testing.expectError(error.InvalidParameter, symbols.item(4));
+    try std.testing.expectEqual(@as(?u21, 'β'), symbols.get(1));
+    try std.testing.expectEqual(@as(?u21, null), symbols.get(4));
+    try std.testing.expectEqual(@as(?usize, 2), symbols.indexOf('γ'));
+    try std.testing.expect(symbols.contains(0x1F600));
+    try std.testing.expect(!symbols.contains('δ'));
+    try std.testing.expectEqual(@as(usize, 4), symbols.maxUtf8Len());
+    try std.testing.expectEqual(@as(usize, 20), try symbols.utf8Capacity(5));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), try symbols.probabilityAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), symbols.probability(3).?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), symbols.probability(4));
+    var probability_iter = symbols.probabilityIter();
+    try std.testing.expectEqual(@as(usize, 4), probability_iter.len());
+    var probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 4), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 4), probability_hint.upper);
+    var probability_buf: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), probability_iter.fill(&probability_buf));
+    for (probability_buf) |probability| try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability, 1e-12);
+    probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 2), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 2), probability_hint.upper);
+    const probabilities = try symbols.probabilities(std.testing.allocator);
+    defer std.testing.allocator.free(probabilities);
+    try std.testing.expectEqualSlices(f64, &.{ 0.25, 0.25, 0.25, 0.25 }, probabilities);
+    var wrong_probabilities: [3]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, symbols.probabilitiesInto(&wrong_probabilities));
+
+    const scalar = symbols.sample(rng);
+    try std.testing.expect(symbols.contains(scalar));
+    var scalar_buf: [12]u21 = undefined;
+    symbols.fill(rng, &scalar_buf);
+    for (scalar_buf) |item| try std.testing.expect(symbols.contains(item));
+
+    const text = try symbols.sampleString(std.testing.allocator, rng, 12);
+    defer std.testing.allocator.free(text);
+    var view = try std.unicode.Utf8View.init(text);
+    var iter = view.iterator();
+    var count: usize = 0;
+    while (iter.nextCodepoint()) |codepoint| {
+        count += 1;
+        try std.testing.expect(symbols.contains(codepoint));
+    }
+    try std.testing.expectEqual(@as(usize, 12), count);
+
+    var appended = try std.ArrayList(u8).initCapacity(std.testing.allocator, 4);
+    defer appended.deinit(std.testing.allocator);
+    try appended.appendSlice(std.testing.allocator, "u:");
+    try symbols.appendString(std.testing.allocator, rng, &appended, 6);
+    try std.testing.expectEqualStrings("u:", appended.items[0..2]);
+    view = try std.unicode.Utf8View.init(appended.items[2..]);
+    iter = view.iterator();
+    count = 0;
+    while (iter.nextCodepoint()) |codepoint| {
+        count += 1;
+        try std.testing.expect(symbols.contains(codepoint));
+    }
+    try std.testing.expectEqual(@as(usize, 6), count);
+
+    const singleton = UnicodeCharset.init(&.{0x2665});
+    try std.testing.expectEqual(@as(?usize, 0), singleton.constantIndex());
+    try std.testing.expectEqual(@as(u21, 0x2665), singleton.sampleFrom(&engine));
+    var singleton_buf: [3]u21 = undefined;
+    singleton.fillFrom(&engine, &singleton_buf);
+    try std.testing.expectEqualSlices(u21, &.{ 0x2665, 0x2665, 0x2665 }, &singleton_buf);
+    const singleton_text = try singleton.sampleStringFrom(std.testing.allocator, &engine, 3);
+    defer std.testing.allocator.free(singleton_text);
+    try std.testing.expectEqualStrings("♥♥♥", singleton_text);
+}
+
+test "unicode charset helpers preserve direct stream shape" {
+    const alea = @import("root.zig");
+    const symbols = UnicodeCharset.init(&.{ '水', '火', '木', '金', '土' });
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_b002);
+        var direct_engine = Engine.init(0x5150_b002);
+        const rng = alea.Rng.init(&facade_engine);
+
+        try std.testing.expectEqual(symbols.sample(rng), symbols.sampleFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try std.testing.expectEqual(try symbols.sampleChecked(rng), try symbols.sampleCheckedFrom(&direct_engine));
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_buf: [16]u21 = undefined;
+        var direct_buf: [16]u21 = undefined;
+        symbols.fill(rng, &facade_buf);
+        symbols.fillFrom(&direct_engine, &direct_buf);
+        try std.testing.expectEqualSlices(u21, &facade_buf, &direct_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try symbols.fillChecked(rng, &facade_buf);
+        try symbols.fillCheckedFrom(&direct_engine, &direct_buf);
+        try std.testing.expectEqualSlices(u21, &facade_buf, &direct_buf);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_text = try symbols.sampleString(std.testing.allocator, rng, 10);
+        defer std.testing.allocator.free(facade_text);
+        const direct_text = try symbols.sampleStringFrom(std.testing.allocator, &direct_engine, 10);
+        defer std.testing.allocator.free(direct_text);
+        try std.testing.expectEqualSlices(u8, facade_text, direct_text);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        const facade_checked_text = try symbols.sampleStringChecked(std.testing.allocator, rng, 10);
+        defer std.testing.allocator.free(facade_checked_text);
+        const direct_checked_text = try symbols.sampleStringCheckedFrom(std.testing.allocator, &direct_engine, 10);
+        defer std.testing.allocator.free(direct_checked_text);
+        try std.testing.expectEqualSlices(u8, facade_checked_text, direct_checked_text);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var facade_list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+        defer facade_list.deinit(std.testing.allocator);
+        try facade_list.appendSlice(std.testing.allocator, "z=");
+        var direct_list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+        defer direct_list.deinit(std.testing.allocator);
+        try direct_list.appendSlice(std.testing.allocator, "z=");
+        try symbols.appendString(std.testing.allocator, rng, &facade_list, 7);
+        try symbols.appendStringFrom(std.testing.allocator, &direct_engine, &direct_list, 7);
+        try std.testing.expectEqualSlices(u8, facade_list.items, direct_list.items);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        try symbols.appendStringChecked(std.testing.allocator, rng, &facade_list, 7);
+        try symbols.appendStringCheckedFrom(std.testing.allocator, &direct_engine, &direct_list, 7);
+        try std.testing.expectEqualSlices(u8, facade_list.items, direct_list.items);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    }
+}
+
+test "unicode charset checked helpers validate without consuming" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_b003);
+    var control = alea.ScalarPrng.init(0x5150_b003);
+    const empty = UnicodeCharset{ .scalars = &.{} };
+    const invalid = UnicodeCharset{ .scalars = &.{0xD800} };
+
+    try std.testing.expectError(error.EmptyCharset, UnicodeCharset.initChecked(&.{}));
+    try std.testing.expectError(error.InvalidParameter, UnicodeCharset.initChecked(&.{0xD800}));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyCharset, empty.sampleCheckedFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, invalid.sampleCheckedFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [2]u21 = undefined;
+    try std.testing.expectError(error.EmptyCharset, empty.fillCheckedFrom(&engine, &scalar_buf));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, invalid.fillCheckedFrom(&engine, &scalar_buf));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyCharset, empty.sampleStringCheckedFrom(std.testing.allocator, &engine, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, invalid.sampleStringCheckedFrom(std.testing.allocator, &engine, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+    defer list.deinit(std.testing.allocator);
+    try list.appendSlice(std.testing.allocator, "x:");
+    try std.testing.expectError(error.EmptyCharset, empty.appendStringCheckedFrom(std.testing.allocator, &engine, &list, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, invalid.appendStringCheckedFrom(std.testing.allocator, &engine, &list, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqualStrings("x:", list.items);
+
+    const zero_empty = try empty.sampleStringCheckedFrom(std.testing.allocator, &engine, 0);
+    defer std.testing.allocator.free(zero_empty);
+    try std.testing.expectEqual(@as(usize, 0), zero_empty.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+    const zero_invalid = try invalid.sampleStringCheckedFrom(std.testing.allocator, &engine, 0);
+    defer std.testing.allocator.free(zero_invalid);
+    try std.testing.expectEqual(@as(usize, 0), zero_invalid.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try invalid.appendStringCheckedFrom(std.testing.allocator, &engine, &list, 0);
+    try std.testing.expectEqualStrings("x:", list.items);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty_scalar_buf: [0]u21 = .{};
+    try invalid.fillCheckedFrom(&engine, &empty_scalar_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "single-scalar unicode charset helpers do not consume random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_b006);
+    var control = alea.ScalarPrng.init(0x5150_b006);
+    const rng = alea.Rng.init(&engine);
+    const singleton = UnicodeCharset.init(&.{0x2665});
+
+    try std.testing.expectEqual(@as(?usize, 0), singleton.constantIndex());
+    try std.testing.expectEqual(@as(u21, 0x2665), singleton.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(u21, 0x2665), try singleton.sampleChecked(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [4]u21 = undefined;
+    singleton.fillFrom(&engine, &scalar_buf);
+    try std.testing.expectEqualSlices(u21, &.{ 0x2665, 0x2665, 0x2665, 0x2665 }, &scalar_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try singleton.fillChecked(rng, &scalar_buf);
+    try std.testing.expectEqualSlices(u21, &.{ 0x2665, 0x2665, 0x2665, 0x2665 }, &scalar_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const text = try singleton.sampleStringFrom(std.testing.allocator, &engine, 3);
+    defer std.testing.allocator.free(text);
+    try std.testing.expectEqualStrings("♥♥♥", text);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+    defer list.deinit(std.testing.allocator);
+    try list.appendSlice(std.testing.allocator, "s:");
+    try singleton.appendString(std.testing.allocator, rng, &list, 2);
+    try std.testing.expectEqualStrings("s:♥♥", list.items);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "initial unicode charset allocation failures do not consume random stream" {
+    const alea = @import("root.zig");
+    const symbols = UnicodeCharset.init(&.{ 'α', 'β', 0x1F600 });
+
+    var sample_engine = alea.ScalarPrng.init(0x5150_b004);
+    var sample_control = alea.ScalarPrng.init(0x5150_b004);
+    var sample_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, symbols.sampleStringFrom(sample_alloc.allocator(), &sample_engine, 8));
+    try std.testing.expect(sample_alloc.has_induced_failure);
+    try std.testing.expectEqual(sample_control.next(), sample_engine.next());
+
+    var append_engine = alea.ScalarPrng.init(0x5150_b005);
+    var append_control = alea.ScalarPrng.init(0x5150_b005);
+    var append_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+    defer list.deinit(std.testing.allocator);
+    try list.appendSlice(std.testing.allocator, "p:");
+    try std.testing.expectError(error.OutOfMemory, symbols.appendStringFrom(append_alloc.allocator(), &append_engine, &list, 8));
+    try std.testing.expect(append_alloc.has_induced_failure);
+    try std.testing.expectEqualStrings("p:", list.items);
+    try std.testing.expectEqual(append_control.next(), append_engine.next());
 }
 
 test "invalid charset facade helpers do not consume random stream" {

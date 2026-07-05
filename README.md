@@ -73,7 +73,7 @@ The current Linux-first roadmap is intentionally broad:
   repeated index iterators
 - ASCII `Alphanumeric`, `Alphabetic`, custom `Charset`, direct-source charset
   helpers, Rust-discoverable `sampleString` / `appendString` aliases,
-  checked charset methods plus numChoices, constantIndex, and checked item alias, optional item, probability, probability-iterator, and size-hint diagnostics for fallible custom charsets, and Unicode
+  checked charset methods plus numChoices, constantIndex, and checked item alias, optional item, probability, probability-iterator, and size-hint diagnostics for fallible custom charsets, `UnicodeCharset` reusable Unicode scalar alphabets with SampleString-style UTF-8 output, and Unicode
   scalar fill/owned/range batches plus string generation with
   allocation-returning and caller-owned-buffer UTF-8 helpers
 - distributions: uniform, bernoulli, binomial, negative-binomial,

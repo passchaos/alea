@@ -58,6 +58,15 @@ pub fn main(init: std.process.Init) !void {
 
     var utf8_buf: [try alea.ascii.unicodeUtf8Capacity(6)]u8 = undefined;
     const utf8_into = try alea.ascii.unicodeUtf8IntoFrom(&engine, &utf8_buf, 6);
+    const unicode_symbols = alea.ascii.UnicodeCharset.init(&.{ 'α', 'β', 'γ', 0x1F600 });
+    const unicode_symbol_string = try unicode_symbols.sampleStringFrom(allocator, &engine, 8);
+    defer allocator.free(unicode_symbol_string);
+    var unicode_appended = try std.ArrayList(u8).initCapacity(allocator, 8);
+    defer unicode_appended.deinit(allocator);
+    try unicode_appended.appendSlice(allocator, "u:");
+    try unicode_symbols.appendStringFrom(allocator, &engine, &unicode_appended, 5);
+    const unicode_symbol_choices = unicode_symbols.numChoices();
+    const unicode_symbol_max_utf8 = unicode_symbols.maxUtf8Len();
 
     const maybe_empty = alea.ascii.Charset{ .bytes = "" };
     const empty_checked_name = if (maybe_empty.sampleCheckedFrom(&engine)) |_| "unexpected-success" else |err| @errorName(err);
@@ -84,8 +93,11 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("unicode scalar range batch: {any}\n", .{scalar_range_batch});
     try stdout.print("unicode utf8 alloc: {s}\n", .{utf8});
     try stdout.print("unicode utf8 into: {s}\n", .{utf8_into});
+    try stdout.print("unicode charset sampleString: {s}\n", .{unicode_symbol_string});
+    try stdout.print("unicode charset appendString: {s}\n", .{unicode_appended.items});
+    try stdout.print("UnicodeCharset numChoices={} maxUtf8Len={}\n", .{ unicode_symbol_choices, unicode_symbol_max_utf8 });
     try stdout.print("single charset constantIndex: {?}\n", .{single_charset.constantIndex()});
     try stdout.print("empty charset checked result: {s}\n", .{empty_checked_name});
-    try stdout.print("\nUse predefined ASCII charsets for common tokens, Charset for custom alphabets and diagnostics, unicodeScalarBatch/fillUnicodeScalar plus range variants for codepoint batches, and unicodeUtf8Capacity/unicodeUtf8Into for caller-owned UTF-8 buffers.\n", .{});
+    try stdout.print("\nUse predefined ASCII charsets for common tokens, Charset for custom alphabets and diagnostics, UnicodeCharset for reusable Unicode scalar alphabets, unicodeScalarBatch/fillUnicodeScalar plus range variants for codepoint batches, and unicodeUtf8Capacity/unicodeUtf8Into for caller-owned UTF-8 buffers.\n", .{});
     try stdout.flush();
 }
