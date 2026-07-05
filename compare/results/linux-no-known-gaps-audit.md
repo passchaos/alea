@@ -685,3 +685,8 @@ exception.
 S4-M293 adds local `rand_distr` `from_mean_cv` constructor discovery aliases
 (`compare/results/s4-m293-from-mean-cv-aliases.md`) for `Normal(T)` and
 `LogNormal(T)` over Alea's existing `initMeanCv` constructors.
+S4-M294 adds a consolidated cached local `rand_distr 0.6.0` public-surface
+manifest (`compare/results/s4-m294-rand-distr-public-surface-manifest.md`)
+mapping root distribution, error, `multi`, `weighted`, utility, and trait
+surfaces to Alea evidence or intentional exclusions; the manifest identifies no
+new unblocked local `rand_distr` public-surface gap.
