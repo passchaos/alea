@@ -16,7 +16,13 @@ stability expectations.
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
   `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
   `secureFromSeed`, `secure`, `secureBytes`, `sysRng`, `stepRng`, `constRng`,
-  `makeRng`, `rng`
+- System-entropy helpers: `makeRng`, `random`, `randomValue`,
+  `randomValueChecked`, `randomIter`, `randomRange`, `randomRangeChecked`,
+  `randomRangeAtMost`, `randomRangeAtMostChecked`, `randomBool`,
+  `randomBoolChecked`, `randomRatio`, `randomRatioChecked`, `fill`
+- `RandomIterator(T)`: `RandomIterator.next`, `RandomIterator.nextValue`,
+  `RandomIterator.fill`, `RandomIterator.sizeHint`
+- Facade constructor: `rng`
 
 ## Rng
 

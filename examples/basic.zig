@@ -47,6 +47,14 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(inclusive_words);
     const random_bool = rng.randomBool(0.25);
     const random_ratio = rng.randomRatio(3, 8);
+    const root_random_value = try alea.random(u16, io);
+    const root_random_range = try alea.randomRange(u8, io, 1, 7);
+    const root_random_bool = try alea.randomBool(io, 0.25);
+    var root_random_bytes: [4]u8 = undefined;
+    try alea.fill(u8, io, &root_random_bytes);
+    var root_random_iter = try alea.randomIter(u8, io);
+    const root_random_iter_hint = root_random_iter.sizeHint();
+    const root_random_iter_next = root_random_iter.next().?;
     const chance_flags = try rng.chanceBatch(init.gpa, 8, 0.25);
     defer init.gpa.free(chance_flags);
     const ratio_flags = try rng.ratioBatch(init.gpa, 8, 3, 8);
@@ -138,6 +146,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("uintLessThanBatch u16 <1000: {any}\n", .{bounded_words});
     try stdout.print("uintAtMostBatch u16 <=999: {any}\n", .{inclusive_words});
     try stdout.print("randomBool p=.25: {}, randomRatio 3/8: {}\n", .{ random_bool, random_ratio });
+    try stdout.print("root random helpers: random={}, range={}, bool={}, fill={any}, iterNext={}, iterUnbounded={}\n", .{ root_random_value, root_random_range, root_random_bool, root_random_bytes, root_random_iter_next, root_random_iter_hint.upper == null });
     try stdout.print("chanceBatch p=.25: {any}\n", .{chance_flags});
     try stdout.print("ratioBatch 3/8: {any}\n", .{ratio_flags});
     try stdout.print("vectorChanceBatch boolx8 p=.25: {any}\n", .{vector_chance_flags});

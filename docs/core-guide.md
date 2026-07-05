@@ -98,6 +98,15 @@ itself. It exposes `tryNextU64`, `tryNextU32`, `tryFillBytes`, and
 `reader(buffer)`, so it can seed engines through `tryFromRng`, fill direct
 buffers, or stream entropy through the `RngReader` adapter while preserving
 `std.Io.RandomSecureError` failures.
+For local Rust top-level helper workflows, the root also exposes explicit-I/O
+forms of `rand::random`, `random_iter`, `random_range`, `random_bool`,
+`random_ratio`, and `fill`: use `random(T, io)`, `randomValue(T, io)`,
+`randomIter(T, io)`, `randomRange(T, io, min, max)`,
+`randomRangeAtMost(T, io, min, max)`, `randomBool(io, p)`,
+`randomRatio(io, numerator, denominator)`, and `fill(T, io, dest)`. Checked
+variants validate empty enums, invalid ranges, and invalid probabilities before
+requesting entropy, and all root one-shot helpers require an explicit `std.Io`
+instead of hiding a thread-local RNG.
 
 See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 Run `zig build run-reproducible-streams` for a runnable example of named seeds,

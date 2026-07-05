@@ -280,6 +280,7 @@ Local Alea evidence:
 - `compare/results/s4-m256-chacha12rng-alias.md`
 - `compare/results/s4-m257-chacha8-chacha20-rngs.md`
 - `compare/results/s4-m258-xoshiro128plusplus.md`
+- `compare/results/s4-m259-root-random-helpers.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -536,3 +537,7 @@ S4-M258 adds a Rust-discoverable `Xoshiro128PlusPlus` engine
 (`compare/results/s4-m258-xoshiro128plusplus.md`), closing the local Rust
 portable 32-bit Xoshiro++ generator discovery/workflow gap while preserving
 local 64-bit `SmallRng = Xoshiro256PlusPlus`.
+S4-M259 adds explicit-I/O root `random` / `randomIter` / `randomRange` /
+`randomBool` / `randomRatio` / `fill` helpers
+(`compare/results/s4-m259-root-random-helpers.md`), closing the local Rust
+top-level helper workflow gap without introducing hidden thread-local RNG state.
