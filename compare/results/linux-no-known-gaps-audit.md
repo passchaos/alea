@@ -595,3 +595,7 @@ S4-M271 adds distribution-namespace `WeightError` / `WeightedError` aliases
 (`compare/results/s4-m271-weighted-error-aliases.md`), closing the local Rust
 `rand::distr::weighted::Error` discovery-name gap while preserving Alea's
 existing weighted-sampling error contract.
+S4-M272 adds `UniformInt(T)`, `UniformFloat(T)`, and `UniformUsize`
+(`compare/results/s4-m272-uniform-backend-aliases.md`), closing the local Rust
+`rand::distr::uniform::{UniformInt, UniformFloat, UniformUsize}` discovery-name
+gap while preserving Alea's existing `Uniform(T)` implementation.

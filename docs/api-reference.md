@@ -916,6 +916,9 @@ Reusable samplers:
 - `VectorHypergeometric(VectorType).fill`
 - `VectorHypergeometric(VectorType).fillFrom`
 - `Uniform(T)`
+- `UniformInt(T)`
+- `UniformFloat(T)`
+- `UniformUsize`
 - `Uniform(T).init`
 - `Uniform(T).new`
 - `Uniform(T).initInclusive`

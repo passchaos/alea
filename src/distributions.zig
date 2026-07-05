@@ -2487,6 +2487,18 @@ pub fn Uniform(comptime T: type) type {
     };
 }
 
+pub fn UniformInt(comptime T: type) type {
+    if (@typeInfo(T) != .int) @compileError("UniformInt expects an integer type");
+    return Uniform(T);
+}
+
+pub fn UniformFloat(comptime T: type) type {
+    comptime requireFloat(T);
+    return Uniform(T);
+}
+
+pub const UniformUsize = Uniform(usize);
+
 pub const UniformDuration = struct {
     const Self = @This();
 
@@ -31024,6 +31036,43 @@ test "UniformError mirrors uniform-family errors" {
     try std.testing.expect(@typeInfo(@TypeOf(UniformUnicodeScalar.new('A', 'Z'))).error_union.error_set == UniformError);
     try std.testing.expectError(error.EmptyRange, Uniform(u8).new(6, 1));
     try std.testing.expectError(error.EmptyRange, UniformDuration.new(.fromMilliseconds(2), .fromMilliseconds(1)));
+}
+
+test "UniformInt Float Usize aliases mirror Uniform" {
+    const root = @import("root.zig");
+    comptime {
+        std.debug.assert(UniformInt(u32) == Uniform(u32));
+        std.debug.assert(UniformFloat(f64) == Uniform(f64));
+        std.debug.assert(UniformUsize == Uniform(usize));
+    }
+
+    const int_sampler = try UniformInt(u32).new(10, 20);
+    const float_sampler = try UniformFloat(f64).new(-1, 1);
+    const usize_sampler = try UniformUsize.new(3, 9);
+
+    var int_alias_engine = root.DefaultPrng.init(0x51_4d_272);
+    var int_uniform_engine = root.DefaultPrng.init(0x51_4d_272);
+    try std.testing.expectEqual(
+        (try Uniform(u32).new(10, 20)).sampleFrom(&int_uniform_engine),
+        int_sampler.sampleFrom(&int_alias_engine),
+    );
+    try std.testing.expectEqual(int_uniform_engine.next(), int_alias_engine.next());
+
+    var float_alias_engine = root.DefaultPrng.init(0x51_4d_273);
+    var float_uniform_engine = root.DefaultPrng.init(0x51_4d_273);
+    try std.testing.expectEqual(
+        (try Uniform(f64).new(-1, 1)).sampleFrom(&float_uniform_engine),
+        float_sampler.sampleFrom(&float_alias_engine),
+    );
+    try std.testing.expectEqual(float_uniform_engine.next(), float_alias_engine.next());
+
+    var usize_alias_engine = root.DefaultPrng.init(0x51_4d_274);
+    var usize_uniform_engine = root.DefaultPrng.init(0x51_4d_274);
+    try std.testing.expectEqual(
+        (try Uniform(usize).new(3, 9)).sampleFrom(&usize_uniform_engine),
+        usize_sampler.sampleFrom(&usize_alias_engine),
+    );
+    try std.testing.expectEqual(usize_uniform_engine.next(), usize_alias_engine.next());
 }
 
 test "distribution weight error aliases mirror Error" {
