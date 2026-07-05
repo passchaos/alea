@@ -591,3 +591,7 @@ S4-M270 adds distribution-namespace `Map` / `Iter` aliases
 (`compare/results/s4-m270-map-iter-aliases.md`), closing the local Rust
 `rand::distr::{Map, Iter}` discovery-name gap while preserving Alea's existing
 mapped sampler and sample iterator implementations.
+S4-M271 adds distribution-namespace `WeightError` / `WeightedError` aliases
+(`compare/results/s4-m271-weighted-error-aliases.md`), closing the local Rust
+`rand::distr::weighted::Error` discovery-name gap while preserving Alea's
+existing weighted-sampling error contract.

@@ -493,7 +493,9 @@ Use:
   `seq.sampleIteratorWeightedArrayCheckedFrom`,
   `seq.sampleIteratorWeightedIntoFrom`,
   `seq.sampleIteratorWeightedIntoCheckedFrom`
-- `WeightError` / `seq.WeightError` aliases for local Rust `rand::seq::WeightError` discovery, plus `Rng.weightedIndexFrom`, `Rng.fillWeightedIndexFrom`,
+- `WeightError` / `seq.WeightError` aliases for local Rust `rand::seq::WeightError`
+  discovery, and `distributions.WeightError` / `distributions.WeightedError`
+  aliases for local Rust `rand::distr::weighted::Error` discovery, plus `Rng.weightedIndexFrom`, `Rng.fillWeightedIndexFrom`,
   `Rng.weightedIndexArrayFrom`, `Rng.weightedIndexBatchFrom`,
   `Rng.fillWeightedIndexU32From`, `Rng.weightedIndexU32ArrayFrom`,
   `Rng.weightedIndexU32BatchFrom`, `Rng.fillChooseWeightedFrom`,

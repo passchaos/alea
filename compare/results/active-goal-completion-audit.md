@@ -291,7 +291,8 @@ complete.
 | S4-M268 distribution Choose sampler | `src/distributions.zig`, `examples/sequence_sampling.zig`, `tools/examplecheck.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/examples.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m268-distribution-choose.md` | Closed for the current bar: `distributions.Choose(T)` now exposes local Rust `rand::distr::slice::Choose` discovery naming with Zig-native pointer/value sampling over `[]const T`. |
 | S4-M269 UniformError alias | `src/distributions.zig`, `examples/range_sampling.zig`, `tools/examplecheck.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m269-uniform-error.md` | Closed for the current bar: `distributions.UniformError` now exposes local Rust `rand::distr::uniform::Error` discovery naming over Alea's existing uniform-family error set. |
 | S4-M270 distribution Map/Iter aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/s4-m270-map-iter-aliases.md` | Closed for the current bar: `distributions.Map` and `distributions.Iter` now expose local Rust `rand::distr::{Map, Iter}` discovery names as aliases over Alea's existing mapped sampler and sample iterator types. |
-| S4-M271 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M271 distribution weighted error aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m271-weighted-error-aliases.md` | Closed for the current bar: `distributions.WeightError` and `distributions.WeightedError` now expose local Rust `rand::distr::weighted::Error` discovery naming over Alea's existing weighted-sampling error set. |
+| S4-M272 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -361,6 +362,9 @@ S4-M269 additionally adds `distributions.UniformError`; it is another closed
 local Rust discovery-name side gap and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M270 additionally adds distribution-namespace `Map` / `Iter` aliases; it is
+another closed local Rust discovery-name side gap and does not resolve S4-M11 or
+complete the long-term objective.
+S4-M271 additionally adds distribution-namespace weighted error aliases; it is
 another closed local Rust discovery-name side gap and does not resolve S4-M11 or
 complete the long-term objective.
 

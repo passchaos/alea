@@ -141,6 +141,8 @@ pub const Error = error{
 };
 
 pub const UniformError = Error;
+pub const WeightedError = Error;
+pub const WeightError = Error;
 
 pub const BernoulliError = error{
     InvalidProbability,
@@ -31022,6 +31024,15 @@ test "UniformError mirrors uniform-family errors" {
     try std.testing.expect(@typeInfo(@TypeOf(UniformUnicodeScalar.new('A', 'Z'))).error_union.error_set == UniformError);
     try std.testing.expectError(error.EmptyRange, Uniform(u8).new(6, 1));
     try std.testing.expectError(error.EmptyRange, UniformDuration.new(.fromMilliseconds(2), .fromMilliseconds(1)));
+}
+
+test "distribution weight error aliases mirror Error" {
+    const weighted_error: WeightedError = error.InvalidWeight;
+    const weight_error: WeightError = error.InvalidWeight;
+    try std.testing.expectEqual(@as(Error, error.InvalidWeight), weighted_error);
+    try std.testing.expectEqual(@as(WeightedError, error.InvalidWeight), weight_error);
+    try std.testing.expectError(error.InvalidWeight, AliasTable(u32).new(std.testing.allocator, &.{}));
+    try std.testing.expectError(error.InvalidWeight, WeightedIndex(u32).new(std.testing.allocator, &.{ 0, 0 }));
 }
 
 test "distribution ascii aliases mirror ascii namespace" {
