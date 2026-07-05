@@ -329,6 +329,13 @@ pub fn main(init: std.process.Init) !void {
     try alea.seq.fillChooseWeightedConstPtrByFrom(&weighted_by_ptr_fill_engine, WeightedRecord, u32, &weighted_by_ptr_fill, &weighted_records, WeightedRecord.weightOf);
     try stdout.print("weighted by const ptr fill: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_by_ptr_fill[0].?.label, weighted_by_ptr_fill[1].?.label, weighted_by_ptr_fill[2].?.label, weighted_by_ptr_fill[3].?.label, weighted_by_ptr_fill[4].?.label, weighted_by_ptr_fill[5].?.label });
 
+    var weighted_by_iter_engine = alea.ScalarPrng.init(0x7193);
+    var weighted_by_iter = (try alea.seq.chooseWeightedIterByFrom(allocator, &weighted_by_iter_engine, WeightedRecord, u32, &weighted_records, WeightedRecord.weightOf)).?;
+    defer weighted_by_iter.deinit();
+    var weighted_by_iter_fill: [6]*const WeightedRecord = undefined;
+    weighted_by_iter.fill(&weighted_by_iter_fill);
+    try stdout.print("weighted by iter fill: [{s}, {s}, {s}, {s}, {s}, {s}]\n", .{ weighted_by_iter_fill[0].label, weighted_by_iter_fill[1].label, weighted_by_iter_fill[2].label, weighted_by_iter_fill[3].label, weighted_by_iter_fill[4].label, weighted_by_iter_fill[5].label });
+
     var weighted_by_mut_fill_records = weighted_records;
     var weighted_by_mut_fill_engine = alea.ScalarPrng.init(0x7196);
     var weighted_by_mut_fill: [6]?*WeightedRecord = undefined;

@@ -419,6 +419,7 @@ Use:
   `seq.weightedIndexU32BatchByCheckedFrom`, `seq.fillChooseWeightedFrom`,
   `seq.chooseWeightedValueArrayFrom`, `seq.chooseWeightedBatchFrom`,
   `seq.chooseWeightedIterFrom`, `seq.chooseWeightedIterCheckedFrom`,
+  `seq.chooseWeightedIterByFrom`, `seq.chooseWeightedIterByCheckedFrom`,
   `seq.fillChooseWeightedConstPtrFrom`,
   `seq.chooseWeightedConstPtrArrayFrom`, `seq.chooseWeightedConstPtrBatchFrom`,
   `seq.fillChooseWeightedPtrFrom`,
@@ -592,7 +593,8 @@ Use:
   `WeightedChoice.indexArrayFrom` / `indexArrayU32From` repeated index arrays
   plus repeated `WeightedChoice.indexIterFrom` / `indexIterU32From` index
   streams, `WeightedChoice.iterFrom` borrowed pointer streams, and
-  `seq.chooseWeightedIterFrom` owned repeated pointer streams for Rust
+  `seq.chooseWeightedIterFrom` and accessor-weighted
+  `seq.chooseWeightedIterByFrom` owned repeated pointer streams for Rust
   `choose_weighted_iter`-style workflows
 - `distributions.AliasTable` for O(1) repeated weighted index sampling,
   including `len`, `totalWeight`, and allocation-returning or caller-buffer
