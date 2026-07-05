@@ -719,7 +719,7 @@ already consumed randomness for earlier accepted candidates.
 `ascii.zig` includes ASCII `Alphanumeric`, `Alphabetic`, `Lowercase`,
 `Uppercase`, `Digits`, custom `Charset`, and Unicode scalar UTF-8 string
 generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
-`Charset.allocFrom`, `Charset.probability` / `probabilityAt`, `Charset.probabilityIter`, `charFrom`, `stringFrom`, `unicodeScalarFrom`,
+`Charset.allocFrom`, `Charset.get` / `byteAt`, `Charset.probability` / `probabilityAt`, `Charset.probabilityIter`, `charFrom`, `stringFrom`, `unicodeScalarFrom`,
 `unicodeScalarRangeLessThanFrom`, `unicodeScalarRangeAtMostFrom`,
 `fillUnicodeScalarFrom`, `fillUnicodeScalarRangeLessThanFrom`,
 `fillUnicodeScalarRangeAtMostFrom`, `unicodeScalarBatchFrom`,
@@ -740,7 +740,7 @@ want codepoint-level batches instead of UTF-8 strings; use the range variants
 when you need a bounded Unicode scalar interval while still skipping UTF-16
 surrogate code points.
 Run `zig build run-string-generation` for a runnable comparison of predefined
-ASCII charsets, custom `Charset` probability and probability-iterator diagnostics, allocation-returning strings,
+ASCII charsets, custom `Charset` item, probability, and probability-iterator diagnostics, allocation-returning strings,
 Unicode scalar batches and range batches, and caller-owned UTF-8 buffers.
 
 ## Validation

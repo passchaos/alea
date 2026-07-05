@@ -19,6 +19,9 @@ pub fn main(init: std.process.Init) !void {
     const custom = alea.ascii.Charset.init("ABC123-_");
     var probabilities: [8]f64 = undefined;
     try custom.probabilitiesInto(&probabilities);
+    const custom_get = custom.get(0).?;
+    const custom_get_missing = custom.get(custom.len()) == null;
+    const custom_get_buf = [_]u8{custom_get};
     const custom_probability = custom.probability(0).?;
     const custom_missing_probability = custom.probability(custom.len()) == null;
     var custom_probability_iter = custom.probabilityIter();
@@ -51,6 +54,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("alphanumeric string: {s}\n", .{token});
     try stdout.print("lowercase fill: {s}\n", .{lower_buf});
     try stdout.print("custom charset probabilities: {any}\n", .{probabilities});
+    try stdout.print("custom charset get(0)={s} missing={}\n", .{ &custom_get_buf, custom_get_missing });
     try stdout.print("custom charset probability(0)={d:.3} missing={}\n", .{ custom_probability, custom_missing_probability });
     try stdout.print("custom charset probabilityIter fill: {any}\n", .{custom_probability_iter_fill});
     try stdout.print("custom charset fill: {s}\n", .{custom_buf});

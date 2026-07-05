@@ -64,6 +64,11 @@ pub const Charset = struct {
         return self.bytes[index];
     }
 
+    pub fn get(self: Charset, index: usize) ?u8 {
+        if (index >= self.bytes.len) return null;
+        return self.bytes[index];
+    }
+
     pub fn indexOf(self: Charset, byte: u8) ?usize {
         return std.mem.indexOfScalar(u8, self.bytes, byte);
     }
@@ -250,6 +255,9 @@ test "ascii charset fills requested length" {
     try std.testing.expect(!Alphanumeric.isEmpty());
     try std.testing.expectEqual(@as(u8, 'A'), try Alphanumeric.byteAt(0));
     try std.testing.expectError(error.InvalidParameter, Alphanumeric.byteAt(alphanumeric.len));
+    try std.testing.expectEqual(@as(?u8, 'A'), Alphanumeric.get(0));
+    try std.testing.expectEqual(@as(?u8, '9'), Alphanumeric.get(alphanumeric.len - 1));
+    try std.testing.expectEqual(@as(?u8, null), Alphanumeric.get(alphanumeric.len));
     try std.testing.expectEqual(@as(?usize, 0), Alphanumeric.indexOf('A'));
     try std.testing.expectEqual(@as(?usize, 61), Alphanumeric.indexOf('9'));
     try std.testing.expect(Alphanumeric.contains('z'));
