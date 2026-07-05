@@ -8178,6 +8178,10 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return self.table.totalWeight();
         }
 
+        pub fn constantIndex(self: Self) ?usize {
+            return self.table.constantIndex();
+        }
+
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]f64 {
             return self.table.weights(allocator);
         }
@@ -17069,6 +17073,7 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectEqual(&labels[1], choice.get(1).?);
     try std.testing.expectEqual(@as(?*const []const u8, null), choice.get(3));
     try std.testing.expectApproxEqAbs(@as(f64, 8), choice.totalWeight(), 1e-12);
+    try std.testing.expectEqual(@as(?usize, null), choice.constantIndex());
     var reconstructed_weights: [3]f64 = undefined;
     try choice.weightsInto(&reconstructed_weights);
     try std.testing.expectApproxEqAbs(@as(f64, 0), reconstructed_weights[0], 1e-12);
@@ -17441,6 +17446,8 @@ test "single-positive weighted choice does not consume random stream" {
     var choice = try WeightedChoice(u8, u32).init(std.testing.allocator, &items, &.{ 0, 5, 0 });
     defer choice.deinit();
 
+    try std.testing.expectEqual(@as(?usize, 1), choice.constantIndex());
+
     try std.testing.expectEqual(@as(u8, 20), choice.sampleFrom(&engine).*);
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -17494,7 +17501,16 @@ test "single-positive weighted choice does not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try choice.update(&.{ 0, 0, 7 });
+    try std.testing.expectEqual(@as(?usize, 2), choice.constantIndex());
     try std.testing.expectEqual(@as(u8, 30), choice.sampleValueFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try choice.update(&.{ 1, 5, 0 });
+    try std.testing.expectEqual(@as(?usize, null), choice.constantIndex());
+
+    try choice.update(&.{ 0, 0, 3 });
+    try std.testing.expectEqual(@as(?usize, 2), choice.constantIndex());
+    try std.testing.expectEqual(@as(usize, 2), choice.sampleIndexFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

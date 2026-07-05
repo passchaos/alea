@@ -584,6 +584,7 @@ pub fn main(init: std.process.Init) !void {
     var choice = try alea.seq.WeightedChoice([]const u8, f64).init(allocator, &items, &float_weights);
     defer choice.deinit();
     try stdout.print("WeightedChoice.numChoices: {}\n", .{choice.numChoices()});
+    try stdout.print("WeightedChoice.constantIndex: {?}\n", .{choice.constantIndex()});
     try stdout.print("WeightedChoice.item(2)={s}\n", .{(try choice.item(2)).*});
     try stdout.print("WeightedChoice.weight(2)={d:.3} missing={}\n", .{ choice.weight(2).?, choice.weight(items.len) == null });
     try stdout.print("WeightedChoice.probability(2)={d:.3} missing={}\n", .{ choice.probability(2).?, choice.probability(items.len) == null });
@@ -670,6 +671,8 @@ pub fn main(init: std.process.Init) !void {
     var choice_by_index_values: [4][]const u8 = undefined;
     choice_by_index.fillValuesFrom(&choice_by_index_engine, &choice_by_index_values);
     try printStringSlice(stdout, "WeightedChoice.updateByIndex values", &choice_by_index_values);
+    try choice.update(&.{ 0, 0, 5, 0 });
+    try stdout.print("WeightedChoice.single-positive constantIndex: {?}\n", .{choice.constantIndex()});
 
     var no_replace_engine = alea.ScalarPrng.init(0x7156);
     const no_replace = try alea.seq.sampleWeightedFrom(allocator, &no_replace_engine, []const u8, f64, &items, &float_weights, 3);
