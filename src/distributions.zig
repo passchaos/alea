@@ -15455,6 +15455,33 @@ pub fn AliasTable(comptime Weight: type) type {
         constant_index: ?usize = null,
         allocator: std.mem.Allocator,
 
+        pub const WeightIterator = struct {
+            const Iterator = @This();
+
+            table: Self,
+            index: usize = 0,
+
+            pub fn next(self: *Iterator) ?f64 {
+                const value = self.table.weight(self.index) orelse return null;
+                self.index += 1;
+                return value;
+            }
+
+            pub fn remaining(self: Iterator) usize {
+                return self.table.len() - self.index;
+            }
+
+            pub fn len(self: Iterator) usize {
+                return self.remaining();
+            }
+
+            pub fn fill(self: *Iterator, dest: []f64) usize {
+                const count = @min(dest.len, self.remaining());
+                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                return count;
+            }
+        };
+
         pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
             if (input_weights.len == 0) return error.InvalidWeight;
 
@@ -15653,6 +15680,10 @@ pub fn AliasTable(comptime Weight: type) type {
 
         pub fn weight(self: Self, index: usize) ?f64 {
             return self.weightAt(index) catch null;
+        }
+
+        pub fn weightIter(self: Self) WeightIterator {
+            return .{ .table = self };
         }
 
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
@@ -18552,6 +18583,17 @@ test "alias table exposes totals and reconstructs weights" {
     try std.testing.expectApproxEqAbs(@as(f64, 5), table.weight(2).?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), table.weight(3).?, 1e-12);
     try std.testing.expectEqual(@as(?f64, null), table.weight(4));
+    var weight_iter = table.weightIter();
+    try std.testing.expectEqual(@as(usize, 4), weight_iter.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 1), weight_iter.next().?, 1e-12);
+    try std.testing.expectEqual(@as(usize, 3), weight_iter.remaining());
+    var iter_weights: [3]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), weight_iter.fill(&iter_weights));
+    try std.testing.expectApproxEqAbs(@as(f64, 0), iter_weights[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), iter_weights[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), iter_weights[2], 1e-12);
+    try std.testing.expectEqual(@as(usize, 0), weight_iter.len());
+    try std.testing.expectEqual(@as(?f64, null), weight_iter.next());
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 9.0), try table.probabilityAt(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), try table.probabilityAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 9.0), try table.probabilityAt(2), 1e-12);
