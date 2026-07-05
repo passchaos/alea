@@ -249,6 +249,14 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(chosen_ptrs_alloc);
     try stdout.print("chooseMultiplePtrs items: {s}, {s}, {s}\n", .{ chosen_ptrs_alloc[0].*, chosen_ptrs_alloc[1].*, chosen_ptrs_alloc[2].* });
 
+    var sampled_ptr_iter_engine = alea.ScalarPrng.init(0x5e11_0038);
+    var sampled_ptr_iter = try alea.seq.samplePtrsIterFrom(allocator, &sampled_ptr_iter_engine, []const u8, &items, 3);
+    defer sampled_ptr_iter.deinit();
+    const sampled_ptr_iter0 = sampled_ptr_iter.next().?.*;
+    const sampled_ptr_iter1 = sampled_ptr_iter.next().?.*;
+    const sampled_ptr_iter2 = sampled_ptr_iter.next().?.*;
+    try stdout.print("samplePtrsIter items: {s}, {s}, {s}; remaining={}\n", .{ sampled_ptr_iter0, sampled_ptr_iter1, sampled_ptr_iter2, sampled_ptr_iter.remaining() });
+
     var choose_mut_ptrs_alloc_engine = alea.ScalarPrng.init(0x5e11_001a);
     var mutable_alloc_scores = [_]u8{ 10, 20, 30, 40, 50, 60, 70, 80 };
     const chosen_mut_ptrs_alloc = try alea.seq.chooseMultipleMutPtrsFrom(allocator, &choose_mut_ptrs_alloc_engine, u8, &mutable_alloc_scores, 3);
