@@ -55,6 +55,13 @@ The `Rng` facade also exposes Rust-discoverable raw aliases `nextU64()`,
 `tryFillBytes(out)` (plus `nextU64From`, `nextU32From`, and `fillBytesFrom`
 for direct sources) for users mapping local Rust `Rng::next_u64`,
 `Rng::next_u32`, `Rng::fill_bytes`, and `TryRng::try_*` terminology.
+Use `rng.reader(buffer)`, `Rng.readerFrom(source, buffer)`, or
+`Rng.rngReader(source, buffer)` when you need an infinite `std.Io.Reader`
+view over a random byte stream, mirroring local Rust `rand::RngReader` without
+introducing trait machinery. The adapter owns value sources, borrows pointer
+sources, fills `std.Io.Reader` destinations completely, and records the
+underlying error in `lastError()` when a fallible source reports one through
+`tryFillBytes`, `tryNextU64`, or `tryNext`.
 
 ## Seeding
 

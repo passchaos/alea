@@ -19,7 +19,10 @@ stability expectations.
 ## Rng
 
 - Error type: `Error`
-- Construction and interop: `init`, `fromRandom`, `random`
+- Construction and interop: `init`, `fromRandom`, `random`, `reader`,
+  `readerFrom`, `RngReader`, `rngReader`
+- `RngReader(Source)`: `RngReader.init`, `RngReader.reader`,
+  `RngReader.read`, `RngReader.readAll`, `RngReader.lastError`
 - Values: `value`, `valueFrom`, `valueChecked`, `valueCheckedFrom`,
   `randomValue`, `randomValueFrom`, `randomValueChecked`,
   `randomValueCheckedFrom`,

@@ -97,6 +97,122 @@ pub fn random(self: Rng) std.Random {
     };
 }
 
+pub fn reader(self: Rng, buffer: []u8) RngReader(Rng) {
+    return RngReader(Rng).init(self, buffer);
+}
+
+pub fn readerFrom(source: anytype, buffer: []u8) RngReader(@TypeOf(source)) {
+    return RngReader(@TypeOf(source)).init(source, buffer);
+}
+
+pub fn RngReader(comptime Source: type) type {
+    return struct {
+        const Self = @This();
+
+        source: Source,
+        interface: std.Io.Reader,
+        err: ?anyerror = null,
+
+        pub fn init(source: Source, buffer: []u8) Self {
+            return .{
+                .source = source,
+                .interface = .{
+                    .vtable = &.{
+                        .stream = stream,
+                        .discard = discard,
+                        .readVec = readVec,
+                    },
+                    .buffer = buffer,
+                    .seek = 0,
+                    .end = 0,
+                },
+            };
+        }
+
+        pub fn reader(self: *Self) *std.Io.Reader {
+            return &self.interface;
+        }
+
+        pub fn read(self: *Self, out: []u8) std.Io.Reader.ShortError!usize {
+            return self.interface.readSliceShort(out);
+        }
+
+        pub fn readAll(self: *Self, out: []u8) std.Io.Reader.Error!void {
+            return self.interface.readSliceAll(out);
+        }
+
+        pub fn lastError(self: *const Self) ?anyerror {
+            return self.err;
+        }
+
+        fn stream(io_r: *std.Io.Reader, io_w: *std.Io.Writer, limit: std.Io.Limit) std.Io.Reader.StreamError!usize {
+            if (limit == .nothing) return 0;
+            const dest = limit.slice(try io_w.writableSliceGreedy(1));
+            const self: *Self = @alignCast(@fieldParentPtr("interface", io_r));
+            fillSourceBytes(self, dest) catch return error.ReadFailed;
+            io_w.advance(dest.len);
+            return dest.len;
+        }
+
+        fn discard(io_r: *std.Io.Reader, limit: std.Io.Limit) std.Io.Reader.Error!usize {
+            if (limit == .nothing) return 0;
+            const self: *Self = @alignCast(@fieldParentPtr("interface", io_r));
+            const amount = limit.toInt() orelse @max(@as(usize, 64), io_r.buffer.len);
+            var remaining = amount;
+            var scratch: [64]u8 = undefined;
+            while (remaining != 0) {
+                const n = @min(remaining, scratch.len);
+                fillSourceBytes(self, scratch[0..n]) catch return error.ReadFailed;
+                remaining -= n;
+            }
+            return amount;
+        }
+
+        fn readVec(io_r: *std.Io.Reader, data: [][]u8) std.Io.Reader.Error!usize {
+            const self: *Self = @alignCast(@fieldParentPtr("interface", io_r));
+            if (data[0].len == 0) {
+                const dest = io_r.buffer[io_r.end..];
+                if (dest.len == 0) return error.ReadFailed;
+                fillSourceBytes(self, dest) catch return error.ReadFailed;
+                io_r.end += dest.len;
+                return 0;
+            }
+
+            var total: usize = 0;
+            for (data) |dest| {
+                if (dest.len == 0) continue;
+                fillSourceBytes(self, dest) catch return error.ReadFailed;
+                total += dest.len;
+            }
+            return total;
+        }
+
+        fn fillSourceBytes(self: *Self, out: []u8) !void {
+            self.err = null;
+            if (comptime isSinglePointer(Source)) {
+                fillSourceBytesFrom(self.source, out) catch |err| {
+                    self.err = err;
+                    return err;
+                };
+            } else {
+                fillSourceBytesFrom(&self.source, out) catch |err| {
+                    self.err = err;
+                    return err;
+                };
+            }
+        }
+
+        fn isSinglePointer(comptime T: type) bool {
+            const info = @typeInfo(T);
+            return info == .pointer and info.pointer.size == .one;
+        }
+    };
+}
+
+pub fn rngReader(source: anytype, buffer: []u8) RngReader(@TypeOf(source)) {
+    return RngReader(@TypeOf(source)).init(source, buffer);
+}
+
 pub fn value(self: Rng, comptime T: type) T {
     return valueFrom(self, T);
 }
@@ -1409,6 +1525,26 @@ pub fn fillBytesFrom(source: anytype, buf: []u8) void {
         source.bytes(buf);
     } else {
         source.fill(buf);
+    }
+}
+
+fn fillSourceBytesFrom(source: anytype, buf: []u8) !void {
+    if (comptime sourceCanTryFillBytes(@TypeOf(source))) {
+        return source.tryFillBytes(buf);
+    }
+    if (comptime sourceCanFillBytes(@TypeOf(source))) {
+        fillBytesFrom(source, buf);
+        return;
+    }
+
+    var i: usize = 0;
+    while (i < buf.len) {
+        const word = try tryNextU64From(source);
+        var word_bytes: [8]u8 = undefined;
+        std.mem.writeInt(u64, &word_bytes, word, .little);
+        const n = @min(8, buf.len - i);
+        @memcpy(buf[i..][0..n], word_bytes[0..n]);
+        i += n;
     }
 }
 
@@ -4956,6 +5092,108 @@ test "rng direct try raw aliases propagate source failures" {
     var fail_fill = FallibleSource{ .words = &words, .fail_after = 1 };
     try std.testing.expectError(error.NoSeed, Rng.tryFillBytesFrom(&fail_fill, &buf));
     try std.testing.expectEqual(@as(usize, 1), fail_fill.index);
+}
+
+test "rng reader adapter streams deterministic bytes" {
+    const StepSource = struct {
+        value: u64,
+        increment: u64,
+
+        fn next(self: *@This()) u64 {
+            const word = self.value;
+            self.value +%= self.increment;
+            return word;
+        }
+    };
+
+    var source = StepSource{ .value = 255, .increment = 1 };
+    var reader_buffer: [8]u8 = undefined;
+    var adapter = rngReader(&source, &reader_buffer);
+
+    var out: [24]u8 = undefined;
+    try adapter.readAll(&out);
+
+    try std.testing.expectEqualSlices(u8, &.{
+        255, 0, 0, 0, 0, 0, 0, 0,
+        0,   1, 0, 0, 0, 0, 0, 0,
+        1,   1, 0, 0, 0, 0, 0, 0,
+    }, &out);
+    try std.testing.expectEqual(@as(u64, 258), source.value);
+    try std.testing.expectEqual(@as(?anyerror, null), adapter.lastError());
+
+    const owned_source = StepSource{ .value = 255, .increment = 1 };
+    var owned_reader_buffer: [8]u8 = undefined;
+    var owned_adapter = rngReader(owned_source, &owned_reader_buffer);
+    var owned_out: [24]u8 = undefined;
+    try owned_adapter.reader().readSliceAll(&owned_out);
+    try std.testing.expectEqualSlices(u8, &out, &owned_out);
+    try std.testing.expectEqual(@as(u64, 255), owned_source.value);
+    try std.testing.expectEqual(@as(u64, 258), owned_adapter.source.value);
+
+    var reader_from_source = StepSource{ .value = 255, .increment = 1 };
+    var reader_from_buffer: [8]u8 = undefined;
+    var reader_from_adapter = readerFrom(&reader_from_source, &reader_from_buffer);
+    var reader_from_out: [24]u8 = undefined;
+    try reader_from_adapter.readAll(&reader_from_out);
+    try std.testing.expectEqualSlices(u8, &out, &reader_from_out);
+}
+
+test "rng reader adapter integrates with Io stream and discard" {
+    const alea = @import("root.zig");
+
+    var stream_engine = alea.ScalarPrng.init(0x5eed);
+    var direct_engine = alea.ScalarPrng.init(0x5eed);
+    var reader_buffer: [16]u8 = undefined;
+    var adapter = Rng.init(&stream_engine).reader(&reader_buffer);
+
+    var written: [19]u8 = undefined;
+    var writer = std.Io.Writer.fixed(&written);
+    try std.testing.expectEqual(@as(usize, 19), try adapter.reader().stream(&writer, .limited(19)));
+
+    var expected: [19]u8 = undefined;
+    direct_engine.fill(&expected);
+    try std.testing.expectEqualSlices(u8, &expected, &written);
+
+    try std.testing.expectEqual(@as(usize, 5), try adapter.reader().discard(.limited(5)));
+    var skipped: [5]u8 = undefined;
+    direct_engine.fill(&skipped);
+
+    var after_skip: [7]u8 = undefined;
+    try adapter.readAll(&after_skip);
+    var expected_after_skip: [7]u8 = undefined;
+    direct_engine.fill(&expected_after_skip);
+    try std.testing.expectEqualSlices(u8, &expected_after_skip, &after_skip);
+}
+
+test "rng reader adapter propagates fallible sources" {
+    const FallibleSource = struct {
+        words: []const u64,
+        index: usize = 0,
+        fail_after: ?usize = null,
+
+        fn tryNext(self: *@This()) error{NoSeed}!u64 {
+            if (self.fail_after) |limit| {
+                if (self.index >= limit) return error.NoSeed;
+            }
+            if (self.index >= self.words.len) return error.NoSeed;
+            const word = self.words[self.index];
+            self.index += 1;
+            return word;
+        }
+    };
+
+    const words = [_]u64{
+        0x0123_4567_89ab_cdef,
+        0xfedc_ba98_7654_3210,
+    };
+
+    var source = FallibleSource{ .words = &words, .fail_after = 1 };
+    var reader_buffer: [8]u8 = undefined;
+    var adapter = rngReader(&source, &reader_buffer);
+    var out: [12]u8 = undefined;
+    try std.testing.expectError(error.ReadFailed, adapter.readAll(&out));
+    try std.testing.expectEqual(error.NoSeed, adapter.lastError().?);
+    try std.testing.expectEqual(@as(usize, 1), source.index);
 }
 
 test "scalar sampling has stable snapshots" {
