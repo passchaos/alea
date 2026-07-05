@@ -37,7 +37,10 @@ Focused test coverage in `src/distributions.zig`:
 - `UniformError mirrors uniform-family errors` verifies that `UniformError`
   aliases `Error`, that scalar/vector/duration/Unicode uniform constructors
   expose the alias error set, and that representative invalid ranges still
-  return `error.EmptyRange`.
+  return `error.EmptyRange`. S4-M275 later extended this shared error set with
+  `error.NonFinite` for non-finite floating-point uniform/range inputs, matching
+  the second local Rust `uniform::Error` variant without changing the alias
+  relationship.
 
 Documentation/example updates:
 

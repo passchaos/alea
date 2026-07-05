@@ -607,3 +607,7 @@ S4-M274 adds `distributions.UniformChar`
 (`compare/results/s4-m274-uniform-char-alias.md`), closing the local Rust
 `rand::distr::uniform::UniformChar` discovery-name gap while preserving Alea's
 existing `UniformUnicodeScalar` reusable `u21` scalar sampler.
+S4-M275 adds `NonFinite` to checked scalar/vector float range and uniform error
+paths (`compare/results/s4-m275-uniform-nonfinite.md`), closing the local Rust
+`rand::distr::uniform::Error::NonFinite` diagnostics gap while preserving
+checked validation before random-stream consumption.

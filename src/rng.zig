@@ -31,6 +31,7 @@ const exp_ziggurat_mantissa_threshold = blk: {
 
 pub const Error = error{
     EmptyRange,
+    NonFinite,
     InvalidProbability,
     InvalidParameter,
     InvalidWeight,
@@ -677,10 +678,19 @@ fn validateRangeParams(comptime T: type, min: T, max: T) Error!void {
             if (min >= max) return error.EmptyRange;
         },
         .float => {
-            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+            try validateFloatRangeParams(T, min, max, true);
         },
         else => @compileError("alea.Rng.fillRangeChecked supports integer and floating-point slices"),
     }
+}
+
+fn validateFloatRangeParams(comptime T: type, min: T, max: T, comptime allow_equal: bool) Error!void {
+    requireFloat(T);
+    if (!std.math.isFinite(min) or !std.math.isFinite(max)) return error.NonFinite;
+    if (allow_equal) {
+        if (min > max) return error.EmptyRange;
+    } else if (min >= max) return error.EmptyRange;
+    if (!std.math.isFinite(max - min)) return error.NonFinite;
 }
 
 fn validateRangeAtMostParams(comptime T: type, min: T, max: T) Error!void {
@@ -981,7 +991,7 @@ pub fn vectorRangeBatchCheckedFrom(source: anytype, comptime VectorType: type, a
             if (min >= max) return error.EmptyRange;
         },
         .float => {
-            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+            try validateFloatRangeParams(info.child, min, max, true);
         },
         else => @compileError("Rng.vectorRangeBatchChecked supports integer and floating-point vectors"),
     }
@@ -1004,7 +1014,7 @@ pub fn fillVectorRangeCheckedFrom(source: anytype, comptime VectorType: type, de
             if (min >= max) return error.EmptyRange;
         },
         .float => {
-            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+            try validateFloatRangeParams(info.child, min, max, true);
         },
         else => @compileError("Rng.fillVectorRangeChecked supports integer and floating-point vectors"),
     }
@@ -2200,7 +2210,7 @@ pub fn floatRangeChecked(self: Rng, comptime T: type, min: T, max: T) Error!T {
 }
 
 pub fn floatRangeCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
-    if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+    try validateFloatRangeParams(T, min, max, true);
     return floatRangeFrom(source, T, min, max);
 }
 
@@ -2314,7 +2324,7 @@ pub fn vectorRangeCheckedFrom(source: anytype, comptime VectorType: type, min: v
             if (min >= max) return error.EmptyRange;
         },
         .float => {
-            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+            try validateFloatRangeParams(info.child, min, max, true);
         },
         else => @compileError("Rng.vectorRangeChecked supports integer and floating-point vectors"),
     }
@@ -4587,13 +4597,13 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.EmptyRange, rng.intRangeLessThanChecked(u32, 3, 3));
     try std.testing.expectError(error.EmptyRange, Rng.intRangeLessThanCheckedFrom(&engine, u32, 3, 3));
     try std.testing.expectError(error.EmptyRange, rng.randomRangeChecked(u32, 3, 3));
-    try std.testing.expectError(error.EmptyRange, Rng.randomRangeCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, Rng.randomRangeCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     try std.testing.expectError(error.EmptyRange, rng.intRangeAtMostChecked(u32, 4, 3));
     try std.testing.expectError(error.EmptyRange, Rng.intRangeAtMostCheckedFrom(&engine, u32, 4, 3));
     try std.testing.expectError(error.EmptyRange, rng.randomRangeAtMostChecked(u32, 4, 3));
     try std.testing.expectError(error.EmptyRange, Rng.randomRangeAtMostCheckedFrom(&engine, u32, 4, 3));
-    try std.testing.expectError(error.EmptyRange, rng.floatRangeChecked(f64, std.math.inf(f64), 1));
-    try std.testing.expectError(error.EmptyRange, Rng.floatRangeCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, rng.floatRangeChecked(f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, Rng.floatRangeCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     const duration = rng.durationRangeAtMost(.fromMilliseconds(10), .fromMilliseconds(20));
     try std.testing.expect(duration.nanoseconds >= std.time.ns_per_ms * 10);
     try std.testing.expect(duration.nanoseconds <= std.time.ns_per_ms * 20);
@@ -5111,8 +5121,8 @@ test "rng facade covers scalar APIs" {
     inline for (0..8) |i| try std.testing.expect(vector_standard_exp_f32[i] >= 0);
 
     try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, u32), 3, 3));
-    try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
-    try std.testing.expectError(error.EmptyRange, Rng.vectorRangeCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, Rng.vectorRangeCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
     try std.testing.expectError(error.InvalidProbability, Rng.vectorChanceCheckedFrom(&engine, @Vector(8, bool), -0.1));
     try std.testing.expectError(error.InvalidProbability, Rng.vectorRatioCheckedFrom(&engine, @Vector(8, bool), 2, 1));
     try std.testing.expectError(error.EmptyRange, rng.fillVectorRangeChecked(@Vector(8, f32), &vec_range_buf, 2, 1));
@@ -6340,7 +6350,7 @@ test "invalid checked helpers do not consume random stream" {
     try std.testing.expectError(error.EmptyRange, intRangeLessThanCheckedFrom(&engine, u32, 3, 3));
     try std.testing.expectEqual(@as(u64, 0xba4d054547a7f857), engine.next());
 
-    try std.testing.expectError(error.EmptyRange, floatRangeCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, floatRangeCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     try std.testing.expectEqual(@as(u64, 0x52050e6daf1ffc3d), engine.next());
 
     try std.testing.expectError(error.EmptyRange, durationRangeLessThanCheckedFrom(&engine, .fromSeconds(2), .fromSeconds(1)));
@@ -6357,11 +6367,11 @@ test "invalid checked helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, fillRatioCheckedFrom(&engine, &bool_buf, 2, 1));
     try std.testing.expectEqual(@as(u64, 0x8a9c3d610f339467), engine.next());
 
-    try std.testing.expectError(error.EmptyRange, vectorRangeCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, vectorRangeCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
     try std.testing.expectEqual(@as(u64, 0xfedbe66623c1adc2), engine.next());
 
     var vec_buf: [2]@Vector(4, f64) = undefined;
-    try std.testing.expectError(error.EmptyRange, fillVectorRangeCheckedFrom(&engine, @Vector(4, f64), &vec_buf, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, fillVectorRangeCheckedFrom(&engine, @Vector(4, f64), &vec_buf, std.math.inf(f64), 1));
     try std.testing.expectEqual(@as(u64, 0xa360fbcd83acd8d7), engine.next());
 
     try std.testing.expectError(error.EmptyRange, chooseCheckedFrom(&engine, u8, &.{}));
@@ -6645,10 +6655,10 @@ test "invalid facade range helpers do not consume random stream" {
     try std.testing.expectError(error.EmptyRange, rng.intRangeAtMostChecked(u32, 4, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.EmptyRange, rng.floatRangeChecked(f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, rng.floatRangeChecked(f64, std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.EmptyRange, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, rng.vectorRangeChecked(@Vector(4, f64), std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -6682,7 +6692,7 @@ test "owned range batches allocate and validate before consuming random stream" 
     try std.testing.expect(!invalid_inclusive_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.EmptyRange, rangeBatchCheckedFrom(&engine, f64, std.testing.allocator, 4, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, rangeBatchCheckedFrom(&engine, f64, std.testing.allocator, 4, std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
@@ -6727,7 +6737,7 @@ test "owned vector range batches allocate and validate before consuming random s
     try std.testing.expectEqual(control.next(), engine.next());
 
     var invalid_float_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.EmptyRange, vectorRangeBatchCheckedFrom(&engine, @Vector(4, f64), invalid_float_alloc.allocator(), 4, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, vectorRangeBatchCheckedFrom(&engine, @Vector(4, f64), invalid_float_alloc.allocator(), 4, std.math.inf(f64), 1));
     try std.testing.expect(!invalid_float_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -7068,7 +7078,7 @@ test "invalid facade checked fills do not consume random stream" {
     const rng = Rng.init(&engine);
 
     var floats: [4]f64 = undefined;
-    try std.testing.expectError(error.EmptyRange, rng.fillRangeChecked(f64, &floats, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, rng.fillRangeChecked(f64, &floats, std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     var bools: [8]bool = undefined;

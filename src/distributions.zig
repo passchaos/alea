@@ -132,6 +132,7 @@ fn inverseCdfNormalTailInit(q: f64) f64 {
 
 pub const Error = error{
     EmptyRange,
+    NonFinite,
     InvalidProbability,
     InvalidWeight,
     InvalidParameter,
@@ -470,7 +471,7 @@ pub fn uniformInclusiveCheckedFrom(source: anytype, comptime T: type, min: T, ma
     switch (@typeInfo(T)) {
         .int => return Rng.intRangeAtMostCheckedFrom(source, T, min, max),
         .float => {
-            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+            try validateFiniteFloatRange(T, min, max, true);
             return uniformInclusiveFrom(source, T, min, max);
         },
         else => @compileError("uniformInclusiveChecked supports integer and floating-point types"),
@@ -523,7 +524,7 @@ pub fn fillUniformInclusiveCheckedFrom(source: anytype, comptime T: type, dest: 
             fillUniformInclusiveFrom(source, T, dest, min, max);
         },
         .float => {
-            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+            try validateFiniteFloatRange(T, min, max, true);
             fillUniformInclusiveFrom(source, T, dest, min, max);
         },
         else => @compileError("fillUniformInclusiveChecked supports integer and floating-point slices"),
@@ -626,7 +627,7 @@ fn validateVectorInclusiveRange(comptime VectorType: type, min: vectorChild(Vect
             if (min > max) return error.EmptyRange;
         },
         .float => {
-            if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
+            try validateFiniteFloatRange(info.child, min, max, true);
         },
         else => @compileError("vectorUniformInclusiveChecked supports integer and floating-point vectors"),
     }
@@ -2414,7 +2415,7 @@ pub fn Uniform(comptime T: type) type {
         inclusive: bool = false,
 
         pub fn init(low: T, high: T) Error!Self {
-            if (!rangeLess(T, low, high)) return error.EmptyRange;
+            try validateUniformRange(T, low, high, false);
             return .{ .low = low, .high = high, .inclusive = false };
         }
 
@@ -2423,7 +2424,7 @@ pub fn Uniform(comptime T: type) type {
         }
 
         pub fn initInclusive(low: T, high: T) Error!Self {
-            if (!rangeLessEqual(T, low, high)) return error.EmptyRange;
+            try validateUniformRange(T, low, high, true);
             return .{ .low = low, .high = high, .inclusive = true };
         }
 
@@ -2667,7 +2668,7 @@ pub fn VectorUniform(comptime VectorType: type) type {
         inclusive: bool = false,
 
         pub fn init(low: Child, high: Child) Error!Self {
-            if (!rangeLess(Child, low, high)) return error.EmptyRange;
+            try validateUniformRange(Child, low, high, false);
             return .{ .low = low, .high = high, .inclusive = false };
         }
 
@@ -2676,7 +2677,7 @@ pub fn VectorUniform(comptime VectorType: type) type {
         }
 
         pub fn initInclusive(low: Child, high: Child) Error!Self {
-            if (!rangeLessEqual(Child, low, high)) return error.EmptyRange;
+            try validateUniformRange(Child, low, high, true);
             return .{ .low = low, .high = high, .inclusive = true };
         }
 
@@ -17989,20 +17990,25 @@ fn requireUnsignedWeight(comptime Weight: type) void {
     }
 }
 
-fn rangeLess(comptime T: type, low: T, high: T) bool {
-    return switch (@typeInfo(T)) {
-        .int => low < high,
-        .float => std.math.isFinite(low) and std.math.isFinite(high) and low < high,
+fn validateUniformRange(comptime T: type, low: T, high: T, comptime allow_equal: bool) Error!void {
+    switch (@typeInfo(T)) {
+        .int => {
+            if (allow_equal) {
+                if (low > high) return error.EmptyRange;
+            } else if (low >= high) return error.EmptyRange;
+        },
+        .float => try validateFiniteFloatRange(T, low, high, allow_equal),
         else => @compileError("Uniform supports integer and floating-point types"),
-    };
+    }
 }
 
-fn rangeLessEqual(comptime T: type, low: T, high: T) bool {
-    return switch (@typeInfo(T)) {
-        .int => low <= high,
-        .float => std.math.isFinite(low) and std.math.isFinite(high) and low <= high,
-        else => @compileError("Uniform supports integer and floating-point types"),
-    };
+fn validateFiniteFloatRange(comptime T: type, low: T, high: T, comptime allow_equal: bool) Error!void {
+    requireFloat(T);
+    if (!std.math.isFinite(low) or !std.math.isFinite(high)) return error.NonFinite;
+    if (allow_equal) {
+        if (low > high) return error.EmptyRange;
+    } else if (low >= high) return error.EmptyRange;
+    if (!std.math.isFinite(high - low)) return error.NonFinite;
 }
 
 fn requireFloat(comptime T: type) void {
@@ -18843,8 +18849,8 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect(try sampleSingleInclusiveFrom(&engine, f64, -1, 1) <= 1);
     try std.testing.expectError(error.EmptyRange, uniformCheckedFrom(&engine, u32, 9, 5));
     try std.testing.expectError(error.EmptyRange, sampleSingleFrom(&engine, u32, 9, 5));
-    try std.testing.expectError(error.EmptyRange, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
-    try std.testing.expectError(error.EmptyRange, sampleSingleInclusiveFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, sampleSingleInclusiveFrom(&engine, f64, std.math.inf(f64), 1));
     var uniform_int_buf: [8]u32 = undefined;
     fillUniform(rng, u32, &uniform_int_buf, 5, 9);
     for (uniform_int_buf) |value| try std.testing.expect(value >= 5 and value < 9);
@@ -18890,7 +18896,7 @@ test "basic distributions stay in expected ranges" {
     for (inclusive_float_buf) |value| try std.testing.expect(value >= -1 and value <= 1);
     try fillUniformInclusiveCheckedFrom(&engine, f64, &inclusive_float_buf, -1, 1);
     for (inclusive_float_buf) |value| try std.testing.expect(value >= -1 and value <= 1);
-    try std.testing.expectError(error.EmptyRange, fillUniformInclusiveCheckedFrom(&engine, f64, &inclusive_float_buf, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, fillUniformInclusiveCheckedFrom(&engine, f64, &inclusive_float_buf, std.math.inf(f64), 1));
     try std.testing.expect((try Bernoulli.initRatio(1, 1)).sample(rng));
     try std.testing.expect(!(try Bernoulli.init(0)).sample(rng));
     const fair_bernoulli = try Bernoulli.init(0.5);
@@ -26175,7 +26181,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorPoissonAhrensDieterCheckedFrom(&engine, @Vector(4, u64), &poisson_buf, 11));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.EmptyRange, vectorUniformCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, vectorUniformCheckedFrom(&engine, @Vector(4, f64), std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.EmptyRange, vectorUniformInclusiveCheckedFrom(&engine, @Vector(4, u16), 4, 3));
@@ -26281,10 +26287,10 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     var uniform_buf: [4]@Vector(4, f64) = undefined;
-    try std.testing.expectError(error.EmptyRange, fillVectorUniformCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, fillVectorUniformCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.EmptyRange, fillVectorUniformInclusiveCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, fillVectorUniformInclusiveCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, fillVectorNormalCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0, -1));
@@ -26613,7 +26619,7 @@ test "invalid distribution facade misc scalars do not consume random stream" {
     try std.testing.expectError(error.EmptyRange, uniformChecked(rng, u32, 9, 5));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.EmptyRange, uniformInclusiveChecked(rng, f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, uniformInclusiveChecked(rng, f64, std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, poissonChecked(rng, std.math.inf(f64)));
@@ -26865,7 +26871,7 @@ test "invalid uniform distribution helpers do not consume random stream" {
     try std.testing.expectError(error.EmptyRange, uniformCheckedFrom(&engine, u32, 9, 5));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.EmptyRange, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     var ints: [4]u32 = undefined;
@@ -27274,7 +27280,7 @@ test "invalid scalar distribution helpers do not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_d1f0);
     var control = alea.ScalarPrng.init(0x5150_d1f0);
 
-    try std.testing.expectError(error.EmptyRange, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, uniformInclusiveCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, logNormalCheckedFrom(&engine, f64, 0, -1));
@@ -29915,8 +29921,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).initMeanCv(-1, 0.5));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).initMeanCv(1, -0.5));
     try std.testing.expectError(error.InvalidParameter, HalfNormal(f64).init(-1));
-    try std.testing.expectError(error.EmptyRange, Uniform(f64).init(std.math.inf(f64), 1));
-    try std.testing.expectError(error.EmptyRange, Uniform(f64).initInclusive(0, std.math.inf(f64)));
+    try std.testing.expectError(error.NonFinite, Uniform(f64).init(std.math.inf(f64), 1));
+    try std.testing.expectError(error.NonFinite, Uniform(f64).initInclusive(0, std.math.inf(f64)));
     try std.testing.expectError(error.InvalidParameter, Poisson.init(std.math.inf(f64)));
     try std.testing.expectError(error.InvalidProbability, Geometric.init(0));
     try std.testing.expectError(error.InvalidParameter, Gamma(f64).init(0, 1));
@@ -31043,12 +31049,15 @@ test "BernoulliError mirrors local rand error shape" {
 
 test "UniformError mirrors uniform-family errors" {
     const err: UniformError = error.EmptyRange;
+    const non_finite: UniformError = error.NonFinite;
     try std.testing.expectEqual(@as(Error, error.EmptyRange), err);
+    try std.testing.expectEqual(@as(Error, error.NonFinite), non_finite);
     try std.testing.expect(@typeInfo(@TypeOf(Uniform(u8).new(1, 6))).error_union.error_set == UniformError);
     try std.testing.expect(@typeInfo(@TypeOf(VectorUniform(@Vector(4, i32)).newInclusive(-1, 1))).error_union.error_set == UniformError);
     try std.testing.expect(@typeInfo(@TypeOf(UniformDuration.new(.fromMilliseconds(1), .fromMilliseconds(2)))).error_union.error_set == UniformError);
     try std.testing.expect(@typeInfo(@TypeOf(UniformUnicodeScalar.new('A', 'Z'))).error_union.error_set == UniformError);
     try std.testing.expectError(error.EmptyRange, Uniform(u8).new(6, 1));
+    try std.testing.expectError(error.NonFinite, Uniform(f64).new(0, std.math.inf(f64)));
     try std.testing.expectError(error.EmptyRange, UniformDuration.new(.fromMilliseconds(2), .fromMilliseconds(1)));
 }
 
