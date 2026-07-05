@@ -373,7 +373,8 @@ Rust `Distribution::sample_iter` shape. These unbounded iterators expose
 iterator fills to `Rng.fill` / `fillFrom` for stream-compatible `f64`,
 64-bit integer, and matching vector slice types; packed `bool`, `f32`, `u8`,
 and sub-64-bit integer fills keep repeated-`nextValue` stream shape.
-`Dirichlet` and `Multinomial` support allocation-returning `sample(allocator, rng)` /
+`Dirichlet` (also available as `multi.Dirichlet` for local `rand_distr::multi`
+discovery) and `Multinomial` support allocation-returning `sample(allocator, rng)` /
 `sampleFrom(allocator, source)` and allocation-free `sampleInto(rng, out)` /
 `sampleIntoFrom(source, out)` and flat `sampleManyInto` / `sampleManyIntoFrom`
 batch APIs; both also expose checked `sampleInto*` / `sampleManyInto*` variants

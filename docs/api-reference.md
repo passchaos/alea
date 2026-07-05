@@ -2461,6 +2461,8 @@ Reusable samplers:
 - `VectorUnitBall(VectorType).fill`
 - `VectorUnitBall(VectorType).fillFrom`
 - `Dirichlet(T)`
+- `multi`
+- `multi.Dirichlet(T)`
 - `Dirichlet(T).init`
 - `Dirichlet(T).alphaValues`
 - `Dirichlet(T).alphaAt`

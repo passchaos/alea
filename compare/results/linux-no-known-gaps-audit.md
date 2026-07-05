@@ -674,3 +674,7 @@ distribution error set while preserving Zig-native diagnostics.
 S4-M290 adds local `rand_distr` `Exp` / `Exp1` discovery aliases
 (`compare/results/s4-m290-exp-aliases.md`) over Alea's existing
 `Exponential(T)` and `StandardExponential(T)` samplers.
+S4-M291 adds local `rand_distr::multi::Dirichlet` discovery
+(`compare/results/s4-m291-multi-dirichlet-alias.md`) over Alea's existing
+`Dirichlet(T)` sampler while intentionally not copying Rust multivariate trait
+machinery.

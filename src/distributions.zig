@@ -181,6 +181,12 @@ pub const weighted = struct {
     }
 };
 
+pub const multi = struct {
+    pub fn Dirichlet(comptime T: type) type {
+        return distributions_module.Dirichlet(T);
+    }
+};
+
 pub const BernoulliError = error{
     InvalidProbability,
 };
@@ -31208,6 +31214,26 @@ test "rand_distr Exp and Exp1 aliases mirror exponential samplers" {
     (StandardExponential(f64){}).fillFrom(&standard_fill_engine, &standard_buf);
     try std.testing.expectEqualSlices(f64, &standard_buf, &exp1_alias_buf);
     try std.testing.expectEqual(standard_fill_engine.next(), exp1_fill_engine.next());
+}
+
+test "rand_distr multi Dirichlet namespace alias mirrors Dirichlet" {
+    const root = @import("root.zig");
+    comptime std.debug.assert(multi.Dirichlet(f64) == Dirichlet(f64));
+
+    const namespace_sampler = try multi.Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
+    const canonical_sampler = try Dirichlet(f64).init(&.{ 1.0, 2.0, 3.0 });
+    try std.testing.expectEqual(canonical_sampler.dimensionValue(), namespace_sampler.dimensionValue());
+    try std.testing.expectApproxEqAbs(canonical_sampler.totalAlphaValue(), namespace_sampler.totalAlphaValue(), 0);
+    try std.testing.expectApproxEqAbs(try canonical_sampler.meanAt(1), try namespace_sampler.meanAt(1), 0);
+
+    var namespace_engine = root.DefaultPrng.init(0x51_4d_291);
+    var canonical_engine = root.DefaultPrng.init(0x51_4d_291);
+    var namespace_sample: [3]f64 = undefined;
+    var canonical_sample: [3]f64 = undefined;
+    namespace_sampler.sampleIntoFrom(&namespace_engine, &namespace_sample);
+    canonical_sampler.sampleIntoFrom(&canonical_engine, &canonical_sample);
+    try std.testing.expectEqualSlices(f64, &canonical_sample, &namespace_sample);
+    try std.testing.expectEqual(canonical_engine.next(), namespace_engine.next());
 }
 
 test "UniformInt Float Usize aliases mirror Uniform" {
