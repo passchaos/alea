@@ -532,6 +532,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("WeightedChoice.numChoices: {}\n", .{choice.numChoices()});
     try stdout.print("WeightedChoice.weight(2)={d:.3} missing={}\n", .{ choice.weight(2).?, choice.weight(items.len) == null });
     try stdout.print("WeightedChoice.probability(2)={d:.3} missing={}\n", .{ choice.probability(2).?, choice.probability(items.len) == null });
+    try stdout.print("WeightedChoice.get(2)={s} missing={}\n", .{ choice.get(2).?.*, choice.get(items.len) == null });
     var choice_weight_iter = choice.weightIter();
     var choice_weight_iter_fill: [items.len]f64 = undefined;
     _ = choice_weight_iter.fill(&choice_weight_iter_fill);

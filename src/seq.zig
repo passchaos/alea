@@ -7789,6 +7789,11 @@ pub fn Choice(comptime T: type) type {
             return &self.items[index];
         }
 
+        pub fn get(self: Self, index: usize) ?*const T {
+            if (index >= self.items.len) return null;
+            return &self.items[index];
+        }
+
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
             if (index >= self.items.len) return error.InvalidParameter;
             return 1.0 / @as(f64, @floatFromInt(self.items.len));
@@ -8148,6 +8153,11 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn itemAt(self: Self, index: usize) Error!*const T {
             if (index >= self.items.len) return error.InvalidParameter;
+            return &self.items[index];
+        }
+
+        pub fn get(self: Self, index: usize) ?*const T {
+            if (index >= self.items.len) return null;
             return &self.items[index];
         }
 
@@ -16422,6 +16432,8 @@ test "choice sampler repeatedly samples slice references" {
     try std.testing.expectEqualSlices(u8, &values, choice.itemsValue());
     try std.testing.expectEqual(&values[2], try choice.itemAt(2));
     try std.testing.expectError(error.InvalidParameter, choice.itemAt(4));
+    try std.testing.expectEqual(&values[2], choice.get(2).?);
+    try std.testing.expectEqual(@as(?*const u8, null), choice.get(4));
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), try choice.probabilityAt(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), try choice.probabilityAt(3), 1e-12);
     try std.testing.expectError(error.InvalidParameter, choice.probabilityAt(4));
@@ -17034,6 +17046,8 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectEqualSlices([]const u8, &labels, choice.itemsValue());
     try std.testing.expectEqual(&labels[1], try choice.itemAt(1));
     try std.testing.expectError(error.InvalidParameter, choice.itemAt(3));
+    try std.testing.expectEqual(&labels[1], choice.get(1).?);
+    try std.testing.expectEqual(@as(?*const []const u8, null), choice.get(3));
     try std.testing.expectApproxEqAbs(@as(f64, 8), choice.totalWeight(), 1e-12);
     var reconstructed_weights: [3]f64 = undefined;
     try choice.weightsInto(&reconstructed_weights);

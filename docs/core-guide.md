@@ -582,7 +582,7 @@ Use:
   drawing)
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `Choice.sampleIndexFrom`,
-  `Choice.probability` / `probabilityAt`, lazy `Choice.probabilityIter`,
+  `Choice.get` / `itemAt`, `Choice.probability` / `probabilityAt`, lazy `Choice.probabilityIter`,
   `Choice.sampleIndexU32From`, `Choice.fillValuesFrom` / `fillFrom`,
   `Choice.valuesFrom` / `ptrsFrom`, fixed-size `Choice.valueArrayFrom` /
   `ptrArrayFrom`, `Choice.fillIndicesFrom`,
@@ -590,7 +590,7 @@ Use:
   fixed-size `Choice.indexArrayFrom` / `indexArrayU32From`, and
   repeated `Choice.indexIterFrom` / `indexIterU32From` index streams,
   `WeightedChoice.initBy` / `updateBy`, `WeightedChoice.initByIndex` / `updateByIndex`,
-  `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, and
+  `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, `WeightedChoice.get` / `itemAt`, and
   optional `WeightedChoice.weight` / `probability`, lazy `WeightedChoice.weightIter` / `probabilityIter`, `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
   `sampleIndexU32From`, `WeightedChoice.fillValuesFrom` / `fillFrom`,
   `WeightedChoice.valuesFrom` / `ptrsFrom`, fixed-size
