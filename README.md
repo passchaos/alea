@@ -185,6 +185,7 @@ zig build examplecheck
 zig build toolingcheck
 zig build readmecheck
 zig build roadmapcheck
+zig build surfacecheck
 zig build doccheck
 zig build validate
 zig build validate-all

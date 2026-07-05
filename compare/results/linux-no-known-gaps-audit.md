@@ -696,3 +696,10 @@ the checker now validates scanned-source/version tokens, major public-surface
 sections, representative Rust-only exclusions, no-new-gap results, and
 non-completion notes so future local `rand` / `rand_distr` comparisons do not
 silently regress to file-existence-only evidence.
+S4-M296 adds an explicit local source drift checker
+(`compare/results/s4-m296-surfacecheck.md`) exposed as `zig build surfacecheck`;
+it re-scans the available local Rust `rand`, resolved `rand_core`, and cached
+`rand_distr` source files for public declarations/re-exports and checks they are
+mapped by the S4-M288/S4-M294 manifests, while documenting that
+`rand_distr` `#[cfg(test)]` helpers such as `VoidRng` / `rng` are not public
+crate-surface gaps.

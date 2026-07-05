@@ -1088,6 +1088,22 @@ pub fn build(b: *std.Build) void {
     const roadmapcheck_step = b.step("roadmapcheck", "Check roadmap and audit evidence coverage");
     roadmapcheck_step.dependOn(&run_roadmapcheck.step);
 
+    const surfacecheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/surfacecheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const surfacecheck = b.addExecutable(.{
+        .name = "alea-surfacecheck",
+        .root_module = surfacecheck_mod,
+    });
+    const run_surfacecheck = b.addRunArtifact(surfacecheck);
+    if (b.args) |args| run_surfacecheck.addArgs(args);
+
+    const surfacecheck_step = b.step("surfacecheck", "Check local Rust rand/rand_distr public-surface manifest coverage");
+    surfacecheck_step.dependOn(&run_surfacecheck.step);
+
     const doccheck_step = b.step("doccheck", "Run documentation, catalog, and roadmap coverage checks");
     doccheck_step.dependOn(&run_apicheck.step);
     doccheck_step.dependOn(&run_examplecheck.step);

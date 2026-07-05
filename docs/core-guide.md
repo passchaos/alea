@@ -952,6 +952,7 @@ zig build examplecheck
 zig build toolingcheck
 zig build readmecheck
 zig build roadmapcheck
+zig build surfacecheck
 zig build doccheck
 zig build validate
 zig build validate-all
@@ -973,6 +974,10 @@ sh tools/practrand.sh fast 1073741824
 tokens, major surface sections, representative Zig-native exclusions,
 no-new-gap conclusions, and non-completion notes in addition to the roadmap,
 active audit, and S4-M11 blocker tokens.
+Run `zig build surfacecheck` when the local Rust checkouts/caches are available
+to re-scan `~/Work/rand`, resolved `rand_core`, and cached `rand_distr` public
+declarations/re-exports against those manifests; override the default local
+paths with `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, or `ALEA_RAND_DISTR_ROOT`.
 
 PractRand reports are stored under `compare/results/`.
 

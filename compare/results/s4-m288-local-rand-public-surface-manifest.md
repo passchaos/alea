@@ -36,6 +36,7 @@ The scan focused on public declarations and re-exports visible in these files:
 | `make_rng` | Covered by root `makeRng(Engine, io)` with explicit engine type and `std.Io` entropy flow; see S4-M245. |
 | `RngReader` | Covered by `Rng.RngReader`, `Rng.rngReader`, root `RngReader`, and root `rngReader`; see S4-M246 and S4-M278. |
 | `random`, `random_iter`, `random_range`, `random_bool`, `random_ratio`, `fill` | Covered by explicit-IO root helpers and `Rng` facade/direct-source helpers; see S4-M259 and related `Rng` alias milestones. |
+| `#[cfg(test)]` root helpers `rng`, `const_rng`, `step_rng`, and `StepRng` | Covered for local test/mock workflows by Alea `StepRng`, root `stepRng`, and root `constRng`; these Rust names are in the local checkout's test-only module and are not crate-root public API gaps. |
 | `RngExt`, `Fill` | Audited as Rust extension traits in S4-M283; workflows are covered by concrete `Rng`/root APIs, fills, batches, and samplers. |
 
 ## RNG Namespace Surface
@@ -59,7 +60,7 @@ The scan focused on public declarations and re-exports visible in these files:
 | `Bernoulli`, `BernoulliError` | Covered by `Bernoulli`, vector Bernoulli, aliases, and diagnostics; see S4-M225, S4-M227, S4-M228, S4-M263. |
 | `Alphanumeric`, `Alphabetic`, `SampleString` | Covered by distribution namespace aliases, ASCII/Unicode charset samplers, and string sample/append APIs; see S4-M251, S4-M252, S4-M264. |
 | `Choose`, `slice::Choose`, `slice::Empty` | Covered by `distributions.Choose`, `distributions.slice.Choose`, and `distributions.slice.Empty`; see S4-M268 and S4-M273. |
-| `WeightedIndex`, `weighted::WeightedIndex`, `weighted::Error` | Covered by `WeightedIndex`, `AliasTable`, `distributions.weighted.WeightedIndex`, and weighted error aliases/variants; see S4-M265, S4-M271, S4-M281, S4-M284. |
+| `WeightedIndex`, `WeightedIndexIter`, `weighted::WeightedIndex`, `weighted::Error` | Covered by `WeightedIndex`, `AliasTable`, `distributions.weighted.WeightedIndex`, and weight iterator diagnostics/aliases; see S4-M192, S4-M265, S4-M271, S4-M281, S4-M284. |
 | `Distribution`, `Iter`, `Map` | `Iter` / `Map` aliases and sample-iterator/map workflows are covered; Rust `Distribution` trait machinery is intentionally not copied; see S4-M248, S4-M250, S4-M270, S4-M283. |
 | `SampleUniform`, `UniformSampler`, `SampleBorrow`, `SampleRange`, hidden `IntoFloat`, hidden `hidden_export` | Audited as Rust trait/internal support machinery in S4-M283 and S4-M285; concrete uniform workflows are covered, and the Rust-only helper path is intentionally not copied. |
 
