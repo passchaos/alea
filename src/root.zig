@@ -110,6 +110,14 @@ pub fn sysRng(io: std.Io) SysRng {
     return SysRng.init(io);
 }
 
+pub fn RngReader(comptime Source: type) type {
+    return Rng.RngReader(Source);
+}
+
+pub fn rngReader(source: anytype, buffer: []u8) RngReader(@TypeOf(source)) {
+    return Rng.rngReader(source, buffer);
+}
+
 pub fn stepRng(initial: u64, increment: u64) StepRng {
     return StepRng.init(initial, increment);
 }
@@ -398,6 +406,24 @@ test "root rngs namespace mirrors root aliases" {
     var namespace_chacha20 = rngs.ChaCha20Rng.seedFromU64(0x5150_c277);
     var root_chacha20 = ChaCha20Rng.seedFromU64(0x5150_c277);
     try std.testing.expectEqual(root_chacha20.next(), namespace_chacha20.next());
+}
+
+test "root RngReader aliases mirror Rng namespace adapter" {
+    comptime std.debug.assert(RngReader(*StepRng) == Rng.RngReader(*StepRng));
+
+    var alias_source = StepRng.init(0xff, 1);
+    var direct_source = StepRng.init(0xff, 1);
+    var alias_buffer: [7]u8 = undefined;
+    var direct_buffer: [7]u8 = undefined;
+    var alias_reader = rngReader(&alias_source, &alias_buffer);
+    var direct_reader = Rng.rngReader(&direct_source, &direct_buffer);
+
+    var alias_out: [16]u8 = undefined;
+    var direct_out: [16]u8 = undefined;
+    try alias_reader.readAll(&alias_out);
+    try direct_reader.readAll(&direct_out);
+    try std.testing.expectEqualSlices(u8, &direct_out, &alias_out);
+    try std.testing.expectEqual(direct_source.next(), alias_source.next());
 }
 
 test "root StepRng helpers mirror StepRng constructors" {

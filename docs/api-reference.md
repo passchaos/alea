@@ -25,6 +25,7 @@ stability expectations.
   `randomValueChecked`, `randomIter`, `randomRange`, `randomRangeChecked`,
   `randomRangeAtMost`, `randomRangeAtMostChecked`, `randomBool`,
   `randomBoolChecked`, `randomRatio`, `randomRatioChecked`, `fill`
+- Root reader aliases: `RngReader(Source)`, `rngReader`
 - `RandomIterator(T)`: `RandomIterator.next`, `RandomIterator.nextValue`,
   `RandomIterator.fill`, `RandomIterator.sizeHint`
 - Facade constructor: `rng`

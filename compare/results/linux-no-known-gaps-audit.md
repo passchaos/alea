@@ -619,3 +619,7 @@ S4-M277 adds the root `rngs` namespace
 (`compare/results/s4-m277-rngs-namespace.md`), closing the local Rust
 `rand::rngs::*` namespace discoverability gap for Alea's existing explicit
 engine aliases and `SysRng` source without adding hidden thread-local RNG state.
+S4-M278 adds root `RngReader(Source)` and `rngReader(source, buffer)`
+(`compare/results/s4-m278-root-rngreader.md`), closing the local Rust root
+`rand::RngReader` discovery gap while preserving Alea's explicit caller-buffer
+`std.Io.Reader` adapter design.

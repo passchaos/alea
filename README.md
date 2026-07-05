@@ -17,7 +17,8 @@ The current Linux-first roadmap is intentionally broad:
   `tryNext()`, `tryNextU64()`, `tryNextU32()`, and `tryFillBytes(out)` on
   deterministic engines, alongside Zig-native `next()`, `bytes`, and
   `fill(u8, out)`
-- a Zig-native `Rng.reader(buffer)` / `Rng.rngReader(source, buffer)`
+- a Zig-native `Rng.reader(buffer)` / `Rng.rngReader(source, buffer)` plus root
+  `rngReader(source, buffer)`
   adapter for streaming random bytes through `std.Io.Reader`, matching local
   Rust `rand::RngReader` workflows while preserving Alea's source ownership
   and fallible-source diagnostics
