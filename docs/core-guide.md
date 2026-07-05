@@ -44,7 +44,8 @@ selection.
 
 - integers: `uint`, `uintLessThan`, `uintAtMost`, `fillUintLessThan`,
   `fillUintAtMost`, `uintLessThanBatch`, and `uintAtMostBatch`
-- signed and unsigned ranges: `intRangeLessThan`, `intRangeAtMost`
+- signed and unsigned ranges: `intRangeLessThan`, `intRangeAtMost`, plus
+  Rust-discoverable `randomRange` / `randomRangeAtMost` aliases
 - floats: `float`, `floatOpen`, `floatOpenClosed`, `floatRange`,
   `standardNormal`, `standardExponential`
 - vectors: `value(@Vector(N, T))`, `vectorOpen`, `vectorOpenClosed`,

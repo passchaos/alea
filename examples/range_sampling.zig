@@ -13,6 +13,8 @@ pub fn main(init: std.process.Init) !void {
 
     const die_exclusive = rng.intRangeLessThan(u8, 1, 7);
     const die_inclusive = rng.intRangeAtMost(u8, 1, 6);
+    const random_range_die = rng.randomRange(u8, 1, 7);
+    const random_range_at_most_die = rng.randomRangeAtMost(u8, 1, 6);
     const signed_offset = rng.intRangeLessThan(i32, -10, 11);
     const unit = rng.float(f64);
     const open = rng.floatOpen(f64);
@@ -25,6 +27,7 @@ pub fn main(init: std.process.Init) !void {
     const sample_single_inclusive = try alea.distributions.sampleSingleInclusiveFrom(&engine, u8, 1, 6);
 
     try stdout.print("integer ranges: less-than die={}, inclusive die={}, signed offset={}\n", .{ die_exclusive, die_inclusive, signed_offset });
+    try stdout.print("randomRange die={}, randomRangeAtMost die={}\n", .{ random_range_die, random_range_at_most_die });
     try stdout.print("float units: [0,1)={d:.8}, (0,1)={d:.8}, (0,1]={d:.8}, range[-1,1)={d:.8}\n", .{ unit, open, open_closed, centered });
     try stdout.print("sampleSingle die={}, sampleSingleInclusive die={}\n", .{ sample_single, sample_single_inclusive });
     try stdout.print("duration range [10ms,20ms]: {} ns\n", .{duration.nanoseconds});

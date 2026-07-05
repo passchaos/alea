@@ -1776,6 +1776,38 @@ pub fn intRangeLessThan(self: Rng, comptime T: type, at_least: T, less_than: T) 
     return intRangeLessThanFrom(self, T, at_least, less_than);
 }
 
+pub fn randomRange(self: Rng, comptime T: type, min: T, max: T) T {
+    return rangeFrom(self, T, min, max);
+}
+
+pub fn randomRangeFrom(source: anytype, comptime T: type, min: T, max: T) T {
+    return rangeFrom(source, T, min, max);
+}
+
+pub fn randomRangeChecked(self: Rng, comptime T: type, min: T, max: T) Error!T {
+    return rangeCheckedFrom(self, T, min, max);
+}
+
+pub fn randomRangeCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
+    return rangeCheckedFrom(source, T, min, max);
+}
+
+pub fn randomRangeAtMost(self: Rng, comptime T: type, min: T, max: T) T {
+    return rangeAtMostFrom(self, T, min, max);
+}
+
+pub fn randomRangeAtMostFrom(source: anytype, comptime T: type, min: T, max: T) T {
+    return rangeAtMostFrom(source, T, min, max);
+}
+
+pub fn randomRangeAtMostChecked(self: Rng, comptime T: type, min: T, max: T) Error!T {
+    return rangeAtMostCheckedFrom(self, T, min, max);
+}
+
+pub fn randomRangeAtMostCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
+    return rangeAtMostCheckedFrom(source, T, min, max);
+}
+
 pub fn intRangeLessThanChecked(self: Rng, comptime T: type, at_least: T, less_than: T) Error!T {
     return intRangeLessThanCheckedFrom(self, T, at_least, less_than);
 }
@@ -1830,6 +1862,36 @@ pub fn intRangeAtMostFrom(source: anytype, comptime T: type, at_least: T, at_mos
     }
 
     return at_least + uintAtMostFrom(source, T, at_most - at_least);
+}
+
+fn rangeFrom(source: anytype, comptime T: type, min: T, max: T) T {
+    return switch (@typeInfo(T)) {
+        .int => intRangeLessThanFrom(source, T, min, max),
+        .float => floatRangeFrom(source, T, min, max),
+        else => @compileError("Rng.rangeFrom supports integer and floating-point types"),
+    };
+}
+
+fn rangeCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
+    return switch (@typeInfo(T)) {
+        .int => intRangeLessThanCheckedFrom(source, T, min, max),
+        .float => floatRangeCheckedFrom(source, T, min, max),
+        else => @compileError("Rng.rangeCheckedFrom supports integer and floating-point types"),
+    };
+}
+
+fn rangeAtMostFrom(source: anytype, comptime T: type, min: T, max: T) T {
+    return switch (@typeInfo(T)) {
+        .int => intRangeAtMostFrom(source, T, min, max),
+        else => @compileError("Rng.rangeAtMostFrom supports integer types"),
+    };
+}
+
+fn rangeAtMostCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
+    return switch (@typeInfo(T)) {
+        .int => intRangeAtMostCheckedFrom(source, T, min, max),
+        else => @compileError("Rng.rangeAtMostCheckedFrom supports integer types"),
+    };
 }
 
 pub fn float(self: Rng, comptime T: type) T {
@@ -4080,6 +4142,10 @@ test "rng facade covers scalar APIs" {
 
     try std.testing.expect(rng.uintLessThan(u32, 10) < 10);
     try std.testing.expect(rng.intRangeLessThan(i32, -5, 5) >= -5);
+    try std.testing.expect(rng.randomRange(i32, -5, 5) >= -5);
+    try std.testing.expect(Rng.randomRangeFrom(&engine, u32, 3, 7) < 7);
+    try std.testing.expect(rng.randomRangeAtMost(i32, -5, 5) <= 5);
+    try std.testing.expect(Rng.randomRangeAtMostFrom(&engine, u32, 3, 7) <= 7);
     try std.testing.expect(rng.float(f64) < 1.0);
     try std.testing.expect(rng.floatOpen(f64) > 0.0);
     try std.testing.expect(Rng.floatOpenFrom(&engine, f64) > 0.0);
@@ -4108,6 +4174,10 @@ test "rng facade covers scalar APIs" {
     try std.testing.expect(try Rng.intRangeLessThanCheckedFrom(&engine, i32, -5, 5) >= -5);
     try std.testing.expect(try Rng.intRangeAtMostCheckedFrom(&engine, i32, -5, 5) <= 5);
     try std.testing.expect(try Rng.floatRangeCheckedFrom(&engine, f64, -1, 1) >= -1);
+    try std.testing.expect(try rng.randomRangeChecked(i32, -5, 5) < 5);
+    try std.testing.expect(try Rng.randomRangeCheckedFrom(&engine, f64, -1, 1) < 1);
+    try std.testing.expect(try rng.randomRangeAtMostChecked(i32, -5, 5) <= 5);
+    try std.testing.expect(try Rng.randomRangeAtMostCheckedFrom(&engine, u32, 3, 7) <= 7);
     try std.testing.expectError(error.InvalidProbability, rng.chanceChecked(1.1));
     try std.testing.expectError(error.InvalidProbability, Rng.chanceCheckedFrom(&engine, 1.1));
     try std.testing.expectError(error.InvalidProbability, rng.randomBoolChecked(1.1));
@@ -4125,8 +4195,12 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.EmptyRange, Rng.uintLessThanCheckedFrom(&engine, u32, 0));
     try std.testing.expectError(error.EmptyRange, rng.intRangeLessThanChecked(u32, 3, 3));
     try std.testing.expectError(error.EmptyRange, Rng.intRangeLessThanCheckedFrom(&engine, u32, 3, 3));
+    try std.testing.expectError(error.EmptyRange, rng.randomRangeChecked(u32, 3, 3));
+    try std.testing.expectError(error.EmptyRange, Rng.randomRangeCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     try std.testing.expectError(error.EmptyRange, rng.intRangeAtMostChecked(u32, 4, 3));
     try std.testing.expectError(error.EmptyRange, Rng.intRangeAtMostCheckedFrom(&engine, u32, 4, 3));
+    try std.testing.expectError(error.EmptyRange, rng.randomRangeAtMostChecked(u32, 4, 3));
+    try std.testing.expectError(error.EmptyRange, Rng.randomRangeAtMostCheckedFrom(&engine, u32, 4, 3));
     try std.testing.expectError(error.EmptyRange, rng.floatRangeChecked(f64, std.math.inf(f64), 1));
     try std.testing.expectError(error.EmptyRange, Rng.floatRangeCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     const duration = rng.durationRangeAtMost(.fromMilliseconds(10), .fromMilliseconds(20));
