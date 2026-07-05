@@ -750,3 +750,7 @@ S4-M305 expands `surfacecheck` file coverage
 `rand/src/distr/other.rs` and cached `rand_distr/src/ziggurat_tables.rs`, so the
 source-driven audit covers ASCII distribution aliases and public ziggurat table
 type names alongside the existing manifest entries.
+S4-M306 adds an unlisted-public-file guard to `surfacecheck`
+(`compare/results/s4-m306-surfacecheck-public-file-guard.md`): the checker now
+recursively reports `.rs` files under each local baseline root that contain
+public declarations or methods but are neither scanned nor explicitly ignored.

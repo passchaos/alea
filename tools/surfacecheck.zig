@@ -8,6 +8,7 @@ const SourceGroup = struct {
     files: []const []const u8,
     expected_tokens: []const []const u8,
     ignored_tokens: []const []const u8 = &.{},
+    ignored_public_files: []const []const u8 = &.{},
 };
 
 const GroupStats = struct {
@@ -127,6 +128,11 @@ const local_rand_ignored_tokens = [_][]const u8{
     "const_rng",
     "step_rng",
     "StepRng",
+};
+
+const local_rand_ignored_public_files = [_][]const u8{
+    "seq/coin_flipper.rs",
+    "seq/increasing_uniform.rs",
 };
 
 const rand_core_files = [_][]const u8{
@@ -277,6 +283,7 @@ const groups = [_]SourceGroup{
         .files = local_rand_files[0..],
         .expected_tokens = local_rand_expected_tokens[0..],
         .ignored_tokens = local_rand_ignored_tokens[0..],
+        .ignored_public_files = local_rand_ignored_public_files[0..],
     },
     .{
         .label = "local rand_core",
@@ -384,7 +391,61 @@ fn checkGroup(
         try checkSourcePublicTokens(stderr, group, relative, source, manifest, missing, &stats);
     }
 
+    try checkUnlistedPublicFiles(io, allocator, stderr, group, root, "", missing);
+
     return stats;
+}
+
+fn checkUnlistedPublicFiles(
+    io: std.Io,
+    allocator: std.mem.Allocator,
+    stderr: *std.Io.Writer,
+    group: SourceGroup,
+    root: []const u8,
+    relative_dir: []const u8,
+    missing: *usize,
+) !void {
+    const dir_path = if (relative_dir.len == 0)
+        try allocator.dupe(u8, root)
+    else
+        try std.fs.path.join(allocator, &.{ root, relative_dir });
+    defer allocator.free(dir_path);
+
+    var dir = try std.Io.Dir.openDirAbsolute(io, dir_path, .{ .iterate = true });
+    defer dir.close(io);
+
+    var it = dir.iterate();
+    while (try it.next(io)) |entry| {
+        if (std.mem.eql(u8, entry.name, ".") or std.mem.eql(u8, entry.name, "..")) continue;
+        const relative = if (relative_dir.len == 0)
+            try allocator.dupe(u8, entry.name)
+        else
+            try std.fs.path.join(allocator, &.{ relative_dir, entry.name });
+        defer allocator.free(relative);
+
+        switch (entry.kind) {
+            .directory => try checkUnlistedPublicFiles(io, allocator, stderr, group, root, relative, missing),
+            .file => {
+                if (!std.mem.endsWith(u8, relative, ".rs")) continue;
+                if (knownFile(group, relative) or ignoredPublicFile(group, relative)) continue;
+
+                const path = try std.fs.path.join(allocator, &.{ root, relative });
+                defer allocator.free(path);
+                const source = readAbsoluteFile(io, allocator, path) catch |err| {
+                    try stderr.print("surfacecheck: unable to read candidate {s} source `{s}`: {s}\n", .{ group.label, path, @errorName(err) });
+                    missing.* += 1;
+                    continue;
+                };
+                defer allocator.free(source);
+
+                if (hasPublicLine(source)) {
+                    try stderr.print("surfacecheck: {s} public source `{s}` is not listed in surfacecheck files\n", .{ group.label, relative });
+                    missing.* += 1;
+                }
+            },
+            else => {},
+        }
+    }
 }
 
 fn checkSourcePublicTokens(
@@ -693,6 +754,29 @@ fn isIdentByte(byte: u8) bool {
 fn isIgnored(group: SourceGroup, token: []const u8) bool {
     for (group.ignored_tokens) |ignored| {
         if (std.mem.eql(u8, token, ignored)) return true;
+    }
+    return false;
+}
+
+fn knownFile(group: SourceGroup, relative: []const u8) bool {
+    for (group.files) |file| {
+        if (std.mem.eql(u8, relative, file)) return true;
+    }
+    return false;
+}
+
+fn ignoredPublicFile(group: SourceGroup, relative: []const u8) bool {
+    for (group.ignored_public_files) |file| {
+        if (std.mem.eql(u8, relative, file)) return true;
+    }
+    return false;
+}
+
+fn hasPublicLine(source: []const u8) bool {
+    var line_it = std.mem.splitScalar(u8, source, '\n');
+    while (line_it.next()) |line| {
+        const trimmed = std.mem.trim(u8, line, " \t\r");
+        if (std.mem.startsWith(u8, trimmed, "pub ")) return true;
     }
     return false;
 }
