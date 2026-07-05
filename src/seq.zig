@@ -21,6 +21,27 @@ pub const IndexVec = union(enum) {
         };
     }
 
+    pub const IntoIterator = struct {
+        index_vec: IndexVec,
+        allocator: std.mem.Allocator,
+        index: usize = 0,
+
+        pub fn next(self: *IntoIterator) ?usize {
+            if (self.index >= self.index_vec.len()) return null;
+            const value = self.index_vec.at(self.index);
+            self.index += 1;
+            return value;
+        }
+
+        pub fn remaining(self: IntoIterator) usize {
+            return self.index_vec.len() - self.index;
+        }
+
+        pub fn deinit(self: IntoIterator) void {
+            self.index_vec.deinit(self.allocator);
+        }
+    };
+
     pub const Iterator = struct {
         index_vec: IndexVec,
         index: usize = 0,
@@ -317,6 +338,10 @@ pub const IndexVec = union(enum) {
     pub fn mutPtrsOwnedChecked(self: IndexVec, allocator: std.mem.Allocator, comptime T: type, items: []T) ![]*T {
         try self.validateDistinctItems(items.len);
         return self.mutPtrsOwned(allocator, T, items);
+    }
+
+    pub fn intoIter(self: IndexVec, allocator: std.mem.Allocator) IntoIterator {
+        return .{ .index_vec = self, .allocator = allocator };
     }
 
     pub fn iter(self: IndexVec) Iterator {
@@ -9181,6 +9206,31 @@ test "index vec clone preserves representation and owns copy" {
     var failing_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, native_vec.clone(failing_alloc.allocator()));
     try std.testing.expect(failing_alloc.has_induced_failure);
+}
+
+test "index vec consuming iterator owns backing" {
+    const compact_backing = try std.testing.allocator.alloc(u32, 3);
+    compact_backing[0..3].* = .{ 3, 5, 8 };
+    const compact_vec = IndexVec.fromOwnedU32Slice(compact_backing);
+    var compact_iter = compact_vec.intoIter(std.testing.allocator);
+    defer compact_iter.deinit();
+    try std.testing.expectEqual(@as(usize, 3), compact_iter.remaining());
+    try std.testing.expectEqual(@as(?usize, 3), compact_iter.next());
+    try std.testing.expectEqual(@as(usize, 2), compact_iter.remaining());
+    try std.testing.expectEqual(@as(?usize, 5), compact_iter.next());
+    try std.testing.expectEqual(@as(?usize, 8), compact_iter.next());
+    try std.testing.expectEqual(@as(usize, 0), compact_iter.remaining());
+    try std.testing.expectEqual(@as(?usize, null), compact_iter.next());
+
+    const native_backing = try std.testing.allocator.alloc(usize, 2);
+    native_backing[0..2].* = .{ 13, 21 };
+    const native_vec = IndexVec.fromOwnedSlice(native_backing);
+    var native_iter = native_vec.intoIter(std.testing.allocator);
+    defer native_iter.deinit();
+    try std.testing.expectEqual(@as(?usize, 13), native_iter.next());
+    try std.testing.expectEqual(@as(usize, 1), native_iter.remaining());
+    try std.testing.expectEqual(@as(?usize, 21), native_iter.next());
+    try std.testing.expectEqual(@as(?usize, null), native_iter.next());
 }
 
 test "index vec consuming owned conversions transfer or narrow backing" {

@@ -303,7 +303,8 @@ Use:
   representation-preserving deep `clone`, `len`, `isEmpty`, `at`,
   representation-independent `eql`, `copyInto`, `copyIntoU32`,
   `toOwnedSlice`, `toOwnedU32Slice`, consuming `intoOwnedSlice` /
-  `intoOwnedU32Slice`, and an exact-size `iter` with `remaining`, plus
+  `intoOwnedU32Slice`, a consuming `intoIter` with `remaining` / `deinit`, and
+  an exact-size `iter` with `remaining`, plus
   `values` / `ptrs` / `mutPtrs`, `valuesInto` / `ptrsInto` /
   `mutPtrsInto`, `valuesOwned` / `ptrsOwned` / `mutPtrsOwned`, and checked
   variants for mapping indexes back to slice items

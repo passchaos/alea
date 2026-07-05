@@ -2583,6 +2583,8 @@ Dynamic weighted helpers:
   `IndexVec.mutPtrsChecked`, `IndexVec.mutPtrsInto`,
   `IndexVec.mutPtrsIntoChecked`, `IndexVec.mutPtrsOwned`,
   `IndexVec.mutPtrsOwnedChecked`,
+  `IndexVec.intoIter`, `IndexVec.IntoIterator.next`,
+  `IndexVec.IntoIterator.remaining`, `IndexVec.IntoIterator.deinit`,
   `IndexVec.iter`, `IndexVec.Iterator.next`, `IndexVec.Iterator.remaining`,
   `IndexVec.ValueIterator.remaining`, `PtrIterator`, `PtrIterator.next`,
   `PtrIterator.remaining`, `MutPtrIterator`, `MutPtrIterator.next`,

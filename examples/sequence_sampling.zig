@@ -86,6 +86,13 @@ pub fn main(init: std.process.Init) !void {
     const cloned_index_vec = try item_index_vec.clone(allocator);
     defer cloned_index_vec.deinit(allocator);
     try stdout.print("IndexVec.clone eql: {}\n", .{cloned_index_vec.eql(item_index_vec)});
+    const iter_backing = try allocator.dupe(u32, &.{ 0, 2, 4 });
+    var consuming_iter = alea.seq.IndexVec.fromOwnedU32Slice(iter_backing).intoIter(allocator);
+    defer consuming_iter.deinit();
+    const iter0 = consuming_iter.next().?;
+    const iter1 = consuming_iter.next().?;
+    const iter2 = consuming_iter.next().?;
+    try stdout.print("IndexVec.intoIter: {}, {}, {}; remaining={}\n", .{ iter0, iter1, iter2, consuming_iter.remaining() });
     const adopted_native_backing = try allocator.dupe(usize, &.{ 0, 2, 4 });
     const adopted_native_index_vec = alea.seq.IndexVec.fromOwnedSlice(adopted_native_backing);
     defer adopted_native_index_vec.deinit(allocator);
