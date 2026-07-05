@@ -54,6 +54,14 @@ pub fn next(self: *ChaCha) u64 {
     return std.mem.readInt(u64, &bytes, .little);
 }
 
+pub fn nextU64(self: *ChaCha) u64 {
+    return self.next();
+}
+
+pub fn nextU32(self: *ChaCha) u32 {
+    return @truncate(self.next() >> 32);
+}
+
 pub fn fill(self: *ChaCha, out: []u8) void {
     var dest = out;
     while (dest.len > 0) {
@@ -66,6 +74,10 @@ pub fn fill(self: *ChaCha, out: []u8) void {
         self.offset += n;
         dest = dest[n..];
     }
+}
+
+pub fn fillBytes(self: *ChaCha, out: []u8) void {
+    self.fill(out);
 }
 
 fn refill(self: *ChaCha) void {

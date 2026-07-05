@@ -30,6 +30,14 @@ pub fn next(self: *Wyhash64) u64 {
     return wymix(self.state ^ secret[1], self.state);
 }
 
+pub fn nextU64(self: *Wyhash64) u64 {
+    return self.next();
+}
+
+pub fn nextU32(self: *Wyhash64) u32 {
+    return @truncate(self.next() >> 32);
+}
+
 pub fn fill(self: *Wyhash64, buf: []u8) void {
     var i: usize = 0;
     const aligned_len = buf.len - (buf.len & 7);
@@ -45,6 +53,10 @@ pub fn fill(self: *Wyhash64, buf: []u8) void {
         std.mem.writeInt(u64, &bytes, self.next(), .little);
         @memcpy(buf[i..], bytes[0 .. buf.len - i]);
     }
+}
+
+pub fn fillBytes(self: *Wyhash64, buf: []u8) void {
+    self.fill(buf);
 }
 
 fn wymix(a: u64, b: u64) u64 {

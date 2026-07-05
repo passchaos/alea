@@ -269,17 +269,23 @@ stability expectations.
 ## Engines
 
 All engines expose deterministic construction and `random()` interop where
-appropriate.
+appropriate. Engines with byte fills expose Rust-discoverable `fillBytes`
+aliases; all deterministic engines expose Rust-discoverable `nextU64` /
+`nextU32` raw aliases alongside `next`.
 
-- `SplitMix64`: `init`, `next`
-- `Wyhash64`: `init`, `fromState`, `random`, `next`, `fill`
-- `Alea4x64`: `init`, `random`, `next`, `fill`
-- `Xoshiro256`: `init`, `seed`, `random`, `next`, `split`, `jump`,
-  `longJump`, `fill`
-- `Xoshiro256PlusPlus`: `init`, `random`, `next`, `jump`, `fill`
-- `Pcg64`: `init`, `initTwo`, `random`, `next`, `fill`
+- `SplitMix64`: `init`, `next`, `nextU64`, `nextU32`
+- `Wyhash64`: `init`, `fromState`, `random`, `next`, `nextU64`, `nextU32`,
+  `fill`, `fillBytes`
+- `Alea4x64`: `init`, `random`, `next`, `nextU64`, `nextU32`, `fill`,
+  `fillBytes`
+- `Xoshiro256`: `init`, `seed`, `random`, `next`, `nextU64`, `nextU32`,
+  `split`, `jump`, `longJump`, `fill`, `fillBytes`
+- `Xoshiro256PlusPlus`: `init`, `random`, `next`, `nextU64`, `nextU32`,
+  `jump`, `fill`, `fillBytes`
+- `Pcg64`: `init`, `initTwo`, `random`, `next`, `nextU64`, `nextU32`,
+  `fill`, `fillBytes`
 - `ChaCha`: `seed_length`, `init`, `initFromU64`, `random`, `addEntropy`,
-  `next`, `fill`
+  `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`
 
 ## Distributions
 

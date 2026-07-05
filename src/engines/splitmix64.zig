@@ -15,6 +15,14 @@ pub fn next(self: *SplitMix64) u64 {
     return z ^ (z >> 31);
 }
 
+pub fn nextU64(self: *SplitMix64) u64 {
+    return self.next();
+}
+
+pub fn nextU32(self: *SplitMix64) u32 {
+    return @truncate(self.next() >> 32);
+}
+
 test "splitmix64 next has stable snapshots" {
     var rng = SplitMix64.init(0x1234_5678_9abc_def0);
     try @import("std").testing.expectEqual(@as(u64, 0x161922c645ce50e8), rng.next());

@@ -22,6 +22,14 @@ pub inline fn next(self: *Xoshiro256PlusPlus) u64 {
     return result;
 }
 
+pub fn nextU64(self: *Xoshiro256PlusPlus) u64 {
+    return self.next();
+}
+
+pub fn nextU32(self: *Xoshiro256PlusPlus) u32 {
+    return @truncate(self.next() >> 32);
+}
+
 pub fn jump(self: *Xoshiro256PlusPlus) void {
     jumpBy(self, &.{
         0x180ec6d33cfd0aba,
@@ -46,6 +54,10 @@ pub fn fill(self: *Xoshiro256PlusPlus, buf: []u8) void {
         std.mem.writeInt(u64, &bytes, self.next(), .little);
         @memcpy(buf[i..], bytes[0 .. buf.len - i]);
     }
+}
+
+pub fn fillBytes(self: *Xoshiro256PlusPlus, buf: []u8) void {
+    self.fill(buf);
 }
 
 inline fn step(self: *Xoshiro256PlusPlus) void {

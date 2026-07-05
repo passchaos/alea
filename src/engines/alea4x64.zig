@@ -25,6 +25,14 @@ pub inline fn next(self: *Alea4x64) u64 {
     return lane(self, 0);
 }
 
+pub fn nextU64(self: *Alea4x64) u64 {
+    return self.next();
+}
+
+pub fn nextU32(self: *Alea4x64) u32 {
+    return @truncate(self.next() >> 32);
+}
+
 pub fn fill(self: *Alea4x64, buf: []u8) void {
     var i: usize = 0;
     const aligned_len = buf.len - (buf.len & 31);
@@ -47,6 +55,10 @@ pub fn fill(self: *Alea4x64, buf: []u8) void {
             n >>= 8;
         }
     }
+}
+
+pub fn fillBytes(self: *Alea4x64, buf: []u8) void {
+    self.fill(buf);
 }
 
 inline fn lane(self: *Alea4x64, comptime i: usize) u64 {

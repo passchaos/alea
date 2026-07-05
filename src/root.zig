@@ -143,3 +143,42 @@ test "root deterministic constructors have stable snapshots" {
     const wrapper = rng(&wrapper_engine);
     try std.testing.expectEqual(direct_rng_engine.next(), wrapper.next());
 }
+
+fn engineFromSeed(comptime Engine: type, seed: u64) Engine {
+    if (comptime Engine == ChaCha) return Engine.initFromU64(seed);
+    return Engine.init(seed);
+}
+
+fn expectFullEngineRawAliases(comptime Engine: type, seed: u64) !void {
+    var direct_u64 = engineFromSeed(Engine, seed);
+    var alias_u64 = engineFromSeed(Engine, seed);
+    try std.testing.expectEqual(direct_u64.next(), alias_u64.nextU64());
+
+    var direct_u32 = engineFromSeed(Engine, seed);
+    var alias_u32 = engineFromSeed(Engine, seed);
+    try std.testing.expectEqual(@as(u32, @truncate(direct_u32.next() >> 32)), alias_u32.nextU32());
+
+    var direct_fill = engineFromSeed(Engine, seed);
+    var alias_fill = engineFromSeed(Engine, seed);
+    var direct_bytes: [23]u8 = undefined;
+    var alias_bytes: [23]u8 = undefined;
+    direct_fill.fill(&direct_bytes);
+    alias_fill.fillBytes(&alias_bytes);
+    try std.testing.expectEqualSlices(u8, &direct_bytes, &alias_bytes);
+}
+
+test "engine raw aliases preserve stream shape" {
+    const seed: u64 = 0x5150_f00d_dead_beef;
+
+    inline for (.{ Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha }) |Engine| {
+        try expectFullEngineRawAliases(Engine, seed);
+    }
+
+    var splitmix_direct_u64 = SplitMix64.init(seed);
+    var splitmix_alias_u64 = SplitMix64.init(seed);
+    try std.testing.expectEqual(splitmix_direct_u64.next(), splitmix_alias_u64.nextU64());
+
+    var splitmix_direct_u32 = SplitMix64.init(seed);
+    var splitmix_alias_u32 = SplitMix64.init(seed);
+    try std.testing.expectEqual(@as(u32, @truncate(splitmix_direct_u32.next() >> 32)), splitmix_alias_u32.nextU32());
+}

@@ -26,6 +26,14 @@ pub fn next(self: *Xoshiro256) u64 {
     return result;
 }
 
+pub fn nextU64(self: *Xoshiro256) u64 {
+    return self.next();
+}
+
+pub fn nextU32(self: *Xoshiro256) u32 {
+    return @truncate(self.next() >> 32);
+}
+
 pub fn split(self: *Xoshiro256) Xoshiro256 {
     var child: Xoshiro256 = .{ .state = undefined };
     inline for (0..4) |i| child.state[i] = self.next();
@@ -66,6 +74,10 @@ pub fn fill(self: *Xoshiro256, buf: []u8) void {
         std.mem.writeInt(u64, &bytes, self.next(), .little);
         @memcpy(buf[i..], bytes[0 .. buf.len - i]);
     }
+}
+
+pub fn fillBytes(self: *Xoshiro256, buf: []u8) void {
+    self.fill(buf);
 }
 
 fn step(self: *Xoshiro256) void {

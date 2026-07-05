@@ -25,6 +25,9 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
 Every engine exposes `next() u64`, `fill([]u8)`, and `random() std.Random`.
 Use `alea.Rng.init(&engine)` when you want the ergonomic facade, and direct
 engine helpers when benchmark shape matters.
+Direct engines also expose Rust-discoverable `nextU64()` / `nextU32()` aliases
+(`fillBytes(out)` where the engine has byte fills), so callers can use local
+Rust raw-RNG terminology without wrapping in `Rng`.
 The `Rng` facade also exposes Rust-discoverable raw aliases `nextU64()`,
 `nextU32()`, and `fillBytes(out)` (plus `nextU64From`, `nextU32From`, and
 `fillBytesFrom` for direct sources) for users mapping local Rust
