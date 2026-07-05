@@ -273,6 +273,16 @@ pub fn tryFillBytes(self: Rng, buf: []u8) !void {
     self.fillBytes(buf);
 }
 
+pub fn tryFillBytesFrom(source: anytype, buf: []u8) !void {
+    if (@TypeOf(source) == Rng) {
+        try source.tryFillBytes(buf);
+    } else if (comptime sourceCanTryFillBytes(@TypeOf(source))) {
+        try source.tryFillBytes(buf);
+    } else {
+        fillBytesFrom(source, buf);
+    }
+}
+
 pub fn bytesAlloc(self: Rng, allocator: std.mem.Allocator, count: usize) ![]u8 {
     return bytesAllocFrom(self, allocator, count);
 }
@@ -1411,6 +1421,15 @@ fn sourceCanFillBytes(comptime Source: type) bool {
     return @hasDecl(Source, "fill");
 }
 
+fn sourceCanTryFillBytes(comptime Source: type) bool {
+    if (Source == Rng) return true;
+    const info = @typeInfo(Source);
+    if (info == .pointer and info.pointer.size == .one) {
+        return @hasDecl(info.pointer.child, "tryFillBytes");
+    }
+    return @hasDecl(Source, "tryFillBytes");
+}
+
 fn fillBoolsFrom(source: anytype, dest: []bool) void {
     var i: usize = 0;
     while (i < dest.len) {
@@ -1666,6 +1685,13 @@ pub fn tryNextU64(self: Rng) !u64 {
     return self.nextU64();
 }
 
+pub fn tryNextU64From(source: anytype) !u64 {
+    if (@TypeOf(source) == Rng) return source.tryNextU64();
+    if (comptime sourceCanTryNextU64(@TypeOf(source))) return source.tryNextU64();
+    if (comptime sourceCanTryNext(@TypeOf(source))) return source.tryNext();
+    return nextFrom(source);
+}
+
 pub fn nextU64From(source: anytype) u64 {
     return nextFrom(source);
 }
@@ -1676,6 +1702,12 @@ pub fn nextU32(self: Rng) u32 {
 
 pub fn tryNextU32(self: Rng) !u32 {
     return self.nextU32();
+}
+
+pub fn tryNextU32From(source: anytype) !u32 {
+    if (@TypeOf(source) == Rng) return source.tryNextU32();
+    if (comptime sourceCanTryNextU32(@TypeOf(source))) return source.tryNextU32();
+    return @truncate((try tryNextU64From(source)) >> 32);
 }
 
 pub fn nextU32From(source: anytype) u32 {
@@ -3816,6 +3848,33 @@ pub inline fn nextFrom(source: anytype) u64 {
     return source.next();
 }
 
+fn sourceCanTryNext(comptime Source: type) bool {
+    if (Source == Rng) return true;
+    const info = @typeInfo(Source);
+    if (info == .pointer and info.pointer.size == .one) {
+        return @hasDecl(info.pointer.child, "tryNext");
+    }
+    return @hasDecl(Source, "tryNext");
+}
+
+fn sourceCanTryNextU64(comptime Source: type) bool {
+    if (Source == Rng) return true;
+    const info = @typeInfo(Source);
+    if (info == .pointer and info.pointer.size == .one) {
+        return @hasDecl(info.pointer.child, "tryNextU64");
+    }
+    return @hasDecl(Source, "tryNextU64");
+}
+
+fn sourceCanTryNextU32(comptime Source: type) bool {
+    if (Source == Rng) return true;
+    const info = @typeInfo(Source);
+    if (info == .pointer and info.pointer.size == .one) {
+        return @hasDecl(info.pointer.child, "tryNextU32");
+    }
+    return @hasDecl(Source, "tryNextU32");
+}
+
 fn randomFrom(source: anytype) std.Random {
     return source.random();
 }
@@ -4202,8 +4261,11 @@ test "rng facade covers scalar APIs" {
     _ = try rng.tryNextU32();
     _ = Rng.nextU64From(&engine);
     _ = Rng.nextU32From(&engine);
+    _ = try Rng.tryNextU64From(&engine);
+    _ = try Rng.tryNextU32From(&engine);
     var raw_bytes: [7]u8 = undefined;
     try rng.tryFillBytes(&raw_bytes);
+    try Rng.tryFillBytesFrom(&engine, &raw_bytes);
     _ = rng.randomValue(u64);
     _ = Rng.randomValueFrom(&engine, u32);
     _ = try rng.randomValueChecked(bool);
@@ -4818,6 +4880,82 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.InvalidParameter, Rng.normalCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     try std.testing.expectError(error.InvalidParameter, rng.exponentialChecked(f64, 0));
     try std.testing.expectError(error.InvalidParameter, Rng.exponentialCheckedFrom(&engine, f64, std.math.nan(f64)));
+}
+
+test "rng direct try raw aliases propagate source failures" {
+    const FallibleSource = struct {
+        words: []const u64,
+        index: usize = 0,
+        fail_after: ?usize = null,
+
+        fn next(self: *@This()) u64 {
+            const word = self.words[self.index];
+            self.index += 1;
+            return word;
+        }
+
+        fn fill(self: *@This(), out: []u8) void {
+            var i: usize = 0;
+            while (i < out.len) {
+                const word = self.next();
+                var word_bytes: [8]u8 = undefined;
+                std.mem.writeInt(u64, &word_bytes, word, .little);
+                const n = @min(8, out.len - i);
+                @memcpy(out[i..][0..n], word_bytes[0..n]);
+                i += n;
+            }
+        }
+
+        fn tryNext(self: *@This()) error{NoSeed}!u64 {
+            if (self.fail_after) |limit| {
+                if (self.index >= limit) return error.NoSeed;
+            }
+            if (self.index >= self.words.len) return error.NoSeed;
+            return self.next();
+        }
+
+        fn tryFillBytes(self: *@This(), out: []u8) error{NoSeed}!void {
+            var i: usize = 0;
+            while (i < out.len) {
+                const word = try self.tryNext();
+                var word_bytes: [8]u8 = undefined;
+                std.mem.writeInt(u64, &word_bytes, word, .little);
+                const n = @min(8, out.len - i);
+                @memcpy(out[i..][0..n], word_bytes[0..n]);
+                i += n;
+            }
+        }
+    };
+
+    const words = [_]u64{
+        0x0123_4567_89ab_cdef,
+        0xfedc_ba98_7654_3210,
+    };
+
+    var ok_u64 = FallibleSource{ .words = &words };
+    try std.testing.expectEqual(words[0], try Rng.tryNextU64From(&ok_u64));
+    try std.testing.expectEqual(@as(usize, 1), ok_u64.index);
+
+    var ok_u32 = FallibleSource{ .words = &words };
+    try std.testing.expectEqual(@as(u32, @truncate(words[0] >> 32)), try Rng.tryNextU32From(&ok_u32));
+    try std.testing.expectEqual(@as(usize, 1), ok_u32.index);
+
+    var ok_fill = FallibleSource{ .words = &words };
+    var buf: [12]u8 = undefined;
+    try Rng.tryFillBytesFrom(&ok_fill, &buf);
+    var expected: [12]u8 = undefined;
+    std.mem.writeInt(u64, expected[0..8], words[0], .little);
+    std.mem.writeInt(u32, expected[8..12], @truncate(words[1]), .little);
+    try std.testing.expectEqualSlices(u8, &expected, &buf);
+    try std.testing.expectEqual(@as(usize, 2), ok_fill.index);
+
+    var fail_next = FallibleSource{ .words = &words, .fail_after = 0 };
+    try std.testing.expectError(error.NoSeed, Rng.tryNextU64From(&fail_next));
+    try std.testing.expectEqual(@as(usize, 0), fail_next.index);
+
+    var fail_fill = FallibleSource{ .words = &words, .fail_after = 1 };
+    try std.testing.expectError(error.NoSeed, Rng.tryFillBytesFrom(&fail_fill, &buf));
+    try std.testing.expectEqual(@as(usize, 1), fail_fill.index);
 }
 
 test "scalar sampling has stable snapshots" {

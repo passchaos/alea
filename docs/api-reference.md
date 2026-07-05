@@ -28,6 +28,7 @@ stability expectations.
   `randomIterFrom`, `sample`, `sampleFrom`, `sampleIter`, `sampleIterFrom`, `sampleBatch`,
   `sampleBatchFrom`
 - Bytes/fill: `bytes`, `fillBytes`, `tryFillBytes`, `fillBytesFrom`,
+  `tryFillBytesFrom`,
   `bytesAlloc`, `bytesAllocFrom`, `fill` and `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`,
   `fillRangeChecked`, `fillRangeCheckedFrom`, `fillRangeAtMost`,
@@ -68,7 +69,8 @@ stability expectations.
   `vectorStandardExponentialBatch`, `vectorStandardExponentialBatchFrom`,
   `fillVectorExponentialFrom`
 - Raw/scalars: `next`, `nextFrom`, `nextU64`, `tryNextU64`, `nextU64From`,
-  `nextU32`, `tryNextU32`, `nextU32From`, `boolean`, `booleanFrom`, `chance`, `chanceChecked`, `ratio`,
+  `tryNextU64From`, `nextU32`, `tryNextU32`, `nextU32From`,
+  `tryNextU32From`, `boolean`, `booleanFrom`, `chance`, `chanceChecked`, `ratio`,
   `chanceFrom`, `chanceCheckedFrom`, `ratioFrom`, `ratioChecked`,
   `ratioCheckedFrom`, `randomBool`, `randomBoolFrom`,
   `randomBoolChecked`, `randomBoolCheckedFrom`, `randomRatio`,
