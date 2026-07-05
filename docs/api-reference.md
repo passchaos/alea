@@ -2444,6 +2444,7 @@ Dynamic weighted helpers:
 - `WeightedTree.updateAllBy`
 - `WeightedTree.get`
 - `WeightedTree.weightAt`
+- `WeightedTree.weight`
 - `WeightedTree.probabilityAt`
 - `WeightedTree.sample`
 - `WeightedTree.sampleIndex`
@@ -2523,6 +2524,7 @@ Dynamic weighted helpers:
 - `WeightedIntTree.updateAllBy`
 - `WeightedIntTree.get`
 - `WeightedIntTree.weightAt`
+- `WeightedIntTree.weight`
 - `WeightedIntTree.probabilityAt`
 - `WeightedIntTree.sample`
 - `WeightedIntTree.sampleIndex`

@@ -618,7 +618,7 @@ Use:
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
   and sampling workloads with weights accumulated as `f64`, including
   `initBy` / `updateAllBy` from item weight accessors,
-  `initByIndex` / `updateAllByIndex` from index-weight accessors, and bulk
+  `initByIndex` / `updateAllByIndex` from index-weight accessors, and optional `weight` / checked `weightAt` lookup plus bulk
   `weights` / `weightsInto` export for diagnostics; use `sampleU32` /
   `fillU32` variants when population indexes fit `u32` and compact output is
   desired, and `indices` / `indicesU32` variants for allocation-returning
@@ -629,7 +629,7 @@ Use:
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
   update/push/pop/sample throughput matters, including `initBy` /
   `updateAllBy` from item weight accessors and `initByIndex` /
-  `updateAllByIndex` from index-weight accessors; weights wider than `u64` are
+  `updateAllByIndex` from index-weight accessors; optional `weight` / checked `weightAt` lookup mirrors generic trees, and weights wider than `u64` are
   accepted only when each value fits the `u64` accumulator
   (failed push/update operations preserve the previous tree totals, `sampleU32`
   / `fillU32` and `indicesU32` variants mirror compact index output,

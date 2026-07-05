@@ -15991,8 +15991,8 @@ pub fn WeightedTree(comptime Weight: type) type {
 
             var positive_count: usize = 0;
             var positive_index: ?usize = null;
-            for (input_weights, 0..) |weight, index| {
-                const value = try weightToF64(weight);
+            for (input_weights, 0..) |input_weight, index| {
+                const value = try weightToF64(input_weight);
                 try subtotals.append(allocator, value);
                 if (value > 0) {
                     positive_count += 1;
@@ -16098,11 +16098,15 @@ pub fn WeightedTree(comptime Weight: type) type {
             return self.get(index);
         }
 
+        pub fn weight(self: Self, index: usize) ?f64 {
+            return self.weightAt(index) catch null;
+        }
+
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
-            const weight = try self.get(index);
+            const current_weight = try self.get(index);
             const total = self.totalWeight();
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
-            return weight / total;
+            return current_weight / total;
         }
 
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]f64 {
@@ -16132,8 +16136,8 @@ pub fn WeightedTree(comptime Weight: type) type {
             for (out, 0..) |*slot, index| slot.* = (try self.get(index)) / total;
         }
 
-        pub fn push(self: *Self, weight: Weight) !void {
-            const value = try weightToF64(weight);
+        pub fn push(self: *Self, input_weight: Weight) !void {
+            const value = try weightToF64(input_weight);
             const next_total = self.totalWeight() + value;
             if (!std.math.isFinite(next_total)) return error.InvalidWeight;
 
@@ -16153,15 +16157,15 @@ pub fn WeightedTree(comptime Weight: type) type {
             if (self.subtotals.items.len == 0) return null;
 
             const index = self.subtotals.items.len - 1;
-            const weight = self.get(index) catch unreachable;
+            const current_weight = self.get(index) catch unreachable;
             _ = self.subtotals.pop();
 
             var parent_index = index;
             while (parent_index != 0) {
                 parent_index = (parent_index - 1) / 2;
-                self.subtotals.items[parent_index] -= weight;
+                self.subtotals.items[parent_index] -= current_weight;
             }
-            if (weight > 0) {
+            if (current_weight > 0) {
                 self.positive_count -= 1;
                 if (self.positive_count == 0) {
                     self.positive_index = null;
@@ -16169,13 +16173,13 @@ pub fn WeightedTree(comptime Weight: type) type {
                     self.positive_index = self.findFirstPositive();
                 }
             }
-            return weight;
+            return current_weight;
         }
 
-        pub fn update(self: *Self, index: usize, weight: Weight) !void {
+        pub fn update(self: *Self, index: usize, input_weight: Weight) !void {
             if (index >= self.subtotals.items.len) return error.InvalidParameter;
 
-            const value = try weightToF64(weight);
+            const value = try weightToF64(input_weight);
             const old = try self.get(index);
             const delta = value - old;
             const next_total = self.totalWeight() + delta;
@@ -16537,10 +16541,10 @@ pub fn WeightedTree(comptime Weight: type) type {
             return null;
         }
 
-        fn weightToF64(weight: Weight) Error!f64 {
+        fn weightToF64(input_weight: Weight) Error!f64 {
             const value: f64 = switch (@typeInfo(Weight)) {
-                .int => @floatFromInt(weight),
-                .float => @floatCast(weight),
+                .int => @floatFromInt(input_weight),
+                .float => @floatCast(input_weight),
                 else => @compileError("weighted tree weights must be numeric"),
             };
             if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
@@ -16575,8 +16579,8 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
             var positive_count: usize = 0;
             var positive_index: ?usize = null;
-            for (input_weights, 0..) |weight, index| {
-                const value = try weightToU64(weight);
+            for (input_weights, 0..) |input_weight, index| {
+                const value = try weightToU64(input_weight);
                 try subtotals.append(allocator, value);
                 if (value > 0) {
                     positive_count += 1;
@@ -16683,11 +16687,15 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return self.get(index);
         }
 
+        pub fn weight(self: Self, index: usize) ?u64 {
+            return self.weightAt(index) catch null;
+        }
+
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
-            const weight = try self.get(index);
+            const current_weight = try self.get(index);
             const total = self.totalWeight();
             if (total == 0) return error.InvalidWeight;
-            return @as(f64, @floatFromInt(weight)) / @as(f64, @floatFromInt(total));
+            return @as(f64, @floatFromInt(current_weight)) / @as(f64, @floatFromInt(total));
         }
 
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]u64 {
@@ -16718,8 +16726,8 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             for (out, 0..) |*slot, index| slot.* = @as(f64, @floatFromInt(try self.get(index))) / total_float;
         }
 
-        pub fn push(self: *Self, weight: Weight) !void {
-            const value = try weightToU64(weight);
+        pub fn push(self: *Self, input_weight: Weight) !void {
+            const value = try weightToU64(input_weight);
             const next_total = std.math.add(u64, self.totalWeight(), value) catch return error.InvalidWeight;
 
             try self.subtotals.append(self.allocator, value);
@@ -16739,15 +16747,15 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             if (self.subtotals.items.len == 0) return null;
 
             const index = self.subtotals.items.len - 1;
-            const weight = self.get(index) catch unreachable;
+            const current_weight = self.get(index) catch unreachable;
             _ = self.subtotals.pop();
 
             var parent_index = index;
             while (parent_index != 0) {
                 parent_index = (parent_index - 1) / 2;
-                self.subtotals.items[parent_index] -= weight;
+                self.subtotals.items[parent_index] -= current_weight;
             }
-            if (weight > 0) {
+            if (current_weight > 0) {
                 self.positive_count -= 1;
                 if (self.positive_count == 0) {
                     self.positive_index = null;
@@ -16755,12 +16763,12 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                     self.positive_index = self.findFirstPositive();
                 }
             }
-            return weight;
+            return current_weight;
         }
 
-        pub fn update(self: *Self, index: usize, weight: Weight) !void {
+        pub fn update(self: *Self, index: usize, input_weight: Weight) !void {
             if (index >= self.subtotals.items.len) return error.InvalidParameter;
-            const value = try weightToU64(weight);
+            const value = try weightToU64(input_weight);
             const old = try self.get(index);
             if (value >= old) {
                 const delta = value - old;
@@ -17139,9 +17147,9 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             }
         }
 
-        fn weightToU64(weight: Weight) Error!u64 {
-            if (@typeInfo(Weight).int.bits > 64 and weight > std.math.maxInt(u64)) return error.InvalidWeight;
-            return @intCast(weight);
+        fn weightToU64(input_weight: Weight) Error!u64 {
+            if (@typeInfo(Weight).int.bits > 64 and input_weight > std.math.maxInt(u64)) return error.InvalidWeight;
+            return @intCast(input_weight);
         }
     };
 }
@@ -18819,6 +18827,10 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 9), try tree.get(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), try tree.get(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), try tree.get(2), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 9), tree.weight(0).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), tree.weight(1).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), tree.weight(2).?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), tree.weight(3));
     try std.testing.expectApproxEqAbs(@as(f64, 1), try tree.weightAt(1), 1e-12);
     try std.testing.expectError(error.InvalidParameter, tree.weightAt(3));
     try std.testing.expectApproxEqAbs(@as(f64, 0.9), try tree.probabilityAt(0), 1e-12);
@@ -19722,6 +19734,10 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectEqual(@as(u64, 9), try tree.get(0));
     try std.testing.expectEqual(@as(u64, 1), try tree.get(1));
     try std.testing.expectEqual(@as(u64, 0), try tree.get(2));
+    try std.testing.expectEqual(@as(?u64, 9), tree.weight(0));
+    try std.testing.expectEqual(@as(?u64, 1), tree.weight(1));
+    try std.testing.expectEqual(@as(?u64, 0), tree.weight(2));
+    try std.testing.expectEqual(@as(?u64, null), tree.weight(3));
     try std.testing.expectEqual(@as(u64, 1), try tree.weightAt(1));
     try std.testing.expectError(error.InvalidParameter, tree.weightAt(3));
     try std.testing.expectApproxEqAbs(@as(f64, 0.9), try tree.probabilityAt(0), 1e-12);
