@@ -8,7 +8,8 @@ The current Linux-first roadmap is intentionally broad:
 - multiple deterministic engines: `Wyhash64`, `Xoshiro256`, `Pcg64`, plus
   Rust-discoverable `StdRng` / `SmallRng` aliases for standard secure-style and
   small fast generator discovery
-- a `ChaCha12` secure-style stream for secret-seeded randomness
+- a `ChaCha12` secure-style stream for secret-seeded randomness, with a
+  Rust-discoverable `ChaCha12Rng` alias
 - `Rng`, a small facade with `std.Random` compatibility
 - Rust-discoverable raw aliases `nextU64()`, `nextU32()`, `fillBytes(out)`,
   `tryNext()`, `tryNextU64()`, `tryNextU32()`, and `tryFillBytes(out)` on
@@ -204,9 +205,10 @@ exposes `random()` for standard-library consumers, and `Rng.random()` returns a
 `std.Random` interface.
 
 `DefaultPrng` is `Xoshiro256`, `FastPrng` is `Alea4x64`, `ScalarPrng` and
-`HashPrng` are `Wyhash64`, `ReproduciblePrng` is `Pcg64`, `SecurePrng` and
-Rust-discoverable `StdRng` are `ChaCha12`, Rust-discoverable `SmallRng` is
-`Xoshiro256PlusPlus`, and `StepRng` is a deterministic arithmetic-sequence
+`HashPrng` are `Wyhash64`, `ReproduciblePrng` is `Pcg64`, `SecurePrng`,
+Rust-discoverable `StdRng`, and Rust-discoverable `ChaCha12Rng` are
+`ChaCha12`, Rust-discoverable `SmallRng` is `Xoshiro256PlusPlus`, and
+`StepRng` is a deterministic arithmetic-sequence
 mock source for tests. Root helpers such as `default`, `fast`, `scalar`, `hash`,
 `reproducible`, and their secure-seeded variants initialize the matching
 aliases without spelling out the concrete engine type.

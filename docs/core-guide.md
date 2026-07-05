@@ -21,6 +21,8 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
 - `HashPrng = Wyhash64`: compact hash-style generator.
 - `ReproduciblePrng = Pcg64`: stream-selectable reproducible generator.
 - `SecurePrng = ChaCha12`: secure-style stream for secret-seeded randomness.
+- `ChaCha12Rng = SecurePrng`: Rust-discoverable named ChaCha12 RNG alias,
+  matching local Rust's optional `rand::rngs::ChaCha12Rng` discovery.
 - `StdRng = SecurePrng`: Rust-discoverable standard secure-style RNG alias,
   mirroring local Rust `rand::rngs::StdRng` discovery while preserving Alea's
   explicit `SecurePrng` name.

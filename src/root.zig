@@ -24,6 +24,8 @@ pub const Pcg64 = @import("engines/pcg64.zig");
 pub const ChaCha = @import("engines/chacha.zig");
 pub const StepRng = @import("engines/step.zig");
 
+pub const ChaCha12Rng = ChaCha;
+
 pub const DefaultPrng = Xoshiro256;
 pub const FastPrng = Alea4x64;
 pub const ScalarPrng = Wyhash64;
@@ -143,6 +145,10 @@ test "root hash constructors mirror HashPrng" {
 }
 
 test "root Rust-discoverable rng aliases mirror concrete engines" {
+    var chacha12_rng = ChaCha12Rng.seedFromU64(0x5150_c12);
+    var chacha_rng = ChaCha.seedFromU64(0x5150_c12);
+    try std.testing.expectEqual(chacha_rng.next(), chacha12_rng.next());
+
     var std_rng = StdRng.seedFromU64(0x5150_547d);
     var secure_rng = SecurePrng.seedFromU64(0x5150_547d);
     try std.testing.expectEqual(secure_rng.next(), std_rng.next());

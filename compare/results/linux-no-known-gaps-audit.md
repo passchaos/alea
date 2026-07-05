@@ -277,6 +277,7 @@ Local Alea evidence:
 - `compare/results/s4-m253-hinted-iterator-choice.md`
 - `compare/results/s4-m254-stdrng-smallrng-aliases.md`
 - `compare/results/s4-m255-step-rng.md`
+- `compare/results/s4-m256-chacha12rng-alias.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -520,3 +521,7 @@ existing `SecurePrng` and `Xoshiro256PlusPlus` engine contracts.
 S4-M255 adds a Rust-discoverable `StepRng` deterministic mock source
 (`compare/results/s4-m255-step-rng.md`), closing the local Rust `StepRng`
 test/mock byte-stream workflow for the current Linux bar.
+S4-M256 adds a Rust-discoverable `ChaCha12Rng` root alias
+(`compare/results/s4-m256-chacha12rng-alias.md`), closing the local Rust
+optional-`chacha` `rand::rngs::ChaCha12Rng` discovery-name gap while preserving
+Alea's existing `ChaCha` / `SecurePrng` engine contract.
