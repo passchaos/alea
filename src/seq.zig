@@ -7732,6 +7732,33 @@ pub fn Choice(comptime T: type) type {
 
         items: []const T,
 
+        pub const ProbabilityIterator = struct {
+            const Iterator = @This();
+
+            choice: Self,
+            index: usize = 0,
+
+            pub fn next(self: *Iterator) ?f64 {
+                const value = self.choice.probability(self.index) orelse return null;
+                self.index += 1;
+                return value;
+            }
+
+            pub fn remaining(self: Iterator) usize {
+                return self.choice.len() - self.index;
+            }
+
+            pub fn len(self: Iterator) usize {
+                return self.remaining();
+            }
+
+            pub fn fill(self: *Iterator, dest: []f64) usize {
+                const count = @min(dest.len, self.remaining());
+                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                return count;
+            }
+        };
+
         pub fn init(items: []const T) ?Self {
             if (items.len == 0) return null;
             return .{ .items = items };
@@ -7769,6 +7796,10 @@ pub fn Choice(comptime T: type) type {
 
         pub fn probability(self: Self, index: usize) ?f64 {
             return self.probabilityAt(index) catch null;
+        }
+
+        pub fn probabilityIter(self: Self) ProbabilityIterator {
+            return .{ .choice = self };
         }
 
         pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
@@ -16397,6 +16428,14 @@ test "choice sampler repeatedly samples slice references" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), choice.probability(0).?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), choice.probability(3).?, 1e-12);
     try std.testing.expectEqual(@as(?f64, null), choice.probability(4));
+    var probability_iter = choice.probabilityIter();
+    try std.testing.expectEqual(@as(usize, 4), probability_iter.len());
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability_iter.next().?, 1e-12);
+    try std.testing.expectEqual(@as(usize, 3), probability_iter.remaining());
+    var iter_probabilities: [3]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), probability_iter.fill(&iter_probabilities));
+    for (iter_probabilities) |probability| try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), probability_iter.next());
     var choice_probabilities: [4]f64 = undefined;
     try choice.probabilitiesInto(&choice_probabilities);
     for (choice_probabilities) |probability| try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability, 1e-12);

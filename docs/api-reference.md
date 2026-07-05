@@ -2755,7 +2755,7 @@ Dynamic weighted helpers:
   `WeightedChoice(T, Weight)`,
   `Choice.init`, `Choice.initChecked`, `Choice.len`, `Choice.numChoices`,
   `Choice.isEmpty`, `Choice.itemsValue`, `Choice.itemAt`, `Choice.probabilityAt`,
-  `Choice.probability`, `Choice.probabilities`, `Choice.probabilitiesInto`,
+  `Choice.probability`, `Choice.probabilityIter`, `Choice.ProbabilityIterator`, `Choice.ProbabilityIterator.next`, `Choice.ProbabilityIterator.remaining`, `Choice.ProbabilityIterator.len`, `Choice.ProbabilityIterator.fill`, `Choice.probabilities`, `Choice.probabilitiesInto`,
   `Choice.sample`,
   `Choice.sampleFrom`, `Choice.sampleIndex`, `Choice.sampleIndexFrom`,
   `Choice.sampleIndexU32`, `Choice.sampleIndexU32From`,
