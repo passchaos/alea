@@ -389,11 +389,16 @@ pub fn main(init: std.process.Init) !void {
         .{ .index = 0, .weight = 2 },
         .{ .index = 3, .weight = 4 },
     });
+    const alias_update_many_total = alias.totalWeight();
+    try alias.updateWeights(&.{
+        .{ .index = 0, .weight = 3 },
+        .{ .index = 3, .weight = 4 },
+    });
     var alias_probs: [items.len]f64 = undefined;
     try alias.probabilitiesInto(&alias_probs);
     const alias_num_choices = alias.numChoices();
     const alias_positive_count = alias.positiveCount();
-    const alias_update_many_total = alias.totalWeight();
+    const alias_update_weights_total = alias.totalWeight();
     const alias_weight = alias.weight(2).?;
     const alias_missing_weight = alias.weight(items.len) == null;
     const alias_probability = alias.probability(2).?;
@@ -440,6 +445,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("alias positiveCount: {}\n", .{alias_positive_count});
     try stdout.print("alias updateAt totalWeight: {d:.3}\n", .{alias_update_total});
     try stdout.print("alias updateMany totalWeight: {d:.3}\n", .{alias_update_many_total});
+    try stdout.print("alias updateWeights totalWeight: {d:.3}\n", .{alias_update_weights_total});
     try stdout.print("alias weight(2)={d:.3} missing={}\n", .{ alias_weight, alias_missing_weight });
     try stdout.print("alias probability(2)={d:.3} missing={}\n", .{ alias_probability, alias_missing_probability });
     try stdout.print("alias weightIter fill: {any}\n", .{alias_weight_iter_fill});
@@ -464,6 +470,11 @@ pub fn main(init: std.process.Init) !void {
         .{ .index = 4, .weight = 5 },
     });
     const tree_update_many_total = tree.totalWeight();
+    try tree.updateWeights(&.{
+        .{ .index = 0, .weight = 3 },
+        .{ .index = 4, .weight = 5 },
+    });
+    const tree_update_weights_total = tree.totalWeight();
     const tree_num_choices = tree.numChoices();
     const tree_positive_count = tree.positiveCount();
     const tree_constant_index = tree.constantIndex();
@@ -495,6 +506,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("dynamic tree positiveCount: {}\n", .{tree_positive_count});
     try stdout.print("dynamic tree constantIndex: {?}\n", .{tree_constant_index});
     try stdout.print("dynamic tree updateMany totalWeight: {d:.3}\n", .{tree_update_many_total});
+    try stdout.print("dynamic tree updateWeights totalWeight: {d:.3}\n", .{tree_update_weights_total});
     try stdout.print("dynamic tree weight(1)={d:.3} missing={}\n", .{ tree_weight, tree_missing_weight });
     try stdout.print("dynamic tree probability(1)={d:.3} missing={}\n", .{ tree_probability, tree_missing_probability });
     try stdout.print("dynamic tree weightIter fill: {any}\n", .{tree_weight_iter_fill});
@@ -523,6 +535,11 @@ pub fn main(init: std.process.Init) !void {
         .{ .index = 3, .weight = 4 },
     });
     const int_tree_update_many_total = int_tree.totalWeight();
+    try int_tree.updateWeights(&.{
+        .{ .index = 0, .weight = 3 },
+        .{ .index = 3, .weight = 4 },
+    });
+    const int_tree_update_weights_total = int_tree.totalWeight();
     const int_tree_num_choices = int_tree.numChoices();
     const int_tree_positive_count = int_tree.positiveCount();
     const int_tree_constant_index = int_tree.constantIndex();
@@ -554,6 +571,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("integer tree constantIndex: {?}\n", .{int_tree_constant_index});
     try stdout.print("integer tree total weight: {}\n", .{int_tree.totalWeight()});
     try stdout.print("integer tree updateMany totalWeight: {}\n", .{int_tree_update_many_total});
+    try stdout.print("integer tree updateWeights totalWeight: {}\n", .{int_tree_update_weights_total});
     try stdout.print("integer tree weight(2)={} missing={}\n", .{ int_tree_weight, int_tree_missing_weight });
     try stdout.print("integer tree probability(2)={d:.3} missing={}\n", .{ int_tree_probability, int_tree_missing_probability });
     try stdout.print("integer tree weightIter fill: {any}\n", .{int_tree_weight_iter_fill});
@@ -706,6 +724,11 @@ pub fn main(init: std.process.Init) !void {
         .{ .index = 3, .weight = 4 },
     });
     try stdout.print("WeightedChoice.updateMany totalWeight: {d:.3}\n", .{choice.totalWeight()});
+    try choice.updateWeights(&.{
+        .{ .index = 0, .weight = 3 },
+        .{ .index = 3, .weight = 4 },
+    });
+    try stdout.print("WeightedChoice.updateWeights totalWeight: {d:.3}\n", .{choice.totalWeight()});
     try choice.update(&.{ 0, 0, 5, 0 });
     try stdout.print("WeightedChoice.single-positive constantIndex: {?}\n", .{choice.constantIndex()});
 
@@ -940,6 +963,6 @@ pub fn main(init: std.process.Init) !void {
     for (weighted_by_mut_ptrs_into) |record| record.score += 20;
     try stdout.print("weighted by mut ptrs into scores: [{}, {}, {}, {}]\n", .{ weighted_by_mut_records_into[0].score, weighted_by_mut_records_into[1].score, weighted_by_mut_records_into[2].score, weighted_by_mut_records_into[3].score });
 
-    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, weightedIndexByIndex/weightedIndexU32ByIndex plus fillWeightedIndexByIndex/fillWeightedIndexU32ByIndex, weightedIndexBatchByIndex/weightedIndexU32BatchByIndex, weightedIndexArrayByIndex/weightedIndexU32ArrayByIndex, chooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, fillChooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, chooseWeightedBatchByIndex/ConstPtrBatchByIndex/PtrBatchByIndex, and chooseWeightedValueArrayByIndex/ConstPtrArrayByIndex/PtrArrayByIndex for length/index-weight accessors, weightedIndexBy/weightedIndexU32By plus fillWeightedIndexBy/fillWeightedIndexU32By and weightedIndexBatchBy/weightedIndexU32BatchBy when weights live inside item records, chooseWeightedBy/ConstPtrBy/PtrBy, fillChooseWeightedBy/ConstPtrBy/PtrBy, and chooseWeightedBatchBy/ConstPtrBatchBy/PtrBatchBy for accessor-weighted item choices, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight no-replacement workflows, Rng weighted batch helpers and fixed-size weighted arrays for repeated f64 index/u32-index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including updateMany ordered partial refresh and updateAt single-weight refresh, compact sampleU32/fillU32 index output, owned indices/indicesU32 or value/pointer/index batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, iter/iterU32 repeated streams, initBy/updateBy construction from item weight accessors, and initByIndex/updateByIndex construction from index weights, WeightedTree/WeightedIntTree for dynamic updates including initBy/updateAllBy construction from item weight accessors, initByIndex/updateAllByIndex construction from index weights, compact sampleU32/fillU32 index output, owned indices/indicesU32 batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, and iter/iterU32 repeated index streams, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
+    try stdout.print("\nUse weightedIndex or chooseWeighted for simple draws, weightedIndexByIndex/weightedIndexU32ByIndex plus fillWeightedIndexByIndex/fillWeightedIndexU32ByIndex, weightedIndexBatchByIndex/weightedIndexU32BatchByIndex, weightedIndexArrayByIndex/weightedIndexU32ArrayByIndex, chooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, fillChooseWeightedByIndex/ConstPtrByIndex/PtrByIndex, chooseWeightedBatchByIndex/ConstPtrBatchByIndex/PtrBatchByIndex, and chooseWeightedValueArrayByIndex/ConstPtrArrayByIndex/PtrArrayByIndex for length/index-weight accessors, weightedIndexBy/weightedIndexU32By plus fillWeightedIndexBy/fillWeightedIndexU32By and weightedIndexBatchBy/weightedIndexU32BatchBy when weights live inside item records, chooseWeightedBy/ConstPtrBy/PtrBy, fillChooseWeightedBy/ConstPtrBy/PtrBy, and chooseWeightedBatchBy/ConstPtrBatchBy/PtrBatchBy for accessor-weighted item choices, sampleWeightedBy/PtrsBy/MutPtrsBy for accessor-weighted no-replacement draws, sampleWeightedIndicesByIndex, sampleWeightedIndicesByIndexInto, and sampleWeightedIndexArrayByIndex for length/index-weight no-replacement workflows, Rng weighted batch helpers and fixed-size weighted arrays for repeated f64 index/u32-index/value/const-pointer/mutable-pointer draws, AliasTable/WeightedChoice for repeated static weights including updateWeights aliases, updateMany ordered partial refresh, and updateAt single-weight refresh, compact sampleU32/fillU32 index output, owned indices/indicesU32 or value/pointer/index batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, iter/iterU32 repeated streams, initBy/updateBy construction from item weight accessors, and initByIndex/updateByIndex construction from index weights, WeightedTree/WeightedIntTree for dynamic updates including updateWeights aliases, initBy/updateAllBy construction from item weight accessors, initByIndex/updateAllByIndex construction from index weights, compact sampleU32/fillU32 index output, owned indices/indicesU32 batches, fixed-size indexArray/indexArrayU32 outputs, sampleIndex/fillIndices aliases, and iter/iterU32 repeated index streams, and seq weighted helpers for allocation-returning item/index/pointer no-replacement, caller-owned usize/u32 index/value/pointer/accessor-weighted buffers, and fixed-size value/pointer array workflows.\n", .{});
     try stdout.flush();
 }

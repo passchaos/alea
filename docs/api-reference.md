@@ -2359,6 +2359,7 @@ Alias helpers:
 - `AliasTable.update`
 - `AliasTable.Update`
 - `AliasTable.updateMany`
+- `AliasTable.updateWeights`
 - `AliasTable.updateAt`
 - `AliasTable.updateByIndex`
 - `AliasTable.updateBy`
@@ -2447,6 +2448,7 @@ Dynamic weighted helpers:
 - `WeightedTree.update`
 - `WeightedTree.Update`
 - `WeightedTree.updateMany`
+- `WeightedTree.updateWeights`
 - `WeightedTree.updateAll`
 - `WeightedTree.updateAllByIndex`
 - `WeightedTree.updateAllBy`
@@ -2547,6 +2549,7 @@ Dynamic weighted helpers:
 - `WeightedIntTree.update`
 - `WeightedIntTree.Update`
 - `WeightedIntTree.updateMany`
+- `WeightedIntTree.updateWeights`
 - `WeightedIntTree.updateAll`
 - `WeightedIntTree.updateAllByIndex`
 - `WeightedIntTree.updateAllBy`
@@ -2834,7 +2837,7 @@ Dynamic weighted helpers:
   `WeightedChoice.probabilitiesInto`, `WeightedChoice.weightAt`,
   `WeightedChoice.weight`, `WeightedChoice.weightIter`, `WeightedChoice.probabilityAt`,
   `WeightedChoice.probability`, `WeightedChoice.probabilityIter`,
-  `WeightedChoice.update`, `WeightedChoice.Update`, `WeightedChoice.updateMany`,
+  `WeightedChoice.update`, `WeightedChoice.Update`, `WeightedChoice.updateMany`, `WeightedChoice.updateWeights`,
   `WeightedChoice.updateAt`, `WeightedChoice.updateBy`, `WeightedChoice.updateByIndex`, `WeightedChoice.sample`,
   `WeightedChoice.sampleFrom`, `WeightedChoice.sampleIndex`,
   `WeightedChoice.sampleIndexFrom`, `WeightedChoice.sampleIndexU32`,

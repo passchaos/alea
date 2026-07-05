@@ -612,16 +612,16 @@ Use:
   `indicesU32` variants for allocation-returning repeated draws; `indexArray`
   / `indexArrayU32` variants return fixed-size repeated index arrays;
   `sampleIndex` / `fillIndices` aliases mirror `WeightedChoice` naming, and
-  `iter` / `iterU32` provide repeated index streams; `updateMany` applies
-  ordered partial updates and `updateAt` refreshes one weight while preserving
-  failed-update table safety, `initByIndex` /
+  `iter` / `iterU32` provide repeated index streams; `updateWeights` is the
+  Rust-discoverable alias for ordered partial `updateMany`, and `updateAt`
+  refreshes one weight while preserving failed-update table safety, `initByIndex` /
   `updateByIndex` construct and refresh static alias tables from index-weight
   functions, while `initBy` / `updateBy` do the same from item weight accessors
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
   and sampling workloads with weights accumulated as `f64`, including
   `initBy` / `updateAllBy` from item weight accessors,
-  `initByIndex` / `updateAllByIndex` from index-weight accessors, `updateMany`
-  ordered partial updates, `numChoices` / `len` count diagnostics,
+  `initByIndex` / `updateAllByIndex` from index-weight accessors,
+  `updateWeights` / `updateMany` ordered partial updates, `numChoices` / `len` count diagnostics,
   `positiveCount`, `constantIndex` for single-positive deterministic paths, and
   optional `weight` / `probability`, lazy `weightIter` / `probabilityIter`,
   checked `weightAt` / `probabilityAt` lookup, and bulk
@@ -633,7 +633,8 @@ Use:
   for users discovering dynamic trees from `WeightedChoice` index naming; use
   `iter` / `iterU32` for repeated with-replacement index streams
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
-  update/push/pop/sample throughput matters, including `updateMany`,
+  update/push/pop/sample throughput matters, including `updateWeights` /
+  `updateMany`,
   `initBy` /
   `updateAllBy` from item weight accessors and `initByIndex` /
   `updateAllByIndex` from index-weight accessors; `numChoices` / `len`, `positiveCount`, `constantIndex`, optional `weight` / `probability`, lazy `weightIter` / `probabilityIter`, and checked `weightAt` / `probabilityAt` lookup mirrors generic trees, and weights wider than `u64` are
@@ -714,9 +715,10 @@ known until the stream is inspected are explicitly different: short
 UTF-8 string allocation may need to finalize storage after reading/drawing, so
 prefer checked exact-count or caller-owned-buffer forms when no-consume
 allocation-failure behavior matters.
-`AliasTable.update`, `AliasTable.updateMany`, `AliasTable.updateAt`,
-`WeightedChoice.update`, `WeightedChoice.updateMany`, and
-`WeightedChoice.updateAt` build the replacement table
+`AliasTable.update`, `AliasTable.updateWeights` / `updateMany`,
+`AliasTable.updateAt`, `WeightedChoice.update`,
+`WeightedChoice.updateWeights` / `updateMany`, and `WeightedChoice.updateAt`
+build the replacement table
 before swapping state, so length, weight, and initial allocation failures leave
 the previous valid table usable.
 For allocation-returning sequence helpers, initial allocation failures are

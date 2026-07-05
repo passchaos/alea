@@ -8252,6 +8252,10 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             try self.table.updateMany(updates);
         }
 
+        pub fn updateWeights(self: *Self, updates: []const Update) !void {
+            try self.table.updateWeights(updates);
+        }
+
         pub fn updateBy(self: *Self, comptime weightFn: fn (*const T) Weight) !void {
             const input_weights = try weightsFromItems(self.table.allocator, self.items, weightFn);
             defer self.table.allocator.free(input_weights);
@@ -17362,6 +17366,31 @@ test "weighted choice updateMany applies ordered partial updates atomically" {
     try std.testing.expect(failing.has_induced_failure);
     try std.testing.expectEqual(@as(usize, 1), failing_choice.positiveCount());
     try std.testing.expectEqual(@as(?usize, 3), failing_choice.constantIndex());
+}
+
+test "weighted choice updateWeights alias mirrors updateMany" {
+    const labels = [_][]const u8{ "never", "rare", "often", "bonus" };
+
+    var choice = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &labels, &.{ 1, 2, 6, 3 });
+    defer choice.deinit();
+
+    try choice.updateWeights(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 1, .weight = 5 },
+        .{ .index = 2, .weight = 0 },
+    });
+    try std.testing.expectEqual(@as(usize, 2), choice.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), choice.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 8), choice.totalWeight(), 1e-12);
+    var weights: [4]f64 = undefined;
+    try choice.weightsInto(&weights);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 5, 0, 3 }, &weights);
+
+    try std.testing.expectError(error.InvalidParameter, choice.updateWeights(&.{
+        .{ .index = 2, .weight = 1 },
+        .{ .index = 1, .weight = 1 },
+    }));
+    try std.testing.expectApproxEqAbs(@as(f64, 8), choice.totalWeight(), 1e-12);
 }
 
 test "WeightedChoice index arrays mirror fills" {

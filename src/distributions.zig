@@ -15712,6 +15712,10 @@ pub fn AliasTable(comptime Weight: type) type {
             self.constant_index = next.constant_index;
         }
 
+        pub fn updateWeights(self: *Self, updates: []const Update) !void {
+            try self.updateMany(updates);
+        }
+
         pub fn updateByIndex(self: *Self, comptime weightFn: fn (usize) Weight) !void {
             const input_weights = try weightsFromIndices(self.allocator, self.prob.len, weightFn);
             defer self.allocator.free(input_weights);
@@ -16396,6 +16400,10 @@ pub fn WeightedTree(comptime Weight: type) type {
                     self.updatePositiveState(item.index, old, value);
                 }
             }
+        }
+
+        pub fn updateWeights(self: *Self, updates: []const Update) !void {
+            try self.updateMany(updates);
         }
 
         pub fn updateAll(self: *Self, input_weights: []const Weight) !void {
@@ -17134,6 +17142,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                     self.updatePositiveState(item.index, old, value);
                 }
             }
+        }
+
+        pub fn updateWeights(self: *Self, updates: []const Update) !void {
+            try self.updateMany(updates);
         }
 
         pub fn updateAll(self: *Self, input_weights: []const Weight) !void {
@@ -19280,6 +19292,29 @@ test "alias table updateMany allocation failure preserves table" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "alias table updateWeights alias mirrors updateMany" {
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    try table.updateWeights(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 1, .weight = 4 },
+        .{ .index = 2, .weight = 0 },
+    });
+    try std.testing.expectEqual(@as(usize, 2), table.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), table.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 7), table.totalWeight(), 1e-12);
+    var weights: [4]f64 = undefined;
+    try table.weightsInto(&weights);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 4, 0, 3 }, &weights);
+
+    try std.testing.expectError(error.InvalidParameter, table.updateWeights(&.{
+        .{ .index = 2, .weight = 1 },
+        .{ .index = 1, .weight = 1 },
+    }));
+    try std.testing.expectApproxEqAbs(@as(f64, 7), table.totalWeight(), 1e-12);
+}
+
 test "weighted tree init failures clean up" {
     var generic_alloc_fail = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, WeightedTree(u32).init(generic_alloc_fail.allocator(), &.{ 1, 2, 3 }));
@@ -19538,6 +19573,29 @@ test "weighted tree updateMany applies ordered partial updates atomically" {
     try std.testing.expectError(error.InvalidWeight, float_tree.updateMany(&.{.{ .index = 1, .weight = std.math.nan(f64) }}));
     try std.testing.expectApproxEqAbs(@as(f64, 6), float_tree.totalWeight(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), float_tree.weight(1).?, 1e-12);
+}
+
+test "weighted tree updateWeights alias mirrors updateMany" {
+    var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+
+    try tree.updateWeights(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 1, .weight = 4 },
+        .{ .index = 2, .weight = 0 },
+    });
+    try std.testing.expectEqual(@as(usize, 2), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), tree.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 7), tree.totalWeight(), 1e-12);
+    var weights: [4]f64 = undefined;
+    try tree.weightsInto(&weights);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 4, 0, 3 }, &weights);
+
+    try std.testing.expectError(error.InvalidParameter, tree.updateWeights(&.{
+        .{ .index = 2, .weight = 1 },
+        .{ .index = 1, .weight = 1 },
+    }));
+    try std.testing.expectApproxEqAbs(@as(f64, 7), tree.totalWeight(), 1e-12);
 }
 
 test "weighted tree push allocation failure preserves tree" {
@@ -20562,6 +20620,29 @@ test "weighted int tree updateMany applies ordered partial updates atomically" {
     defer wide_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, wide_tree.updateMany(&.{.{ .index = 0, .weight = too_large_u128 }}));
     try std.testing.expectEqual(@as(u64, 1), wide_tree.totalWeight());
+}
+
+test "weighted int tree updateWeights alias mirrors updateMany" {
+    var tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+
+    try tree.updateWeights(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 1, .weight = 4 },
+        .{ .index = 2, .weight = 0 },
+    });
+    try std.testing.expectEqual(@as(usize, 2), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), tree.constantIndex());
+    try std.testing.expectEqual(@as(u64, 7), tree.totalWeight());
+    var weights: [4]u64 = undefined;
+    try tree.weightsInto(&weights);
+    try std.testing.expectEqualSlices(u64, &.{ 0, 4, 0, 3 }, &weights);
+
+    try std.testing.expectError(error.InvalidParameter, tree.updateWeights(&.{
+        .{ .index = 2, .weight = 1 },
+        .{ .index = 1, .weight = 1 },
+    }));
+    try std.testing.expectEqual(@as(u64, 7), tree.totalWeight());
 }
 
 test "weighted int tree push allocation failure preserves tree" {
