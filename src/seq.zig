@@ -2504,6 +2504,54 @@ pub fn chooseWeightedFrom(source: anytype, comptime T: type, comptime Weight: ty
     return items[index];
 }
 
+pub fn chooseWeightedIter(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    weights: []const Weight,
+) !?WeightedChoice(T, Weight).Iterator(Rng) {
+    return chooseWeightedIterFrom(allocator, rng, T, Weight, items, weights);
+}
+
+pub fn chooseWeightedIterChecked(
+    allocator: std.mem.Allocator,
+    rng: Rng,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    weights: []const Weight,
+) !WeightedChoice(T, Weight).Iterator(Rng) {
+    return (try chooseWeightedIterFrom(allocator, rng, T, Weight, items, weights)) orelse error.EmptyInput;
+}
+
+pub fn chooseWeightedIterFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    weights: []const Weight,
+) !?WeightedChoice(T, Weight).Iterator(@TypeOf(source)) {
+    if (items.len != weights.len) return error.LengthMismatch;
+    const validation = try validateWeightedIndexWeightsAllowEmpty(Weight, weights);
+    if (validation.total == 0) return null;
+    const choice = try WeightedChoice(T, Weight).init(allocator, items, weights);
+    return choice.ownedIterFrom(source);
+}
+
+pub fn chooseWeightedIterCheckedFrom(
+    allocator: std.mem.Allocator,
+    source: anytype,
+    comptime T: type,
+    comptime Weight: type,
+    items: []const T,
+    weights: []const Weight,
+) !WeightedChoice(T, Weight).Iterator(@TypeOf(source)) {
+    return (try chooseWeightedIterFrom(allocator, source, T, Weight, items, weights)) orelse error.EmptyInput;
+}
+
 pub fn chooseWeightedBy(
     rng: Rng,
     comptime T: type,
@@ -7578,20 +7626,20 @@ pub fn Choice(comptime T: type) type {
 
         pub fn IndexIterator(comptime Source: type) type {
             return struct {
-                const Iterator = @This();
+                const Iter = @This();
 
                 source: Source,
                 choice: Self,
 
-                pub fn next(self: *Iterator) ?usize {
+                pub fn next(self: *Iter) ?usize {
                     return self.nextValue();
                 }
 
-                pub fn nextValue(self: *Iterator) usize {
+                pub fn nextValue(self: *Iter) usize {
                     return self.choice.sampleIndexFrom(self.source);
                 }
 
-                pub fn fill(self: *Iterator, dest: []usize) void {
+                pub fn fill(self: *Iter, dest: []usize) void {
                     self.choice.fillIndicesFrom(self.source, dest);
                 }
             };
@@ -7599,20 +7647,20 @@ pub fn Choice(comptime T: type) type {
 
         pub fn U32IndexIterator(comptime Source: type) type {
             return struct {
-                const Iterator = @This();
+                const Iter = @This();
 
                 source: Source,
                 choice: Self,
 
-                pub fn next(self: *Iterator) ?u32 {
+                pub fn next(self: *Iter) ?u32 {
                     return self.nextValue();
                 }
 
-                pub fn nextValue(self: *Iterator) u32 {
+                pub fn nextValue(self: *Iter) u32 {
                     return self.choice.sampleIndexU32From(self.source) catch unreachable;
                 }
 
-                pub fn fill(self: *Iterator, dest: []u32) void {
+                pub fn fill(self: *Iter, dest: []u32) void {
                     self.choice.fillIndicesU32From(self.source, dest) catch unreachable;
                 }
             };
@@ -7863,6 +7911,47 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return out;
         }
 
+        pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
+            return rng.sampleIter(*const T, self);
+        }
+
+        pub fn iterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
+            return Rng.sampleIterFrom(source, *const T, self);
+        }
+
+        pub fn ownedIter(self: Self, rng: Rng) Iterator(Rng) {
+            return self.ownedIterFrom(rng);
+        }
+
+        pub fn ownedIterFrom(self: Self, source: anytype) Iterator(@TypeOf(source)) {
+            return .{ .source = source, .choice = self };
+        }
+
+        pub fn Iterator(comptime Source: type) type {
+            return struct {
+                const Iter = @This();
+
+                source: Source,
+                choice: Self,
+
+                pub fn next(self: *Iter) ?*const T {
+                    return self.nextValue();
+                }
+
+                pub fn nextValue(self: *Iter) *const T {
+                    return self.choice.sampleFrom(self.source);
+                }
+
+                pub fn fill(self: *Iter, dest: []*const T) void {
+                    self.choice.fillFrom(self.source, dest);
+                }
+
+                pub fn deinit(self: *Iter) void {
+                    self.choice.deinit();
+                }
+            };
+        }
+
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
             self.fillIndicesFrom(rng, dest);
         }
@@ -7958,20 +8047,20 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn IndexIterator(comptime Source: type) type {
             return struct {
-                const Iterator = @This();
+                const Iter = @This();
 
                 source: Source,
                 choice: Self,
 
-                pub fn next(self: *Iterator) ?usize {
+                pub fn next(self: *Iter) ?usize {
                     return self.nextValue();
                 }
 
-                pub fn nextValue(self: *Iterator) usize {
+                pub fn nextValue(self: *Iter) usize {
                     return self.choice.sampleIndexFrom(self.source);
                 }
 
-                pub fn fill(self: *Iterator, dest: []usize) void {
+                pub fn fill(self: *Iter, dest: []usize) void {
                     self.choice.fillIndicesFrom(self.source, dest);
                 }
             };
@@ -7979,31 +8068,23 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn U32IndexIterator(comptime Source: type) type {
             return struct {
-                const Iterator = @This();
+                const Iter = @This();
 
                 source: Source,
                 choice: Self,
 
-                pub fn next(self: *Iterator) ?u32 {
+                pub fn next(self: *Iter) ?u32 {
                     return self.nextValue();
                 }
 
-                pub fn nextValue(self: *Iterator) u32 {
+                pub fn nextValue(self: *Iter) u32 {
                     return self.choice.sampleIndexU32From(self.source) catch unreachable;
                 }
 
-                pub fn fill(self: *Iterator, dest: []u32) void {
+                pub fn fill(self: *Iter, dest: []u32) void {
                     self.choice.fillIndicesU32From(self.source, dest) catch unreachable;
                 }
             };
-        }
-
-        pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
-            return rng.sampleIter(*const T, self);
-        }
-
-        pub fn iterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
-            return Rng.sampleIterFrom(source, *const T, self);
         }
 
         fn weightsFromItems(
@@ -19054,6 +19135,78 @@ test "weighted iterator choice works without collecting first" {
 
     var short_weighted_iter = WeightedIter{ .items = entries[0..1] };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &short_weighted_iter, 2));
+}
+
+test "weighted choice iterator streams repeated const pointers" {
+    const alea = @import("root.zig");
+    const items = [_][]const u8{ "red", "green", "blue", "gold" };
+    const weights = [_]u32{ 1, 2, 6, 3 };
+
+    inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var facade_engine = Engine.init(0x5150_1781);
+        var direct_engine = Engine.init(0x5150_1781);
+        const rng = Rng.init(&facade_engine);
+
+        var facade_iter = (try chooseWeightedIter(std.testing.allocator, rng, []const u8, u32, &items, &weights)).?;
+        defer facade_iter.deinit();
+        var direct_choice = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &items, &weights);
+        defer direct_choice.deinit();
+        var direct_iter = direct_choice.iterFrom(&direct_engine);
+
+        var facade_out: [8][]const u8 = undefined;
+        var direct_out: [8][]const u8 = undefined;
+        for (&facade_out, &direct_out) |*facade_slot, *direct_slot| {
+            facade_slot.* = facade_iter.next().?.*;
+            direct_slot.* = direct_iter.next().?.*;
+        }
+        try std.testing.expectEqualSlices([]const u8, &direct_out, &facade_out);
+        try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var checked_facade_engine = Engine.init(0x5150_1782);
+        var checked_direct_engine = Engine.init(0x5150_1782);
+        const checked_rng = Rng.init(&checked_facade_engine);
+        var checked_iter = try chooseWeightedIterChecked(std.testing.allocator, checked_rng, []const u8, u32, &items, &weights);
+        defer checked_iter.deinit();
+        var checked_direct_choice = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &items, &weights);
+        defer checked_direct_choice.deinit();
+        var checked_direct_iter = checked_direct_choice.iterFrom(&checked_direct_engine);
+        var checked_out: [4]*const []const u8 = undefined;
+        var checked_direct_out: [4]*const []const u8 = undefined;
+        checked_iter.fill(&checked_out);
+        checked_direct_iter.fill(&checked_direct_out);
+        for (checked_direct_out, checked_out) |direct_item, facade_item| {
+            try std.testing.expectEqualStrings(direct_item.*, facade_item.*);
+        }
+        try std.testing.expectEqual(checked_facade_engine.next(), checked_direct_engine.next());
+    }
+
+    var single_engine = alea.ScalarPrng.init(0x5150_1783);
+    var single_control = alea.ScalarPrng.init(0x5150_1783);
+    var single_iter = (try chooseWeightedIterFrom(std.testing.allocator, &single_engine, []const u8, u32, &items, &.{ 0, 0, 5, 0 })).?;
+    defer single_iter.deinit();
+    try std.testing.expectEqualStrings("blue", single_iter.next().?.*);
+    var single_out: [3]*const []const u8 = undefined;
+    single_iter.fill(&single_out);
+    for (single_out) |item| try std.testing.expectEqualStrings("blue", item.*);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var empty_engine = alea.ScalarPrng.init(0x5150_1784);
+    var empty_control = alea.ScalarPrng.init(0x5150_1784);
+    try std.testing.expect((try chooseWeightedIterFrom(std.testing.allocator, &empty_engine, []const u8, u32, &items, &.{ 0, 0, 0, 0 })) == null);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    try std.testing.expectError(error.EmptyInput, chooseWeightedIterCheckedFrom(std.testing.allocator, &empty_engine, []const u8, u32, &items, &.{ 0, 0, 0, 0 }));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var invalid_engine = alea.ScalarPrng.init(0x5150_1785);
+    var invalid_control = alea.ScalarPrng.init(0x5150_1785);
+    try std.testing.expectError(error.LengthMismatch, chooseWeightedIterFrom(std.testing.allocator, &invalid_engine, []const u8, u32, &items, &.{ 1, 2 }));
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedIterFrom(std.testing.allocator, &invalid_engine, []const u8, f64, &items, &.{ 1, 2, std.math.nan(f64), 3 }));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var failing_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, chooseWeightedIterFrom(failing_alloc.allocator(), &invalid_engine, []const u8, u32, &items, &weights));
+    try std.testing.expect(failing_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "sampleIteratorWeightedArray returns fixed-size weighted iterator samples" {
