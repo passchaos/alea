@@ -719,7 +719,7 @@ already consumed randomness for earlier accepted candidates.
 `ascii.zig` includes ASCII `Alphanumeric`, `Alphabetic`, `Lowercase`,
 `Uppercase`, `Digits`, custom `Charset`, and Unicode scalar UTF-8 string
 generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
-`Charset.allocFrom`, `Charset.numChoices` / `len`, `Charset.item` / `byteAt` / `get`, `Charset.probability` / `probabilityAt`, `Charset.probabilityIter` size hints, `charFrom`, `stringFrom`, `unicodeScalarFrom`,
+`Charset.allocFrom`, `Charset.numChoices` / `len`, `Charset.constantIndex`, `Charset.item` / `byteAt` / `get`, `Charset.probability` / `probabilityAt`, `Charset.probabilityIter` size hints, `charFrom`, `stringFrom`, `unicodeScalarFrom`,
 `unicodeScalarRangeLessThanFrom`, `unicodeScalarRangeAtMostFrom`,
 `fillUnicodeScalarFrom`, `fillUnicodeScalarRangeLessThanFrom`,
 `fillUnicodeScalarRangeAtMostFrom`, `unicodeScalarBatchFrom`,

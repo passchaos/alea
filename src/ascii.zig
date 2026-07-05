@@ -64,6 +64,10 @@ pub const Charset = struct {
         return self.bytes.len;
     }
 
+    pub fn constantIndex(self: Charset) ?usize {
+        return if (self.bytes.len == 1) 0 else null;
+    }
+
     pub fn isEmpty(self: Charset) bool {
         return self.len() == 0;
     }
@@ -266,6 +270,7 @@ test "ascii charset fills requested length" {
     try std.testing.expectEqualSlices(u8, alphanumeric, Alphanumeric.bytesValue());
     try std.testing.expectEqual(alphanumeric.len, Alphanumeric.len());
     try std.testing.expectEqual(alphanumeric.len, Alphanumeric.numChoices());
+    try std.testing.expectEqual(@as(?usize, null), Alphanumeric.constantIndex());
     try std.testing.expect(!Alphanumeric.isEmpty());
     try std.testing.expectEqual(@as(u8, 'A'), try Alphanumeric.byteAt(0));
     try std.testing.expectError(error.InvalidParameter, Alphanumeric.byteAt(alphanumeric.len));
@@ -504,6 +509,7 @@ test "single-byte charset helpers do not consume random stream" {
     var control = alea.ScalarPrng.init(0x5150_a5d0);
     const rng = Rng.init(&engine);
     const only_x = Charset.init("x");
+    try std.testing.expectEqual(@as(?usize, 0), only_x.constantIndex());
 
     try std.testing.expectEqual(@as(u8, 'x'), only_x.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());

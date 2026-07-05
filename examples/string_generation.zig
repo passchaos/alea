@@ -20,6 +20,7 @@ pub fn main(init: std.process.Init) !void {
     var probabilities: [8]f64 = undefined;
     try custom.probabilitiesInto(&probabilities);
     const custom_num_choices = custom.numChoices();
+    const custom_constant_index = custom.constantIndex();
     const custom_item = try custom.item(0);
     const custom_item_buf = [_]u8{custom_item};
     const custom_get = custom.get(0).?;
@@ -54,11 +55,13 @@ pub fn main(init: std.process.Init) !void {
 
     const maybe_empty = alea.ascii.Charset{ .bytes = "" };
     const empty_checked_name = if (maybe_empty.sampleCheckedFrom(&engine)) |_| "unexpected-success" else |err| @errorName(err);
+    const single_charset = alea.ascii.Charset.init("Z");
 
     try stdout.print("alphanumeric string: {s}\n", .{token});
     try stdout.print("lowercase fill: {s}\n", .{lower_buf});
     try stdout.print("custom charset probabilities: {any}\n", .{probabilities});
     try stdout.print("custom charset numChoices: {}\n", .{custom_num_choices});
+    try stdout.print("custom charset constantIndex: {?}\n", .{custom_constant_index});
     try stdout.print("custom charset item(0)={s}\n", .{&custom_item_buf});
     try stdout.print("custom charset get(0)={s} missing={}\n", .{ &custom_get_buf, custom_get_missing });
     try stdout.print("custom charset probability(0)={d:.3} missing={}\n", .{ custom_probability, custom_missing_probability });
@@ -73,6 +76,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("unicode scalar range batch: {any}\n", .{scalar_range_batch});
     try stdout.print("unicode utf8 alloc: {s}\n", .{utf8});
     try stdout.print("unicode utf8 into: {s}\n", .{utf8_into});
+    try stdout.print("single charset constantIndex: {?}\n", .{single_charset.constantIndex()});
     try stdout.print("empty charset checked result: {s}\n", .{empty_checked_name});
     try stdout.print("\nUse predefined ASCII charsets for common tokens, Charset for custom alphabets and diagnostics, unicodeScalarBatch/fillUnicodeScalar plus range variants for codepoint batches, and unicodeUtf8Capacity/unicodeUtf8Into for caller-owned UTF-8 buffers.\n", .{});
     try stdout.flush();
