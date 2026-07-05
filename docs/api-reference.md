@@ -325,7 +325,7 @@ self-forking.
 ## Distributions
 
 - Error type: `Error`
-- Reusable sampler adapters: `map`, `MappedSampler`,
+- Reusable sampler adapters: `sampleIter`, `sampleIterFrom`, `map`, `MappedSampler`,
   `MappedSampler.sample`, `MappedSampler.sampleFrom`, `MappedSampler.fill`,
   `MappedSampler.fillFrom`, `MappedSampler.map`
 

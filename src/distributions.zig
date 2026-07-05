@@ -139,6 +139,14 @@ pub const Error = error{
     LibmUnavailable,
 };
 
+pub fn sampleIter(rng: Rng, comptime T: type, sampler: anytype) Rng.SampleIterator(@TypeOf(sampler), T) {
+    return rng.sampleIter(T, sampler);
+}
+
+pub fn sampleIterFrom(source: anytype, comptime T: type, sampler: anytype) Rng.SampleIteratorFrom(@TypeOf(source), @TypeOf(sampler), T) {
+    return Rng.sampleIterFrom(source, T, sampler);
+}
+
 pub fn map(comptime In: type, comptime Out: type, sampler: anytype, mapper: anytype) MappedSampler(@TypeOf(sampler), @TypeOf(mapper), In, Out) {
     return .{ .sampler = sampler, .mapper = mapper };
 }
@@ -29672,6 +29680,46 @@ test "mapped samplers transform reusable sampler outputs" {
         expected.* = if (even) 110 else 100;
     }
     try std.testing.expectEqual(manual_iter_engine.next(), iter_engine.next());
+}
+
+test "distribution namespace sample iterators mirror rng facade iterators" {
+    const alea = @import("root.zig");
+
+    const die = try Uniform(u8).newInclusive(1, 6);
+
+    var namespace_engine = alea.ScalarPrng.init(0x5169_7465_7250);
+    var facade_engine = alea.ScalarPrng.init(0x5169_7465_7250);
+    const facade_rng = Rng.init(&facade_engine);
+    var namespace_iter = sampleIter(Rng.init(&namespace_engine), u8, die);
+    var facade_iter = facade_rng.sampleIter(u8, die);
+
+    const namespace_hint = namespace_iter.sizeHint();
+    try std.testing.expectEqual(std.math.maxInt(usize), namespace_hint.lower);
+    try std.testing.expectEqual(@as(?usize, null), namespace_hint.upper);
+
+    var namespace_values: [12]u8 = undefined;
+    var facade_values: [12]u8 = undefined;
+    namespace_iter.fill(&namespace_values);
+    facade_iter.fill(&facade_values);
+    try std.testing.expectEqualSlices(u8, &facade_values, &namespace_values);
+    try std.testing.expectEqual(facade_engine.next(), namespace_engine.next());
+
+    var direct_namespace_engine = alea.ScalarPrng.init(0x5169_7465_7251);
+    var direct_facade_engine = alea.ScalarPrng.init(0x5169_7465_7251);
+    var direct_namespace_iter = sampleIterFrom(&direct_namespace_engine, u8, die);
+    var direct_facade_iter = Rng.sampleIterFrom(&direct_facade_engine, u8, die);
+    try std.testing.expectEqual(direct_facade_iter.next().?, direct_namespace_iter.next().?);
+    try std.testing.expectEqual(direct_facade_engine.next(), direct_namespace_engine.next());
+
+    var mapped_namespace_engine = alea.ScalarPrng.init(0x5169_7465_7252);
+    const Even = struct {
+        pub fn map(value: u8) bool {
+            return value % 2 == 0;
+        }
+    };
+    var mapped_iter = sampleIterFrom(&mapped_namespace_engine, bool, map(u8, bool, die, Even{}));
+    const mapped_value = mapped_iter.next().?;
+    try std.testing.expect(mapped_value == true or mapped_value == false);
 }
 
 test "binomial sampler has plausible moments" {

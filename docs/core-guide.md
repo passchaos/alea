@@ -299,8 +299,11 @@ Reusable samplers expose `sample(rng)`, and direct-source samplers expose
 called through the Rust-discoverable `rng.sample(T, sampler)` /
 `Rng.sampleFrom(source, T, sampler)` facade aliases, or used with
 `rng.sampleIter(T, sampler)` /
-`Rng.sampleIterFrom(source, T, sampler)` when the sample type is scalar, and
-their unbounded iterators expose `sizeHint()` as `usize.max..unbounded` while
+`Rng.sampleIterFrom(source, T, sampler)` when the sample type is scalar. The
+distribution namespace also exposes `sampleIter(rng, T, sampler)` and
+`sampleIterFrom(source, T, sampler)` aliases for callers looking for the local
+Rust `Distribution::sample_iter` shape. These unbounded iterators expose
+`sizeHint()` as `usize.max..unbounded` while
 `fill` methods inherit sampler-specific bulk fills where available.
 `valueIter(T)` / `valueIterFrom(source, T)` likewise expose the same unbounded
 `sizeHint()` and delegate

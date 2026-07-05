@@ -271,6 +271,7 @@ Local Alea evidence:
 - `compare/results/s4-m247-sysrng.md`
 - `compare/results/s4-m248-mapped-sampler.md`
 - `compare/results/s4-m249-unbounded-iterator-sizehint.md`
+- `compare/results/s4-m250-distribution-sampleiter.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -491,3 +492,7 @@ S4-M249 adds unbounded `sizeHint()` diagnostics to value/random/sample iterators
 (`compare/results/s4-m249-unbounded-iterator-sizehint.md`), closing the local
 Rust `Distribution::Iter::size_hint` / `random_iter` discoverability gap for
 the current Linux bar.
+S4-M250 adds distribution-namespace `sampleIter` / `sampleIterFrom` aliases
+(`compare/results/s4-m250-distribution-sampleiter.md`), closing the local Rust
+`Distribution::sample_iter` naming/discoverability gap for the current Linux
+bar.

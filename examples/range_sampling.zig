@@ -85,6 +85,10 @@ pub fn main(init: std.process.Init) !void {
     const vec_uniform = alea.distributions.vectorUniformFrom(&vector_engine, @Vector(4, f32), 10, 20);
     const vec_uniform_sampler = try alea.distributions.VectorUniform(@Vector(4, f32)).new(10, 20);
     const vec_uniform_inclusive_sampler = try alea.distributions.VectorUniform(@Vector(4, i32)).newInclusive(-10, 10);
+    var distribution_iter_engine = alea.ScalarPrng.init(0x7261_6e67_6e);
+    var distribution_die_iter = alea.distributions.sampleIterFrom(&distribution_iter_engine, u8, inclusive_die);
+    const distribution_die_iter_hint = distribution_die_iter.sizeHint();
+    const distribution_die_iter_roll = distribution_die_iter.next().?;
     const vec_range_batch = try alea.Rng.vectorRangeBatchFrom(&vector_engine, @Vector(4, f32), allocator, 3, -1, 1);
     defer allocator.free(vec_range_batch);
     const vec_range_at_most_batch = try alea.Rng.vectorRangeAtMostBatchCheckedFrom(&vector_engine, @Vector(4, i32), allocator, 3, -10, 10);
@@ -99,6 +103,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("distribution vectorUniform f32x4 [10,20): {any}\n", .{vec_uniform});
     try stdout.print("VectorUniform(f32x4).new low={d:.1}, high={d:.1}, sample={any}\n", .{ vec_uniform_sampler.lowValue(), vec_uniform_sampler.highValue(), vec_uniform_sampler.sampleFrom(&vector_engine) });
     try stdout.print("VectorUniform(i32x4).newInclusive low={}, high={}, isInclusive={}, sample={any}\n", .{ vec_uniform_inclusive_sampler.lowValue(), vec_uniform_inclusive_sampler.highValue(), vec_uniform_inclusive_sampler.isInclusive(), vec_uniform_inclusive_sampler.sampleFrom(&vector_engine) });
+    try stdout.print("distribution sampleIter die: {}, unbounded={}\n", .{ distribution_die_iter_roll, distribution_die_iter_hint.upper == null });
     try stdout.print("vectorRangeBatch f32x4 [-1,1): {any}\n", .{vec_range_batch});
     try stdout.print("vectorRangeAtMostBatch i32x4 [-10,10]: {any}\n", .{vec_range_at_most_batch});
     try stdout.print("vectorOpenBatch f32x4 (0,1): {any}\n", .{vec_open_batch});
