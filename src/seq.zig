@@ -37,6 +37,10 @@ pub const IndexVec = union(enum) {
             return self.index_vec.len() - self.index;
         }
 
+        pub fn len(self: IntoIterator) usize {
+            return self.remaining();
+        }
+
         pub fn deinit(self: IntoIterator) void {
             self.index_vec.deinit(self.allocator);
         }
@@ -56,6 +60,10 @@ pub const IndexVec = union(enum) {
         pub fn remaining(self: Iterator) usize {
             return self.index_vec.len() - self.index;
         }
+
+        pub fn len(self: Iterator) usize {
+            return self.remaining();
+        }
     };
 
     pub fn ValueIterator(comptime T: type) type {
@@ -70,6 +78,10 @@ pub const IndexVec = union(enum) {
 
             pub fn remaining(self: @This()) usize {
                 return self.index_iter.remaining();
+            }
+
+            pub fn len(self: @This()) usize {
+                return self.remaining();
             }
         };
     }
@@ -87,6 +99,10 @@ pub const IndexVec = union(enum) {
             pub fn remaining(self: @This()) usize {
                 return self.index_iter.remaining();
             }
+
+            pub fn len(self: @This()) usize {
+                return self.remaining();
+            }
         };
     }
 
@@ -102,6 +118,10 @@ pub const IndexVec = union(enum) {
 
             pub fn remaining(self: @This()) usize {
                 return self.index_iter.remaining();
+            }
+
+            pub fn len(self: @This()) usize {
+                return self.remaining();
             }
         };
     }
@@ -379,6 +399,10 @@ pub fn SampledPtrIterator(comptime T: type) type {
             return self.index_iter.remaining();
         }
 
+        pub fn len(self: Self) usize {
+            return self.remaining();
+        }
+
         pub fn fill(self: *Self, dest: []*const T) usize {
             const count = @min(dest.len, self.remaining());
             for (dest[0..count]) |*slot| slot.* = self.next().?;
@@ -407,6 +431,10 @@ pub fn SampledMutPtrIterator(comptime T: type) type {
             return self.index_iter.remaining();
         }
 
+        pub fn len(self: Self) usize {
+            return self.remaining();
+        }
+
         pub fn fill(self: *Self, dest: []*T) usize {
             const count = @min(dest.len, self.remaining());
             for (dest[0..count]) |*slot| slot.* = self.next().?;
@@ -433,6 +461,10 @@ pub fn SampledValueIterator(comptime T: type) type {
 
         pub fn remaining(self: Self) usize {
             return self.index_iter.remaining();
+        }
+
+        pub fn len(self: Self) usize {
+            return self.remaining();
         }
 
         pub fn fill(self: *Self, dest: []T) usize {
@@ -9380,9 +9412,11 @@ test "portable index sampling has stable snapshots" {
     try std.testing.expect(!index_vec.contains(99));
     var iter = index_vec.iter();
     try std.testing.expectEqual(@as(usize, expected.len), iter.remaining());
+    try std.testing.expectEqual(@as(usize, expected.len), iter.len());
     for (expected, 0..) |value, i| {
         try std.testing.expectEqual(value, iter.next().?);
         try std.testing.expectEqual(expected.len - i - 1, iter.remaining());
+        try std.testing.expectEqual(expected.len - i - 1, iter.len());
     }
     try std.testing.expectEqual(@as(?usize, null), iter.next());
     var copied: [8]usize = undefined;
@@ -9539,8 +9573,10 @@ test "index vec consuming iterator owns backing" {
     var compact_iter = compact_vec.intoIter(std.testing.allocator);
     defer compact_iter.deinit();
     try std.testing.expectEqual(@as(usize, 3), compact_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 3), compact_iter.len());
     try std.testing.expectEqual(@as(?usize, 3), compact_iter.next());
     try std.testing.expectEqual(@as(usize, 2), compact_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 2), compact_iter.len());
     try std.testing.expectEqual(@as(?usize, 5), compact_iter.next());
     try std.testing.expectEqual(@as(?usize, 8), compact_iter.next());
     try std.testing.expectEqual(@as(usize, 0), compact_iter.remaining());
@@ -9619,13 +9655,17 @@ test "index vec maps sampled indexes to slice items" {
 
     var values = index_vec.values([]const u8, &labels);
     try std.testing.expectEqual(@as(usize, 3), values.remaining());
+    try std.testing.expectEqual(@as(usize, 3), values.len());
     try std.testing.expectEqualStrings("eel", values.next().?);
     try std.testing.expectEqualStrings("bee", values.next().?);
     try std.testing.expectEqualStrings("fox", values.next().?);
     try std.testing.expectEqual(@as(?[]const u8, null), values.next());
 
     var ptrs = try index_vec.ptrsChecked([]const u8, &labels);
+    try std.testing.expectEqual(@as(usize, 3), ptrs.remaining());
+    try std.testing.expectEqual(@as(usize, 3), ptrs.len());
     try std.testing.expectEqualStrings("eel", ptrs.next().?.*);
+    try std.testing.expectEqual(@as(usize, 2), ptrs.len());
     try std.testing.expectEqualStrings("bee", ptrs.next().?.*);
     try std.testing.expectEqualStrings("fox", ptrs.next().?.*);
     try std.testing.expectEqual(@as(?*const []const u8, null), ptrs.next());
@@ -9682,7 +9722,9 @@ test "index vec maps sampled indexes to slice items" {
     var numbers = [_]u8{ 10, 20, 30, 40, 50, 60 };
     var mut_ptrs = try index_vec.mutPtrsChecked(u8, &numbers);
     try std.testing.expectEqual(@as(usize, 3), mut_ptrs.remaining());
+    try std.testing.expectEqual(@as(usize, 3), mut_ptrs.len());
     mut_ptrs.next().?.* += 1;
+    try std.testing.expectEqual(@as(usize, 2), mut_ptrs.len());
     mut_ptrs.next().?.* += 2;
     mut_ptrs.next().?.* += 3;
     try std.testing.expectEqual(@as(?*u8, null), mut_ptrs.next());
@@ -12048,6 +12090,7 @@ test "sampleItemsIter owns sampled indices and streams values" {
     var optional_iter = try sampleItemsIterFrom(std.testing.allocator, &optional_engine, u8, &items, 3);
     defer optional_iter.deinit();
     try std.testing.expectEqual(@as(usize, 3), optional_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 3), optional_iter.len());
     var seen = [_]bool{false} ** items.len;
     var count: usize = 0;
     while (optional_iter.next()) |value| : (count += 1) {
@@ -12057,6 +12100,7 @@ test "sampleItemsIter owns sampled indices and streams values" {
     }
     try std.testing.expectEqual(@as(usize, 3), count);
     try std.testing.expectEqual(@as(usize, 0), optional_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 0), optional_iter.len());
 
     var fill_engine = alea.ScalarPrng.init(0x5150_c316);
     var fill_iter = try sampleItemsIterFrom(std.testing.allocator, &fill_engine, u8, &items, 4);
@@ -12064,9 +12108,11 @@ test "sampleItemsIter owns sampled indices and streams values" {
     var fill_out: [3]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 3), fill_iter.fill(&fill_out));
     try std.testing.expectEqual(@as(usize, 1), fill_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 1), fill_iter.len());
     var fill_tail: [3]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 1), fill_iter.fill(&fill_tail));
     try std.testing.expectEqual(@as(usize, 0), fill_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 0), fill_iter.len());
 
     var checked_engine = alea.ScalarPrng.init(0x5150_c30d);
     var checked_iter = try sampleItemsIterCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 5);
@@ -12117,6 +12163,7 @@ test "samplePtrsIter owns sampled indices and streams pointers" {
     var optional_iter = try samplePtrsIterFrom(std.testing.allocator, &optional_engine, u8, &items, 3);
     defer optional_iter.deinit();
     try std.testing.expectEqual(@as(usize, 3), optional_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 3), optional_iter.len());
     var seen = [_]bool{false} ** items.len;
     var count: usize = 0;
     while (optional_iter.next()) |ptr| : (count += 1) {
@@ -12128,6 +12175,7 @@ test "samplePtrsIter owns sampled indices and streams pointers" {
     }
     try std.testing.expectEqual(@as(usize, 3), count);
     try std.testing.expectEqual(@as(usize, 0), optional_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 0), optional_iter.len());
 
     var fill_engine = alea.ScalarPrng.init(0x5150_c317);
     var fill_iter = try samplePtrsIterFrom(std.testing.allocator, &fill_engine, u8, &items, 4);
@@ -12135,9 +12183,11 @@ test "samplePtrsIter owns sampled indices and streams pointers" {
     var fill_out: [3]*const u8 = undefined;
     try std.testing.expectEqual(@as(usize, 3), fill_iter.fill(&fill_out));
     try std.testing.expectEqual(@as(usize, 1), fill_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 1), fill_iter.len());
     var fill_tail: [3]*const u8 = undefined;
     try std.testing.expectEqual(@as(usize, 1), fill_iter.fill(&fill_tail));
     try std.testing.expectEqual(@as(usize, 0), fill_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 0), fill_iter.len());
 
     var checked_engine = alea.ScalarPrng.init(0x5150_c308);
     var checked_iter = try samplePtrsIterCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 5);
@@ -12195,6 +12245,7 @@ test "sampleMutPtrsIter owns sampled indices and streams mutable pointers" {
     var optional_iter = try sampleMutPtrsIterFrom(std.testing.allocator, &optional_engine, u8, &items, 3);
     defer optional_iter.deinit();
     try std.testing.expectEqual(@as(usize, 3), optional_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 3), optional_iter.len());
     var changed = [_]bool{false} ** items.len;
     var count: usize = 0;
     while (optional_iter.next()) |ptr| : (count += 1) {
@@ -12218,10 +12269,12 @@ test "sampleMutPtrsIter owns sampled indices and streams mutable pointers" {
     var fill_out: [3]*u8 = undefined;
     try std.testing.expectEqual(@as(usize, 3), fill_iter.fill(&fill_out));
     try std.testing.expectEqual(@as(usize, 1), fill_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 1), fill_iter.len());
     for (fill_out) |ptr| ptr.* += 2;
     var fill_tail: [3]*u8 = undefined;
     try std.testing.expectEqual(@as(usize, 1), fill_iter.fill(&fill_tail));
     try std.testing.expectEqual(@as(usize, 0), fill_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 0), fill_iter.len());
     for (fill_tail[0..1]) |ptr| ptr.* += 2;
     var changed_by_fill: usize = 0;
     for (fill_items, original) |actual, before| {

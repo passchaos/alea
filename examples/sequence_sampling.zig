@@ -223,7 +223,7 @@ pub fn main(init: std.process.Init) !void {
     defer sampled_items_iter.deinit();
     var sampled_items_iter_fill: [3][]const u8 = undefined;
     _ = sampled_items_iter.fill(&sampled_items_iter_fill);
-    try stdout.print("sampleItemsIter.fill items: {s}, {s}, {s}; remaining={}\n", .{ sampled_items_iter_fill[0], sampled_items_iter_fill[1], sampled_items_iter_fill[2], sampled_items_iter.remaining() });
+    try stdout.print("sampleItemsIter.fill items: {s}, {s}, {s}; remaining={} len={}\n", .{ sampled_items_iter_fill[0], sampled_items_iter_fill[1], sampled_items_iter_fill[2], sampled_items_iter.remaining(), sampled_items_iter.len() });
 
     var choose_into_engine = alea.ScalarPrng.init(0x5e11_0011);
     var chosen_into: [3][]const u8 = undefined;
