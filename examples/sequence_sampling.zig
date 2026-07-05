@@ -80,6 +80,16 @@ pub fn main(init: std.process.Init) !void {
     const compact_owned_copy = try item_index_vec.toOwnedU32Slice(allocator);
     defer allocator.free(compact_owned_copy);
     try stdout.print("IndexVec.toOwnedU32Slice: {any}\n", .{compact_owned_copy});
+    var consuming_index_engine = alea.ScalarPrng.init(0x5e11_0036);
+    const consuming_index_vec = try alea.seq.sampleIndexVecFrom(allocator, &consuming_index_engine, items.len, 3);
+    const consuming_owned = try consuming_index_vec.intoOwnedSlice(allocator);
+    defer allocator.free(consuming_owned);
+    try stdout.print("IndexVec.intoOwnedSlice: {any}\n", .{consuming_owned});
+    var consuming_u32_index_engine = alea.ScalarPrng.init(0x5e11_0037);
+    const consuming_u32_index_vec = try alea.seq.sampleIndexVecFrom(allocator, &consuming_u32_index_engine, items.len, 3);
+    const consuming_u32_owned = try consuming_u32_index_vec.intoOwnedU32Slice(allocator);
+    defer allocator.free(consuming_u32_owned);
+    try stdout.print("IndexVec.intoOwnedU32Slice: {any}\n", .{consuming_u32_owned});
     var mapped_ptrs: [3]*const []const u8 = undefined;
     try item_index_vec.ptrsIntoChecked([]const u8, &items, &mapped_ptrs);
     try stdout.print("IndexVec.ptrsInto: {s}, {s}, {s}\n", .{ mapped_ptrs[0].*, mapped_ptrs[1].*, mapped_ptrs[2].* });

@@ -155,6 +155,35 @@ pub const IndexVec = union(enum) {
         return out;
     }
 
+    pub fn intoOwnedSlice(self: IndexVec, allocator: std.mem.Allocator) ![]usize {
+        switch (self) {
+            .usize => |items| return items,
+            .u32 => |items| {
+                const out = try allocator.alloc(usize, items.len);
+                errdefer allocator.free(out);
+                for (items, out) |item, *slot| slot.* = item;
+                allocator.free(items);
+                return out;
+            },
+        }
+    }
+
+    pub fn intoOwnedU32Slice(self: IndexVec, allocator: std.mem.Allocator) ![]u32 {
+        switch (self) {
+            .u32 => |items| return items,
+            .usize => |items| {
+                const out = try allocator.alloc(u32, items.len);
+                errdefer allocator.free(out);
+                for (items, out) |item, *slot| {
+                    if (item > std.math.maxInt(u32)) return error.InvalidParameter;
+                    slot.* = @intCast(item);
+                }
+                allocator.free(items);
+                return out;
+            },
+        }
+    }
+
     pub fn values(self: IndexVec, comptime T: type, items: []const T) ValueIterator(T) {
         return .{ .index_iter = self.iter(), .items = items };
     }
@@ -9031,6 +9060,61 @@ test "index vec conversion supports native backing" {
     var too_large_out: [2]u32 = undefined;
     try std.testing.expectError(error.InvalidParameter, too_large.copyIntoU32(&too_large_out));
     try std.testing.expectError(error.InvalidParameter, too_large.toOwnedU32Slice(std.testing.allocator));
+}
+
+test "index vec consuming owned conversions transfer or narrow backing" {
+    const alea = @import("root.zig");
+
+    var compact_engine = alea.ScalarPrng.init(0x5150_1d71);
+    const compact_vec = try sampleIndexVecFrom(std.testing.allocator, &compact_engine, 100, 8);
+    const compact_owned = try compact_vec.intoOwnedSlice(std.testing.allocator);
+    defer std.testing.allocator.free(compact_owned);
+    try std.testing.expectEqual(@as(usize, 8), compact_owned.len);
+    for (compact_owned) |index| try std.testing.expect(index < 100);
+
+    var compact_u32_engine = alea.ScalarPrng.init(0x5150_1d72);
+    const compact_u32_vec = try sampleIndexVecFrom(std.testing.allocator, &compact_u32_engine, 100, 8);
+    const compact_u32_owned = try compact_u32_vec.intoOwnedU32Slice(std.testing.allocator);
+    defer std.testing.allocator.free(compact_u32_owned);
+    try std.testing.expectEqual(@as(usize, 8), compact_u32_owned.len);
+    for (compact_u32_owned) |index| try std.testing.expect(index < 100);
+
+    const native_backing = try std.testing.allocator.alloc(usize, 3);
+    native_backing[0..3].* = .{ 5, 8, 13 };
+    const native_vec = IndexVec{ .usize = native_backing };
+    const native_owned = try native_vec.intoOwnedSlice(std.testing.allocator);
+    defer std.testing.allocator.free(native_owned);
+    try std.testing.expectEqual(@intFromPtr(native_backing.ptr), @intFromPtr(native_owned.ptr));
+    try std.testing.expectEqualSlices(usize, &.{ 5, 8, 13 }, native_owned);
+
+    const compact_backing = try std.testing.allocator.alloc(u32, 3);
+    compact_backing[0..3].* = .{ 2, 3, 5 };
+    const compact_transfer_vec = IndexVec{ .u32 = compact_backing };
+    const compact_transfer_owned = try compact_transfer_vec.intoOwnedU32Slice(std.testing.allocator);
+    defer std.testing.allocator.free(compact_transfer_owned);
+    try std.testing.expectEqual(@intFromPtr(compact_backing.ptr), @intFromPtr(compact_transfer_owned.ptr));
+    try std.testing.expectEqualSlices(u32, &.{ 2, 3, 5 }, compact_transfer_owned);
+
+    const native_u32_backing = try std.testing.allocator.alloc(usize, 3);
+    native_u32_backing[0..3].* = .{ 3, 5, 8 };
+    const native_u32_vec = IndexVec{ .usize = native_u32_backing };
+    const native_u32_owned = try native_u32_vec.intoOwnedU32Slice(std.testing.allocator);
+    defer std.testing.allocator.free(native_u32_owned);
+    try std.testing.expectEqualSlices(u32, &.{ 3, 5, 8 }, native_u32_owned);
+
+    const too_large_backing = try std.testing.allocator.alloc(usize, 2);
+    defer std.testing.allocator.free(too_large_backing);
+    too_large_backing[0..2].* = .{ 1, @as(usize, std.math.maxInt(u32)) + 1 };
+    const too_large_vec = IndexVec{ .usize = too_large_backing };
+    try std.testing.expectError(error.InvalidParameter, too_large_vec.intoOwnedU32Slice(std.testing.allocator));
+
+    var failing_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const failing_backing = try std.testing.allocator.alloc(u32, 2);
+    defer std.testing.allocator.free(failing_backing);
+    failing_backing[0..2].* = .{ 1, 2 };
+    const failing_vec = IndexVec{ .u32 = failing_backing };
+    try std.testing.expectError(error.OutOfMemory, failing_vec.intoOwnedSlice(failing_alloc.allocator()));
+    try std.testing.expect(failing_alloc.has_induced_failure);
 }
 
 test "index vec maps sampled indexes to slice items" {

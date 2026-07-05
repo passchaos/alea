@@ -300,7 +300,8 @@ Use:
   `seq.sampleIndicesU32CheckedFrom`, `seq.sampleIndicesU32IntoFrom`,
   `seq.sampleIndicesU32IntoCheckedFrom`; compact `IndexVec` results expose
   `len`, `isEmpty`, `at`, `copyInto`, `copyIntoU32`, `toOwnedSlice`,
-  `toOwnedU32Slice`, and an exact-size `iter` with `remaining`, plus
+  `toOwnedU32Slice`, consuming `intoOwnedSlice` / `intoOwnedU32Slice`, and
+  an exact-size `iter` with `remaining`, plus
   `values` / `ptrs` / `mutPtrs`, `valuesInto` / `ptrsInto` /
   `mutPtrsInto`, `valuesOwned` / `ptrsOwned` / `mutPtrsOwned`, and checked
   variants for mapping indexes back to slice items
