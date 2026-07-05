@@ -54,6 +54,14 @@ pub fn tryNext(self: *Wyhash64) !u64 {
     return self.next();
 }
 
+pub fn tryNextU64(self: *Wyhash64) !u64 {
+    return self.tryNext();
+}
+
+pub fn tryNextU32(self: *Wyhash64) !u32 {
+    return @truncate((try self.tryNext()) >> 32);
+}
+
 pub fn nextU64(self: *Wyhash64) u64 {
     return self.next();
 }
@@ -81,6 +89,10 @@ pub fn fill(self: *Wyhash64, buf: []u8) void {
 
 pub fn fillBytes(self: *Wyhash64, buf: []u8) void {
     self.fill(buf);
+}
+
+pub fn tryFillBytes(self: *Wyhash64, buf: []u8) !void {
+    self.fillBytes(buf);
 }
 
 pub fn fork(self: *Wyhash64) Wyhash64 {

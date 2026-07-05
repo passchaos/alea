@@ -27,7 +27,8 @@ stability expectations.
   `valueBatchCheckedFrom`, `valueIter`, `valueIterFrom`, `randomIter`,
   `randomIterFrom`, `sample`, `sampleFrom`, `sampleIter`, `sampleIterFrom`, `sampleBatch`,
   `sampleBatchFrom`
-- Bytes/fill: `bytes`, `fillBytes`, `fillBytesFrom`, `bytesAlloc`, `bytesAllocFrom`, `fill` and `fillFrom` for scalar and vector slices,
+- Bytes/fill: `bytes`, `fillBytes`, `tryFillBytes`, `fillBytesFrom`,
+  `bytesAlloc`, `bytesAllocFrom`, `fill` and `fillFrom` for scalar and vector slices,
   `fillSample`, `fillSampleFrom`, `fillRange`, `fillRangeFrom`,
   `fillRangeChecked`, `fillRangeCheckedFrom`, `fillRangeAtMost`,
   `fillRangeAtMostFrom`, `fillRangeAtMostChecked`,
@@ -66,8 +67,8 @@ stability expectations.
   `fillVectorStandardExponential`, `fillVectorStandardExponentialFrom`,
   `vectorStandardExponentialBatch`, `vectorStandardExponentialBatchFrom`,
   `fillVectorExponentialFrom`
-- Raw/scalars: `next`, `nextFrom`, `nextU64`, `nextU64From`,
-  `nextU32`, `nextU32From`, `boolean`, `booleanFrom`, `chance`, `chanceChecked`, `ratio`,
+- Raw/scalars: `next`, `nextFrom`, `nextU64`, `tryNextU64`, `nextU64From`,
+  `nextU32`, `tryNextU32`, `nextU32From`, `boolean`, `booleanFrom`, `chance`, `chanceChecked`, `ratio`,
   `chanceFrom`, `chanceCheckedFrom`, `ratioFrom`, `ratioChecked`,
   `ratioCheckedFrom`, `randomBool`, `randomBoolFrom`,
   `randomBoolChecked`, `randomBoolCheckedFrom`, `randomRatio`,
@@ -273,7 +274,7 @@ stability expectations.
 All engines expose deterministic construction and `random()` interop where
 appropriate. Engines with byte fills expose Rust-discoverable `fillBytes`
 aliases; all deterministic engines expose Rust-discoverable `nextU64` /
-`nextU32` raw aliases alongside `next`, plus Rust-discoverable `seedFromU64`
+`nextU32` raw aliases alongside `next`, `tryNextU64`, and `tryNextU32`, plus Rust-discoverable `seedFromU64`,
 `fromSeed`, and `fromSeedBytes` constructor aliases alongside their Zig-native
 seed constructors.
 Engines also expose Rust-discoverable `fromRng` and `fork` helpers for
@@ -282,28 +283,32 @@ fallible sources exposing `tryNext() !u64` and `tryFork` for fallible
 self-forking.
 
 - `SplitMix64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`,
-  `tryNext`, `nextU64`, `nextU32`, `fromRng`, `tryFromRng`, `fork`,
+  `tryNext`, `nextU64`, `tryNextU64`, `nextU32`, `tryNextU32`, `fromRng`, `tryFromRng`, `fork`,
   `tryFork`
 - `Wyhash64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`,
-  `fromState`, `random`, `next`, `tryNext`, `nextU64`, `nextU32`, `fill`,
-  `fillBytes`, `fromRng`, `tryFromRng`, `fork`, `tryFork`
-- `Alea4x64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `random`,
-  `next`, `tryNext`, `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`,
+  `fromState`, `random`, `next`, `tryNext`, `nextU64`, `tryNextU64`,
+  `nextU32`, `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`, `fromRng`,
   `tryFromRng`, `fork`, `tryFork`
-- `Xoshiro256`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `seed`,
-  `random`, `next`, `tryNext`, `nextU64`, `nextU32`, `split`, `jump`,
-  `longJump`, `fill`, `fillBytes`, `fromRng`, `tryFromRng`, `fork`,
+- `Alea4x64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `random`,
+  `next`, `tryNext`, `nextU64`, `tryNextU64`, `nextU32`, `tryNextU32`,
+  `fill`, `fillBytes`, `tryFillBytes`, `fromRng`, `tryFromRng`, `fork`,
   `tryFork`
+- `Xoshiro256`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `seed`,
+  `random`, `next`, `tryNext`, `nextU64`, `tryNextU64`, `nextU32`,
+  `tryNextU32`, `split`, `jump`, `longJump`, `fill`, `fillBytes`,
+  `tryFillBytes`, `fromRng`, `tryFromRng`, `fork`, `tryFork`
 - `Xoshiro256PlusPlus`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`,
-  `random`, `next`, `tryNext`, `nextU64`, `nextU32`, `jump`, `fill`,
-  `fillBytes`, `fromRng`, `tryFromRng`, `fork`, `tryFork`
+  `random`, `next`, `tryNext`, `nextU64`, `tryNextU64`, `nextU32`,
+  `tryNextU32`, `jump`, `fill`, `fillBytes`, `tryFillBytes`, `fromRng`,
+  `tryFromRng`, `fork`, `tryFork`
 - `Pcg64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `initTwo`,
-  `random`, `next`, `tryNext`, `nextU64`, `nextU32`, `fill`, `fillBytes`,
-  `fromRng`, `tryFromRng`, `fork`, `tryFork`
+  `random`, `next`, `tryNext`, `nextU64`, `tryNextU64`, `nextU32`,
+  `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`, `fromRng`, `tryFromRng`,
+  `fork`, `tryFork`
 - `ChaCha`: `seed_length`, `init`, `initFromU64`, `random`, `addEntropy`,
   `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`, `tryNext`, `nextU64`,
-  `nextU32`, `fill`, `fillBytes`, `fromRng`, `tryFromRng`, `fork`,
-  `tryFork`
+  `tryNextU64`, `nextU32`, `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`,
+  `fromRng`, `tryFromRng`, `fork`, `tryFork`
 
 ## Distributions
 

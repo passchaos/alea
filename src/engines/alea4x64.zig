@@ -59,6 +59,14 @@ pub fn tryNext(self: *Alea4x64) !u64 {
     return self.next();
 }
 
+pub fn tryNextU64(self: *Alea4x64) !u64 {
+    return self.tryNext();
+}
+
+pub fn tryNextU32(self: *Alea4x64) !u32 {
+    return @truncate((try self.tryNext()) >> 32);
+}
+
 pub fn nextU64(self: *Alea4x64) u64 {
     return self.next();
 }
@@ -93,6 +101,10 @@ pub fn fill(self: *Alea4x64, buf: []u8) void {
 
 pub fn fillBytes(self: *Alea4x64, buf: []u8) void {
     self.fill(buf);
+}
+
+pub fn tryFillBytes(self: *Alea4x64, buf: []u8) !void {
+    self.fillBytes(buf);
 }
 
 pub fn fork(self: *Alea4x64) Alea4x64 {

@@ -41,6 +41,14 @@ pub fn tryNext(self: *SplitMix64) !u64 {
     return self.next();
 }
 
+pub fn tryNextU64(self: *SplitMix64) !u64 {
+    return self.tryNext();
+}
+
+pub fn tryNextU32(self: *SplitMix64) !u32 {
+    return @truncate((try self.tryNext()) >> 32);
+}
+
 pub fn nextU64(self: *SplitMix64) u64 {
     return self.next();
 }

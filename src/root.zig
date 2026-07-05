@@ -154,9 +154,17 @@ fn expectFullEngineRawAliases(comptime Engine: type, seed: u64) !void {
     var alias_u64 = engineFromSeed(Engine, seed);
     try std.testing.expectEqual(direct_u64.next(), alias_u64.nextU64());
 
+    var direct_try_u64 = engineFromSeed(Engine, seed);
+    var alias_try_u64 = engineFromSeed(Engine, seed);
+    try std.testing.expectEqual(direct_try_u64.next(), try alias_try_u64.tryNextU64());
+
     var direct_u32 = engineFromSeed(Engine, seed);
     var alias_u32 = engineFromSeed(Engine, seed);
     try std.testing.expectEqual(@as(u32, @truncate(direct_u32.next() >> 32)), alias_u32.nextU32());
+
+    var direct_try_u32 = engineFromSeed(Engine, seed);
+    var alias_try_u32 = engineFromSeed(Engine, seed);
+    try std.testing.expectEqual(@as(u32, @truncate(direct_try_u32.next() >> 32)), try alias_try_u32.tryNextU32());
 
     var direct_fill = engineFromSeed(Engine, seed);
     var alias_fill = engineFromSeed(Engine, seed);
@@ -165,6 +173,14 @@ fn expectFullEngineRawAliases(comptime Engine: type, seed: u64) !void {
     direct_fill.fill(&direct_bytes);
     alias_fill.fillBytes(&alias_bytes);
     try std.testing.expectEqualSlices(u8, &direct_bytes, &alias_bytes);
+
+    var direct_try_fill = engineFromSeed(Engine, seed);
+    var alias_try_fill = engineFromSeed(Engine, seed);
+    var direct_try_bytes: [23]u8 = undefined;
+    var alias_try_bytes: [23]u8 = undefined;
+    direct_try_fill.fill(&direct_try_bytes);
+    try alias_try_fill.tryFillBytes(&alias_try_bytes);
+    try std.testing.expectEqualSlices(u8, &direct_try_bytes, &alias_try_bytes);
 }
 
 test "engine raw aliases preserve stream shape" {
@@ -178,9 +194,17 @@ test "engine raw aliases preserve stream shape" {
     var splitmix_alias_u64 = SplitMix64.init(seed);
     try std.testing.expectEqual(splitmix_direct_u64.next(), splitmix_alias_u64.nextU64());
 
+    var splitmix_direct_try_u64 = SplitMix64.init(seed);
+    var splitmix_alias_try_u64 = SplitMix64.init(seed);
+    try std.testing.expectEqual(splitmix_direct_try_u64.next(), try splitmix_alias_try_u64.tryNextU64());
+
     var splitmix_direct_u32 = SplitMix64.init(seed);
     var splitmix_alias_u32 = SplitMix64.init(seed);
     try std.testing.expectEqual(@as(u32, @truncate(splitmix_direct_u32.next() >> 32)), splitmix_alias_u32.nextU32());
+
+    var splitmix_direct_try_u32 = SplitMix64.init(seed);
+    var splitmix_alias_try_u32 = SplitMix64.init(seed);
+    try std.testing.expectEqual(@as(u32, @truncate(splitmix_direct_try_u32.next() >> 32)), try splitmix_alias_try_u32.tryNextU32());
 }
 
 fn expectEngineSeedFromU64Alias(comptime Engine: type, seed: u64) !void {

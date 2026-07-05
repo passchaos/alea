@@ -92,6 +92,14 @@ pub fn tryNext(self: *ChaCha) !u64 {
     return self.next();
 }
 
+pub fn tryNextU64(self: *ChaCha) !u64 {
+    return self.tryNext();
+}
+
+pub fn tryNextU32(self: *ChaCha) !u32 {
+    return @truncate((try self.tryNext()) >> 32);
+}
+
 pub fn nextU64(self: *ChaCha) u64 {
     return self.next();
 }
@@ -116,6 +124,10 @@ pub fn fill(self: *ChaCha, out: []u8) void {
 
 pub fn fillBytes(self: *ChaCha, out: []u8) void {
     self.fill(out);
+}
+
+pub fn tryFillBytes(self: *ChaCha, out: []u8) !void {
+    self.fillBytes(out);
 }
 
 pub fn fork(self: *ChaCha) ChaCha {

@@ -59,6 +59,14 @@ pub fn tryNext(self: *Xoshiro256PlusPlus) !u64 {
     return self.next();
 }
 
+pub fn tryNextU64(self: *Xoshiro256PlusPlus) !u64 {
+    return self.tryNext();
+}
+
+pub fn tryNextU32(self: *Xoshiro256PlusPlus) !u32 {
+    return @truncate((try self.tryNext()) >> 32);
+}
+
 pub fn nextU64(self: *Xoshiro256PlusPlus) u64 {
     return self.next();
 }
@@ -95,6 +103,10 @@ pub fn fill(self: *Xoshiro256PlusPlus, buf: []u8) void {
 
 pub fn fillBytes(self: *Xoshiro256PlusPlus, buf: []u8) void {
     self.fill(buf);
+}
+
+pub fn tryFillBytes(self: *Xoshiro256PlusPlus, buf: []u8) !void {
+    self.fillBytes(buf);
 }
 
 pub fn fork(self: *Xoshiro256PlusPlus) Xoshiro256PlusPlus {

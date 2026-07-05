@@ -47,12 +47,14 @@ a Zig-native `source.tryNext() !u64` contract and propagate source errors
 without constructing a child. Engine `tryFork()` mirrors local Rust
 `SeedableRng::try_fork` naming by delegating to `tryFromRng(self)`.
 Direct engines also expose Rust-discoverable `nextU64()` / `nextU32()` aliases
-and `tryNext()` raw draws (`fillBytes(out)` where the engine has byte fills), so
+and fallible-shaped `tryNext()` / `tryNextU64()` / `tryNextU32()` raw draws
+(`fillBytes(out)` / `tryFillBytes(out)` where the engine has byte fills), so
 callers can use local Rust raw-RNG terminology without wrapping in `Rng`.
 The `Rng` facade also exposes Rust-discoverable raw aliases `nextU64()`,
-`nextU32()`, and `fillBytes(out)` (plus `nextU64From`, `nextU32From`, and
-`fillBytesFrom` for direct sources) for users mapping local Rust
-`Rng::next_u64`, `Rng::next_u32`, and `Rng::fill_bytes` terminology.
+`nextU32()`, `fillBytes(out)`, `tryNextU64()`, `tryNextU32()`, and
+`tryFillBytes(out)` (plus `nextU64From`, `nextU32From`, and `fillBytesFrom`
+for direct sources) for users mapping local Rust `Rng::next_u64`,
+`Rng::next_u32`, `Rng::fill_bytes`, and `TryRng::try_*` terminology.
 
 ## Seeding
 

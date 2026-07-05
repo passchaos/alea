@@ -269,6 +269,10 @@ pub fn fillBytes(self: Rng, buf: []u8) void {
     self.bytes(buf);
 }
 
+pub fn tryFillBytes(self: Rng, buf: []u8) !void {
+    self.fillBytes(buf);
+}
+
 pub fn bytesAlloc(self: Rng, allocator: std.mem.Allocator, count: usize) ![]u8 {
     return bytesAllocFrom(self, allocator, count);
 }
@@ -1658,12 +1662,20 @@ pub fn nextU64(self: Rng) u64 {
     return self.next();
 }
 
+pub fn tryNextU64(self: Rng) !u64 {
+    return self.nextU64();
+}
+
 pub fn nextU64From(source: anytype) u64 {
     return nextFrom(source);
 }
 
 pub fn nextU32(self: Rng) u32 {
     return nextU32From(self);
+}
+
+pub fn tryNextU32(self: Rng) !u32 {
+    return self.nextU32();
 }
 
 pub fn nextU32From(source: anytype) u32 {
@@ -4186,8 +4198,12 @@ test "rng facade covers scalar APIs" {
 
     _ = rng.nextU64();
     _ = rng.nextU32();
+    _ = try rng.tryNextU64();
+    _ = try rng.tryNextU32();
     _ = Rng.nextU64From(&engine);
     _ = Rng.nextU32From(&engine);
+    var raw_bytes: [7]u8 = undefined;
+    try rng.tryFillBytes(&raw_bytes);
     _ = rng.randomValue(u64);
     _ = Rng.randomValueFrom(&engine, u32);
     _ = try rng.randomValueChecked(bool);

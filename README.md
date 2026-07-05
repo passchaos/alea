@@ -8,9 +8,10 @@ The current Linux-first roadmap is intentionally broad:
 - multiple deterministic engines: `Wyhash64`, `Xoshiro256`, `Pcg64`
 - a `ChaCha12` secure-style stream for secret-seeded randomness
 - `Rng`, a small facade with `std.Random` compatibility
-- Rust-discoverable raw aliases `nextU64()`, `nextU32()`, and
-  `fillBytes(out)` plus fallible `tryNext()` on deterministic engines,
-  alongside Zig-native `next()`, `bytes`, and `fill(u8, out)`
+- Rust-discoverable raw aliases `nextU64()`, `nextU32()`, `fillBytes(out)`,
+  `tryNext()`, `tryNextU64()`, `tryNextU32()`, and `tryFillBytes(out)` on
+  deterministic engines, alongside Zig-native `next()`, `bytes`, and
+  `fill(u8, out)`
 - Rust-discoverable engine `seedFromU64(seed)` constructor aliases alongside
   Zig-native `init` / `initFromU64`
 - Rust-discoverable engine `fromSeed(seed)` aliases for Alea `Seed` values
