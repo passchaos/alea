@@ -657,3 +657,8 @@ surface (`compare/results/s4-m286-rand-core-reexport-audit.md`) and records that
 raw/try/seeding/reader/byte-fill workflows are covered by Alea concrete APIs,
 while the remaining names are Rust trait/adaptor/block-generator implementation
 machinery intentionally not copied.
+S4-M287 audits the local Rust `rand::seq::index` namespace path
+(`compare/results/s4-m287-seq-index-namespace-audit.md`) and records that
+concrete index, compact-index, fixed-size, weighted-index, and item-mapping
+workflows are covered by top-level `seq.*` APIs, while a `seq.index` namespace
+would duplicate functionality and collide with existing Zig identifiers.
