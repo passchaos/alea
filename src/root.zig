@@ -13,6 +13,7 @@ pub const distributions = @import("distributions.zig");
 pub const seq = @import("seq.zig");
 pub const ascii = @import("ascii.zig");
 pub const quality = @import("quality.zig");
+pub const SysRng = Rng.SysRng;
 
 pub const SplitMix64 = @import("engines/splitmix64.zig");
 pub const Wyhash64 = @import("engines/wyhash64.zig");
@@ -81,6 +82,10 @@ pub fn secure(io: std.Io) !SecurePrng {
 
 pub fn secureBytes(io: std.Io, out: []u8) !void {
     try std.Io.randomSecure(io, out);
+}
+
+pub fn sysRng(io: std.Io) SysRng {
+    return SysRng.init(io);
 }
 
 pub fn makeRng(comptime Engine: type, io: std.Io) !Engine {
@@ -188,6 +193,16 @@ test "makeRng constructs exported engines from system entropy" {
 
     var splitmix_engine = try makeRng(SplitMix64, io);
     _ = splitmix_engine.next();
+}
+
+test "root sysRng exposes system entropy source" {
+    const io = std.Io.Threaded.global_single_threaded.io();
+    const source = sysRng(io);
+    var bytes: [8]u8 = undefined;
+    try source.tryFillBytes(&bytes);
+
+    var from_alias = SysRng.init(io);
+    _ = try from_alias.tryNextU64();
 }
 
 fn engineFromSeed(comptime Engine: type, seed: u64) Engine {

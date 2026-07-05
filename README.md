@@ -29,6 +29,8 @@ The current Linux-first roadmap is intentionally broad:
   `tryNext() !u64`
 - Rust-discoverable generic `makeRng(Engine, io)` for system-entropy
   construction of any exported deterministic engine
+- Rust-discoverable `Rng.SysRng` / root `sysRng(io)` system-entropy source
+  with `tryNextU64`, `tryNextU32`, `tryFillBytes`, and `RngReader` support
 - `ScalarPrng = Wyhash64` for scalar-heavy distribution workloads such as
   normal, exponential, and Poisson, alongside `FastPrng = Alea4x64` for
   bulk-fill throughput

@@ -35,6 +35,40 @@ ptr: *anyopaque,
 nextFn: *const fn (ptr: *anyopaque) u64,
 fillFn: *const fn (ptr: *anyopaque, buf: []u8) void,
 
+pub const SysRng = struct {
+    io: std.Io,
+
+    pub const Error = std.Io.RandomSecureError;
+
+    pub fn init(io: std.Io) SysRng {
+        return .{ .io = io };
+    }
+
+    pub fn reader(self: SysRng, buffer: []u8) RngReader(SysRng) {
+        return rngReader(self, buffer);
+    }
+
+    pub fn tryNext(self: SysRng) SysRng.Error!u64 {
+        return self.tryNextU64();
+    }
+
+    pub fn tryNextU64(self: SysRng) SysRng.Error!u64 {
+        var word_bytes: [8]u8 = undefined;
+        try self.tryFillBytes(&word_bytes);
+        return std.mem.readInt(u64, &word_bytes, .little);
+    }
+
+    pub fn tryNextU32(self: SysRng) SysRng.Error!u32 {
+        var word_bytes: [4]u8 = undefined;
+        try self.tryFillBytes(&word_bytes);
+        return std.mem.readInt(u32, &word_bytes, .little);
+    }
+
+    pub fn tryFillBytes(self: SysRng, out: []u8) SysRng.Error!void {
+        return std.Io.randomSecure(self.io, out);
+    }
+};
+
 pub fn init(pointer: anytype) Rng {
     const Ptr = @TypeOf(pointer);
     comptime {
@@ -5194,6 +5228,39 @@ test "rng reader adapter propagates fallible sources" {
     try std.testing.expectError(error.ReadFailed, adapter.readAll(&out));
     try std.testing.expectEqual(error.NoSeed, adapter.lastError().?);
     try std.testing.expectEqual(@as(usize, 1), source.index);
+}
+
+test "sys rng source uses Io entropy and propagates failures" {
+    const io = std.Io.Threaded.global_single_threaded.io();
+    const sys = SysRng.init(io);
+
+    var entropy_bytes: [16]u8 = undefined;
+    try sys.tryFillBytes(&entropy_bytes);
+    _ = try sys.tryNextU64();
+    _ = try sys.tryNextU32();
+
+    var direct_bytes: [8]u8 = undefined;
+    try tryFillBytesFrom(sys, &direct_bytes);
+
+    var borrowed_sys = SysRng.init(io);
+    var borrowed_bytes: [8]u8 = undefined;
+    try tryFillBytesFrom(&borrowed_sys, &borrowed_bytes);
+
+    var reader_buffer: [8]u8 = undefined;
+    var adapter = sys.reader(&reader_buffer);
+    var reader_bytes: [8]u8 = undefined;
+    try adapter.readAll(&reader_bytes);
+
+    const failing = SysRng.init(std.Io.failing);
+    try std.testing.expectError(error.EntropyUnavailable, failing.tryFillBytes(&entropy_bytes));
+    try std.testing.expectError(error.EntropyUnavailable, failing.tryNextU64());
+    try std.testing.expectError(error.EntropyUnavailable, failing.tryNextU32());
+    try std.testing.expectError(error.EntropyUnavailable, tryFillBytesFrom(failing, &direct_bytes));
+
+    var failing_reader_buffer: [8]u8 = undefined;
+    var failing_reader = failing.reader(&failing_reader_buffer);
+    try std.testing.expectError(error.ReadFailed, failing_reader.readAll(&reader_bytes));
+    try std.testing.expectEqual(error.EntropyUnavailable, failing_reader.lastError().?);
 }
 
 test "scalar sampling has stable snapshots" {

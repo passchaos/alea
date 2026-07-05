@@ -11,14 +11,17 @@ stability expectations.
 - Engines: `SplitMix64`, `Wyhash64`, `Alea4x64`, `Xoshiro256PlusPlus`,
   `Xoshiro256`, `Pcg64`, `ChaCha`
 - Aliases: `DefaultPrng`, `FastPrng`, `HashPrng`, `ReproduciblePrng`,
-  `ScalarPrng`, `SecurePrng`
+  `ScalarPrng`, `SecurePrng`, `SysRng`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
   `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
-  `secureFromSeed`, `secure`, `secureBytes`, `makeRng`, `rng`
+  `secureFromSeed`, `secure`, `secureBytes`, `sysRng`, `makeRng`, `rng`
 
 ## Rng
 
 - Error type: `Error`
+- System entropy source: `SysRng`, `SysRng.Error`, `SysRng.init`,
+  `SysRng.reader`, `SysRng.tryNext`, `SysRng.tryNextU64`,
+  `SysRng.tryNextU32`, `SysRng.tryFillBytes`
 - Construction and interop: `init`, `fromRandom`, `random`, `reader`,
   `readerFrom`, `RngReader`, `rngReader`
 - `RngReader(Source)`: `RngReader.init`, `RngReader.reader`,
