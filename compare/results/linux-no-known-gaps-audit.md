@@ -782,3 +782,6 @@ S4-M313 makes `surfacecheck` default local baseline roots HOME-relative
 (`compare/results/s4-m313-surfacecheck-home-roots.md`) while preserving
 `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` overrides,
 so the local comparison checker is less tied to one absolute home directory.
+S4-M314 adds focused tests for that root-resolution helper
+(`compare/results/s4-m314-surfacecheck-root-tests.md`), covering `$HOME` suffix
+resolution and fallback behavior.

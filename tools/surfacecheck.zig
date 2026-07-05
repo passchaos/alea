@@ -355,15 +355,9 @@ fn checkGroup(
         .expected_tokens = group.expected_tokens.len,
     };
 
-    var owned_root: ?[]u8 = null;
-    defer if (owned_root) |root| allocator.free(root);
-    const root = if (env.get(group.root_env)) |override_root|
-        override_root
-    else if (env.get("HOME")) |home| blk: {
-        if (group.default_home_suffix.len == 0) break :blk group.default_root;
-        owned_root = try std.fs.path.join(allocator, &.{ home, group.default_home_suffix });
-        break :blk owned_root.?;
-    } else group.default_root;
+    const override_root = env.get(group.root_env);
+    const root = override_root orelse try resolveDefaultRoot(allocator, env.get("HOME"), group);
+    defer if (override_root == null and root.ptr != group.default_root.ptr) allocator.free(root);
     std.Io.Dir.accessAbsolute(io, root, .{}) catch |err| {
         try stderr.print(
             "surfacecheck: {s} root `{s}` unavailable ({s}); set {s} to the local checkout/cache root\n",
@@ -730,6 +724,15 @@ fn manifestHasToken(manifest: []const u8, token: []const u8) bool {
     return std.mem.indexOf(u8, manifest, token) != null;
 }
 
+fn resolveDefaultRoot(allocator: std.mem.Allocator, home: ?[]const u8, group: SourceGroup) ![]const u8 {
+    if (home) |home_value| {
+        if (group.default_home_suffix.len != 0) {
+            return try std.fs.path.join(allocator, &.{ home_value, group.default_home_suffix });
+        }
+    }
+    return group.default_root;
+}
+
 fn isIdentifierToken(token: []const u8) bool {
     if (token.len == 0) return false;
     for (token) |byte| {
@@ -843,6 +846,37 @@ test "public file guard helpers distinguish scanned ignored and public files" {
     try std.testing.expect(hasPublicLine("pub struct Visible;\n"));
     try std.testing.expect(!hasPublicLine("pub(crate) struct Private;\n"));
     try std.testing.expect(!hasPublicLine("    // pub fn comment_only() {}\n"));
+}
+
+test "default root resolution uses HOME suffix with literal fallback" {
+    const allocator = std.testing.allocator;
+    const group = SourceGroup{
+        .label = "test",
+        .root_env = "TEST_ROOT",
+        .default_root = "/fallback/root",
+        .default_home_suffix = "Work/rand/src",
+        .manifest_path = "manifest",
+        .files = &.{},
+        .expected_tokens = &.{},
+    };
+
+    const home_root = try resolveDefaultRoot(allocator, "/home/example", group);
+    defer allocator.free(home_root);
+    try std.testing.expectEqualStrings("/home/example/Work/rand/src", home_root);
+
+    const fallback_root = try resolveDefaultRoot(allocator, null, group);
+    try std.testing.expectEqualStrings("/fallback/root", fallback_root);
+
+    const no_suffix_group = SourceGroup{
+        .label = "test",
+        .root_env = "TEST_ROOT",
+        .default_root = "/literal/root",
+        .manifest_path = "manifest",
+        .files = &.{},
+        .expected_tokens = &.{},
+    };
+    const no_suffix_root = try resolveDefaultRoot(allocator, "/home/example", no_suffix_group);
+    try std.testing.expectEqualStrings("/literal/root", no_suffix_root);
 }
 
 fn readAbsoluteFile(io: std.Io, allocator: std.mem.Allocator, path: []const u8) ![]u8 {
