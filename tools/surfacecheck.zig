@@ -30,6 +30,7 @@ const local_rand_files = [_][]const u8{
     "distr/distribution.rs",
     "distr/float.rs",
     "distr/bernoulli.rs",
+    "distr/other.rs",
     "distr/slice.rs",
     "distr/uniform.rs",
     "distr/uniform_float.rs",
@@ -192,6 +193,7 @@ const rand_distr_files = [_][]const u8{
     "weighted/mod.rs",
     "weighted/weighted_alias.rs",
     "weighted/weighted_tree.rs",
+    "ziggurat_tables.rs",
 };
 
 const rand_distr_expected_tokens = [_][]const u8{

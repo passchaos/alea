@@ -23,6 +23,7 @@ The scan focused on public declarations and root re-exports:
   `new(...)` constructors;
 - `multi/mod.rs` and `multi/dirichlet.rs`;
 - `weighted/mod.rs`, `weighted_alias.rs`, and `weighted_tree.rs`.
+- `ziggurat_tables.rs` for public implementation-table type names.
 
 ## Root Distribution Re-Exports
 

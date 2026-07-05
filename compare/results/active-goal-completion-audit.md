@@ -325,7 +325,8 @@ complete.
 | S4-M302 surfacecheck Bernoulli impl coverage | `tools/surfacecheck.zig`, `compare/results/s4-m302-surfacecheck-bernoulli-impl.md`, `compare/results/s4-m288-local-rand-public-surface-manifest.md` | Closed for the current bar: `surfacecheck` now scans the re-exported local `rand` Bernoulli implementation and the manifest explicitly maps `from_ratio` / `p` to Alea `fromRatio` / `p()`. |
 | S4-M303 surfacecheck coverage summaries | `tools/surfacecheck.zig`, `docs/tooling.md`, `compare/results/s4-m303-surfacecheck-summary.md` | Closed for the current bar: `surfacecheck` now prints per-baseline file, expected-token, and source-token counts for local `rand`, resolved `rand_core`, and cached `rand_distr` checks. |
 | S4-M304 surfacecheck token-boundary matching | `tools/surfacecheck.zig`, `compare/results/s4-m304-surfacecheck-token-boundaries.md`, `compare/results/s4-m288-local-rand-public-surface-manifest.md` | Closed for the current bar: manifest token checks now prefer exact backtick-wrapped tokens and identifier boundaries, eliminating ordinary substring false positives and forcing additional manifest mappings for previously hidden short names. |
-| S4-M305 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M305 surfacecheck extra public files | `tools/surfacecheck.zig`, `compare/results/s4-m305-surfacecheck-extra-files.md`, `compare/results/s4-m294-rand-distr-public-surface-manifest.md` | Closed for the current bar: `surfacecheck` now scans local `rand/src/distr/other.rs` and cached `rand_distr/src/ziggurat_tables.rs`, covering ASCII distribution aliases and ziggurat table type names in source-driven drift checks. |
+| S4-M306 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -493,6 +494,9 @@ S4-M303 additionally adds surfacecheck coverage summaries; it is an
 evidence/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M304 additionally hardens surfacecheck token matching; it is an
+evidence/tooling improvement and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M305 additionally broadens surfacecheck's source-file coverage; it is an
 evidence/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
 

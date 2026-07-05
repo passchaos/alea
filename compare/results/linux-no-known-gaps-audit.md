@@ -745,3 +745,8 @@ prefer exact backtick-wrapped code tokens or identifier-boundary matches instead
 of accepting arbitrary substrings; this exposed and closed additional local
 `rand` manifest mappings for short method names that had previously matched
 incidentally.
+S4-M305 expands `surfacecheck` file coverage
+(`compare/results/s4-m305-surfacecheck-extra-files.md`) to local
+`rand/src/distr/other.rs` and cached `rand_distr/src/ziggurat_tables.rs`, so the
+source-driven audit covers ASCII distribution aliases and public ziggurat table
+type names alongside the existing manifest entries.

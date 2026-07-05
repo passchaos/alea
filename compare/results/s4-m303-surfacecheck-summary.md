@@ -15,9 +15,9 @@ validated for each local baseline group.
 `tools/surfacecheck.zig` now accumulates and prints per-group coverage summaries:
 
 ```text
-surfacecheck local rand: files=24 expected-tokens=75 source-tokens=135
+surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137
 surfacecheck local rand_core: files=6 expected-tokens=18 source-tokens=30
-surfacecheck local rand_distr: files=33 expected-tokens=64 source-tokens=177
+surfacecheck local rand_distr: files=34 expected-tokens=64 source-tokens=178
 surfacecheck ok
 ```
 
