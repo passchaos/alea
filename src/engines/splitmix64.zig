@@ -24,6 +24,10 @@ pub fn fromRng(source: anytype) SplitMix64 {
     return init(source.next());
 }
 
+pub fn tryFromRng(source: anytype) !SplitMix64 {
+    return init(try source.tryNext());
+}
+
 pub fn next(self: *SplitMix64) u64 {
     self.state +%= 0x9e3779b97f4a7c15;
 

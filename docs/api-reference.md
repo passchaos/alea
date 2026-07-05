@@ -261,6 +261,7 @@ stability expectations.
 - `fromBytes`
 - `fromString`
 - `fromRng`
+- `tryFromRng`
 - `secure`
 - `mix`
 - `stream`
@@ -276,27 +277,29 @@ aliases; all deterministic engines expose Rust-discoverable `nextU64` /
 `fromSeed`, and `fromSeedBytes` constructor aliases alongside their Zig-native
 seed constructors.
 Engines also expose Rust-discoverable `fromRng` and `fork` helpers for
-deriving child streams from existing generators.
+deriving child streams from existing generators, plus `tryFromRng` for
+fallible sources exposing `tryNext() !u64`.
 
 - `SplitMix64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`,
-  `nextU64`, `nextU32`, `fromRng`, `fork`
+  `nextU64`, `nextU32`, `fromRng`, `tryFromRng`, `fork`
 - `Wyhash64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`,
   `fromState`, `random`, `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`,
-  `fromRng`, `fork`
+  `fromRng`, `tryFromRng`, `fork`
 - `Alea4x64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `random`,
-  `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`, `fork`
+  `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`,
+  `tryFromRng`, `fork`
 - `Xoshiro256`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `seed`,
   `random`, `next`, `nextU64`, `nextU32`, `split`, `jump`, `longJump`,
-  `fill`, `fillBytes`, `fromRng`, `fork`
+  `fill`, `fillBytes`, `fromRng`, `tryFromRng`, `fork`
 - `Xoshiro256PlusPlus`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`,
   `random`, `next`, `nextU64`, `nextU32`, `jump`, `fill`, `fillBytes`,
-  `fromRng`, `fork`
+  `fromRng`, `tryFromRng`, `fork`
 - `Pcg64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `initTwo`,
   `random`, `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`,
-  `fork`
+  `tryFromRng`, `fork`
 - `ChaCha`: `seed_length`, `init`, `initFromU64`, `random`, `addEntropy`,
   `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`, `nextU64`, `nextU32`,
-  `fill`, `fillBytes`, `fromRng`, `fork`
+  `fill`, `fillBytes`, `fromRng`, `tryFromRng`, `fork`
 
 ## Distributions
 

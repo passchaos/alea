@@ -21,6 +21,10 @@ pub fn fromRng(source: anytype) Seed {
     return .{ .state = source.next() };
 }
 
+pub fn tryFromRng(source: anytype) !Seed {
+    return .{ .state = try source.tryNext() };
+}
+
 pub fn secure(io: std.Io) !Seed {
     var bytes_buf: [8]u8 = undefined;
     try std.Io.randomSecure(io, &bytes_buf);

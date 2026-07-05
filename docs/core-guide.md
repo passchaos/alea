@@ -41,6 +41,10 @@ mirror local Rust `SeedableRng::from_rng` / `fork` naming for deterministic
 child derivation from an existing generator; `Seed.fromRng` consumes one `u64`
 seed draw, while engine `fromRng` / `fork` consume enough `u64` seed material
 to fill the target engine's state or key before constructing the child.
+For fallible seed sources, `Seed.tryFromRng(source)` and engine
+`tryFromRng(source)` mirror local Rust `SeedableRng::try_from_rng` naming using
+a Zig-native `source.tryNext() !u64` contract and propagate source errors
+without constructing a child.
 Direct engines also expose Rust-discoverable `nextU64()` / `nextU32()` aliases
 (`fillBytes(out)` where the engine has byte fills), so callers can use local
 Rust raw-RNG terminology without wrapping in `Rng`.

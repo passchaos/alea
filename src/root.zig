@@ -372,3 +372,112 @@ test "engine fromRng and fork aliases consume full seed material" {
         try expectEngineForkAlias(Engine, seed);
     }
 }
+
+const FallibleSeedSource = struct {
+    values: []const u64,
+    index: usize = 0,
+    fail_after: ?usize = null,
+
+    pub fn tryNext(self: *@This()) error{SeedUnavailable}!u64 {
+        if (self.fail_after) |limit| {
+            if (self.index >= limit) return error.SeedUnavailable;
+        }
+        if (self.index >= self.values.len) return error.SeedUnavailable;
+        const value = self.values[self.index];
+        self.index += 1;
+        return value;
+    }
+};
+
+fn expectEngineTryFromRngAlias(comptime Engine: type, words: []const u64) !void {
+    var direct_source = FallibleSeedSource{ .values = words };
+    var alias_source = FallibleSeedSource{ .values = words };
+    var direct = engineFromFallibleRngReference(Engine, &direct_source) catch unreachable;
+    var alias = try Engine.tryFromRng(&alias_source);
+    try std.testing.expectEqual(direct.next(), alias.next());
+    try std.testing.expectEqual(direct_source.index, alias_source.index);
+}
+
+fn expectEngineTryFromRngFailure(comptime Engine: type, words: []const u64, fail_after: usize) !void {
+    var source = FallibleSeedSource{ .values = words, .fail_after = fail_after };
+    try std.testing.expectError(error.SeedUnavailable, Engine.tryFromRng(&source));
+    try std.testing.expectEqual(fail_after, source.index);
+}
+
+fn engineFromFallibleRngReference(comptime Engine: type, source: anytype) !Engine {
+    if (comptime Engine == Alea4x64) {
+        return .{ .state = .{
+            try source.tryNext(),
+            try source.tryNext(),
+            try source.tryNext(),
+            try source.tryNext(),
+        } };
+    }
+    if (comptime Engine == Xoshiro256) {
+        var out: Xoshiro256 = .{ .state = undefined };
+        inline for (0..4) |i| out.state[i] = try source.tryNext();
+        if (xoshiro256StateIsZero(out.state)) return Xoshiro256.init(0);
+        return out;
+    }
+    if (comptime Engine == Xoshiro256PlusPlus) {
+        var out: Xoshiro256PlusPlus = .{ .state = undefined };
+        inline for (0..4) |i| out.state[i] = try source.tryNext();
+        if (xoshiro256StateIsZero(out.state)) return Xoshiro256PlusPlus.init(0);
+        return out;
+    }
+    if (comptime Engine == Pcg64) {
+        const seed = try source.tryNext();
+        const stream = try source.tryNext();
+        return Pcg64.initTwo(seed, stream);
+    }
+    if (comptime Engine == ChaCha) {
+        var key: [ChaCha.seed_length]u8 = undefined;
+        var i: usize = 0;
+        while (i < key.len) : (i += 8) {
+            var bytes: [8]u8 = undefined;
+            std.mem.writeInt(u64, &bytes, try source.tryNext(), .little);
+            @memcpy(key[i..][0..8], &bytes);
+        }
+        return ChaCha.init(key);
+    }
+    if (comptime Engine == Wyhash64) {
+        return Wyhash64.fromState(try source.tryNext());
+    }
+    if (comptime Engine == SplitMix64) {
+        return SplitMix64.init(try source.tryNext());
+    }
+    @compileError("unsupported engine");
+}
+
+test "engine tryFromRng aliases propagate source failures" {
+    const words = [_]u64{
+        0x0102_0304_0506_0708,
+        0x1112_1314_1516_1718,
+        0x2122_2324_2526_2728,
+        0x3132_3334_3536_3738,
+    };
+
+    var direct_seed_source = FallibleSeedSource{ .values = &words };
+    const alias_seed = try Seed.tryFromRng(&direct_seed_source);
+    try std.testing.expectEqual(words[0], alias_seed.state);
+    try std.testing.expectEqual(@as(usize, 1), direct_seed_source.index);
+
+    var failing_seed_source = FallibleSeedSource{ .values = &words, .fail_after = 0 };
+    try std.testing.expectError(error.SeedUnavailable, Seed.tryFromRng(&failing_seed_source));
+    try std.testing.expectEqual(@as(usize, 0), failing_seed_source.index);
+
+    inline for (.{ SplitMix64, Wyhash64 }) |Engine| {
+        try expectEngineTryFromRngAlias(Engine, &words);
+        try expectEngineTryFromRngFailure(Engine, &words, 0);
+    }
+
+    inline for (.{Pcg64}) |Engine| {
+        try expectEngineTryFromRngAlias(Engine, &words);
+        try expectEngineTryFromRngFailure(Engine, &words, 1);
+    }
+
+    inline for (.{ Alea4x64, Xoshiro256, Xoshiro256PlusPlus, ChaCha }) |Engine| {
+        try expectEngineTryFromRngAlias(Engine, &words);
+        try expectEngineTryFromRngFailure(Engine, &words, 3);
+    }
+}

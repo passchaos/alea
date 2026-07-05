@@ -33,6 +33,10 @@ pub fn fromRng(source: anytype) Wyhash64 {
     return fromState(source.next());
 }
 
+pub fn tryFromRng(source: anytype) !Wyhash64 {
+    return fromState(try source.tryNext());
+}
+
 pub fn fromState(state: u64) Wyhash64 {
     return .{ .state = state };
 }

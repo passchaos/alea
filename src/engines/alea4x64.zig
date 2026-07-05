@@ -38,6 +38,15 @@ pub fn fromRng(source: anytype) Alea4x64 {
     return .{ .state = .{ source.next(), source.next(), source.next(), source.next() } };
 }
 
+pub fn tryFromRng(source: anytype) !Alea4x64 {
+    return .{ .state = .{
+        try source.tryNext(),
+        try source.tryNext(),
+        try source.tryNext(),
+        try source.tryNext(),
+    } };
+}
+
 pub fn random(self: *Alea4x64) std.Random {
     return std.Random.init(self, fill);
 }

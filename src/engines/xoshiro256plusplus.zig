@@ -38,6 +38,13 @@ pub fn fromRng(source: anytype) Xoshiro256PlusPlus {
     return self;
 }
 
+pub fn tryFromRng(source: anytype) !Xoshiro256PlusPlus {
+    var self: Xoshiro256PlusPlus = .{ .state = undefined };
+    inline for (0..4) |i| self.state[i] = try source.tryNext();
+    if (self.isZeroState()) return init(0);
+    return self;
+}
+
 pub fn random(self: *Xoshiro256PlusPlus) std.Random {
     return std.Random.init(self, fill);
 }

@@ -32,6 +32,12 @@ pub fn fromRng(source: anytype) Pcg64 {
     return initTwo(source.next(), source.next());
 }
 
+pub fn tryFromRng(source: anytype) !Pcg64 {
+    const seed = try source.tryNext();
+    const stream = try source.tryNext();
+    return initTwo(seed, stream);
+}
+
 pub fn initTwo(seed: u64, stream: u64) Pcg64 {
     var self: Pcg64 = .{
         .state = 0,

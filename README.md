@@ -19,6 +19,8 @@ The current Linux-first roadmap is intentionally broad:
   little-endian byte-array seeds
 - Rust-discoverable `Seed.fromRng(source)`, engine `fromRng(source)`, and
   engine `fork()` helpers for deriving child streams from existing generators
+- Rust-discoverable fallible `Seed.tryFromRng(source)` and engine
+  `tryFromRng(source)` helpers for sources exposing `tryNext() !u64`
 - `ScalarPrng = Wyhash64` for scalar-heavy distribution workloads such as
   normal, exponential, and Poisson, alongside `FastPrng = Alea4x64` for
   bulk-fill throughput
