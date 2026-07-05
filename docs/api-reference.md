@@ -66,7 +66,10 @@ stability expectations.
   `fillVectorExponentialFrom`
 - Raw/scalars: `next`, `nextFrom`, `boolean`, `booleanFrom`, `chance`, `chanceChecked`, `ratio`,
   `chanceFrom`, `chanceCheckedFrom`, `ratioFrom`, `ratioChecked`,
-  `ratioCheckedFrom`, `uint`, `uintLessThan`, `uintLessThanChecked`,
+  `ratioCheckedFrom`, `randomBool`, `randomBoolFrom`,
+  `randomBoolChecked`, `randomBoolCheckedFrom`, `randomRatio`,
+  `randomRatioFrom`, `randomRatioChecked`, `randomRatioCheckedFrom`,
+  `uint`, `uintLessThan`, `uintLessThanChecked`,
   `uintLessThanCheckedFrom`, `fillUintLessThan`, `fillUintLessThanFrom`,
   `fillUintLessThanChecked`, `fillUintLessThanCheckedFrom`,
   `uintLessThanBatch`, `uintLessThanBatchFrom`, `uintLessThanBatchChecked`,

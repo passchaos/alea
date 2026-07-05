@@ -1638,6 +1638,10 @@ pub fn chance(self: Rng, p: f64) bool {
     return chanceFrom(self, p);
 }
 
+pub fn randomBool(self: Rng, p: f64) bool {
+    return chance(self, p);
+}
+
 pub fn chanceFrom(source: anytype, p: f64) bool {
     std.debug.assert(p >= 0 and p <= 1);
     if (p == 0) return false;
@@ -1645,8 +1649,16 @@ pub fn chanceFrom(source: anytype, p: f64) bool {
     return nextFrom(source) < probabilityThreshold(p);
 }
 
+pub fn randomBoolFrom(source: anytype, p: f64) bool {
+    return chanceFrom(source, p);
+}
+
 pub fn chanceChecked(self: Rng, p: f64) Error!bool {
     return chanceCheckedFrom(self, p);
+}
+
+pub fn randomBoolChecked(self: Rng, p: f64) Error!bool {
+    return chanceChecked(self, p);
 }
 
 pub fn chanceCheckedFrom(source: anytype, p: f64) Error!bool {
@@ -1654,8 +1666,16 @@ pub fn chanceCheckedFrom(source: anytype, p: f64) Error!bool {
     return chanceFrom(source, p);
 }
 
+pub fn randomBoolCheckedFrom(source: anytype, p: f64) Error!bool {
+    return chanceCheckedFrom(source, p);
+}
+
 pub fn ratio(self: Rng, numerator: u32, denominator: u32) bool {
     return ratioFrom(self, numerator, denominator);
+}
+
+pub fn randomRatio(self: Rng, numerator: u32, denominator: u32) bool {
+    return ratio(self, numerator, denominator);
 }
 
 pub fn ratioFrom(source: anytype, numerator: u32, denominator: u32) bool {
@@ -1665,13 +1685,25 @@ pub fn ratioFrom(source: anytype, numerator: u32, denominator: u32) bool {
     return uintLessThanFrom(source, u32, denominator) < numerator;
 }
 
+pub fn randomRatioFrom(source: anytype, numerator: u32, denominator: u32) bool {
+    return ratioFrom(source, numerator, denominator);
+}
+
 pub fn ratioChecked(self: Rng, numerator: u32, denominator: u32) Error!bool {
     return ratioCheckedFrom(self, numerator, denominator);
+}
+
+pub fn randomRatioChecked(self: Rng, numerator: u32, denominator: u32) Error!bool {
+    return ratioChecked(self, numerator, denominator);
 }
 
 pub fn ratioCheckedFrom(source: anytype, numerator: u32, denominator: u32) Error!bool {
     if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     return ratioFrom(source, numerator, denominator);
+}
+
+pub fn randomRatioCheckedFrom(source: anytype, numerator: u32, denominator: u32) Error!bool {
+    return ratioCheckedFrom(source, numerator, denominator);
 }
 
 pub fn uint(self: Rng, comptime T: type) T {
@@ -4058,18 +4090,28 @@ test "rng facade covers scalar APIs" {
     try std.testing.expect(direct_float_range >= -1 and direct_float_range < 1);
     try std.testing.expect(rng.chance(1));
     try std.testing.expect(Rng.chanceFrom(&engine, 1));
+    try std.testing.expect(rng.randomBool(1));
+    try std.testing.expect(Rng.randomBoolFrom(&engine, 1));
     try std.testing.expect(!rng.ratio(0, 7));
     try std.testing.expect(Rng.ratioFrom(&engine, 1, 1));
+    try std.testing.expect(!rng.randomRatio(0, 7));
+    try std.testing.expect(Rng.randomRatioFrom(&engine, 1, 1));
     try std.testing.expect(rng.chance(1.0 - std.math.floatEps(f64) / 2.0));
     try std.testing.expect(try rng.chanceChecked(0.5) or true);
+    _ = try rng.randomBoolChecked(0.5);
     try std.testing.expect(try Rng.chanceCheckedFrom(&engine, 1));
+    try std.testing.expect(try Rng.randomBoolCheckedFrom(&engine, 1));
     try std.testing.expect(try Rng.ratioCheckedFrom(&engine, 1, 1));
+    try std.testing.expect(try rng.randomRatioChecked(1, 1));
+    try std.testing.expect(try Rng.randomRatioCheckedFrom(&engine, 1, 1));
     try std.testing.expect(try Rng.uintLessThanCheckedFrom(&engine, u32, 10) < 10);
     try std.testing.expect(try Rng.intRangeLessThanCheckedFrom(&engine, i32, -5, 5) >= -5);
     try std.testing.expect(try Rng.intRangeAtMostCheckedFrom(&engine, i32, -5, 5) <= 5);
     try std.testing.expect(try Rng.floatRangeCheckedFrom(&engine, f64, -1, 1) >= -1);
     try std.testing.expectError(error.InvalidProbability, rng.chanceChecked(1.1));
     try std.testing.expectError(error.InvalidProbability, Rng.chanceCheckedFrom(&engine, 1.1));
+    try std.testing.expectError(error.InvalidProbability, rng.randomBoolChecked(1.1));
+    try std.testing.expectError(error.InvalidProbability, Rng.randomBoolCheckedFrom(&engine, 1.1));
     var empty_bool_buf: [0]bool = .{};
     try rng.fillChanceChecked(&empty_bool_buf, 1.1);
     try rng.fillRatioChecked(&empty_bool_buf, 2, 1);
@@ -4077,6 +4119,8 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.InvalidProbability, rng.vectorRatioChecked(@Vector(4, bool), 2, 1));
     try std.testing.expectError(error.InvalidProbability, rng.ratioChecked(2, 1));
     try std.testing.expectError(error.InvalidProbability, Rng.ratioCheckedFrom(&engine, 2, 1));
+    try std.testing.expectError(error.InvalidProbability, rng.randomRatioChecked(2, 1));
+    try std.testing.expectError(error.InvalidProbability, Rng.randomRatioCheckedFrom(&engine, 2, 1));
     try std.testing.expectError(error.EmptyRange, rng.uintLessThanChecked(u32, 0));
     try std.testing.expectError(error.EmptyRange, Rng.uintLessThanCheckedFrom(&engine, u32, 0));
     try std.testing.expectError(error.EmptyRange, rng.intRangeLessThanChecked(u32, 3, 3));

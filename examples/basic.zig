@@ -31,6 +31,8 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(bounded_words);
     const inclusive_words = try rng.uintAtMostBatch(u16, init.gpa, 4, 999);
     defer init.gpa.free(inclusive_words);
+    const random_bool = rng.randomBool(0.25);
+    const random_ratio = rng.randomRatio(3, 8);
     const chance_flags = try rng.chanceBatch(init.gpa, 8, 0.25);
     defer init.gpa.free(chance_flags);
     const ratio_flags = try rng.ratioBatch(init.gpa, 8, 3, 8);
@@ -112,6 +114,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("valueBatch u16: {any}\n", .{random_words});
     try stdout.print("uintLessThanBatch u16 <1000: {any}\n", .{bounded_words});
     try stdout.print("uintAtMostBatch u16 <=999: {any}\n", .{inclusive_words});
+    try stdout.print("randomBool p=.25: {}, randomRatio 3/8: {}\n", .{ random_bool, random_ratio });
     try stdout.print("chanceBatch p=.25: {any}\n", .{chance_flags});
     try stdout.print("ratioBatch 3/8: {any}\n", .{ratio_flags});
     try stdout.print("vectorChanceBatch boolx8 p=.25: {any}\n", .{vector_chance_flags});

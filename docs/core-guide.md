@@ -52,7 +52,8 @@ selection.
   `vectorNormal`, `vectorStandardExponential`, `vectorExponential` for
   `f32`/`f64`, integer, and boolean lanes
 - booleans: `boolean`, `booleanFrom`, `chance`, `chanceFrom`, `ratio`, `ratioFrom`,
-  `fillChance`, `fillRatio`, `chanceBatch`, and `ratioBatch`
+  Rust-discoverable `randomBool` / `randomRatio` aliases, `fillChance`,
+  `fillRatio`, `chanceBatch`, and `ratioBatch`
 - durations: `durationRangeLessThan`, `durationRangeAtMost`,
   `durationRangeLessThanFrom`, `durationRangeAtMostFrom`,
   `durationRangeLessThanBatch`, and `durationRangeAtMostBatch`
