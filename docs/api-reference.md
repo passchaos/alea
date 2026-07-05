@@ -2448,6 +2448,7 @@ Reusable samplers:
 Alias helpers:
 
 - `aliasTable(T)`
+- `WeightedIndex(Weight)`
 - `AliasTable.init`
 - `AliasTable.new`
 - `AliasTable.initByIndex`

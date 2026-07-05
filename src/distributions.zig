@@ -15618,6 +15618,10 @@ pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
 
+pub fn WeightedIndex(comptime Weight: type) type {
+    return AliasTable(Weight);
+}
+
 pub fn AliasTable(comptime Weight: type) type {
     return struct {
         const Self = @This();
@@ -30791,4 +30795,35 @@ test "distribution ascii aliases mirror ascii namespace" {
     ascii.Alphanumeric.fillFrom(&ascii_fill_engine, &ascii_buf);
     try std.testing.expectEqualSlices(u8, &ascii_buf, &alias_buf);
     try std.testing.expectEqual(ascii_fill_engine.next(), alias_fill_engine.next());
+}
+
+test "WeightedIndex alias mirrors AliasTable" {
+    const root = @import("root.zig");
+    comptime std.debug.assert(WeightedIndex(u32) == AliasTable(u32));
+
+    var weighted = try WeightedIndex(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer weighted.deinit();
+    var alias = try AliasTable(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer alias.deinit();
+
+    try std.testing.expectEqual(alias.numChoices(), weighted.numChoices());
+    try std.testing.expectEqual(alias.positiveCount(), weighted.positiveCount());
+    try std.testing.expectApproxEqAbs(alias.totalWeight(), weighted.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(alias.weight(2).?, weighted.weight(2).?, 1e-12);
+
+    var weighted_engine = root.DefaultPrng.init(0x51_4d_265);
+    var alias_engine = root.DefaultPrng.init(0x51_4d_265);
+    try std.testing.expectEqual(alias.sampleFrom(&alias_engine), weighted.sampleFrom(&weighted_engine));
+    try std.testing.expectEqual(alias_engine.next(), weighted_engine.next());
+
+    try weighted.updateWeights(&.{
+        .{ .index = 0, .weight = 2 },
+        .{ .index = 3, .weight = 4 },
+    });
+    try alias.updateWeights(&.{
+        .{ .index = 0, .weight = 2 },
+        .{ .index = 3, .weight = 4 },
+    });
+    try std.testing.expectApproxEqAbs(alias.totalWeight(), weighted.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(alias.probability(2).?, weighted.probability(2).?, 1e-12);
 }

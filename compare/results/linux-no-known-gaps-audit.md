@@ -564,3 +564,8 @@ S4-M264 adds distribution-namespace `Alphanumeric` / `Alphabetic` aliases
 (`compare/results/s4-m264-distribution-ascii-aliases.md`), closing the local
 Rust `rand::distr::{Alphanumeric, Alphabetic}` discovery-name gap while
 preserving Alea's canonical `ascii.Charset` implementation and string APIs.
+S4-M265 adds `distributions.WeightedIndex`
+(`compare/results/s4-m265-weightedindex-alias.md`), closing the local Rust
+`rand::distr::weighted::WeightedIndex` discovery-name gap while preserving
+Alea's `AliasTable` static weighted sampler implementation and O(1) repeated
+sampling contract.

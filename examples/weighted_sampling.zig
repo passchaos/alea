@@ -385,7 +385,10 @@ pub fn main(init: std.process.Init) !void {
     defer alias.deinit();
     var alias_new = try alea.distributions.AliasTable(f64).new(allocator, &float_weights);
     defer alias_new.deinit();
+    var weighted_index_alias = try alea.distributions.WeightedIndex(f64).new(allocator, &float_weights);
+    defer weighted_index_alias.deinit();
     const alias_new_num_choices = alias_new.numChoices();
+    const weighted_index_alias_num_choices = weighted_index_alias.numChoices();
     try alias.updateAt(1, 5);
     const alias_update_total = alias.totalWeight();
     try alias.updateMany(&.{
@@ -446,6 +449,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("alias probabilities: {any}\n", .{alias_probs});
     try stdout.print("alias numChoices: {}\n", .{alias_num_choices});
     try stdout.print("alias new numChoices: {}\n", .{alias_new_num_choices});
+    try stdout.print("WeightedIndex alias numChoices: {}\n", .{weighted_index_alias_num_choices});
     try stdout.print("alias positiveCount: {}\n", .{alias_positive_count});
     try stdout.print("alias updateAt totalWeight: {d:.3}\n", .{alias_update_total});
     try stdout.print("alias updateMany totalWeight: {d:.3}\n", .{alias_update_many_total});
