@@ -589,7 +589,7 @@ Use:
   `Choice.fillIndicesU32From`, `Choice.indicesFrom`, `Choice.indicesU32From`,
   fixed-size `Choice.indexArrayFrom` / `indexArrayU32From`, and
   repeated `Choice.indexIterFrom` / `indexIterU32From` index streams,
-  `WeightedChoice.initBy` / `updateBy`, `WeightedChoice.initByIndex` / `updateByIndex`,
+  `WeightedChoice.updateAt`, `WeightedChoice.initBy` / `updateBy`, `WeightedChoice.initByIndex` / `updateByIndex`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, `WeightedChoice.positiveCount`, `WeightedChoice.constantIndex`, `WeightedChoice.item` / `itemAt` / `get`, and
   optional `WeightedChoice.weight` / `probability`, lazy `WeightedChoice.weightIter` / `probabilityIter` size hints, `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
   `sampleIndexU32From`, `WeightedChoice.fillValuesFrom` / `fillFrom`,
@@ -612,7 +612,8 @@ Use:
   `indicesU32` variants for allocation-returning repeated draws; `indexArray`
   / `indexArrayU32` variants return fixed-size repeated index arrays;
   `sampleIndex` / `fillIndices` aliases mirror `WeightedChoice` naming, and
-  `iter` / `iterU32` provide repeated index streams; `initByIndex` /
+  `iter` / `iterU32` provide repeated index streams; `updateAt` refreshes one
+  weight while preserving failed-update table safety, `initByIndex` /
   `updateByIndex` construct and refresh static alias tables from index-weight
   functions, while `initBy` / `updateBy` do the same from item weight accessors
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
@@ -707,7 +708,8 @@ known until the stream is inspected are explicitly different: short
 UTF-8 string allocation may need to finalize storage after reading/drawing, so
 prefer checked exact-count or caller-owned-buffer forms when no-consume
 allocation-failure behavior matters.
-`AliasTable.update` and `WeightedChoice.update` build the replacement table
+`AliasTable.update`, `AliasTable.updateAt`, `WeightedChoice.update`, and
+`WeightedChoice.updateAt` build the replacement table
 before swapping state, so length, weight, and initial allocation failures leave
 the previous valid table usable.
 For allocation-returning sequence helpers, initial allocation failures are

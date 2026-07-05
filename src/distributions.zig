@@ -15451,6 +15451,7 @@ pub fn AliasTable(comptime Weight: type) type {
         prob: []f64,
         prob_threshold: []u64,
         alias: []usize,
+        weight_values: []f64,
         total: f64,
         positive_count: usize = 0,
         constant_index: ?usize = null,
@@ -15521,6 +15522,10 @@ pub fn AliasTable(comptime Weight: type) type {
         };
 
         pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
+            return initFromWeights(allocator, input_weights);
+        }
+
+        fn initFromWeights(allocator: std.mem.Allocator, input_weights: anytype) !Self {
             if (input_weights.len == 0) return error.InvalidWeight;
 
             const prob = try allocator.alloc(f64, input_weights.len);
@@ -15529,6 +15534,8 @@ pub fn AliasTable(comptime Weight: type) type {
             errdefer allocator.free(prob_threshold);
             const alias = try allocator.alloc(usize, input_weights.len);
             errdefer allocator.free(alias);
+            const weight_values = try allocator.alloc(f64, input_weights.len);
+            errdefer allocator.free(weight_values);
 
             var scaled = try allocator.alloc(f64, input_weights.len);
             defer allocator.free(scaled);
@@ -15541,12 +15548,8 @@ pub fn AliasTable(comptime Weight: type) type {
             var positive_index: ?usize = null;
             var positive_count: usize = 0;
             for (input_weights, 0..) |input_weight, index| {
-                const value: f64 = switch (@typeInfo(Weight)) {
-                    .int => @floatFromInt(input_weight),
-                    .float => @floatCast(input_weight),
-                    else => @compileError("alias weights must be numeric"),
-                };
-                if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+                const value = try weightToF64(input_weight);
+                weight_values[index] = value;
                 total += value;
                 if (value > 0) {
                     positive_index = index;
@@ -15555,12 +15558,7 @@ pub fn AliasTable(comptime Weight: type) type {
             }
             if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
 
-            for (input_weights, 0..) |input_weight, i| {
-                const value: f64 = switch (@typeInfo(Weight)) {
-                    .int => @floatFromInt(input_weight),
-                    .float => @floatCast(input_weight),
-                    else => unreachable,
-                };
+            for (weight_values, 0..) |value, i| {
                 scaled[i] = value * @as(f64, @floatFromInt(input_weights.len)) / total;
                 if (scaled[i] < 1) {
                     try small.append(allocator, i);
@@ -15598,6 +15596,7 @@ pub fn AliasTable(comptime Weight: type) type {
                 .prob = prob,
                 .prob_threshold = prob_threshold,
                 .alias = alias,
+                .weight_values = weight_values,
                 .total = total,
                 .positive_count = positive_count,
                 .constant_index = if (positive_count == 1) positive_index else null,
@@ -15630,6 +15629,7 @@ pub fn AliasTable(comptime Weight: type) type {
             self.allocator.free(self.prob);
             self.allocator.free(self.prob_threshold);
             self.allocator.free(self.alias);
+            self.allocator.free(self.weight_values);
             self.* = undefined;
         }
 
@@ -15640,9 +15640,34 @@ pub fn AliasTable(comptime Weight: type) type {
             self.allocator.free(self.prob);
             self.allocator.free(self.prob_threshold);
             self.allocator.free(self.alias);
+            self.allocator.free(self.weight_values);
             self.prob = next.prob;
             self.prob_threshold = next.prob_threshold;
             self.alias = next.alias;
+            self.weight_values = next.weight_values;
+            self.total = next.total;
+            self.positive_count = next.positive_count;
+            self.constant_index = next.constant_index;
+        }
+
+        pub fn updateAt(self: *Self, index: usize, input_weight: Weight) !void {
+            if (index >= self.prob.len) return error.InvalidParameter;
+            const value = try weightToF64(input_weight);
+            const next_total = self.total - self.weight_values[index] + value;
+            if (!(next_total > 0) or !std.math.isFinite(next_total)) return error.InvalidWeight;
+            const input_weights = try self.allocator.dupe(f64, self.weight_values);
+            defer self.allocator.free(input_weights);
+            input_weights[index] = value;
+
+            const next = try initFromWeights(self.allocator, input_weights);
+            self.allocator.free(self.prob);
+            self.allocator.free(self.prob_threshold);
+            self.allocator.free(self.alias);
+            self.allocator.free(self.weight_values);
+            self.prob = next.prob;
+            self.prob_threshold = next.prob_threshold;
+            self.alias = next.alias;
+            self.weight_values = next.weight_values;
             self.total = next.total;
             self.positive_count = next.positive_count;
             self.constant_index = next.constant_index;
@@ -15695,13 +15720,7 @@ pub fn AliasTable(comptime Weight: type) type {
 
         pub fn weightsInto(self: Self, out: []f64) Error!void {
             if (out.len != self.prob.len) return error.InvalidLength;
-            @memset(out, 0);
-
-            const column_scale = self.total / @as(f64, @floatFromInt(self.prob.len));
-            for (self.prob, self.alias, 0..) |probability_value, alias_index, index| {
-                out[index] += probability_value * column_scale;
-                out[alias_index] += (1 - probability_value) * column_scale;
-            }
+            @memcpy(out, self.weight_values);
         }
 
         pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
@@ -15718,12 +15737,7 @@ pub fn AliasTable(comptime Weight: type) type {
 
         pub fn weightAt(self: Self, index: usize) Error!f64 {
             if (index >= self.prob.len) return error.InvalidParameter;
-            const column_scale = self.total / @as(f64, @floatFromInt(self.prob.len));
-            var value = self.prob[index] * column_scale;
-            for (self.prob, self.alias) |probability_value, alias_index| {
-                if (alias_index == index) value += (1 - probability_value) * column_scale;
-            }
-            return value;
+            return self.weight_values[index];
         }
 
         pub fn weight(self: Self, index: usize) ?f64 {
@@ -15972,6 +15986,16 @@ pub fn AliasTable(comptime Weight: type) type {
             errdefer allocator.free(out);
             for (items, out) |*item, *slot| slot.* = weightFn(item);
             return out;
+        }
+
+        fn weightToF64(input_weight: anytype) Error!f64 {
+            const value: f64 = switch (@typeInfo(@TypeOf(input_weight))) {
+                .int => @floatFromInt(input_weight),
+                .float => @floatCast(input_weight),
+                else => @compileError("alias weights must be numeric"),
+            };
+            if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+            return value;
         }
     };
 }
@@ -18981,6 +19005,58 @@ test "alias table update allocation failure preserves table" {
     var out: [8]usize = undefined;
     table.fillFrom(&engine, &out);
     for (out) |index| try std.testing.expectEqual(@as(usize, 2), index);
+}
+
+test "alias table single-weight updateAt mirrors partial update diagnostics" {
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    try table.updateAt(2, 0);
+    try std.testing.expectEqual(@as(usize, 2), table.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), table.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 4), table.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), table.weight(2).?, 1e-12);
+
+    var weights: [4]f64 = undefined;
+    try table.weightsInto(&weights);
+    try std.testing.expectEqualSlices(f64, &.{ 1, 0, 0, 3 }, &weights);
+
+    try table.updateAt(0, 0);
+    try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), table.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 3), table.totalWeight(), 1e-12);
+
+    try std.testing.expectError(error.InvalidParameter, table.updateAt(4, 1));
+    try std.testing.expectError(error.InvalidWeight, table.updateAt(3, 0));
+    try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), table.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 3), table.totalWeight(), 1e-12);
+
+    var float_table = try AliasTable(f64).init(std.testing.allocator, &.{ 1, 2, 3 });
+    defer float_table.deinit();
+    try std.testing.expectError(error.InvalidWeight, float_table.updateAt(1, std.math.nan(f64)));
+    try std.testing.expectApproxEqAbs(@as(f64, 6), float_table.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), float_table.weight(1).?, 1e-12);
+}
+
+test "alias table updateAt allocation failure preserves table" {
+    const alea = @import("root.zig");
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    var table = try AliasTable(u32).init(failing.allocator(), &.{ 0, 0, 1 });
+    defer table.deinit();
+
+    failing.fail_index = failing.alloc_index;
+    try std.testing.expectError(error.OutOfMemory, table.updateAt(0, 9));
+    try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 2), table.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 1), table.totalWeight(), 1e-12);
+
+    var engine = alea.ScalarPrng.init(0x5150_a139);
+    var control = alea.ScalarPrng.init(0x5150_a139);
+    try std.testing.expectEqual(@as(usize, 2), table.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "weighted tree init failures clean up" {
