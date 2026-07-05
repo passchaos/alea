@@ -2859,6 +2859,7 @@ Dynamic weighted helpers:
   `samplePtrs`, `samplePtrsFrom`, `samplePtrsChecked`,
   `samplePtrsCheckedFrom`, `samplePtrsIter`, `samplePtrsIterFrom`,
   `samplePtrsIterChecked`, `samplePtrsIterCheckedFrom`,
+  `IndexedSamples`, `SliceChooseIter`,
   `SampledPtrIterator`, `SampledPtrIterator.next`,
   `SampledPtrIterator.remaining`, `SampledPtrIterator.len`,
   `SampledPtrIterator.sizeHint`, `SampledPtrIterator.fill`,

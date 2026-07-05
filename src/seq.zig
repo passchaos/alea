@@ -490,6 +490,14 @@ pub fn SampledPtrIterator(comptime T: type) type {
     };
 }
 
+pub fn IndexedSamples(comptime T: type) type {
+    return SampledPtrIterator(T);
+}
+
+pub fn SliceChooseIter(comptime T: type) type {
+    return IndexedSamples(T);
+}
+
 pub fn SampledMutPtrIterator(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -12588,6 +12596,38 @@ test "samplePtrsIter owns sampled indices and streams pointers" {
     try std.testing.expectError(error.OutOfMemory, samplePtrsIterFrom(failing_alloc.allocator(), &invalid_engine, u8, &items, 3));
     try std.testing.expect(failing_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "IndexedSamples aliases sampled pointer iterators" {
+    const alea = @import("root.zig");
+    comptime {
+        std.debug.assert(IndexedSamples(u8) == SampledPtrIterator(u8));
+        std.debug.assert(SliceChooseIter(u8) == IndexedSamples(u8));
+    }
+
+    const items = [_]u8{ 10, 20, 30, 40, 50 };
+    var alias_engine = alea.ScalarPrng.init(0x5150_0279);
+    var direct_engine = alea.ScalarPrng.init(0x5150_0279);
+    var alias_iter: IndexedSamples(u8) = try samplePtrsIterFrom(std.testing.allocator, &alias_engine, u8, &items, 3);
+    defer alias_iter.deinit();
+    var direct_iter: SampledPtrIterator(u8) = try samplePtrsIterFrom(std.testing.allocator, &direct_engine, u8, &items, 3);
+    defer direct_iter.deinit();
+
+    try std.testing.expectEqual(direct_iter.len(), alias_iter.len());
+    try std.testing.expectEqual(direct_iter.sizeHint(), alias_iter.sizeHint());
+    while (direct_iter.next()) |direct_ptr| {
+        const alias_ptr = alias_iter.next().?;
+        const direct_index = @divExact(@intFromPtr(direct_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+        const alias_index = @divExact(@intFromPtr(alias_ptr) - @intFromPtr(&items[0]), @sizeOf(u8));
+        try std.testing.expectEqual(direct_index, alias_index);
+    }
+    try std.testing.expectEqual(@as(?*const u8, null), alias_iter.next());
+    try std.testing.expectEqual(direct_engine.next(), alias_engine.next());
+
+    var deprecated_name_engine = alea.ScalarPrng.init(0x5150_1279);
+    var deprecated_name_iter: SliceChooseIter(u8) = try samplePtrsIterFrom(std.testing.allocator, &deprecated_name_engine, u8, &items, 2);
+    defer deprecated_name_iter.deinit();
+    try std.testing.expectEqual(@as(usize, 2), deprecated_name_iter.len());
 }
 
 test "sampleMutPtrsIter owns sampled indices and streams mutable pointers" {

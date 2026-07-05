@@ -299,7 +299,8 @@ complete.
 | S4-M276 Uniform range-constructor aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m276-uniform-range-constructors.md` | Closed for the current bar: `Uniform(T)` and `VectorUniform(VectorType)` now expose `tryFromRange` / `tryFromRangeInclusive` aliases for local Rust `Uniform::try_from(Range)` / `RangeInclusive` discovery while preserving existing constructors. |
 | S4-M277 rngs namespace aliases | `src/root.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/s4-m277-rngs-namespace.md` | Closed for the current bar: root `rngs` now exposes local Rust `rand::rngs::*` discovery names over Alea's existing explicit engines and entropy source without adding hidden thread-local RNG semantics. |
 | S4-M278 root RngReader aliases | `src/root.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/s4-m278-root-rngreader.md` | Closed for the current bar: root `RngReader(Source)` and `rngReader(source, buffer)` now expose local Rust root `rand::RngReader` discovery while forwarding to Alea's existing explicit-buffer `Rng` adapter. |
-| S4-M279 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M279 IndexedSamples aliases | `src/seq.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m279-indexed-samples-aliases.md` | Closed for the current bar: `seq.IndexedSamples(T)` and `seq.SliceChooseIter(T)` now expose local Rust `rand::seq::{IndexedSamples, SliceChooseIter}` discovery naming over Alea's existing sampled pointer iterator implementation. |
+| S4-M280 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -393,6 +394,9 @@ S4-M277 additionally adds a root `rngs` namespace; it is another closed local
 Rust discovery-name side gap and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M278 additionally adds root RngReader aliases; it is another closed local
+Rust discovery-name side gap and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M279 additionally adds IndexedSamples aliases; it is another closed local
 Rust discovery-name side gap and does not resolve S4-M11 or complete the
 long-term objective.
 

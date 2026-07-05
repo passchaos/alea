@@ -623,3 +623,7 @@ S4-M278 adds root `RngReader(Source)` and `rngReader(source, buffer)`
 (`compare/results/s4-m278-root-rngreader.md`), closing the local Rust root
 `rand::RngReader` discovery gap while preserving Alea's explicit caller-buffer
 `std.Io.Reader` adapter design.
+S4-M279 adds `seq.IndexedSamples(T)` and `seq.SliceChooseIter(T)`
+(`compare/results/s4-m279-indexed-samples-aliases.md`), closing the local Rust
+`rand::seq::{IndexedSamples, SliceChooseIter}` discovery gap while preserving
+Alea's sampled const-pointer iterator implementation.

@@ -470,7 +470,9 @@ Use:
   `seq.sampleMutPtrsCheckedFrom`, owned sampled iterator forms
   `seq.sampleItemsIterFrom` / `seq.samplePtrsIterFrom` /
   `seq.sampleMutPtrsIterFrom` expose exact `remaining` / `len` / `sizeHint`
-  diagnostics plus caller-buffer `fill`, `seq.chooseMultipleIntoFrom`,
+  diagnostics plus caller-buffer `fill`, with `seq.IndexedSamples` /
+  `seq.SliceChooseIter` aliases over sampled pointer iterators for local Rust
+  `rand::seq` discovery, `seq.chooseMultipleIntoFrom`,
   `seq.chooseMultipleIntoCheckedFrom`, `seq.sampleItemsIntoFrom` /
   `seq.sampleItemsIntoCheckedFrom`, `seq.chooseMultiplePtrsIntoFrom`,
   `seq.chooseMultiplePtrsIntoCheckedFrom`, `seq.samplePtrsIntoFrom` /
