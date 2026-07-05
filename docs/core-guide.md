@@ -863,6 +863,8 @@ charset diagnostics remain on `ascii.Charset`. Use
 `UnicodeCharset.sampleFrom`, `UnicodeCharset.fillFrom`,
 `UnicodeCharset.sampleStringFrom`, `UnicodeCharset.appendStringFrom`,
 `UnicodeCharset.maxUtf8Len` / `utf8Capacity`, Unicode charset diagnostics,
+`distributions.UniformUnicodeScalar` for reusable Rust `UniformChar`-style
+bounded `u21` Unicode scalar sampling,
 `unicodeScalarFrom`,
 `unicodeScalarRangeLessThanFrom`, `unicodeScalarRangeAtMostFrom`,
 `fillUnicodeScalarFrom`, `fillUnicodeScalarRangeLessThanFrom`,
@@ -890,7 +892,8 @@ Run `zig build run-string-generation` for a runnable comparison of predefined
 ASCII charsets, distribution-namespace ASCII aliases, custom `Charset` count,
 checked-item, optional-item, probability, probability-iterator, and size-hint
 diagnostics, allocation-returning strings, Unicode scalar batches and range
-batches, reusable Unicode scalar charsets, and caller-owned UTF-8 buffers.
+batches, reusable Unicode scalar range samplers and charsets, and caller-owned
+UTF-8 buffers.
 
 ## Validation
 

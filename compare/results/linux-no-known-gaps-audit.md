@@ -574,3 +574,8 @@ S4-M266 adds `distributions.UniformDuration`
 `rand::distr::uniform::UniformDuration` discovery-name gap while preserving
 Alea's `std.Io.Duration` range helper semantics and inclusive point-mass
 no-consume behavior.
+S4-M267 adds `distributions.UniformUnicodeScalar`
+(`compare/results/s4-m267-uniform-unicode-scalar.md`), closing the local Rust
+`rand::distr::uniform::UniformChar` reusable-sampler workflow in Zig-native
+`u21` form while preserving surrogate-gap validation and Unicode scalar range
+helper stream shape.

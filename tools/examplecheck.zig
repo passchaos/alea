@@ -41,7 +41,7 @@ const examples = [_]Example{
     .{
         .path = "examples/string_generation.zig",
         .step = "zig build run-string-generation",
-        .source_tokens = &.{ "sampleString alphanumeric", "distribution Alphanumeric/Alphabetic bytes", "appendString alphanumeric", "custom charset numChoices", "custom charset constantIndex", "single charset constantIndex", "custom charset item(0)", "custom charset get(0)", "custom charset probability(0)", "custom charset probabilityIter fill", "custom charset probabilityIter sizeHint", "unicode scalar fill", "unicode scalar batch", "unicode scalar range fill", "unicode scalar range batch", "unicode charset sampleString", "unicode charset appendString", "UnicodeCharset numChoices", "unicodeScalarBatch", "fillUnicodeScalar", "unicodeScalarRangeAtMostBatchChecked", "fillUnicodeScalarRangeLessThanChecked", "UnicodeCharset" },
+        .source_tokens = &.{ "sampleString alphanumeric", "distribution Alphanumeric/Alphabetic bytes", "appendString alphanumeric", "custom charset numChoices", "custom charset constantIndex", "single charset constantIndex", "custom charset item(0)", "custom charset get(0)", "custom charset probability(0)", "custom charset probabilityIter fill", "custom charset probabilityIter sizeHint", "unicode scalar fill", "unicode scalar batch", "unicode scalar range fill", "unicode scalar range batch", "UniformUnicodeScalar range sampler", "unicode charset sampleString", "unicode charset appendString", "UnicodeCharset numChoices", "unicodeScalarBatch", "fillUnicodeScalar", "unicodeScalarRangeAtMostBatchChecked", "fillUnicodeScalarRangeLessThanChecked", "UnicodeCharset" },
     },
     .{ .path = "examples/unit_geometry.zig", .step = "zig build run-unit-geometry" },
 };

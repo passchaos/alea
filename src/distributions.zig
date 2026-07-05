@@ -2439,6 +2439,90 @@ pub const UniformDuration = struct {
     }
 };
 
+pub const UniformUnicodeScalar = struct {
+    const Self = @This();
+
+    low: u21,
+    high: u21,
+    inclusive: bool = false,
+
+    pub fn init(low: u21, high: u21) Error!Self {
+        try validateUnicodeScalarExclusiveRange(low, high);
+        return .{ .low = low, .high = high, .inclusive = false };
+    }
+
+    pub fn new(low: u21, high: u21) Error!Self {
+        return init(low, high);
+    }
+
+    pub fn initInclusive(low: u21, high: u21) Error!Self {
+        try validateUnicodeScalarInclusiveRange(low, high);
+        return .{ .low = low, .high = high, .inclusive = true };
+    }
+
+    pub fn newInclusive(low: u21, high: u21) Error!Self {
+        return initInclusive(low, high);
+    }
+
+    pub fn lowValue(self: Self) u21 {
+        return self.low;
+    }
+
+    pub fn highValue(self: Self) u21 {
+        return self.high;
+    }
+
+    pub fn isInclusive(self: Self) bool {
+        return self.inclusive;
+    }
+
+    pub fn sample(self: Self, rng: Rng) u21 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Self, source: anytype) u21 {
+        if (self.inclusive) {
+            return Rng.unicodeScalarRangeAtMostFrom(source, self.low, self.high);
+        }
+        return Rng.unicodeScalarRangeLessThanFrom(source, self.low, self.high);
+    }
+
+    pub fn fill(self: Self, rng: Rng, dest: []u21) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Self, source: anytype, dest: []u21) void {
+        if (self.inclusive) {
+            Rng.fillUnicodeScalarRangeAtMostFrom(source, dest, self.low, self.high);
+        } else {
+            Rng.fillUnicodeScalarRangeLessThanFrom(source, dest, self.low, self.high);
+        }
+    }
+};
+
+fn validateUnicodeScalarExclusiveRange(low: u21, high: u21) Error!void {
+    const compressed_low = try unicodeScalarToCompressed(low);
+    const compressed_high = try unicodeScalarExclusiveEndToCompressed(high);
+    if (compressed_low >= compressed_high) return error.EmptyRange;
+}
+
+fn validateUnicodeScalarInclusiveRange(low: u21, high: u21) Error!void {
+    const compressed_low = try unicodeScalarToCompressed(low);
+    const compressed_high = try unicodeScalarToCompressed(high);
+    if (compressed_low > compressed_high) return error.EmptyRange;
+}
+
+fn unicodeScalarToCompressed(scalar: u21) Error!u21 {
+    if (!std.unicode.utf8ValidCodepoint(scalar)) return error.InvalidParameter;
+    return if (scalar >= 0xE000) scalar - 0x800 else scalar;
+}
+
+fn unicodeScalarExclusiveEndToCompressed(scalar: u21) Error!u21 {
+    if (scalar > 0x11_0000) return error.InvalidParameter;
+    if (scalar == 0x11_0000) return 0x11_0000 - 0x800;
+    return unicodeScalarToCompressed(scalar);
+}
+
 pub fn VectorUniform(comptime VectorType: type) type {
     const info = vectorInfo(VectorType);
     const Child = info.child;
@@ -30932,4 +31016,54 @@ test "UniformDuration sampler mirrors duration helpers" {
 
     try std.testing.expectError(error.EmptyRange, UniformDuration.new(high, low));
     try std.testing.expectError(error.EmptyRange, UniformDuration.newInclusive(high, low));
+}
+
+test "UniformUnicodeScalar sampler mirrors unicode range helpers" {
+    const root = @import("root.zig");
+    const low: u21 = 0xD7F0;
+    const high: u21 = 0xE010;
+
+    const half_open = try UniformUnicodeScalar.new(low, high);
+    try std.testing.expectEqual(low, half_open.lowValue());
+    try std.testing.expectEqual(high, half_open.highValue());
+    try std.testing.expect(!half_open.isInclusive());
+
+    var sampler_engine = root.DefaultPrng.init(0x51_4d_267);
+    var helper_engine = root.DefaultPrng.init(0x51_4d_267);
+    const sampler_rng = Rng.init(&sampler_engine);
+    const helper_rng = Rng.init(&helper_engine);
+    try std.testing.expectEqual(helper_rng.unicodeScalarRangeLessThan(low, high), sampler_rng.sample(u21, half_open));
+    try std.testing.expectEqual(helper_engine.next(), sampler_engine.next());
+
+    const inclusive = try UniformUnicodeScalar.newInclusive('A', 'Z');
+    try std.testing.expect(inclusive.isInclusive());
+
+    var inclusive_sampler_engine = root.DefaultPrng.init(0x51_4d_268);
+    var inclusive_helper_engine = root.DefaultPrng.init(0x51_4d_268);
+    try std.testing.expectEqual(
+        Rng.unicodeScalarRangeAtMostFrom(&inclusive_helper_engine, 'A', 'Z'),
+        Rng.sampleFrom(&inclusive_sampler_engine, u21, inclusive),
+    );
+    try std.testing.expectEqual(inclusive_helper_engine.next(), inclusive_sampler_engine.next());
+
+    var fill_sampler_engine = root.DefaultPrng.init(0x51_4d_269);
+    var fill_helper_engine = root.DefaultPrng.init(0x51_4d_269);
+    var sampler_values: [6]u21 = undefined;
+    var helper_values: [6]u21 = undefined;
+    half_open.fillFrom(&fill_sampler_engine, &sampler_values);
+    Rng.fillUnicodeScalarRangeLessThanFrom(&fill_helper_engine, &helper_values, low, high);
+    try std.testing.expectEqualSlices(u21, &helper_values, &sampler_values);
+    try std.testing.expectEqual(fill_helper_engine.next(), fill_sampler_engine.next());
+
+    const point = try UniformUnicodeScalar.newInclusive(0xE000, 0xE000);
+    var point_engine = root.DefaultPrng.init(0x51_4d_270);
+    var point_control = root.DefaultPrng.init(0x51_4d_270);
+    var point_values: [4]u21 = undefined;
+    point.fillFrom(&point_engine, &point_values);
+    for (point_values) |item| try std.testing.expectEqual(@as(u21, 0xE000), item);
+    try std.testing.expectEqual(point_control.next(), point_engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, UniformUnicodeScalar.new(0xD800, 0xE000));
+    try std.testing.expectError(error.EmptyRange, UniformUnicodeScalar.new('A', 'A'));
+    try std.testing.expectError(error.EmptyRange, UniformUnicodeScalar.newInclusive('Z', 'A'));
 }

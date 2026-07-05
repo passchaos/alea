@@ -3320,6 +3320,13 @@ Dynamic weighted helpers:
 
 - Charset constants: `Alphanumeric`, `Alphabetic`, `Lowercase`, `Uppercase`,
   `Digits`
+- Distribution Unicode scalar range sampler: `UniformUnicodeScalar`,
+  `UniformUnicodeScalar.init`, `UniformUnicodeScalar.new`,
+  `UniformUnicodeScalar.initInclusive`,
+  `UniformUnicodeScalar.newInclusive`, `UniformUnicodeScalar.lowValue`,
+  `UniformUnicodeScalar.highValue`, `UniformUnicodeScalar.isInclusive`,
+  `UniformUnicodeScalar.sample`, `UniformUnicodeScalar.sampleFrom`,
+  `UniformUnicodeScalar.fill`, `UniformUnicodeScalar.fillFrom`
 - Raw charset byte sets: `alphanumeric`, `alphabetic`, `lowercase`,
   `uppercase`, `digits`
 - Charset type: `Charset.init`, `Charset.initChecked`, `Charset.bytesValue`,
