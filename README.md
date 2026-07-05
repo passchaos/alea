@@ -33,6 +33,8 @@ The current Linux-first roadmap is intentionally broad:
   construction of any exported deterministic engine
 - Rust-discoverable `Rng.SysRng` / root `sysRng(io)` system-entropy source
   with `tryNextU64`, `tryNextU32`, `tryFillBytes`, and `RngReader` support
+- Rust-discoverable `StepRng` plus root `stepRng` / `constRng` helpers for
+  deterministic mock streams and byte-shape tests
 - `ScalarPrng = Wyhash64` for scalar-heavy distribution workloads such as
   normal, exponential, and Poisson, alongside `FastPrng = Alea4x64` for
   bulk-fill throughput
@@ -203,8 +205,9 @@ exposes `random()` for standard-library consumers, and `Rng.random()` returns a
 
 `DefaultPrng` is `Xoshiro256`, `FastPrng` is `Alea4x64`, `ScalarPrng` and
 `HashPrng` are `Wyhash64`, `ReproduciblePrng` is `Pcg64`, `SecurePrng` and
-Rust-discoverable `StdRng` are `ChaCha12`, and Rust-discoverable `SmallRng` is
-`Xoshiro256PlusPlus`. Root helpers such as `default`, `fast`, `scalar`, `hash`,
+Rust-discoverable `StdRng` are `ChaCha12`, Rust-discoverable `SmallRng` is
+`Xoshiro256PlusPlus`, and `StepRng` is a deterministic arithmetic-sequence
+mock source for tests. Root helpers such as `default`, `fast`, `scalar`, `hash`,
 `reproducible`, and their secure-seeded variants initialize the matching
 aliases without spelling out the concrete engine type.
 

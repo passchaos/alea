@@ -33,6 +33,11 @@ pub fn main(init: std.process.Init) !void {
     var rng_reader = rng.reader(&reader_buffer);
     var reader_bytes: [12]u8 = undefined;
     try rng_reader.readAll(&reader_bytes);
+    var step_rng = alea.stepRng(255, 1);
+    var step_bytes: [16]u8 = undefined;
+    step_rng.fillBytes(&step_bytes);
+    var constant_rng = alea.constRng(42);
+    const constant_rng_next = constant_rng.nextU64();
     const random_value = rng.randomValue(u16);
     const random_words = try rng.valueBatch(u16, init.gpa, 4);
     defer init.gpa.free(random_words);
@@ -127,6 +132,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("nextU64 raw: {}, nextU32 raw: {}\n", .{ raw64, raw32 });
     try stdout.print("fillBytes raw: {any}\n", .{raw_fill_bytes});
     try stdout.print("rngReader bytes: {any}\n", .{reader_bytes});
+    try stdout.print("StepRng bytes: {any}, constRng next: {}\n", .{ step_bytes, constant_rng_next });
     try stdout.print("randomValue u16: {}\n", .{random_value});
     try stdout.print("valueBatch u16: {any}\n", .{random_words});
     try stdout.print("uintLessThanBatch u16 <1000: {any}\n", .{bounded_words});

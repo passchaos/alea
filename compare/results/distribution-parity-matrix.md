@@ -15,6 +15,7 @@ Zig-native way.
 | Rust `rand` area | Alea status |
 | --- | --- |
 | `StandardUniform` integers/floats/bools/bytes | Covered by `Rng.value`, Rust-discoverable `randomValue` aliases, scalar helpers, `float`, `boolean`, caller-owned bytes, and allocation-returning `bytesAlloc` |
+| `StepRng` test/mock source | Covered by `StepRng`, root `stepRng`, and root `constRng`; byte fills use the local Rust `StepRng(255, 1)` little-endian word shape and raw aliases integrate with `RngReader` / `std.Random` workflows |
 | `StandardUniform` arrays/tuples | Covered by `Rng.value` / `randomValue` arrays and tuples plus allocation-returning `Rng.valueBatch` / `Rng.valueBatchChecked` repeated samples |
 | `StandardUniform` char | Covered by explicit `Rng.unicodeScalar`, caller-owned `fillUnicodeScalar`, owned `unicodeScalarBatch`, range helpers, and Unicode UTF-8 helpers, including caller-owned-buffer UTF-8 output |
 | `Uniform` integer/float ranges | Covered by `Uniform(T)` with Rust-discoverable `new` / `newInclusive` aliases, Rust-discoverable one-shot checked `sampleSingle` / `sampleSingleInclusive` aliases, `Rng.randomRange` / `randomRangeAtMost` aliases for local Rust `Rng::random_range` workflows, `VectorUniform(VectorType)` with matching reusable aliases, `Open01`, `OpenClosed01`, scalar/vector range helpers, caller-owned range/strict-interval fills, owned `Rng.rangeBatch` / `vectorRangeBatch` / `openBatch` / `openClosedBatch` / `vectorOpenBatch` / `vectorOpenClosedBatch` batches, endpoint/inclusivity, and range/strict-interval moment accessors |

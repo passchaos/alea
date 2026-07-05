@@ -22,6 +22,7 @@ pub const Xoshiro256PlusPlus = @import("engines/xoshiro256plusplus.zig");
 pub const Xoshiro256 = @import("engines/xoshiro256.zig");
 pub const Pcg64 = @import("engines/pcg64.zig");
 pub const ChaCha = @import("engines/chacha.zig");
+pub const StepRng = @import("engines/step.zig");
 
 pub const DefaultPrng = Xoshiro256;
 pub const FastPrng = Alea4x64;
@@ -90,6 +91,14 @@ pub fn sysRng(io: std.Io) SysRng {
     return SysRng.init(io);
 }
 
+pub fn stepRng(initial: u64, increment: u64) StepRng {
+    return StepRng.init(initial, increment);
+}
+
+pub fn constRng(value: u64) StepRng {
+    return StepRng.constant(value);
+}
+
 pub fn makeRng(comptime Engine: type, io: std.Io) !Engine {
     if (comptime Engine == SplitMix64 or Engine == Wyhash64) {
         var seed_bytes: [8]u8 = undefined;
@@ -110,6 +119,11 @@ pub fn makeRng(comptime Engine: type, io: std.Io) !Engine {
         var seed_bytes: [ChaCha.seed_length]u8 = undefined;
         try std.Io.randomSecure(io, &seed_bytes);
         return Engine.fromSeedBytes(seed_bytes);
+    }
+    if (comptime Engine == StepRng) {
+        var seed_bytes: [16]u8 = undefined;
+        try std.Io.randomSecure(io, &seed_bytes);
+        return StepRng.fromSeedBytes(seed_bytes);
     }
     @compileError("alea.makeRng supports alea's exported deterministic engines");
 }
@@ -144,6 +158,18 @@ test "root Rust-discoverable rng aliases mirror concrete engines" {
     var small_from_seed = SmallRng.fromSeed(Seed.fromString("small alias"));
     var xoshiro_from_seed = Xoshiro256PlusPlus.fromSeed(Seed.fromString("small alias"));
     try std.testing.expectEqual(xoshiro_from_seed.next(), small_from_seed.next());
+}
+
+test "root StepRng helpers mirror StepRng constructors" {
+    var stepped = stepRng(2, 3);
+    var direct = StepRng.init(2, 3);
+    try std.testing.expectEqual(direct.next(), stepped.next());
+    try std.testing.expectEqual(direct.next(), stepped.next());
+
+    var constant_rng = constRng(0x5150);
+    var direct_constant = StepRng.constant(0x5150);
+    try std.testing.expectEqual(direct_constant.next(), constant_rng.next());
+    try std.testing.expectEqual(direct_constant.next(), constant_rng.next());
 }
 
 test "root deterministic constructors have stable snapshots" {
@@ -213,6 +239,9 @@ test "makeRng constructs exported engines from system entropy" {
 
     var splitmix_engine = try makeRng(SplitMix64, io);
     _ = splitmix_engine.next();
+
+    var step_engine = try makeRng(StepRng, io);
+    _ = step_engine.next();
 }
 
 test "root sysRng exposes system entropy source" {

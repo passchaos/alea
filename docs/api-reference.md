@@ -9,12 +9,13 @@ stability expectations.
 
 - Modules: `Rng`, `Seed`, `distributions`, `seq`, `ascii`, `quality`
 - Engines: `SplitMix64`, `Wyhash64`, `Alea4x64`, `Xoshiro256PlusPlus`,
-  `Xoshiro256`, `Pcg64`, `ChaCha`
+  `Xoshiro256`, `Pcg64`, `ChaCha`, `StepRng`
 - Aliases: `DefaultPrng`, `FastPrng`, `HashPrng`, `ReproduciblePrng`,
   `ScalarPrng`, `SecurePrng`, `StdRng`, `SmallRng`, `SysRng`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
   `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
-  `secureFromSeed`, `secure`, `secureBytes`, `sysRng`, `makeRng`, `rng`
+  `secureFromSeed`, `secure`, `secureBytes`, `sysRng`, `stepRng`, `constRng`,
+  `makeRng`, `rng`
 
 ## Rng
 
@@ -286,10 +287,11 @@ stability expectations.
 All engines expose deterministic construction and `random()` interop where
 appropriate. Engines with byte fills expose Rust-discoverable `fillBytes`
 aliases; all deterministic engines expose Rust-discoverable `nextU64` /
-`nextU32` raw aliases alongside `next`, `tryNextU64`, and `tryNextU32`, plus Rust-discoverable `seedFromU64`,
+`nextU32` raw aliases alongside `next`, `tryNextU64`, and `tryNextU32`.
+Seedable production engines also expose Rust-discoverable `seedFromU64`,
 `fromSeed`, and `fromSeedBytes` constructor aliases alongside their Zig-native
-seed constructors.
-Engines also expose Rust-discoverable `fromRng` and `fork` helpers for
+seed constructors. Engines with larger state expose Rust-discoverable `fromRng`
+and `fork` helpers for
 deriving child streams from existing generators, plus `tryFromRng` for
 fallible sources exposing `tryNext() !u64` and `tryFork` for fallible
 self-forking.
@@ -321,6 +323,9 @@ self-forking.
   `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`, `tryNext`, `nextU64`,
   `tryNextU64`, `nextU32`, `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`,
   `fromRng`, `tryFromRng`, `fork`, `tryFork`
+- `StepRng`: `init`, `new`, `constant`, `constRng`, `fromSeedBytes`,
+  `random`, `next`, `tryNext`, `nextU64`, `tryNextU64`, `nextU32`,
+  `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`
 
 ## Distributions
 

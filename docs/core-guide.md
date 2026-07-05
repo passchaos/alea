@@ -26,15 +26,20 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
   explicit `SecurePrng` name.
 - `SmallRng = Xoshiro256PlusPlus`: Rust-discoverable small fast RNG alias,
   matching the current local Rust 64-bit `SmallRng` family in Zig-native form.
+- `StepRng`: deterministic arithmetic-sequence mock source for tests, byte
+  stream adapters, and reproducibility examples; use `stepRng(initial,
+  increment)` or `constRng(value)` at the root for Rust-discoverable
+  construction.
 
 Every engine exposes `next() u64`, `fill([]u8)`, and `random() std.Random`.
 Use `alea.Rng.init(&engine)` when you want the ergonomic facade, and direct
 engine helpers when benchmark shape matters.
-Direct engines expose Rust-discoverable `seedFromU64(seed)` aliases for their
-deterministic `u64` constructors, mirroring local Rust
+Seedable production engines expose Rust-discoverable `seedFromU64(seed)`
+aliases for their deterministic `u64` constructors, mirroring local Rust
 `SeedableRng::seed_from_u64` naming while preserving Zig-native `init` /
-`initFromU64`.
-They also expose `fromSeed(seed)` aliases for Alea `Seed` values, mirroring
+`initFromU64`. StepRng instead uses `new(initial, increment)` /
+`stepRng(initial, increment)` and `constant(value)` / `constRng(value)`.
+Seedable production engines also expose `fromSeed(seed)` aliases for Alea `Seed` values, mirroring
 local Rust `SeedableRng::from_seed` naming while keeping `Seed.stream(...)`
 and `Seed.mix(...)` as the Zig-native derivation tools.
 Use `fromSeedBytes(seed)` when you need the Rust-style fixed byte-array seed
