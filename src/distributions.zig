@@ -15530,6 +15530,10 @@ pub fn AliasTable(comptime Weight: type) type {
             return initFromWeights(allocator, input_weights);
         }
 
+        pub fn new(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
+            return init(allocator, input_weights);
+        }
+
         fn initFromWeights(allocator: std.mem.Allocator, input_weights: anytype) !Self {
             if (input_weights.len == 0) return error.InvalidWeight;
 
@@ -18994,9 +18998,13 @@ test "alias table item accessors initialize and update tables" {
 test "alias table exposes totals and reconstructs weights" {
     var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
     defer table.deinit();
+    var new_table = try AliasTable(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer new_table.deinit();
 
     try std.testing.expectEqual(@as(usize, 4), table.len());
     try std.testing.expectEqual(@as(usize, 4), table.numChoices());
+    try std.testing.expectEqual(@as(usize, 4), new_table.numChoices());
+    try std.testing.expectApproxEqAbs(table.totalWeight(), new_table.totalWeight(), 1e-12);
     try std.testing.expectEqual(@as(usize, 3), table.positiveCount());
     try std.testing.expect(!table.isEmpty());
     try std.testing.expectApproxEqAbs(@as(f64, 9), table.totalWeight(), 1e-12);

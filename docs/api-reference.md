@@ -2354,6 +2354,7 @@ Alias helpers:
 
 - `aliasTable(T)`
 - `AliasTable.init`
+- `AliasTable.new`
 - `AliasTable.initByIndex`
 - `AliasTable.initBy`
 - `AliasTable.update`
@@ -2828,7 +2829,7 @@ Dynamic weighted helpers:
   `Choice.U32IndexIterator`, `Choice.U32IndexIterator.next`,
   `Choice.U32IndexIterator.nextValue`, `Choice.U32IndexIterator.fill`,
   `Choice.iter`, `Choice.iterFrom`,
-  `WeightedChoice.init`, `WeightedChoice.initBy`,
+  `WeightedChoice.init`, `WeightedChoice.new`, `WeightedChoice.initBy`,
   `WeightedChoice.initByIndex`, `WeightedChoice.deinit`,
   `WeightedChoice.len`, `WeightedChoice.numChoices`, `WeightedChoice.isEmpty`,
   `WeightedChoice.itemsValue`, `WeightedChoice.itemAt`, `WeightedChoice.item`, `WeightedChoice.get`,

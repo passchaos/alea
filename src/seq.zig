@@ -8127,6 +8127,10 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             };
         }
 
+        pub fn new(allocator: std.mem.Allocator, items: []const T, input_weights: []const Weight) !Self {
+            return init(allocator, items, input_weights);
+        }
+
         pub fn initBy(
             allocator: std.mem.Allocator,
             items: []const T,
@@ -17121,9 +17125,13 @@ test "weighted choice sampler maps alias indexes to items" {
     const labels = [_][]const u8{ "never", "rare", "often" };
     var choice = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &labels, &.{ 0, 1, 7 });
     defer choice.deinit();
+    var new_choice = try WeightedChoice([]const u8, u32).new(std.testing.allocator, &labels, &.{ 0, 1, 7 });
+    defer new_choice.deinit();
 
     try std.testing.expectEqual(@as(usize, 3), choice.len());
     try std.testing.expectEqual(@as(usize, 3), choice.numChoices());
+    try std.testing.expectEqual(@as(usize, 3), new_choice.numChoices());
+    try std.testing.expectApproxEqAbs(choice.totalWeight(), new_choice.totalWeight(), 1e-12);
     try std.testing.expect(!choice.isEmpty());
     try std.testing.expectEqualSlices([]const u8, &labels, choice.itemsValue());
     try std.testing.expectEqual(&labels[1], try choice.itemAt(1));
