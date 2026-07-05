@@ -367,6 +367,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("reservoirSampleMutPtrsInto updated scores: {any}\n", .{mutable_reservoir_into_scores});
 
     const choice = alea.seq.Choice([]const u8).init(&items).?;
+    try stdout.print("Choice.numChoices: {}\n", .{choice.numChoices()});
     var choice_engine = alea.ScalarPrng.init(0x5e11_0007);
     const choice_index = choice.sampleIndexFrom(&choice_engine);
     try stdout.print("Choice.sampleIndexFrom: {}\n", .{choice_index});

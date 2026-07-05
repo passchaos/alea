@@ -515,6 +515,7 @@ pub fn main(init: std.process.Init) !void {
 
     var choice = try alea.seq.WeightedChoice([]const u8, f64).init(allocator, &items, &float_weights);
     defer choice.deinit();
+    try stdout.print("WeightedChoice.numChoices: {}\n", .{choice.numChoices()});
     var choice_engine = alea.ScalarPrng.init(0x7155);
     const choice_index = choice.sampleIndexFrom(&choice_engine);
     try stdout.print("weighted choice sample index: {}\n", .{choice_index});
