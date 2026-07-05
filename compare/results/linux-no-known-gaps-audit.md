@@ -275,6 +275,7 @@ Local Alea evidence:
 - `compare/results/s4-m251-samplestring-aliases.md`
 - `compare/results/s4-m252-unicode-charset.md`
 - `compare/results/s4-m253-hinted-iterator-choice.md`
+- `compare/results/s4-m254-stdrng-smallrng-aliases.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -511,3 +512,7 @@ S4-M253 adds hint-sensitive iterator choice helpers
 (`compare/results/s4-m253-hinted-iterator-choice.md`), closing the local Rust
 `IteratorRandom::choose` exact-size-hint workflow while preserving Alea's
 stable reservoir iterator choice defaults for the current Linux bar.
+S4-M254 adds Rust-discoverable root `StdRng` and `SmallRng` aliases
+(`compare/results/s4-m254-stdrng-smallrng-aliases.md`), closing the local Rust
+`rand::rngs::{StdRng, SmallRng}` discovery-name gap while preserving Alea's
+existing `SecurePrng` and `Xoshiro256PlusPlus` engine contracts.

@@ -29,6 +29,8 @@ pub const ScalarPrng = Wyhash64;
 pub const HashPrng = Wyhash64;
 pub const ReproduciblePrng = Pcg64;
 pub const SecurePrng = ChaCha;
+pub const StdRng = SecurePrng;
+pub const SmallRng = Xoshiro256PlusPlus;
 
 pub fn default(seed: u64) DefaultPrng {
     return DefaultPrng.init(seed);
@@ -124,6 +126,24 @@ test "root hash constructors mirror HashPrng" {
     const seeded = hash(123);
     const direct = HashPrng.init(123);
     try std.testing.expectEqual(direct.state, seeded.state);
+}
+
+test "root Rust-discoverable rng aliases mirror concrete engines" {
+    var std_rng = StdRng.seedFromU64(0x5150_547d);
+    var secure_rng = SecurePrng.seedFromU64(0x5150_547d);
+    try std.testing.expectEqual(secure_rng.next(), std_rng.next());
+
+    var small_rng = SmallRng.seedFromU64(0x5150_51a1);
+    var xoshiro_rng = Xoshiro256PlusPlus.seedFromU64(0x5150_51a1);
+    try std.testing.expectEqual(xoshiro_rng.next(), small_rng.next());
+
+    var std_from_seed = StdRng.fromSeed(Seed.fromString("std alias"));
+    var secure_from_seed = SecurePrng.fromSeed(Seed.fromString("std alias"));
+    try std.testing.expectEqual(secure_from_seed.next(), std_from_seed.next());
+
+    var small_from_seed = SmallRng.fromSeed(Seed.fromString("small alias"));
+    var xoshiro_from_seed = Xoshiro256PlusPlus.fromSeed(Seed.fromString("small alias"));
+    try std.testing.expectEqual(xoshiro_from_seed.next(), small_from_seed.next());
 }
 
 test "root deterministic constructors have stable snapshots" {

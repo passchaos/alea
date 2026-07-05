@@ -5,7 +5,9 @@ generation, and reproducible experiments.
 
 The current Linux-first roadmap is intentionally broad:
 
-- multiple deterministic engines: `Wyhash64`, `Xoshiro256`, `Pcg64`
+- multiple deterministic engines: `Wyhash64`, `Xoshiro256`, `Pcg64`, plus
+  Rust-discoverable `StdRng` / `SmallRng` aliases for standard secure-style and
+  small fast generator discovery
 - a `ChaCha12` secure-style stream for secret-seeded randomness
 - `Rng`, a small facade with `std.Random` compatibility
 - Rust-discoverable raw aliases `nextU64()`, `nextU32()`, `fillBytes(out)`,
@@ -200,8 +202,9 @@ exposes `random()` for standard-library consumers, and `Rng.random()` returns a
 `std.Random` interface.
 
 `DefaultPrng` is `Xoshiro256`, `FastPrng` is `Alea4x64`, `ScalarPrng` and
-`HashPrng` are `Wyhash64`, `ReproduciblePrng` is `Pcg64`, and `SecurePrng` is
-`ChaCha12`. Root helpers such as `default`, `fast`, `scalar`, `hash`,
+`HashPrng` are `Wyhash64`, `ReproduciblePrng` is `Pcg64`, `SecurePrng` and
+Rust-discoverable `StdRng` are `ChaCha12`, and Rust-discoverable `SmallRng` is
+`Xoshiro256PlusPlus`. Root helpers such as `default`, `fast`, `scalar`, `hash`,
 `reproducible`, and their secure-seeded variants initialize the matching
 aliases without spelling out the concrete engine type.
 

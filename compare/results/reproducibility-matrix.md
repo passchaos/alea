@@ -18,6 +18,7 @@ is explicitly documented.
 | `Xoshiro256.next`, `jump`, `longJump`, `split` | Same stream transitions for identical seed and operation order. |
 | `Xoshiro256PlusPlus.next`, `jump` | Same stream transitions for identical seed and operation order. |
 | `Pcg64.next` / `initTwo` | Same stream for identical seed and stream id. |
+| Root engine aliases including `StdRng` and `SmallRng` | Same output as their concrete alias targets for identical seeds. Current mappings: `StdRng = SecurePrng = ChaCha12` and `SmallRng = Xoshiro256PlusPlus`. |
 | Engine `fromRng` / `fork` helpers | Same child engine stream for identical source engine stream; direct-engine `fromRng` / `fork` consume enough `u64` seed material to fill each target engine's state or key. |
 | `ChaCha.init`, `initFromU64`, `addEntropy`, `fill` | Same byte stream for identical seed/entropy operation order. |
 | `Rng.uint`, `uintLessThan`, `uintAtMost`, integer ranges | Same output for fixed engine stream, integer type, and bounds on the same integer width. |
@@ -42,7 +43,7 @@ tests so accidental compatibility drift is caught by `zig build test`.
 | Evidence | Covered contract |
 | --- | --- |
 | `src/seed.zig`: `seed derivation and byte output have stable snapshots` | `Seed.fromBytes`, `Seed.fromString`, `Seed.mix`, `Seed.stream`, `Seed.next`, `Seed.bytes` |
-| `src/root.zig`: `root deterministic constructors have stable snapshots` | Root deterministic constructors mirror engine initialization and `secureFromSeed` output |
+| `src/root.zig`: `root deterministic constructors have stable snapshots`, `root Rust-discoverable rng aliases mirror concrete engines` | Root deterministic constructors mirror engine initialization and `secureFromSeed` output; `StdRng` and `SmallRng` mirror their concrete alias targets |
 | `src/root.zig`: `engine seedFromU64 aliases mirror constructors`, `engine fromSeed aliases mirror Seed constructors`, `engine fromRng and fork aliases consume full seed material` | Rust-discoverable direct-engine seed constructor aliases and seeded child derivation helpers preserve the documented stream/consumption shape |
 | `src/engines/splitmix64.zig`: `splitmix64 next has stable snapshots` | `SplitMix64.next` |
 | `src/engines/*`: engine `fill has stable byte snapshot` tests | `Alea4x64.fill`, `Wyhash64.fill`, `Xoshiro256.fill`, `Xoshiro256PlusPlus.fill`, `Pcg64.fill`, `ChaCha.fill`; `Xoshiro256PlusPlus.fill` now uses explicit little-endian word writes so the byte-fill mapping is pointer-alignment and target-width independent |

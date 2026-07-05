@@ -21,6 +21,11 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
 - `HashPrng = Wyhash64`: compact hash-style generator.
 - `ReproduciblePrng = Pcg64`: stream-selectable reproducible generator.
 - `SecurePrng = ChaCha12`: secure-style stream for secret-seeded randomness.
+- `StdRng = SecurePrng`: Rust-discoverable standard secure-style RNG alias,
+  mirroring local Rust `rand::rngs::StdRng` discovery while preserving Alea's
+  explicit `SecurePrng` name.
+- `SmallRng = Xoshiro256PlusPlus`: Rust-discoverable small fast RNG alias,
+  matching the current local Rust 64-bit `SmallRng` family in Zig-native form.
 
 Every engine exposes `next() u64`, `fill([]u8)`, and `random() std.Random`.
 Use `alea.Rng.init(&engine)` when you want the ergonomic facade, and direct
