@@ -8246,6 +8246,12 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             try self.table.updateAt(index, input_weight);
         }
 
+        pub const Update = Table.Update;
+
+        pub fn updateMany(self: *Self, updates: []const Update) !void {
+            try self.table.updateMany(updates);
+        }
+
         pub fn updateBy(self: *Self, comptime weightFn: fn (*const T) Weight) !void {
             const input_weights = try weightsFromItems(self.table.allocator, self.items, weightFn);
             defer self.table.allocator.free(input_weights);
@@ -17293,6 +17299,66 @@ test "weighted choice updateAt refreshes one weight and preserves table on error
     defer failing_choice.deinit();
     failing.fail_index = failing.alloc_index;
     try std.testing.expectError(error.OutOfMemory, failing_choice.updateAt(0, 9));
+    try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 1), failing_choice.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), failing_choice.constantIndex());
+}
+
+test "weighted choice updateMany applies ordered partial updates atomically" {
+    const alea = @import("root.zig");
+    const labels = [_][]const u8{ "never", "rare", "often", "bonus" };
+
+    var choice = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &labels, &.{ 1, 2, 6, 3 });
+    defer choice.deinit();
+
+    try choice.updateMany(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 1, .weight = 5 },
+        .{ .index = 2, .weight = 0 },
+    });
+    try std.testing.expectEqual(@as(usize, 2), choice.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), choice.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 8), choice.totalWeight(), 1e-12);
+    var weights: [4]f64 = undefined;
+    try choice.weightsInto(&weights);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 5, 0, 3 }, &weights);
+
+    try choice.updateMany(&.{.{ .index = 1, .weight = 0 }});
+    try std.testing.expectEqual(@as(usize, 1), choice.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), choice.constantIndex());
+
+    var engine = alea.ScalarPrng.init(0x5150_0447);
+    var control = alea.ScalarPrng.init(0x5150_0447);
+    try std.testing.expect(std.mem.eql(u8, choice.sampleFrom(&engine).*, "bonus"));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, choice.updateMany(&.{.{ .index = labels.len, .weight = 1 }}));
+    try std.testing.expectError(error.InvalidParameter, choice.updateMany(&.{
+        .{ .index = 2, .weight = 1 },
+        .{ .index = 1, .weight = 1 },
+    }));
+    try std.testing.expectError(error.InvalidParameter, choice.updateMany(&.{
+        .{ .index = 1, .weight = 1 },
+        .{ .index = 1, .weight = 2 },
+    }));
+    try std.testing.expectError(error.InvalidWeight, choice.updateMany(&.{.{ .index = 3, .weight = 0 }}));
+    try std.testing.expectEqual(@as(usize, 1), choice.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), choice.constantIndex());
+
+    var float_choice = try WeightedChoice([]const u8, f64).init(std.testing.allocator, labels[0..3], &.{ 1, 2, 3 });
+    defer float_choice.deinit();
+    try std.testing.expectError(error.InvalidWeight, float_choice.updateMany(&.{.{ .index = 1, .weight = std.math.nan(f64) }}));
+    try std.testing.expectApproxEqAbs(@as(f64, 6), float_choice.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), float_choice.weight(1).?, 1e-12);
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    var failing_choice = try WeightedChoice([]const u8, u32).init(failing.allocator(), &labels, &.{ 0, 0, 0, 1 });
+    defer failing_choice.deinit();
+    failing.fail_index = failing.alloc_index;
+    try std.testing.expectError(error.OutOfMemory, failing_choice.updateMany(&.{
+        .{ .index = 0, .weight = 9 },
+        .{ .index = 3, .weight = 1 },
+    }));
     try std.testing.expect(failing.has_induced_failure);
     try std.testing.expectEqual(@as(usize, 1), failing_choice.positiveCount());
     try std.testing.expectEqual(@as(?usize, 3), failing_choice.constantIndex());

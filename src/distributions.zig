@@ -15457,6 +15457,11 @@ pub fn AliasTable(comptime Weight: type) type {
         constant_index: ?usize = null,
         allocator: std.mem.Allocator,
 
+        pub const Update = struct {
+            index: usize,
+            weight: Weight,
+        };
+
         pub const WeightIterator = struct {
             const Iterator = @This();
 
@@ -15658,6 +15663,40 @@ pub fn AliasTable(comptime Weight: type) type {
             const input_weights = try self.allocator.dupe(f64, self.weight_values);
             defer self.allocator.free(input_weights);
             input_weights[index] = value;
+
+            const next = try initFromWeights(self.allocator, input_weights);
+            self.allocator.free(self.prob);
+            self.allocator.free(self.prob_threshold);
+            self.allocator.free(self.alias);
+            self.allocator.free(self.weight_values);
+            self.prob = next.prob;
+            self.prob_threshold = next.prob_threshold;
+            self.alias = next.alias;
+            self.weight_values = next.weight_values;
+            self.total = next.total;
+            self.positive_count = next.positive_count;
+            self.constant_index = next.constant_index;
+        }
+
+        pub fn updateMany(self: *Self, updates: []const Update) !void {
+            if (updates.len == 0) return;
+
+            var next_total = self.total;
+            var previous_index: ?usize = null;
+            for (updates) |item| {
+                if (item.index >= self.prob.len) return error.InvalidParameter;
+                if (previous_index) |previous| {
+                    if (previous >= item.index) return error.InvalidParameter;
+                }
+                const value = try weightToF64(item.weight);
+                next_total = next_total - self.weight_values[item.index] + value;
+                previous_index = item.index;
+            }
+            if (!(next_total > 0) or !std.math.isFinite(next_total)) return error.InvalidWeight;
+
+            const input_weights = try self.allocator.dupe(f64, self.weight_values);
+            defer self.allocator.free(input_weights);
+            for (updates) |item| input_weights[item.index] = try weightToF64(item.weight);
 
             const next = try initFromWeights(self.allocator, input_weights);
             self.allocator.free(self.prob);
@@ -19055,6 +19094,75 @@ test "alias table updateAt allocation failure preserves table" {
 
     var engine = alea.ScalarPrng.init(0x5150_a139);
     var control = alea.ScalarPrng.init(0x5150_a139);
+    try std.testing.expectEqual(@as(usize, 2), table.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "alias table updateMany applies ordered partial updates atomically" {
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    try table.updateMany(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 1, .weight = 4 },
+        .{ .index = 2, .weight = 0 },
+    });
+    try std.testing.expectEqual(@as(usize, 2), table.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), table.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 7), table.totalWeight(), 1e-12);
+    var weights: [4]f64 = undefined;
+    try table.weightsInto(&weights);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 4, 0, 3 }, &weights);
+
+    try table.updateMany(&.{.{ .index = 1, .weight = 0 }});
+    try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), table.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 3), table.totalWeight(), 1e-12);
+
+    try table.updateMany(&.{});
+    try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), table.constantIndex());
+
+    try std.testing.expectError(error.InvalidParameter, table.updateMany(&.{.{ .index = 4, .weight = 1 }}));
+    try std.testing.expectError(error.InvalidParameter, table.updateMany(&.{
+        .{ .index = 2, .weight = 1 },
+        .{ .index = 1, .weight = 1 },
+    }));
+    try std.testing.expectError(error.InvalidParameter, table.updateMany(&.{
+        .{ .index = 1, .weight = 1 },
+        .{ .index = 1, .weight = 2 },
+    }));
+    try std.testing.expectError(error.InvalidWeight, table.updateMany(&.{.{ .index = 3, .weight = 0 }}));
+    try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), table.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 3), table.totalWeight(), 1e-12);
+
+    var float_table = try AliasTable(f64).init(std.testing.allocator, &.{ 1, 2, 3 });
+    defer float_table.deinit();
+    try std.testing.expectError(error.InvalidWeight, float_table.updateMany(&.{.{ .index = 1, .weight = std.math.nan(f64) }}));
+    try std.testing.expectApproxEqAbs(@as(f64, 6), float_table.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), float_table.weight(1).?, 1e-12);
+}
+
+test "alias table updateMany allocation failure preserves table" {
+    const alea = @import("root.zig");
+
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    var table = try AliasTable(u32).init(failing.allocator(), &.{ 0, 0, 1 });
+    defer table.deinit();
+
+    failing.fail_index = failing.alloc_index;
+    try std.testing.expectError(error.OutOfMemory, table.updateMany(&.{
+        .{ .index = 0, .weight = 9 },
+        .{ .index = 2, .weight = 1 },
+    }));
+    try std.testing.expect(failing.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 2), table.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 1), table.totalWeight(), 1e-12);
+
+    var engine = alea.ScalarPrng.init(0x5150_a13a);
+    var control = alea.ScalarPrng.init(0x5150_a13a);
     try std.testing.expectEqual(@as(usize, 2), table.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 }
