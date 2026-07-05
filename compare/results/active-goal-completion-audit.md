@@ -294,7 +294,8 @@ complete.
 | S4-M271 distribution weighted error aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m271-weighted-error-aliases.md` | Closed for the current bar: `distributions.WeightError` and `distributions.WeightedError` now expose local Rust `rand::distr::weighted::Error` discovery naming over Alea's existing weighted-sampling error set. |
 | S4-M272 Uniform backend discovery aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m272-uniform-backend-aliases.md` | Closed for the current bar: `distributions.UniformInt(T)`, `UniformFloat(T)`, and `UniformUsize` now expose local Rust uniform backend discovery names while aliasing Alea's existing `Uniform(T)` sampler. |
 | S4-M273 distribution slice namespace aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m273-slice-namespace-aliases.md` | Closed for the current bar: `distributions.slice.Choose(T)` and `distributions.slice.Empty` now expose local Rust `rand::distr::slice::{Choose, Empty}` discovery naming while preserving Alea's existing `Choose(T)` sampler and error contract. |
-| S4-M274 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M274 UniformChar discovery alias | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m274-uniform-char-alias.md` | Closed for the current bar: `distributions.UniformChar` now exposes local Rust `rand::distr::uniform::UniformChar` discovery naming while aliasing Alea's existing `UniformUnicodeScalar` reusable `u21` scalar sampler. |
+| S4-M275 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -375,6 +376,9 @@ complete the long-term objective.
 S4-M273 additionally adds distribution slice namespace aliases; it is another
 closed local Rust discovery-name side gap and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M274 additionally adds a UniformChar discovery alias; it is another closed
+local Rust discovery-name side gap and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

@@ -2511,6 +2511,8 @@ pub fn UniformFloat(comptime T: type) type {
 
 pub const UniformUsize = Uniform(usize);
 
+pub const UniformChar = UniformUnicodeScalar;
+
 pub const UniformDuration = struct {
     const Self = @This();
 
@@ -31085,6 +31087,32 @@ test "UniformInt Float Usize aliases mirror Uniform" {
         usize_sampler.sampleFrom(&usize_alias_engine),
     );
     try std.testing.expectEqual(usize_uniform_engine.next(), usize_alias_engine.next());
+}
+
+test "UniformChar alias mirrors UniformUnicodeScalar" {
+    comptime std.debug.assert(UniformChar == UniformUnicodeScalar);
+
+    const alias_sampler = try UniformChar.new('A', 'Z');
+    const unicode_sampler = try UniformUnicodeScalar.new('A', 'Z');
+    try std.testing.expectEqual(alias_sampler.lowValue(), unicode_sampler.lowValue());
+    try std.testing.expectEqual(alias_sampler.highValue(), unicode_sampler.highValue());
+    try std.testing.expectEqual(alias_sampler.isInclusive(), unicode_sampler.isInclusive());
+
+    var alias_engine = @import("root.zig").DefaultPrng.init(0x51_4d_274);
+    var unicode_engine = @import("root.zig").DefaultPrng.init(0x51_4d_274);
+    try std.testing.expectEqual(unicode_sampler.sampleFrom(&unicode_engine), alias_sampler.sampleFrom(&alias_engine));
+    try std.testing.expectEqual(unicode_engine.next(), alias_engine.next());
+
+    var alias_buf: [6]u21 = undefined;
+    var unicode_buf: [6]u21 = undefined;
+    var alias_fill_engine = @import("root.zig").DefaultPrng.init(0x51_4d_275);
+    var unicode_fill_engine = @import("root.zig").DefaultPrng.init(0x51_4d_275);
+    alias_sampler.fillFrom(&alias_fill_engine, &alias_buf);
+    unicode_sampler.fillFrom(&unicode_fill_engine, &unicode_buf);
+    try std.testing.expectEqualSlices(u21, &unicode_buf, &alias_buf);
+    try std.testing.expectEqual(unicode_fill_engine.next(), alias_fill_engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, UniformChar.new(0xD800, 0xE000));
 }
 
 test "distribution slice aliases mirror Choose and Empty errors" {

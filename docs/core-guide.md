@@ -873,7 +873,8 @@ charset diagnostics remain on `ascii.Charset`. Use
 `UnicodeCharset.sampleStringFrom`, `UnicodeCharset.appendStringFrom`,
 `UnicodeCharset.maxUtf8Len` / `utf8Capacity`, Unicode charset diagnostics,
 `distributions.UniformUnicodeScalar` for reusable Rust `UniformChar`-style
-bounded `u21` Unicode scalar sampling,
+bounded `u21` Unicode scalar sampling, `distributions.UniformChar` as a
+discovery alias for local Rust `rand::distr::uniform::UniformChar`,
 `unicodeScalarFrom`,
 `unicodeScalarRangeLessThanFrom`, `unicodeScalarRangeAtMostFrom`,
 `fillUnicodeScalarFrom`, `fillUnicodeScalarRangeLessThanFrom`,

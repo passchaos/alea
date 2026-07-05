@@ -603,3 +603,7 @@ S4-M273 adds `distributions.slice.Choose(T)` and `distributions.slice.Empty`
 (`compare/results/s4-m273-slice-namespace-aliases.md`), closing the local Rust
 `rand::distr::slice::{Choose, Empty}` namespace discovery gap while preserving
 Alea's existing `Choose(T)` sampler and distribution error contract.
+S4-M274 adds `distributions.UniformChar`
+(`compare/results/s4-m274-uniform-char-alias.md`), closing the local Rust
+`rand::distr::uniform::UniformChar` discovery-name gap while preserving Alea's
+existing `UniformUnicodeScalar` reusable `u21` scalar sampler.
