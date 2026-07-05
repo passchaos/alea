@@ -15452,6 +15452,7 @@ pub fn AliasTable(comptime Weight: type) type {
         prob_threshold: []u64,
         alias: []usize,
         total: f64,
+        positive_count: usize = 0,
         constant_index: ?usize = null,
         allocator: std.mem.Allocator,
 
@@ -15598,6 +15599,7 @@ pub fn AliasTable(comptime Weight: type) type {
                 .prob_threshold = prob_threshold,
                 .alias = alias,
                 .total = total,
+                .positive_count = positive_count,
                 .constant_index = if (positive_count == 1) positive_index else null,
                 .allocator = allocator,
             };
@@ -15642,6 +15644,7 @@ pub fn AliasTable(comptime Weight: type) type {
             self.prob_threshold = next.prob_threshold;
             self.alias = next.alias;
             self.total = next.total;
+            self.positive_count = next.positive_count;
             self.constant_index = next.constant_index;
         }
 
@@ -15677,6 +15680,10 @@ pub fn AliasTable(comptime Weight: type) type {
 
         pub fn totalWeight(self: Self) f64 {
             return self.total;
+        }
+
+        pub fn positiveCount(self: Self) usize {
+            return self.positive_count;
         }
 
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]f64 {
@@ -18708,6 +18715,7 @@ test "alias table index accessors initialize and update tables" {
     try std.testing.expect(saw_two);
 
     try table.updateByIndex(IndexWeight.updated);
+    try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
     try std.testing.expectEqual(@as(?usize, 1), table.constantIndex());
     try std.testing.expectApproxEqAbs(@as(f64, 9), table.totalWeight(), 1e-12);
     try std.testing.expectEqual(@as(usize, 1), table.sampleFrom(&engine));
@@ -18716,6 +18724,7 @@ test "alias table index accessors initialize and update tables" {
     var float_table = try AliasTable(f64).initByIndex(std.testing.allocator, 4, IndexWeight.floatWeight);
     defer float_table.deinit();
     try std.testing.expectError(error.InvalidWeight, float_table.updateByIndex(IndexWeight.invalid));
+    try std.testing.expectEqual(@as(usize, 3), float_table.positiveCount());
     try std.testing.expectApproxEqAbs(@as(f64, 9), float_table.totalWeight(), 1e-12);
     try std.testing.expectEqual(@as(?usize, 1), table.constantIndex());
     try std.testing.expectEqual(@as(usize, 1), table.sampleFrom(&engine));
@@ -18775,6 +18784,7 @@ test "alias table item accessors initialize and update tables" {
     try std.testing.expect(saw_often);
 
     try table.updateBy(Entry, &entries, Entry.updated);
+    try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
     try std.testing.expectEqual(@as(?usize, 1), table.constantIndex());
     try std.testing.expectApproxEqAbs(@as(f64, 9), table.totalWeight(), 1e-12);
     try std.testing.expectEqual(@as(usize, 1), table.sampleFrom(&engine));
@@ -18783,6 +18793,7 @@ test "alias table item accessors initialize and update tables" {
     var float_table = try AliasTable(f64).initBy(std.testing.allocator, Entry, &entries, Entry.floatWeight);
     defer float_table.deinit();
     try std.testing.expectError(error.InvalidWeight, float_table.updateBy(Entry, &entries, Entry.invalid));
+    try std.testing.expectEqual(@as(usize, 3), float_table.positiveCount());
     try std.testing.expectApproxEqAbs(@as(f64, 9), float_table.totalWeight(), 1e-12);
     try std.testing.expectError(error.InvalidParameter, table.updateBy(Entry, entries[0..3], Entry.updated));
     try std.testing.expectEqual(@as(?usize, 1), table.constantIndex());
@@ -18798,6 +18809,7 @@ test "alias table exposes totals and reconstructs weights" {
 
     try std.testing.expectEqual(@as(usize, 4), table.len());
     try std.testing.expectEqual(@as(usize, 4), table.numChoices());
+    try std.testing.expectEqual(@as(usize, 3), table.positiveCount());
     try std.testing.expect(!table.isEmpty());
     try std.testing.expectApproxEqAbs(@as(f64, 9), table.totalWeight(), 1e-12);
 
@@ -18891,6 +18903,7 @@ test "alias table exposes totals and reconstructs weights" {
 
     try table.update(&.{ 0, 10, 0, 0 });
     try std.testing.expectEqual(@as(usize, 4), table.len());
+    try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
     try std.testing.expectApproxEqAbs(@as(f64, 10), table.totalWeight(), 1e-12);
     try table.weightsInto(&stack_weights);
     try std.testing.expectApproxEqAbs(@as(f64, 0), stack_weights[0], 1e-12);

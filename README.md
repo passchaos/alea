@@ -34,7 +34,7 @@ The current Linux-first roadmap is intentionally broad:
   replacement, fixed-size and caller-owned/sample-fill iterator sampling, allocated/caller-owned value and pointer reservoir sampling, adaptive, repeated, and caller-owned usize/u32 index sampling, and checked
   variants for fallible user-supplied counts or empty inputs
 - reusable uniform, Bernoulli, non-uniform distribution, opt-in bounded f32
-  LogNormal approximation, and alias-table samplers with numChoices, compact `u32` index
+  LogNormal approximation, and alias-table samplers with numChoices, positiveCount, compact `u32` index
   output, `sampleIndex` / `fillIndices` aliases, and owned repeated index
   batches, fixed-size index arrays, iterators, plus item- and index-accessor
   construction/update

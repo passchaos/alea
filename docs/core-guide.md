@@ -605,7 +605,7 @@ Use:
   `seq.chooseWeightedIterByIndexFrom` owned repeated pointer streams for Rust
   `choose_weighted_iter`-style workflows
 - `distributions.AliasTable` for O(1) repeated weighted index sampling,
-  including `len`, `numChoices`, `totalWeight`, and allocation-returning or caller-buffer
+  including `len`, `numChoices`, `positiveCount`, `totalWeight`, and allocation-returning or caller-buffer
   optional `weight` / `probability`, lazy `weightIter` / `probabilityIter` size hints, `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
   sampler introspection; use `sampleU32` / `fillU32` variants when population
   indexes fit `u32` and compact output is desired, and `indices` /

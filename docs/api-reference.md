@@ -2363,6 +2363,7 @@ Alias helpers:
 - `AliasTable.numChoices`
 - `AliasTable.isEmpty`
 - `AliasTable.totalWeight`
+- `AliasTable.positiveCount`
 - `AliasTable.weights`
 - `AliasTable.weightsInto`
 - `AliasTable.probabilities`
