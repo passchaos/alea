@@ -92,7 +92,8 @@ pub fn main(init: std.process.Init) !void {
     const iter0 = consuming_iter.next().?;
     const iter1 = consuming_iter.next().?;
     const iter2 = consuming_iter.next().?;
-    try stdout.print("IndexVec.intoIter: {}, {}, {}; remaining={}\n", .{ iter0, iter1, iter2, consuming_iter.remaining() });
+    const consuming_iter_hint = consuming_iter.sizeHint();
+    try stdout.print("IndexVec.intoIter: {}, {}, {}; remaining={} len={} sizeHint={}..{}\n", .{ iter0, iter1, iter2, consuming_iter.remaining(), consuming_iter.len(), consuming_iter_hint.lower, consuming_iter_hint.upper.? });
     const adopted_native_backing = try allocator.dupe(usize, &.{ 0, 2, 4 });
     const adopted_native_index_vec = alea.seq.IndexVec.fromOwnedSlice(adopted_native_backing);
     defer adopted_native_index_vec.deinit(allocator);
@@ -223,7 +224,8 @@ pub fn main(init: std.process.Init) !void {
     defer sampled_items_iter.deinit();
     var sampled_items_iter_fill: [3][]const u8 = undefined;
     _ = sampled_items_iter.fill(&sampled_items_iter_fill);
-    try stdout.print("sampleItemsIter.fill items: {s}, {s}, {s}; remaining={} len={}\n", .{ sampled_items_iter_fill[0], sampled_items_iter_fill[1], sampled_items_iter_fill[2], sampled_items_iter.remaining(), sampled_items_iter.len() });
+    const sampled_items_iter_hint = sampled_items_iter.sizeHint();
+    try stdout.print("sampleItemsIter.fill items: {s}, {s}, {s}; remaining={} len={} sizeHint={}..{}\n", .{ sampled_items_iter_fill[0], sampled_items_iter_fill[1], sampled_items_iter_fill[2], sampled_items_iter.remaining(), sampled_items_iter.len(), sampled_items_iter_hint.lower, sampled_items_iter_hint.upper.? });
 
     var choose_into_engine = alea.ScalarPrng.init(0x5e11_0011);
     var chosen_into: [3][]const u8 = undefined;

@@ -2574,7 +2574,7 @@ Dynamic weighted helpers:
 
 ## Sequence Sampling
 
-- Error type: `Error`
+- Error type: `Error`; exact-size iterator hint: `SizeHint`
 - Index vectors: `IndexVec.fromOwnedSlice`, `IndexVec.fromOwnedU32Slice`,
   `IndexVec.clone`, `IndexVec.len`, `IndexVec.isEmpty`, `IndexVec.at`,
   `IndexVec.indexOf`, `IndexVec.contains`, `IndexVec.eql`, `IndexVec.validateItems`,
@@ -2591,12 +2591,15 @@ Dynamic weighted helpers:
   `IndexVec.mutPtrsOwnedChecked`,
   `IndexVec.intoIter`, `IndexVec.IntoIterator.next`,
   `IndexVec.IntoIterator.remaining`, `IndexVec.IntoIterator.len`,
-  `IndexVec.IntoIterator.deinit`, `IndexVec.iter`, `IndexVec.Iterator.next`,
-  `IndexVec.Iterator.remaining`, `IndexVec.Iterator.len`,
-  `IndexVec.ValueIterator.remaining`, `IndexVec.ValueIterator.len`,
+  `IndexVec.IntoIterator.sizeHint`, `IndexVec.IntoIterator.deinit`,
+  `IndexVec.iter`, `IndexVec.Iterator.next`, `IndexVec.Iterator.remaining`,
+  `IndexVec.Iterator.len`, `IndexVec.Iterator.sizeHint`,
+  `IndexVec.ValueIterator.next`, `IndexVec.ValueIterator.remaining`,
+  `IndexVec.ValueIterator.len`, `IndexVec.ValueIterator.sizeHint`,
   `PtrIterator`, `PtrIterator.next`, `PtrIterator.remaining`,
-  `PtrIterator.len`, `MutPtrIterator`, `MutPtrIterator.next`,
-  `MutPtrIterator.remaining`, `MutPtrIterator.len`, `IndexVec.deinit`
+  `PtrIterator.len`, `PtrIterator.sizeHint`, `MutPtrIterator`,
+  `MutPtrIterator.next`, `MutPtrIterator.remaining`, `MutPtrIterator.len`,
+  `MutPtrIterator.sizeHint`, `IndexVec.deinit`
 - Indices: `sampleIndexVec`, `sampleIndexVecFrom`, `sampleIndices`,
   `sampleIndexVecCheckedFrom`, `sampleIndicesFrom`, `sampleIndicesCheckedFrom`,
   `sampleIndicesInto`, `sampleIndicesIntoFrom`, `sampleIndicesIntoChecked`,
@@ -2651,7 +2654,8 @@ Dynamic weighted helpers:
   `sampleItemsIterChecked`, `sampleItemsIterCheckedFrom`,
   `SampledValueIterator`, `SampledValueIterator.next`,
   `SampledValueIterator.remaining`, `SampledValueIterator.len`,
-  `SampledValueIterator.fill`, `SampledValueIterator.deinit`,
+  `SampledValueIterator.sizeHint`, `SampledValueIterator.fill`,
+  `SampledValueIterator.deinit`,
   `chooseMultiplePtrs`, `chooseMultiplePtrsFrom`,
   `chooseMultiplePtrsChecked`, `chooseMultiplePtrsCheckedFrom`,
   `samplePtrs`, `samplePtrsFrom`, `samplePtrsChecked`,
@@ -2659,7 +2663,8 @@ Dynamic weighted helpers:
   `samplePtrsIterChecked`, `samplePtrsIterCheckedFrom`,
   `SampledPtrIterator`, `SampledPtrIterator.next`,
   `SampledPtrIterator.remaining`, `SampledPtrIterator.len`,
-  `SampledPtrIterator.fill`, `SampledPtrIterator.deinit`,
+  `SampledPtrIterator.sizeHint`, `SampledPtrIterator.fill`,
+  `SampledPtrIterator.deinit`,
   `chooseMultipleMutPtrs`, `chooseMultipleMutPtrsFrom`,
   `chooseMultipleMutPtrsChecked`, `chooseMultipleMutPtrsCheckedFrom`,
   `sampleMutPtrs`, `sampleMutPtrsFrom`, `sampleMutPtrsChecked`,
@@ -2667,7 +2672,8 @@ Dynamic weighted helpers:
   `sampleMutPtrsIterChecked`, `sampleMutPtrsIterCheckedFrom`,
   `SampledMutPtrIterator`, `SampledMutPtrIterator.next`,
   `SampledMutPtrIterator.remaining`, `SampledMutPtrIterator.len`,
-  `SampledMutPtrIterator.fill`, `SampledMutPtrIterator.deinit`, `chooseMultipleInto`,
+  `SampledMutPtrIterator.sizeHint`, `SampledMutPtrIterator.fill`,
+  `SampledMutPtrIterator.deinit`, `chooseMultipleInto`,
   `chooseMultipleIntoFrom`, `chooseMultipleIntoChecked`,
   `chooseMultipleIntoCheckedFrom`, `sampleItemsInto`,
   `sampleItemsIntoFrom`, `sampleItemsIntoChecked`,

@@ -303,8 +303,9 @@ Use:
   representation-preserving deep `clone`, `len`, `isEmpty`, `at`,
   representation-independent `eql`, `copyInto`, `copyIntoU32`,
   `toOwnedSlice`, `toOwnedU32Slice`, consuming `intoOwnedSlice` /
-  `intoOwnedU32Slice`, a consuming `intoIter` with `remaining` / `deinit`, and
-  an exact-size `iter` with `remaining`, plus
+  `intoOwnedU32Slice`, a consuming `intoIter` with `remaining` / `len` /
+  `sizeHint` / `deinit`, and exact-size `iter` / mapped item iterators with
+  `remaining` / `len` / `sizeHint`, plus
   `values` / `ptrs` / `mutPtrs`, `valuesInto` / `ptrsInto` /
   `mutPtrsInto`, `valuesOwned` / `ptrsOwned` / `mutPtrsOwned`, and checked
   variants for mapping indexes back to slice items
@@ -339,7 +340,10 @@ Use:
   `seq.chooseMultiplePtrsCheckedFrom`, `seq.samplePtrsFrom` /
   `seq.samplePtrsCheckedFrom`, `seq.chooseMultipleMutPtrsFrom`,
   `seq.chooseMultipleMutPtrsCheckedFrom`, `seq.sampleMutPtrsFrom` /
-  `seq.sampleMutPtrsCheckedFrom`, `seq.chooseMultipleIntoFrom`,
+  `seq.sampleMutPtrsCheckedFrom`, owned sampled iterator forms
+  `seq.sampleItemsIterFrom` / `seq.samplePtrsIterFrom` /
+  `seq.sampleMutPtrsIterFrom` expose exact `remaining` / `len` / `sizeHint`
+  diagnostics plus caller-buffer `fill`, `seq.chooseMultipleIntoFrom`,
   `seq.chooseMultipleIntoCheckedFrom`, `seq.sampleItemsIntoFrom` /
   `seq.sampleItemsIntoCheckedFrom`, `seq.chooseMultiplePtrsIntoFrom`,
   `seq.chooseMultiplePtrsIntoCheckedFrom`, `seq.samplePtrsIntoFrom` /

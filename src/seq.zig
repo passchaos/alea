@@ -2,6 +2,11 @@ const std = @import("std");
 const Rng = @import("rng.zig");
 const distributions = @import("distributions.zig");
 
+pub const SizeHint = struct {
+    lower: usize,
+    upper: ?usize,
+};
+
 pub const IndexVec = union(enum) {
     u32: []u32,
     usize: []usize,
@@ -41,6 +46,11 @@ pub const IndexVec = union(enum) {
             return self.remaining();
         }
 
+        pub fn sizeHint(self: IntoIterator) SizeHint {
+            const length = self.remaining();
+            return .{ .lower = length, .upper = length };
+        }
+
         pub fn deinit(self: IntoIterator) void {
             self.index_vec.deinit(self.allocator);
         }
@@ -64,6 +74,11 @@ pub const IndexVec = union(enum) {
         pub fn len(self: Iterator) usize {
             return self.remaining();
         }
+
+        pub fn sizeHint(self: Iterator) SizeHint {
+            const length = self.remaining();
+            return .{ .lower = length, .upper = length };
+        }
     };
 
     pub fn ValueIterator(comptime T: type) type {
@@ -82,6 +97,10 @@ pub const IndexVec = union(enum) {
 
             pub fn len(self: @This()) usize {
                 return self.remaining();
+            }
+
+            pub fn sizeHint(self: @This()) SizeHint {
+                return self.index_iter.sizeHint();
             }
         };
     }
@@ -103,6 +122,10 @@ pub const IndexVec = union(enum) {
             pub fn len(self: @This()) usize {
                 return self.remaining();
             }
+
+            pub fn sizeHint(self: @This()) SizeHint {
+                return self.index_iter.sizeHint();
+            }
         };
     }
 
@@ -122,6 +145,10 @@ pub const IndexVec = union(enum) {
 
             pub fn len(self: @This()) usize {
                 return self.remaining();
+            }
+
+            pub fn sizeHint(self: @This()) SizeHint {
+                return self.index_iter.sizeHint();
             }
         };
     }
@@ -403,6 +430,10 @@ pub fn SampledPtrIterator(comptime T: type) type {
             return self.remaining();
         }
 
+        pub fn sizeHint(self: Self) SizeHint {
+            return self.index_iter.sizeHint();
+        }
+
         pub fn fill(self: *Self, dest: []*const T) usize {
             const count = @min(dest.len, self.remaining());
             for (dest[0..count]) |*slot| slot.* = self.next().?;
@@ -435,6 +466,10 @@ pub fn SampledMutPtrIterator(comptime T: type) type {
             return self.remaining();
         }
 
+        pub fn sizeHint(self: Self) SizeHint {
+            return self.index_iter.sizeHint();
+        }
+
         pub fn fill(self: *Self, dest: []*T) usize {
             const count = @min(dest.len, self.remaining());
             for (dest[0..count]) |*slot| slot.* = self.next().?;
@@ -465,6 +500,10 @@ pub fn SampledValueIterator(comptime T: type) type {
 
         pub fn len(self: Self) usize {
             return self.remaining();
+        }
+
+        pub fn sizeHint(self: Self) SizeHint {
+            return self.index_iter.sizeHint();
         }
 
         pub fn fill(self: *Self, dest: []T) usize {
@@ -9349,6 +9388,11 @@ const U32Set = struct {
     }
 };
 
+fn expectExactSizeHint(hint: SizeHint, expected: usize) !void {
+    try std.testing.expectEqual(expected, hint.lower);
+    try std.testing.expectEqual(@as(?usize, expected), hint.upper);
+}
+
 test "sample indices are distinct and bounded" {
     const alea = @import("root.zig");
     var engine = alea.DefaultPrng.init(333);
@@ -9413,10 +9457,12 @@ test "portable index sampling has stable snapshots" {
     var iter = index_vec.iter();
     try std.testing.expectEqual(@as(usize, expected.len), iter.remaining());
     try std.testing.expectEqual(@as(usize, expected.len), iter.len());
+    try expectExactSizeHint(iter.sizeHint(), expected.len);
     for (expected, 0..) |value, i| {
         try std.testing.expectEqual(value, iter.next().?);
         try std.testing.expectEqual(expected.len - i - 1, iter.remaining());
         try std.testing.expectEqual(expected.len - i - 1, iter.len());
+        try expectExactSizeHint(iter.sizeHint(), expected.len - i - 1);
     }
     try std.testing.expectEqual(@as(?usize, null), iter.next());
     var copied: [8]usize = undefined;
@@ -9574,12 +9620,15 @@ test "index vec consuming iterator owns backing" {
     defer compact_iter.deinit();
     try std.testing.expectEqual(@as(usize, 3), compact_iter.remaining());
     try std.testing.expectEqual(@as(usize, 3), compact_iter.len());
+    try expectExactSizeHint(compact_iter.sizeHint(), 3);
     try std.testing.expectEqual(@as(?usize, 3), compact_iter.next());
     try std.testing.expectEqual(@as(usize, 2), compact_iter.remaining());
     try std.testing.expectEqual(@as(usize, 2), compact_iter.len());
+    try expectExactSizeHint(compact_iter.sizeHint(), 2);
     try std.testing.expectEqual(@as(?usize, 5), compact_iter.next());
     try std.testing.expectEqual(@as(?usize, 8), compact_iter.next());
     try std.testing.expectEqual(@as(usize, 0), compact_iter.remaining());
+    try expectExactSizeHint(compact_iter.sizeHint(), 0);
     try std.testing.expectEqual(@as(?usize, null), compact_iter.next());
 
     const native_backing = try std.testing.allocator.alloc(usize, 2);
@@ -9656,7 +9705,9 @@ test "index vec maps sampled indexes to slice items" {
     var values = index_vec.values([]const u8, &labels);
     try std.testing.expectEqual(@as(usize, 3), values.remaining());
     try std.testing.expectEqual(@as(usize, 3), values.len());
+    try expectExactSizeHint(values.sizeHint(), 3);
     try std.testing.expectEqualStrings("eel", values.next().?);
+    try expectExactSizeHint(values.sizeHint(), 2);
     try std.testing.expectEqualStrings("bee", values.next().?);
     try std.testing.expectEqualStrings("fox", values.next().?);
     try std.testing.expectEqual(@as(?[]const u8, null), values.next());
@@ -9664,8 +9715,10 @@ test "index vec maps sampled indexes to slice items" {
     var ptrs = try index_vec.ptrsChecked([]const u8, &labels);
     try std.testing.expectEqual(@as(usize, 3), ptrs.remaining());
     try std.testing.expectEqual(@as(usize, 3), ptrs.len());
+    try expectExactSizeHint(ptrs.sizeHint(), 3);
     try std.testing.expectEqualStrings("eel", ptrs.next().?.*);
     try std.testing.expectEqual(@as(usize, 2), ptrs.len());
+    try expectExactSizeHint(ptrs.sizeHint(), 2);
     try std.testing.expectEqualStrings("bee", ptrs.next().?.*);
     try std.testing.expectEqualStrings("fox", ptrs.next().?.*);
     try std.testing.expectEqual(@as(?*const []const u8, null), ptrs.next());
@@ -9723,8 +9776,10 @@ test "index vec maps sampled indexes to slice items" {
     var mut_ptrs = try index_vec.mutPtrsChecked(u8, &numbers);
     try std.testing.expectEqual(@as(usize, 3), mut_ptrs.remaining());
     try std.testing.expectEqual(@as(usize, 3), mut_ptrs.len());
+    try expectExactSizeHint(mut_ptrs.sizeHint(), 3);
     mut_ptrs.next().?.* += 1;
     try std.testing.expectEqual(@as(usize, 2), mut_ptrs.len());
+    try expectExactSizeHint(mut_ptrs.sizeHint(), 2);
     mut_ptrs.next().?.* += 2;
     mut_ptrs.next().?.* += 3;
     try std.testing.expectEqual(@as(?*u8, null), mut_ptrs.next());
@@ -12091,6 +12146,7 @@ test "sampleItemsIter owns sampled indices and streams values" {
     defer optional_iter.deinit();
     try std.testing.expectEqual(@as(usize, 3), optional_iter.remaining());
     try std.testing.expectEqual(@as(usize, 3), optional_iter.len());
+    try expectExactSizeHint(optional_iter.sizeHint(), 3);
     var seen = [_]bool{false} ** items.len;
     var count: usize = 0;
     while (optional_iter.next()) |value| : (count += 1) {
@@ -12101,6 +12157,7 @@ test "sampleItemsIter owns sampled indices and streams values" {
     try std.testing.expectEqual(@as(usize, 3), count);
     try std.testing.expectEqual(@as(usize, 0), optional_iter.remaining());
     try std.testing.expectEqual(@as(usize, 0), optional_iter.len());
+    try expectExactSizeHint(optional_iter.sizeHint(), 0);
 
     var fill_engine = alea.ScalarPrng.init(0x5150_c316);
     var fill_iter = try sampleItemsIterFrom(std.testing.allocator, &fill_engine, u8, &items, 4);
@@ -12109,10 +12166,12 @@ test "sampleItemsIter owns sampled indices and streams values" {
     try std.testing.expectEqual(@as(usize, 3), fill_iter.fill(&fill_out));
     try std.testing.expectEqual(@as(usize, 1), fill_iter.remaining());
     try std.testing.expectEqual(@as(usize, 1), fill_iter.len());
+    try expectExactSizeHint(fill_iter.sizeHint(), 1);
     var fill_tail: [3]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 1), fill_iter.fill(&fill_tail));
     try std.testing.expectEqual(@as(usize, 0), fill_iter.remaining());
     try std.testing.expectEqual(@as(usize, 0), fill_iter.len());
+    try expectExactSizeHint(fill_iter.sizeHint(), 0);
 
     var checked_engine = alea.ScalarPrng.init(0x5150_c30d);
     var checked_iter = try sampleItemsIterCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 5);
@@ -12164,6 +12223,7 @@ test "samplePtrsIter owns sampled indices and streams pointers" {
     defer optional_iter.deinit();
     try std.testing.expectEqual(@as(usize, 3), optional_iter.remaining());
     try std.testing.expectEqual(@as(usize, 3), optional_iter.len());
+    try expectExactSizeHint(optional_iter.sizeHint(), 3);
     var seen = [_]bool{false} ** items.len;
     var count: usize = 0;
     while (optional_iter.next()) |ptr| : (count += 1) {
@@ -12176,6 +12236,7 @@ test "samplePtrsIter owns sampled indices and streams pointers" {
     try std.testing.expectEqual(@as(usize, 3), count);
     try std.testing.expectEqual(@as(usize, 0), optional_iter.remaining());
     try std.testing.expectEqual(@as(usize, 0), optional_iter.len());
+    try expectExactSizeHint(optional_iter.sizeHint(), 0);
 
     var fill_engine = alea.ScalarPrng.init(0x5150_c317);
     var fill_iter = try samplePtrsIterFrom(std.testing.allocator, &fill_engine, u8, &items, 4);
@@ -12184,10 +12245,12 @@ test "samplePtrsIter owns sampled indices and streams pointers" {
     try std.testing.expectEqual(@as(usize, 3), fill_iter.fill(&fill_out));
     try std.testing.expectEqual(@as(usize, 1), fill_iter.remaining());
     try std.testing.expectEqual(@as(usize, 1), fill_iter.len());
+    try expectExactSizeHint(fill_iter.sizeHint(), 1);
     var fill_tail: [3]*const u8 = undefined;
     try std.testing.expectEqual(@as(usize, 1), fill_iter.fill(&fill_tail));
     try std.testing.expectEqual(@as(usize, 0), fill_iter.remaining());
     try std.testing.expectEqual(@as(usize, 0), fill_iter.len());
+    try expectExactSizeHint(fill_iter.sizeHint(), 0);
 
     var checked_engine = alea.ScalarPrng.init(0x5150_c308);
     var checked_iter = try samplePtrsIterCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 5);
@@ -12246,6 +12309,7 @@ test "sampleMutPtrsIter owns sampled indices and streams mutable pointers" {
     defer optional_iter.deinit();
     try std.testing.expectEqual(@as(usize, 3), optional_iter.remaining());
     try std.testing.expectEqual(@as(usize, 3), optional_iter.len());
+    try expectExactSizeHint(optional_iter.sizeHint(), 3);
     var changed = [_]bool{false} ** items.len;
     var count: usize = 0;
     while (optional_iter.next()) |ptr| : (count += 1) {
@@ -12261,6 +12325,7 @@ test "sampleMutPtrsIter owns sampled indices and streams mutable pointers" {
         if (was_changed) expected[index] += 1;
     }
     try std.testing.expectEqualSlices(u8, &expected, &items);
+    try expectExactSizeHint(optional_iter.sizeHint(), 0);
 
     var fill_items = original;
     var fill_engine = alea.ScalarPrng.init(0x5150_c318);
@@ -12270,11 +12335,13 @@ test "sampleMutPtrsIter owns sampled indices and streams mutable pointers" {
     try std.testing.expectEqual(@as(usize, 3), fill_iter.fill(&fill_out));
     try std.testing.expectEqual(@as(usize, 1), fill_iter.remaining());
     try std.testing.expectEqual(@as(usize, 1), fill_iter.len());
+    try expectExactSizeHint(fill_iter.sizeHint(), 1);
     for (fill_out) |ptr| ptr.* += 2;
     var fill_tail: [3]*u8 = undefined;
     try std.testing.expectEqual(@as(usize, 1), fill_iter.fill(&fill_tail));
     try std.testing.expectEqual(@as(usize, 0), fill_iter.remaining());
     try std.testing.expectEqual(@as(usize, 0), fill_iter.len());
+    try expectExactSizeHint(fill_iter.sizeHint(), 0);
     for (fill_tail[0..1]) |ptr| ptr.* += 2;
     var changed_by_fill: usize = 0;
     for (fill_items, original) |actual, before| {
