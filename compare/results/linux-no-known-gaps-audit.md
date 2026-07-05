@@ -647,3 +647,8 @@ S4-M284 adds the distribution `weighted` namespace
 (`compare/results/s4-m284-weighted-namespace.md`), closing the local Rust
 `rand::distr::weighted::*` path discovery gap while preserving Alea's canonical
 `AliasTable` / `WeightedIndex` implementation and weighted error aliases.
+S4-M285 audits the local Rust `rand::distr::uniform::*` namespace path
+(`compare/results/s4-m285-uniform-namespace-audit.md`) and records that concrete
+uniform workflows are already covered by top-level `distributions.*` APIs, while
+the intermediate Rust module path is intentionally not copied because it would
+collide with Alea's existing one-shot `uniform(...)` function.
