@@ -91,6 +91,10 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("examplecheck: source examples/weighted_sampling.zig missing expected token `WeightedIndex alias numChoices`\n", .{});
         missing += 1;
     }
+    if (std.mem.indexOf(u8, weighted_source, "weighted namespace numChoices") == null) {
+        try stderr.print("examplecheck: source examples/weighted_sampling.zig missing expected token `weighted namespace numChoices`\n", .{});
+        missing += 1;
+    }
 
     var dir = try std.Io.Dir.cwd().openDir(io, "examples", .{ .iterate = true });
     defer dir.close(io);

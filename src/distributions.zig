@@ -4,6 +4,7 @@ const Rng = @import("rng.zig");
 const Alea4x64 = @import("engines/alea4x64.zig");
 const ascii = @import("ascii.zig");
 const std_ziggurat = std.Random.ziggurat;
+const distributions_module = @This();
 
 const native_f32_norm_r: f32 = @floatCast(std_ziggurat.norm_r);
 
@@ -147,6 +148,16 @@ pub const Error = error{
 pub const UniformError = Error;
 pub const WeightedError = Error;
 pub const WeightError = Error;
+
+pub const weighted = struct {
+    pub const Error = distributions_module.Error;
+    pub const WeightedError = distributions_module.WeightedError;
+    pub const WeightError = distributions_module.WeightError;
+
+    pub fn WeightedIndex(comptime Weight: type) type {
+        return distributions_module.WeightedIndex(Weight);
+    }
+};
 
 pub const BernoulliError = error{
     InvalidProbability,
@@ -31255,22 +31266,22 @@ test "WeightedIndex alias mirrors AliasTable" {
     const root = @import("root.zig");
     comptime std.debug.assert(WeightedIndex(u32) == AliasTable(u32));
 
-    var weighted = try WeightedIndex(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
-    defer weighted.deinit();
+    var weighted_alias = try WeightedIndex(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer weighted_alias.deinit();
     var alias = try AliasTable(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
     defer alias.deinit();
 
-    try std.testing.expectEqual(alias.numChoices(), weighted.numChoices());
-    try std.testing.expectEqual(alias.positiveCount(), weighted.positiveCount());
-    try std.testing.expectApproxEqAbs(alias.totalWeight(), weighted.totalWeight(), 1e-12);
-    try std.testing.expectApproxEqAbs(alias.weight(2).?, weighted.weight(2).?, 1e-12);
+    try std.testing.expectEqual(alias.numChoices(), weighted_alias.numChoices());
+    try std.testing.expectEqual(alias.positiveCount(), weighted_alias.positiveCount());
+    try std.testing.expectApproxEqAbs(alias.totalWeight(), weighted_alias.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(alias.weight(2).?, weighted_alias.weight(2).?, 1e-12);
 
     var weighted_engine = root.DefaultPrng.init(0x51_4d_265);
     var alias_engine = root.DefaultPrng.init(0x51_4d_265);
-    try std.testing.expectEqual(alias.sampleFrom(&alias_engine), weighted.sampleFrom(&weighted_engine));
+    try std.testing.expectEqual(alias.sampleFrom(&alias_engine), weighted_alias.sampleFrom(&weighted_engine));
     try std.testing.expectEqual(alias_engine.next(), weighted_engine.next());
 
-    try weighted.updateWeights(&.{
+    try weighted_alias.updateWeights(&.{
         .{ .index = 0, .weight = 2 },
         .{ .index = 3, .weight = 4 },
     });
@@ -31278,8 +31289,30 @@ test "WeightedIndex alias mirrors AliasTable" {
         .{ .index = 0, .weight = 2 },
         .{ .index = 3, .weight = 4 },
     });
-    try std.testing.expectApproxEqAbs(alias.totalWeight(), weighted.totalWeight(), 1e-12);
-    try std.testing.expectApproxEqAbs(alias.probability(2).?, weighted.probability(2).?, 1e-12);
+    try std.testing.expectApproxEqAbs(alias.totalWeight(), weighted_alias.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(alias.probability(2).?, weighted_alias.probability(2).?, 1e-12);
+}
+
+test "weighted namespace mirrors Rust weighted module discovery names" {
+    const root = @import("root.zig");
+    comptime std.debug.assert(weighted.Error == Error);
+    comptime std.debug.assert(weighted.WeightError == WeightError);
+    comptime std.debug.assert(weighted.WeightedError == WeightedError);
+    comptime std.debug.assert(weighted.WeightedIndex(u32) == WeightedIndex(u32));
+
+    var namespace_table = try weighted.WeightedIndex(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer namespace_table.deinit();
+    var top_level_table = try WeightedIndex(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer top_level_table.deinit();
+
+    try std.testing.expectEqual(top_level_table.numChoices(), namespace_table.numChoices());
+    try std.testing.expectApproxEqAbs(top_level_table.totalWeight(), namespace_table.totalWeight(), 1e-12);
+    try std.testing.expectError(error.InvalidInput, weighted.WeightedIndex(u32).new(std.testing.allocator, &.{}));
+
+    var namespace_engine = root.DefaultPrng.init(0x51_4d_284);
+    var top_level_engine = root.DefaultPrng.init(0x51_4d_284);
+    try std.testing.expectEqual(top_level_table.sampleFrom(&top_level_engine), namespace_table.sampleFrom(&namespace_engine));
+    try std.testing.expectEqual(top_level_engine.next(), namespace_engine.next());
 }
 
 test "UniformDuration sampler mirrors duration helpers" {

@@ -643,3 +643,7 @@ S4-M283 audits the remaining local Rust trait/marker/thread-local public
 surface (`compare/results/s4-m283-rust-trait-surface-audit.md`) and records that
 the remaining names are covered by Zig-native APIs or intentionally not copied
 unless a concrete workflow gap appears.
+S4-M284 adds the distribution `weighted` namespace
+(`compare/results/s4-m284-weighted-namespace.md`), closing the local Rust
+`rand::distr::weighted::*` path discovery gap while preserving Alea's canonical
+`AliasTable` / `WeightedIndex` implementation and weighted error aliases.

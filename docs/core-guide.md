@@ -752,7 +752,10 @@ Use:
   `choose_weighted_iter`-style workflows
 - `distributions.AliasTable` for O(1) repeated weighted index sampling
   (`distributions.WeightedIndex` is a Rust-discoverable alias matching local
-  Rust `rand::distr::weighted::WeightedIndex` naming), including
+  Rust `rand::distr::weighted::WeightedIndex` naming, and
+  `distributions.weighted.WeightedIndex` / `distributions.weighted.Error` /
+  `distributions.weighted.WeightError` mirror the local Rust
+  `rand::distr::weighted::*` module path), including
   Rust-discoverable `new`, `len`, `numChoices`, `positiveCount`, `totalWeight`, and allocation-returning or caller-buffer
   optional `weight` / `probability`, lazy `weightIter` / `probabilityIter` size hints, `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
   sampler introspection; use `sampleU32` / `fillU32` variants when population

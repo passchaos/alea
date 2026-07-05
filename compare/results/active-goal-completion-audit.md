@@ -304,7 +304,8 @@ complete.
 | S4-M281 weighted error variant diagnostics | `src/distributions.zig`, `src/seq.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m271-weighted-error-aliases.md`, `compare/results/s4-m281-weighted-error-variants.md` | Closed for the current bar: static `AliasTable` / `WeightedIndex` diagnostics now expose local Rust `rand::distr::weighted::Error` variant names for invalid input, invalid weight, insufficient non-zero weights, and overflow while preserving weighted error aliases and mapping sequence wrappers back to existing `seq.Error` outcomes. |
 | S4-M282 root distr namespace alias | `src/root.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/s4-m282-distr-alias.md` | Closed for the current bar: root `distr` now exposes local Rust `rand::distr::*` discovery naming while aliasing Alea's existing canonical `distributions` module. |
 | S4-M283 Rust trait surface audit | `compare/results/s4-m283-rust-trait-surface-audit.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: remaining local Rust public trait/marker/thread-local names are documented as covered by Zig-native APIs or intentionally not copied, with no new unblocked implementation gap identified. |
-| S4-M284 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M284 distribution weighted namespace | `src/distributions.zig`, `examples/weighted_sampling.zig`, `tools/examplecheck.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/examples.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m284-weighted-namespace.md` | Closed for the current bar: `distributions.weighted` now exposes local Rust `rand::distr::weighted::*` discovery names over Alea's existing `WeightedIndex` / `AliasTable` sampler and weighted error aliases. |
+| S4-M285 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -415,6 +416,9 @@ long-term objective.
 S4-M283 additionally documents the remaining local Rust trait/marker/thread-local
 surface; it is an audit closure and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M284 additionally adds a `distributions.weighted` namespace; it is another
+closed local Rust discovery-name side gap and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

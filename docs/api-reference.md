@@ -360,7 +360,9 @@ self-forking.
 ## Distributions
 
 - Error types/aliases: `Error`, `UniformError`, `BernoulliError`,
-  `WeightedError`, `WeightError`, `slice.Empty`; uniform/range APIs distinguish
+  `WeightedError`, `WeightError`, `weighted.Error`,
+  `weighted.WeightedError`, `weighted.WeightError`, `slice.Empty`;
+  uniform/range APIs distinguish
   `EmptyRange` from `NonFinite` for non-finite floating-point endpoints or
   widths, while static weighted samplers distinguish `InvalidInput`,
   `InvalidWeight`, `InsufficientNonZero`, and `Overflow`
@@ -2483,6 +2485,11 @@ Alias helpers:
 
 - `aliasTable(T)`
 - `WeightedIndex(Weight)`
+- `weighted`
+- `weighted.Error`
+- `weighted.WeightedError`
+- `weighted.WeightError`
+- `weighted.WeightedIndex(Weight)`
 - `AliasTable.init`
 - `AliasTable.new`
 - `AliasTable.initByIndex`
