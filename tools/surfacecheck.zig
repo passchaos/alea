@@ -4,6 +4,7 @@ const SourceGroup = struct {
     label: []const u8,
     root_env: []const u8,
     default_root: []const u8,
+    default_home_suffix: []const u8 = "",
     manifest_path: []const u8,
     files: []const []const u8,
     expected_tokens: []const []const u8,
@@ -279,6 +280,7 @@ const groups = [_]SourceGroup{
         .label = "local rand",
         .root_env = "ALEA_RAND_ROOT",
         .default_root = "/home/passchaos/Work/rand/src",
+        .default_home_suffix = "Work/rand/src",
         .manifest_path = "compare/results/s4-m288-local-rand-public-surface-manifest.md",
         .files = local_rand_files[0..],
         .expected_tokens = local_rand_expected_tokens[0..],
@@ -289,6 +291,7 @@ const groups = [_]SourceGroup{
         .label = "local rand_core",
         .root_env = "ALEA_RAND_CORE_ROOT",
         .default_root = "/home/passchaos/.cargo/registry/src/rsproxy.cn-e3de039b2554c837/rand_core-0.10.1/src",
+        .default_home_suffix = ".cargo/registry/src/rsproxy.cn-e3de039b2554c837/rand_core-0.10.1/src",
         .manifest_path = "compare/results/s4-m288-local-rand-public-surface-manifest.md",
         .files = rand_core_files[0..],
         .expected_tokens = rand_core_expected_tokens[0..],
@@ -297,6 +300,7 @@ const groups = [_]SourceGroup{
         .label = "local rand_distr",
         .root_env = "ALEA_RAND_DISTR_ROOT",
         .default_root = "/home/passchaos/.cargo/registry/src/rsproxy.cn-e3de039b2554c837/rand_distr-0.6.0/src",
+        .default_home_suffix = ".cargo/registry/src/rsproxy.cn-e3de039b2554c837/rand_distr-0.6.0/src",
         .manifest_path = "compare/results/s4-m294-rand-distr-public-surface-manifest.md",
         .files = rand_distr_files[0..],
         .expected_tokens = rand_distr_expected_tokens[0..],
@@ -351,7 +355,15 @@ fn checkGroup(
         .expected_tokens = group.expected_tokens.len,
     };
 
-    const root = env.get(group.root_env) orelse group.default_root;
+    var owned_root: ?[]u8 = null;
+    defer if (owned_root) |root| allocator.free(root);
+    const root = if (env.get(group.root_env)) |override_root|
+        override_root
+    else if (env.get("HOME")) |home| blk: {
+        if (group.default_home_suffix.len == 0) break :blk group.default_root;
+        owned_root = try std.fs.path.join(allocator, &.{ home, group.default_home_suffix });
+        break :blk owned_root.?;
+    } else group.default_root;
     std.Io.Dir.accessAbsolute(io, root, .{}) catch |err| {
         try stderr.print(
             "surfacecheck: {s} root `{s}` unavailable ({s}); set {s} to the local checkout/cache root\n",

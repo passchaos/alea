@@ -333,7 +333,8 @@ complete.
 | S4-M310 surfacecheck build-step tests | `build.zig`, `docs/tooling.md`, `tools/surfacecheck.zig`, `compare/results/s4-m310-surfacecheck-build-tests.md` | Closed for the current bar: `zig build surfacecheck` now runs `tools/surfacecheck.zig` unit tests before the local public-surface checker executable. |
 | S4-M311 toolingcheck surfacecheck dependency guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m311-toolingcheck-surfacecheck-deps.md` | Closed for the current bar: `toolingcheck` now enforces both `surfacecheck` dependencies, keeping helper tests wired before the drift scan. |
 | S4-M312 surfacecheck public-file guard tests | `tools/surfacecheck.zig`, `compare/results/s4-m312-surfacecheck-public-file-tests.md` | Closed for the current bar: helper tests now cover listed files, ignored private helper files, public-looking declarations/methods, `pub(crate)` non-public helpers, and comment-only lines. |
-| S4-M313 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M313 surfacecheck HOME-relative roots | `tools/surfacecheck.zig`, `docs/tooling.md`, `compare/results/s4-m313-surfacecheck-home-roots.md` | Closed for the current bar: `surfacecheck` now resolves default local baseline roots relative to `$HOME` while preserving explicit `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` overrides. |
+| S4-M314 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -526,6 +527,9 @@ S4-M11 or complete the long-term objective.
 S4-M312 additionally adds focused tests for `surfacecheck` public-file guard
 helpers; it is an evidence/tooling improvement and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M313 additionally makes `surfacecheck` default roots HOME-relative; it is an
+evidence/tooling portability improvement and does not resolve S4-M11 or complete
+the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
