@@ -83,6 +83,30 @@ pub fn secureBytes(io: std.Io, out: []u8) !void {
     try std.Io.randomSecure(io, out);
 }
 
+pub fn makeRng(comptime Engine: type, io: std.Io) !Engine {
+    if (comptime Engine == SplitMix64 or Engine == Wyhash64) {
+        var seed_bytes: [8]u8 = undefined;
+        try std.Io.randomSecure(io, &seed_bytes);
+        return Engine.fromSeedBytes(seed_bytes);
+    }
+    if (comptime Engine == Pcg64) {
+        var seed_bytes: [16]u8 = undefined;
+        try std.Io.randomSecure(io, &seed_bytes);
+        return Engine.fromSeedBytes(seed_bytes);
+    }
+    if (comptime Engine == Alea4x64 or Engine == Xoshiro256 or Engine == Xoshiro256PlusPlus) {
+        var seed_bytes: [32]u8 = undefined;
+        try std.Io.randomSecure(io, &seed_bytes);
+        return Engine.fromSeedBytes(seed_bytes);
+    }
+    if (comptime Engine == ChaCha) {
+        var seed_bytes: [ChaCha.seed_length]u8 = undefined;
+        try std.Io.randomSecure(io, &seed_bytes);
+        return Engine.fromSeedBytes(seed_bytes);
+    }
+    @compileError("alea.makeRng supports alea's exported deterministic engines");
+}
+
 pub fn rng(engine: anytype) Rng {
     return Rng.init(engine);
 }
@@ -142,6 +166,28 @@ test "root deterministic constructors have stable snapshots" {
     var wrapper_engine = scalar(seed);
     const wrapper = rng(&wrapper_engine);
     try std.testing.expectEqual(direct_rng_engine.next(), wrapper.next());
+}
+
+test "makeRng constructs exported engines from system entropy" {
+    const io = std.Io.Threaded.global_single_threaded.io();
+
+    var default_engine = try makeRng(DefaultPrng, io);
+    _ = default_engine.next();
+
+    var fast_engine = try makeRng(FastPrng, io);
+    _ = fast_engine.next();
+
+    var scalar_engine = try makeRng(ScalarPrng, io);
+    _ = scalar_engine.next();
+
+    var reproducible_engine = try makeRng(ReproduciblePrng, io);
+    _ = reproducible_engine.next();
+
+    var secure_engine = try makeRng(SecurePrng, io);
+    _ = secure_engine.next();
+
+    var splitmix_engine = try makeRng(SplitMix64, io);
+    _ = splitmix_engine.next();
 }
 
 fn engineFromSeed(comptime Engine: type, seed: u64) Engine {

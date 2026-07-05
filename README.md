@@ -23,6 +23,8 @@ The current Linux-first roadmap is intentionally broad:
 - Rust-discoverable fallible `Seed.tryFromRng(source)` and engine
   `tryFromRng(source)` / `tryFork()` helpers for sources exposing
   `tryNext() !u64`
+- Rust-discoverable generic `makeRng(Engine, io)` for system-entropy
+  construction of any exported deterministic engine
 - `ScalarPrng = Wyhash64` for scalar-heavy distribution workloads such as
   normal, exponential, and Poisson, alongside `FastPrng = Alea4x64` for
   bulk-fill throughput

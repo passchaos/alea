@@ -61,7 +61,10 @@ for direct sources) for users mapping local Rust `Rng::next_u64`,
 Use `Seed.fromString`, `Seed.fromBytes`, `Seed.mix`, and `Seed.stream` for
 stable named streams. Use `Seed.secure(io)`, `defaultSecure`, `fastSecure`,
 `scalarSecure`, `hashSecure`, `reproducibleSecure`, `secure(io)`, or
-`secureBytes` when the seed must come from system entropy.
+`secureBytes` when the seed must come from system entropy. Use
+`makeRng(Engine, io)` when you want the Rust-discoverable generic
+`rand::make_rng` style entry point for any exported deterministic engine; it
+fills the target engine's fixed byte seed from system entropy where possible.
 
 See `compare/results/reproducibility-matrix.md` for stable-output expectations.
 Run `zig build run-reproducible-streams` for a runnable example of named seeds,

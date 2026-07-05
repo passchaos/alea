@@ -79,7 +79,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 
 | Area | Reason |
 | --- | --- |
-| `Seed.secure`, `defaultSecure`, `fastSecure`, `reproducibleSecure`, `secure`, `secureBytes` | Source is system entropy. |
+| `Seed.secure`, `defaultSecure`, `fastSecure`, `scalarSecure`, `hashSecure`, `reproducibleSecure`, `secure`, `secureBytes`, `makeRng` | Source is system entropy. |
 | Native benchmark numbers | Hardware, CPU flags, compiler, and system load dependent. |
 | PractRand timing | Machine and build dependent; pass/fail/anomaly results are the relevant evidence. |
 

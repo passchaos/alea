@@ -14,7 +14,7 @@ stability expectations.
   `ScalarPrng`, `SecurePrng`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
   `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
-  `secureFromSeed`, `secure`, `secureBytes`, `rng`
+  `secureFromSeed`, `secure`, `secureBytes`, `makeRng`, `rng`
 
 ## Rng
 
