@@ -360,7 +360,7 @@ fn checkGroup(
     defer allocator.free(manifest);
 
     for (group.expected_tokens) |token| {
-        if (std.mem.indexOf(u8, manifest, token) == null) {
+        if (!manifestHasToken(manifest, token)) {
             try stderr.print(
                 "surfacecheck: {s} manifest `{s}` missing expected public-surface token `{s}`\n",
                 .{ group.label, group.manifest_path, token },
@@ -534,7 +534,7 @@ fn requireManifestToken(
     stats: *GroupStats,
 ) !void {
     stats.source_tokens += 1;
-    if (std.mem.indexOf(u8, manifest, token) != null) return;
+    if (manifestHasToken(manifest, token)) return;
     try stderr.print(
         "surfacecheck: {s} source `{s}` exposes public token `{s}` not mapped in `{s}`\n",
         .{ group.label, relative, token, group.manifest_path },
@@ -629,6 +629,38 @@ fn appendPubUseLine(buffer: *[4096]u8, len: *usize, line: []const u8) !void {
     len.* += line.len;
     buffer[len.*] = ' ';
     len.* += 1;
+}
+
+fn manifestHasToken(manifest: []const u8, token: []const u8) bool {
+    var quoted_buffer: [256]u8 = undefined;
+    if (token.len + 2 <= quoted_buffer.len) {
+        quoted_buffer[0] = '`';
+        @memcpy(quoted_buffer[1..][0..token.len], token);
+        quoted_buffer[token.len + 1] = '`';
+        if (std.mem.indexOf(u8, manifest, quoted_buffer[0 .. token.len + 2]) != null) return true;
+    }
+
+    if (isIdentifierToken(token)) {
+        var offset: usize = 0;
+        while (std.mem.indexOfPos(u8, manifest, offset, token)) |index| {
+            const before_ok = index == 0 or !isIdentByte(manifest[index - 1]);
+            const after_index = index + token.len;
+            const after_ok = after_index == manifest.len or !isIdentByte(manifest[after_index]);
+            if (before_ok and after_ok) return true;
+            offset = index + token.len;
+        }
+        return false;
+    }
+
+    return std.mem.indexOf(u8, manifest, token) != null;
+}
+
+fn isIdentifierToken(token: []const u8) bool {
+    if (token.len == 0) return false;
+    for (token) |byte| {
+        if (!isIdentByte(byte)) return false;
+    }
+    return true;
 }
 
 fn readIdent(text: []const u8) ?[]const u8 {

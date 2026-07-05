@@ -739,3 +739,9 @@ S4-M303 adds coverage summaries to `zig build surfacecheck`
 (`compare/results/s4-m303-surfacecheck-summary.md`), so local `rand`, resolved
 `rand_core`, and cached `rand_distr` checks report the number of source files,
 manifest expected tokens, and source-discovered tokens validated.
+S4-M304 hardens `surfacecheck` token matching
+(`compare/results/s4-m304-surfacecheck-token-boundaries.md`) so manifest checks
+prefer exact backtick-wrapped code tokens or identifier-boundary matches instead
+of accepting arbitrary substrings; this exposed and closed additional local
+`rand` manifest mappings for short method names that had previously matched
+incidentally.
