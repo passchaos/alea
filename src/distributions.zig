@@ -134,7 +134,10 @@ pub const Error = error{
     EmptyRange,
     NonFinite,
     InvalidProbability,
+    InvalidInput,
     InvalidWeight,
+    InsufficientNonZero,
+    Overflow,
     InvalidParameter,
     InvalidLength,
     LibmvecUnavailable,
@@ -16002,7 +16005,7 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         fn initFromWeights(allocator: std.mem.Allocator, input_weights: anytype) !Self {
-            if (input_weights.len == 0) return error.InvalidWeight;
+            if (input_weights.len == 0) return error.InvalidInput;
 
             const prob = try allocator.alloc(f64, input_weights.len);
             errdefer allocator.free(prob);
@@ -16027,12 +16030,13 @@ pub fn AliasTable(comptime Weight: type) type {
                 const value = try weightToF64(input_weight);
                 weight_values[index] = value;
                 total += value;
+                if (!std.math.isFinite(total)) return error.Overflow;
                 if (value > 0) {
                     positive_index = index;
                     positive_count += 1;
                 }
             }
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
 
             for (weight_values, 0..) |value, i| {
                 scaled[i] = value * @as(f64, @floatFromInt(input_weights.len)) / total;
@@ -16130,7 +16134,7 @@ pub fn AliasTable(comptime Weight: type) type {
             if (index >= self.prob.len) return error.InvalidParameter;
             const value = try weightToF64(input_weight);
             const next_total = self.total - self.weight_values[index] + value;
-            if (!(next_total > 0) or !std.math.isFinite(next_total)) return error.InvalidWeight;
+            try validateStaticWeightTotal(next_total);
             const input_weights = try self.allocator.dupe(f64, self.weight_values);
             defer self.allocator.free(input_weights);
             input_weights[index] = value;
@@ -16163,7 +16167,7 @@ pub fn AliasTable(comptime Weight: type) type {
                 next_total = next_total - self.weight_values[item.index] + value;
                 previous_index = item.index;
             }
-            if (!(next_total > 0) or !std.math.isFinite(next_total)) return error.InvalidWeight;
+            try validateStaticWeightTotal(next_total);
 
             const input_weights = try self.allocator.dupe(f64, self.weight_values);
             defer self.allocator.free(input_weights);
@@ -16510,6 +16514,12 @@ pub fn AliasTable(comptime Weight: type) type {
             };
             if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
             return value;
+        }
+
+        fn validateStaticWeightTotal(total_weight: f64) Error!void {
+            if (!std.math.isFinite(total_weight)) return error.Overflow;
+            if (total_weight == 0) return error.InsufficientNonZero;
+            if (!(total_weight > 0)) return error.InvalidWeight;
         }
     };
 }
@@ -19081,11 +19091,11 @@ test "alias table samples valid indexes" {
     }
 
     try std.testing.expectError(error.InvalidParameter, table.update(&.{ 1, 2 }));
-    try std.testing.expectError(error.InvalidWeight, table.update(&.{ 0, 0, 0, 0 }));
+    try std.testing.expectError(error.InsufficientNonZero, table.update(&.{ 0, 0, 0, 0 }));
     try std.testing.expectEqual(@as(usize, 1), table.sampleFrom(&engine));
 
-    try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{}));
-    try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{ 0, 0 }));
+    try std.testing.expectError(error.InvalidInput, AliasTable(u32).init(std.testing.allocator, &.{}));
+    try std.testing.expectError(error.InsufficientNonZero, AliasTable(u32).init(std.testing.allocator, &.{ 0, 0 }));
 }
 
 test "alias table u32 sampling helpers mirror usize helpers" {
@@ -19695,7 +19705,7 @@ test "alias table single-weight updateAt mirrors partial update diagnostics" {
     try std.testing.expectApproxEqAbs(@as(f64, 3), table.totalWeight(), 1e-12);
 
     try std.testing.expectError(error.InvalidParameter, table.updateAt(4, 1));
-    try std.testing.expectError(error.InvalidWeight, table.updateAt(3, 0));
+    try std.testing.expectError(error.InsufficientNonZero, table.updateAt(3, 0));
     try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
     try std.testing.expectEqual(@as(?usize, 3), table.constantIndex());
     try std.testing.expectApproxEqAbs(@as(f64, 3), table.totalWeight(), 1e-12);
@@ -19761,7 +19771,7 @@ test "alias table updateMany applies ordered partial updates atomically" {
         .{ .index = 1, .weight = 1 },
         .{ .index = 1, .weight = 2 },
     }));
-    try std.testing.expectError(error.InvalidWeight, table.updateMany(&.{.{ .index = 3, .weight = 0 }}));
+    try std.testing.expectError(error.InsufficientNonZero, table.updateMany(&.{.{ .index = 3, .weight = 0 }}));
     try std.testing.expectEqual(@as(usize, 1), table.positiveCount());
     try std.testing.expectEqual(@as(?usize, 3), table.constantIndex());
     try std.testing.expectApproxEqAbs(@as(f64, 3), table.totalWeight(), 1e-12);
@@ -31200,10 +31210,17 @@ test "distribution slice aliases mirror Choose and Empty errors" {
 test "distribution weight error aliases mirror Error" {
     const weighted_error: WeightedError = error.InvalidWeight;
     const weight_error: WeightError = error.InvalidWeight;
+    const invalid_input: WeightedError = error.InvalidInput;
+    const insufficient: WeightedError = error.InsufficientNonZero;
+    const overflow: WeightedError = error.Overflow;
     try std.testing.expectEqual(@as(Error, error.InvalidWeight), weighted_error);
     try std.testing.expectEqual(@as(WeightedError, error.InvalidWeight), weight_error);
-    try std.testing.expectError(error.InvalidWeight, AliasTable(u32).new(std.testing.allocator, &.{}));
-    try std.testing.expectError(error.InvalidWeight, WeightedIndex(u32).new(std.testing.allocator, &.{ 0, 0 }));
+    try std.testing.expectEqual(@as(Error, error.InvalidInput), invalid_input);
+    try std.testing.expectEqual(@as(Error, error.InsufficientNonZero), insufficient);
+    try std.testing.expectEqual(@as(Error, error.Overflow), overflow);
+    try std.testing.expectError(error.InvalidInput, AliasTable(u32).new(std.testing.allocator, &.{}));
+    try std.testing.expectError(error.InsufficientNonZero, WeightedIndex(u32).new(std.testing.allocator, &.{ 0, 0 }));
+    try std.testing.expectError(error.Overflow, WeightedIndex(f64).new(std.testing.allocator, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
 }
 
 test "distribution ascii aliases mirror ascii namespace" {

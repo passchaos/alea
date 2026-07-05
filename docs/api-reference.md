@@ -362,7 +362,8 @@ self-forking.
 - Error types/aliases: `Error`, `UniformError`, `BernoulliError`,
   `WeightedError`, `WeightError`, `slice.Empty`; uniform/range APIs distinguish
   `EmptyRange` from `NonFinite` for non-finite floating-point endpoints or
-  widths
+  widths, while static weighted samplers distinguish `InvalidInput`,
+  `InvalidWeight`, `InsufficientNonZero`, and `Overflow`
 - Reusable sampler adapters: `StandardUniform`, `StandardUniform.sample`,
   `StandardUniform.sampleFrom`, `StandardUniform.fill`,
   `StandardUniform.fillFrom`, `Choose(T)`, `Alphanumeric`, `Alphabetic`,

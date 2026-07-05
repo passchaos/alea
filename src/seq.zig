@@ -8187,7 +8187,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             if (items.len != input_weights.len) return error.LengthMismatch;
             return .{
                 .items = items,
-                .table = try Table.init(allocator, input_weights),
+                .table = Table.init(allocator, input_weights) catch |err| return mapTableError(err),
             };
         }
 
@@ -8205,7 +8205,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             defer allocator.free(input_weights);
             return .{
                 .items = items,
-                .table = try Table.init(allocator, input_weights),
+                .table = Table.init(allocator, input_weights) catch |err| return mapTableError(err),
             };
         }
 
@@ -8219,7 +8219,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             defer allocator.free(input_weights);
             return .{
                 .items = items,
-                .table = try Table.init(allocator, input_weights),
+                .table = Table.init(allocator, input_weights) catch |err| return mapTableError(err),
             };
         }
 
@@ -8318,34 +8318,42 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn update(self: *Self, input_weights: []const Weight) !void {
             if (input_weights.len != self.items.len) return error.LengthMismatch;
-            try self.table.update(input_weights);
+            self.table.update(input_weights) catch |err| return mapTableError(err);
         }
 
         pub fn updateAt(self: *Self, index: usize, input_weight: Weight) !void {
             if (index >= self.items.len) return error.InvalidParameter;
-            try self.table.updateAt(index, input_weight);
+            self.table.updateAt(index, input_weight) catch |err| return mapTableError(err);
         }
 
         pub const Update = Table.Update;
 
         pub fn updateMany(self: *Self, updates: []const Update) !void {
-            try self.table.updateMany(updates);
+            self.table.updateMany(updates) catch |err| return mapTableError(err);
         }
 
         pub fn updateWeights(self: *Self, updates: []const Update) !void {
-            try self.table.updateWeights(updates);
+            self.table.updateWeights(updates) catch |err| return mapTableError(err);
         }
 
         pub fn updateBy(self: *Self, comptime weightFn: fn (*const T) Weight) !void {
             const input_weights = try weightsFromItems(self.table.allocator, self.items, weightFn);
             defer self.table.allocator.free(input_weights);
-            try self.table.update(input_weights);
+            self.table.update(input_weights) catch |err| return mapTableError(err);
         }
 
         pub fn updateByIndex(self: *Self, comptime weightFn: fn (usize) Weight) !void {
             const input_weights = try weightsFromIndices(self.table.allocator, self.items.len, weightFn);
             defer self.table.allocator.free(input_weights);
-            try self.table.update(input_weights);
+            self.table.update(input_weights) catch |err| return mapTableError(err);
+        }
+
+        fn mapTableError(err: anyerror) anyerror {
+            return switch (err) {
+                error.InvalidInput => error.EmptyInput,
+                error.InsufficientNonZero, error.Overflow => error.InvalidWeight,
+                else => err,
+            };
         }
 
         pub fn sample(self: Self, rng: Rng) *const T {

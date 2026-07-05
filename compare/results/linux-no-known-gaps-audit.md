@@ -631,3 +631,8 @@ S4-M280 adds the root `prelude` namespace
 (`compare/results/s4-m280-prelude-namespace.md`), closing the local Rust
 `rand::prelude::*` discovery gap for Alea's common modules and aliases without
 adding Rust trait machinery.
+S4-M281 adds weighted error variant diagnostics
+(`compare/results/s4-m281-weighted-error-variants.md`), closing the local Rust
+`rand::distr::weighted::Error::{InvalidInput, InvalidWeight,
+InsufficientNonZero, Overflow}` diagnostics gap for static `AliasTable` /
+`WeightedIndex` workflows while preserving existing weighted error aliases.

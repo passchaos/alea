@@ -513,7 +513,10 @@ Use:
   `seq.sampleIteratorWeightedIntoCheckedFrom`
 - `WeightError` / `seq.WeightError` aliases for local Rust `rand::seq::WeightError`
   discovery, and `distributions.WeightError` / `distributions.WeightedError`
-  aliases for local Rust `rand::distr::weighted::Error` discovery, plus `Rng.weightedIndexFrom`, `Rng.fillWeightedIndexFrom`,
+  aliases for local Rust `rand::distr::weighted::Error` discovery; static
+  `AliasTable` / `WeightedIndex` construction and updates report
+  `InvalidInput`, `InvalidWeight`, `InsufficientNonZero`, and `Overflow`
+  diagnostics matching local Rust weighted error names, plus `Rng.weightedIndexFrom`, `Rng.fillWeightedIndexFrom`,
   `Rng.weightedIndexArrayFrom`, `Rng.weightedIndexBatchFrom`,
   `Rng.fillWeightedIndexU32From`, `Rng.weightedIndexU32ArrayFrom`,
   `Rng.weightedIndexU32BatchFrom`, `Rng.fillChooseWeightedFrom`,

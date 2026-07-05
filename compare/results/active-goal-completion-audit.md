@@ -301,7 +301,8 @@ complete.
 | S4-M278 root RngReader aliases | `src/root.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/s4-m278-root-rngreader.md` | Closed for the current bar: root `RngReader(Source)` and `rngReader(source, buffer)` now expose local Rust root `rand::RngReader` discovery while forwarding to Alea's existing explicit-buffer `Rng` adapter. |
 | S4-M279 IndexedSamples aliases | `src/seq.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m279-indexed-samples-aliases.md` | Closed for the current bar: `seq.IndexedSamples(T)` and `seq.SliceChooseIter(T)` now expose local Rust `rand::seq::{IndexedSamples, SliceChooseIter}` discovery naming over Alea's existing sampled pointer iterator implementation. |
 | S4-M280 prelude namespace aliases | `src/root.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/s4-m280-prelude-namespace.md` | Closed for the current bar: root `prelude` now exposes local Rust `rand::prelude::*` discovery naming over Alea's common modules and aliases without adding Rust trait machinery. |
-| S4-M281 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M281 weighted error variant diagnostics | `src/distributions.zig`, `src/seq.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `README.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m271-weighted-error-aliases.md`, `compare/results/s4-m281-weighted-error-variants.md` | Closed for the current bar: static `AliasTable` / `WeightedIndex` diagnostics now expose local Rust `rand::distr::weighted::Error` variant names for invalid input, invalid weight, insufficient non-zero weights, and overflow while preserving weighted error aliases and mapping sequence wrappers back to existing `seq.Error` outcomes. |
+| S4-M282 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -403,6 +404,9 @@ long-term objective.
 S4-M280 additionally adds a root `prelude` namespace; it is another closed local
 Rust discovery-name side gap and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M281 additionally adds weighted error variant diagnostics; it is another
+closed local Rust diagnostics side gap and does not resolve S4-M11 or complete
+the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

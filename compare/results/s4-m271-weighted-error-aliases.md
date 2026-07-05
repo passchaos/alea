@@ -27,7 +27,11 @@ pub const WeightError = Error;
 
 These aliases preserve Alea's existing weighted-sampling error contract while
 making the distribution namespace easier to discover for callers comparing
-against local Rust `rand::distr::weighted::Error`.
+against local Rust `rand::distr::weighted::Error`. S4-M281 later extended the
+shared distribution error set with the local Rust variant names
+`InvalidInput`, `InsufficientNonZero`, and `Overflow` for static
+`AliasTable` / `WeightedIndex` diagnostics while preserving the alias
+relationship.
 
 ## Tests and Validation
 
