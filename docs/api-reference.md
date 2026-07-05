@@ -2375,6 +2375,7 @@ Alias helpers:
 - `AliasTable.WeightIterator.len`
 - `AliasTable.WeightIterator.fill`
 - `AliasTable.probabilityAt`
+- `AliasTable.probability`
 - `AliasTable.constantIndex`
 - `AliasTable.sample`
 - `AliasTable.sampleIndex`
@@ -2777,6 +2778,7 @@ Dynamic weighted helpers:
   `WeightedChoice.weightsInto`, `WeightedChoice.probabilities`,
   `WeightedChoice.probabilitiesInto`, `WeightedChoice.weightAt`,
   `WeightedChoice.weight`, `WeightedChoice.weightIter`, `WeightedChoice.probabilityAt`,
+  `WeightedChoice.probability`,
   `WeightedChoice.update`, `WeightedChoice.updateBy`, `WeightedChoice.updateByIndex`, `WeightedChoice.sample`,
   `WeightedChoice.sampleFrom`, `WeightedChoice.sampleIndex`,
   `WeightedChoice.sampleIndexFrom`, `WeightedChoice.sampleIndexU32`,

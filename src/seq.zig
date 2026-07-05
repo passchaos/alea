@@ -8157,6 +8157,11 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return self.table.probabilityAt(index) catch unreachable;
         }
 
+        pub fn probability(self: Self, index: usize) ?f64 {
+            if (index >= self.items.len) return null;
+            return self.table.probability(index) orelse unreachable;
+        }
+
         pub fn update(self: *Self, input_weights: []const Weight) !void {
             if (input_weights.len != self.items.len) return error.LengthMismatch;
             try self.table.update(input_weights);
@@ -17006,6 +17011,10 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 8.0), try choice.probabilityAt(1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 7.0 / 8.0), try choice.probabilityAt(2), 1e-12);
     try std.testing.expectError(error.InvalidParameter, choice.probabilityAt(3));
+    try std.testing.expectApproxEqAbs(@as(f64, 0), choice.probability(0).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 8.0), choice.probability(1).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 7.0 / 8.0), choice.probability(2).?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), choice.probability(3));
     var reconstructed_probabilities: [3]f64 = undefined;
     try choice.probabilitiesInto(&reconstructed_probabilities);
     try std.testing.expectApproxEqAbs(@as(f64, 0), reconstructed_probabilities[0], 1e-12);
