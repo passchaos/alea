@@ -52,6 +52,19 @@ pub const rngs = struct {
     pub const Xoshiro256PlusPlus = @import("engines/xoshiro256plusplus.zig");
 };
 
+pub const prelude = struct {
+    pub const Rng = @import("rng.zig");
+    pub const Seed = @import("seed.zig");
+    pub const distributions = @import("distributions.zig");
+    pub const seq = @import("seq.zig");
+    pub const ascii = @import("ascii.zig");
+    pub const StdRng = ChaCha;
+    pub const SmallRng = @import("engines/xoshiro256plusplus.zig");
+    pub const SysRng = @import("rng.zig").SysRng;
+    pub const SysError = @import("rng.zig").SysRng.Error;
+    pub const WeightError = @import("seq.zig").WeightError;
+};
+
 pub fn default(seed: u64) DefaultPrng {
     return DefaultPrng.init(seed);
 }
@@ -424,6 +437,29 @@ test "root RngReader aliases mirror Rng namespace adapter" {
     try direct_reader.readAll(&direct_out);
     try std.testing.expectEqualSlices(u8, &direct_out, &alias_out);
     try std.testing.expectEqual(direct_source.next(), alias_source.next());
+}
+
+test "root prelude namespace mirrors common aliases" {
+    comptime {
+        std.debug.assert(prelude.Rng == Rng);
+        std.debug.assert(prelude.Seed == Seed);
+        std.debug.assert(prelude.distributions == distributions);
+        std.debug.assert(prelude.seq == seq);
+        std.debug.assert(prelude.ascii == ascii);
+        std.debug.assert(prelude.StdRng == StdRng);
+        std.debug.assert(prelude.SmallRng == SmallRng);
+        std.debug.assert(prelude.SysRng == SysRng);
+        std.debug.assert(prelude.SysError == SysError);
+        std.debug.assert(prelude.WeightError == WeightError);
+    }
+
+    var prelude_std = prelude.StdRng.seedFromU64(0x5150_0280);
+    var root_std = StdRng.seedFromU64(0x5150_0280);
+    try std.testing.expectEqual(root_std.next(), prelude_std.next());
+
+    var prelude_small = prelude.SmallRng.seedFromU64(0x5150_1280);
+    var root_small = SmallRng.seedFromU64(0x5150_1280);
+    try std.testing.expectEqual(root_small.next(), prelude_small.next());
 }
 
 test "root StepRng helpers mirror StepRng constructors" {

@@ -40,6 +40,11 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
   `ChaCha8Rng`, `ChaCha12Rng`, `ChaCha20Rng`, `Xoshiro128PlusPlus`, and
   `Xoshiro256PlusPlus` names without adding Rust's implicit thread-local
   `ThreadRng` model.
+- `prelude`: a Rust-discoverable convenience namespace for local
+  `rand::prelude::*` comparisons, re-exporting Alea's common modules and
+  aliases (`Rng`, `Seed`, `distributions`, `seq`, `ascii`, `StdRng`,
+  `SmallRng`, `SysRng`, `SysError`, and `WeightError`) without adding Rust
+  traits.
 - `StepRng`: deterministic arithmetic-sequence mock source for tests, byte
   stream adapters, and reproducibility examples; use `stepRng(initial,
   increment)` or `constRng(value)` at the root for Rust-discoverable

@@ -627,3 +627,7 @@ S4-M279 adds `seq.IndexedSamples(T)` and `seq.SliceChooseIter(T)`
 (`compare/results/s4-m279-indexed-samples-aliases.md`), closing the local Rust
 `rand::seq::{IndexedSamples, SliceChooseIter}` discovery gap while preserving
 Alea's sampled const-pointer iterator implementation.
+S4-M280 adds the root `prelude` namespace
+(`compare/results/s4-m280-prelude-namespace.md`), closing the local Rust
+`rand::prelude::*` discovery gap for Alea's common modules and aliases without
+adding Rust trait machinery.

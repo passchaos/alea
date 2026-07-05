@@ -7,7 +7,8 @@ stability expectations.
 
 ## Root Module
 
-- Modules: `Rng`, `Seed`, `distributions`, `seq`, `ascii`, `quality`
+- Modules/namespaces: `Rng`, `Seed`, `distributions`, `seq`, `ascii`,
+  `quality`, `rngs`, `prelude`
 - Engines: `SplitMix64`, `Wyhash64`, `Alea4x64`, `Xoshiro256PlusPlus`,
   `Xoshiro128PlusPlus`, `Xoshiro256`, `Pcg64`, `ChaCha`, `ChaCha8Rng`,
   `ChaCha20Rng`, `StepRng`
@@ -18,6 +19,10 @@ stability expectations.
   `rngs.SysError`, `rngs.ChaCha8Rng`, `rngs.ChaCha12Rng`,
   `rngs.ChaCha20Rng`, `rngs.Xoshiro128PlusPlus`,
   `rngs.Xoshiro256PlusPlus`
+- `prelude` namespace aliases: `prelude.Rng`, `prelude.Seed`,
+  `prelude.distributions`, `prelude.seq`, `prelude.ascii`, `prelude.StdRng`,
+  `prelude.SmallRng`, `prelude.SysRng`, `prelude.SysError`,
+  `prelude.WeightError`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
   `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
   `secureFromSeed`, `secure`, `secureBytes`, `sysRng`, `stepRng`, `constRng`,

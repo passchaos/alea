@@ -9,7 +9,8 @@ The current Linux-first roadmap is intentionally broad:
   `Xoshiro128PlusPlus`, `Xoshiro256PlusPlus`, `Pcg64`, plus
   Rust-discoverable `StdRng` / `SmallRng` aliases for standard secure-style and
   small fast generator discovery and an explicit `rngs` namespace for
-  `rand::rngs::*` comparisons
+  `rand::rngs::*` comparisons plus a `prelude` namespace for common
+  `rand::prelude::*` imports
 - `ChaCha8Rng`, `ChaCha12Rng`, and `ChaCha20Rng` optional-chacha style stream
   names, with `SecurePrng` / `StdRng` continuing to use the ChaCha12 contract
 - `Rng`, a small facade with `std.Random` compatibility
