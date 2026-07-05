@@ -454,6 +454,10 @@ pub fn main(init: std.process.Init) !void {
     var tree_weight_iter_fill: [items.len + 1]f64 = undefined;
     _ = tree_weight_iter.fill(&tree_weight_iter_fill);
     const tree_weight_iter_hint = tree_weight_iter.sizeHint();
+    var tree_probability_iter = tree.probabilityIter();
+    var tree_probability_iter_fill: [items.len + 1]f64 = undefined;
+    _ = tree_probability_iter.fill(&tree_probability_iter_fill);
+    const tree_probability_iter_hint = tree_probability_iter.sizeHint();
     var tree_probs: [items.len + 1]f64 = undefined;
     try tree.probabilitiesInto(&tree_probs);
     var tree_engine = alea.ScalarPrng.init(0x7153);
@@ -470,6 +474,8 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("dynamic tree probability(1)={d:.3} missing={}\n", .{ tree_probability, tree_missing_probability });
     try stdout.print("dynamic tree weightIter fill: {any}\n", .{tree_weight_iter_fill});
     try stdout.print("dynamic tree weightIter sizeHint: {}..{}\n", .{ tree_weight_iter_hint.lower, tree_weight_iter_hint.upper.? });
+    try stdout.print("dynamic tree probabilityIter fill: {any}\n", .{tree_probability_iter_fill});
+    try stdout.print("dynamic tree probabilityIter sizeHint: {}..{}\n", .{ tree_probability_iter_hint.lower, tree_probability_iter_hint.upper.? });
     try stdout.print("dynamic tree probabilities after update/push: {any}\n", .{tree_probs});
     try stdout.print("dynamic tree sample indices: {any}\n", .{tree_samples});
     try stdout.print("dynamic tree sample u32 index: {}\n", .{tree_sample_u32});
@@ -493,6 +499,10 @@ pub fn main(init: std.process.Init) !void {
     var int_tree_weight_iter_fill: [items.len]u64 = undefined;
     _ = int_tree_weight_iter.fill(&int_tree_weight_iter_fill);
     const int_tree_weight_iter_hint = int_tree_weight_iter.sizeHint();
+    var int_tree_probability_iter = int_tree.probabilityIter();
+    var int_tree_probability_iter_fill: [items.len]f64 = undefined;
+    _ = int_tree_probability_iter.fill(&int_tree_probability_iter_fill);
+    const int_tree_probability_iter_hint = int_tree_probability_iter.sizeHint();
     var int_tree_engine = alea.ScalarPrng.init(0x7154);
     var int_tree_samples: [8]usize = undefined;
     int_tree.fillFrom(&int_tree_engine, &int_tree_samples);
@@ -509,6 +519,8 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("integer tree probability(2)={d:.3} missing={}\n", .{ int_tree_probability, int_tree_missing_probability });
     try stdout.print("integer tree weightIter fill: {any}\n", .{int_tree_weight_iter_fill});
     try stdout.print("integer tree weightIter sizeHint: {}..{}\n", .{ int_tree_weight_iter_hint.lower, int_tree_weight_iter_hint.upper.? });
+    try stdout.print("integer tree probabilityIter fill: {any}\n", .{int_tree_probability_iter_fill});
+    try stdout.print("integer tree probabilityIter sizeHint: {}..{}\n", .{ int_tree_probability_iter_hint.lower, int_tree_probability_iter_hint.upper.? });
     try stdout.print("integer tree sample indices: {any}\n", .{int_tree_samples});
     try stdout.print("integer tree u32 sample indices: {any}\n", .{int_tree_u32_samples});
     try stdout.print("integer tree owned u32 indices: {any}\n", .{int_tree_owned_u32});

@@ -16017,6 +16017,38 @@ pub fn WeightedTree(comptime Weight: type) type {
             }
         };
 
+        pub const ProbabilityIterator = struct {
+            const Iterator = @This();
+
+            tree: Self,
+            index: usize = 0,
+
+            pub fn next(self: *Iterator) ?f64 {
+                const value = self.tree.probability(self.index) orelse return null;
+                self.index += 1;
+                return value;
+            }
+
+            pub fn remaining(self: Iterator) usize {
+                return self.tree.len() - self.index;
+            }
+
+            pub fn len(self: Iterator) usize {
+                return self.remaining();
+            }
+
+            pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
+            }
+
+            pub fn fill(self: *Iterator, dest: []f64) usize {
+                const count = @min(dest.len, self.remaining());
+                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                return count;
+            }
+        };
+
         pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
             var subtotals = try std.ArrayList(f64).initCapacity(allocator, input_weights.len);
             errdefer subtotals.deinit(allocator);
@@ -16147,6 +16179,10 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn probability(self: Self, index: usize) ?f64 {
             return self.probabilityAt(index) catch null;
+        }
+
+        pub fn probabilityIter(self: Self) ProbabilityIterator {
+            return .{ .tree = self };
         }
 
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]f64 {
@@ -16644,6 +16680,38 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             }
         };
 
+        pub const ProbabilityIterator = struct {
+            const Iterator = @This();
+
+            tree: Self,
+            index: usize = 0,
+
+            pub fn next(self: *Iterator) ?f64 {
+                const value = self.tree.probability(self.index) orelse return null;
+                self.index += 1;
+                return value;
+            }
+
+            pub fn remaining(self: Iterator) usize {
+                return self.tree.len() - self.index;
+            }
+
+            pub fn len(self: Iterator) usize {
+                return self.remaining();
+            }
+
+            pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
+            }
+
+            pub fn fill(self: *Iterator, dest: []f64) usize {
+                const count = @min(dest.len, self.remaining());
+                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                return count;
+            }
+        };
+
         pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
             comptime requireUnsignedWeight(Weight);
             var subtotals = try std.ArrayList(u64).initCapacity(allocator, input_weights.len);
@@ -16776,6 +16844,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn probability(self: Self, index: usize) ?f64 {
             return self.probabilityAt(index) catch null;
+        }
+
+        pub fn probabilityIter(self: Self) ProbabilityIterator {
+            return .{ .tree = self };
         }
 
         pub fn weights(self: Self, allocator: std.mem.Allocator) ![]u64 {
@@ -18936,6 +19008,21 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.1), tree.probability(1).?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), tree.probability(2).?, 1e-12);
     try std.testing.expectEqual(@as(?f64, null), tree.probability(3));
+    var probability_iter = tree.probabilityIter();
+    try std.testing.expectEqual(@as(usize, 3), probability_iter.len());
+    var probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 3), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 3), probability_hint.upper);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9), probability_iter.next().?, 1e-12);
+    try std.testing.expectEqual(@as(usize, 2), probability_iter.remaining());
+    var iter_probabilities: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), probability_iter.fill(&iter_probabilities));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.1), iter_probabilities[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), iter_probabilities[1], 1e-12);
+    probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 0), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 0), probability_hint.upper);
+    try std.testing.expectEqual(@as(?f64, null), probability_iter.next());
     var probabilities_buf: [3]f64 = undefined;
     try tree.probabilitiesInto(&probabilities_buf);
     try std.testing.expectApproxEqAbs(@as(f64, 0.9), probabilities_buf[0], 1e-12);
@@ -19861,6 +19948,21 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.1), tree.probability(1).?, 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), tree.probability(2).?, 1e-12);
     try std.testing.expectEqual(@as(?f64, null), tree.probability(3));
+    var probability_iter = tree.probabilityIter();
+    try std.testing.expectEqual(@as(usize, 3), probability_iter.len());
+    var probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 3), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 3), probability_hint.upper);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9), probability_iter.next().?, 1e-12);
+    try std.testing.expectEqual(@as(usize, 2), probability_iter.remaining());
+    var iter_probabilities: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), probability_iter.fill(&iter_probabilities));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.1), iter_probabilities[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), iter_probabilities[1], 1e-12);
+    probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 0), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 0), probability_hint.upper);
+    try std.testing.expectEqual(@as(?f64, null), probability_iter.next());
     var probabilities_buf: [3]f64 = undefined;
     try tree.probabilitiesInto(&probabilities_buf);
     try std.testing.expectApproxEqAbs(@as(f64, 0.9), probabilities_buf[0], 1e-12);
