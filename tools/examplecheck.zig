@@ -14,7 +14,7 @@ const examples = [_]Example{
     },
     .{ .path = "examples/reproducible_streams.zig", .step = "zig build run-reproducible-streams" },
     .{ .path = "examples/range_sampling.zig", .step = "zig build run-range-sampling", .source_tokens = &.{ "rangeBatch u16", "rangeAtMostBatchChecked i16", "rangeBatchChecked f64", "durationRangeAtMostBatch", "vectorRangeBatch f32x4", "vectorRangeAtMostBatch i32x4", "vectorOpenBatch f32x4", "vectorOpenClosedBatch f32x4", "openBatch f32", "openClosedBatch f32" } },
-    .{ .path = "examples/discrete_distributions.zig", .step = "zig build run-discrete-distributions" },
+    .{ .path = "examples/discrete_distributions.zig", .step = "zig build run-discrete-distributions", .source_tokens = &.{"Bernoulli.new(p=.25)"} },
     .{ .path = "examples/continuous_distributions.zig", .step = "zig build run-continuous-distributions" },
     .{ .path = "examples/advanced_continuous_distributions.zig", .step = "zig build run-advanced-continuous-distributions" },
     .{ .path = "examples/rank_distributions.zig", .step = "zig build run-rank-distributions" },

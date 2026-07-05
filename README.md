@@ -33,7 +33,7 @@ The current Linux-first roadmap is intentionally broad:
   replacement, stable iterator choice aliases, iterator and weighted iterator sampling with and without
   replacement, fixed-size and caller-owned/sample-fill iterator sampling, allocated/caller-owned value and pointer reservoir sampling, adaptive, repeated, and caller-owned usize/u32 index sampling, and checked
   variants for fallible user-supplied counts or empty inputs
-- reusable uniform, Bernoulli, non-uniform distribution, opt-in bounded f32
+- reusable uniform, Bernoulli with Rust-discoverable new aliases, non-uniform distribution, opt-in bounded f32
   LogNormal approximation, and alias-table samplers with Rust-discoverable new aliases, Rust-discoverable updateWeights, ordered updateMany, and single-weight updateAt, numChoices, positiveCount, compact `u32` index
   output, `sampleIndex` / `fillIndices` aliases, and owned repeated index
   batches, fixed-size index arrays, iterators, plus item- and index-accessor
