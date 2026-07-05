@@ -9,8 +9,8 @@ The current Linux-first roadmap is intentionally broad:
 - a `ChaCha12` secure-style stream for secret-seeded randomness
 - `Rng`, a small facade with `std.Random` compatibility
 - Rust-discoverable raw aliases `nextU64()`, `nextU32()`, and
-  `fillBytes(out)` on `Rng` and deterministic engines, alongside Zig-native
-  `next()`, `bytes`, and `fill(u8, out)`
+  `fillBytes(out)` plus fallible `tryNext()` on deterministic engines,
+  alongside Zig-native `next()`, `bytes`, and `fill(u8, out)`
 - Rust-discoverable engine `seedFromU64(seed)` constructor aliases alongside
   Zig-native `init` / `initFromU64`
 - Rust-discoverable engine `fromSeed(seed)` aliases for Alea `Seed` values
@@ -20,7 +20,8 @@ The current Linux-first roadmap is intentionally broad:
 - Rust-discoverable `Seed.fromRng(source)`, engine `fromRng(source)`, and
   engine `fork()` helpers for deriving child streams from existing generators
 - Rust-discoverable fallible `Seed.tryFromRng(source)` and engine
-  `tryFromRng(source)` helpers for sources exposing `tryNext() !u64`
+  `tryFromRng(source)` / `tryFork()` helpers for sources exposing
+  `tryNext() !u64`
 - `ScalarPrng = Wyhash64` for scalar-heavy distribution workloads such as
   normal, exponential, and Poisson, alongside `FastPrng = Alea4x64` for
   bulk-fill throughput

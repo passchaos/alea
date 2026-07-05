@@ -305,6 +305,15 @@ fn expectEngineForkAlias(comptime Engine: type, seed: u64) !void {
     try std.testing.expectEqual(direct_parent.next(), alias_parent.next());
 }
 
+fn expectEngineTryForkAlias(comptime Engine: type, seed: u64) !void {
+    var direct_parent = engineFromSeed(Engine, seed);
+    var alias_parent = engineFromSeed(Engine, seed);
+    var direct_child = engineFromRngReference(Engine, &direct_parent);
+    var alias_child = try alias_parent.tryFork();
+    try std.testing.expectEqual(direct_child.next(), alias_child.next());
+    try std.testing.expectEqual(direct_parent.next(), alias_parent.next());
+}
+
 fn engineFromRngReference(comptime Engine: type, source: anytype) Engine {
     if (comptime Engine == Alea4x64) {
         return .{ .state = .{ source.next(), source.next(), source.next(), source.next() } };
@@ -370,6 +379,7 @@ test "engine fromRng and fork aliases consume full seed material" {
     inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha }) |Engine| {
         try expectEngineFromRngAlias(Engine, seed);
         try expectEngineForkAlias(Engine, seed);
+        try expectEngineTryForkAlias(Engine, seed);
     }
 }
 

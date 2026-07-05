@@ -55,6 +55,10 @@ pub inline fn next(self: *Alea4x64) u64 {
     return lane(self, 0);
 }
 
+pub fn tryNext(self: *Alea4x64) !u64 {
+    return self.next();
+}
+
 pub fn nextU64(self: *Alea4x64) u64 {
     return self.next();
 }
@@ -93,6 +97,10 @@ pub fn fillBytes(self: *Alea4x64, buf: []u8) void {
 
 pub fn fork(self: *Alea4x64) Alea4x64 {
     return fromRng(self);
+}
+
+pub fn tryFork(self: *Alea4x64) !Alea4x64 {
+    return tryFromRng(self);
 }
 
 inline fn lane(self: *Alea4x64, comptime i: usize) u64 {

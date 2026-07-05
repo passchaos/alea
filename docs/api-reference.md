@@ -278,28 +278,32 @@ aliases; all deterministic engines expose Rust-discoverable `nextU64` /
 seed constructors.
 Engines also expose Rust-discoverable `fromRng` and `fork` helpers for
 deriving child streams from existing generators, plus `tryFromRng` for
-fallible sources exposing `tryNext() !u64`.
+fallible sources exposing `tryNext() !u64` and `tryFork` for fallible
+self-forking.
 
 - `SplitMix64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`,
-  `nextU64`, `nextU32`, `fromRng`, `tryFromRng`, `fork`
+  `tryNext`, `nextU64`, `nextU32`, `fromRng`, `tryFromRng`, `fork`,
+  `tryFork`
 - `Wyhash64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`,
-  `fromState`, `random`, `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`,
-  `fromRng`, `tryFromRng`, `fork`
+  `fromState`, `random`, `next`, `tryNext`, `nextU64`, `nextU32`, `fill`,
+  `fillBytes`, `fromRng`, `tryFromRng`, `fork`, `tryFork`
 - `Alea4x64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `random`,
-  `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`,
-  `tryFromRng`, `fork`
+  `next`, `tryNext`, `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`,
+  `tryFromRng`, `fork`, `tryFork`
 - `Xoshiro256`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `seed`,
-  `random`, `next`, `nextU64`, `nextU32`, `split`, `jump`, `longJump`,
-  `fill`, `fillBytes`, `fromRng`, `tryFromRng`, `fork`
+  `random`, `next`, `tryNext`, `nextU64`, `nextU32`, `split`, `jump`,
+  `longJump`, `fill`, `fillBytes`, `fromRng`, `tryFromRng`, `fork`,
+  `tryFork`
 - `Xoshiro256PlusPlus`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`,
-  `random`, `next`, `nextU64`, `nextU32`, `jump`, `fill`, `fillBytes`,
-  `fromRng`, `tryFromRng`, `fork`
+  `random`, `next`, `tryNext`, `nextU64`, `nextU32`, `jump`, `fill`,
+  `fillBytes`, `fromRng`, `tryFromRng`, `fork`, `tryFork`
 - `Pcg64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `initTwo`,
-  `random`, `next`, `nextU64`, `nextU32`, `fill`, `fillBytes`, `fromRng`,
-  `tryFromRng`, `fork`
+  `random`, `next`, `tryNext`, `nextU64`, `nextU32`, `fill`, `fillBytes`,
+  `fromRng`, `tryFromRng`, `fork`, `tryFork`
 - `ChaCha`: `seed_length`, `init`, `initFromU64`, `random`, `addEntropy`,
-  `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`, `nextU64`, `nextU32`,
-  `fill`, `fillBytes`, `fromRng`, `tryFromRng`, `fork`
+  `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`, `tryNext`, `nextU64`,
+  `nextU32`, `fill`, `fillBytes`, `fromRng`, `tryFromRng`, `fork`,
+  `tryFork`
 
 ## Distributions
 

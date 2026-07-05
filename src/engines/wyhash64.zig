@@ -50,6 +50,10 @@ pub fn next(self: *Wyhash64) u64 {
     return wymix(self.state ^ secret[1], self.state);
 }
 
+pub fn tryNext(self: *Wyhash64) !u64 {
+    return self.next();
+}
+
 pub fn nextU64(self: *Wyhash64) u64 {
     return self.next();
 }
@@ -81,6 +85,10 @@ pub fn fillBytes(self: *Wyhash64, buf: []u8) void {
 
 pub fn fork(self: *Wyhash64) Wyhash64 {
     return fromRng(self);
+}
+
+pub fn tryFork(self: *Wyhash64) !Wyhash64 {
+    return tryFromRng(self);
 }
 
 fn wymix(a: u64, b: u64) u64 {

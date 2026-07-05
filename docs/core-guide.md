@@ -44,10 +44,11 @@ to fill the target engine's state or key before constructing the child.
 For fallible seed sources, `Seed.tryFromRng(source)` and engine
 `tryFromRng(source)` mirror local Rust `SeedableRng::try_from_rng` naming using
 a Zig-native `source.tryNext() !u64` contract and propagate source errors
-without constructing a child.
+without constructing a child. Engine `tryFork()` mirrors local Rust
+`SeedableRng::try_fork` naming by delegating to `tryFromRng(self)`.
 Direct engines also expose Rust-discoverable `nextU64()` / `nextU32()` aliases
-(`fillBytes(out)` where the engine has byte fills), so callers can use local
-Rust raw-RNG terminology without wrapping in `Rng`.
+and `tryNext()` raw draws (`fillBytes(out)` where the engine has byte fills), so
+callers can use local Rust raw-RNG terminology without wrapping in `Rng`.
 The `Rng` facade also exposes Rust-discoverable raw aliases `nextU64()`,
 `nextU32()`, and `fillBytes(out)` (plus `nextU64From`, `nextU32From`, and
 `fillBytesFrom` for direct sources) for users mapping local Rust

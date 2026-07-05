@@ -37,6 +37,10 @@ pub fn next(self: *SplitMix64) u64 {
     return z ^ (z >> 31);
 }
 
+pub fn tryNext(self: *SplitMix64) !u64 {
+    return self.next();
+}
+
 pub fn nextU64(self: *SplitMix64) u64 {
     return self.next();
 }
@@ -47,6 +51,10 @@ pub fn nextU32(self: *SplitMix64) u32 {
 
 pub fn fork(self: *SplitMix64) SplitMix64 {
     return fromRng(self);
+}
+
+pub fn tryFork(self: *SplitMix64) !SplitMix64 {
+    return tryFromRng(self);
 }
 
 test "splitmix64 next has stable snapshots" {

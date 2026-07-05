@@ -88,6 +88,10 @@ pub fn next(self: *ChaCha) u64 {
     return std.mem.readInt(u64, &bytes, .little);
 }
 
+pub fn tryNext(self: *ChaCha) !u64 {
+    return self.next();
+}
+
 pub fn nextU64(self: *ChaCha) u64 {
     return self.next();
 }
@@ -116,6 +120,10 @@ pub fn fillBytes(self: *ChaCha, out: []u8) void {
 
 pub fn fork(self: *ChaCha) ChaCha {
     return fromRng(self);
+}
+
+pub fn tryFork(self: *ChaCha) !ChaCha {
+    return tryFromRng(self);
 }
 
 fn refill(self: *ChaCha) void {

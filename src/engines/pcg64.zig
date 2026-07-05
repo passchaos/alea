@@ -62,6 +62,10 @@ pub fn next(self: *Pcg64) u64 {
     return std.math.rotr(u64, xorshifted, rot);
 }
 
+pub fn tryNext(self: *Pcg64) !u64 {
+    return self.next();
+}
+
 pub fn nextU64(self: *Pcg64) u64 {
     return self.next();
 }
@@ -93,6 +97,10 @@ pub fn fillBytes(self: *Pcg64, buf: []u8) void {
 
 pub fn fork(self: *Pcg64) Pcg64 {
     return fromRng(self);
+}
+
+pub fn tryFork(self: *Pcg64) !Pcg64 {
+    return tryFromRng(self);
 }
 
 test "pcg64 stream selection is deterministic" {

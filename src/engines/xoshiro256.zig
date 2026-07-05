@@ -59,6 +59,10 @@ pub fn next(self: *Xoshiro256) u64 {
     return result;
 }
 
+pub fn tryNext(self: *Xoshiro256) !u64 {
+    return self.next();
+}
+
 pub fn nextU64(self: *Xoshiro256) u64 {
     return self.next();
 }
@@ -115,6 +119,10 @@ pub fn fillBytes(self: *Xoshiro256, buf: []u8) void {
 
 pub fn fork(self: *Xoshiro256) Xoshiro256 {
     return fromRng(self);
+}
+
+pub fn tryFork(self: *Xoshiro256) !Xoshiro256 {
+    return tryFromRng(self);
 }
 
 fn isZeroState(self: Xoshiro256) bool {
