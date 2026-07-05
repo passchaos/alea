@@ -322,7 +322,8 @@ complete.
 | S4-M299 WeightedTree is_valid manifest mapping | `compare/results/s4-m299-weighted-tree-is-valid.md`, `compare/results/s4-m294-rand-distr-public-surface-manifest.md`, `compare/results/distribution-parity-matrix.md`, `tools/surfacecheck.zig` | Closed for the current bar: local `rand_distr::WeightedTreeIndex::is_valid` is explicitly mapped to Alea `WeightedTree.isValid` / `WeightedIntTree.isValid`, and `surfacecheck` now requires the `is_valid` token in the manifest. |
 | S4-M300 Normal parameter discovery aliases | `src/distributions.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/distribution-parity-matrix.md`, `compare/results/s4-m300-normal-parameter-aliases.md` | Closed for the current bar: `Normal(T)` now exposes `meanParameter`, `stddevParameter`, and `stdDevParameter` aliases over existing parameter accessors, with exact Rust method names intentionally avoided because they collide with public Zig fields. |
 | S4-M301 surfacecheck impl-method scanning | `tools/surfacecheck.zig`, `compare/results/s4-m301-surfacecheck-impl-methods.md`, `compare/results/s4-m288-local-rand-public-surface-manifest.md`, `compare/results/s4-m294-rand-distr-public-surface-manifest.md` | Closed for the current bar: `surfacecheck` now scans non-test `impl`-body `pub fn` methods and the manifests explicitly map the newly exposed local helper/weighted-tree methods to existing Alea APIs or Rust-only scaffolding. |
-| S4-M302 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M302 surfacecheck Bernoulli impl coverage | `tools/surfacecheck.zig`, `compare/results/s4-m302-surfacecheck-bernoulli-impl.md`, `compare/results/s4-m288-local-rand-public-surface-manifest.md` | Closed for the current bar: `surfacecheck` now scans the re-exported local `rand` Bernoulli implementation and the manifest explicitly maps `from_ratio` / `p` to Alea `fromRatio` / `p()`. |
+| S4-M303 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -481,6 +482,9 @@ S4-M300 additionally adds Normal parameter discovery aliases; it is another
 closed local `rand_distr` accessor side gap and does not resolve S4-M11 or
 complete the long-term objective.
 S4-M301 additionally strengthens local public-surface drift checking for impl
+methods; it is an evidence/tooling closure and does not resolve S4-M11 or
+complete the long-term objective.
+S4-M302 additionally extends that drift checking to local `rand` Bernoulli impl
 methods; it is an evidence/tooling closure and does not resolve S4-M11 or
 complete the long-term objective.
 

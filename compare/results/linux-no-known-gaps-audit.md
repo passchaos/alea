@@ -731,3 +731,7 @@ S4-M301 strengthens the local surface drift checker
 non-test Rust `impl`-body `pub fn` methods. The newly exposed local method names
 are mapped in the S4-M288/S4-M294 manifests to existing Alea APIs or Rust-only
 scaffolding, and `zig build surfacecheck` passes with the broader scan.
+S4-M302 extends that checker
+(`compare/results/s4-m302-surfacecheck-bernoulli-impl.md`) to local
+`rand/src/distr/bernoulli.rs`, ensuring the re-exported `Bernoulli::from_ratio`
+and `Bernoulli::p` methods remain mapped to Alea `fromRatio` and `p()`.

@@ -23,6 +23,7 @@ const local_rand_files = [_][]const u8{
     "distr/mod.rs",
     "distr/distribution.rs",
     "distr/float.rs",
+    "distr/bernoulli.rs",
     "distr/slice.rs",
     "distr/uniform.rs",
     "distr/uniform_float.rs",
