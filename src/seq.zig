@@ -7794,6 +7794,10 @@ pub fn Choice(comptime T: type) type {
             return &self.items[index];
         }
 
+        pub fn item(self: Self, index: usize) Error!*const T {
+            return self.itemAt(index);
+        }
+
         pub fn get(self: Self, index: usize) ?*const T {
             if (index >= self.items.len) return null;
             return &self.items[index];
@@ -7868,7 +7872,7 @@ pub fn Choice(comptime T: type) type {
                 @memset(dest, &self.items[0]);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*slot| slot.* = self.sampleFrom(source);
         }
 
         pub fn fillValues(self: Self, rng: Rng, dest: []T) void {
@@ -7880,7 +7884,7 @@ pub fn Choice(comptime T: type) type {
                 @memset(dest, self.items[0]);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleValueFrom(source);
+            for (dest) |*slot| slot.* = self.sampleValueFrom(source);
         }
 
         pub fn ptrs(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
@@ -8161,6 +8165,10 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return &self.items[index];
         }
 
+        pub fn item(self: Self, index: usize) Error!*const T {
+            return self.itemAt(index);
+        }
+
         pub fn get(self: Self, index: usize) ?*const T {
             if (index >= self.items.len) return null;
             return &self.items[index];
@@ -8275,7 +8283,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
                 @memset(dest, &self.items[index]);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*slot| slot.* = self.sampleFrom(source);
         }
 
         pub fn fillValues(self: Self, rng: Rng, dest: []T) void {
@@ -8287,7 +8295,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
                 @memset(dest, self.items[index]);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleValueFrom(source);
+            for (dest) |*slot| slot.* = self.sampleValueFrom(source);
         }
 
         pub fn ptrs(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
@@ -8515,7 +8523,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         ) ![]Weight {
             const out = try allocator.alloc(Weight, items.len);
             errdefer allocator.free(out);
-            for (items, out) |*item, *slot| slot.* = weightFn(item);
+            for (items, out) |*input_item, *slot| slot.* = weightFn(input_item);
             return out;
         }
 
@@ -16437,6 +16445,8 @@ test "choice sampler repeatedly samples slice references" {
     try std.testing.expectEqualSlices(u8, &values, choice.itemsValue());
     try std.testing.expectEqual(&values[2], try choice.itemAt(2));
     try std.testing.expectError(error.InvalidParameter, choice.itemAt(4));
+    try std.testing.expectEqual(&values[2], try choice.item(2));
+    try std.testing.expectError(error.InvalidParameter, choice.item(4));
     try std.testing.expectEqual(&values[2], choice.get(2).?);
     try std.testing.expectEqual(@as(?*const u8, null), choice.get(4));
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), try choice.probabilityAt(0), 1e-12);
@@ -17054,6 +17064,8 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectEqualSlices([]const u8, &labels, choice.itemsValue());
     try std.testing.expectEqual(&labels[1], try choice.itemAt(1));
     try std.testing.expectError(error.InvalidParameter, choice.itemAt(3));
+    try std.testing.expectEqual(&labels[1], try choice.item(1));
+    try std.testing.expectError(error.InvalidParameter, choice.item(3));
     try std.testing.expectEqual(&labels[1], choice.get(1).?);
     try std.testing.expectEqual(@as(?*const []const u8, null), choice.get(3));
     try std.testing.expectApproxEqAbs(@as(f64, 8), choice.totalWeight(), 1e-12);

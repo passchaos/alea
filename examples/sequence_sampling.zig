@@ -380,6 +380,7 @@ pub fn main(init: std.process.Init) !void {
 
     const choice = alea.seq.Choice([]const u8).init(&items).?;
     try stdout.print("Choice.numChoices: {}\n", .{choice.numChoices()});
+    try stdout.print("Choice.item(2)={s}\n", .{(try choice.item(2)).*});
     try stdout.print("Choice.probability(0)={d:.3} missing={}\n", .{ choice.probability(0).?, choice.probability(items.len) == null });
     try stdout.print("Choice.get(2)={s} missing={}\n", .{ choice.get(2).?.*, choice.get(items.len) == null });
     var choice_probability_iter = choice.probabilityIter();

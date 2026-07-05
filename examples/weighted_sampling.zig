@@ -534,6 +534,7 @@ pub fn main(init: std.process.Init) !void {
     var choice = try alea.seq.WeightedChoice([]const u8, f64).init(allocator, &items, &float_weights);
     defer choice.deinit();
     try stdout.print("WeightedChoice.numChoices: {}\n", .{choice.numChoices()});
+    try stdout.print("WeightedChoice.item(2)={s}\n", .{(try choice.item(2)).*});
     try stdout.print("WeightedChoice.weight(2)={d:.3} missing={}\n", .{ choice.weight(2).?, choice.weight(items.len) == null });
     try stdout.print("WeightedChoice.probability(2)={d:.3} missing={}\n", .{ choice.probability(2).?, choice.probability(items.len) == null });
     try stdout.print("WeightedChoice.get(2)={s} missing={}\n", .{ choice.get(2).?.*, choice.get(items.len) == null });
