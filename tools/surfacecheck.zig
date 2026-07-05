@@ -795,6 +795,21 @@ fn updateBraceDepth(initial: usize, line: []const u8) usize {
     return depth;
 }
 
+test "manifest token matching prefers exact code tokens and identifier boundaries" {
+    try std.testing.expect(manifestHasToken("covered by `p` and `len`", "p"));
+    try std.testing.expect(manifestHasToken("covered by `p` and `len`", "len"));
+    try std.testing.expect(!manifestHasToken("alphabetic length helper", "p"));
+    try std.testing.expect(!manifestHasToken("length helper", "len"));
+    try std.testing.expect(manifestHasToken("maps weight, total weight, and update", "weight"));
+    try std.testing.expect(!manifestHasToken("weighted helper", "weight"));
+}
+
+test "manifest token matching keeps non-identifier fallback for scoped phrases" {
+    try std.testing.expect(manifestHasToken("covered by `slice::Choose` and aliases", "slice::Choose"));
+    try std.testing.expect(manifestHasToken("`block::{Generator, BlockRng, reconstruct}`", "`block::{Generator"));
+    try std.testing.expect(manifestHasToken("No new unblocked local Rust public-surface gap", "No new unblocked local Rust public-surface gap"));
+}
+
 fn readAbsoluteFile(io: std.Io, allocator: std.mem.Allocator, path: []const u8) ![]u8 {
     const directory_name = std.fs.path.dirname(path) orelse return error.InvalidPath;
     const file_name = std.fs.path.basename(path);

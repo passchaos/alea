@@ -763,3 +763,7 @@ S4-M308 adds a README discovery guard
 (`compare/results/s4-m308-readme-surfacecheck-guard.md`) so `zig build
 readmecheck` requires the `zig build surfacecheck` command to stay visible with
 the other validation/local-comparison commands.
+S4-M309 adds focused unit tests for `surfacecheck` token matching
+(`compare/results/s4-m309-surfacecheck-token-tests.md`), covering exact
+backtick-wrapped tokens, identifier-boundary matches, short-token false-positive
+rejection, and scoped/phrase fallback behavior.
