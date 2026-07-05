@@ -317,7 +317,8 @@ complete.
 | S4-M294 local rand_distr public-surface manifest | `compare/results/s4-m294-rand-distr-public-surface-manifest.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: cached local `rand_distr 0.6.0` root, `multi`, `weighted`, utility, and trait surfaces are mapped to Alea evidence or intentional Zig-native exclusions, with no new unblocked local `rand_distr` public-surface gap identified. |
 | S4-M295 public-surface manifest guardrails | `tools/roadmapcheck.zig`, `compare/results/s4-m295-public-surface-manifest-guardrails.md`, `compare/results/core-rand-coverage.md`, `compare/results/linux-no-known-gaps-audit.md` | Closed for the current bar: `roadmapcheck` now verifies scanned-source, major-surface, representative exclusion, no-new-gap result, and non-completion tokens in the local Rust and `rand_distr` public-surface manifests instead of relying only on file existence. |
 | S4-M296 optional local surface drift checker | `tools/surfacecheck.zig`, `build.zig`, `docs/tooling.md`, `compare/results/s4-m296-surfacecheck.md` | Closed for the current bar: `zig build surfacecheck` re-scans local Rust `rand`, resolved `rand_core`, and cached `rand_distr` public declarations/re-exports against the checked-in manifests, with explicit local path overrides and a documented `rand_distr` `#[cfg(test)]` helper exclusion. |
-| S4-M297 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M297 surfacecheck multiline re-exports | `tools/surfacecheck.zig`, `compare/results/s4-m297-surfacecheck-multiline-reexports.md` | Closed for the current bar: `surfacecheck` now collects Rust multiline `pub use ... { ... };` blocks, checks aliases/names after the terminator, and detects unterminated or oversized re-export blocks while preserving test-helper exclusions. |
+| S4-M298 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -463,6 +464,9 @@ long-term objective.
 S4-M296 additionally adds an explicit local surface drift checker; it is an
 evidence-quality/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M297 additionally strengthens that drift checker with multiline re-export
+parsing; it is an evidence-quality/tooling improvement and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

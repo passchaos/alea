@@ -373,6 +373,9 @@ fn checkSourcePublicTokens(
     var test_module_brace_depth: usize = 0;
     var pending_cfg_test = false;
     var brace_depth: usize = 0;
+    var collecting_pub_use = false;
+    var pub_use_buffer: [4096]u8 = undefined;
+    var pub_use_len: usize = 0;
     var line_it = std.mem.splitScalar(u8, source, '\n');
     while (line_it.next()) |line| {
         const trimmed = std.mem.trim(u8, line, " \t\r");
@@ -389,8 +392,38 @@ fn checkSourcePublicTokens(
 
         if (in_cfg_test_module) {
             try checkIgnoredTestLine(stderr, group, relative, trimmed, missing);
+        } else if (collecting_pub_use) {
+            appendPubUseLine(&pub_use_buffer, &pub_use_len, trimmed) catch |err| {
+                try stderr.print(
+                    "surfacecheck: {s} source `{s}` has oversized pub use block: {s}\n",
+                    .{ group.label, relative, @errorName(err) },
+                );
+                missing.* += 1;
+                collecting_pub_use = false;
+                pub_use_len = 0;
+                continue;
+            };
+            if (std.mem.indexOfScalar(u8, trimmed, ';') != null) {
+                try checkPubUseLine(stderr, group, relative, pub_use_buffer[0..pub_use_len], manifest, missing);
+                collecting_pub_use = false;
+                pub_use_len = 0;
+            }
         } else if (brace_depth == 0) {
-            try checkPublicLine(stderr, group, relative, trimmed, manifest, missing);
+            if (std.mem.startsWith(u8, trimmed, "pub use ") and std.mem.indexOfScalar(u8, trimmed, ';') == null) {
+                collecting_pub_use = true;
+                pub_use_len = 0;
+                appendPubUseLine(&pub_use_buffer, &pub_use_len, trimmed) catch |err| {
+                    try stderr.print(
+                        "surfacecheck: {s} source `{s}` has oversized pub use block: {s}\n",
+                        .{ group.label, relative, @errorName(err) },
+                    );
+                    missing.* += 1;
+                    collecting_pub_use = false;
+                    pub_use_len = 0;
+                };
+            } else {
+                try checkPublicLine(stderr, group, relative, trimmed, manifest, missing);
+            }
         }
 
         brace_depth = updateBraceDepth(brace_depth, line);
@@ -402,6 +435,14 @@ fn checkSourcePublicTokens(
                 pending_cfg_test = false;
             }
         }
+    }
+
+    if (collecting_pub_use) {
+        try stderr.print(
+            "surfacecheck: {s} source `{s}` has unterminated pub use block\n",
+            .{ group.label, relative },
+        );
+        missing.* += 1;
     }
 }
 
@@ -522,6 +563,14 @@ fn checkPubUseLine(
         if (leaf.len == 0 or isIgnored(group, leaf)) continue;
         try requireManifestToken(stderr, group, relative, manifest, leaf, missing);
     }
+}
+
+fn appendPubUseLine(buffer: *[4096]u8, len: *usize, line: []const u8) !void {
+    if (len.* + line.len + 1 > buffer.len) return error.PubUseBlockTooLong;
+    @memcpy(buffer[len.*..][0..line.len], line);
+    len.* += line.len;
+    buffer[len.*] = ' ';
+    len.* += 1;
 }
 
 fn readIdent(text: []const u8) ?[]const u8 {

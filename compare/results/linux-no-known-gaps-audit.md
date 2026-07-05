@@ -703,3 +703,8 @@ it re-scans the available local Rust `rand`, resolved `rand_core`, and cached
 mapped by the S4-M288/S4-M294 manifests, while documenting that
 `rand_distr` `#[cfg(test)]` helpers such as `VoidRng` / `rng` are not public
 crate-surface gaps.
+S4-M297 strengthens that checker
+(`compare/results/s4-m297-surfacecheck-multiline-reexports.md`) so it collects
+and validates Rust multiline `pub use ... { ... };` re-export blocks from the
+local `rand` / `rand_distr` sources, reducing reliance on manual expected-token
+lists when checking manifest drift.
