@@ -51,6 +51,12 @@ pub const IndexVec = union(enum) {
             return .{ .lower = length, .upper = length };
         }
 
+        pub fn fill(self: *IntoIterator, dest: []usize) usize {
+            const count = @min(dest.len, self.remaining());
+            for (dest[0..count]) |*slot| slot.* = self.next().?;
+            return count;
+        }
+
         pub fn deinit(self: IntoIterator) void {
             self.index_vec.deinit(self.allocator);
         }
@@ -79,6 +85,12 @@ pub const IndexVec = union(enum) {
             const length = self.remaining();
             return .{ .lower = length, .upper = length };
         }
+
+        pub fn fill(self: *Iterator, dest: []usize) usize {
+            const count = @min(dest.len, self.remaining());
+            for (dest[0..count]) |*slot| slot.* = self.next().?;
+            return count;
+        }
     };
 
     pub fn ValueIterator(comptime T: type) type {
@@ -101,6 +113,12 @@ pub const IndexVec = union(enum) {
 
             pub fn sizeHint(self: @This()) SizeHint {
                 return self.index_iter.sizeHint();
+            }
+
+            pub fn fill(self: *@This(), dest: []T) usize {
+                const count = @min(dest.len, self.remaining());
+                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                return count;
             }
         };
     }
@@ -126,6 +144,12 @@ pub const IndexVec = union(enum) {
             pub fn sizeHint(self: @This()) SizeHint {
                 return self.index_iter.sizeHint();
             }
+
+            pub fn fill(self: *@This(), dest: []*const T) usize {
+                const count = @min(dest.len, self.remaining());
+                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                return count;
+            }
         };
     }
 
@@ -149,6 +173,12 @@ pub const IndexVec = union(enum) {
 
             pub fn sizeHint(self: @This()) SizeHint {
                 return self.index_iter.sizeHint();
+            }
+
+            pub fn fill(self: *@This(), dest: []*T) usize {
+                const count = @min(dest.len, self.remaining());
+                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                return count;
             }
         };
     }
@@ -9814,6 +9844,65 @@ test "index vec maps sampled indexes to slice items" {
     try std.testing.expectError(error.InvalidParameter, invalid.mutPtrsChecked(u8, &numbers));
     try std.testing.expectError(error.InvalidParameter, invalid.mutPtrsIntoChecked(u8, &numbers, short_mut_ptrs[0..2]));
     try std.testing.expectError(error.InvalidParameter, invalid.mutPtrsOwnedChecked(std.testing.allocator, u8, &numbers));
+}
+
+test "index vec iterators fill caller-owned buffers" {
+    const labels = [_][]const u8{ "ant", "bee", "cat", "dog", "eel", "fox" };
+    var backing = [_]usize{ 4, 1, 5, 2 };
+    const index_vec = IndexVec{ .usize = &backing };
+
+    var iter = index_vec.iter();
+    var filled_indices: [2]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 2), iter.fill(&filled_indices));
+    try std.testing.expectEqualSlices(usize, &.{ 4, 1 }, &filled_indices);
+    try std.testing.expectEqual(@as(usize, 2), iter.remaining());
+    try expectExactSizeHint(iter.sizeHint(), 2);
+    var tail_indices: [3]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 2), iter.fill(&tail_indices));
+    try std.testing.expectEqualSlices(usize, &.{ 5, 2 }, tail_indices[0..2]);
+    try std.testing.expectEqual(@as(usize, 0), iter.remaining());
+    try std.testing.expectEqual(@as(usize, 0), iter.fill(&tail_indices));
+
+    const owned_backing = try std.testing.allocator.dupe(u32, &.{ 3, 5, 8 });
+    var into_iter = IndexVec.fromOwnedU32Slice(owned_backing).intoIter(std.testing.allocator);
+    defer into_iter.deinit();
+    var consumed: [2]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 2), into_iter.fill(&consumed));
+    try std.testing.expectEqualSlices(usize, &.{ 3, 5 }, &consumed);
+    try std.testing.expectEqual(@as(usize, 1), into_iter.len());
+    try expectExactSizeHint(into_iter.sizeHint(), 1);
+    var consumed_tail: [2]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 1), into_iter.fill(&consumed_tail));
+    try std.testing.expectEqual(@as(usize, 8), consumed_tail[0]);
+    try std.testing.expectEqual(@as(usize, 0), into_iter.len());
+
+    var values = index_vec.values([]const u8, &labels);
+    var value_out: [3][]const u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), values.fill(&value_out));
+    try std.testing.expectEqualStrings("eel", value_out[0]);
+    try std.testing.expectEqualStrings("bee", value_out[1]);
+    try std.testing.expectEqualStrings("fox", value_out[2]);
+    try std.testing.expectEqual(@as(usize, 1), values.len());
+    var value_tail: [2][]const u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 1), values.fill(&value_tail));
+    try std.testing.expectEqualStrings("cat", value_tail[0]);
+
+    var ptrs = try index_vec.ptrsChecked([]const u8, &labels);
+    var ptr_out: [2]*const []const u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), ptrs.fill(&ptr_out));
+    try std.testing.expectEqualStrings("eel", ptr_out[0].*);
+    try std.testing.expectEqualStrings("bee", ptr_out[1].*);
+    try std.testing.expectEqual(@as(usize, 2), ptrs.remaining());
+
+    var numbers = [_]u8{ 10, 20, 30, 40, 50, 60 };
+    var mut_ptrs = try index_vec.mutPtrsChecked(u8, &numbers);
+    var mut_out: [3]*u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), mut_ptrs.fill(&mut_out));
+    for (mut_out) |ptr| ptr.* += 7;
+    var mut_tail: [2]*u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 1), mut_ptrs.fill(&mut_tail));
+    mut_tail[0].* += 7;
+    try std.testing.expectEqualSlices(u8, &.{ 10, 27, 37, 40, 57, 67 }, &numbers);
 }
 
 test "index vec keeps compact backing for u32 lengths" {

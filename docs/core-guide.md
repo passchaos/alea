@@ -304,8 +304,8 @@ Use:
   representation-independent `eql`, `copyInto`, `copyIntoU32`,
   `toOwnedSlice`, `toOwnedU32Slice`, consuming `intoOwnedSlice` /
   `intoOwnedU32Slice`, a consuming `intoIter` with `remaining` / `len` /
-  `sizeHint` / `deinit`, and exact-size `iter` / mapped item iterators with
-  `remaining` / `len` / `sizeHint`, plus
+  `sizeHint` / `fill` / `deinit`, and exact-size `iter` / mapped item iterators with
+  `remaining` / `len` / `sizeHint` / `fill`, plus
   `values` / `ptrs` / `mutPtrs`, `valuesInto` / `ptrsInto` /
   `mutPtrsInto`, `valuesOwned` / `ptrsOwned` / `mutPtrsOwned`, and checked
   variants for mapping indexes back to slice items

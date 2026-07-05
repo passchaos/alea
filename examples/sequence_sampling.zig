@@ -68,6 +68,11 @@ pub fn main(init: std.process.Init) !void {
     const mapped1 = item_values.next().?;
     const mapped2 = item_values.next().?;
     try stdout.print("IndexVec.values: {s}, {s}, {s}\n", .{ mapped0, mapped1, mapped2 });
+    var item_values_fill_iter = item_index_vec.values([]const u8, &items);
+    var item_values_fill: [2][]const u8 = undefined;
+    _ = item_values_fill_iter.fill(&item_values_fill);
+    const item_values_fill_hint = item_values_fill_iter.sizeHint();
+    try stdout.print("IndexVec.values.fill: {s}, {s}; remaining={} sizeHint={}..{}\n", .{ item_values_fill[0], item_values_fill[1], item_values_fill_iter.remaining(), item_values_fill_hint.lower, item_values_fill_hint.upper.? });
     var mapped_into: [3][]const u8 = undefined;
     try item_index_vec.valuesIntoChecked([]const u8, &items, &mapped_into);
     try stdout.print("IndexVec.valuesInto: {s}, {s}, {s}\n", .{ mapped_into[0], mapped_into[1], mapped_into[2] });
@@ -86,6 +91,11 @@ pub fn main(init: std.process.Init) !void {
     const cloned_index_vec = try item_index_vec.clone(allocator);
     defer cloned_index_vec.deinit(allocator);
     try stdout.print("IndexVec.clone eql: {}\n", .{cloned_index_vec.eql(item_index_vec)});
+    var borrowed_iter_fill = item_index_vec.iter();
+    var borrowed_iter_fill_out: [2]usize = undefined;
+    _ = borrowed_iter_fill.fill(&borrowed_iter_fill_out);
+    const borrowed_iter_hint = borrowed_iter_fill.sizeHint();
+    try stdout.print("IndexVec.iter.fill: {any}; remaining={} sizeHint={}..{}\n", .{ borrowed_iter_fill_out, borrowed_iter_fill.remaining(), borrowed_iter_hint.lower, borrowed_iter_hint.upper.? });
     const iter_backing = try allocator.dupe(u32, &.{ 0, 2, 4 });
     var consuming_iter = alea.seq.IndexVec.fromOwnedU32Slice(iter_backing).intoIter(allocator);
     defer consuming_iter.deinit();
