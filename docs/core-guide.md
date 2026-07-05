@@ -216,7 +216,10 @@ slices via repeated `valueFrom` draws.
 Reusable scalar and vector uniform samplers keep Zig-native `init` /
 `initInclusive` constructors and also expose Rust-discoverable `new` /
 `newInclusive` aliases matching local Rust `Uniform::new` /
-`Uniform::new_inclusive` semantics. The distribution namespace also exposes
+`Uniform::new_inclusive` semantics. `UniformDuration` provides the same reusable
+half-open/inclusive sampler shape for `std.Io.Duration`, matching local Rust
+`UniformDuration` discovery while delegating to Alea's duration range helpers.
+The distribution namespace also exposes
 Rust-discoverable one-shot checked aliases `sampleSingle` /
 `sampleSingleInclusive` (plus direct-source `From` variants), mirroring local
 Rust `UniformSampler::sample_single` naming while preserving the existing

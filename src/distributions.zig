@@ -2382,6 +2382,63 @@ pub fn Uniform(comptime T: type) type {
     };
 }
 
+pub const UniformDuration = struct {
+    const Self = @This();
+
+    low: std.Io.Duration,
+    high: std.Io.Duration,
+    inclusive: bool = false,
+
+    pub fn init(low: std.Io.Duration, high: std.Io.Duration) Error!Self {
+        if (low.nanoseconds >= high.nanoseconds) return error.EmptyRange;
+        return .{ .low = low, .high = high, .inclusive = false };
+    }
+
+    pub fn new(low: std.Io.Duration, high: std.Io.Duration) Error!Self {
+        return init(low, high);
+    }
+
+    pub fn initInclusive(low: std.Io.Duration, high: std.Io.Duration) Error!Self {
+        if (low.nanoseconds > high.nanoseconds) return error.EmptyRange;
+        return .{ .low = low, .high = high, .inclusive = true };
+    }
+
+    pub fn newInclusive(low: std.Io.Duration, high: std.Io.Duration) Error!Self {
+        return initInclusive(low, high);
+    }
+
+    pub fn lowValue(self: Self) std.Io.Duration {
+        return self.low;
+    }
+
+    pub fn highValue(self: Self) std.Io.Duration {
+        return self.high;
+    }
+
+    pub fn isInclusive(self: Self) bool {
+        return self.inclusive;
+    }
+
+    pub fn sample(self: Self, rng: Rng) std.Io.Duration {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: Self, source: anytype) std.Io.Duration {
+        if (self.inclusive) {
+            return Rng.durationRangeAtMostFrom(source, self.low, self.high);
+        }
+        return Rng.durationRangeLessThanFrom(source, self.low, self.high);
+    }
+
+    pub fn fill(self: Self, rng: Rng, dest: []std.Io.Duration) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: Self, source: anytype, dest: []std.Io.Duration) void {
+        for (dest) |*item| item.* = self.sampleFrom(source);
+    }
+};
+
 pub fn VectorUniform(comptime VectorType: type) type {
     const info = vectorInfo(VectorType);
     const Child = info.child;
@@ -30826,4 +30883,53 @@ test "WeightedIndex alias mirrors AliasTable" {
     });
     try std.testing.expectApproxEqAbs(alias.totalWeight(), weighted.totalWeight(), 1e-12);
     try std.testing.expectApproxEqAbs(alias.probability(2).?, weighted.probability(2).?, 1e-12);
+}
+
+test "UniformDuration sampler mirrors duration helpers" {
+    const root = @import("root.zig");
+    const low = std.Io.Duration.fromMilliseconds(10);
+    const high = std.Io.Duration.fromMilliseconds(20);
+
+    const half_open = try UniformDuration.new(low, high);
+    try std.testing.expectEqual(low, half_open.lowValue());
+    try std.testing.expectEqual(high, half_open.highValue());
+    try std.testing.expect(!half_open.isInclusive());
+
+    var sampler_engine = root.DefaultPrng.init(0xd02a_7101);
+    var helper_engine = root.DefaultPrng.init(0xd02a_7101);
+    const sampler_rng = Rng.init(&sampler_engine);
+    const helper_rng = Rng.init(&helper_engine);
+    try std.testing.expectEqual(helper_rng.durationRangeLessThan(low, high), sampler_rng.sample(std.Io.Duration, half_open));
+    try std.testing.expectEqual(helper_engine.next(), sampler_engine.next());
+
+    const inclusive = try UniformDuration.newInclusive(low, high);
+    try std.testing.expect(inclusive.isInclusive());
+
+    var inclusive_sampler_engine = root.DefaultPrng.init(0xd02a_7102);
+    var inclusive_helper_engine = root.DefaultPrng.init(0xd02a_7102);
+    try std.testing.expectEqual(
+        Rng.durationRangeAtMostFrom(&inclusive_helper_engine, low, high),
+        Rng.sampleFrom(&inclusive_sampler_engine, std.Io.Duration, inclusive),
+    );
+    try std.testing.expectEqual(inclusive_helper_engine.next(), inclusive_sampler_engine.next());
+
+    var fill_sampler_engine = root.DefaultPrng.init(0xd02a_7103);
+    var fill_helper_engine = root.DefaultPrng.init(0xd02a_7103);
+    var sampler_values: [5]std.Io.Duration = undefined;
+    var helper_values: [5]std.Io.Duration = undefined;
+    inclusive.fillFrom(&fill_sampler_engine, &sampler_values);
+    for (&helper_values) |*item| item.* = Rng.durationRangeAtMostFrom(&fill_helper_engine, low, high);
+    try std.testing.expectEqualSlices(std.Io.Duration, &helper_values, &sampler_values);
+    try std.testing.expectEqual(fill_helper_engine.next(), fill_sampler_engine.next());
+
+    const point = try UniformDuration.newInclusive(high, high);
+    var point_engine = root.DefaultPrng.init(0xd02a_7104);
+    var point_control = root.DefaultPrng.init(0xd02a_7104);
+    var point_values: [3]std.Io.Duration = undefined;
+    point.fillFrom(&point_engine, &point_values);
+    for (point_values) |item| try std.testing.expectEqual(high, item);
+    try std.testing.expectEqual(point_control.next(), point_engine.next());
+
+    try std.testing.expectError(error.EmptyRange, UniformDuration.new(high, low));
+    try std.testing.expectError(error.EmptyRange, UniformDuration.newInclusive(high, low));
 }

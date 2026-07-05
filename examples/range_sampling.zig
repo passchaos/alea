@@ -23,6 +23,10 @@ pub fn main(init: std.process.Init) !void {
     const duration = rng.durationRangeAtMost(.fromMilliseconds(10), .fromMilliseconds(20));
     const duration_batch = try rng.durationRangeAtMostBatch(allocator, 4, .fromMilliseconds(10), .fromMilliseconds(20));
     defer allocator.free(duration_batch);
+    const duration_sampler = try alea.distributions.UniformDuration.newInclusive(.fromMilliseconds(10), .fromMilliseconds(20));
+    var duration_sampler_engine = alea.ScalarPrng.init(0x7261_6e67_64);
+    var duration_sampler_values: [3]std.Io.Duration = undefined;
+    duration_sampler.fillFrom(&duration_sampler_engine, &duration_sampler_values);
     const sample_single = try alea.distributions.sampleSingleFrom(&engine, u8, 1, 7);
     const sample_single_inclusive = try alea.distributions.sampleSingleInclusiveFrom(&engine, u8, 1, 6);
     const standard_uniform = alea.distributions.StandardUniform{};
@@ -41,6 +45,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("StandardUniform pair={any}, u32={}, f32 fill [0,1): {any}\n", .{ standard_pair, standard_word, standard_units });
     try stdout.print("duration range [10ms,20ms]: {} ns\n", .{duration.nanoseconds});
     try stdout.print("durationRangeAtMostBatch [10ms,20ms]: {any}\n", .{duration_batch});
+    try stdout.print("UniformDuration.newInclusive [10ms,20ms]: {any}\n", .{duration_sampler_values});
 
     var fill_engine = alea.ScalarPrng.init(0x7261_6e67_66);
     var ints: [8]u16 = undefined;

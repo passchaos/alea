@@ -569,3 +569,8 @@ S4-M265 adds `distributions.WeightedIndex`
 `rand::distr::weighted::WeightedIndex` discovery-name gap while preserving
 Alea's `AliasTable` static weighted sampler implementation and O(1) repeated
 sampling contract.
+S4-M266 adds `distributions.UniformDuration`
+(`compare/results/s4-m266-uniform-duration.md`), closing the local Rust
+`rand::distr::uniform::UniformDuration` discovery-name gap while preserving
+Alea's `std.Io.Duration` range helper semantics and inclusive point-mass
+no-consume behavior.
