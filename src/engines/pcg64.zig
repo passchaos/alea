@@ -22,7 +22,7 @@ pub fn fromSeed(seed: anytype) Pcg64 {
 }
 
 pub fn fromRng(source: anytype) Pcg64 {
-    return init(source.next());
+    return initTwo(source.next(), source.next());
 }
 
 pub fn initTwo(seed: u64, stream: u64) Pcg64 {

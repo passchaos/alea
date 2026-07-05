@@ -26,7 +26,7 @@ pub fn fromSeed(seed: anytype) Wyhash64 {
 }
 
 pub fn fromRng(source: anytype) Wyhash64 {
-    return init(source.next());
+    return fromState(source.next());
 }
 
 pub fn fromState(state: u64) Wyhash64 {

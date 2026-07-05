@@ -26,7 +26,7 @@ pub fn fromSeed(seed: anytype) Alea4x64 {
 }
 
 pub fn fromRng(source: anytype) Alea4x64 {
-    return init(source.next());
+    return .{ .state = .{ source.next(), source.next(), source.next(), source.next() } };
 }
 
 pub fn random(self: *Alea4x64) std.Random {

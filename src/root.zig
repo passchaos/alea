@@ -215,7 +215,7 @@ test "engine fromSeed aliases mirror Seed constructors" {
 fn expectEngineFromRngAlias(comptime Engine: type, seed: u64) !void {
     var direct_source = ScalarPrng.init(seed);
     var alias_source = ScalarPrng.init(seed);
-    var direct = engineFromSeed(Engine, direct_source.next());
+    var direct = engineFromRngReference(Engine, &direct_source);
     var alias = Engine.fromRng(&alias_source);
     try std.testing.expectEqual(direct.next(), alias.next());
     try std.testing.expectEqual(direct_source.next(), alias_source.next());
@@ -224,13 +224,65 @@ fn expectEngineFromRngAlias(comptime Engine: type, seed: u64) !void {
 fn expectEngineForkAlias(comptime Engine: type, seed: u64) !void {
     var direct_parent = engineFromSeed(Engine, seed);
     var alias_parent = engineFromSeed(Engine, seed);
-    var direct_child = engineFromSeed(Engine, direct_parent.next());
+    var direct_child = engineFromRngReference(Engine, &direct_parent);
     var alias_child = alias_parent.fork();
     try std.testing.expectEqual(direct_child.next(), alias_child.next());
     try std.testing.expectEqual(direct_parent.next(), alias_parent.next());
 }
 
-test "engine fromRng and fork aliases consume one seed draw" {
+fn engineFromRngReference(comptime Engine: type, source: anytype) Engine {
+    if (comptime Engine == Alea4x64) {
+        return .{ .state = .{ source.next(), source.next(), source.next(), source.next() } };
+    }
+    if (comptime Engine == Xoshiro256) {
+        var out: Xoshiro256 = .{ .state = undefined };
+        inline for (0..4) |i| out.state[i] = source.next();
+        var all_zero = true;
+        for (out.state) |word| {
+            if (word != 0) {
+                all_zero = false;
+                break;
+            }
+        }
+        if (all_zero) return Xoshiro256.init(0);
+        return out;
+    }
+    if (comptime Engine == Xoshiro256PlusPlus) {
+        var out: Xoshiro256PlusPlus = .{ .state = undefined };
+        inline for (0..4) |i| out.state[i] = source.next();
+        var all_zero = true;
+        for (out.state) |word| {
+            if (word != 0) {
+                all_zero = false;
+                break;
+            }
+        }
+        if (all_zero) return Xoshiro256PlusPlus.init(0);
+        return out;
+    }
+    if (comptime Engine == Pcg64) {
+        return Pcg64.initTwo(source.next(), source.next());
+    }
+    if (comptime Engine == ChaCha) {
+        var key: [ChaCha.seed_length]u8 = undefined;
+        var i: usize = 0;
+        while (i < key.len) : (i += 8) {
+            var bytes: [8]u8 = undefined;
+            std.mem.writeInt(u64, &bytes, source.next(), .little);
+            @memcpy(key[i..][0..8], &bytes);
+        }
+        return ChaCha.init(key);
+    }
+    if (comptime Engine == Wyhash64) {
+        return Wyhash64.fromState(source.next());
+    }
+    if (comptime Engine == SplitMix64) {
+        return SplitMix64.init(source.next());
+    }
+    @compileError("unsupported engine");
+}
+
+test "engine fromRng and fork aliases consume full seed material" {
     const seed: u64 = 0x5150_f04b_1234_abcd;
 
     var direct_seed_source = ScalarPrng.init(seed);

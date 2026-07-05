@@ -5,8 +5,8 @@ Result: passed.
 Purpose: add Rust-discoverable seeded-from-RNG and fork aliases. Local Rust
 `rand_core::SeedableRng` exposes `from_rng` and `fork`; Alea already had
 deterministic `Seed`, `seedFromU64`, and `fromSeed` workflows. This milestone
-adds Zig-native aliases that consume one `u64` seed draw from an existing
-generator and then use the target engine's normal deterministic constructor.
+adds Zig-native aliases for constructing child streams from an existing
+generator.
 
 ## Local Rust Reference
 
@@ -40,10 +40,14 @@ Semantics:
 
 - `Seed.fromRng(source)` consumes one `source.next()` draw and stores it as
   seed state;
-- `Engine.fromRng(source)` consumes one `source.next()` draw and forwards it to
-  the engine's normal deterministic `u64` constructor;
-- `engine.fork()` delegates to `Engine.fromRng(&engine)`, consuming one seed
-  draw from the parent;
+- `Engine.fromRng(source)` consumes enough `source.next()` draws to fill the
+  target engine's state or key directly (`SplitMix64` and `Wyhash64`: 1 word,
+  `Pcg64`: 2 words, `Alea4x64` / `Xoshiro256` / `Xoshiro256PlusPlus` /
+  `ChaCha`: 4 words);
+- Xoshiro all-zero child states are remapped through the existing
+  `init(0)` fallback;
+- `engine.fork()` delegates to `Engine.fromRng(&engine)`, consuming the same
+  target-width seed material from the parent;
 - this milestone is naming/discoverability only and does not change `Seed.mix`,
   `Seed.stream`, or existing engine output snapshots.
 
@@ -65,7 +69,7 @@ Semantics:
 The relevant validation for this milestone is:
 
 - `git diff --check`
-- `zig test src/root.zig --test-filter "engine fromRng and fork aliases consume one seed draw"`
+- `zig test src/root.zig --test-filter "engine fromRng and fork aliases consume full seed material"`
 - `zig build run-reproducible-streams`
 - `zig build doccheck`
 - `zig build test`

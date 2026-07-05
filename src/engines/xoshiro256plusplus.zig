@@ -21,7 +21,17 @@ pub fn fromSeed(seed_value: anytype) Xoshiro256PlusPlus {
 }
 
 pub fn fromRng(source: anytype) Xoshiro256PlusPlus {
-    return init(source.next());
+    var self: Xoshiro256PlusPlus = .{ .state = undefined };
+    inline for (0..4) |i| self.state[i] = source.next();
+    var all_zero = true;
+    for (self.state) |word| {
+        if (word != 0) {
+            all_zero = false;
+            break;
+        }
+    }
+    if (all_zero) return init(0);
+    return self;
 }
 
 pub fn random(self: *Xoshiro256PlusPlus) std.Random {

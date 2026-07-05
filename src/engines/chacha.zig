@@ -43,7 +43,14 @@ pub fn fromSeed(seed: anytype) ChaCha {
 }
 
 pub fn fromRng(source: anytype) ChaCha {
-    return initFromU64(source.next());
+    var key: [seed_length]u8 = undefined;
+    var i: usize = 0;
+    while (i < seed_length) : (i += 8) {
+        var bytes: [8]u8 = undefined;
+        std.mem.writeInt(u64, &bytes, source.next(), .little);
+        @memcpy(key[i..][0..8], &bytes);
+    }
+    return init(key);
 }
 
 pub fn random(self: *ChaCha) std.Random {

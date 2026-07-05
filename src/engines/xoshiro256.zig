@@ -20,7 +20,17 @@ pub fn fromSeed(seed_value: anytype) Xoshiro256 {
 }
 
 pub fn fromRng(source: anytype) Xoshiro256 {
-    return init(source.next());
+    var self: Xoshiro256 = .{ .state = undefined };
+    inline for (0..4) |i| self.state[i] = source.next();
+    var all_zero = true;
+    for (self.state) |word| {
+        if (word != 0) {
+            all_zero = false;
+            break;
+        }
+    }
+    if (all_zero) return init(0);
+    return self;
 }
 
 pub fn seed(self: *Xoshiro256, seed_value: u64) void {

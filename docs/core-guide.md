@@ -34,8 +34,9 @@ local Rust `SeedableRng::from_seed` naming while keeping `Seed.stream(...)`
 and `Seed.mix(...)` as the Zig-native derivation tools.
 `Seed.fromRng(source)`, direct-engine `fromRng(source)`, and engine `fork()`
 mirror local Rust `SeedableRng::from_rng` / `fork` naming for deterministic
-child derivation from an existing generator; each consumes one `u64` seed draw
-from the source and then uses the engine's normal `u64` constructor.
+child derivation from an existing generator; `Seed.fromRng` consumes one `u64`
+seed draw, while engine `fromRng` / `fork` consume enough `u64` seed material
+to fill the target engine's state or key before constructing the child.
 Direct engines also expose Rust-discoverable `nextU64()` / `nextU32()` aliases
 (`fillBytes(out)` where the engine has byte fills), so callers can use local
 Rust raw-RNG terminology without wrapping in `Rng`.
