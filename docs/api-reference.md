@@ -2445,6 +2445,7 @@ Dynamic weighted helpers:
 - `WeightedTree.updateAllByIndex`
 - `WeightedTree.updateAllBy`
 - `WeightedTree.get`
+- `WeightedTree.constantIndex`
 - `WeightedTree.weightAt`
 - `WeightedTree.weight`
 - `WeightedTree.weightIter`
@@ -2541,6 +2542,7 @@ Dynamic weighted helpers:
 - `WeightedIntTree.updateAllByIndex`
 - `WeightedIntTree.updateAllBy`
 - `WeightedIntTree.get`
+- `WeightedIntTree.constantIndex`
 - `WeightedIntTree.weightAt`
 - `WeightedIntTree.weight`
 - `WeightedIntTree.weightIter`
