@@ -2570,8 +2570,8 @@ Dynamic weighted helpers:
 
 - Error type: `Error`
 - Index vectors: `IndexVec.fromOwnedSlice`, `IndexVec.fromOwnedU32Slice`,
-  `IndexVec.len`, `IndexVec.isEmpty`, `IndexVec.at`, `IndexVec.indexOf`,
-  `IndexVec.contains`, `IndexVec.eql`, `IndexVec.validateItems`,
+  `IndexVec.clone`, `IndexVec.len`, `IndexVec.isEmpty`, `IndexVec.at`,
+  `IndexVec.indexOf`, `IndexVec.contains`, `IndexVec.eql`, `IndexVec.validateItems`,
   `IndexVec.validateDistinctItems`, `IndexVec.copyInto`,
   `IndexVec.copyIntoU32`, `IndexVec.toOwnedSlice`,
   `IndexVec.toOwnedU32Slice`, `IndexVec.intoOwnedSlice`,

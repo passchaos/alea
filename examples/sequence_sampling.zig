@@ -83,6 +83,9 @@ pub fn main(init: std.process.Init) !void {
     var equality_backing = [_]u32{ 0, 2, 4 };
     const equality_index_vec = alea.seq.IndexVec{ .u32 = &equality_backing };
     try stdout.print("IndexVec.eql cross-backing: {}\n", .{item_index_vec.eql(equality_index_vec)});
+    const cloned_index_vec = try item_index_vec.clone(allocator);
+    defer cloned_index_vec.deinit(allocator);
+    try stdout.print("IndexVec.clone eql: {}\n", .{cloned_index_vec.eql(item_index_vec)});
     const adopted_native_backing = try allocator.dupe(usize, &.{ 0, 2, 4 });
     const adopted_native_index_vec = alea.seq.IndexVec.fromOwnedSlice(adopted_native_backing);
     defer adopted_native_index_vec.deinit(allocator);

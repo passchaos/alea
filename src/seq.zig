@@ -14,6 +14,13 @@ pub const IndexVec = union(enum) {
         return .{ .u32 = items };
     }
 
+    pub fn clone(self: IndexVec, allocator: std.mem.Allocator) !IndexVec {
+        return switch (self) {
+            .u32 => |items| .{ .u32 = try allocator.dupe(u32, items) },
+            .usize => |items| .{ .usize = try allocator.dupe(usize, items) },
+        };
+    }
+
     pub const Iterator = struct {
         index_vec: IndexVec,
         index: usize = 0,
@@ -9141,6 +9148,39 @@ test "index vec owned-slice constructors adopt backing" {
     var copied: [3]usize = undefined;
     try compact_vec.copyInto(&copied);
     try std.testing.expectEqualSlices(usize, &expected_native, &copied);
+}
+
+test "index vec clone preserves representation and owns copy" {
+    const compact_backing = try std.testing.allocator.alloc(u32, 3);
+    compact_backing[0..3].* = .{ 3, 5, 8 };
+    const compact_vec = IndexVec.fromOwnedU32Slice(compact_backing);
+    defer compact_vec.deinit(std.testing.allocator);
+    const compact_clone = try compact_vec.clone(std.testing.allocator);
+    defer compact_clone.deinit(std.testing.allocator);
+    try std.testing.expect(compact_vec.eql(compact_clone));
+    try std.testing.expectEqual(@intFromEnum(compact_vec), @intFromEnum(compact_clone));
+    try std.testing.expectEqual(@as(usize, 3), compact_clone.len());
+    try std.testing.expect(@intFromPtr(compact_vec.u32.ptr) != @intFromPtr(compact_clone.u32.ptr));
+    compact_vec.u32[1] = 13;
+    try std.testing.expectEqual(@as(usize, 5), compact_clone.at(1));
+    try std.testing.expect(!compact_vec.eql(compact_clone));
+
+    const native_backing = try std.testing.allocator.alloc(usize, 3);
+    native_backing[0..3].* = .{ 2, 4, 6 };
+    const native_vec = IndexVec.fromOwnedSlice(native_backing);
+    defer native_vec.deinit(std.testing.allocator);
+    const native_clone = try native_vec.clone(std.testing.allocator);
+    defer native_clone.deinit(std.testing.allocator);
+    try std.testing.expect(native_vec.eql(native_clone));
+    try std.testing.expectEqual(@intFromEnum(native_vec), @intFromEnum(native_clone));
+    try std.testing.expect(@intFromPtr(native_vec.usize.ptr) != @intFromPtr(native_clone.usize.ptr));
+    native_vec.usize[0] = 10;
+    try std.testing.expectEqual(@as(usize, 2), native_clone.at(0));
+    try std.testing.expect(!native_vec.eql(native_clone));
+
+    var failing_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, native_vec.clone(failing_alloc.allocator()));
+    try std.testing.expect(failing_alloc.has_induced_failure);
 }
 
 test "index vec consuming owned conversions transfer or narrow backing" {
