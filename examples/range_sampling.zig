@@ -20,6 +20,7 @@ pub fn main(init: std.process.Init) !void {
     const open = rng.floatOpen(f64);
     const open_closed = rng.floatOpenClosed(f64);
     const centered = rng.floatRange(f64, -1, 1);
+    const uniform_error: alea.distributions.UniformError = error.EmptyRange;
     const duration = rng.durationRangeAtMost(.fromMilliseconds(10), .fromMilliseconds(20));
     const duration_batch = try rng.durationRangeAtMostBatch(allocator, 4, .fromMilliseconds(10), .fromMilliseconds(20));
     defer allocator.free(duration_batch);
@@ -42,6 +43,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("randomRange die={}, randomRangeAtMost die={}\n", .{ random_range_die, random_range_at_most_die });
     try stdout.print("float units: [0,1)={d:.8}, (0,1)={d:.8}, (0,1]={d:.8}, range[-1,1)={d:.8}\n", .{ unit, open, open_closed, centered });
     try stdout.print("sampleSingle die={}, sampleSingleInclusive die={}\n", .{ sample_single, sample_single_inclusive });
+    try stdout.print("UniformError alias -> {s}\n", .{@errorName(uniform_error)});
     try stdout.print("StandardUniform pair={any}, u32={}, f32 fill [0,1): {any}\n", .{ standard_pair, standard_word, standard_units });
     try stdout.print("duration range [10ms,20ms]: {} ns\n", .{duration.nanoseconds});
     try stdout.print("durationRangeAtMostBatch [10ms,20ms]: {any}\n", .{duration_batch});

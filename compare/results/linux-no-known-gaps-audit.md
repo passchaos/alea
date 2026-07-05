@@ -583,3 +583,7 @@ S4-M268 adds distribution-namespace `Choose(T)`
 (`compare/results/s4-m268-distribution-choose.md`), closing the local Rust
 `rand::distr::slice::Choose` discovery-name gap while preserving Alea's
 sequence-choice semantics over `[]const T`.
+S4-M269 adds `distributions.UniformError`
+(`compare/results/s4-m269-uniform-error.md`), closing the local Rust
+`rand::distr::uniform::Error` discovery-name gap while preserving Alea's
+uniform-family `Error` semantics.

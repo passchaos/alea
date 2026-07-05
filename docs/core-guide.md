@@ -215,7 +215,7 @@ stream-compatible `Rng.fill` fast paths and fill enum or compound array/tuple
 slices via repeated `valueFrom` draws.
 Reusable scalar and vector uniform samplers keep Zig-native `init` /
 `initInclusive` constructors and also expose Rust-discoverable `new` /
-`newInclusive` aliases matching local Rust `Uniform::new` /
+`newInclusive` aliases and `UniformError` discovery matching local Rust `Uniform::new` /
 `Uniform::new_inclusive` semantics. `UniformDuration` provides the same reusable
 half-open/inclusive sampler shape for `std.Io.Duration`, matching local Rust
 `UniformDuration` discovery while delegating to Alea's duration range helpers.

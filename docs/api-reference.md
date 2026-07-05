@@ -349,7 +349,7 @@ self-forking.
 
 ## Distributions
 
-- Error types/aliases: `Error`, `BernoulliError`
+- Error types/aliases: `Error`, `UniformError`, `BernoulliError`
 - Reusable sampler adapters: `StandardUniform`, `StandardUniform.sample`,
   `StandardUniform.sampleFrom`, `StandardUniform.fill`,
   `StandardUniform.fillFrom`, `Choose(T)`, `Alphanumeric`, `Alphabetic`,

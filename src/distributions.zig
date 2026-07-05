@@ -140,6 +140,8 @@ pub const Error = error{
     LibmUnavailable,
 };
 
+pub const UniformError = Error;
+
 pub const BernoulliError = error{
     InvalidProbability,
 };
@@ -31001,6 +31003,17 @@ test "BernoulliError mirrors local rand error shape" {
     try std.testing.expect(@typeInfo(@TypeOf(VectorBernoulli(@Vector(4, bool)).fromRatio(1, 4))).error_union.error_set == BernoulliError);
     try std.testing.expectError(error.InvalidProbability, Bernoulli.new(-0.1));
     try std.testing.expectError(error.InvalidProbability, Bernoulli.fromRatio(2, 1));
+}
+
+test "UniformError mirrors uniform-family errors" {
+    const err: UniformError = error.EmptyRange;
+    try std.testing.expectEqual(@as(Error, error.EmptyRange), err);
+    try std.testing.expect(@typeInfo(@TypeOf(Uniform(u8).new(1, 6))).error_union.error_set == UniformError);
+    try std.testing.expect(@typeInfo(@TypeOf(VectorUniform(@Vector(4, i32)).newInclusive(-1, 1))).error_union.error_set == UniformError);
+    try std.testing.expect(@typeInfo(@TypeOf(UniformDuration.new(.fromMilliseconds(1), .fromMilliseconds(2)))).error_union.error_set == UniformError);
+    try std.testing.expect(@typeInfo(@TypeOf(UniformUnicodeScalar.new('A', 'Z'))).error_union.error_set == UniformError);
+    try std.testing.expectError(error.EmptyRange, Uniform(u8).new(6, 1));
+    try std.testing.expectError(error.EmptyRange, UniformDuration.new(.fromMilliseconds(2), .fromMilliseconds(1)));
 }
 
 test "distribution ascii aliases mirror ascii namespace" {
