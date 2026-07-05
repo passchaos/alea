@@ -2822,7 +2822,7 @@ Dynamic weighted helpers:
   `WeightedChoice.initByIndex`, `WeightedChoice.deinit`,
   `WeightedChoice.len`, `WeightedChoice.numChoices`, `WeightedChoice.isEmpty`,
   `WeightedChoice.itemsValue`, `WeightedChoice.itemAt`, `WeightedChoice.item`, `WeightedChoice.get`,
-  `WeightedChoice.totalWeight`, `WeightedChoice.constantIndex`, `WeightedChoice.weights`,
+  `WeightedChoice.totalWeight`, `WeightedChoice.positiveCount`, `WeightedChoice.constantIndex`, `WeightedChoice.weights`,
   `WeightedChoice.weightsInto`, `WeightedChoice.probabilities`,
   `WeightedChoice.probabilitiesInto`, `WeightedChoice.weightAt`,
   `WeightedChoice.weight`, `WeightedChoice.weightIter`, `WeightedChoice.probabilityAt`,

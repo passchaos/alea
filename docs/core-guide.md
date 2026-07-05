@@ -590,7 +590,7 @@ Use:
   fixed-size `Choice.indexArrayFrom` / `indexArrayU32From`, and
   repeated `Choice.indexIterFrom` / `indexIterU32From` index streams,
   `WeightedChoice.initBy` / `updateBy`, `WeightedChoice.initByIndex` / `updateByIndex`,
-  `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, `WeightedChoice.constantIndex`, `WeightedChoice.item` / `itemAt` / `get`, and
+  `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, `WeightedChoice.positiveCount`, `WeightedChoice.constantIndex`, `WeightedChoice.item` / `itemAt` / `get`, and
   optional `WeightedChoice.weight` / `probability`, lazy `WeightedChoice.weightIter` / `probabilityIter` size hints, `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
   `sampleIndexU32From`, `WeightedChoice.fillValuesFrom` / `fillFrom`,
   `WeightedChoice.valuesFrom` / `ptrsFrom`, fixed-size
