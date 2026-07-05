@@ -379,6 +379,12 @@ pub fn SampledPtrIterator(comptime T: type) type {
             return self.index_iter.remaining();
         }
 
+        pub fn fill(self: *Self, dest: []*const T) usize {
+            const count = @min(dest.len, self.remaining());
+            for (dest[0..count]) |*slot| slot.* = self.next().?;
+            return count;
+        }
+
         pub fn deinit(self: Self) void {
             self.index_iter.deinit();
         }
@@ -401,6 +407,12 @@ pub fn SampledMutPtrIterator(comptime T: type) type {
             return self.index_iter.remaining();
         }
 
+        pub fn fill(self: *Self, dest: []*T) usize {
+            const count = @min(dest.len, self.remaining());
+            for (dest[0..count]) |*slot| slot.* = self.next().?;
+            return count;
+        }
+
         pub fn deinit(self: Self) void {
             self.index_iter.deinit();
         }
@@ -421,6 +433,12 @@ pub fn SampledValueIterator(comptime T: type) type {
 
         pub fn remaining(self: Self) usize {
             return self.index_iter.remaining();
+        }
+
+        pub fn fill(self: *Self, dest: []T) usize {
+            const count = @min(dest.len, self.remaining());
+            for (dest[0..count]) |*slot| slot.* = self.next().?;
+            return count;
         }
 
         pub fn deinit(self: Self) void {
@@ -12040,6 +12058,16 @@ test "sampleItemsIter owns sampled indices and streams values" {
     try std.testing.expectEqual(@as(usize, 3), count);
     try std.testing.expectEqual(@as(usize, 0), optional_iter.remaining());
 
+    var fill_engine = alea.ScalarPrng.init(0x5150_c316);
+    var fill_iter = try sampleItemsIterFrom(std.testing.allocator, &fill_engine, u8, &items, 4);
+    defer fill_iter.deinit();
+    var fill_out: [3]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), fill_iter.fill(&fill_out));
+    try std.testing.expectEqual(@as(usize, 1), fill_iter.remaining());
+    var fill_tail: [3]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 1), fill_iter.fill(&fill_tail));
+    try std.testing.expectEqual(@as(usize, 0), fill_iter.remaining());
+
     var checked_engine = alea.ScalarPrng.init(0x5150_c30d);
     var checked_iter = try sampleItemsIterCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 5);
     defer checked_iter.deinit();
@@ -12100,6 +12128,16 @@ test "samplePtrsIter owns sampled indices and streams pointers" {
     }
     try std.testing.expectEqual(@as(usize, 3), count);
     try std.testing.expectEqual(@as(usize, 0), optional_iter.remaining());
+
+    var fill_engine = alea.ScalarPrng.init(0x5150_c317);
+    var fill_iter = try samplePtrsIterFrom(std.testing.allocator, &fill_engine, u8, &items, 4);
+    defer fill_iter.deinit();
+    var fill_out: [3]*const u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), fill_iter.fill(&fill_out));
+    try std.testing.expectEqual(@as(usize, 1), fill_iter.remaining());
+    var fill_tail: [3]*const u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 1), fill_iter.fill(&fill_tail));
+    try std.testing.expectEqual(@as(usize, 0), fill_iter.remaining());
 
     var checked_engine = alea.ScalarPrng.init(0x5150_c308);
     var checked_iter = try samplePtrsIterCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 5);
@@ -12172,6 +12210,27 @@ test "sampleMutPtrsIter owns sampled indices and streams mutable pointers" {
         if (was_changed) expected[index] += 1;
     }
     try std.testing.expectEqualSlices(u8, &expected, &items);
+
+    var fill_items = original;
+    var fill_engine = alea.ScalarPrng.init(0x5150_c318);
+    var fill_iter = try sampleMutPtrsIterFrom(std.testing.allocator, &fill_engine, u8, &fill_items, 4);
+    defer fill_iter.deinit();
+    var fill_out: [3]*u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), fill_iter.fill(&fill_out));
+    try std.testing.expectEqual(@as(usize, 1), fill_iter.remaining());
+    for (fill_out) |ptr| ptr.* += 2;
+    var fill_tail: [3]*u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 1), fill_iter.fill(&fill_tail));
+    try std.testing.expectEqual(@as(usize, 0), fill_iter.remaining());
+    for (fill_tail[0..1]) |ptr| ptr.* += 2;
+    var changed_by_fill: usize = 0;
+    for (fill_items, original) |actual, before| {
+        if (actual != before) {
+            changed_by_fill += 1;
+            try std.testing.expectEqual(before + 2, actual);
+        }
+    }
+    try std.testing.expectEqual(@as(usize, 4), changed_by_fill);
 
     var checked_items = original;
     var checked_engine = alea.ScalarPrng.init(0x5150_c312);

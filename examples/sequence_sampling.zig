@@ -221,10 +221,9 @@ pub fn main(init: std.process.Init) !void {
     var sampled_items_iter_engine = alea.ScalarPrng.init(0x5e11_0039);
     var sampled_items_iter = try alea.seq.sampleItemsIterFrom(allocator, &sampled_items_iter_engine, []const u8, &items, 3);
     defer sampled_items_iter.deinit();
-    const sampled_items_iter0 = sampled_items_iter.next().?;
-    const sampled_items_iter1 = sampled_items_iter.next().?;
-    const sampled_items_iter2 = sampled_items_iter.next().?;
-    try stdout.print("sampleItemsIter items: {s}, {s}, {s}; remaining={}\n", .{ sampled_items_iter0, sampled_items_iter1, sampled_items_iter2, sampled_items_iter.remaining() });
+    var sampled_items_iter_fill: [3][]const u8 = undefined;
+    _ = sampled_items_iter.fill(&sampled_items_iter_fill);
+    try stdout.print("sampleItemsIter.fill items: {s}, {s}, {s}; remaining={}\n", .{ sampled_items_iter_fill[0], sampled_items_iter_fill[1], sampled_items_iter_fill[2], sampled_items_iter.remaining() });
 
     var choose_into_engine = alea.ScalarPrng.init(0x5e11_0011);
     var chosen_into: [3][]const u8 = undefined;
