@@ -382,6 +382,12 @@ before any component draws; zero-length checked batch outputs are no-ops.
 Run `zig build run-multivariate-sampling` for a runnable comparison of
 allocation-returning, caller-owned-buffer, and flat batched Multinomial and
 Dirichlet sampling.
+For callers porting local `rand_distr` names, distribution-specific error aliases
+such as `NormalError`, `ExpError`, `GammaError`, `BetaError`, `PoissonError`,
+`PertError`, `ZipfError`, and the other local `rand_distr::*Error` names map to
+Alea's shared distribution `Error` set while constructors keep Zig-native
+diagnostics like `InvalidParameter`, `InvalidProbability`, and
+`InvalidLength`.
 `Normal(T).initMeanCv` and
 `LogNormal(T).initMeanCv` cover coefficient-of-variation parameterization
 without requiring users to hand-convert to log-space parameters; both samplers

@@ -10,6 +10,15 @@ The goal is not to mirror Rust traits or feature gates. The goal is to ensure
 that core distribution functionality is covered or intentionally excluded in a
 Zig-native way.
 
+Local `rand_distr::*Error` discovery names are covered by Alea distribution
+error aliases over the shared `distributions.Error` set, including
+`NormalError`, `ExpError`, `GammaError`, `BetaError`, `BinomialError`,
+`CauchyError`, `ChiSquaredError`, `FisherFError`, `FrechetError`, `GeoError`,
+`GumbelError`, `HyperGeoError`, `InverseGaussianError`,
+`NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
+`SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`, and
+`ZipfError`.
+
 ## Current Rust `rand` Default Crate
 
 | Rust `rand` area | Alea status |

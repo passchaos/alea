@@ -361,7 +361,13 @@ self-forking.
 
 - Error types/aliases: `Error`, `UniformError`, `BernoulliError`,
   `WeightedError`, `WeightError`, `weighted.Error`,
-  `weighted.WeightedError`, `weighted.WeightError`, `slice.Empty`;
+  `weighted.WeightedError`, `weighted.WeightError`, `slice.Empty`,
+  `NormalError`, `ExpError`, `GammaError`, `BetaError`, `BinomialError`,
+  `CauchyError`, `ChiSquaredError`, `FisherFError`, `FrechetError`,
+  `GeoError`, `GumbelError`, `HyperGeoError`, `InverseGaussianError`,
+  `NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
+  `SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`,
+  `ZipfError`;
   uniform/range APIs distinguish
   `EmptyRange` from `NonFinite` for non-finite floating-point endpoints or
   widths, while static weighted samplers distinguish `InvalidInput`,

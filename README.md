@@ -89,7 +89,9 @@ The current Linux-first roadmap is intentionally broad:
   Rust-discoverable new aliases, Rust-discoverable updateWeights, ordered updateMany, and single-weight updateAt, numChoices, positiveCount, compact `u32` index
   output, `sampleIndex` / `fillIndices` aliases, and owned repeated index
   batches, fixed-size index arrays, iterators, plus item- and index-accessor
-  construction/update
+  construction/update, plus local `rand_distr::*Error` discovery aliases such
+  as `NormalError`, `ExpError`, `GammaError`, `PoissonError`, and `ZipfError`
+  over Alea's shared distribution error set
 - dynamic weighted trees for frequent update/push/pop/sample/fill weighted
   workloads, including item- and index-accessor construction/full-refresh
   helpers, `updateWeights` / `updateMany`, `numChoices`, `positiveCount`, `constantIndex`, `sampleIndex` / `fillIndices` aliases, compact `u32` index

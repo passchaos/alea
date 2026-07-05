@@ -148,6 +148,28 @@ pub const Error = error{
 pub const UniformError = Error;
 pub const WeightedError = Error;
 pub const WeightError = Error;
+pub const NormalError = Error;
+pub const ExpError = Error;
+pub const GammaError = Error;
+pub const BetaError = Error;
+pub const BinomialError = Error;
+pub const CauchyError = Error;
+pub const ChiSquaredError = Error;
+pub const FisherFError = Error;
+pub const FrechetError = Error;
+pub const GeoError = Error;
+pub const GumbelError = Error;
+pub const HyperGeoError = Error;
+pub const InverseGaussianError = Error;
+pub const NormalInverseGaussianError = Error;
+pub const ParetoError = Error;
+pub const PertError = Error;
+pub const PoissonError = Error;
+pub const SkewNormalError = Error;
+pub const TriangularError = Error;
+pub const WeibullError = Error;
+pub const ZetaError = Error;
+pub const ZipfError = Error;
 
 pub const weighted = struct {
     pub const Error = distributions_module.Error;
@@ -31096,6 +31118,56 @@ test "UniformError mirrors uniform-family errors" {
     try std.testing.expectError(error.EmptyRange, Uniform(u8).new(6, 1));
     try std.testing.expectError(error.NonFinite, Uniform(f64).new(0, std.math.inf(f64)));
     try std.testing.expectError(error.EmptyRange, UniformDuration.new(.fromMilliseconds(2), .fromMilliseconds(1)));
+}
+
+test "rand_distr error aliases mirror distribution Error" {
+    comptime {
+        std.debug.assert(NormalError == Error);
+        std.debug.assert(ExpError == Error);
+        std.debug.assert(GammaError == Error);
+        std.debug.assert(BetaError == Error);
+        std.debug.assert(BinomialError == Error);
+        std.debug.assert(CauchyError == Error);
+        std.debug.assert(ChiSquaredError == Error);
+        std.debug.assert(FisherFError == Error);
+        std.debug.assert(FrechetError == Error);
+        std.debug.assert(GeoError == Error);
+        std.debug.assert(GumbelError == Error);
+        std.debug.assert(HyperGeoError == Error);
+        std.debug.assert(InverseGaussianError == Error);
+        std.debug.assert(NormalInverseGaussianError == Error);
+        std.debug.assert(ParetoError == Error);
+        std.debug.assert(PertError == Error);
+        std.debug.assert(PoissonError == Error);
+        std.debug.assert(SkewNormalError == Error);
+        std.debug.assert(TriangularError == Error);
+        std.debug.assert(WeibullError == Error);
+        std.debug.assert(ZetaError == Error);
+        std.debug.assert(ZipfError == Error);
+    }
+
+    const normal_alias: NormalError = error.InvalidParameter;
+    const exponential_alias: ExpError = error.InvalidParameter;
+    const gamma_alias: GammaError = error.InvalidParameter;
+    const beta_alias: BetaError = error.InvalidParameter;
+    const binomial_alias: BinomialError = error.InvalidProbability;
+    const hypergeometric_alias: HyperGeoError = error.InvalidParameter;
+    const poisson_alias: PoissonError = error.InvalidParameter;
+    try std.testing.expectEqual(@as(Error, error.InvalidParameter), normal_alias);
+    try std.testing.expectEqual(@as(Error, error.InvalidParameter), exponential_alias);
+    try std.testing.expectEqual(@as(Error, error.InvalidParameter), gamma_alias);
+    try std.testing.expectEqual(@as(Error, error.InvalidParameter), beta_alias);
+    try std.testing.expectEqual(@as(Error, error.InvalidProbability), binomial_alias);
+    try std.testing.expectEqual(@as(Error, error.InvalidParameter), hypergeometric_alias);
+    try std.testing.expectEqual(@as(Error, error.InvalidParameter), poisson_alias);
+
+    try std.testing.expect(@typeInfo(@TypeOf(Normal(f64).init(0, 1))).error_union.error_set == NormalError);
+    try std.testing.expect(@typeInfo(@TypeOf(Exponential(f64).init(1))).error_union.error_set == ExpError);
+    try std.testing.expect(@typeInfo(@TypeOf(Gamma(f64).init(2, 3))).error_union.error_set == GammaError);
+    try std.testing.expect(@typeInfo(@TypeOf(Beta(f64).init(2, 5))).error_union.error_set == BetaError);
+    try std.testing.expect(@typeInfo(@TypeOf(Binomial.init(8, 0.5))).error_union.error_set == BinomialError);
+    try std.testing.expect(@typeInfo(@TypeOf(Hypergeometric.init(10, 5, 2))).error_union.error_set == HyperGeoError);
+    try std.testing.expect(@typeInfo(@TypeOf(Poisson.init(2))).error_union.error_set == PoissonError);
 }
 
 test "UniformInt Float Usize aliases mirror Uniform" {

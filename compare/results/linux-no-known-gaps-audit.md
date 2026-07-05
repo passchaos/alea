@@ -667,3 +667,7 @@ S4-M288 adds a consolidated local Rust public-surface manifest
 current root, `rngs`, `distr`, `seq`, and resolved `rand_core` public names to
 Alea evidence or intentional exclusions; the manifest identifies no new
 unblocked local Rust public-surface gap.
+S4-M289 adds local `rand_distr 0.6.0` root error discovery aliases
+(`compare/results/s4-m289-rand-distr-error-aliases.md`) such as `NormalError`,
+`ExpError`, `GammaError`, `PoissonError`, and `ZipfError` over Alea's shared
+distribution error set while preserving Zig-native diagnostics.
