@@ -15475,6 +15475,11 @@ pub fn AliasTable(comptime Weight: type) type {
                 return self.remaining();
             }
 
+            pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
+            }
+
             pub fn fill(self: *Iterator, dest: []f64) usize {
                 const count = @min(dest.len, self.remaining());
                 for (dest[0..count]) |*slot| slot.* = self.next().?;
@@ -15500,6 +15505,11 @@ pub fn AliasTable(comptime Weight: type) type {
 
             pub fn len(self: Iterator) usize {
                 return self.remaining();
+            }
+
+            pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
             }
 
             pub fn fill(self: *Iterator, dest: []f64) usize {
@@ -18620,14 +18630,23 @@ test "alias table exposes totals and reconstructs weights" {
     try std.testing.expectEqual(@as(?f64, null), table.weight(4));
     var weight_iter = table.weightIter();
     try std.testing.expectEqual(@as(usize, 4), weight_iter.len());
+    var weight_hint = weight_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 4), weight_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 4), weight_hint.upper);
     try std.testing.expectApproxEqAbs(@as(f64, 1), weight_iter.next().?, 1e-12);
     try std.testing.expectEqual(@as(usize, 3), weight_iter.remaining());
+    weight_hint = weight_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 3), weight_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 3), weight_hint.upper);
     var iter_weights: [3]f64 = undefined;
     try std.testing.expectEqual(@as(usize, 3), weight_iter.fill(&iter_weights));
     try std.testing.expectApproxEqAbs(@as(f64, 0), iter_weights[0], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5), iter_weights[1], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 3), iter_weights[2], 1e-12);
     try std.testing.expectEqual(@as(usize, 0), weight_iter.len());
+    weight_hint = weight_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 0), weight_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 0), weight_hint.upper);
     try std.testing.expectEqual(@as(?f64, null), weight_iter.next());
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 9.0), try table.probabilityAt(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0), try table.probabilityAt(1), 1e-12);
@@ -18641,14 +18660,23 @@ test "alias table exposes totals and reconstructs weights" {
     try std.testing.expectEqual(@as(?f64, null), table.probability(4));
     var probability_iter = table.probabilityIter();
     try std.testing.expectEqual(@as(usize, 4), probability_iter.len());
+    var probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 4), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 4), probability_hint.upper);
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 9.0), probability_iter.next().?, 1e-12);
     try std.testing.expectEqual(@as(usize, 3), probability_iter.remaining());
+    probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 3), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 3), probability_hint.upper);
     var iter_probabilities: [3]f64 = undefined;
     try std.testing.expectEqual(@as(usize, 3), probability_iter.fill(&iter_probabilities));
     try std.testing.expectApproxEqAbs(@as(f64, 0), iter_probabilities[0], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 9.0), iter_probabilities[1], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), iter_probabilities[2], 1e-12);
     try std.testing.expectEqual(@as(usize, 0), probability_iter.len());
+    probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 0), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 0), probability_hint.upper);
     try std.testing.expectEqual(@as(?f64, null), probability_iter.next());
     var stack_probabilities: [4]f64 = undefined;
     try table.probabilitiesInto(&stack_probabilities);

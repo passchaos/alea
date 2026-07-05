@@ -385,7 +385,9 @@ pub fn main(init: std.process.Init) !void {
     var choice_probability_iter = choice.probabilityIter();
     var choice_probability_iter_fill: [4]f64 = undefined;
     _ = choice_probability_iter.fill(&choice_probability_iter_fill);
+    const choice_probability_iter_hint = choice_probability_iter.sizeHint();
     try stdout.print("Choice.probabilityIter fill: {any}\n", .{choice_probability_iter_fill});
+    try stdout.print("Choice.probabilityIter sizeHint: {}..{}\n", .{ choice_probability_iter_hint.lower, choice_probability_iter_hint.upper.? });
     var choice_engine = alea.ScalarPrng.init(0x5e11_0007);
     const choice_index = choice.sampleIndexFrom(&choice_engine);
     try stdout.print("Choice.sampleIndexFrom: {}\n", .{choice_index});

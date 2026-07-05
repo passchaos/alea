@@ -582,7 +582,7 @@ Use:
   drawing)
 - `seq.Choice`, `seq.chooseIterFrom`, `seq.chooseIterCheckedFrom`,
   `seq.WeightedChoice`, including `Choice.iterFrom`, `Choice.sampleIndexFrom`,
-  `Choice.get` / `itemAt`, `Choice.probability` / `probabilityAt`, lazy `Choice.probabilityIter`,
+  `Choice.get` / `itemAt`, `Choice.probability` / `probabilityAt`, lazy `Choice.probabilityIter` size hints,
   `Choice.sampleIndexU32From`, `Choice.fillValuesFrom` / `fillFrom`,
   `Choice.valuesFrom` / `ptrsFrom`, fixed-size `Choice.valueArrayFrom` /
   `ptrArrayFrom`, `Choice.fillIndicesFrom`,
@@ -591,7 +591,7 @@ Use:
   repeated `Choice.indexIterFrom` / `indexIterU32From` index streams,
   `WeightedChoice.initBy` / `updateBy`, `WeightedChoice.initByIndex` / `updateByIndex`,
   `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, `WeightedChoice.get` / `itemAt`, and
-  optional `WeightedChoice.weight` / `probability`, lazy `WeightedChoice.weightIter` / `probabilityIter`, `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
+  optional `WeightedChoice.weight` / `probability`, lazy `WeightedChoice.weightIter` / `probabilityIter` size hints, `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
   `sampleIndexU32From`, `WeightedChoice.fillValuesFrom` / `fillFrom`,
   `WeightedChoice.valuesFrom` / `ptrsFrom`, fixed-size
   `WeightedChoice.valueArrayFrom` / `ptrArrayFrom`, and
@@ -606,7 +606,7 @@ Use:
   `choose_weighted_iter`-style workflows
 - `distributions.AliasTable` for O(1) repeated weighted index sampling,
   including `len`, `totalWeight`, and allocation-returning or caller-buffer
-  optional `weight` / `probability`, lazy `weightIter` / `probabilityIter`, `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
+  optional `weight` / `probability`, lazy `weightIter` / `probabilityIter` size hints, `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
   sampler introspection; use `sampleU32` / `fillU32` variants when population
   indexes fit `u32` and compact output is desired, and `indices` /
   `indicesU32` variants for allocation-returning repeated draws; `indexArray`
@@ -719,7 +719,7 @@ already consumed randomness for earlier accepted candidates.
 `ascii.zig` includes ASCII `Alphanumeric`, `Alphabetic`, `Lowercase`,
 `Uppercase`, `Digits`, custom `Charset`, and Unicode scalar UTF-8 string
 generation. Use `Charset.sampleFrom`, `Charset.fillFrom`,
-`Charset.allocFrom`, `Charset.get` / `byteAt`, `Charset.probability` / `probabilityAt`, `Charset.probabilityIter`, `charFrom`, `stringFrom`, `unicodeScalarFrom`,
+`Charset.allocFrom`, `Charset.get` / `byteAt`, `Charset.probability` / `probabilityAt`, `Charset.probabilityIter` size hints, `charFrom`, `stringFrom`, `unicodeScalarFrom`,
 `unicodeScalarRangeLessThanFrom`, `unicodeScalarRangeAtMostFrom`,
 `fillUnicodeScalarFrom`, `fillUnicodeScalarRangeLessThanFrom`,
 `fillUnicodeScalarRangeAtMostFrom`, `unicodeScalarBatchFrom`,
@@ -740,7 +740,7 @@ want codepoint-level batches instead of UTF-8 strings; use the range variants
 when you need a bounded Unicode scalar interval while still skipping UTF-16
 surrogate code points.
 Run `zig build run-string-generation` for a runnable comparison of predefined
-ASCII charsets, custom `Charset` item, probability, and probability-iterator diagnostics, allocation-returning strings,
+ASCII charsets, custom `Charset` item, probability, probability-iterator, and size-hint diagnostics, allocation-returning strings,
 Unicode scalar batches and range batches, and caller-owned UTF-8 buffers.
 
 ## Validation

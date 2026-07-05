@@ -30,6 +30,11 @@ pub const Charset = struct {
             return self.remaining();
         }
 
+        pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+            const length = self.remaining();
+            return .{ .lower = length, .upper = length };
+        }
+
         pub fn fill(self: *Iterator, dest: []f64) usize {
             const count = @min(dest.len, self.remaining());
             for (dest[0..count]) |*slot| slot.* = self.next().?;
@@ -270,17 +275,29 @@ test "ascii charset fills requested length" {
     try std.testing.expectEqual(@as(?f64, null), Alphanumeric.probability(alphanumeric.len));
     var probability_iter = Alphanumeric.probabilityIter();
     try std.testing.expectEqual(alphanumeric.len, probability_iter.len());
+    var probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(alphanumeric.len, probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, alphanumeric.len), probability_hint.upper);
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), probability_iter.next().?, 1e-12);
     try std.testing.expectEqual(alphanumeric.len - 1, probability_iter.remaining());
+    probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(alphanumeric.len - 1, probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, alphanumeric.len - 1), probability_hint.upper);
     var iter_probabilities: [3]f64 = undefined;
     try std.testing.expectEqual(@as(usize, 3), probability_iter.fill(&iter_probabilities));
     for (iter_probabilities) |probability| {
         try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), probability, 1e-12);
     }
     try std.testing.expectEqual(alphanumeric.len - 4, probability_iter.len());
+    probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(alphanumeric.len - 4, probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, alphanumeric.len - 4), probability_hint.upper);
     var iter_tail: [alphanumeric.len]f64 = undefined;
     try std.testing.expectEqual(alphanumeric.len - 4, probability_iter.fill(&iter_tail));
     try std.testing.expectEqual(@as(?f64, null), probability_iter.next());
+    probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 0), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 0), probability_hint.upper);
     var probabilities_buf: [alphanumeric.len]f64 = undefined;
     try Alphanumeric.probabilitiesInto(&probabilities_buf);
     for (probabilities_buf) |probability| {

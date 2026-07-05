@@ -392,9 +392,11 @@ pub fn main(init: std.process.Init) !void {
     var alias_weight_iter = alias.weightIter();
     var alias_weight_iter_fill: [items.len]f64 = undefined;
     _ = alias_weight_iter.fill(&alias_weight_iter_fill);
+    const alias_weight_iter_hint = alias_weight_iter.sizeHint();
     var alias_probability_iter = alias.probabilityIter();
     var alias_probability_iter_fill: [items.len]f64 = undefined;
     _ = alias_probability_iter.fill(&alias_probability_iter_fill);
+    const alias_probability_iter_hint = alias_probability_iter.sizeHint();
     var alias_engine = alea.ScalarPrng.init(0x7152);
     var alias_samples: [8]usize = undefined;
     alias.fillFrom(&alias_engine, &alias_samples);
@@ -428,7 +430,9 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("alias weight(2)={d:.3} missing={}\n", .{ alias_weight, alias_missing_weight });
     try stdout.print("alias probability(2)={d:.3} missing={}\n", .{ alias_probability, alias_missing_probability });
     try stdout.print("alias weightIter fill: {any}\n", .{alias_weight_iter_fill});
+    try stdout.print("alias weightIter sizeHint: {}..{}\n", .{ alias_weight_iter_hint.lower, alias_weight_iter_hint.upper.? });
     try stdout.print("alias probabilityIter fill: {any}\n", .{alias_probability_iter_fill});
+    try stdout.print("alias probabilityIter sizeHint: {}..{}\n", .{ alias_probability_iter_hint.lower, alias_probability_iter_hint.upper.? });
     try stdout.print("alias sample indices: {any}\n", .{alias_samples});
     try stdout.print("alias u32 sample indices: {any}\n", .{alias_u32_samples});
     try stdout.print("alias owned u32 indices: {any}\n", .{alias_owned_u32});
@@ -536,11 +540,15 @@ pub fn main(init: std.process.Init) !void {
     var choice_weight_iter = choice.weightIter();
     var choice_weight_iter_fill: [items.len]f64 = undefined;
     _ = choice_weight_iter.fill(&choice_weight_iter_fill);
+    const choice_weight_iter_hint = choice_weight_iter.sizeHint();
     try stdout.print("WeightedChoice.weightIter fill: {any}\n", .{choice_weight_iter_fill});
+    try stdout.print("WeightedChoice.weightIter sizeHint: {}..{}\n", .{ choice_weight_iter_hint.lower, choice_weight_iter_hint.upper.? });
     var choice_probability_iter = choice.probabilityIter();
     var choice_probability_iter_fill: [items.len]f64 = undefined;
     _ = choice_probability_iter.fill(&choice_probability_iter_fill);
+    const choice_probability_iter_hint = choice_probability_iter.sizeHint();
     try stdout.print("WeightedChoice.probabilityIter fill: {any}\n", .{choice_probability_iter_fill});
+    try stdout.print("WeightedChoice.probabilityIter sizeHint: {}..{}\n", .{ choice_probability_iter_hint.lower, choice_probability_iter_hint.upper.? });
     var choice_engine = alea.ScalarPrng.init(0x7155);
     const choice_index = choice.sampleIndexFrom(&choice_engine);
     try stdout.print("weighted choice sample index: {}\n", .{choice_index});

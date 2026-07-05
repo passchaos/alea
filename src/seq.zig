@@ -7752,6 +7752,11 @@ pub fn Choice(comptime T: type) type {
                 return self.remaining();
             }
 
+            pub fn sizeHint(self: Iterator) SizeHint {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
+            }
+
             pub fn fill(self: *Iterator, dest: []f64) usize {
                 const count = @min(dest.len, self.remaining());
                 for (dest[0..count]) |*slot| slot.* = self.next().?;
@@ -16442,11 +16447,14 @@ test "choice sampler repeatedly samples slice references" {
     try std.testing.expectEqual(@as(?f64, null), choice.probability(4));
     var probability_iter = choice.probabilityIter();
     try std.testing.expectEqual(@as(usize, 4), probability_iter.len());
+    try expectExactSizeHint(probability_iter.sizeHint(), 4);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability_iter.next().?, 1e-12);
     try std.testing.expectEqual(@as(usize, 3), probability_iter.remaining());
+    try expectExactSizeHint(probability_iter.sizeHint(), 3);
     var iter_probabilities: [3]f64 = undefined;
     try std.testing.expectEqual(@as(usize, 3), probability_iter.fill(&iter_probabilities));
     for (iter_probabilities) |probability| try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability, 1e-12);
+    try expectExactSizeHint(probability_iter.sizeHint(), 0);
     try std.testing.expectEqual(@as(?f64, null), probability_iter.next());
     var choice_probabilities: [4]f64 = undefined;
     try choice.probabilitiesInto(&choice_probabilities);
@@ -17064,12 +17072,21 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectEqual(@as(?f64, null), choice.weight(3));
     var weight_iter = choice.weightIter();
     try std.testing.expectEqual(@as(usize, 3), weight_iter.len());
+    var weight_hint = weight_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 3), weight_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 3), weight_hint.upper);
     try std.testing.expectApproxEqAbs(@as(f64, 0), weight_iter.next().?, 1e-12);
     try std.testing.expectEqual(@as(usize, 2), weight_iter.remaining());
+    weight_hint = weight_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 2), weight_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 2), weight_hint.upper);
     var iter_weights: [2]f64 = undefined;
     try std.testing.expectEqual(@as(usize, 2), weight_iter.fill(&iter_weights));
     try std.testing.expectApproxEqAbs(@as(f64, 1), iter_weights[0], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 7), iter_weights[1], 1e-12);
+    weight_hint = weight_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 0), weight_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 0), weight_hint.upper);
     try std.testing.expectEqual(@as(?f64, null), weight_iter.next());
     try std.testing.expectApproxEqAbs(@as(f64, 0), try choice.probabilityAt(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 8.0), try choice.probabilityAt(1), 1e-12);
@@ -17081,12 +17098,21 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectEqual(@as(?f64, null), choice.probability(3));
     var probability_iter = choice.probabilityIter();
     try std.testing.expectEqual(@as(usize, 3), probability_iter.len());
+    var probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 3), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 3), probability_hint.upper);
     try std.testing.expectApproxEqAbs(@as(f64, 0), probability_iter.next().?, 1e-12);
     try std.testing.expectEqual(@as(usize, 2), probability_iter.remaining());
+    probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 2), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 2), probability_hint.upper);
     var iter_probabilities: [2]f64 = undefined;
     try std.testing.expectEqual(@as(usize, 2), probability_iter.fill(&iter_probabilities));
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 8.0), iter_probabilities[0], 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 7.0 / 8.0), iter_probabilities[1], 1e-12);
+    probability_hint = probability_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 0), probability_hint.lower);
+    try std.testing.expectEqual(@as(?usize, 0), probability_hint.upper);
     try std.testing.expectEqual(@as(?f64, null), probability_iter.next());
     var reconstructed_probabilities: [3]f64 = undefined;
     try choice.probabilitiesInto(&reconstructed_probabilities);

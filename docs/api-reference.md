@@ -2373,6 +2373,7 @@ Alias helpers:
 - `AliasTable.WeightIterator.next`
 - `AliasTable.WeightIterator.remaining`
 - `AliasTable.WeightIterator.len`
+- `AliasTable.WeightIterator.sizeHint`
 - `AliasTable.WeightIterator.fill`
 - `AliasTable.probabilityAt`
 - `AliasTable.probability`
@@ -2381,6 +2382,7 @@ Alias helpers:
 - `AliasTable.ProbabilityIterator.next`
 - `AliasTable.ProbabilityIterator.remaining`
 - `AliasTable.ProbabilityIterator.len`
+- `AliasTable.ProbabilityIterator.sizeHint`
 - `AliasTable.ProbabilityIterator.fill`
 - `AliasTable.constantIndex`
 - `AliasTable.sample`
@@ -2755,7 +2757,7 @@ Dynamic weighted helpers:
   `WeightedChoice(T, Weight)`,
   `Choice.init`, `Choice.initChecked`, `Choice.len`, `Choice.numChoices`,
   `Choice.isEmpty`, `Choice.itemsValue`, `Choice.itemAt`, `Choice.get`, `Choice.probabilityAt`,
-  `Choice.probability`, `Choice.probabilityIter`, `Choice.ProbabilityIterator`, `Choice.ProbabilityIterator.next`, `Choice.ProbabilityIterator.remaining`, `Choice.ProbabilityIterator.len`, `Choice.ProbabilityIterator.fill`, `Choice.probabilities`, `Choice.probabilitiesInto`,
+  `Choice.probability`, `Choice.probabilityIter`, `Choice.ProbabilityIterator`, `Choice.ProbabilityIterator.next`, `Choice.ProbabilityIterator.remaining`, `Choice.ProbabilityIterator.len`, `Choice.ProbabilityIterator.sizeHint`, `Choice.ProbabilityIterator.fill`, `Choice.probabilities`, `Choice.probabilitiesInto`,
   `Choice.sample`,
   `Choice.sampleFrom`, `Choice.sampleIndex`, `Choice.sampleIndexFrom`,
   `Choice.sampleIndexU32`, `Choice.sampleIndexU32From`,
@@ -3160,7 +3162,7 @@ Dynamic weighted helpers:
   `Charset.contains`, `Charset.probabilityAt`, `Charset.probability`,
   `Charset.probabilityIter`, `Charset.ProbabilityIterator`,
   `Charset.ProbabilityIterator.next`, `Charset.ProbabilityIterator.remaining`,
-  `Charset.ProbabilityIterator.len`, `Charset.ProbabilityIterator.fill`,
+  `Charset.ProbabilityIterator.len`, `Charset.ProbabilityIterator.sizeHint`, `Charset.ProbabilityIterator.fill`,
   `Charset.probabilities`, `Charset.probabilitiesInto`, `Charset.sample`,
   `Charset.sampleChecked`, `Charset.sampleFrom`, `Charset.sampleCheckedFrom`,
   `Charset.fill`, `Charset.fillChecked`, `Charset.fillFrom`,
