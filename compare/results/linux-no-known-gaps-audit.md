@@ -639,3 +639,7 @@ InsufficientNonZero, Overflow}` diagnostics gap for static `AliasTable` /
 S4-M282 adds root `distr` (`compare/results/s4-m282-distr-alias.md`), closing
 the local Rust `rand::distr::*` module-name discovery gap while preserving
 Alea's canonical `distributions` module name.
+S4-M283 audits the remaining local Rust trait/marker/thread-local public
+surface (`compare/results/s4-m283-rust-trait-surface-audit.md`) and records that
+the remaining names are covered by Zig-native APIs or intentionally not copied
+unless a concrete workflow gap appears.
