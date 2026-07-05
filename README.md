@@ -11,7 +11,8 @@ The current Linux-first roadmap is intentionally broad:
 - `ScalarPrng = Wyhash64` for scalar-heavy distribution workloads such as
   normal, exponential, and Poisson, alongside `FastPrng = Alea4x64` for
   bulk-fill throughput
-- `Rng.value(T)` / `Rng.valueChecked(T)` for scalar, enum, tuple, and array
+- `Rng.value(T)` / `Rng.valueChecked(T)` plus Rust-discoverable
+  `Rng.randomValue(T)` aliases for scalar, enum, tuple, and array
   sampling, including fallible empty-enum handling
 - `Rng.valueBatch(T)` / `Rng.valueBatchChecked(T)`,
   Rust-discoverable `Rng.sample(T, sampler)`, `Rng.sampleBatch(T, sampler)`, bounded-uint `uintLessThanBatch` /

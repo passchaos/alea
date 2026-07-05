@@ -101,13 +101,25 @@ pub fn value(self: Rng, comptime T: type) T {
     return valueFrom(self, T);
 }
 
+pub fn randomValue(self: Rng, comptime T: type) T {
+    return value(self, T);
+}
+
 pub fn valueChecked(self: Rng, comptime T: type) Error!T {
     return valueCheckedFrom(self, T);
+}
+
+pub fn randomValueChecked(self: Rng, comptime T: type) Error!T {
+    return valueChecked(self, T);
 }
 
 pub fn valueCheckedFrom(source: anytype, comptime T: type) Error!T {
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return valueCheckedFromPrevalidated(source, T);
+}
+
+pub fn randomValueCheckedFrom(source: anytype, comptime T: type) Error!T {
+    return valueCheckedFrom(source, T);
 }
 
 pub fn valueBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
@@ -194,6 +206,10 @@ pub fn valueFrom(source: anytype, comptime T: type) T {
         },
         else => @compileError("alea.Rng.value does not support " ++ @typeName(T)),
     };
+}
+
+pub fn randomValueFrom(source: anytype, comptime T: type) T {
+    return valueFrom(source, T);
 }
 
 pub fn valueIter(self: Rng, comptime T: type) ValueIterator(T) {
@@ -4148,6 +4164,10 @@ test "rng facade covers scalar APIs" {
     var engine = Xoshiro256.init(7);
     const rng = Rng.init(&engine);
 
+    _ = rng.randomValue(u64);
+    _ = Rng.randomValueFrom(&engine, u32);
+    _ = try rng.randomValueChecked(bool);
+    _ = try Rng.randomValueCheckedFrom(&engine, f64);
     try std.testing.expect(rng.uintLessThan(u32, 10) < 10);
     try std.testing.expect(rng.intRangeLessThan(i32, -5, 5) >= -5);
     try std.testing.expect(rng.randomRange(i32, -5, 5) >= -5);
@@ -5706,6 +5726,13 @@ test "invalid facade value helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     if (rng.valueChecked(EmptyEnum)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (rng.randomValueChecked(EmptyEnum)) |_| {
         return error.TestExpectedError;
     } else |err| {
         try std.testing.expectEqual(error.EmptyRange, err);

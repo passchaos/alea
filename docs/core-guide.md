@@ -64,8 +64,9 @@ selection.
   `unicodeScalarRangeAtMost*`, `fillUnicodeScalarRangeLessThan*`,
   `fillUnicodeScalarRangeAtMost*`, `unicodeScalarRangeLessThanBatch*`, and
   `unicodeScalarRangeAtMostBatch*` for bounded Unicode scalar ranges
-- structured values: `value(T)` / `valueFrom(source, T)` for bools, ints,
-  floats, vectors, enums, arrays, and tuples; use `valueChecked` /
+- structured values: `value(T)` / `valueFrom(source, T)` plus
+  Rust-discoverable `randomValue(T)` / `randomValueFrom(source, T)` for bools,
+  ints, floats, vectors, enums, arrays, and tuples; use `valueChecked` /
   `valueCheckedFrom` or `enumValueChecked` / `enumValueCheckedFrom` when an
   empty enum type should be reported as `EmptyRange` (zero-length arrays are
   valid even when their child type is not sampled, while non-empty arrays or

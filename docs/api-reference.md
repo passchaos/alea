@@ -21,6 +21,8 @@ stability expectations.
 - Error type: `Error`
 - Construction and interop: `init`, `fromRandom`, `random`
 - Values: `value`, `valueFrom`, `valueChecked`, `valueCheckedFrom`,
+  `randomValue`, `randomValueFrom`, `randomValueChecked`,
+  `randomValueCheckedFrom`,
   `valueBatch`, `valueBatchFrom`, `valueBatchChecked`,
   `valueBatchCheckedFrom`, `valueIter`, `valueIterFrom`, `randomIter`,
   `randomIterFrom`, `sample`, `sampleFrom`, `sampleIter`, `sampleIterFrom`, `sampleBatch`,
