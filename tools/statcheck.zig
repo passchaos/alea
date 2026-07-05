@@ -22,6 +22,7 @@ pub fn main(init: std.process.Init) !void {
 fn runChecks() !void {
     try checkEngine(alea.Alea4x64, "alea4x64");
     try checkEngine(alea.Wyhash64, "wyhash64");
+    try checkEngine(alea.Xoshiro128PlusPlus, "xoshiro128++");
     try checkEngine(alea.Xoshiro256, "xoshiro256");
     try checkEngine(alea.Xoshiro256PlusPlus, "xoshiro256++");
     try checkEngine(alea.Pcg64, "pcg64");

@@ -30,7 +30,9 @@ Audited local Rust evidence:
 Semantics:
 
 - `nextU64` mirrors each engine's `next`;
-- `nextU32` consumes one `u64` draw and returns its high 32 bits;
+- `nextU32` follows each engine's native raw policy: u64 engines consume one
+  `u64` draw and return its high 32 bits, while 32-bit-word engines such as
+  `Xoshiro128PlusPlus` return one native `u32` draw;
 - `fillBytes` mirrors each engine's existing `fill` byte-stream method;
 - `SplitMix64` remains a seeding/scalar helper and does not grow a byte-fill
   API in this milestone.

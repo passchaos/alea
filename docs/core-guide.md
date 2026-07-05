@@ -21,6 +21,9 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
 - `HashPrng = Wyhash64`: compact hash-style generator.
 - `ReproduciblePrng = Pcg64`: stream-selectable reproducible generator.
 - `SecurePrng = ChaCha12`: secure-style stream for secret-seeded randomness.
+- `Xoshiro128PlusPlus`: Rust-discoverable 32-bit Xoshiro++ portable generator
+  matching local Rust's `rand::rngs::Xoshiro128PlusPlus` algorithm and seed
+  vectors; this is separate from local 64-bit `SmallRng`.
 - `ChaCha8Rng`: Rust-discoverable optional-`chacha` ChaCha8 stream for users
   intentionally matching local Rust's faster lower-round named generator.
 - `ChaCha12Rng = SecurePrng`: Rust-discoverable named ChaCha12 RNG alias,
@@ -49,9 +52,10 @@ Seedable production engines also expose `fromSeed(seed)` aliases for Alea `Seed`
 local Rust `SeedableRng::from_seed` naming while keeping `Seed.stream(...)`
 and `Seed.mix(...)` as the Zig-native derivation tools.
 Use `fromSeedBytes(seed)` when you need the Rust-style fixed byte-array seed
-shape directly: scalar engines accept 8 bytes, `Pcg64` accepts 16 bytes, and
-32-byte-state/key engines accept 32 bytes, all interpreted as little-endian
-`u64` words with Xoshiro all-zero states remapped through `init(0)`.
+shape directly: scalar engines accept 8 bytes, `Pcg64` and
+`Xoshiro128PlusPlus` accept 16 bytes, and 32-byte-state/key engines accept
+32 bytes. Integer state bytes are interpreted as little-endian words, with
+Xoshiro all-zero states remapped through `init(0)`.
 `Seed.fromRng(source)`, direct-engine `fromRng(source)`, and engine `fork()`
 mirror local Rust `SeedableRng::from_rng` / `fork` naming for deterministic
 child derivation from an existing generator; `Seed.fromRng` consumes one `u64`

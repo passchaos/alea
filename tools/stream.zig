@@ -48,6 +48,9 @@ pub fn main(init: std.process.Init) !void {
     } else if (std.mem.eql(u8, engine_name, "pcg64")) {
         var engine = alea.Pcg64.init(seed);
         try writeStream(&engine, stdout, bytes);
+    } else if (std.mem.eql(u8, engine_name, "xoshiro128++")) {
+        var engine = alea.Xoshiro128PlusPlus.init(seed);
+        try writeStream(&engine, stdout, bytes);
     } else if (std.mem.eql(u8, engine_name, "xoshiro256++")) {
         var engine = alea.Xoshiro256PlusPlus.init(seed);
         try writeStream(&engine, stdout, bytes);
@@ -80,7 +83,7 @@ fn writeStream(engine: anytype, stdout: *std.Io.Writer, bytes: usize) !void {
 
 fn usage() error{InvalidArguments} {
     std.debug.print(
-        \\usage: zig build stream -- [--engine fast|default|wyhash64|pcg64|xoshiro256++|chacha8|chacha12|chacha20] [--seed N] [--bytes N]
+        \\usage: zig build stream -- [--engine fast|default|wyhash64|pcg64|xoshiro128++|xoshiro256++|chacha8|chacha12|chacha20] [--seed N] [--bytes N]
         \\
         \\Example:
         \\  zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1073741824 | RNG_test stdin64

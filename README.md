@@ -5,7 +5,8 @@ generation, and reproducible experiments.
 
 The current Linux-first roadmap is intentionally broad:
 
-- multiple deterministic engines: `Wyhash64`, `Xoshiro256`, `Pcg64`, plus
+- multiple deterministic engines: `Wyhash64`, `Xoshiro256`,
+  `Xoshiro128PlusPlus`, `Xoshiro256PlusPlus`, `Pcg64`, plus
   Rust-discoverable `StdRng` / `SmallRng` aliases for standard secure-style and
   small fast generator discovery
 - `ChaCha8Rng`, `ChaCha12Rng`, and `ChaCha20Rng` optional-chacha style stream
@@ -208,11 +209,13 @@ exposes `random()` for standard-library consumers, and `Rng.random()` returns a
 `HashPrng` are `Wyhash64`, `ReproduciblePrng` is `Pcg64`, `SecurePrng`,
 Rust-discoverable `StdRng`, and Rust-discoverable `ChaCha12Rng` are
 `ChaCha12`, Rust-discoverable `ChaCha8Rng` and `ChaCha20Rng` expose the
-matching lower/higher ChaCha round-count streams, Rust-discoverable `SmallRng`
-is `Xoshiro256PlusPlus`, and `StepRng` is a deterministic arithmetic-sequence
-mock source for tests. Root helpers such as `default`, `fast`, `scalar`, `hash`,
-`reproducible`, and their secure-seeded variants initialize the matching aliases
-without spelling out the concrete engine type.
+matching lower/higher ChaCha round-count streams, `Xoshiro128PlusPlus` exposes
+the local Rust 32-bit small portable generator, Rust-discoverable `SmallRng` is
+`Xoshiro256PlusPlus` on this local 64-bit platform, and `StepRng` is a
+deterministic arithmetic-sequence mock source for tests. Root helpers such as
+`default`, `fast`, `scalar`, `hash`, `reproducible`, and their secure-seeded
+variants initialize the matching aliases without spelling out the concrete
+engine type.
 
 See `docs/core-guide.md` for the core API guide, `docs/api-reference.md` for
 the public API reference, `docs/examples.md` for runnable examples,

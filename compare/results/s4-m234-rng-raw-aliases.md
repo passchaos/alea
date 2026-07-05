@@ -34,9 +34,11 @@ Semantics:
 
 - `nextU64` mirrors `next`;
 - `nextU64From` mirrors `nextFrom`;
-- `nextU32` / `nextU32From` consume one `u64` draw and return its high 32 bits,
-  matching the local Rust xoshiro raw-u32 policy while keeping stream
+- `nextU32` consumes one facade `u64` draw and returns its high 32 bits,
+  matching the local Rust xoshiro256 raw-u32 policy while keeping stream
   consumption explicit and stable;
+- `nextU32From` dispatches to a direct source `nextU32` where the source exposes
+  one, and otherwise falls back to the same high-32-bits policy;
 - `fillBytes` mirrors `bytes`;
 - `fillBytesFrom` exposes the existing direct-source byte-fill dispatch.
 

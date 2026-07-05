@@ -21,6 +21,7 @@ const checks = [_]Check{
     .{ .path = "src/engines/splitmix64.zig", .label = "SplitMix64" },
     .{ .path = "src/engines/step.zig", .label = "StepRng" },
     .{ .path = "src/engines/wyhash64.zig", .label = "Wyhash64" },
+    .{ .path = "src/engines/xoshiro128plusplus.zig", .label = "Xoshiro128PlusPlus" },
     .{ .path = "src/engines/xoshiro256.zig", .label = "Xoshiro256" },
     .{ .path = "src/engines/xoshiro256plusplus.zig", .label = "Xoshiro256PlusPlus" },
 };

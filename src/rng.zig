@@ -38,6 +38,7 @@ pub const Error = error{
 
 ptr: *anyopaque,
 nextFn: *const fn (ptr: *anyopaque) u64,
+nextU32Fn: *const fn (ptr: *anyopaque) u32,
 fillFn: *const fn (ptr: *anyopaque, buf: []u8) void,
 
 pub const SysRng = struct {
@@ -76,12 +77,12 @@ pub const SysRng = struct {
 
 pub fn init(pointer: anytype) Rng {
     const Ptr = @TypeOf(pointer);
+    const ptr_info = @typeInfo(Ptr);
     comptime {
-        const info = @typeInfo(Ptr);
-        if (info != .pointer or info.pointer.size != .one) {
+        if (ptr_info != .pointer or ptr_info.pointer.size != .one) {
             @compileError("Rng.init expects a single-item pointer to an engine");
         }
-        const Child = info.pointer.child;
+        const Child = ptr_info.pointer.child;
         if (!@hasDecl(Child, "next")) {
             @compileError(@typeName(Child) ++ " must expose pub fn next(*Self) u64");
         }
@@ -89,11 +90,18 @@ pub fn init(pointer: anytype) Rng {
             @compileError(@typeName(Child) ++ " must expose pub fn fill(*Self, []u8) void");
         }
     }
+    const Child = ptr_info.pointer.child;
 
     const gen = struct {
         fn next(ptr: *anyopaque) u64 {
             const self: Ptr = @ptrCast(@alignCast(ptr));
             return self.next();
+        }
+
+        fn nextU32(ptr: *anyopaque) u32 {
+            const self: Ptr = @ptrCast(@alignCast(ptr));
+            if (comptime @hasDecl(Child, "nextU32")) return self.nextU32();
+            return @truncate(self.next() >> 32);
         }
 
         fn fill(ptr: *anyopaque, buf: []u8) void {
@@ -105,6 +113,7 @@ pub fn init(pointer: anytype) Rng {
     return .{
         .ptr = pointer,
         .nextFn = gen.next,
+        .nextU32Fn = gen.nextU32,
         .fillFn = gen.fill,
     };
 }
@@ -116,6 +125,11 @@ pub fn fromRandom(random_source: *std.Random) Rng {
             return source.int(u64);
         }
 
+        fn nextU32(ptr: *anyopaque) u32 {
+            const source: *std.Random = @ptrCast(@alignCast(ptr));
+            return @truncate(source.int(u64) >> 32);
+        }
+
         fn fill(ptr: *anyopaque, buf: []u8) void {
             const source: *std.Random = @ptrCast(@alignCast(ptr));
             source.bytes(buf);
@@ -125,6 +139,7 @@ pub fn fromRandom(random_source: *std.Random) Rng {
     return .{
         .ptr = random_source,
         .nextFn = gen.next,
+        .nextU32Fn = gen.nextU32,
         .fillFn = gen.fill,
     };
 }
@@ -1872,7 +1887,7 @@ pub fn nextU64From(source: anytype) u64 {
 }
 
 pub fn nextU32(self: Rng) u32 {
-    return nextU32From(self);
+    return self.nextU32Fn(self.ptr);
 }
 
 pub fn tryNextU32(self: Rng) !u32 {
@@ -1886,6 +1901,8 @@ pub fn tryNextU32From(source: anytype) !u32 {
 }
 
 pub fn nextU32From(source: anytype) u32 {
+    if (@TypeOf(source) == Rng) return source.nextU32();
+    if (comptime sourceCanNextU32(@TypeOf(source))) return source.nextU32();
     return @truncate(nextFrom(source) >> 32);
 }
 
@@ -4070,6 +4087,15 @@ fn sourceCanTryNextU32(comptime Source: type) bool {
     return @hasDecl(Source, "tryNextU32");
 }
 
+fn sourceCanNextU32(comptime Source: type) bool {
+    if (Source == Rng) return true;
+    const info = @typeInfo(Source);
+    if (info == .pointer and info.pointer.size == .one) {
+        return @hasDecl(info.pointer.child, "nextU32");
+    }
+    return @hasDecl(Source, "nextU32");
+}
+
 fn randomFrom(source: anytype) std.Random {
     return source.random();
 }
@@ -4443,6 +4469,46 @@ pub fn probabilityThreshold(p: f64) u64 {
     const threshold = @floor(p * scale);
     if (threshold >= scale) return std.math.maxInt(u64);
     return @intFromFloat(threshold);
+}
+
+test "rng direct raw aliases dispatch source native nextU32" {
+    const NativeU32Source = struct {
+        next_called: bool = false,
+        next_u32_called: bool = false,
+
+        fn next(self: *@This()) u64 {
+            self.next_called = true;
+            return 0xaaaa_bbbb_cccc_dddd;
+        }
+
+        fn nextU32(self: *@This()) u32 {
+            self.next_u32_called = true;
+            return 0x1234_5678;
+        }
+
+        fn fill(self: *@This(), out: []u8) void {
+            var i: usize = 0;
+            while (i < out.len) {
+                const word = self.next();
+                var word_bytes: [8]u8 = undefined;
+                std.mem.writeInt(u64, &word_bytes, word, .little);
+                const n = @min(8, out.len - i);
+                @memcpy(out[i..][0..n], word_bytes[0..n]);
+                i += n;
+            }
+        }
+    };
+
+    var source = NativeU32Source{};
+    try std.testing.expectEqual(@as(u32, 0x1234_5678), Rng.nextU32From(&source));
+    try std.testing.expect(!source.next_called);
+    try std.testing.expect(source.next_u32_called);
+
+    var facade_source = NativeU32Source{};
+    const rng = Rng.init(&facade_source);
+    try std.testing.expectEqual(@as(u32, 0x1234_5678), rng.nextU32());
+    try std.testing.expect(!facade_source.next_called);
+    try std.testing.expect(facade_source.next_u32_called);
 }
 
 test "rng facade covers scalar APIs" {
