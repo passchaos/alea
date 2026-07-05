@@ -50,6 +50,10 @@ pub const Charset = struct {
         return 1.0 / @as(f64, @floatFromInt(self.bytes.len));
     }
 
+    pub fn probability(self: Charset, index: usize) ?f64 {
+        return self.probabilityAt(index) catch null;
+    }
+
     pub fn probabilities(self: Charset, allocator: std.mem.Allocator) ![]f64 {
         const out = try allocator.alloc(f64, self.bytes.len);
         errdefer allocator.free(out);
@@ -222,6 +226,9 @@ test "ascii charset fills requested length" {
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), try Alphanumeric.probabilityAt(0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), try Alphanumeric.probabilityAt(alphanumeric.len - 1), 1e-12);
     try std.testing.expectError(error.InvalidParameter, Alphanumeric.probabilityAt(alphanumeric.len));
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), Alphanumeric.probability(0).?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / @as(f64, @floatFromInt(alphanumeric.len))), Alphanumeric.probability(alphanumeric.len - 1).?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), Alphanumeric.probability(alphanumeric.len));
     var probabilities_buf: [alphanumeric.len]f64 = undefined;
     try Alphanumeric.probabilitiesInto(&probabilities_buf);
     for (probabilities_buf) |probability| {

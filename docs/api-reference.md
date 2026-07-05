@@ -3157,7 +3157,7 @@ Dynamic weighted helpers:
   `uppercase`, `digits`
 - Charset type: `Charset.init`, `Charset.initChecked`, `Charset.bytesValue`,
   `Charset.len`, `Charset.isEmpty`, `Charset.byteAt`, `Charset.indexOf`,
-  `Charset.contains`, `Charset.probabilityAt`,
+  `Charset.contains`, `Charset.probabilityAt`, `Charset.probability`,
   `Charset.probabilities`, `Charset.probabilitiesInto`, `Charset.sample`,
   `Charset.sampleChecked`, `Charset.sampleFrom`, `Charset.sampleCheckedFrom`,
   `Charset.fill`, `Charset.fillChecked`, `Charset.fillFrom`,
