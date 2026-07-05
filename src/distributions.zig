@@ -16059,6 +16059,11 @@ pub fn WeightedTree(comptime Weight: type) type {
         positive_index: ?usize = null,
         allocator: std.mem.Allocator,
 
+        pub const Update = struct {
+            index: usize,
+            weight: Weight,
+        };
+
         pub const WeightIterator = struct {
             const Iterator = @This();
 
@@ -16354,6 +16359,43 @@ pub fn WeightedTree(comptime Weight: type) type {
                 cursor = (cursor - 1) / 2;
             }
             self.updatePositiveState(index, old, value);
+        }
+
+        pub fn updateMany(self: *Self, updates: []const Update) !void {
+            if (updates.len == 0) return;
+
+            var previous_index: ?usize = null;
+            var next_total = self.totalWeight();
+            for (updates) |item| {
+                if (item.index >= self.subtotals.items.len) return error.InvalidParameter;
+                if (previous_index) |previous| {
+                    if (previous >= item.index) return error.InvalidParameter;
+                }
+                const value = try weightToF64(item.weight);
+                const old = try self.get(item.index);
+                next_total += value - old;
+                if (next_total < 0 or !std.math.isFinite(next_total)) return error.InvalidWeight;
+                previous_index = item.index;
+            }
+
+            for (updates) |item| {
+                const value = weightToF64(item.weight) catch unreachable;
+                const old = self.get(item.index) catch unreachable;
+                const delta = value - old;
+                if (delta < 0) {
+                    self.applyDelta(item.index, delta);
+                    self.updatePositiveState(item.index, old, value);
+                }
+            }
+            for (updates) |item| {
+                const value = weightToF64(item.weight) catch unreachable;
+                const old = self.get(item.index) catch unreachable;
+                const delta = value - old;
+                if (delta >= 0) {
+                    self.applyDelta(item.index, delta);
+                    self.updatePositiveState(item.index, old, value);
+                }
+            }
         }
 
         pub fn updateAll(self: *Self, input_weights: []const Weight) !void {
@@ -16677,6 +16719,15 @@ pub fn WeightedTree(comptime Weight: type) type {
             return if (index < self.subtotals.items.len) self.subtotals.items[index] else 0;
         }
 
+        fn applyDelta(self: *Self, index: usize, delta: f64) void {
+            var cursor = index;
+            while (true) {
+                self.subtotals.items[cursor] += delta;
+                if (cursor == 0) break;
+                cursor = (cursor - 1) / 2;
+            }
+        }
+
         fn updatePositiveState(self: *Self, index: usize, old: f64, new: f64) void {
             const old_positive = old > 0;
             const new_positive = new > 0;
@@ -16733,6 +16784,11 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         positive_count: usize = 0,
         positive_index: ?usize = null,
         allocator: std.mem.Allocator,
+
+        pub const Update = struct {
+            index: usize,
+            weight: Weight,
+        };
 
         pub const WeightIterator = struct {
             const Iterator = @This();
@@ -17039,6 +17095,45 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 }
             }
             self.updatePositiveState(index, old, value);
+        }
+
+        pub fn updateMany(self: *Self, updates: []const Update) !void {
+            if (updates.len == 0) return;
+
+            var previous_index: ?usize = null;
+            var next_total = self.totalWeight();
+            for (updates) |item| {
+                if (item.index >= self.subtotals.items.len) return error.InvalidParameter;
+                if (previous_index) |previous| {
+                    if (previous >= item.index) return error.InvalidParameter;
+                }
+                const value = try weightToU64(item.weight);
+                const old = try self.get(item.index);
+                if (value >= old) {
+                    const delta = value - old;
+                    next_total = std.math.add(u64, next_total, delta) catch return error.InvalidWeight;
+                } else {
+                    next_total -= old - value;
+                }
+                previous_index = item.index;
+            }
+
+            for (updates) |item| {
+                const value = weightToU64(item.weight) catch unreachable;
+                const old = self.get(item.index) catch unreachable;
+                if (value < old) {
+                    self.applyDeltaSub(item.index, old - value);
+                    self.updatePositiveState(item.index, old, value);
+                }
+            }
+            for (updates) |item| {
+                const value = weightToU64(item.weight) catch unreachable;
+                const old = self.get(item.index) catch unreachable;
+                if (value >= old) {
+                    self.applyDeltaAdd(item.index, value - old);
+                    self.updatePositiveState(item.index, old, value);
+                }
+            }
         }
 
         pub fn updateAll(self: *Self, input_weights: []const Weight) !void {
@@ -17360,6 +17455,24 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         fn subtotal(self: Self, index: usize) u64 {
             return if (index < self.subtotals.items.len) self.subtotals.items[index] else 0;
+        }
+
+        fn applyDeltaAdd(self: *Self, index: usize, delta: u64) void {
+            var cursor = index;
+            while (true) {
+                self.subtotals.items[cursor] = std.math.add(u64, self.subtotals.items[cursor], delta) catch unreachable;
+                if (cursor == 0) break;
+                cursor = (cursor - 1) / 2;
+            }
+        }
+
+        fn applyDeltaSub(self: *Self, index: usize, delta: u64) void {
+            var cursor = index;
+            while (true) {
+                self.subtotals.items[cursor] -= delta;
+                if (cursor == 0) break;
+                cursor = (cursor - 1) / 2;
+            }
         }
 
         fn updatePositiveState(self: *Self, index: usize, old: u64, new: u64) void {
@@ -19374,6 +19487,59 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), invalid_total_tree.totalWeight(), 1e-12);
 }
 
+test "weighted tree updateMany applies ordered partial updates atomically" {
+    const alea = @import("root.zig");
+    var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+
+    try tree.updateMany(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 1, .weight = 4 },
+        .{ .index = 2, .weight = 0 },
+    });
+    try std.testing.expectEqual(@as(usize, 2), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), tree.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 7), tree.totalWeight(), 1e-12);
+    var weights: [4]f64 = undefined;
+    try tree.weightsInto(&weights);
+    try std.testing.expectEqualSlices(f64, &.{ 0, 4, 0, 3 }, &weights);
+
+    try tree.updateMany(&.{.{ .index = 1, .weight = 0 }});
+    try std.testing.expectEqual(@as(usize, 1), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), tree.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 3), tree.totalWeight(), 1e-12);
+
+    var engine = alea.ScalarPrng.init(0x5150_d560);
+    var control = alea.ScalarPrng.init(0x5150_d560);
+    try std.testing.expectEqual(@as(usize, 3), tree.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try tree.updateMany(&.{});
+    try std.testing.expectEqual(@as(usize, 1), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), tree.constantIndex());
+
+    try std.testing.expectError(error.InvalidParameter, tree.updateMany(&.{.{ .index = 4, .weight = 1 }}));
+    try std.testing.expectError(error.InvalidParameter, tree.updateMany(&.{
+        .{ .index = 2, .weight = 1 },
+        .{ .index = 1, .weight = 1 },
+    }));
+    try std.testing.expectError(error.InvalidParameter, tree.updateMany(&.{
+        .{ .index = 1, .weight = 1 },
+        .{ .index = 1, .weight = 2 },
+    }));
+    try tree.updateMany(&.{.{ .index = 3, .weight = 0 }});
+    try std.testing.expectEqual(@as(usize, 0), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), tree.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), tree.totalWeight(), 1e-12);
+    try std.testing.expectError(error.InvalidWeight, tree.sampleCheckedFrom(&engine));
+
+    var float_tree = try WeightedTree(f64).init(std.testing.allocator, &.{ 1, 2, 3 });
+    defer float_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, float_tree.updateMany(&.{.{ .index = 1, .weight = std.math.nan(f64) }}));
+    try std.testing.expectApproxEqAbs(@as(f64, 6), float_tree.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), float_tree.weight(1).?, 1e-12);
+}
+
 test "weighted tree push allocation failure preserves tree" {
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
     var tree = try WeightedTree(u32).init(failing.allocator(), &.{ 0, 0, 5 });
@@ -20339,6 +20505,62 @@ test "weighted int tree supports dynamic updates" {
     defer wide_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, wide_tree.push(too_large_u128));
     try std.testing.expectError(error.InvalidWeight, wide_tree.update(0, too_large_u128));
+    try std.testing.expectEqual(@as(u64, 1), wide_tree.totalWeight());
+}
+
+test "weighted int tree updateMany applies ordered partial updates atomically" {
+    const alea = @import("root.zig");
+    var tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+
+    try tree.updateMany(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 1, .weight = 4 },
+        .{ .index = 2, .weight = 0 },
+    });
+    try std.testing.expectEqual(@as(usize, 2), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), tree.constantIndex());
+    try std.testing.expectEqual(@as(u64, 7), tree.totalWeight());
+    var weights: [4]u64 = undefined;
+    try tree.weightsInto(&weights);
+    try std.testing.expectEqualSlices(u64, &.{ 0, 4, 0, 3 }, &weights);
+
+    try tree.updateMany(&.{.{ .index = 1, .weight = 0 }});
+    try std.testing.expectEqual(@as(usize, 1), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), tree.constantIndex());
+    try std.testing.expectEqual(@as(u64, 3), tree.totalWeight());
+
+    var engine = alea.ScalarPrng.init(0x5150_d561);
+    var control = alea.ScalarPrng.init(0x5150_d561);
+    try std.testing.expectEqual(@as(usize, 3), tree.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try tree.updateMany(&.{});
+    try std.testing.expectEqual(@as(usize, 1), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), tree.constantIndex());
+
+    try std.testing.expectError(error.InvalidParameter, tree.updateMany(&.{.{ .index = 4, .weight = 1 }}));
+    try std.testing.expectError(error.InvalidParameter, tree.updateMany(&.{
+        .{ .index = 2, .weight = 1 },
+        .{ .index = 1, .weight = 1 },
+    }));
+    try std.testing.expectError(error.InvalidParameter, tree.updateMany(&.{
+        .{ .index = 1, .weight = 1 },
+        .{ .index = 1, .weight = 2 },
+    }));
+    try std.testing.expectEqual(@as(usize, 1), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, 3), tree.constantIndex());
+    try std.testing.expectEqual(@as(u64, 3), tree.totalWeight());
+
+    var overflow_tree = try WeightedIntTree(u64).init(std.testing.allocator, &.{ std.math.maxInt(u64), 0 });
+    defer overflow_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, overflow_tree.updateMany(&.{.{ .index = 1, .weight = 1 }}));
+    try std.testing.expectEqual(@as(u64, std.math.maxInt(u64)), overflow_tree.totalWeight());
+
+    const too_large_u128 = @as(u128, std.math.maxInt(u64)) + 1;
+    var wide_tree = try WeightedIntTree(u128).init(std.testing.allocator, &.{1});
+    defer wide_tree.deinit();
+    try std.testing.expectError(error.InvalidWeight, wide_tree.updateMany(&.{.{ .index = 0, .weight = too_large_u128 }}));
     try std.testing.expectEqual(@as(u64, 1), wide_tree.totalWeight());
 }
 

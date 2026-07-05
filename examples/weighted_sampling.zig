@@ -459,6 +459,11 @@ pub fn main(init: std.process.Init) !void {
     defer tree.deinit();
     try tree.update(1, 8);
     try tree.push(4);
+    try tree.updateMany(&.{
+        .{ .index = 0, .weight = 2 },
+        .{ .index = 4, .weight = 5 },
+    });
+    const tree_update_many_total = tree.totalWeight();
     const tree_num_choices = tree.numChoices();
     const tree_positive_count = tree.positiveCount();
     const tree_constant_index = tree.constantIndex();
@@ -489,6 +494,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("dynamic tree numChoices: {}\n", .{tree_num_choices});
     try stdout.print("dynamic tree positiveCount: {}\n", .{tree_positive_count});
     try stdout.print("dynamic tree constantIndex: {?}\n", .{tree_constant_index});
+    try stdout.print("dynamic tree updateMany totalWeight: {d:.3}\n", .{tree_update_many_total});
     try stdout.print("dynamic tree weight(1)={d:.3} missing={}\n", .{ tree_weight, tree_missing_weight });
     try stdout.print("dynamic tree probability(1)={d:.3} missing={}\n", .{ tree_probability, tree_missing_probability });
     try stdout.print("dynamic tree weightIter fill: {any}\n", .{tree_weight_iter_fill});
@@ -512,6 +518,11 @@ pub fn main(init: std.process.Init) !void {
     var int_tree = try alea.distributions.WeightedIntTree(u32).init(allocator, &int_weights);
     defer int_tree.deinit();
     try int_tree.update(2, 10);
+    try int_tree.updateMany(&.{
+        .{ .index = 0, .weight = 2 },
+        .{ .index = 3, .weight = 4 },
+    });
+    const int_tree_update_many_total = int_tree.totalWeight();
     const int_tree_num_choices = int_tree.numChoices();
     const int_tree_positive_count = int_tree.positiveCount();
     const int_tree_constant_index = int_tree.constantIndex();
@@ -542,6 +553,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("integer tree positiveCount: {}\n", .{int_tree_positive_count});
     try stdout.print("integer tree constantIndex: {?}\n", .{int_tree_constant_index});
     try stdout.print("integer tree total weight: {}\n", .{int_tree.totalWeight()});
+    try stdout.print("integer tree updateMany totalWeight: {}\n", .{int_tree_update_many_total});
     try stdout.print("integer tree weight(2)={} missing={}\n", .{ int_tree_weight, int_tree_missing_weight });
     try stdout.print("integer tree probability(2)={d:.3} missing={}\n", .{ int_tree_probability, int_tree_missing_probability });
     try stdout.print("integer tree weightIter fill: {any}\n", .{int_tree_weight_iter_fill});

@@ -620,7 +620,11 @@ Use:
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
   and sampling workloads with weights accumulated as `f64`, including
   `initBy` / `updateAllBy` from item weight accessors,
-  `initByIndex` / `updateAllByIndex` from index-weight accessors, `numChoices` / `len` count diagnostics, `positiveCount`, `constantIndex` for single-positive deterministic paths, and optional `weight` / `probability`, lazy `weightIter` / `probabilityIter`, checked `weightAt` / `probabilityAt` lookup, and bulk
+  `initByIndex` / `updateAllByIndex` from index-weight accessors, `updateMany`
+  ordered partial updates, `numChoices` / `len` count diagnostics,
+  `positiveCount`, `constantIndex` for single-positive deterministic paths, and
+  optional `weight` / `probability`, lazy `weightIter` / `probabilityIter`,
+  checked `weightAt` / `probabilityAt` lookup, and bulk
   `weights` / `weightsInto` export for diagnostics; use `sampleU32` /
   `fillU32` variants when population indexes fit `u32` and compact output is
   desired, and `indices` / `indicesU32` variants for allocation-returning
@@ -629,7 +633,8 @@ Use:
   for users discovering dynamic trees from `WeightedChoice` index naming; use
   `iter` / `iterU32` for repeated with-replacement index streams
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
-  update/push/pop/sample throughput matters, including `initBy` /
+  update/push/pop/sample throughput matters, including `updateMany`,
+  `initBy` /
   `updateAllBy` from item weight accessors and `initByIndex` /
   `updateAllByIndex` from index-weight accessors; `numChoices` / `len`, `positiveCount`, `constantIndex`, optional `weight` / `probability`, lazy `weightIter` / `probabilityIter`, and checked `weightAt` / `probabilityAt` lookup mirrors generic trees, and weights wider than `u64` are
   accepted only when each value fits the `u64` accumulator

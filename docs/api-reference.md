@@ -2445,6 +2445,8 @@ Dynamic weighted helpers:
 - `WeightedTree.push`
 - `WeightedTree.pop`
 - `WeightedTree.update`
+- `WeightedTree.Update`
+- `WeightedTree.updateMany`
 - `WeightedTree.updateAll`
 - `WeightedTree.updateAllByIndex`
 - `WeightedTree.updateAllBy`
@@ -2543,6 +2545,8 @@ Dynamic weighted helpers:
 - `WeightedIntTree.push`
 - `WeightedIntTree.pop`
 - `WeightedIntTree.update`
+- `WeightedIntTree.Update`
+- `WeightedIntTree.updateMany`
 - `WeightedIntTree.updateAll`
 - `WeightedIntTree.updateAllByIndex`
 - `WeightedIntTree.updateAllBy`
