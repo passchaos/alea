@@ -17,6 +17,10 @@ pub fn init(seed_value: u64) Alea4x64 {
     return .{ .state = .{ sm.next(), sm.next(), sm.next(), sm.next() } };
 }
 
+pub fn seedFromU64(seed: u64) Alea4x64 {
+    return init(seed);
+}
+
 pub fn random(self: *Alea4x64) std.Random {
     return std.Random.init(self, fill);
 }

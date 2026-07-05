@@ -17,6 +17,10 @@ pub fn init(seed: u64) Wyhash64 {
     return .{ .state = sm.next() };
 }
 
+pub fn seedFromU64(seed: u64) Wyhash64 {
+    return init(seed);
+}
+
 pub fn fromState(state: u64) Wyhash64 {
     return .{ .state = state };
 }

@@ -182,3 +182,17 @@ test "engine raw aliases preserve stream shape" {
     var splitmix_alias_u32 = SplitMix64.init(seed);
     try std.testing.expectEqual(@as(u32, @truncate(splitmix_direct_u32.next() >> 32)), splitmix_alias_u32.nextU32());
 }
+
+fn expectEngineSeedFromU64Alias(comptime Engine: type, seed: u64) !void {
+    var direct = engineFromSeed(Engine, seed);
+    var alias = Engine.seedFromU64(seed);
+    try std.testing.expectEqual(direct.next(), alias.next());
+}
+
+test "engine seedFromU64 aliases mirror constructors" {
+    const seed: u64 = 0x5150_5eed_1234_5678;
+
+    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Pcg64, ChaCha }) |Engine| {
+        try expectEngineSeedFromU64Alias(Engine, seed);
+    }
+}
