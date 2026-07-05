@@ -64,10 +64,18 @@ pub fn main(init: std.process.Init) !void {
     var dist_engine = alea.ScalarPrng.init(0x7261_6e67_67);
     const uniform = try alea.distributions.Uniform(f64).new(-2, 3);
     const inclusive_die = try alea.distributions.Uniform(u8).newInclusive(1, 6);
+    const Even = struct {
+        pub fn map(value: u8) bool {
+            return value % 2 == 0;
+        }
+    };
+    var mapped_engine = alea.ScalarPrng.init(0x7261_6e67_6d);
+    const mapped_even_die = alea.distributions.map(u8, bool, inclusive_die, Even{}).sampleFrom(&mapped_engine);
     var uniform_values: [4]f64 = undefined;
     uniform.fillFrom(&dist_engine, &uniform_values);
     try stdout.print("Uniform(f64).new low={d:.1}, high={d:.1}, expected={d:.2}, variance={d:.2}, sample={d:.6}\n", .{ uniform.lowValue(), uniform.highValue(), uniform.expectedValue(), uniform.varianceValue(), uniform.sampleFrom(&dist_engine) });
     try stdout.print("Uniform(u8).newInclusive die isInclusive={}, sample={}\n", .{ inclusive_die.isInclusive(), inclusive_die.sampleFrom(&dist_engine) });
+    try stdout.print("mapped Uniform even die: {}\n", .{mapped_even_die});
     try stdout.print("Uniform(f64).fillFrom: {any}\n", .{uniform_values});
 
     var vector_engine = alea.ScalarPrng.init(0x7261_6e67_68);

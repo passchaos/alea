@@ -139,6 +139,67 @@ pub const Error = error{
     LibmUnavailable,
 };
 
+pub fn map(comptime In: type, comptime Out: type, sampler: anytype, mapper: anytype) MappedSampler(@TypeOf(sampler), @TypeOf(mapper), In, Out) {
+    return .{ .sampler = sampler, .mapper = mapper };
+}
+
+pub fn MappedSampler(comptime Sampler: type, comptime Mapper: type, comptime In: type, comptime Out: type) type {
+    return struct {
+        const Self = @This();
+
+        sampler: Sampler,
+        mapper: Mapper,
+
+        pub fn sample(self: Self, rng: Rng) Out {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) Out {
+            return applyMapper(Out, self.mapper, Rng.sampleFrom(source, In, self.sampler));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []Out) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []Out) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        pub fn map(self: Self, comptime NextOut: type, mapper: anytype) MappedSampler(Self, @TypeOf(mapper), Out, NextOut) {
+            return .{ .sampler = self, .mapper = mapper };
+        }
+    };
+}
+
+fn applyMapper(comptime Out: type, mapper: anytype, value: anytype) Out {
+    const Mapper = @TypeOf(mapper);
+    const Base = switch (@typeInfo(Mapper)) {
+        .pointer => |pointer| pointer.child,
+        else => Mapper,
+    };
+
+    if (comptime @hasDecl(Base, "map")) {
+        const info = @typeInfo(@TypeOf(@field(Base, "map"))).@"fn";
+        if (comptime info.params.len == 1) return @as(Out, Base.map(value));
+        if (comptime info.params.len == 2) return @as(Out, mapper.map(value));
+        @compileError(@typeName(Base) ++ ".map must accept either (value) or (self, value)");
+    }
+    if (comptime @hasDecl(Base, "apply")) {
+        const info = @typeInfo(@TypeOf(@field(Base, "apply"))).@"fn";
+        if (comptime info.params.len == 1) return @as(Out, Base.apply(value));
+        if (comptime info.params.len == 2) return @as(Out, mapper.apply(value));
+        @compileError(@typeName(Base) ++ ".apply must accept either (value) or (self, value)");
+    }
+    if (comptime @hasDecl(Base, "call")) {
+        const info = @typeInfo(@TypeOf(@field(Base, "call"))).@"fn";
+        if (comptime info.params.len == 1) return @as(Out, Base.call(value));
+        if (comptime info.params.len == 2) return @as(Out, mapper.call(value));
+        @compileError(@typeName(Base) ++ ".call must accept either (value) or (self, value)");
+    }
+    @compileError("mapped sampler mapper must expose map, apply, or call");
+}
+
 const LibmvecExpF64x4 = *const fn (@Vector(4, f64)) callconv(.c) @Vector(4, f64);
 const LibmvecExpF32x8 = *const fn (@Vector(8, f32)) callconv(.c) @Vector(8, f32);
 const LibmExpF64 = *const fn (f64) callconv(.c) f64;
@@ -29561,6 +29622,56 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectError(error.InvalidParameter, Zipf(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, Zipf(f64).init(std.math.inf(f64), 1));
     try std.testing.expectError(error.InvalidParameter, Zeta(f64).init(1));
+}
+
+test "mapped samplers transform reusable sampler outputs" {
+    const alea = @import("root.zig");
+
+    const Even = struct {
+        pub fn map(value: u8) bool {
+            return value % 2 == 0;
+        }
+    };
+    const Offset = struct {
+        offset: i16,
+
+        pub fn map(self: @This(), value: bool) i16 {
+            return if (value) self.offset + 10 else self.offset;
+        }
+    };
+
+    const die = try Uniform(u8).newInclusive(1, 6);
+    const even_die = map(u8, bool, die, Even{});
+    const shifted_even_die = even_die.map(i16, Offset{ .offset = 100 });
+
+    var mapped_engine = alea.ScalarPrng.init(0x6d61_7070_6564);
+    var manual_engine = alea.ScalarPrng.init(0x6d61_7070_6564);
+    try std.testing.expectEqual(die.sampleFrom(&manual_engine) % 2 == 0, even_die.sampleFrom(&mapped_engine));
+    try std.testing.expectEqual(manual_engine.next(), mapped_engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x6d61_7070_6565);
+    var direct_engine = alea.ScalarPrng.init(0x6d61_7070_6565);
+    const rng = Rng.init(&facade_engine);
+    try std.testing.expectEqual(Rng.sampleFrom(&direct_engine, bool, even_die), rng.sample(bool, even_die));
+    try std.testing.expectEqual(direct_engine.next(), facade_engine.next());
+
+    var mapped_fill_engine = alea.ScalarPrng.init(0x6d61_7070_6566);
+    var manual_fill_engine = alea.ScalarPrng.init(0x6d61_7070_6566);
+    var mapped_values: [8]bool = undefined;
+    even_die.fillFrom(&mapped_fill_engine, &mapped_values);
+    for (&mapped_values) |*expected| expected.* = die.sampleFrom(&manual_fill_engine) % 2 == 0;
+    try std.testing.expectEqual(manual_fill_engine.next(), mapped_fill_engine.next());
+
+    var iter_engine = alea.ScalarPrng.init(0x6d61_7070_6567);
+    var manual_iter_engine = alea.ScalarPrng.init(0x6d61_7070_6567);
+    var iter = Rng.sampleIterFrom(&iter_engine, i16, shifted_even_die);
+    var iter_values: [6]i16 = undefined;
+    iter.fill(&iter_values);
+    for (&iter_values) |*expected| {
+        const even = die.sampleFrom(&manual_iter_engine) % 2 == 0;
+        expected.* = if (even) 110 else 100;
+    }
+    try std.testing.expectEqual(manual_iter_engine.next(), iter_engine.next());
 }
 
 test "binomial sampler has plausible moments" {

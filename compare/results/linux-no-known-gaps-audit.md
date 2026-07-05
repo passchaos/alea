@@ -269,6 +269,7 @@ Local Alea evidence:
 - `compare/results/s4-m245-root-makerng.md`
 - `compare/results/s4-m246-rng-reader.md`
 - `compare/results/s4-m247-sysrng.md`
+- `compare/results/s4-m248-mapped-sampler.md`
 - `compare/results/2026-07-03-repro-wasm32-wasi-node.md`
 
 Out of scope for this Linux-first audit:
@@ -481,3 +482,7 @@ S4-M247 adds a Rust-discoverable `Rng.SysRng` / root `sysRng(io)`
 system-entropy source (`compare/results/s4-m247-sysrng.md`), closing the local
 Rust `rand::rngs::SysRng` / `getrandom::SysRng` source-shape gap for the
 current Linux bar.
+S4-M248 adds a mapped reusable-sampler adapter
+(`compare/results/s4-m248-mapped-sampler.md`), closing the local Rust
+`Distribution::map` ergonomics gap for the current Linux bar without importing
+trait machinery.

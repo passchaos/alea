@@ -269,6 +269,10 @@ profiles.
 Single-shot helpers and reusable samplers cover:
 
 - uniform, Bernoulli, binomial, negative-binomial, vector Bernoulli/binomial/binomial-approx/negative-binomial
+  (`distributions.map(In, Out, sampler, mapper)` / `MappedSampler.map`
+  adapt reusable sampler outputs through Zig structs exposing `map`, `apply`,
+  or `call`, matching local Rust `Distribution::map` ergonomics without trait
+  machinery)
 Run `zig build run-continuous-distributions` for a runnable comparison of core
 continuous reusable samplers, diagnostics, fill APIs, and vector lane batches.
 Run `zig build run-advanced-continuous-distributions` for a runnable comparison
