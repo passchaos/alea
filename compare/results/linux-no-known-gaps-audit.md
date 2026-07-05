@@ -636,3 +636,6 @@ S4-M281 adds weighted error variant diagnostics
 `rand::distr::weighted::Error::{InvalidInput, InvalidWeight,
 InsufficientNonZero, Overflow}` diagnostics gap for static `AliasTable` /
 `WeightedIndex` workflows while preserving existing weighted error aliases.
+S4-M282 adds root `distr` (`compare/results/s4-m282-distr-alias.md`), closing
+the local Rust `rand::distr::*` module-name discovery gap while preserving
+Alea's canonical `distributions` module name.

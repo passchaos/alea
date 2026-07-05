@@ -7,7 +7,7 @@ stability expectations.
 
 ## Root Module
 
-- Modules/namespaces: `Rng`, `Seed`, `distributions`, `seq`, `ascii`,
+- Modules/namespaces: `Rng`, `Seed`, `distributions`, `distr`, `seq`, `ascii`,
   `quality`, `rngs`, `prelude`
 - Engines: `SplitMix64`, `Wyhash64`, `Alea4x64`, `Xoshiro256PlusPlus`,
   `Xoshiro128PlusPlus`, `Xoshiro256`, `Pcg64`, `ChaCha`, `ChaCha8Rng`,

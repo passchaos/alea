@@ -107,7 +107,8 @@ The current Linux-first roadmap is intentionally broad:
   rayleigh, maxwell, pareto, weibull, gumbel, frechet, skew-normal, PERT,
   inverse Gaussian,
   normal-inverse Gaussian, Zipf, Zeta, unit geometry samplers, dirichlet,
-  multinomial
+  multinomial; root `distr` aliases `distributions` for local Rust
+  `rand::distr::*` discovery
 - O(1) repeated weighted sampling through alias tables
 
 The local Linux roadmap has progressed beyond basic feature bring-up into

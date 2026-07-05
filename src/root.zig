@@ -10,6 +10,7 @@ const std = @import("std");
 pub const Rng = @import("rng.zig");
 pub const Seed = @import("seed.zig");
 pub const distributions = @import("distributions.zig");
+pub const distr = distributions;
 pub const seq = @import("seq.zig");
 pub const ascii = @import("ascii.zig");
 pub const quality = @import("quality.zig");
@@ -460,6 +461,17 @@ test "root prelude namespace mirrors common aliases" {
     var prelude_small = prelude.SmallRng.seedFromU64(0x5150_1280);
     var root_small = SmallRng.seedFromU64(0x5150_1280);
     try std.testing.expectEqual(root_small.next(), prelude_small.next());
+}
+
+test "root distr alias mirrors distributions module" {
+    comptime std.debug.assert(distr == distributions);
+
+    const alias_sampler = try distr.Uniform(u32).new(10, 20);
+    const direct_sampler = try distributions.Uniform(u32).new(10, 20);
+    var alias_engine = DefaultPrng.init(0x5150_d157);
+    var direct_engine = DefaultPrng.init(0x5150_d157);
+    try std.testing.expectEqual(direct_sampler.sampleFrom(&direct_engine), alias_sampler.sampleFrom(&alias_engine));
+    try std.testing.expectEqual(direct_engine.next(), alias_engine.next());
 }
 
 test "root StepRng helpers mirror StepRng constructors" {

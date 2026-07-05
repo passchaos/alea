@@ -361,7 +361,8 @@ called through the Rust-discoverable `rng.sample(T, sampler)` /
 `Rng.sampleFrom(source, T, sampler)` facade aliases, or used with
 `rng.sampleIter(T, sampler)` /
 `Rng.sampleIterFrom(source, T, sampler)` when the sample type is scalar. The
-distribution namespace also exposes `sampleIter(rng, T, sampler)` and
+distribution namespace (`distributions`, also available as root `distr` for
+local Rust `rand::distr::*` comparisons) also exposes `sampleIter(rng, T, sampler)` and
 `sampleIterFrom(source, T, sampler)` aliases for callers looking for the local
 Rust `Distribution::sample_iter` shape. These unbounded iterators expose
 `sizeHint()` as `usize.max..unbounded` while
