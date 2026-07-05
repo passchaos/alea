@@ -15667,6 +15667,10 @@ pub fn AliasTable(comptime Weight: type) type {
             return self.prob.len;
         }
 
+        pub fn numChoices(self: Self) usize {
+            return self.prob.len;
+        }
+
         pub fn isEmpty(self: Self) bool {
             return self.len() == 0;
         }
@@ -18769,6 +18773,7 @@ test "alias table exposes totals and reconstructs weights" {
     defer table.deinit();
 
     try std.testing.expectEqual(@as(usize, 4), table.len());
+    try std.testing.expectEqual(@as(usize, 4), table.numChoices());
     try std.testing.expect(!table.isEmpty());
     try std.testing.expectApproxEqAbs(@as(f64, 9), table.totalWeight(), 1e-12);
 

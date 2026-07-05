@@ -385,6 +385,7 @@ pub fn main(init: std.process.Init) !void {
     defer alias.deinit();
     var alias_probs: [items.len]f64 = undefined;
     try alias.probabilitiesInto(&alias_probs);
+    const alias_num_choices = alias.numChoices();
     const alias_weight = alias.weight(2).?;
     const alias_missing_weight = alias.weight(items.len) == null;
     const alias_probability = alias.probability(2).?;
@@ -427,6 +428,7 @@ pub fn main(init: std.process.Init) !void {
     var alias_by_item_samples: [6]usize = undefined;
     alias_by_item.fillFrom(&alias_by_item_engine, &alias_by_item_samples);
     try stdout.print("alias probabilities: {any}\n", .{alias_probs});
+    try stdout.print("alias numChoices: {}\n", .{alias_num_choices});
     try stdout.print("alias weight(2)={d:.3} missing={}\n", .{ alias_weight, alias_missing_weight });
     try stdout.print("alias probability(2)={d:.3} missing={}\n", .{ alias_probability, alias_missing_probability });
     try stdout.print("alias weightIter fill: {any}\n", .{alias_weight_iter_fill});

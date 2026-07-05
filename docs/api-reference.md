@@ -2360,6 +2360,7 @@ Alias helpers:
 - `AliasTable.updateByIndex`
 - `AliasTable.updateBy`
 - `AliasTable.len`
+- `AliasTable.numChoices`
 - `AliasTable.isEmpty`
 - `AliasTable.totalWeight`
 - `AliasTable.weights`
