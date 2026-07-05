@@ -828,7 +828,9 @@ Reusable samplers:
 - `VectorHypergeometric(VectorType).fillFrom`
 - `Uniform(T)`
 - `Uniform(T).init`
+- `Uniform(T).new`
 - `Uniform(T).initInclusive`
+- `Uniform(T).newInclusive`
 - `Uniform(T).lowValue`
 - `Uniform(T).highValue`
 - `Uniform(T).isInclusive`
@@ -851,7 +853,9 @@ Reusable samplers:
 - `VectorPoissonAhrensDieter(VectorType).fillFrom`
 - `VectorUniform(VectorType)`
 - `VectorUniform(VectorType).init`
+- `VectorUniform(VectorType).new`
 - `VectorUniform(VectorType).initInclusive`
+- `VectorUniform(VectorType).newInclusive`
 - `VectorUniform(VectorType).lowValue`
 - `VectorUniform(VectorType).highValue`
 - `VectorUniform(VectorType).isInclusive`

@@ -2159,9 +2159,17 @@ pub fn Uniform(comptime T: type) type {
             return .{ .low = low, .high = high, .inclusive = false };
         }
 
+        pub fn new(low: T, high: T) Error!Self {
+            return init(low, high);
+        }
+
         pub fn initInclusive(low: T, high: T) Error!Self {
             if (!rangeLessEqual(T, low, high)) return error.EmptyRange;
             return .{ .low = low, .high = high, .inclusive = true };
+        }
+
+        pub fn newInclusive(low: T, high: T) Error!Self {
+            return initInclusive(low, high);
         }
 
         pub fn lowValue(self: Self) T {
@@ -2249,9 +2257,17 @@ pub fn VectorUniform(comptime VectorType: type) type {
             return .{ .low = low, .high = high, .inclusive = false };
         }
 
+        pub fn new(low: Child, high: Child) Error!Self {
+            return init(low, high);
+        }
+
         pub fn initInclusive(low: Child, high: Child) Error!Self {
             if (!rangeLessEqual(Child, low, high)) return error.EmptyRange;
             return .{ .low = low, .high = high, .inclusive = true };
+        }
+
+        pub fn newInclusive(low: Child, high: Child) Error!Self {
+            return initInclusive(low, high);
         }
 
         pub fn lowValue(self: Self) Child {
@@ -18541,6 +18557,14 @@ test "basic distributions stay in expected ranges" {
     try std.testing.expect(beta(rng, f64, 2, 5) >= 0);
 
     const die = try Uniform(u8).initInclusive(1, 6);
+    const die_new = try Uniform(u8).newInclusive(1, 6);
+    try std.testing.expect(die_new.isInclusive());
+    try std.testing.expectEqual(die.lowValue(), die_new.lowValue());
+    try std.testing.expectEqual(die.highValue(), die_new.highValue());
+    const half_open_new = try Uniform(u8).new(1, 6);
+    try std.testing.expect(!half_open_new.isInclusive());
+    try std.testing.expectError(error.EmptyRange, Uniform(u8).new(6, 1));
+    try std.testing.expectError(error.EmptyRange, Uniform(u8).newInclusive(6, 1));
     const roll = die.sample(rng);
     try std.testing.expect(roll >= 1 and roll <= 6);
 
@@ -24258,6 +24282,11 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     const vector_uniform_sampler = try VectorUniform(@Vector(4, f32)).init(-1, 2);
+    const vector_uniform_new = try VectorUniform(@Vector(4, f32)).new(-1, 2);
+    try std.testing.expectEqual(vector_uniform_sampler.lowValue(), vector_uniform_new.lowValue());
+    try std.testing.expectEqual(vector_uniform_sampler.highValue(), vector_uniform_new.highValue());
+    try std.testing.expectEqual(vector_uniform_sampler.isInclusive(), vector_uniform_new.isInclusive());
+    try std.testing.expectError(error.EmptyRange, VectorUniform(@Vector(4, f32)).new(2, -1));
     try std.testing.expectEqual(@as(f32, -1), vector_uniform_sampler.lowValue());
     try std.testing.expectEqual(@as(f32, 2), vector_uniform_sampler.highValue());
     try std.testing.expect(!vector_uniform_sampler.isInclusive());
@@ -24270,6 +24299,11 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     const vector_uniform_inclusive_sampler = try VectorUniform(@Vector(4, i16)).initInclusive(-3, 3);
+    const vector_uniform_inclusive_new = try VectorUniform(@Vector(4, i16)).newInclusive(-3, 3);
+    try std.testing.expectEqual(vector_uniform_inclusive_sampler.lowValue(), vector_uniform_inclusive_new.lowValue());
+    try std.testing.expectEqual(vector_uniform_inclusive_sampler.highValue(), vector_uniform_inclusive_new.highValue());
+    try std.testing.expectEqual(vector_uniform_inclusive_sampler.isInclusive(), vector_uniform_inclusive_new.isInclusive());
+    try std.testing.expectError(error.EmptyRange, VectorUniform(@Vector(4, i16)).newInclusive(4, 3));
     try std.testing.expect(vector_uniform_inclusive_sampler.isInclusive());
     try std.testing.expectApproxEqAbs(@as(f64, 0), vector_uniform_inclusive_sampler.expectedValue(), 0);
     try std.testing.expectApproxEqAbs(@as(f64, 4), vector_uniform_inclusive_sampler.varianceValue(), 0);
