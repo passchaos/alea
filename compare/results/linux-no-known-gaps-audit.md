@@ -726,3 +726,8 @@ S4-M300 adds Normal parameter discovery aliases
 `meanParameter`, `stddevParameter`, and `stdDevParameter` mirror existing
 `meanValue` and `stddevValue` accessors while avoiding exact Rust method names
 that collide with public Zig fields.
+S4-M301 strengthens the local surface drift checker
+(`compare/results/s4-m301-surfacecheck-impl-methods.md`) so it also validates
+non-test Rust `impl`-body `pub fn` methods. The newly exposed local method names
+are mapped in the S4-M288/S4-M294 manifests to existing Alea APIs or Rust-only
+scaffolding, and `zig build surfacecheck` passes with the broader scan.

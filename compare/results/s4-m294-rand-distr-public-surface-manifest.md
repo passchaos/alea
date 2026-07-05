@@ -48,8 +48,8 @@ The scan focused on public declarations and root re-exports:
 | Local `rand_distr` surface | Alea status |
 | --- | --- |
 | `weighted::WeightedIndex` and weighted `Error` re-export from `rand::distr::weighted` | Covered by `WeightedIndex`, `AliasTable`, `distributions.weighted.WeightedIndex`, and weighted error aliases/variants; see S4-M265, S4-M271, S4-M281, and S4-M284. |
-| `WeightedAliasIndex` | Covered by `AliasTable(Weight)` for O(1) repeated weighted sampling and diagnostics; see S3-M4 and `distribution-parity-matrix.md`. |
-| `WeightedTreeIndex` and `is_valid` | Covered by `WeightedTree(Weight)` and `WeightedIntTree(Weight)` dynamic weighted samplers; `WeightedTree.isValid` / `WeightedIntTree.isValid` expose the same "can sample" diagnostic as local `rand_distr::WeightedTreeIndex::is_valid`; see S3-M4 and `distribution-parity-matrix.md`. |
+| `WeightedAliasIndex` and `weights` | Covered by `AliasTable(Weight)` for O(1) repeated weighted sampling and diagnostics, including `weights` / `weightIter` export; see S3-M4 and `distribution-parity-matrix.md`. |
+| `WeightedTreeIndex`, `is_empty`, `len`, `is_valid`, `get`, `pop`, `push`, `update`, and `try_sample` | Covered by `WeightedTree(Weight)` and `WeightedIntTree(Weight)` dynamic weighted samplers; `isEmpty`, `len`, `isValid`, `get`, `pop`, `push`, `update`, and checked sample methods expose the corresponding local dynamic-tree workflows; see S3-M4 and `distribution-parity-matrix.md`. |
 | `AliasableWeight` trait | Rust trait bound for weighted alias implementation. Alea uses comptime numeric conversion and concrete sampler APIs; intentionally not copied. |
 
 ## Utility/Internal Surface

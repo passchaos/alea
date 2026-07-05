@@ -427,6 +427,8 @@ fn checkSourcePublicTokens(
             } else {
                 try checkPublicLine(stderr, group, relative, trimmed, manifest, missing);
             }
+        } else {
+            try checkPublicMethodLine(stderr, group, relative, trimmed, manifest, missing);
         }
 
         brace_depth = updateBraceDepth(brace_depth, line);
@@ -464,6 +466,20 @@ fn checkPublicLine(
         return;
     }
     try checkPubUseLine(stderr, group, relative, trimmed, manifest, missing);
+}
+
+fn checkPublicMethodLine(
+    stderr: *std.Io.Writer,
+    group: SourceGroup,
+    relative: []const u8,
+    trimmed: []const u8,
+    manifest: []const u8,
+    missing: *usize,
+) !void {
+    if (extractPublicFnName(trimmed)) |name| {
+        if (isIgnored(group, name)) return;
+        try requireManifestToken(stderr, group, relative, manifest, name, missing);
+    }
 }
 
 fn checkIgnoredTestLine(
@@ -513,6 +529,18 @@ fn extractPublicDeclName(trimmed: []const u8) ?[]const u8 {
             const name_start = prefix.len;
             return readIdent(rest[name_start..]);
         }
+    }
+    return null;
+}
+
+fn extractPublicFnName(trimmed: []const u8) ?[]const u8 {
+    if (!std.mem.startsWith(u8, trimmed, "pub ")) return null;
+    var rest = std.mem.trimStart(u8, trimmed["pub ".len..], " \t");
+    if (std.mem.startsWith(u8, rest, "inline ")) {
+        rest = std.mem.trimStart(u8, rest["inline ".len..], " \t");
+    }
+    if (std.mem.startsWith(u8, rest, "fn ")) {
+        return readIdent(rest["fn ".len..]);
     }
     return null;
 }

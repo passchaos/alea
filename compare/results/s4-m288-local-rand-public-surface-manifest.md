@@ -47,7 +47,7 @@ The scan focused on public declarations and re-exports visible in these files:
 | `Xoshiro128PlusPlus`, `Xoshiro256PlusPlus` | Covered by root and `rngs` engines; see S4-M258 and S4-M277. |
 | `ChaCha8Rng`, `ChaCha12Rng`, `ChaCha20Rng` | Covered by root and `rngs` engines/aliases; see S4-M256, S4-M257, and S4-M277. |
 | `SysRng`, `SysError` | Covered by `SysRng`, `sysRng(io)`, `SysError`, and `rngs.SysRng` / `rngs.SysError`; see S4-M247, S4-M260, and S4-M277. |
-| `ThreadRng`, `rng()` | Audited as hidden thread-local state in S4-M283 and S4-M277; Alea intentionally uses explicit `std.Io` entropy and explicit RNG ownership instead. |
+| `ThreadRng`, `rng()`, `reseed` | Audited as hidden thread-local state in S4-M283 and S4-M277; Alea intentionally uses explicit `std.Io` entropy and explicit RNG ownership instead. |
 | Test/mock `StepRng` helpers in Rust tests | Covered by Alea `StepRng`, root `stepRng`, and root `constRng`; see S4-M255. |
 
 ## Distribution Surface
@@ -56,11 +56,11 @@ The scan focused on public declarations and re-exports visible in these files:
 | --- | --- |
 | `StandardUniform` | Covered by `distributions.StandardUniform`; see S4-M262. |
 | `Open01`, `OpenClosed01` | Covered by scalar/vector strict interval helpers and reusable samplers; listed in `docs/api-reference.md` and `distribution-parity-matrix.md`. |
-| `Uniform`, `UniformInt`, `UniformFloat`, `UniformUsize`, `UniformDuration`, `UniformChar`, `UniformError` | Covered by top-level `distributions.*` APIs and audited against the intermediate Rust namespace in S4-M285; see S4-M266, S4-M269, S4-M272, S4-M274, S4-M275, S4-M276. |
+| `Uniform`, `UniformInt`, `UniformFloat`, `UniformUsize`, `UniformDuration`, `UniformChar`, `UniformError`, `new_inclusive` | Covered by top-level `distributions.*` APIs and audited against the intermediate Rust namespace in S4-M285; `new_inclusive` maps to Alea `newInclusive` / `initInclusive`; see S4-M266, S4-M269, S4-M272, S4-M274, S4-M275, S4-M276. |
 | `Bernoulli`, `BernoulliError` | Covered by `Bernoulli`, vector Bernoulli, aliases, and diagnostics; see S4-M225, S4-M227, S4-M228, S4-M263. |
 | `Alphanumeric`, `Alphabetic`, `SampleString` | Covered by distribution namespace aliases, ASCII/Unicode charset samplers, and string sample/append APIs; see S4-M251, S4-M252, S4-M264. |
-| `Choose`, `slice::Choose`, `slice::Empty` | Covered by `distributions.Choose`, `distributions.slice.Choose`, and `distributions.slice.Empty`; see S4-M268 and S4-M273. |
-| `WeightedIndex`, `WeightedIndexIter`, `weighted::WeightedIndex`, `weighted::Error` | Covered by `WeightedIndex`, `AliasTable`, `distributions.weighted.WeightedIndex`, and weight iterator diagnostics/aliases; see S4-M192, S4-M265, S4-M271, S4-M281, S4-M284. |
+| `Choose`, `slice::Choose`, `slice::Empty`, `num_choices` | Covered by `distributions.Choose`, `distributions.slice.Choose`, `distributions.slice.Empty`, and `numChoices`; see S4-M184, S4-M268 and S4-M273. |
+| `WeightedIndex`, `WeightedIndexIter`, `weighted::WeightedIndex`, `weighted::Error`, `update_weights`, `weights`, `total_weight` | Covered by `WeightedIndex`, `AliasTable`, `distributions.weighted.WeightedIndex`, `updateWeights`, `weights` / `weightIter`, `totalWeight`, and weighted error aliases/variants; see S4-M192, S4-M221, S4-M265, S4-M271, S4-M281, S4-M284. |
 | `Distribution`, `Iter`, `Map` | `Iter` / `Map` aliases and sample-iterator/map workflows are covered; Rust `Distribution` trait machinery is intentionally not copied; see S4-M248, S4-M250, S4-M270, S4-M283. |
 | `SampleUniform`, `UniformSampler`, `SampleBorrow`, `SampleRange`, hidden `IntoFloat`, hidden `hidden_export` | Audited as Rust trait/internal support machinery in S4-M283 and S4-M285; concrete uniform workflows are covered, and the Rust-only helper path is intentionally not copied. |
 
@@ -71,14 +71,14 @@ The scan focused on public declarations and re-exports visible in these files:
 | `WeightError` | Covered by `seq.WeightError` and root `WeightError`; see S4-M261. |
 | `IndexedSamples`, `SliceChooseIter` | Covered by `seq.IndexedSamples(T)` and `seq.SliceChooseIter(T)` aliases; see S4-M279. |
 | `IndexedRandom`, `IndexedMutRandom`, `SliceRandom`, `IteratorRandom` | Audited as Rust extension traits in S4-M283; workflows are covered by concrete `seq` and `Rng` functions. |
-| `seq::index::{IndexVec, IndexVecIter, IndexVecIntoIter, sample, sample_weighted, sample_array}` | Covered by top-level `seq.IndexVec`, index sample helpers, weighted index helpers, and fixed-size array helpers; the intermediate namespace is audited in S4-M287. |
+| `seq::index::{IndexVec, IndexVecIter, IndexVecIntoIter, sample, sample_weighted, sample_array, len, is_empty, into_vec}` | Covered by top-level `seq.IndexVec`, index sample helpers, weighted index helpers, fixed-size array helpers, length/empty diagnostics, and consuming `intoVec`; the intermediate namespace is audited in S4-M287. |
 
 ## `rand_core` Surface
 
 | Local Rust surface | Alea status |
 | --- | --- |
 | `Rng`, `TryRng`, `RngCore`, `TryRngCore`, `CryptoRng`, `TryCryptoRng`, `SeedableRng`, `Infallible`, `UnwrapErr` | Audited in S4-M286; raw/try/seeding/security workflows are concrete Alea APIs, while traits/adaptors are Rust machinery. |
-| `block::{Generator, BlockRng}` | Audited in S4-M286 as Rust implementation scaffolding; Alea engines expose explicit state/fill APIs instead. |
+| `block::{Generator, BlockRng, reconstruct, reset_and_skip, word_offset, remaining_results, next_u64_from_u32}` | Audited in S4-M286 as Rust implementation scaffolding; Alea engines expose explicit state/fill APIs instead. |
 | `utils::{next_u64_via_u32, fill_bytes_via_next_word, next_word_via_fill, read_words, Word}` | Audited in S4-M286; relevant little-endian and byte-fill behavior is implemented and tested in concrete engines. |
 
 ## Result
