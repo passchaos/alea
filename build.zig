@@ -1128,7 +1128,18 @@ pub fn build(b: *std.Build) void {
     const run_runtimecheck = b.addRunArtifact(runtimecheck);
     if (b.args) |args| run_runtimecheck.addArgs(args);
 
+    const runtimecheck_tests = b.addTest(.{
+        .name = "alea-runtimecheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/runtimecheck.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_runtimecheck_tests = b.addRunArtifact(runtimecheck_tests);
+
     const runtimecheck_step = b.step("runtimecheck", "Check S4-M11 runtime runner availability");
+    runtimecheck_step.dependOn(&run_runtimecheck_tests.step);
     runtimecheck_step.dependOn(&run_runtimecheck.step);
 
     const doccheck_step = b.step("doccheck", "Run documentation, catalog, and roadmap coverage checks");

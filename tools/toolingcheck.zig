@@ -23,6 +23,11 @@ const surfacecheck_dependencies = [_][]const u8{
     "surfacecheck_step.dependOn(&run_surfacecheck.step)",
 };
 
+const runtimecheck_dependencies = [_][]const u8{
+    "runtimecheck_step.dependOn(&run_runtimecheck_tests.step)",
+    "runtimecheck_step.dependOn(&run_runtimecheck.step)",
+};
+
 const build_steps = [_]BuildStep{
     .{ .name = "run-basic", .build_token = "b.step(\"run-basic\"" },
     .{ .name = "run-vector-profiles", .build_token = "b.step(\"run-vector-profiles\"" },
@@ -275,6 +280,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (surfacecheck_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: surfacecheck missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (runtimecheck_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: runtimecheck missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

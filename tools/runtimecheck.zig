@@ -86,3 +86,41 @@ fn isExecutable(io: std.Io, path: []const u8) bool {
     }
     return true;
 }
+
+test "findExecutable locates executable in PATH order" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    var file = try tmp.dir.createFile(std.testing.io, "runner", .{ .permissions = .executable_file });
+    file.close(std.testing.io);
+
+    const allocator = std.testing.allocator;
+    const dir_path = try std.fs.path.join(allocator, &.{ ".zig-cache/tmp", &tmp.sub_path });
+    defer allocator.free(dir_path);
+
+    const path_env = try std.fmt.allocPrint(allocator, "/definitely-missing-alea-runtimecheck:{s}", .{dir_path});
+    defer allocator.free(path_env);
+
+    const found = (try findExecutable(std.testing.io, allocator, path_env, "runner")).?;
+    defer allocator.free(found);
+    const expected = try std.fs.path.join(allocator, &.{ dir_path, "runner" });
+    defer allocator.free(expected);
+    try std.testing.expectEqualStrings(expected, found);
+}
+
+test "findExecutable ignores non-executable and missing entries" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    var file = try tmp.dir.createFile(std.testing.io, "plain", .{});
+    file.close(std.testing.io);
+
+    const allocator = std.testing.allocator;
+    const dir_path = try std.fs.path.join(allocator, &.{ ".zig-cache/tmp", &tmp.sub_path });
+    defer allocator.free(dir_path);
+
+    try std.testing.expect(try findExecutable(std.testing.io, allocator, dir_path, "missing") == null);
+    if (std.Io.File.Permissions.has_executable_bit) {
+        try std.testing.expect(try findExecutable(std.testing.io, allocator, dir_path, "plain") == null);
+    }
+}

@@ -812,3 +812,6 @@ S4-M321 adds `zig build runtimecheck`
 (`compare/results/s4-m321-runtimecheck.md`) to automate S4-M11 runtime-runner
 availability checks and fail when a new QEMU/Wine/wasmtime/wasmer runner becomes
 available for broader validation.
+S4-M322 adds focused tests for runtimecheck executable discovery
+(`compare/results/s4-m322-runtimecheck-tests.md`) and wires them into
+`zig build runtimecheck`.
