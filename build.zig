@@ -1102,7 +1102,18 @@ pub fn build(b: *std.Build) void {
     const run_readmecheck = b.addRunArtifact(readmecheck);
     if (b.args) |args| run_readmecheck.addArgs(args);
 
+    const readmecheck_tests = b.addTest(.{
+        .name = "alea-readmecheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/readmecheck.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_readmecheck_tests = b.addRunArtifact(readmecheck_tests);
+
     const readmecheck_step = b.step("readmecheck", "Check README discovery coverage");
+    readmecheck_step.dependOn(&run_readmecheck_tests.step);
     readmecheck_step.dependOn(&run_readmecheck.step);
 
     const roadmapcheck_mod = b.createModule(.{
@@ -1190,7 +1201,7 @@ pub fn build(b: *std.Build) void {
     doccheck_step.dependOn(apicheck_step);
     doccheck_step.dependOn(examplecheck_step);
     doccheck_step.dependOn(toolingcheck_step);
-    doccheck_step.dependOn(&run_readmecheck.step);
+    doccheck_step.dependOn(readmecheck_step);
     doccheck_step.dependOn(roadmapcheck_step);
 
     const test_step = b.step("test", "Run alea unit tests and documentation checks");

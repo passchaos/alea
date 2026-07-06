@@ -44,6 +44,19 @@ const required_files = [_][]const u8{
     "compare/results/performance-triage.md",
 };
 
+fn hasRequiredToken(readme: []const u8, required: RequiredToken) bool {
+    return std.mem.indexOf(u8, readme, required.token) != null;
+}
+
+fn hasProjectPositioning(readme: []const u8) bool {
+    return std.mem.indexOf(u8, readme, "`alea` is a Zig 0.16 random toolkit") != null;
+}
+
+fn hasLocalRandNote(readme: []const u8) bool {
+    return std.mem.indexOf(u8, readme, "local `rand` checkout") != null and
+        std.mem.indexOf(u8, readme, "~/Work/rand") != null;
+}
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     var stdout_buffer: [1024]u8 = undefined;
@@ -68,19 +81,17 @@ pub fn main(init: std.process.Init) !void {
     }
 
     inline for (required_tokens) |required| {
-        if (std.mem.indexOf(u8, readme, required.token) == null) {
+        if (!hasRequiredToken(readme, required)) {
             try stderr.print("readmecheck: README.md missing `{s}` ({s})\n", .{ required.token, required.reason });
             missing += 1;
         }
     }
 
-    if (std.mem.indexOf(u8, readme, "`alea` is a Zig 0.16 random toolkit") == null) {
+    if (!hasProjectPositioning(readme)) {
         try stderr.print("readmecheck: README.md missing Zig 0.16 project positioning\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, readme, "local `rand` checkout") == null or
-        std.mem.indexOf(u8, readme, "~/Work/rand") == null)
-    {
+    if (!hasLocalRandNote(readme)) {
         try stderr.print("readmecheck: README.md missing local rand comparison note\n", .{});
         missing += 1;
     }
@@ -92,4 +103,23 @@ pub fn main(init: std.process.Init) !void {
 
     try stdout.print("readmecheck ok\n", .{});
     try stdout.flush();
+}
+
+test "required-token helper matches exact configured token" {
+    const required = RequiredToken{
+        .token = "zig build validate-local",
+        .reason = "native plus local rand validation command",
+    };
+
+    try std.testing.expect(hasRequiredToken("run zig build validate-local before comparing", required));
+    try std.testing.expect(!hasRequiredToken("run zig build validate before comparing", required));
+}
+
+test "project positioning and local rand note helpers require full phrases" {
+    try std.testing.expect(hasProjectPositioning("`alea` is a Zig 0.16 random toolkit for testing"));
+    try std.testing.expect(!hasProjectPositioning("alea is a random toolkit"));
+
+    try std.testing.expect(hasLocalRandNote("Use the local `rand` checkout at ~/Work/rand."));
+    try std.testing.expect(!hasLocalRandNote("Use the local `rand` checkout."));
+    try std.testing.expect(!hasLocalRandNote("Use ~/Work/rand."));
 }

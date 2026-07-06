@@ -14,7 +14,7 @@ const doccheck_dependencies = [_][]const u8{
     "doccheck_step.dependOn(apicheck_step)",
     "doccheck_step.dependOn(examplecheck_step)",
     "doccheck_step.dependOn(toolingcheck_step)",
-    "doccheck_step.dependOn(&run_readmecheck.step)",
+    "doccheck_step.dependOn(readmecheck_step)",
     "doccheck_step.dependOn(roadmapcheck_step)",
 };
 
@@ -26,6 +26,11 @@ const apicheck_dependencies = [_][]const u8{
 const examplecheck_dependencies = [_][]const u8{
     "examplecheck_step.dependOn(&run_examplecheck_tests.step)",
     "examplecheck_step.dependOn(&run_examplecheck.step)",
+};
+
+const readmecheck_dependencies = [_][]const u8{
+    "readmecheck_step.dependOn(&run_readmecheck_tests.step)",
+    "readmecheck_step.dependOn(&run_readmecheck.step)",
 };
 
 const surfacecheck_dependencies = [_][]const u8{
@@ -401,6 +406,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (examplecheck_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: examplecheck missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (readmecheck_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: readmecheck missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

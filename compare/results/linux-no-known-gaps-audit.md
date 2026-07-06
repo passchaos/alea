@@ -937,3 +937,9 @@ S4-M347 adds examplecheck helper tests
 `zig build examplecheck`, with `toolingcheck` guarding that tests run before the
 examples-catalog executable. This improves examples-catalog checker reliability
 while S4-M11 remains blocked.
+
+S4-M348 adds readmecheck helper tests
+(`compare/results/s4-m348-readmecheck-helper-tests.md`) and wires them into
+`zig build readmecheck`, with `toolingcheck` guarding that tests run before the
+README discovery executable. This improves README checker reliability while
+S4-M11 remains blocked.
