@@ -1816,3 +1816,8 @@ S4-M510 adds root one-shot compact IndexVec sampling
 (`compare/results/s4-m510-root-one-shot-indexvec-helpers.md`):
 system-entropy callers can now allocate compact IndexVec no-replacement samples
 directly from the root API while S4-M11 remains blocked.
+
+S4-M511 adds root one-shot weighted no-replacement compact IndexVec sampling
+(`compare/results/s4-m511-root-one-shot-weighted-no-replacement-indexvec-helpers.md`):
+system-entropy callers can now allocate compact weighted no-replacement IndexVec
+samples directly from the root API while S4-M11 remains blocked.
