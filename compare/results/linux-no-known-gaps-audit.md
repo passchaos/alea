@@ -1220,3 +1220,8 @@ S4-M398 guards `validate` tooling-row precision
 native unit/example/catalog/API/statistical/distribution/libc/profile and
 no-external PractRand wrapper self-test coverage visible while S4-M11 remains
 blocked.
+
+S4-M399 guards README `validate-local` smoke coverage
+(`compare/results/s4-m399-readme-validate-local-smoke-guard.md`) so README keeps
+Rust comparison smoke/self-test, surfacecheck, and runtimecheck coverage visible
+while S4-M11 remains blocked.

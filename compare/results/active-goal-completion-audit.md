@@ -419,7 +419,8 @@ complete.
 | S4-M396 README validate PractRand prose guard | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m396-readme-validate-practrand-guard.md` | Closed for the current bar: readmecheck guards README prose that `validate` includes the no-external PractRand wrapper self-test. |
 | S4-M397 API validate PractRand prose guard | `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m397-api-validate-practrand-guard.md` | Closed for the current bar: toolingcheck guards API prose that `validate` includes no-external PractRand wrapper validation. |
 | S4-M398 validate tooling row precision | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m398-validate-tooling-row.md` | Closed for the current bar: toolingcheck guards the precise `zig build validate` table-row scope. |
-| S4-M399 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M399 README validate-local smoke guard | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m399-readme-validate-local-smoke-guard.md` | Closed for the current bar: readmecheck guards README validate-local prose for smoke/self-test plus surface/runtime checks. |
+| S4-M400 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -880,6 +881,9 @@ S4-M11 or complete the long-term objective.
 S4-M398 additionally guards the `validate` tooling table row; it is validation
 documentation reliability and does not resolve S4-M11 or complete the long-term
 objective.
+S4-M399 additionally guards README `validate-local` prose for Rust comparison
+smoke/self-test coverage; it is validation documentation reliability and does
+not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
