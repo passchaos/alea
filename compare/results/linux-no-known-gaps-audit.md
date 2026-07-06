@@ -1100,3 +1100,9 @@ S4-M375 documents the exact crosscheck target set in the core guide
 (`compare/results/s4-m375-core-guide-crosscheck-targets.md`) and guards the
 target list plus no-execute guidance with `toolingcheck`, improving portability
 compile coverage discoverability while S4-M11 remains blocked.
+
+S4-M376 guards WASI runner file inputs
+(`compare/results/s4-m376-wasi-runner-file-input-guard.md`) by making
+`toolingcheck` require `tools/run_wasi_test.js` to be registered as an input for
+WASI test, dry-run, and report tool build steps, improving rebuild reliability
+while S4-M11 remains blocked.

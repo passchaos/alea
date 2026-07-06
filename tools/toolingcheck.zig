@@ -126,8 +126,14 @@ const crosscheck_target_tokens = [_][]const u8{
 
 const wasi_dry_run_dependencies = [_][]const u8{
     "b.addSystemCommand(&.{ node_path, \"--no-warnings\", \"tools/run_wasi_test.js\", \"--dry-run\", \"sample.wasm\", \"--flag\" })",
+    "wasi_dry_run.addFileInput(b.path(\"tools/run_wasi_test.js\"))",
     "wasi_dry_run_step.dependOn(&wasi_dry_run.step)",
     "wasi_dry_run_step.dependOn(&node_missing.step)",
+};
+
+const wasi_runner_file_input_tokens = [_][]const u8{
+    "run_wasi_tests.addFileInput(b.path(\"tools/run_wasi_test.js\"))",
+    "run_tool.addFileInput(b.path(\"tools/run_wasi_test.js\"))",
 };
 
 const wasi_report_dependencies = [_][]const u8{
@@ -582,6 +588,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (wasi_dry_run_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: wasi-dry-run missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (wasi_runner_file_input_tokens) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: build.zig missing WASI runner file input token `{s}`\n", .{token});
             missing += 1;
         }
     }
