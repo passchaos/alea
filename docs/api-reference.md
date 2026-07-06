@@ -3500,7 +3500,9 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build crosscheck`
 - `zig build test-wasi`
 - `zig build wasi-dry-run`
+- `zig build wasi-self-test`
 - `node tools/run_wasi_test.js --dry-run <test.wasm>`
+- `node tools/run_wasi_test.js --self-test`
 - `zig build wasi-report`
 - `zig build stream -- --engine <engine> --bytes <n>`
 - `tools/practrand.sh --dry-run fast 1048576`
@@ -3522,7 +3524,8 @@ crosscheck` compiles `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`,
 `x86_64-windows`, `x86_64-macos`, and `aarch64-macos` without executing them.
 Use `zig build wasi-dry-run` or `node tools/run_wasi_test.js --dry-run
 <test.wasm>` to verify Node WASI runner arguments without reading or executing a
-wasm file.
+wasm file; use `zig build wasi-self-test` or `node tools/run_wasi_test.js
+--self-test` to test runner dry-run and missing-argument paths without wasm.
 
 See `docs/tooling.md` for the complete build-step and checked-tool catalog.
 

@@ -407,7 +407,8 @@ complete.
 | S4-M384 Rust bench smoke env overrides | `tools/rand_bench_smoke.sh`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m384-rand-bench-smoke-env-overrides.md` | Closed for the current bar: smoke wrapper manifest/expected-row overrides are self-tested and documented. |
 | S4-M385 S4-M11 benchmark-gate blocker evidence | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m385-blocker-benchmark-gates.md` | Closed for the current bar: S4-M11 blocker evidence and roadmapcheck now retain the Rust comparison benchmark gates that participate in `validate-local`. |
 | S4-M386 PractRand wrapper self-tests | `tools/practrand.sh`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m386-practrand-self-test.md` | Closed for the current bar: PractRand wrapper dry-run command construction is self-tested without `RNG_test`. |
-| S4-M387 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M387 WASI runner self-tests | `tools/run_wasi_test.js`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m387-wasi-runner-self-test.md` | Closed for the current bar: Node WASI runner dry-run/missing-argument paths are self-tested without wasm. |
+| S4-M388 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -832,6 +833,9 @@ and does not resolve S4-M11 or complete the long-term objective.
 S4-M386 additionally adds no-`RNG_test` self-tests for the PractRand wrapper; it
 is external-statistical-tooling reliability and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M387 additionally adds no-wasm self-tests for the Node WASI runner; it is
+portability tooling reliability and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

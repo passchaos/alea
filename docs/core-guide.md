@@ -976,6 +976,7 @@ zig build validate-all
 zig build crosscheck
 zig build test-wasi
 zig build wasi-dry-run
+zig build wasi-self-test
 zig build wasi-report
 zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast profilecheck
@@ -1001,7 +1002,9 @@ chained WASI report. `zig build crosscheck` compiles `wasm32-wasi`,
 `aarch64-linux`, `riscv64-linux`, `x86_64-windows`, `x86_64-macos`, and
 `aarch64-macos` without executing them. Use `zig build wasi-dry-run` or
 `node tools/run_wasi_test.js --dry-run <test.wasm>` to verify Node WASI runner
-arguments without reading or executing a wasm file.
+arguments without reading or executing a wasm file; use `zig build
+wasi-self-test` or `node tools/run_wasi_test.js --self-test` to test the runner
+dry-run and missing-argument paths without wasm.
 
 `zig build roadmapcheck` also guards the local Rust `rand` and cached
 `rand_distr` public-surface manifests: it verifies scanned-source/version

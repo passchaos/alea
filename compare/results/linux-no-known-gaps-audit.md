@@ -1161,3 +1161,8 @@ S4-M386 adds PractRand wrapper self-tests
 (`compare/results/s4-m386-practrand-self-test.md`) so default dry-run, custom
 `PRACTRAND_BIN`, and invalid argument-count handling are validated without
 `RNG_test` while S4-M11 remains blocked.
+
+S4-M387 adds Node WASI runner self-tests
+(`compare/results/s4-m387-wasi-runner-self-test.md`) so dry-run argv output and
+missing-argument usage diagnostics are validated without reading or executing
+wasm while S4-M11 remains blocked.

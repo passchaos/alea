@@ -28,6 +28,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build crosscheck` | Compile unit tests for secondary targets without executing them: `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`, `x86_64-windows`, `x86_64-macos`, and `aarch64-macos`. |
 | `zig build test-wasi` | Run wasm32-wasi unit tests through Node's WASI runtime. |
 | `zig build wasi-dry-run` | Print Node WASI runner argv without executing wasm. |
+| `zig build wasi-self-test` | Run Node WASI runner self-tests for dry-run output and missing-argument usage without reading or executing wasm. |
 | `zig build wasi-report` | Run the chained wasm32-wasi repro/statcheck/distcheck/profile checks through Node's WASI runtime. |
 | `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, and accepted-profile checks. |
 | `zig build validate-local` | Run native validation plus the Rust comparison benchmark helper tests, a tiny Rust comparison smoke run, smoke-wrapper self-tests, local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker, and runtime-runner availability checker. |
@@ -85,7 +86,9 @@ example steps are:
 
 These steps execute wasm32-wasi tools through Node when Node's WASI runtime is
 available. Use `node tools/run_wasi_test.js --dry-run <test.wasm> [args...]` to
-verify WASI runner arguments without reading or executing a wasm file:
+verify WASI runner arguments without reading or executing a wasm file, or
+`node tools/run_wasi_test.js --self-test` / `zig build wasi-self-test` to test
+the dry-run and missing-argument paths without wasm:
 
 | Step | Tool |
 | --- | --- |
@@ -211,7 +214,7 @@ new helpers that need documentation.
 | `tools/rand_bench_smoke.sh` | Tiny filtered Rust comparison benchmark smoke-test wrapper with `--dry-run` command preview, `--self-test` parser/env coverage, and `ALEA_RAND_BENCH_MANIFEST` / `ALEA_RAND_BENCH_EXPECTED_ROW` overrides. |
 | `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, public-surface manifest, and S4-M11 blocker-token checker with focused helper tests. |
 | `tools/runtimecheck.zig` | S4-M11 runtime-runner availability checker. |
-| `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps, with `--dry-run` argument reporting. |
+| `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps, with `--dry-run` argument reporting and `--self-test` coverage. |
 | `tools/skew_normal_probe.zig` | SkewNormal performance probe. |
 | `tools/standard_fill_probe.zig` | Standard distribution fill performance probe. |
 | `tools/statcheck.zig` | Statistical smoke checker with focused helper tests. |

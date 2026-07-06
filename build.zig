@@ -1328,6 +1328,11 @@ pub fn build(b: *std.Build) void {
         wasi_dry_run.addFileInput(b.path("tools/run_wasi_test.js"));
         wasi_dry_run_step.dependOn(&wasi_dry_run.step);
 
+        const wasi_self_test = b.addSystemCommand(&.{ node_path, "--no-warnings", "tools/run_wasi_test.js", "--self-test" });
+        wasi_self_test.addFileInput(b.path("tools/run_wasi_test.js"));
+        const wasi_self_test_step = b.step("wasi-self-test", "Run Node WASI runner self-tests without wasm");
+        wasi_self_test_step.dependOn(&wasi_self_test.step);
+
         const wasi_alea_mod = b.createModule(.{
             .root_source_file = b.path("src/root.zig"),
             .target = b.resolveTargetQuery(wasi_test_target),

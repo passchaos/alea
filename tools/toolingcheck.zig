@@ -206,6 +206,13 @@ const wasi_dry_run_dependencies = [_][]const u8{
     "wasi_dry_run_step.dependOn(&node_missing.step)",
 };
 
+const wasi_self_test_dependencies = [_][]const u8{
+    "b.addSystemCommand(&.{ node_path, \"--no-warnings\", \"tools/run_wasi_test.js\", \"--self-test\" })",
+    "wasi_self_test.addFileInput(b.path(\"tools/run_wasi_test.js\"))",
+    "b.step(\"wasi-self-test\"",
+    "wasi_self_test_step.dependOn(&wasi_self_test.step)",
+};
+
 const wasi_runner_file_input_tokens = [_][]const u8{
     "run_wasi_tests.addFileInput(b.path(\"tools/run_wasi_test.js\"))",
     "run_tool.addFileInput(b.path(\"tools/run_wasi_test.js\"))",
@@ -308,13 +315,17 @@ const practrand_self_test_dependencies = [_][]const u8{
 
 const tooling_wasi_dry_run_tokens = [_][]const u8{
     "node tools/run_wasi_test.js --dry-run <test.wasm> [args...]",
+    "node tools/run_wasi_test.js --self-test",
+    "zig build wasi-self-test",
     "verify WASI runner arguments without reading or executing a wasm file",
 };
 
 const wasi_runner_tokens = [_][]const u8{
     "--dry-run",
+    "--self-test",
+    "run_wasi_test self-test ok",
     "--help",
-    "wasi ${wasiArgs.join(' ')}",
+    "dryRunLine",
     "usage: run_wasi_test.js [--dry-run] <test.wasm> [args...]",
 };
 
@@ -409,6 +420,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "crosscheck", .build_token = "b.step(\"crosscheck\"" },
     .{ .name = "test-wasi", .build_token = "b.step(\"test-wasi\"" },
     .{ .name = "wasi-dry-run", .build_token = "b.step(\"wasi-dry-run\"" },
+    .{ .name = "wasi-self-test", .build_token = "b.step(\"wasi-self-test\"" },
     .{ .name = "wasi-report", .build_token = "b.step(\"wasi-report\"" },
     .{ .name = "wasi-repro", .build_token = "\"repro\", \"tools/repro.zig\"" },
     .{ .name = "wasi-statcheck", .build_token = "\"statcheck\", \"tools/statcheck.zig\"" },
@@ -692,6 +704,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (wasi_dry_run_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: wasi-dry-run missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (wasi_self_test_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: wasi-self-test missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }
