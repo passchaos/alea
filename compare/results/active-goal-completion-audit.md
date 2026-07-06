@@ -567,7 +567,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M526 root one-shot index-weighted fill helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m526-root-weighted-by-index-fill-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned `usize` or `u32` weighted indexes from a length and comptime index-weight function directly. |
 | S4-M527 root one-shot index-weighted batch helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m527-root-weighted-by-index-batch-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate owned `usize` or `u32` weighted index batches from a length and comptime index-weight function directly. |
 | S4-M528 root one-shot index-weighted array helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m528-root-weighted-by-index-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size `usize` or `u32` weighted index arrays from a length and comptime index-weight function directly. |
-| S4-M529 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M529 root one-shot index-weighted value choice helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m529-root-weighted-value-by-index-helpers.md` | Closed for the current bar: root system-entropy helpers can now choose values from an item slice and comptime index-weight function directly. |
+| S4-M530 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1410,6 +1411,9 @@ S4-M527 additionally adds root one-shot index-weighted batch helpers; it is API
 ergonomics work and does not resolve S4-M11 or complete the long-term objective.
 S4-M528 additionally adds root one-shot index-weighted fixed-size array helpers;
 it is API ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M529 additionally adds root one-shot index-weighted value choice helpers; it
+is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

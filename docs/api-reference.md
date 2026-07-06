@@ -121,6 +121,7 @@ command matrix evidence.
   `weightedIndexU32Batch`, `weightedIndexU32BatchChecked`, `weightedIndexArray`,
   `weightedIndexArrayChecked`, `weightedIndexU32Array`,
   `weightedIndexU32ArrayChecked`, `chooseWeighted`, `chooseWeightedChecked`,
+  `chooseWeightedByIndex`, `chooseWeightedByIndexChecked`,
   `fillChooseWeighted`, `fillChooseWeightedChecked`, `chooseWeightedBatch`,
   `chooseWeightedBatchChecked`, `chooseWeightedValueArray`,
   `chooseWeightedValueArrayChecked`, `chooseWeightedConstPtr`,
