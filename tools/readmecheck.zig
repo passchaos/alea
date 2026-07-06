@@ -25,6 +25,7 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build validate-local", .reason = "native plus local rand validation command" },
     .{ .token = "comparison work: it runs native validation plus `rand-bench-test`", .reason = "validate-local component explanation" },
     .{ .token = "zig build rand-bench-test", .reason = "Rust comparison benchmark helper-test command" },
+    .{ .token = "zig build rand-bench-smoke", .reason = "Rust comparison benchmark smoke command" },
     .{ .token = "zig build validate-all", .reason = "broad validation command" },
     .{ .token = "wasm32-wasi`, `aarch64-linux`, `riscv64-linux`", .reason = "README crosscheck Linux/WASI targets" },
     .{ .token = "x86_64-windows", .reason = "README crosscheck Windows target" },
@@ -196,16 +197,23 @@ test "required-token helper covers Rust comparison bench test guidance" {
         .token = "comparison work: it runs native validation plus `rand-bench-test`",
         .reason = "validate-local component explanation",
     };
+    const rand_bench_smoke = RequiredToken{
+        .token = "zig build rand-bench-smoke",
+        .reason = "Rust comparison benchmark smoke command",
+    };
 
     const text =
         \\Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
         \\comparison work: it runs native validation plus `rand-bench-test`,
         \\`surfacecheck`, and `runtimecheck`.
         \\Run `zig build rand-bench-test` for focused Rust parser coverage.
+        \\Run `zig build rand-bench-smoke` for a tiny filtered Rust comparison run.
     ;
     try std.testing.expect(hasRequiredToken(text, rand_bench_test));
     try std.testing.expect(hasRequiredToken(text, validate_local));
+    try std.testing.expect(hasRequiredToken(text, rand_bench_smoke));
     try std.testing.expect(!hasRequiredToken("run cargo test directly", rand_bench_test));
+    try std.testing.expect(!hasRequiredToken("run cargo run directly", rand_bench_smoke));
 }
 
 test "project positioning and local rand note helpers require full phrases" {

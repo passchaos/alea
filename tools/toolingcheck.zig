@@ -68,6 +68,22 @@ const rand_bench_doc_tokens = [_][]const u8{
     "Rust comparison benchmark helper tests",
 };
 
+const rand_bench_smoke_dependencies = [_][]const u8{
+    "b.addSystemCommand(&.{ \"tools/rand_bench_smoke.sh\", \"1024\", \"standard-normal\" })",
+    "run_rand_bench_smoke.addFileInput(b.path(\"tools/rand_bench_smoke.sh\"))",
+    "run_rand_bench_smoke.addFileInput(b.path(\"compare/rand_bench/Cargo.toml\"))",
+    "run_rand_bench_smoke.addFileInput(b.path(\"compare/rand_bench/Cargo.lock\"))",
+    "run_rand_bench_smoke.addFileInput(b.path(\"compare/rand_bench/src/main.rs\"))",
+    "rand_bench_smoke_step.dependOn(&run_rand_bench_smoke.step)",
+    "zig build rand-bench-smoke requires cargo",
+};
+
+const rand_bench_smoke_doc_tokens = [_][]const u8{
+    "zig build rand-bench-smoke",
+    "tools/rand_bench_smoke.sh 1024 standard-normal",
+    "tiny filtered Rust comparison benchmark smoke test",
+};
+
 const stream_dependencies = [_][]const u8{
     "stream_step.dependOn(&run_stream_tests.step)",
     "stream_step.dependOn(&run_stream.step)",
@@ -180,7 +196,8 @@ const wasi_report_dependencies = [_][]const u8{
 const core_guide_validation_tokens = [_][]const u8{
     "Use `zig build validate` for broad native checks",
     "Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`",
-    "rand-bench-test`, `surfacecheck`, and",
+    "rand-bench-test`, `rand-bench-smoke`,",
+    "`surfacecheck`, and",
     "`runtimecheck`",
     "Use `zig build validate-all` for portability-sensitive changes or evidence",
     "refreshes because it adds cross-target compile checks, WASI unit tests",
@@ -190,7 +207,7 @@ const api_reference_validation_tokens = [_][]const u8{
     "Use `zig build validate` for broad native API checks",
     "Use `zig build",
     "validate-local` when API work changes local `rand` / `rand_distr` comparison",
-    "rand-bench-test`, `surfacecheck`, and `runtimecheck`",
+    "rand-bench-test`, `rand-bench-smoke`, `surfacecheck`, and `runtimecheck`",
     "Use `zig build",
     "validate-all` for portability-sensitive API evidence",
     "compile checks, WASI unit tests",
@@ -297,6 +314,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "bench-libc", .build_token = "b.step(\"bench-libc\"" },
     .{ .name = "vectorbench", .build_token = "b.step(\"vectorbench\"" },
     .{ .name = "rand-bench-test", .build_token = "b.step(\"rand-bench-test\"" },
+    .{ .name = "rand-bench-smoke", .build_token = "b.step(\"rand-bench-smoke\"" },
     .{ .name = "ziggurat-stats", .build_token = "b.step(\"ziggurat-stats\"" },
     .{ .name = "ziggurat-probe", .build_token = "b.step(\"ziggurat-probe\"" },
     .{ .name = "cauchy-probe", .build_token = "b.step(\"cauchy-probe\"" },
@@ -406,6 +424,7 @@ const tools = [_]Tool{
     .{ .path = "tools/rayleigh_probe.zig", .build_token = "tools/rayleigh_probe.zig" },
     .{ .path = "tools/repro.zig", .build_token = "tools/repro.zig" },
     .{ .path = "tools/readmecheck.zig", .build_token = "tools/readmecheck.zig" },
+    .{ .path = "tools/rand_bench_smoke.sh", .build_token = "tools/rand_bench_smoke.sh" },
     .{ .path = "tools/roadmapcheck.zig", .build_token = "tools/roadmapcheck.zig" },
     .{ .path = "tools/runtimecheck.zig", .build_token = "tools/runtimecheck.zig" },
     .{ .path = "tools/run_wasi_test.js", .build_token = "tools/run_wasi_test.js" },
@@ -637,10 +656,11 @@ pub fn main(init: std.process.Init) !void {
     }
     if (std.mem.indexOf(u8, build, "validate_local_step.dependOn(validate_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_test_step)") == null or
+        std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_smoke_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(surfacecheck_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(runtimecheck_step)") == null)
     {
-        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, surfacecheck, and runtimecheck\n", .{});
+        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, rand-bench-smoke, surfacecheck, and runtimecheck\n", .{});
         missing += 1;
     }
     inline for (doccheck_dependencies) |token| {
@@ -700,6 +720,18 @@ pub fn main(init: std.process.Init) !void {
     inline for (rand_bench_doc_tokens) |token| {
         if (std.mem.indexOf(u8, tooling, token) == null) {
             try stderr.print("toolingcheck: docs/tooling.md missing rand-bench-test token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (rand_bench_smoke_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: rand-bench-smoke missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (rand_bench_smoke_doc_tokens) |token| {
+        if (std.mem.indexOf(u8, tooling, token) == null) {
+            try stderr.print("toolingcheck: docs/tooling.md missing rand-bench-smoke token `{s}`\n", .{token});
             missing += 1;
         }
     }

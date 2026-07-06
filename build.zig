@@ -441,6 +441,19 @@ pub fn build(b: *std.Build) void {
         rand_bench_test_step.dependOn(&cargo_missing.step);
     }
 
+    const rand_bench_smoke_step = b.step("rand-bench-smoke", "Run a tiny filtered Rust comparison benchmark smoke test");
+    if (b.findProgram(&.{"cargo"}, &.{})) |_| {
+        const run_rand_bench_smoke = b.addSystemCommand(&.{ "tools/rand_bench_smoke.sh", "1024", "standard-normal" });
+        run_rand_bench_smoke.addFileInput(b.path("tools/rand_bench_smoke.sh"));
+        run_rand_bench_smoke.addFileInput(b.path("compare/rand_bench/Cargo.toml"));
+        run_rand_bench_smoke.addFileInput(b.path("compare/rand_bench/Cargo.lock"));
+        run_rand_bench_smoke.addFileInput(b.path("compare/rand_bench/src/main.rs"));
+        rand_bench_smoke_step.dependOn(&run_rand_bench_smoke.step);
+    } else |_| {
+        const cargo_missing = b.addFail("zig build rand-bench-smoke requires cargo");
+        rand_bench_smoke_step.dependOn(&cargo_missing.step);
+    }
+
     const ziggurat_stats_mod = b.createModule(.{
         .root_source_file = b.path("tools/ziggurat_stats.zig"),
         .target = target,
@@ -1552,6 +1565,7 @@ pub fn build(b: *std.Build) void {
     const validate_local_step = b.step("validate-local", "Run native validation plus local Rust surface checks");
     validate_local_step.dependOn(validate_step);
     validate_local_step.dependOn(rand_bench_test_step);
+    validate_local_step.dependOn(rand_bench_smoke_step);
     validate_local_step.dependOn(surfacecheck_step);
     validate_local_step.dependOn(runtimecheck_step);
 

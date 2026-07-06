@@ -401,7 +401,8 @@ complete.
 | S4-M378 bench parser helper tests | `bench/throughput.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m378-bench-parser-tests.md` | Closed for the current bar: main throughput bench argument parsing is helper-tested and `zig build bench` runs tests before the executable. |
 | S4-M379 bench-libc parser helper tests | `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m379-bench-libc-parser-tests.md` | Closed for the current bar: `bench-libc` now runs libc-linked throughput parser helper tests before the executable, and toolingcheck guards it. |
 | S4-M380 Rust comparison bench parser tests | `compare/rand_bench/src/main.rs`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m380-rand-bench-parser-tests.md` | Closed for the current bar: local Rust comparison benchmark argument parsing is helper-tested and guarded through `zig build rand-bench-test` / `validate-local`. |
-| S4-M381 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M381 Rust comparison bench smoke step | `tools/rand_bench_smoke.sh`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m381-rand-bench-smoke.md` | Closed for the current bar: local Rust comparison benchmark filtering is smoke-tested through `zig build rand-bench-smoke` / `validate-local`. |
+| S4-M382 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -804,6 +805,10 @@ bench-libc`; it is a performance-tooling improvement and does not resolve S4-M11
 or complete the long-term objective.
 S4-M380 additionally adds helper-tested argument parsing and a `zig build
 rand-bench-test` step for the Rust comparison benchmark; it is local comparison
+benchmark tooling and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M381 additionally adds a tiny filtered `zig build rand-bench-smoke`
+end-to-end run for the Rust comparison benchmark; it is local comparison
 benchmark tooling and does not resolve S4-M11 or complete the long-term
 objective.
 
