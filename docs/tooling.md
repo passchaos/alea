@@ -12,9 +12,9 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build test` | Run unit tests and API reference coverage checks. |
 | `zig build apicheck` | Verify public symbols are covered by `docs/api-reference.md`. |
 | `zig build examplecheck` | Verify `docs/examples.md` covers every checked-in runnable example/focused `run-*` step, every cataloged example remains wired into aggregate `zig build examples`, and key examples still contain expected adoption-output tokens. |
-| `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step/checked-in tool file, that doccheck, validate, validate-all, and wasi-report keep their aggregate dependencies, and that surfacecheck/runtimecheck run helper tests before their executable checks. |
+| `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step/checked-in tool file, that doccheck, validate, validate-all, and wasi-report keep their aggregate dependencies, and that surfacecheck/runtimecheck/roadmapcheck run helper tests before their executable checks. |
 | `zig build readmecheck` | Verify README discovery links, quick-start API tokens, and core validation commands stay visible. |
-| `zig build roadmapcheck` | Verify roadmap, active-audit milestone evidence, public-surface manifests, and concrete S4-M11 blocker tokens stay synchronized. |
+| `zig build roadmapcheck` | Run roadmapcheck helper tests, then verify roadmap, active-audit milestone evidence, public-surface manifests, and concrete S4-M11 blocker tokens stay synchronized. |
 | `zig build surfacecheck` | Run surfacecheck helper tests, compare the local Rust `rand` / resolved `rand_core` / cached `rand_distr` public surface against the checked-in manifests, guard against unlisted public source files, and print file/token coverage summaries; defaults are resolved relative to `$HOME`, and `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` override local paths. |
 | `zig build runtimecheck` | Run runtimecheck helper tests, then check S4-M11 runtime-runner availability: required local tools (`node`, `cargo`, `rustc`) must exist, while extra runners such as QEMU/Wine/wasmtime/wasmer cause the check to fail so blocker evidence can be refreshed. |
 | `zig build doccheck` | Run API, examples, tooling, README, and roadmap documentation checks together. |
@@ -33,8 +33,8 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build validate-all` | Run native validation plus cross-target compile checks and WASI runtime checks. |
 
 `zig build doccheck` depends on `zig build apicheck`, `zig build
-examplecheck`, `zig build toolingcheck`, `zig build readmecheck`, and `zig build
-roadmapcheck`. `zig build
+examplecheck`, `zig build toolingcheck`, `zig build readmecheck`, and the full
+`zig build roadmapcheck` step including its helper tests. `zig build
 validate` depends on `zig build examples`, `zig build doccheck`, `zig build
 statcheck`, `zig build distcheck`, `zig build distcheck-libc`, and `zig build
 profilecheck`. `zig build validate-local` adds `zig build surfacecheck` and
@@ -192,7 +192,7 @@ new helpers that need documentation.
 | `tools/rayleigh_probe.zig` | Rayleigh performance probe. |
 | `tools/repro.zig` | Reproducibility snapshot printer. |
 | `tools/readmecheck.zig` | README discovery and quick-start token checker. |
-| `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, public-surface manifest, and S4-M11 blocker-token checker. |
+| `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, public-surface manifest, and S4-M11 blocker-token checker with focused helper tests. |
 | `tools/runtimecheck.zig` | S4-M11 runtime-runner availability checker. |
 | `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps. |
 | `tools/skew_normal_probe.zig` | SkewNormal performance probe. |

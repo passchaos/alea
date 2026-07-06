@@ -15,7 +15,7 @@ const doccheck_dependencies = [_][]const u8{
     "doccheck_step.dependOn(&run_examplecheck.step)",
     "doccheck_step.dependOn(&run_toolingcheck.step)",
     "doccheck_step.dependOn(&run_readmecheck.step)",
-    "doccheck_step.dependOn(&run_roadmapcheck.step)",
+    "doccheck_step.dependOn(roadmapcheck_step)",
 };
 
 const surfacecheck_dependencies = [_][]const u8{
@@ -26,6 +26,11 @@ const surfacecheck_dependencies = [_][]const u8{
 const runtimecheck_dependencies = [_][]const u8{
     "runtimecheck_step.dependOn(&run_runtimecheck_tests.step)",
     "runtimecheck_step.dependOn(&run_runtimecheck.step)",
+};
+
+const roadmapcheck_dependencies = [_][]const u8{
+    "roadmapcheck_step.dependOn(&run_roadmapcheck_tests.step)",
+    "roadmapcheck_step.dependOn(&run_roadmapcheck.step)",
 };
 
 const validate_dependencies = [_][]const u8{
@@ -381,6 +386,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (runtimecheck_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: runtimecheck missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (roadmapcheck_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: roadmapcheck missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

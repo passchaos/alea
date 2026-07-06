@@ -364,7 +364,8 @@ complete.
 | S4-M341 active completion criteria guard | `tools/roadmapcheck.zig`, `compare/results/active-goal-completion-audit.md`, `compare/results/s4-m341-active-completion-criteria-guard.md` | Closed for the current bar: `roadmapcheck` now verifies that this active audit keeps the concrete required-next-work criteria for whole-goal completion visible. |
 | S4-M342 roadmap current-rule guard | `tools/roadmapcheck.zig`, `compare/results/core-rand-coverage.md`, `compare/results/s4-m342-current-rule-guard.md` | Closed for the current bar: `roadmapcheck` now verifies the living Current Rule's validation and prioritization guidance, including unblocked work, blocker evidence, local comparison checks, statcheck, stream validation, and deferred micro-optimization. |
 | S4-M343 long-term product track guard | `tools/roadmapcheck.zig`, `compare/results/core-rand-coverage.md`, `compare/results/s4-m343-long-term-track-guard.md` | Closed for the current bar: `roadmapcheck` now verifies that the roadmap keeps long-term product tracks and non-completion framing visible after stage milestones close. |
-| S4-M344 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M344 roadmapcheck helper tests | `tools/roadmapcheck.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m344-roadmapcheck-helper-tests.md` | Closed for the current bar: `roadmapcheck` now runs focused helper tests before its executable audit, and `toolingcheck` guards that dependency shape. |
+| S4-M345 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -656,6 +657,9 @@ S4-M343 additionally hardens `roadmapcheck` so the roadmap Long-Term Product
 Tracks keep feature breadth, statistical confidence, performance, ergonomics,
 and portability pressure visible; it is an evidence/tooling improvement and does
 not resolve S4-M11 or complete the long-term objective.
+S4-M344 additionally adds focused roadmapcheck helper tests and wires them into
+`zig build roadmapcheck`; it is an evidence/tooling improvement and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

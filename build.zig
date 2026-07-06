@@ -1085,7 +1085,18 @@ pub fn build(b: *std.Build) void {
     const run_roadmapcheck = b.addRunArtifact(roadmapcheck);
     if (b.args) |args| run_roadmapcheck.addArgs(args);
 
+    const roadmapcheck_tests = b.addTest(.{
+        .name = "alea-roadmapcheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/roadmapcheck.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_roadmapcheck_tests = b.addRunArtifact(roadmapcheck_tests);
+
     const roadmapcheck_step = b.step("roadmapcheck", "Check roadmap and audit evidence coverage");
+    roadmapcheck_step.dependOn(&run_roadmapcheck_tests.step);
     roadmapcheck_step.dependOn(&run_roadmapcheck.step);
 
     const surfacecheck_mod = b.createModule(.{
@@ -1147,7 +1158,7 @@ pub fn build(b: *std.Build) void {
     doccheck_step.dependOn(&run_examplecheck.step);
     doccheck_step.dependOn(&run_toolingcheck.step);
     doccheck_step.dependOn(&run_readmecheck.step);
-    doccheck_step.dependOn(&run_roadmapcheck.step);
+    doccheck_step.dependOn(roadmapcheck_step);
 
     const test_step = b.step("test", "Run alea unit tests and documentation checks");
     test_step.dependOn(&run_tests.step);

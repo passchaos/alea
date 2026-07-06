@@ -339,6 +339,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M341", .path = "compare/results/s4-m341-active-completion-criteria-guard.md" },
     .{ .milestone = "S4-M342", .path = "compare/results/s4-m342-current-rule-guard.md" },
     .{ .milestone = "S4-M343", .path = "compare/results/s4-m343-long-term-track-guard.md" },
+    .{ .milestone = "S4-M344", .path = "compare/results/s4-m344-roadmapcheck-helper-tests.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -346,7 +347,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M344",
+    "S4-M345",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -552,19 +553,19 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "local Rust public-surface manifest", local_rand_manifest, local_rand_manifest_tokens[0..], &missing);
     try checkManifestTokens(stderr, "local rand_distr public-surface manifest", local_rand_distr_manifest, local_rand_distr_manifest_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M344 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M344 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M345 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M345 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M344 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M344 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M345 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M345 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
         try stderr.print("roadmapcheck: active audit must keep S4-M11 unresolved statement\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, build, "doccheck_step.dependOn(&run_roadmapcheck.step)") == null) {
+    if (std.mem.indexOf(u8, build, "doccheck_step.dependOn(roadmapcheck_step)") == null) {
         try stderr.print("roadmapcheck: doccheck must depend on roadmapcheck\n", .{});
         missing += 1;
     }
@@ -601,4 +602,38 @@ fn checkManifestTokens(
             missing.* += 1;
         }
     }
+}
+
+test "manifest token checker counts missing tokens" {
+    var out_buf: [256]u8 = undefined;
+    var stderr = std.Io.Writer.fixed(&out_buf);
+    var missing: usize = 0;
+
+    try checkManifestTokens(
+        &stderr,
+        "sample manifest",
+        "alpha beta",
+        &.{ "alpha", "gamma" },
+        &missing,
+    );
+
+    try std.testing.expectEqual(@as(usize, 1), missing);
+    try std.testing.expect(std.mem.indexOf(u8, std.Io.Writer.buffered(&stderr), "gamma") != null);
+}
+
+test "manifest token checker accepts all present tokens" {
+    var out_buf: [128]u8 = undefined;
+    var stderr = std.Io.Writer.fixed(&out_buf);
+    var missing: usize = 0;
+
+    try checkManifestTokens(
+        &stderr,
+        "sample manifest",
+        "alpha beta gamma",
+        &.{ "alpha", "gamma" },
+        &missing,
+    );
+
+    try std.testing.expectEqual(@as(usize, 0), missing);
+    try std.testing.expectEqual(@as(usize, 0), std.Io.Writer.buffered(&stderr).len);
 }

@@ -913,3 +913,9 @@ S4-M343 hardens long-term product-track evidence
 verify the roadmap's Long-Term Product Tracks section, non-completion framing,
 feature breadth, statistical confidence, performance, ergonomics, and portability
 pressure tokens while S4-M11 remains blocked.
+
+S4-M344 adds roadmapcheck helper tests
+(`compare/results/s4-m344-roadmapcheck-helper-tests.md`) and wires them into
+`zig build roadmapcheck`, with `toolingcheck` guarding that tests run before the
+roadmap/audit executable. This improves evidence-checker reliability while
+S4-M11 remains blocked.
