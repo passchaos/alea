@@ -462,7 +462,8 @@ complete.
 | S4-M439 validate-local description includes status checks | `build.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m439-validate-local-status-description.md` | Closed for the current bar: `validate-local` build-step description now includes status checks. |
 | S4-M440 boolean fields in `rand-status-json` | `tools/rand_status.zig`, `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m440-rand-status-json-booleans.md` | Closed for the current bar: `rand-status-json` now exposes stable boolean fields for pass/no-gap/blocker/runtime state. |
 | S4-M441 S4-M11 blocker sync for rand-status JSON booleans | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m441-blocker-rand-status-boolean-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites the stable boolean JSON status fields. |
-| S4-M442 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M442 current rand status snapshot JSON booleans | `compare/results/s4-m420-current-rand-status.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m442-current-status-json-booleans.md` | Closed for the current bar: the current status snapshot includes and guards the JSON boolean fields. |
+| S4-M443 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1053,6 +1054,9 @@ objective.
 S4-M441 additionally syncs S4-M11 blocker evidence with those JSON boolean
 fields; it is blocker-evidence maintenance and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M442 additionally keeps those JSON boolean fields visible in the current
+status snapshot; it is evidence-quality maintenance and does not resolve S4-M11
+or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

@@ -1434,3 +1434,8 @@ S4-M441 synchronizes S4-M11 blocker evidence with those JSON boolean fields
 (`compare/results/s4-m441-blocker-rand-status-boolean-sync.md`), keeping the
 blocker audit current with script-friendly status signals while S4-M11 remains
 blocked.
+
+S4-M442 keeps the JSON boolean fields visible in the current status snapshot
+(`compare/results/s4-m442-current-status-json-booleans.md`) so
+`compare/results/s4-m420-current-rand-status.md` also records script-friendly
+status signals while S4-M11 remains blocked.
