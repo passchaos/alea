@@ -1982,3 +1982,9 @@ S4-M539 adds root one-shot index-weighted const-pointer array helpers
 system-entropy callers can now produce fixed-size const-pointer arrays from an
 item slice and comptime index-weight function directly from the root API while
 S4-M11 remains blocked.
+
+S4-M540 adds root one-shot index-weighted mutable-pointer array helpers
+(`compare/results/s4-m540-root-weighted-mut-ptr-by-index-array-helpers.md`):
+system-entropy callers can now produce fixed-size mutable-pointer arrays from a
+mutable item slice and comptime index-weight function directly from the root API
+while S4-M11 remains blocked.
