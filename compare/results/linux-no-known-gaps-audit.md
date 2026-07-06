@@ -1875,3 +1875,9 @@ S4-M521 adds root one-shot reservoir value and pointer helpers
 system-entropy callers can now create allocation-returning and caller-owned
 value, const-pointer, and mutable-pointer reservoir samples directly from the
 root API while S4-M11 remains blocked.
+
+S4-M522 adds root repeated with-replacement fixed-size choice arrays
+(`compare/results/s4-m522-root-repeated-choice-array-helpers.md`):
+system-entropy callers can now use explicit repeated-choice value, const-pointer,
+and mutable-pointer fixed-size arrays directly from the root API while S4-M11
+remains blocked.

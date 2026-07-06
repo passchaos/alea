@@ -535,6 +535,14 @@ pub fn chooseValueArrayChecked(comptime T: type, io: std.Io, comptime N: usize, 
     return out;
 }
 
+pub fn chooseRepeatedValueArray(comptime T: type, io: std.Io, comptime N: usize, items: []const T) !?[N]T {
+    return chooseValueArray(T, io, N, items);
+}
+
+pub fn chooseRepeatedValueArrayChecked(comptime T: type, io: std.Io, comptime N: usize, items: []const T) ![N]T {
+    return chooseValueArrayChecked(T, io, N, items);
+}
+
 pub fn chooseConstPtr(comptime T: type, io: std.Io, items: []const T) !?*const T {
     if (items.len == 0) return null;
     if (items.len == 1) return &items[0];
@@ -605,6 +613,14 @@ pub fn chooseConstPtrArrayChecked(comptime T: type, io: std.Io, comptime N: usiz
     return out;
 }
 
+pub fn chooseRepeatedConstPtrArray(comptime T: type, io: std.Io, comptime N: usize, items: []const T) !?[N]*const T {
+    return chooseConstPtrArray(T, io, N, items);
+}
+
+pub fn chooseRepeatedConstPtrArrayChecked(comptime T: type, io: std.Io, comptime N: usize, items: []const T) ![N]*const T {
+    return chooseConstPtrArrayChecked(T, io, N, items);
+}
+
 pub fn choosePtr(comptime T: type, io: std.Io, items: []T) !?*T {
     if (items.len == 0) return null;
     if (items.len == 1) return &items[0];
@@ -673,6 +689,14 @@ pub fn choosePtrArrayChecked(comptime T: type, io: std.Io, comptime N: usize, it
     if (items.len == 0) return error.EmptyRange;
     try fillChoosePtrChecked(T, io, &out, items);
     return out;
+}
+
+pub fn chooseRepeatedPtrArray(comptime T: type, io: std.Io, comptime N: usize, items: []T) !?[N]*T {
+    return choosePtrArray(T, io, N, items);
+}
+
+pub fn chooseRepeatedPtrArrayChecked(comptime T: type, io: std.Io, comptime N: usize, items: []T) ![N]*T {
+    return choosePtrArrayChecked(T, io, N, items);
 }
 
 pub fn shuffle(comptime T: type, io: std.Io, items: []T) !void {
@@ -3999,6 +4023,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(?[3]u8, null), try chooseValueArray(u8, failing, 3, &.{}));
     try std.testing.expectError(error.EmptyRange, chooseValueArrayChecked(u8, failing, 3, &.{}));
     try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, &(try chooseValueArrayChecked(u8, failing, 3, &singleton)));
+    try std.testing.expect((try chooseRepeatedValueArray(u8, failing, 0, &.{})) != null);
+    try std.testing.expectEqual(@as(?[3]u8, null), try chooseRepeatedValueArray(u8, failing, 3, &.{}));
+    try std.testing.expectError(error.EmptyRange, chooseRepeatedValueArrayChecked(u8, failing, 3, &.{}));
+    try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, &(try chooseRepeatedValueArrayChecked(u8, failing, 3, &singleton)));
     try std.testing.expect((try chooseConstPtrArray(u8, failing, 0, &.{})) != null);
     try std.testing.expectEqual(@as(?*const u8, null), try chooseConstPtr(u8, failing, &.{}));
     try std.testing.expectEqual(@as(*const u8, &singleton[0]), (try chooseConstPtr(u8, failing, &singleton)).?);
@@ -4030,6 +4058,13 @@ test "root random helpers validate deterministic cases before entropy" {
     for (fixed_const_ptr_array) |value| try std.testing.expectEqual(&singleton[0], value);
     const fixed_const_ptr_array_checked = try chooseConstPtrArrayChecked(u8, failing, 3, &singleton);
     for (fixed_const_ptr_array_checked) |value| try std.testing.expectEqual(&singleton[0], value);
+    try std.testing.expect((try chooseRepeatedConstPtrArray(u8, failing, 0, &.{})) != null);
+    try std.testing.expectEqual(@as(?[3]*const u8, null), try chooseRepeatedConstPtrArray(u8, failing, 3, &.{}));
+    try std.testing.expectError(error.EmptyRange, chooseRepeatedConstPtrArrayChecked(u8, failing, 3, &.{}));
+    const fixed_repeated_const_ptr_array = (try chooseRepeatedConstPtrArray(u8, failing, 3, &singleton)).?;
+    for (fixed_repeated_const_ptr_array) |value| try std.testing.expectEqual(&singleton[0], value);
+    const fixed_repeated_const_ptr_array_checked = try chooseRepeatedConstPtrArrayChecked(u8, failing, 3, &singleton);
+    for (fixed_repeated_const_ptr_array_checked) |value| try std.testing.expectEqual(&singleton[0], value);
     try std.testing.expectError(error.EmptyRange, chooseConstPtrBatchChecked(u8, failing, std.testing.allocator, 3, &.{}));
     var mutable_singleton = [_]u8{42};
     try std.testing.expect((try choosePtrArray(u8, failing, 0, &mutable_singleton)) != null);
@@ -4063,6 +4098,13 @@ test "root random helpers validate deterministic cases before entropy" {
     for (fixed_ptr_array) |value| try std.testing.expectEqual(&mutable_singleton[0], value);
     const fixed_ptr_array_checked = try choosePtrArrayChecked(u8, failing, 3, &mutable_singleton);
     for (fixed_ptr_array_checked) |value| try std.testing.expectEqual(&mutable_singleton[0], value);
+    try std.testing.expect((try chooseRepeatedPtrArray(u8, failing, 0, &mutable_singleton)) != null);
+    try std.testing.expectEqual(@as(?[3]*u8, null), try chooseRepeatedPtrArray(u8, failing, 3, &.{}));
+    try std.testing.expectError(error.EmptyRange, chooseRepeatedPtrArrayChecked(u8, failing, 3, &.{}));
+    const fixed_repeated_ptr_array = (try chooseRepeatedPtrArray(u8, failing, 3, &mutable_singleton)).?;
+    for (fixed_repeated_ptr_array) |value| try std.testing.expectEqual(&mutable_singleton[0], value);
+    const fixed_repeated_ptr_array_checked = try chooseRepeatedPtrArrayChecked(u8, failing, 3, &mutable_singleton);
+    for (fixed_repeated_ptr_array_checked) |value| try std.testing.expectEqual(&mutable_singleton[0], value);
     try std.testing.expectError(error.EmptyRange, choosePtrBatchChecked(u8, failing, std.testing.allocator, 3, &.{}));
     var empty_shuffle: [0]u8 = .{};
     try shuffle(u8, failing, &empty_shuffle);
@@ -5022,17 +5064,20 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, fillChoose(u8, failing, &byte, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, chooseBatch(u8, failing, std.testing.allocator, 1, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, chooseValueArray(u8, failing, 1, &.{ 1, 2 }));
+    try std.testing.expectError(error.EntropyUnavailable, chooseRepeatedValueArray(u8, failing, 1, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, chooseConstPtr(u8, failing, &.{ 1, 2 }));
     var one_const_ptr: [1]*const u8 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, fillChooseConstPtr(u8, failing, &one_const_ptr, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, chooseConstPtrBatch(u8, failing, std.testing.allocator, 1, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, chooseConstPtrArray(u8, failing, 1, &.{ 1, 2 }));
+    try std.testing.expectError(error.EntropyUnavailable, chooseRepeatedConstPtrArray(u8, failing, 1, &.{ 1, 2 }));
     var mutable_pair = [_]u8{ 1, 2 };
     try std.testing.expectError(error.EntropyUnavailable, choosePtr(u8, failing, &mutable_pair));
     var one_ptr: [1]*u8 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, fillChoosePtr(u8, failing, &one_ptr, &mutable_pair));
     try std.testing.expectError(error.EntropyUnavailable, choosePtrBatch(u8, failing, std.testing.allocator, 1, &mutable_pair));
     try std.testing.expectError(error.EntropyUnavailable, choosePtrArray(u8, failing, 1, &mutable_pair));
+    try std.testing.expectError(error.EntropyUnavailable, chooseRepeatedPtrArray(u8, failing, 1, &mutable_pair));
     var shuffle_pair = [_]u8{ 1, 2 };
     try std.testing.expectError(error.EntropyUnavailable, shuffle(u8, failing, &shuffle_pair));
     try std.testing.expectError(error.EntropyUnavailable, partialShuffle(u8, failing, &shuffle_pair, 1));
