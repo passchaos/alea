@@ -146,6 +146,7 @@ The plain step names below are what the catalog checker tracks.
 | Step | Purpose |
 | --- | --- |
 | `zig build stream` | Run stream helper tests, then write raw RNG bytes to stdout for external statistical tools, for example `zig build stream -- --engine fast --bytes 1048576`. |
+| `zig build practrand-dry-run` | Print the default PractRand stream pipeline without requiring `RNG_test`. |
 | `zig build repro` | Run repro helper tests, then print deterministic reproducibility snapshots. |
 
 `tools/practrand.sh` wraps `zig build stream` for PractRand runs and writes

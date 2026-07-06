@@ -1305,6 +1305,10 @@ pub fn build(b: *std.Build) void {
     stream_step.dependOn(&run_stream_tests.step);
     stream_step.dependOn(&run_stream.step);
 
+    const run_practrand_dry_run = b.addSystemCommand(&.{ "tools/practrand.sh", "--dry-run", "fast", "1048576" });
+    const practrand_dry_run_step = b.step("practrand-dry-run", "Print the PractRand stream pipeline without running PractRand");
+    practrand_dry_run_step.dependOn(&run_practrand_dry_run.step);
+
     const distcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/distcheck.zig"),
         .target = target,

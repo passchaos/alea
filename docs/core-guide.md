@@ -981,6 +981,7 @@ zig build -Doptimize=ReleaseFast wasi-profilecheck
 zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/alea.bin
 sh tools/practrand.sh fast 1073741824
 sh tools/practrand.sh --dry-run fast 1048576
+zig build practrand-dry-run
 ```
 
 Use `zig build validate` for broad native checks before ordinary local changes.

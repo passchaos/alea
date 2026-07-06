@@ -201,6 +201,7 @@ zig build -Doptimize=ReleaseFast distcheck
 zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/alea.bin
 sh tools/practrand.sh fast 1073741824
 sh tools/practrand.sh --dry-run fast 1048576
+zig build practrand-dry-run
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
 zig build -Doptimize=ReleaseFast -Dcpu=native bench -- "standard-normal"
 zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench

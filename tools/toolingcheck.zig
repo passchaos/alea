@@ -156,6 +156,11 @@ const practrand_script_tokens = [_][]const u8{
     "zig build -Doptimize=ReleaseFast stream -- --engine",
 };
 
+const practrand_dry_run_dependencies = [_][]const u8{
+    "b.addSystemCommand(&.{ \"tools/practrand.sh\", \"--dry-run\", \"fast\", \"1048576\" })",
+    "practrand_dry_run_step.dependOn(&run_practrand_dry_run.step)",
+};
+
 const runtimecheck_doc_tokens = [_][]const u8{
     "zig build runtimecheck",
     "node",
@@ -251,6 +256,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "wasi-profilestresscheck", .build_token = "\"profilestresscheck\", \"tools/profilestresscheck.zig\"" },
     .{ .name = "wasi-profilelongcheck", .build_token = "\"profilelongcheck\", \"tools/profilelongcheck.zig\"" },
     .{ .name = "stream", .build_token = "b.step(\"stream\"" },
+    .{ .name = "practrand-dry-run", .build_token = "b.step(\"practrand-dry-run\"" },
     .{ .name = "distcheck", .build_token = "b.step(\"distcheck\"" },
     .{ .name = "distcheck-libc", .build_token = "b.step(\"distcheck-libc\"" },
     .{ .name = "profilecheck", .build_token = "b.step(\"profilecheck\"" },
@@ -428,6 +434,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (practrand_script_tokens) |token| {
         if (std.mem.indexOf(u8, practrand_source, token) == null) {
             try stderr.print("toolingcheck: tools/practrand.sh missing token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (practrand_dry_run_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: practrand-dry-run missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }
