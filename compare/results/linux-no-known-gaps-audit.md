@@ -863,3 +863,9 @@ S4-M335 hardens the native validation aggregate
 `toolingcheck` verify all current `zig build validate` dependency tokens: unit
 tests, examples, doccheck, statcheck, distcheck, distcheck-libc, and accepted
 profilecheck. This improves validation ergonomics while S4-M11 remains blocked.
+
+S4-M336 hardens the broad validation aggregate
+(`compare/results/s4-m336-validate-all-dependency-guard.md`) by making
+`toolingcheck` verify all current `zig build validate-all` dependency tokens:
+native validation, crosscheck, test-wasi, and wasi-report. This improves
+portability validation ergonomics while S4-M11 remains blocked.

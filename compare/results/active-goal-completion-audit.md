@@ -356,7 +356,8 @@ complete.
 | S4-M333 runtimecheck static QEMU names | `tools/runtimecheck.zig`, `docs/tooling.md`, `docs/core-guide.md`, `compare/results/s4-m333-runtimecheck-static-qemu.md` | Closed for the current bar: runtimecheck now treats `qemu-aarch64-static`, `qemu-riscv64-static`, and `qemu-x86_64-static` as opportunity runners, and docs/evidence reflect ten current opportunity names. |
 | S4-M334 example aggregate validation guard | `tools/examplecheck.zig`, `docs/examples.md`, `docs/tooling.md`, `compare/results/s4-m334-example-aggregate-guard.md` | Closed for the current bar: `examplecheck` now verifies that every cataloged runnable example remains included in aggregate `zig build examples`, keeping adoption examples in the `validate` path. |
 | S4-M335 validate aggregate dependency guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m335-validate-dependency-guard.md` | Closed for the current bar: `toolingcheck` now verifies the full current `zig build validate` dependency set, keeping tests, examples, docs, statcheck, distcheck, libc distcheck, and accepted-profile checks wired. |
-| S4-M336 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M336 validate-all aggregate dependency guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m336-validate-all-dependency-guard.md` | Closed for the current bar: `toolingcheck` now verifies the full current `zig build validate-all` dependency set, keeping native validation, crosscheck, test-wasi, and wasi-report wired. |
+| S4-M337 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -618,6 +619,10 @@ S4-M335 additionally hardens `zig build validate` dependency checks so the nativ
 validation aggregate keeps tests, examples, docs, statistical checks, distribution
 checks, libc checks, and accepted-profile checks wired; it is a tooling
 improvement and does not resolve S4-M11 or complete the long-term objective.
+S4-M336 additionally hardens `zig build validate-all` dependency checks so the
+broad validation aggregate keeps native validation, cross-target compile checks,
+WASI unit execution, and the WASI report chain wired; it is a tooling improvement
+and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

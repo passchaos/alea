@@ -38,6 +38,13 @@ const validate_dependencies = [_][]const u8{
     "validate_step.dependOn(&run_profilecheck.step)",
 };
 
+const validate_all_dependencies = [_][]const u8{
+    "validate_all_step.dependOn(validate_step)",
+    "validate_all_step.dependOn(crosscheck_step)",
+    "validate_all_step.dependOn(wasi_test_step)",
+    "validate_all_step.dependOn(wasi_report_step)",
+};
+
 const runtimecheck_doc_tokens = [_][]const u8{
     "zig build runtimecheck",
     "node",
@@ -296,6 +303,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (validate_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: validate missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (validate_all_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: validate-all missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }
