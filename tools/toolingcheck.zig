@@ -38,6 +38,11 @@ const statcheck_dependencies = [_][]const u8{
     "statcheck_step.dependOn(&run_statcheck.step)",
 };
 
+const stream_dependencies = [_][]const u8{
+    "stream_step.dependOn(&run_stream_tests.step)",
+    "stream_step.dependOn(&run_stream.step)",
+};
+
 const distcheck_dependencies = [_][]const u8{
     "distcheck_step.dependOn(&run_distcheck_tests.step)",
     "distcheck_step.dependOn(&run_distcheck.step)",
@@ -453,6 +458,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (statcheck_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: statcheck missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (stream_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: stream missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

@@ -980,3 +980,9 @@ S4-M354 adds profilelongcheck helper tests
 `zig build profilecheck-long`, with `toolingcheck` guarding that tests run before
 the accepted vector-profile long-sweep executable. This improves long-sweep
 checker reliability while S4-M11 remains blocked.
+
+S4-M355 adds stream helper tests
+(`compare/results/s4-m355-stream-helper-tests.md`) and wires them into
+`zig build stream`, with `toolingcheck` guarding that tests run before raw RNG
+bytes are emitted. This improves raw stream exporter reliability while S4-M11
+remains blocked.

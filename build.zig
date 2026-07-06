@@ -1290,7 +1290,19 @@ pub fn build(b: *std.Build) void {
     const run_stream = b.addRunArtifact(stream);
     if (b.args) |args| run_stream.addArgs(args);
 
+    const stream_tests = b.addTest(.{
+        .name = "alea-stream-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/stream.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "alea", .module = module }},
+        }),
+    });
+    const run_stream_tests = b.addRunArtifact(stream_tests);
+
     const stream_step = b.step("stream", "Write raw RNG bytes to stdout for external statistical tools");
+    stream_step.dependOn(&run_stream_tests.step);
     stream_step.dependOn(&run_stream.step);
 
     const distcheck_mod = b.createModule(.{
