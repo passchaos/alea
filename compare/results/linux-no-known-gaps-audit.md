@@ -1552,3 +1552,8 @@ S4-M465 adds an explicit local-status link to `rand-status-json`
 (`compare/results/s4-m465-rand-status-local-status-field.md`) so scripts can
 distinguish the current status snapshot from the generic details path while
 S4-M11 remains blocked.
+
+S4-M466 keeps that local-status link visible in the current status snapshot
+(`compare/results/s4-m466-current-status-local-status.md`) so
+`compare/results/s4-m420-current-rand-status.md` mirrors the script-friendly
+status schema while S4-M11 remains blocked.
