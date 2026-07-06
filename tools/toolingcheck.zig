@@ -343,6 +343,7 @@ const core_guide_validation_tokens = [_][]const u8{
     "zig build rand-status",
     "zig build rand-status -- --json",
     "compare/results/s4-m420-current-rand-status.md",
+    "compare/results/s4-m450-rand-status-command-matrix.md",
     "current local",
     "`rand` / `rand_distr` comparison status snapshot",
 };
@@ -371,6 +372,7 @@ const api_reference_validation_tokens = [_][]const u8{
     "without reading or executing a",
     "wasm file",
     "compare/results/s4-m420-current-rand-status.md",
+    "compare/results/s4-m450-rand-status-command-matrix.md",
     "current local `rand` / `rand_distr` comparison status",
 };
 

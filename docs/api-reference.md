@@ -6,7 +6,9 @@ for build/tool catalogs, and `compare/results/reproducibility-matrix.md` for
 stability expectations. See `zig build rand-status`,
 `zig build rand-status-json`, `zig build rand-status-schema-version`, `zig build rand-status-self-test`, `zig build rand-status -- --json`, or
 `compare/results/s4-m420-current-rand-status.md` for the
-current local `rand` / `rand_distr` comparison status.
+current local `rand` / `rand_distr` comparison status, and
+`compare/results/s4-m450-rand-status-command-matrix.md` for the latest status
+command matrix evidence.
 
 ## Root Module
 

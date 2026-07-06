@@ -1487,3 +1487,8 @@ coverage cannot silently narrow while S4-M11 remains blocked.
 S4-M452 exposes the `rand-status` command matrix from README
 (`compare/results/s4-m452-readme-rand-status-matrix.md`) so users can find the
 latest status command evidence while S4-M11 remains blocked.
+
+S4-M453 exposes the `rand-status` command matrix from the core guide and API
+reference (`compare/results/s4-m453-guide-api-rand-status-matrix.md`) so
+detailed docs also point to the latest status command evidence while S4-M11
+remains blocked.
