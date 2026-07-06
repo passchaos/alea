@@ -1393,3 +1393,8 @@ S4-M433 refreshes validate-local evidence after adding `rand-status-json`
 (`compare/results/s4-m433-validate-local-after-rand-status-json.md`); the
 aggregate passes with text and JSON status output, Rust smoke/parser tests,
 surfacecheck, and runtimecheck while S4-M11 remains blocked.
+
+S4-M434 synchronizes S4-M11 blocker evidence after the rand-status-json
+aggregate refresh (`compare/results/s4-m434-blocker-rand-status-json-sync.md`),
+keeping the blocker audit current with S4-M433 `validate-local` output while
+S4-M11 remains blocked.

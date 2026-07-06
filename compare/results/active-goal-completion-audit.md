@@ -454,7 +454,8 @@ complete.
 | S4-M431 `rand-status` JSON/help output | `tools/rand_status.zig`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/tooling.md`, `tools/readmecheck.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m431-rand-status-json.md` | Closed for the current bar: `rand-status` now has stable JSON and help output. |
 | S4-M432 `rand-status-json` build step and aggregate | `build.zig`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/tooling.md`, `tools/readmecheck.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m432-rand-status-json-step.md` | Closed for the current bar: `rand-status-json` prints stable JSON and is included in `validate-local`. |
 | S4-M433 validate-local refresh after rand-status-json aggregate | `compare/results/s4-m433-validate-local-after-rand-status-json.md`, `compare/results/s4-m420-current-rand-status.md` | Closed for the current bar: `zig build validate-local` passed with text and JSON `rand-status` output included. |
-| S4-M434 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M434 S4-M11 blocker sync after rand-status-json validate-local | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m434-blocker-rand-status-json-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites fresh S4-M433 `validate-local` output including JSON status. |
+| S4-M435 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1021,6 +1022,9 @@ not resolve S4-M11 or complete the long-term objective.
 S4-M433 additionally refreshes `validate-local` evidence after adding
 `rand-status-json` to the aggregate; it is validation evidence and does not
 resolve S4-M11 or complete the long-term objective.
+S4-M434 additionally syncs S4-M11 blocker evidence with the fresh
+rand-status-json `validate-local` output; it is blocker-evidence maintenance and
+does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
