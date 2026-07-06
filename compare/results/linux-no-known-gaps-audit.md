@@ -961,3 +961,9 @@ S4-M351 adds profilecheck helper tests
 `zig build profilecheck`, with `toolingcheck` guarding that tests run before the
 accepted vector-profile executable. This improves profile checker reliability
 while S4-M11 remains blocked.
+
+S4-M352 adds profiletailcheck helper tests
+(`compare/results/s4-m352-profiletailcheck-helper-tests.md`) and wires them into
+`zig build profilecheck-tail`, with `toolingcheck` guarding that tests run before
+the accepted vector-profile tail executable. This improves tail checker
+reliability while S4-M11 remains blocked.

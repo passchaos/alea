@@ -1396,7 +1396,19 @@ pub fn build(b: *std.Build) void {
     const run_profiletailcheck = b.addRunArtifact(profiletailcheck);
     if (b.args) |args| run_profiletailcheck.addArgs(args);
 
+    const profiletailcheck_tests = b.addTest(.{
+        .name = "alea-profiletailcheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/profiletailcheck.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "alea", .module = module }},
+        }),
+    });
+    const run_profiletailcheck_tests = b.addRunArtifact(profiletailcheck_tests);
+
     const profiletailcheck_step = b.step("profilecheck-tail", "Run accepted vector profile tail checks");
+    profiletailcheck_step.dependOn(&run_profiletailcheck_tests.step);
     profiletailcheck_step.dependOn(&run_profiletailcheck.step);
 
     const profilestresscheck_mod = b.createModule(.{
