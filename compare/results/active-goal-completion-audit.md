@@ -449,7 +449,8 @@ complete.
 | S4-M426 guide/API `rand-status` discovery | `docs/core-guide.md`, `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m426-guide-api-rand-status.md` | Closed for the current bar: core guide/API now list `zig build rand-status`. |
 | S4-M427 include `rand-status` in validate-local | `build.zig`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/tooling.md`, `tools/readmecheck.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m427-validate-local-rand-status.md` | Closed for the current bar: `validate-local` now runs `rand-status` and docs/checkers guard the expanded aggregate. |
 | S4-M428 validate-local refresh after rand-status aggregate | `compare/results/s4-m428-validate-local-after-rand-status.md`, `compare/results/s4-m420-current-rand-status.md` | Closed for the current bar: `zig build validate-local` passed with `rand-status` included and the current status snapshot was refreshed. |
-| S4-M429 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M429 S4-M11 blocker sync after rand-status validate-local | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m429-blocker-rand-status-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites fresh S4-M428 `validate-local` output including `rand-status`. |
+| S4-M430 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1000,6 +1001,9 @@ comparison validation ergonomics and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M428 additionally refreshes `validate-local` evidence after adding
 `rand-status` to the aggregate; it is validation evidence and does not resolve
+S4-M11 or complete the long-term objective.
+S4-M429 additionally syncs S4-M11 blocker evidence with the fresh rand-status
+`validate-local` output; it is blocker-evidence maintenance and does not resolve
 S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
