@@ -324,6 +324,114 @@ pub fn sampleBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, s
     return out;
 }
 
+pub fn chooseIndex(io: std.Io, length: usize) !?usize {
+    if (length == 0) return null;
+    if (length == 1) return 0;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.chooseIndex(length);
+}
+
+pub fn chooseIndexChecked(io: std.Io, length: usize) !usize {
+    if (length == 0) return error.EmptyRange;
+    if (length == 1) return 0;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.chooseIndexChecked(length);
+}
+
+pub fn fillChooseIndex(io: std.Io, dest: []usize, length: usize) !void {
+    if (dest.len == 0) return;
+    if (length == 1) {
+        @memset(dest, 0);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillChooseIndex(dest, length);
+}
+
+pub fn fillChooseIndexChecked(io: std.Io, dest: []usize, length: usize) !void {
+    if (dest.len == 0) return;
+    if (length == 0) return error.EmptyRange;
+    if (length == 1) {
+        @memset(dest, 0);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try random_source.fillChooseIndexChecked(dest, length);
+}
+
+pub fn chooseIndexBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, length: usize) ![]usize {
+    const out = try allocator.alloc(usize, count);
+    errdefer allocator.free(out);
+    try fillChooseIndex(io, out, length);
+    return out;
+}
+
+pub fn chooseIndexBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, length: usize) ![]usize {
+    if (count == 0) return allocator.alloc(usize, 0);
+    const out = try allocator.alloc(usize, count);
+    errdefer allocator.free(out);
+    try fillChooseIndexChecked(io, out, length);
+    return out;
+}
+
+pub fn choose(comptime T: type, io: std.Io, items: []const T) !?T {
+    if (items.len == 0) return null;
+    if (items.len == 1) return items[0];
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.choose(T, items);
+}
+
+pub fn chooseChecked(comptime T: type, io: std.Io, items: []const T) !T {
+    if (items.len == 0) return error.EmptyRange;
+    if (items.len == 1) return items[0];
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.chooseChecked(T, items);
+}
+
+pub fn fillChoose(comptime T: type, io: std.Io, dest: []T, items: []const T) !void {
+    if (dest.len == 0) return;
+    if (items.len == 1) {
+        @memset(dest, items[0]);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillChoose(T, dest, items);
+}
+
+pub fn fillChooseChecked(comptime T: type, io: std.Io, dest: []T, items: []const T) !void {
+    if (dest.len == 0) return;
+    if (items.len == 0) return error.EmptyRange;
+    if (items.len == 1) {
+        @memset(dest, items[0]);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try random_source.fillChooseChecked(T, dest, items);
+}
+
+pub fn chooseBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try fillChoose(T, io, out, items);
+    return out;
+}
+
+pub fn chooseBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try fillChooseChecked(T, io, out, items);
+    return out;
+}
+
 pub fn valueBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize) ![]T {
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
@@ -1155,6 +1263,37 @@ test "root random helpers use explicit system entropy" {
     const sampled_die_batch = try sampleBatch(u8, io, std.testing.allocator, die_sampler, 4);
     defer std.testing.allocator.free(sampled_die_batch);
     for (sampled_die_batch) |value| try std.testing.expect(value >= 1 and value <= 6);
+    const colors = [_]u8{ 10, 20, 30, 40 };
+    const chosen_index = (try chooseIndex(io, colors.len)).?;
+    try std.testing.expect(chosen_index < colors.len);
+    const chosen_index_checked = try chooseIndexChecked(io, colors.len);
+    try std.testing.expect(chosen_index_checked < colors.len);
+    var chosen_indices: [4]usize = undefined;
+    try fillChooseIndex(io, &chosen_indices, colors.len);
+    for (chosen_indices) |value| try std.testing.expect(value < colors.len);
+    try fillChooseIndexChecked(io, &chosen_indices, colors.len);
+    for (chosen_indices) |value| try std.testing.expect(value < colors.len);
+    const chosen_index_batch = try chooseIndexBatch(io, std.testing.allocator, 4, colors.len);
+    defer std.testing.allocator.free(chosen_index_batch);
+    for (chosen_index_batch) |value| try std.testing.expect(value < colors.len);
+    const chosen_index_batch_checked = try chooseIndexBatchChecked(io, std.testing.allocator, 4, colors.len);
+    defer std.testing.allocator.free(chosen_index_batch_checked);
+    for (chosen_index_batch_checked) |value| try std.testing.expect(value < colors.len);
+    const chosen_value = (try choose(u8, io, &colors)).?;
+    try std.testing.expect(std.mem.indexOfScalar(u8, &colors, chosen_value) != null);
+    const chosen_value_checked = try chooseChecked(u8, io, &colors);
+    try std.testing.expect(std.mem.indexOfScalar(u8, &colors, chosen_value_checked) != null);
+    var chosen_values: [4]u8 = undefined;
+    try fillChoose(u8, io, &chosen_values, &colors);
+    for (chosen_values) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value) != null);
+    try fillChooseChecked(u8, io, &chosen_values, &colors);
+    for (chosen_values) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value) != null);
+    const chosen_value_batch = try chooseBatch(u8, io, std.testing.allocator, 4, &colors);
+    defer std.testing.allocator.free(chosen_value_batch);
+    for (chosen_value_batch) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value) != null);
+    const chosen_value_batch_checked = try chooseBatchChecked(u8, io, std.testing.allocator, 4, &colors);
+    defer std.testing.allocator.free(chosen_value_batch_checked);
+    for (chosen_value_batch_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value) != null);
     const owned_values = try valueBatch(u16, io, std.testing.allocator, 4);
     defer std.testing.allocator.free(owned_values);
     try std.testing.expectEqual(@as(usize, 4), owned_values.len);
@@ -1329,6 +1468,57 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_sample_batch = try sampleBatch(u8, failing, std.testing.allocator, die_sampler, 0);
     defer std.testing.allocator.free(empty_sample_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_sample_batch.len);
+    try std.testing.expectEqual(@as(?usize, null), try chooseIndex(failing, 0));
+    try std.testing.expectEqual(@as(?usize, 0), try chooseIndex(failing, 1));
+    try std.testing.expectEqual(@as(usize, 0), try chooseIndexChecked(failing, 1));
+    try std.testing.expectError(error.EmptyRange, chooseIndexChecked(failing, 0));
+    var empty_indices: [0]usize = .{};
+    try fillChooseIndex(failing, &empty_indices, 0);
+    try fillChooseIndexChecked(failing, &empty_indices, 0);
+    var fixed_indices: [3]usize = undefined;
+    try fillChooseIndex(failing, &fixed_indices, 1);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0 }, &fixed_indices);
+    try fillChooseIndexChecked(failing, &fixed_indices, 1);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0 }, &fixed_indices);
+    const empty_index_batch = try chooseIndexBatch(failing, std.testing.allocator, 0, 0);
+    defer std.testing.allocator.free(empty_index_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_index_batch.len);
+    const empty_index_batch_checked = try chooseIndexBatchChecked(failing, std.testing.allocator, 0, 0);
+    defer std.testing.allocator.free(empty_index_batch_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_index_batch_checked.len);
+    const fixed_index_batch = try chooseIndexBatch(failing, std.testing.allocator, 3, 1);
+    defer std.testing.allocator.free(fixed_index_batch);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0 }, fixed_index_batch);
+    const fixed_index_batch_checked = try chooseIndexBatchChecked(failing, std.testing.allocator, 3, 1);
+    defer std.testing.allocator.free(fixed_index_batch_checked);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0 }, fixed_index_batch_checked);
+    try std.testing.expectError(error.EmptyRange, chooseIndexBatchChecked(failing, std.testing.allocator, 3, 0));
+    const singleton = [_]u8{42};
+    try std.testing.expectEqual(@as(?u8, null), try choose(u8, failing, &.{}));
+    try std.testing.expectEqual(@as(?u8, 42), try choose(u8, failing, &singleton));
+    try std.testing.expectEqual(@as(u8, 42), try chooseChecked(u8, failing, &singleton));
+    try std.testing.expectError(error.EmptyRange, chooseChecked(u8, failing, &.{}));
+    var empty_values: [0]u8 = .{};
+    try fillChoose(u8, failing, &empty_values, &.{});
+    try fillChooseChecked(u8, failing, &empty_values, &.{});
+    var fixed_values: [3]u8 = undefined;
+    try fillChoose(u8, failing, &fixed_values, &singleton);
+    try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, &fixed_values);
+    try fillChooseChecked(u8, failing, &fixed_values, &singleton);
+    try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, &fixed_values);
+    const empty_choose_batch = try chooseBatch(u8, failing, std.testing.allocator, 0, &.{});
+    defer std.testing.allocator.free(empty_choose_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_choose_batch.len);
+    const empty_choose_batch_checked = try chooseBatchChecked(u8, failing, std.testing.allocator, 0, &.{});
+    defer std.testing.allocator.free(empty_choose_batch_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_choose_batch_checked.len);
+    const fixed_choose_batch = try chooseBatch(u8, failing, std.testing.allocator, 3, &singleton);
+    defer std.testing.allocator.free(fixed_choose_batch);
+    try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, fixed_choose_batch);
+    const fixed_choose_batch_checked = try chooseBatchChecked(u8, failing, std.testing.allocator, 3, &singleton);
+    defer std.testing.allocator.free(fixed_choose_batch_checked);
+    try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, fixed_choose_batch_checked);
+    try std.testing.expectError(error.EmptyRange, chooseBatchChecked(u8, failing, std.testing.allocator, 3, &.{}));
     try fillRange(u8, failing, &empty, 3, 4);
     try fillRangeChecked(u8, failing, &empty, 3, 3);
     try fillRangeAtMost(u8, failing, &empty, 6, 5);
@@ -1517,6 +1707,13 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sample(u8, failing, die_sampler));
     try std.testing.expectError(error.EntropyUnavailable, fillSample(u8, failing, &byte, die_sampler));
     try std.testing.expectError(error.EntropyUnavailable, sampleBatch(u8, failing, std.testing.allocator, die_sampler, 1));
+    try std.testing.expectError(error.EntropyUnavailable, chooseIndex(failing, 2));
+    var one_index: [1]usize = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillChooseIndex(failing, &one_index, 2));
+    try std.testing.expectError(error.EntropyUnavailable, chooseIndexBatch(failing, std.testing.allocator, 1, 2));
+    try std.testing.expectError(error.EntropyUnavailable, choose(u8, failing, &.{ 1, 2 }));
+    try std.testing.expectError(error.EntropyUnavailable, fillChoose(u8, failing, &byte, &.{ 1, 2 }));
+    try std.testing.expectError(error.EntropyUnavailable, chooseBatch(u8, failing, std.testing.allocator, 1, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, valueBatch(u8, failing, std.testing.allocator, 1));
     try std.testing.expectError(error.EntropyUnavailable, fillRange(u8, failing, &byte, 3, 5));
     try std.testing.expectError(error.EntropyUnavailable, rangeBatch(u8, failing, std.testing.allocator, 1, 3, 5));

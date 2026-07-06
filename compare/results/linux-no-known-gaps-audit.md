@@ -1625,3 +1625,9 @@ S4-M477 adds root one-shot sampler helpers
 (`compare/results/s4-m477-root-one-shot-sampler-helpers.md`): system-entropy
 callers can now sample, fill, and allocate from arbitrary reusable samplers
 directly from the root API while S4-M11 remains blocked.
+
+
+S4-M478 adds root one-shot choice helpers
+(`compare/results/s4-m478-root-one-shot-choice-helpers.md`): system-entropy
+callers can now choose indices and values directly from the root API while
+S4-M11 remains blocked.

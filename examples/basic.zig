@@ -56,6 +56,12 @@ pub fn main(init: std.process.Init) !void {
     try alea.fillSample(u8, io, &root_sample_dice_fill, root_die_sampler);
     const root_sample_dice_batch = try alea.sampleBatch(u8, io, init.gpa, root_die_sampler, 4);
     defer init.gpa.free(root_sample_dice_batch);
+    const root_colors = [_][]const u8{ "red", "green", "blue", "gold" };
+    const root_choice_index = (try alea.chooseIndex(io, root_colors.len)).?;
+    var root_choice_indices: [4]usize = undefined;
+    try alea.fillChooseIndex(io, &root_choice_indices, root_colors.len);
+    const root_choice_batch = try alea.chooseBatch([]const u8, io, init.gpa, 4, &root_colors);
+    defer init.gpa.free(root_choice_batch);
     var root_random_bytes: [4]u8 = undefined;
     try alea.fill(u8, io, &root_random_bytes);
     var root_random_range_values: [4]u8 = undefined;
@@ -202,6 +208,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("uintAtMostBatch u16 <=999: {any}\n", .{inclusive_words});
     try stdout.print("randomBool p=.25: {}, randomRatio 3/8: {}\n", .{ random_bool, random_ratio });
     try stdout.print("root sampler helpers: sampleDie={}, sampleFill={any}, sampleBatch={any}\n", .{ root_sample_die, root_sample_dice_fill, root_sample_dice_batch });
+    try stdout.print("root choice helpers: choiceIndex={} ({s}), indexFill={any}, choiceBatch=[{s}, {s}, {s}, {s}]\n", .{ root_choice_index, root_colors[root_choice_index], root_choice_indices, root_choice_batch[0], root_choice_batch[1], root_choice_batch[2], root_choice_batch[3] });
     try stdout.print("root random helpers: random={}, range={}, bool={}, fill={any}, rangeFill={any}, inclusiveFill={any}, boolFill={any}, ratioFill={any}, valueBatch={any}, rangeBatch={any}, boolBatch={any}, ratioBatch={any}, iterNext={}, iterUnbounded={}\n", .{ root_random_value, root_random_range, root_random_bool, root_random_bytes, root_random_range_values, root_random_inclusive_values, root_random_bools, root_random_ratios, root_random_value_batch, root_random_range_batch, root_random_bool_batch, root_random_ratio_batch, root_random_iter_next, root_random_iter_hint.upper == null });
     try stdout.print("root endpoint float helpers: openFill={any}, openBatch={any}, openClosedFill={any}, openClosedBatch={any}\n", .{ root_open_values, root_open_batch, root_open_closed_values, root_open_closed_batch });
     try stdout.print("root duration helpers: lessThan={}ns, atMost={}ns, lessThanBatch={any}, atMostBatch={any}\n", .{ root_duration_less_than.nanoseconds, root_duration_at_most.nanoseconds, root_duration_less_than_batch, root_duration_at_most_batch });
