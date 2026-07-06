@@ -112,6 +112,7 @@ command matrix evidence.
   `fillWeightedIndexU32`, `fillWeightedIndexU32Checked`,
   `weightedIndexByIndex`, `weightedIndexByIndexChecked`,
   `weightedIndexBy`, `weightedIndexByChecked`,
+  `weightedIndexU32By`, `weightedIndexU32ByChecked`,
   `weightedIndexU32ByIndex`, `weightedIndexU32ByIndexChecked`,
   `fillWeightedIndexByIndex`, `fillWeightedIndexByIndexChecked`,
   `fillWeightedIndexU32ByIndex`, `fillWeightedIndexU32ByIndexChecked`,
