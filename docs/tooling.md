@@ -34,6 +34,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build validate-local` | Run native validation plus the Rust comparison benchmark helper tests, a tiny Rust comparison smoke run, smoke-wrapper self-tests, local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker, and runtime-runner availability checker. |
 | `zig build rand-status` | Run rand-status helper tests, then print the current local `rand` / `rand_distr` comparison status summary and status-file path; pass `-- --json` for stable JSON. |
 | `zig build rand-status-json` | Run rand-status helper tests, then print the current local `rand` / `rand_distr` comparison status summary as stable JSON. |
+| `zig build rand-status-self-test` | Run rand-status helper tests, then validate text, JSON, and help output without invoking Rust tools. |
 | `zig build validate-all` | Run native validation plus cross-target compile checks, WASI unit execution, WASI dry/self tests, and the chained WASI report. |
 
 `zig build doccheck` depends on the full `zig build apicheck` step including its
@@ -46,15 +47,17 @@ validate` depends on `zig build examples`, `zig build doccheck`, the full
 `zig build statcheck` step including its helper tests, `zig build distcheck`, `zig build distcheck-libc`, `zig build
 profilecheck`, and `zig build practrand-self-test`. `zig build validate-local` adds `zig build rand-bench-test`, `zig build rand-bench-smoke`,
 `zig build rand-bench-smoke-self-test`, `zig build rand-status`,
-`zig build rand-status-json`, `zig build surfacecheck`, and
-`zig build runtimecheck` to native validation for
+`zig build rand-status-json`, `zig build rand-status-self-test`,
+`zig build surfacecheck`, and `zig build runtimecheck` to native validation for
 this Linux-first local comparison environment; see
 `compare/results/s4-m420-current-rand-status.md` for the current local `rand` /
 `rand_distr` comparison status. `zig build validate-all` adds `zig build crosscheck`,
 `zig build test-wasi`, `zig build wasi-dry-run`, `zig build
 wasi-self-test`, and `zig build wasi-report`.
 
-`zig build rand-status-json` emits stable JSON for scripts. Current fields are
+`zig build rand-status-json` emits stable JSON for scripts, and
+`zig build rand-status-self-test` validates text, JSON, and help output without
+invoking Rust tools. Current JSON fields are
 `date`, `baseline.rand`, `baseline.rand_distr`, `latest_gate`,
 `public_surface`, `rust_comparison`, `runtime_runners`, `current_conclusion`,
 `remaining_blocker`, and `details`; `details` points back to

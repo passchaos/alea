@@ -4,7 +4,7 @@ This reference lists the public API surface by module. See `docs/core-guide.md`
 for usage guidance, `docs/examples.md` for runnable examples, `docs/tooling.md`
 for build/tool catalogs, and `compare/results/reproducibility-matrix.md` for
 stability expectations. See `zig build rand-status`,
-`zig build rand-status-json`, `zig build rand-status -- --json`, or
+`zig build rand-status-json`, `zig build rand-status-self-test`, `zig build rand-status -- --json`, or
 `compare/results/s4-m420-current-rand-status.md` for the
 current local `rand` / `rand_distr` comparison status.
 
@@ -3523,7 +3523,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 
 Use `zig build validate` for broad native API checks, including `zig build practrand-self-test` for no-external PractRand wrapper validation. Use `zig build
 validate-local` when API work changes local `rand` / `rand_distr` comparison
-evidence because it adds `rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `surfacecheck`, and `runtimecheck`; the smoke wrapper supports `ALEA_RAND_BENCH_MANIFEST` / `ALEA_RAND_BENCH_EXPECTED_ROW` overrides for custom local Rust comparison checks.
+evidence because it adds `rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `rand-status-self-test`, `surfacecheck`, and `runtimecheck`; the smoke wrapper supports `ALEA_RAND_BENCH_MANIFEST` / `ALEA_RAND_BENCH_EXPECTED_ROW` overrides for custom local Rust comparison checks.
 Use `zig build validate-all` for portability-sensitive API evidence because it adds cross-target
 compile checks, WASI unit tests, WASI dry/self tests, and the chained WASI report. `zig build
 crosscheck` compiles `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`,

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const OutputMode = enum { text, json, help };
+const OutputMode = enum { text, json, help, self_test };
 
 pub fn main(init: std.process.Init) !void {
     var stdout_buffer: [4096]u8 = undefined;
@@ -26,6 +26,7 @@ pub fn main(init: std.process.Init) !void {
         .text => try printStatus(stdout),
         .json => try printJson(stdout),
         .help => try printUsage(stdout),
+        .self_test => try runSelfTest(stdout),
     }
     try stdout.flush();
 }
@@ -49,6 +50,7 @@ fn parseModeSlice(args: []const []const u8) !OutputMode {
 fn parseModeArg(current: OutputMode, arg: []const u8) !OutputMode {
     if (std.mem.eql(u8, arg, "--json")) return .json;
     if (std.mem.eql(u8, arg, "--help")) return .help;
+    if (std.mem.eql(u8, arg, "--self-test")) return .self_test;
     _ = current;
     return error.UnknownArgument;
 }
@@ -56,10 +58,58 @@ fn parseModeArg(current: OutputMode, arg: []const u8) !OutputMode {
 fn printUsage(writer: *std.Io.Writer) !void {
     try writer.print(
         \\usage: rand-status [--json]
+        \\       rand-status --self-test
         \\       rand-status --help
         \\       --json prints the current local rand/rand_distr status as stable JSON
+        \\       --self-test validates text, JSON, and help output without Rust tools
         \\
     , .{});
+}
+
+fn runSelfTest(stdout: *std.Io.Writer) !void {
+    var text_buf: [2048]u8 = undefined;
+    var text_writer = std.Io.Writer.fixed(&text_buf);
+    try printStatus(&text_writer);
+    const text = std.Io.Writer.buffered(&text_writer);
+    if (!hasAll(text, &.{
+        "Alea local rand/rand_distr status",
+        "~/Work/rand",
+        "no known unblocked local Rust core RNG gap",
+        "S4-M11",
+        "compare/results/s4-m420-current-rand-status.md",
+    })) return error.SelfTestFailed;
+
+    var json_buf: [4096]u8 = undefined;
+    var json_writer = std.Io.Writer.fixed(&json_buf);
+    try printJson(&json_writer);
+    const json = std.Io.Writer.buffered(&json_writer);
+    if (!hasAll(json, &.{
+        "\"baseline\"",
+        "\"rand\": \"~/Work/rand\"",
+        "\"current_conclusion\": \"no known unblocked local Rust core RNG gap\"",
+        "\"remaining_blocker\": \"S4-M11",
+        "\"details\": \"compare/results/s4-m420-current-rand-status.md\"",
+    })) return error.SelfTestFailed;
+
+    var help_buf: [1024]u8 = undefined;
+    var help_writer = std.Io.Writer.fixed(&help_buf);
+    try printUsage(&help_writer);
+    const help = std.Io.Writer.buffered(&help_writer);
+    if (!hasAll(help, &.{
+        "usage: rand-status [--json]",
+        "rand-status --self-test",
+        "--json prints the current local rand/rand_distr status as stable JSON",
+        "--self-test validates text, JSON, and help output without Rust tools",
+    })) return error.SelfTestFailed;
+
+    try stdout.print("rand-status self-test ok\n", .{});
+}
+
+fn hasAll(haystack: []const u8, needles: []const []const u8) bool {
+    for (needles) |needle| {
+        if (std.mem.indexOf(u8, haystack, needle) == null) return false;
+    }
+    return true;
 }
 
 fn printStatus(stdout: *std.Io.Writer) !void {
@@ -132,6 +182,14 @@ test "argument parser supports text json and help" {
     try std.testing.expectEqual(OutputMode.text, try parseModeSlice(&.{}));
     try std.testing.expectEqual(OutputMode.json, try parseModeSlice(&.{"--json"}));
     try std.testing.expectEqual(OutputMode.help, try parseModeSlice(&.{"--help"}));
+    try std.testing.expectEqual(OutputMode.self_test, try parseModeSlice(&.{"--self-test"}));
     try std.testing.expectEqual(OutputMode.help, try parseModeSlice(&.{ "--json", "--help" }));
     try std.testing.expectError(error.UnknownArgument, parseModeSlice(&.{"--bad"}));
+}
+
+test "self-test validates text json and help output" {
+    var buf: [128]u8 = undefined;
+    var writer = std.Io.Writer.fixed(&buf);
+    try runSelfTest(&writer);
+    try std.testing.expectEqualStrings("rand-status self-test ok\n", std.Io.Writer.buffered(&writer));
 }

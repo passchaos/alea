@@ -1261,6 +1261,13 @@ pub fn build(b: *std.Build) void {
     rand_status_json_step.dependOn(&run_rand_status_tests.step);
     rand_status_json_step.dependOn(&run_rand_status_json.step);
 
+    const run_rand_status_self_test = b.addRunArtifact(rand_status);
+    run_rand_status_self_test.addArg("--self-test");
+
+    const rand_status_self_test_step = b.step("rand-status-self-test", "Run rand-status text/JSON/help self-tests");
+    rand_status_self_test_step.dependOn(&run_rand_status_tests.step);
+    rand_status_self_test_step.dependOn(&run_rand_status_self_test.step);
+
     const surfacecheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/surfacecheck.zig"),
         .target = target,
@@ -1626,6 +1633,7 @@ pub fn build(b: *std.Build) void {
     validate_local_step.dependOn(rand_bench_smoke_self_test_step);
     validate_local_step.dependOn(rand_status_step);
     validate_local_step.dependOn(rand_status_json_step);
+    validate_local_step.dependOn(rand_status_self_test_step);
     validate_local_step.dependOn(surfacecheck_step);
     validate_local_step.dependOn(runtimecheck_step);
 

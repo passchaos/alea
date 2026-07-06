@@ -1403,3 +1403,8 @@ S4-M435 documents the `rand-status-json` schema
 (`compare/results/s4-m435-rand-status-json-schema.md`) so scripts have guarded
 field names for consuming current local `rand`/`rand_distr` status while S4-M11
 remains blocked.
+
+S4-M436 adds a `rand-status` self-test
+(`compare/results/s4-m436-rand-status-self-test.md`) so text, JSON, and help
+status output are validated without Rust tools and through `validate-local`
+while S4-M11 remains blocked.
