@@ -311,11 +311,13 @@ const practrand_script_tokens = [_][]const u8{
 
 const practrand_dry_run_dependencies = [_][]const u8{
     "b.addSystemCommand(&.{ \"tools/practrand.sh\", \"--dry-run\", \"fast\", \"1048576\" })",
+    "run_practrand_dry_run.addFileInput(b.path(\"tools/practrand.sh\"))",
     "practrand_dry_run_step.dependOn(&run_practrand_dry_run.step)",
 };
 
 const practrand_self_test_dependencies = [_][]const u8{
     "b.addSystemCommand(&.{ \"tools/practrand.sh\", \"--self-test\" })",
+    "run_practrand_self_test.addFileInput(b.path(\"tools/practrand.sh\"))",
     "practrand_self_test_step.dependOn(&run_practrand_self_test.step)",
 };
 

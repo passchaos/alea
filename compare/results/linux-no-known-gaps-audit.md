@@ -1176,3 +1176,8 @@ S4-M389 refreshes expanded `validate-all` evidence
 (`compare/results/s4-m389-validate-all-refresh.md`). The aggregate passed with
 native validation, crosscheck, `test-wasi`, `wasi-dry-run`, `wasi-self-test`, and
 the chained WASI report while S4-M11 remains blocked.
+
+S4-M390 guards PractRand wrapper file inputs
+(`compare/results/s4-m390-practrand-file-input-guard.md`) so `practrand-dry-run`
+and `practrand-self-test` rebuild when `tools/practrand.sh` changes while S4-M11
+remains blocked.

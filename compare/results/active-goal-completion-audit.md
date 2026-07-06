@@ -410,7 +410,8 @@ complete.
 | S4-M387 WASI runner self-tests | `tools/run_wasi_test.js`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m387-wasi-runner-self-test.md` | Closed for the current bar: Node WASI runner dry-run/missing-argument paths are self-tested without wasm. |
 | S4-M388 validate-all WASI dry/self-test aggregate | `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m388-validate-all-wasi-self-test.md` | Closed for the current bar: `validate-all` now includes `wasi-dry-run` and `wasi-self-test`, and docs/checkers guard the expanded aggregate. |
 | S4-M389 validate-all refresh after WASI aggregate expansion | `zig build validate-all`, `compare/results/s4-m389-validate-all-refresh.md` | Closed for the current bar: expanded `validate-all` passed after adding `wasi-dry-run` and `wasi-self-test`. |
-| S4-M390 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M390 PractRand wrapper file-input guard | `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m390-practrand-file-input-guard.md` | Closed for the current bar: PractRand dry-run/self-test build steps now track `tools/practrand.sh` as an input and toolingcheck guards it. |
+| S4-M391 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -844,6 +845,9 @@ complete the long-term objective.
 S4-M389 additionally reruns and records the expanded `zig build validate-all`
 aggregate; it is portability validation evidence and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M390 additionally guards PractRand wrapper build-step file inputs; it is
+external-statistical-tooling reliability and does not resolve S4-M11 or complete
+the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

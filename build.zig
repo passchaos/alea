@@ -1390,10 +1390,12 @@ pub fn build(b: *std.Build) void {
     stream_step.dependOn(&run_stream.step);
 
     const run_practrand_dry_run = b.addSystemCommand(&.{ "tools/practrand.sh", "--dry-run", "fast", "1048576" });
+    run_practrand_dry_run.addFileInput(b.path("tools/practrand.sh"));
     const practrand_dry_run_step = b.step("practrand-dry-run", "Print the PractRand stream pipeline without running PractRand");
     practrand_dry_run_step.dependOn(&run_practrand_dry_run.step);
 
     const run_practrand_self_test = b.addSystemCommand(&.{ "tools/practrand.sh", "--self-test" });
+    run_practrand_self_test.addFileInput(b.path("tools/practrand.sh"));
     const practrand_self_test_step = b.step("practrand-self-test", "Run PractRand wrapper self-tests without RNG_test");
     practrand_self_test_step.dependOn(&run_practrand_self_test.step);
 
