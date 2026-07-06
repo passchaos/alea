@@ -1363,3 +1363,8 @@ S4-M427 includes `rand-status` in `validate-local`
 (`compare/results/s4-m427-validate-local-rand-status.md`) so the local Rust
 comparison aggregate now exercises the current-status printer while S4-M11
 remains blocked.
+
+S4-M428 refreshes validate-local evidence after adding `rand-status`
+(`compare/results/s4-m428-validate-local-after-rand-status.md`); the aggregate
+passes with status output, Rust smoke/parser tests, surfacecheck, and
+runtimecheck while S4-M11 remains blocked.

@@ -19,12 +19,13 @@ Against the locally available Rust evidence on this Linux host:
 
 ## Latest Evidence
 
-S4-M418 refreshed `zig build validate-local` after the WASI help-output docs and
-checks. The passing run included:
+S4-M428 refreshed `zig build validate-local` after adding `rand-status` to the
+local aggregate. The passing run included:
 
 ```text
-rand_distr standard-normal: 41.2 M samples/s checksum=-3.640
-rand_distr standard-normal f32: 38.3 M samples/s checksum=-3.640
+rand_distr standard-normal: 58.4 M samples/s checksum=-3.640
+rand_distr standard-normal f32: 54.4 M samples/s checksum=-3.640
+Alea local rand/rand_distr status (2026-07-06)
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137
 surfacecheck local rand_core: files=6 expected-tokens=18 source-tokens=30
@@ -35,7 +36,7 @@ runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=
 runtimecheck ok: no additional runtime runner available
 ```
 
-S4-M419 synchronized those signals into `compare/results/s4-m11-blocker-audit.md`.
+S4-M419 synchronized validate-local signals into `compare/results/s4-m11-blocker-audit.md`; S4-M428 additionally confirms the `rand-status` output is part of the local aggregate.
 
 ## Current Blocker
 
