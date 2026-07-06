@@ -749,6 +749,90 @@ pub fn sampleWithoutReplacementChecked(comptime T: type, io: std.Io, allocator: 
     return try random_source.sampleWithoutReplacementChecked(T, allocator, items, count);
 }
 
+pub fn sampleIndices(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) ![]usize {
+    std.debug.assert(amount <= length);
+    return try sampleIndicesChecked(io, allocator, length, amount);
+}
+
+pub fn sampleIndicesChecked(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) ![]usize {
+    if (amount == 0) return allocator.alloc(usize, 0);
+    if (amount > length) return error.InvalidParameter;
+    if (amount == length and length <= 1024) {
+        const out = try allocator.alloc(usize, length);
+        for (out, 0..) |*item, index| item.* = index;
+        return out;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleIndicesCheckedFrom(allocator, random_source, length, amount);
+}
+
+pub fn sampleIndicesInto(io: std.Io, length: usize, out: []usize) !void {
+    if (out.len == 0) return;
+    std.debug.assert(out.len <= length);
+    if (out.len == length and length <= 1024) {
+        for (out, 0..) |*item, index| item.* = index;
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    seq.sampleIndicesInto(random_source, length, out) catch unreachable;
+}
+
+pub fn sampleIndicesIntoChecked(io: std.Io, length: usize, out: []usize) !void {
+    if (out.len == 0) return;
+    if (out.len > length) return error.InvalidParameter;
+    if (out.len == length and length <= 1024) {
+        for (out, 0..) |*item, index| item.* = index;
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.sampleIndicesIntoChecked(random_source, length, out);
+}
+
+pub fn sampleIndicesU32(io: std.Io, allocator: std.mem.Allocator, length: u32, amount: u32) ![]u32 {
+    std.debug.assert(amount <= length);
+    return try sampleIndicesU32Checked(io, allocator, length, amount);
+}
+
+pub fn sampleIndicesU32Checked(io: std.Io, allocator: std.mem.Allocator, length: u32, amount: u32) ![]u32 {
+    if (amount == 0) return allocator.alloc(u32, 0);
+    if (amount > length) return error.InvalidParameter;
+    if (amount == length and length <= 1024) {
+        const out = try allocator.alloc(u32, length);
+        for (out, 0..) |*item, index| item.* = @intCast(index);
+        return out;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleIndicesU32CheckedFrom(allocator, random_source, length, amount);
+}
+
+pub fn sampleIndicesU32Into(io: std.Io, length: u32, out: []u32) !void {
+    if (out.len == 0) return;
+    std.debug.assert(out.len <= @as(usize, length));
+    if (out.len == @as(usize, length) and length <= 1024) {
+        for (out, 0..) |*item, index| item.* = @intCast(index);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    seq.sampleIndicesU32Into(random_source, length, out) catch unreachable;
+}
+
+pub fn sampleIndicesU32IntoChecked(io: std.Io, length: u32, out: []u32) !void {
+    if (out.len == 0) return;
+    if (out.len > @as(usize, length)) return error.InvalidParameter;
+    if (out.len == @as(usize, length) and length <= 1024) {
+        for (out, 0..) |*item, index| item.* = @intCast(index);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.sampleIndicesU32IntoChecked(random_source, length, out);
+}
+
 pub fn weightedIndex(io: std.Io, weights: []const f64) !?usize {
     switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
         .empty => return null,
@@ -2595,6 +2679,50 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(all_without_replacement_checked);
     try std.testing.expectEqualSlices(u8, &sample_items, all_without_replacement_checked);
     try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
+    const empty_sample_indices = try sampleIndices(failing, std.testing.allocator, 5, 0);
+    defer std.testing.allocator.free(empty_sample_indices);
+    try std.testing.expectEqual(@as(usize, 0), empty_sample_indices.len);
+    const empty_sample_indices_checked = try sampleIndicesChecked(failing, std.testing.allocator, 5, 0);
+    defer std.testing.allocator.free(empty_sample_indices_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_sample_indices_checked.len);
+    const all_sample_indices = try sampleIndices(failing, std.testing.allocator, 3, 3);
+    defer std.testing.allocator.free(all_sample_indices);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 1, 2 }, all_sample_indices);
+    const all_sample_indices_checked = try sampleIndicesChecked(failing, std.testing.allocator, 3, 3);
+    defer std.testing.allocator.free(all_sample_indices_checked);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 1, 2 }, all_sample_indices_checked);
+    var empty_indices_into: [0]usize = .{};
+    try sampleIndicesInto(failing, 0, &empty_indices_into);
+    try sampleIndicesIntoChecked(failing, 0, &empty_indices_into);
+    var all_indices_into: [3]usize = undefined;
+    try sampleIndicesInto(failing, 3, &all_indices_into);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 1, 2 }, &all_indices_into);
+    try sampleIndicesIntoChecked(failing, 3, &all_indices_into);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 1, 2 }, &all_indices_into);
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesChecked(failing, std.testing.allocator, 3, 4));
+    var too_many_indices: [4]usize = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesIntoChecked(failing, 3, &too_many_indices));
+    const empty_sample_indices_u32 = try sampleIndicesU32(failing, std.testing.allocator, 5, 0);
+    defer std.testing.allocator.free(empty_sample_indices_u32);
+    try std.testing.expectEqual(@as(usize, 0), empty_sample_indices_u32.len);
+    const empty_sample_indices_u32_checked = try sampleIndicesU32Checked(failing, std.testing.allocator, 5, 0);
+    defer std.testing.allocator.free(empty_sample_indices_u32_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_sample_indices_u32_checked.len);
+    const all_sample_indices_u32 = try sampleIndicesU32(failing, std.testing.allocator, 3, 3);
+    defer std.testing.allocator.free(all_sample_indices_u32);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 1, 2 }, all_sample_indices_u32);
+    const all_sample_indices_u32_checked = try sampleIndicesU32Checked(failing, std.testing.allocator, 3, 3);
+    defer std.testing.allocator.free(all_sample_indices_u32_checked);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 1, 2 }, all_sample_indices_u32_checked);
+    var empty_indices_u32_into: [0]u32 = .{};
+    try sampleIndicesU32Into(failing, 0, &empty_indices_u32_into);
+    try sampleIndicesU32IntoChecked(failing, 0, &empty_indices_u32_into);
+    var all_indices_u32_into: [3]u32 = undefined;
+    try sampleIndicesU32Into(failing, 3, &all_indices_u32_into);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 1, 2 }, &all_indices_u32_into);
+    try sampleIndicesU32IntoChecked(failing, 3, &all_indices_u32_into);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 1, 2 }, &all_indices_u32_into);
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesU32Checked(failing, std.testing.allocator, 3, 4));
     const empty_weights = [_]f64{ 0, 0, 0 };
     try std.testing.expectEqual(@as(?usize, null), try weightedIndex(failing, &empty_weights));
     try std.testing.expectEqual(@as(?usize, null), try weightedIndexChecked(failing, &empty_weights));
@@ -2979,6 +3107,12 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, partialShuffleTailSplit(u8, failing, &shuffle_pair, 1));
     try std.testing.expectError(error.EntropyUnavailable, sampleWithoutReplacement(u8, failing, std.testing.allocator, &sample_items, 1));
     try std.testing.expectError(error.EntropyUnavailable, sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, 1));
+    try std.testing.expectError(error.EntropyUnavailable, sampleIndices(failing, std.testing.allocator, 5, 2));
+    var sample_indices_one: [1]usize = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, sampleIndicesInto(failing, 5, &sample_indices_one));
+    try std.testing.expectError(error.EntropyUnavailable, sampleIndicesU32(failing, std.testing.allocator, 5, 2));
+    var sample_indices_u32_one: [1]u32 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, sampleIndicesU32Into(failing, 5, &sample_indices_u32_one));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
     var weighted_one: [1]?usize = undefined;

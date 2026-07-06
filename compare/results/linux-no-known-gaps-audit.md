@@ -1703,3 +1703,9 @@ S4-M490 adds root one-shot no-replacement value sampling
 (`compare/results/s4-m490-root-one-shot-no-replacement-helpers.md`):
 system-entropy callers can now allocate no-replacement value samples directly
 from the root API while S4-M11 remains blocked.
+
+
+S4-M491 adds root one-shot no-replacement index sampling
+(`compare/results/s4-m491-root-one-shot-no-replacement-index-helpers.md`):
+system-entropy callers can now allocate and fill no-replacement index samples
+directly from the root API while S4-M11 remains blocked.
