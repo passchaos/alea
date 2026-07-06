@@ -419,6 +419,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M421", .path = "compare/results/s4-m421-readme-current-rand-status.md" },
     .{ .milestone = "S4-M422", .path = "compare/results/s4-m422-guide-api-current-rand-status.md" },
     .{ .milestone = "S4-M423", .path = "compare/results/s4-m423-tooling-current-rand-status.md" },
+    .{ .milestone = "S4-M424", .path = "compare/results/s4-m424-current-rand-status-guard.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -426,7 +427,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M424",
+    "S4-M425",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -547,6 +548,23 @@ const local_rand_distr_manifest_tokens = [_][]const u8{
     "not whole-goal completion evidence",
 };
 
+const current_rand_status_tokens = [_][]const u8{
+    "# S4-M420 Current Local Rand Comparison Status",
+    "~/Work/rand",
+    "cached `rand_distr 0.6.0`",
+    "`zig build validate-local` currently passes",
+    "no new unblocked local Rust public-surface or comparison-benchmark gap is known",
+    "rand_distr standard-normal",
+    "surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137",
+    "surfacecheck local rand_core: files=6 expected-tokens=18 source-tokens=30",
+    "surfacecheck local rand_distr: files=34 expected-tokens=64 source-tokens=178",
+    "rand_bench_smoke self-test ok",
+    "runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=10",
+    "runtimecheck ok: no additional runtime runner available",
+    "S4-M11 remains blocked",
+    "no known unblocked core RNG gap versus locally available `rand` / `rand_distr`",
+};
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     var stdout_buffer: [1024]u8 = undefined;
@@ -576,6 +594,8 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(local_rand_manifest);
     const local_rand_distr_manifest = try readFile(io, allocator, "compare/results/s4-m294-rand-distr-public-surface-manifest.md");
     defer allocator.free(local_rand_distr_manifest);
+    const current_rand_status = try readFile(io, allocator, "compare/results/s4-m420-current-rand-status.md");
+    defer allocator.free(current_rand_status);
 
     var missing: usize = 0;
 
@@ -640,13 +660,14 @@ pub fn main(init: std.process.Init) !void {
 
     try checkManifestTokens(stderr, "local Rust public-surface manifest", local_rand_manifest, local_rand_manifest_tokens[0..], &missing);
     try checkManifestTokens(stderr, "local rand_distr public-surface manifest", local_rand_distr_manifest, local_rand_distr_manifest_tokens[0..], &missing);
+    try checkManifestTokens(stderr, "current local rand status", current_rand_status, current_rand_status_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M424 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M424 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M425 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M425 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M424 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M424 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M425 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M425 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {

@@ -1343,3 +1343,9 @@ S4-M423 exposes that current comparison snapshot from the tooling catalog
 (`compare/results/s4-m423-tooling-current-rand-status.md`) so validation/tooling
 docs also point to the latest local `rand`/`rand_distr` status while S4-M11
 remains blocked.
+
+S4-M424 guards the current comparison snapshot
+(`compare/results/s4-m424-current-rand-status-guard.md`) so
+`compare/results/s4-m420-current-rand-status.md` keeps its baseline,
+validate-local, no-new-gap, and S4-M11 blocker tokens while S4-M11 remains
+blocked.
