@@ -1083,3 +1083,10 @@ S4-M372 records full `validate-all` evidence after the crosscheck fix
 (`compare/results/s4-m372-validate-all-after-crosscheck.md`). The aggregate
 passed after S4-M371, covering native validation, crosscheck, test-wasi, and the
 chained WASI report while S4-M11 remains blocked.
+
+S4-M373 refreshes current `validate-local` evidence
+(`compare/results/s4-m373-validate-local-refresh.md`). The aggregate passed,
+covering native validation, local `rand` / `rand_core` / `rand_distr`
+`surfacecheck`, and runtimecheck with current opportunity summary
+`required found=3 missing=0; opportunities found=0 missing=10` while S4-M11
+remains blocked.

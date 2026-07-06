@@ -393,7 +393,8 @@ complete.
 | S4-M370 README crosscheck target prose | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m370-readme-crosscheck-targets.md` | Closed for the current bar: README now documents the exact crosscheck target set and readmecheck guards it. |
 | S4-M371 crosscheck wasm32 usize fix | `src/seq.zig`, `compare/results/s4-m371-crosscheck-wasm32-usize.md` | Closed for the current bar: width-sensitive `u32.max + 1` tests are gated to targets where `usize` can represent them, and `zig build crosscheck` passes. |
 | S4-M372 validate-all after crosscheck fix | `compare/results/s4-m372-validate-all-after-crosscheck.md` | Closed for the current bar: after S4-M371, `zig build validate-all` passes across native validation, crosscheck, test-wasi, and wasi-report. |
-| S4-M373 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M373 validate-local refresh | `compare/results/s4-m373-validate-local-refresh.md` | Closed for the current bar: `zig build validate-local` passes after recent tooling and portability changes, including native validation, surfacecheck, and runtimecheck. |
+| S4-M374 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -773,6 +774,9 @@ S4-M11 or complete the long-term objective.
 S4-M372 additionally reruns and records full `zig build validate-all` evidence
 after the crosscheck fix; it is a portability evidence improvement and does not
 resolve S4-M11 or complete the long-term objective.
+S4-M373 additionally reruns and records `zig build validate-local` evidence for
+the current local rand/rand_distr comparison workflow; it is local comparison
+evidence and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
