@@ -121,15 +121,38 @@ fn checkDistributions() !void {
 }
 
 fn expectBetween(comptime source: []const u8, comptime label: []const u8, value: usize, min: usize, max: usize) !void {
-    if (value < min or value > max) {
+    if (!intInClosedRange(value, min, max)) {
         std.debug.print("{s} {s}: {} not in [{}, {}]\n", .{ source, label, value, min, max });
         return error.StatCheckFailed;
     }
 }
 
 fn expectFloatBetween(comptime label: []const u8, value: f64, min: f64, max: f64) !void {
-    if (!(value >= min and value <= max)) {
+    if (!floatInClosedRange(value, min, max)) {
         std.debug.print("{s}: {d:.6} not in [{d:.6}, {d:.6}]\n", .{ label, value, min, max });
         return error.StatCheckFailed;
     }
+}
+
+fn intInClosedRange(value: usize, min: usize, max: usize) bool {
+    return value >= min and value <= max;
+}
+
+fn floatInClosedRange(value: f64, min: f64, max: f64) bool {
+    return value >= min and value <= max;
+}
+
+test "integer closed-range predicate accepts inclusive boundaries" {
+    try std.testing.expect(intInClosedRange(10, 10, 20));
+    try std.testing.expect(intInClosedRange(20, 10, 20));
+    try std.testing.expect(!intInClosedRange(9, 10, 20));
+    try std.testing.expect(!intInClosedRange(21, 10, 20));
+}
+
+test "float closed-range predicate accepts inclusive finite boundaries" {
+    try std.testing.expect(floatInClosedRange(-1.0, -1.0, 1.0));
+    try std.testing.expect(floatInClosedRange(1.0, -1.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(-1.01, -1.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(1.01, -1.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(std.math.nan(f64), -1.0, 1.0));
 }

@@ -1005,7 +1005,19 @@ pub fn build(b: *std.Build) void {
     const run_statcheck = b.addRunArtifact(statcheck);
     if (b.args) |args| run_statcheck.addArgs(args);
 
+    const statcheck_tests = b.addTest(.{
+        .name = "alea-statcheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/statcheck.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "alea", .module = module }},
+        }),
+    });
+    const run_statcheck_tests = b.addRunArtifact(statcheck_tests);
+
     const statcheck_step = b.step("statcheck", "Run extended statistical smoke checks");
+    statcheck_step.dependOn(&run_statcheck_tests.step);
     statcheck_step.dependOn(&run_statcheck.step);
 
     const apicheck_mod = b.createModule(.{
@@ -1388,7 +1400,7 @@ pub fn build(b: *std.Build) void {
     validate_step.dependOn(&run_tests.step);
     validate_step.dependOn(examples_step);
     validate_step.dependOn(doccheck_step);
-    validate_step.dependOn(&run_statcheck.step);
+    validate_step.dependOn(statcheck_step);
     validate_step.dependOn(&run_distcheck.step);
     validate_step.dependOn(&run_distcheck_libc.step);
     validate_step.dependOn(&run_profilecheck.step);

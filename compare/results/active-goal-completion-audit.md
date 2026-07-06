@@ -369,7 +369,8 @@ complete.
 | S4-M346 apicheck helper tests | `tools/apicheck.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m346-apicheck-helper-tests.md` | Closed for the current bar: `apicheck` now runs focused helper tests before its executable audit, and `toolingcheck` guards that dependency shape. |
 | S4-M347 examplecheck helper tests | `tools/examplecheck.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m347-examplecheck-helper-tests.md` | Closed for the current bar: `examplecheck` now runs focused helper tests before its executable audit, and `toolingcheck` guards that dependency shape. |
 | S4-M348 readmecheck helper tests | `tools/readmecheck.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m348-readmecheck-helper-tests.md` | Closed for the current bar: `readmecheck` now runs focused helper tests before its executable audit, and `toolingcheck` guards that dependency shape. |
-| S4-M349 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M349 statcheck helper tests | `tools/statcheck.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m349-statcheck-helper-tests.md` | Closed for the current bar: `statcheck` now runs focused helper tests before its executable smoke checks, and `toolingcheck` guards that dependency shape. |
+| S4-M350 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -676,6 +677,9 @@ resolve S4-M11 or complete the long-term objective.
 S4-M348 additionally adds focused readmecheck helper tests and wires them into
 `zig build readmecheck`; it is an evidence/tooling improvement and does not
 resolve S4-M11 or complete the long-term objective.
+S4-M349 additionally adds focused statcheck helper tests and wires them into
+`zig build statcheck`; it is an evidence/tooling improvement and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
