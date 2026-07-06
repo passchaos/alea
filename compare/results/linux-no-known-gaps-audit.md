@@ -1905,3 +1905,9 @@ S4-M526 adds root one-shot index-weighted fill helpers
 system-entropy callers can now fill caller-owned `usize` or `u32` weighted
 indexes from a length and comptime index-weight function directly from the root
 API while S4-M11 remains blocked.
+
+S4-M527 adds root one-shot index-weighted batch helpers
+(`compare/results/s4-m527-root-weighted-by-index-batch-helpers.md`):
+system-entropy callers can now allocate owned `usize` or `u32` weighted index
+batches from a length and comptime index-weight function directly from the root
+API while S4-M11 remains blocked.
