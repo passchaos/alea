@@ -1019,6 +1019,20 @@ pub fn sampleIteratorWeightedIntoChecked(comptime T: type, io: std.Io, iterator:
     try seq.sampleIteratorWeightedIntoChecked(random_source, T, iterator, out, scratch_keys);
 }
 
+pub fn sampleIteratorWeightedArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]T {
+    if (N == 0) return .{};
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleIteratorWeightedArray(random_source, T, N, iterator);
+}
+
+pub fn sampleIteratorWeightedArrayChecked(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) ![N]T {
+    if (N == 0) return .{};
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleIteratorWeightedArrayChecked(random_source, T, N, iterator);
+}
+
 pub fn weightedIndex(io: std.Io, weights: []const f64) !?usize {
     switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
         .empty => return null,
@@ -3534,6 +3548,10 @@ test "root random helpers validate deterministic cases before entropy" {
     var weighted_into_entropy = WeightedIter{ .items = &weighted_entropy_entries };
     var weighted_into_keys: [1]f64 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeightedInto(u8, failing, &weighted_into_entropy, &weighted_into_out, &weighted_into_keys));
+    var weighted_array_empty = WeightedIter{ .items = &weighted_entropy_entries };
+    try std.testing.expectEqual(@as(usize, 0), (try sampleIteratorWeightedArray(u8, failing, 0, &weighted_array_empty)).?.len);
+    var weighted_array_entropy = WeightedIter{ .items = &weighted_entropy_entries };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeightedArray(u8, failing, 1, &weighted_array_entropy));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
     var weighted_one: [1]?usize = undefined;
