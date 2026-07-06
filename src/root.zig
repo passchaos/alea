@@ -889,6 +889,34 @@ pub fn sampleWeightedArrayChecked(comptime T: type, comptime Weight: type, io: s
     return try seq.sampleWeightedArrayChecked(random_source, T, Weight, N, items, weights);
 }
 
+pub fn sampleWeightedPtrs(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, weights: []const Weight, amount: usize) ![]*const T {
+    if (amount == 0) return allocator.alloc(*const T, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedPtrs(allocator, random_source, T, Weight, items, weights, amount);
+}
+
+pub fn sampleWeightedPtrsChecked(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, weights: []const Weight, amount: usize) ![]*const T {
+    if (amount == 0) return allocator.alloc(*const T, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedPtrsChecked(allocator, random_source, T, Weight, items, weights, amount);
+}
+
+pub fn sampleWeightedPtrArray(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, weights: []const Weight) !?[N]*const T {
+    if (N == 0) return .{};
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedPtrArray(random_source, T, Weight, N, items, weights);
+}
+
+pub fn sampleWeightedPtrArrayChecked(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, weights: []const Weight) ![N]*const T {
+    if (N == 0) return .{};
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedPtrArrayChecked(random_source, T, Weight, N, items, weights);
+}
+
 pub fn chooseIterator(comptime T: type, io: std.Io, iterator: anytype) !?T {
     return try rootChooseIterator(T, io, iterator, .reservoir);
 }
@@ -3088,6 +3116,10 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(empty_weighted_values_nr);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_values_nr.len);
     try std.testing.expect((try sampleWeightedArray(u8, f64, failing, 0, &.{ 1, 2, 3 }, &.{ 1, 2, 3 })) != null);
+    const empty_weighted_ptrs_nr = try sampleWeightedPtrs(u8, f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }, 0);
+    defer std.testing.allocator.free(empty_weighted_ptrs_nr);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_ptrs_nr.len);
+    try std.testing.expect((try sampleWeightedPtrArray(u8, f64, failing, 0, &.{ 1, 2, 3 }, &.{ 1, 2, 3 })) != null);
     const SliceIter = struct {
         items: []const u8,
         index: usize = 0,
@@ -3509,6 +3541,8 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesU32(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeighted(u8, f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedArray(u8, f64, failing, 2, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedPtrs(u8, f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }, 2));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedPtrArray(u8, f64, failing, 2, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }));
     var entropy_iter = SliceIter{ .items = &.{ 1, 2 } };
     try std.testing.expectError(error.EntropyUnavailable, chooseIterator(u8, failing, &entropy_iter));
     var entropy_iter_checked = SliceIter{ .items = &.{ 1, 2 } };
