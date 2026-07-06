@@ -7,11 +7,13 @@ usage: rand_bench_smoke.sh [bytes] [filter]
        rand_bench_smoke.sh [filter]
        rand_bench_smoke.sh --dry-run [bytes] [filter]
        rand_bench_smoke.sh --dry-run [filter]
+       rand_bench_smoke.sh --self-test
 
 Runs a tiny filtered local Rust rand/rand_distr comparison benchmark and checks
 that the requested filtered row appears while unrelated byte-throughput rows do
 not. Defaults to: bytes=1024 filter=standard-normal. --dry-run prints the cargo
-command without executing it.
+command without executing it. --self-test validates wrapper argument parsing without
+running cargo.
 USAGE
 }
 

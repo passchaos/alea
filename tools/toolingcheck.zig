@@ -110,6 +110,8 @@ const rand_bench_smoke_self_test_dependencies = [_][]const u8{
 
 const rand_bench_smoke_script_tokens = [_][]const u8{
     "--dry-run",
+    "rand_bench_smoke.sh --self-test",
+    "--self-test validates wrapper argument parsing",
     "--self-test",
     "mktemp",
     "trap",

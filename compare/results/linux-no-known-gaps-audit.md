@@ -1230,3 +1230,8 @@ S4-M400 makes wrapper self-test temp files safe
 (`compare/results/s4-m400-wrapper-self-test-tempfiles.md`) by switching
 PractRand and Rust comparison smoke wrapper diagnostics to `mktemp` plus trap
 cleanup while S4-M11 remains blocked.
+
+S4-M401 documents Rust comparison smoke self-test usage
+(`compare/results/s4-m401-rand-bench-smoke-self-test-usage.md`) so
+`tools/rand_bench_smoke.sh --help` exposes `--self-test` and toolingcheck guards
+that discoverability while S4-M11 remains blocked.
