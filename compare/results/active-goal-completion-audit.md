@@ -340,7 +340,8 @@ complete.
 | S4-M317 validate-local aggregate | `build.zig`, `docs/tooling.md`, `README.md`, `compare/results/s4-m317-validate-local.md` | Closed for the current bar: `zig build validate-local` now runs native validation plus the local public-surface drift checker, and discovery/dependency guards cover the new aggregate. |
 | S4-M318 validate-local evidence normalization | `compare/results/s4-m317-validate-local.md`, `compare/results/s4-m318-validate-local-evidence.md` | Closed for the current bar: S4-M317 evidence now separates the generic `zig build validate-local` feature command from the actual `zig build -Doptimize=ReleaseFast validate-local` validation run. |
 | S4-M319 roadmapcheck validate-local blocker token | `tools/roadmapcheck.zig`, `compare/results/s4-m11-blocker-audit.md`, `compare/results/s4-m319-roadmapcheck-validate-local-blocker.md` | Closed for the current bar: S4-M11 blocker evidence now keeps `zig build validate-local` visible, and `roadmapcheck` requires that token alongside surfacecheck/no-public-gap evidence. |
-| S4-M320 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M320 current-rule validate-local guidance | `compare/results/core-rand-coverage.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m320-current-rule-validate-local.md` | Closed for the current bar: the Current Rule now directs local `rand` / `rand_distr` comparison or public-surface evidence changes to use `zig build validate-local`, and `roadmapcheck` guards that token. |
+| S4-M321 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -554,6 +555,9 @@ long-term objective.
 S4-M319 additionally keeps `validate-local` visible in S4-M11 blocker checks; it
 is an evidence/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M320 additionally updates the roadmap Current Rule to prefer `validate-local`
+for local comparison/public-surface evidence changes; it is an evidence/tooling
+improvement and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

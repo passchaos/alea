@@ -804,3 +804,7 @@ S4-M319 adds `zig build validate-local` to the S4-M11 blocker audit and
 `roadmapcheck` required tokens
 (`compare/results/s4-m319-roadmapcheck-validate-local-blocker.md`), keeping the
 local aggregate validation entry point tied to blocker evidence.
+S4-M320 updates the roadmap Current Rule
+(`compare/results/s4-m320-current-rule-validate-local.md`) so changes affecting
+local `rand` / `rand_distr` comparison workflows or public-surface evidence use
+`zig build validate-local`.
