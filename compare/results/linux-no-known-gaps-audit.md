@@ -1857,3 +1857,9 @@ S4-M518 adds root one-shot no-replacement caller-owned value and pointer buffers
 system-entropy callers can now fill caller-owned no-replacement value,
 const-pointer, and mutable-pointer buffers directly from the root API while
 S4-M11 remains blocked.
+
+S4-M519 adds root chooseMultiple no-replacement aliases
+(`compare/results/s4-m519-root-choose-multiple-aliases.md`):
+system-entropy callers can now use Rust-discoverable `chooseMultiple*` names for
+no-replacement value, const-pointer, mutable-pointer, and caller-owned buffer
+workflows directly from the root API while S4-M11 remains blocked.
