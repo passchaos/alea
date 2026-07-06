@@ -1841,3 +1841,8 @@ S4-M515 adds root one-shot no-replacement fixed-size mutable-pointer arrays
 (`compare/results/s4-m515-root-one-shot-mut-ptr-array-helpers.md`):
 system-entropy callers can now produce fixed-size no-replacement mutable-pointer
 arrays directly from the root API while S4-M11 remains blocked.
+
+S4-M516 adds root one-shot no-replacement const-pointer sampling
+(`compare/results/s4-m516-root-one-shot-const-ptr-sampling-helpers.md`):
+system-entropy callers can now allocate no-replacement const-pointer samples
+directly from the root API while S4-M11 remains blocked.
