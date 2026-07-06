@@ -531,7 +531,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M490 root one-shot no-replacement value sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m490-root-one-shot-no-replacement-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate no-replacement value samples directly. |
 | S4-M491 root one-shot no-replacement index sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m491-root-one-shot-no-replacement-index-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate/fill no-replacement index samples directly. |
 | S4-M492 root one-shot iterator choice helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m492-root-one-shot-iterator-choice-helpers.md` | Closed for the current bar: root system-entropy helpers can now choose one item from iterators directly. |
-| S4-M493 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M493 root one-shot weighted iterator choice helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m493-root-one-shot-weighted-iterator-choice-helpers.md` | Closed for the current bar: root system-entropy helpers can now choose one item from weighted iterators directly. |
+| S4-M494 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1269,6 +1270,9 @@ is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 S4-M492 additionally adds root one-shot iterator choice helpers; it is
 API ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M493 additionally adds root one-shot weighted iterator choice helpers; it
+is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
