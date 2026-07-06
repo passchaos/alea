@@ -1863,3 +1863,9 @@ S4-M519 adds root chooseMultiple no-replacement aliases
 system-entropy callers can now use Rust-discoverable `chooseMultiple*` names for
 no-replacement value, const-pointer, mutable-pointer, and caller-owned buffer
 workflows directly from the root API while S4-M11 remains blocked.
+
+S4-M520 adds root sampled no-replacement value and pointer iterators
+(`compare/results/s4-m520-root-sampled-iterator-helpers.md`):
+system-entropy callers can now create owned sampled value, const-pointer, and
+mutable-pointer iterators directly from the root API while S4-M11 remains
+blocked.
