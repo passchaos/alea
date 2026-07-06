@@ -828,3 +828,6 @@ missing-required, opportunity-runner, and missing-required-priority outcomes.
 S4-M326 documents the runtimecheck runner sets in the tooling catalog
 (`compare/results/s4-m326-runtimecheck-docs.md`) and guards those docs with
 `toolingcheck`.
+S4-M327 adds runtimecheck summary counts
+(`compare/results/s4-m327-runtimecheck-summary.md`) and records the current
+required/opportunity counts in S4-M11 blocker evidence.

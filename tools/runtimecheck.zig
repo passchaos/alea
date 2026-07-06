@@ -29,13 +29,16 @@ pub fn main(init: std.process.Init) !void {
     const stderr = &stderr_file.interface;
 
     const path_env = init.environ_map.get("PATH") orelse "";
+    var found_required: usize = 0;
     var missing_required: usize = 0;
     var opportunities: usize = 0;
+    var missing_opportunities: usize = 0;
 
     inline for (required_tools) |name| {
         if (try findExecutable(io, allocator, path_env, name)) |path| {
             defer allocator.free(path);
             try stdout.print("runtimecheck required {s}: found {s}\n", .{ name, path });
+            found_required += 1;
         } else {
             try stderr.print("runtimecheck required {s}: missing\n", .{name});
             missing_required += 1;
@@ -49,8 +52,14 @@ pub fn main(init: std.process.Init) !void {
             opportunities += 1;
         } else {
             try stdout.print("runtimecheck opportunity {s}: missing\n", .{name});
+            missing_opportunities += 1;
         }
     }
+
+    try stdout.print(
+        "runtimecheck summary: required found={d} missing={d}; opportunities found={d} missing={d}\n",
+        .{ found_required, missing_required, opportunities, missing_opportunities },
+    );
 
     evaluateRuntimeState(missing_required, opportunities) catch |err| switch (err) {
         error.RequiredRuntimeMissing => {
