@@ -380,6 +380,12 @@ const wasi_runner_tokens = [_][]const u8{
     "usage: run_wasi_test.js [--dry-run] <test.wasm> [args...]",
 };
 
+const tooling_wasi_runner_tool_tokens = [_][]const u8{
+    "`tools/run_wasi_test.js` | Node WASI runner used by WASI build steps",
+    "`--dry-run` argument reporting and `--self-test` coverage",
+    "dry-run and missing-argument paths without wasm",
+};
+
 const runtimecheck_doc_tokens = [_][]const u8{
     "zig build runtimecheck",
     "node",
@@ -727,6 +733,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (wasi_runner_tokens) |token| {
         if (std.mem.indexOf(u8, wasi_runner_source, token) == null) {
             try stderr.print("toolingcheck: tools/run_wasi_test.js missing token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (tooling_wasi_runner_tool_tokens) |token| {
+        if (std.mem.indexOf(u8, tooling, token) == null) {
+            try stderr.print("toolingcheck: docs/tooling.md missing WASI runner tool token `{s}`\n", .{token});
             missing += 1;
         }
     }

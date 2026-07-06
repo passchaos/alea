@@ -427,7 +427,8 @@ complete.
 | S4-M404 README WASI self-test prose guard | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m404-readme-wasi-self-test-guard.md` | Closed for the current bar: readmecheck guards README prose for no-wasm WASI runner self-test semantics. |
 | S4-M405 guide/API WASI self-test prose guards | `docs/core-guide.md`, `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m405-guide-api-wasi-self-test-guards.md` | Closed for the current bar: toolingcheck guards core-guide/API prose for no-wasm WASI runner self-test semantics. |
 | S4-M406 tooling WASI self-test prose guard | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m406-tooling-wasi-self-test-guard.md` | Closed for the current bar: toolingcheck guards tooling catalog prose for no-wasm WASI runner self-test semantics. |
-| S4-M407 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M407 tooling WASI runner tool-row self-test semantics | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m407-tooling-wasi-runner-row.md` | Closed for the current bar: toolingcheck guards the checked-tool row for no-wasm WASI runner self-test semantics. |
+| S4-M408 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -910,6 +911,9 @@ S4-M405 additionally guards core-guide/API prose for WASI runner self-test
 semantics; it is portability documentation reliability and does not resolve
 S4-M11 or complete the long-term objective.
 S4-M406 additionally guards tooling-catalog prose for WASI runner self-test
+semantics; it is portability documentation reliability and does not resolve
+S4-M11 or complete the long-term objective.
+S4-M407 additionally guards the checked-tool row for WASI runner self-test
 semantics; it is portability documentation reliability and does not resolve
 S4-M11 or complete the long-term objective.
 

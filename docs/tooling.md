@@ -214,7 +214,7 @@ new helpers that need documentation.
 | `tools/rand_bench_smoke.sh` | Tiny filtered Rust comparison benchmark smoke-test wrapper with `--dry-run` command preview, `--self-test` parser/env coverage, and `ALEA_RAND_BENCH_MANIFEST` / `ALEA_RAND_BENCH_EXPECTED_ROW` overrides. |
 | `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, public-surface manifest, and S4-M11 blocker-token checker with focused helper tests. |
 | `tools/runtimecheck.zig` | S4-M11 runtime-runner availability checker. |
-| `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps, with `--dry-run` argument reporting and `--self-test` coverage. |
+| `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps, with `--dry-run` argument reporting and `--self-test` coverage for dry-run and missing-argument paths without wasm. |
 | `tools/skew_normal_probe.zig` | SkewNormal performance probe. |
 | `tools/standard_fill_probe.zig` | Standard distribution fill performance probe. |
 | `tools/statcheck.zig` | Statistical smoke checker with focused helper tests. |

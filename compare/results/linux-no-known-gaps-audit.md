@@ -1260,3 +1260,8 @@ S4-M406 guards tooling-catalog WASI self-test prose
 (`compare/results/s4-m406-tooling-wasi-self-test-guard.md`) so the tooling
 catalog keeps no-wasm dry-run/missing-argument runner coverage visible while
 S4-M11 remains blocked.
+
+S4-M407 guards the checked-tool row for WASI runner self-test prose
+(`compare/results/s4-m407-tooling-wasi-runner-row.md`) so the tooling catalog's
+tool inventory keeps no-wasm dry-run/missing-argument runner coverage visible
+while S4-M11 remains blocked.
