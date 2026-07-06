@@ -172,6 +172,13 @@ const practrand_dry_run_dependencies = [_][]const u8{
     "practrand_dry_run_step.dependOn(&run_practrand_dry_run.step)",
 };
 
+const wasi_runner_tokens = [_][]const u8{
+    "--dry-run",
+    "--help",
+    "wasi ${wasiArgs.join(' ')}",
+    "usage: run_wasi_test.js [--dry-run] <test.wasm> [args...]",
+};
+
 const runtimecheck_doc_tokens = [_][]const u8{
     "zig build runtimecheck",
     "node",
@@ -467,6 +474,14 @@ pub fn main(init: std.process.Init) !void {
     inline for (practrand_dry_run_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: practrand-dry-run missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    const wasi_runner_source = try std.Io.Dir.cwd().readFileAlloc(io, "tools/run_wasi_test.js", allocator, .limited(64 * 1024));
+    defer allocator.free(wasi_runner_source);
+    inline for (wasi_runner_tokens) |token| {
+        if (std.mem.indexOf(u8, wasi_runner_source, token) == null) {
+            try stderr.print("toolingcheck: tools/run_wasi_test.js missing token `{s}`\n", .{token});
             missing += 1;
         }
     }

@@ -82,7 +82,8 @@ example steps are:
 ## WASI Runtime Steps
 
 These steps execute wasm32-wasi tools through Node when Node's WASI runtime is
-available:
+available. Use `node tools/run_wasi_test.js --dry-run <test.wasm> [args...]` to
+verify WASI runner arguments without reading or executing a wasm file:
 
 | Step | Tool |
 | --- | --- |
@@ -201,7 +202,7 @@ new helpers that need documentation.
 | `tools/readmecheck.zig` | README discovery and quick-start token checker. |
 | `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, public-surface manifest, and S4-M11 blocker-token checker with focused helper tests. |
 | `tools/runtimecheck.zig` | S4-M11 runtime-runner availability checker. |
-| `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps. |
+| `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps, with `--dry-run` argument reporting. |
 | `tools/skew_normal_probe.zig` | SkewNormal performance probe. |
 | `tools/standard_fill_probe.zig` | Standard distribution fill performance probe. |
 | `tools/statcheck.zig` | Statistical smoke checker with focused helper tests. |

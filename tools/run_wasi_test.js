@@ -2,15 +2,37 @@
 const { WASI } = require('node:wasi');
 const fs = require('node:fs');
 
-const wasmPath = process.argv[2];
+function usage() {
+  console.error('usage: run_wasi_test.js [--dry-run] <test.wasm> [args...]');
+}
+
+const rawArgs = process.argv.slice(2);
+if (rawArgs[0] === '--help') {
+  usage();
+  process.exit(0);
+}
+
+let dryRun = false;
+if (rawArgs[0] === '--dry-run') {
+  dryRun = true;
+  rawArgs.shift();
+}
+
+const wasmPath = rawArgs[0];
 if (!wasmPath) {
-  console.error('usage: run_wasi_test.js <test.wasm> [args...]');
+  usage();
   process.exit(2);
+}
+
+const wasiArgs = [wasmPath, ...rawArgs.slice(1)];
+if (dryRun) {
+  console.log(`wasi ${wasiArgs.join(' ')}`);
+  process.exit(0);
 }
 
 const wasi = new WASI({
   version: 'preview1',
-  args: [wasmPath, ...process.argv.slice(3)],
+  args: wasiArgs,
   env: process.env,
   preopens: {
     '/': '/',

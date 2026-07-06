@@ -1022,3 +1022,9 @@ S4-M361 adds a shell-tool executable-bit guard
 `toolingcheck` require executable access for checked-in `.sh` tools such as
 `tools/practrand.sh`, protecting script-backed build steps while S4-M11 remains
 blocked.
+
+S4-M362 adds Node WASI runner dry-run support
+(`compare/results/s4-m362-wasi-runner-dry-run.md`) so WASI argv handling can be
+validated without reading or executing a wasm file, and guards those runner tokens
+with `toolingcheck`. This improves WASI validation ergonomics while S4-M11
+remains blocked.

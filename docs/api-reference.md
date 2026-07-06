@@ -3495,6 +3495,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build distcheck`
 - `zig build crosscheck`
 - `zig build test-wasi`
+- `node tools/run_wasi_test.js --dry-run <test.wasm>`
 - `zig build wasi-report`
 - `zig build stream -- --engine <engine> --bytes <n>`
 - `tools/practrand.sh --dry-run fast 1048576`
