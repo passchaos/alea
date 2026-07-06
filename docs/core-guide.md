@@ -966,6 +966,7 @@ zig build roadmapcheck
 zig build surfacecheck
 zig build runtimecheck
 zig build doccheck
+zig build practrand-self-test
 zig build validate
 zig build validate-local
 zig build rand-bench-test
@@ -992,7 +993,7 @@ zig build practrand-dry-run
 zig build practrand-self-test
 ```
 
-Use `zig build validate` for broad native checks before ordinary local changes.
+Use `zig build validate` for broad native checks before ordinary local changes; it includes `zig build practrand-self-test` so the PractRand wrapper is checked without requiring `RNG_test`.
 Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
 comparison work because it adds `rand-bench-test`, `rand-bench-smoke`,
 `rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`.

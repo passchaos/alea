@@ -1181,3 +1181,8 @@ S4-M390 guards PractRand wrapper file inputs
 (`compare/results/s4-m390-practrand-file-input-guard.md`) so `practrand-dry-run`
 and `practrand-self-test` rebuild when `tools/practrand.sh` changes while S4-M11
 remains blocked.
+
+S4-M391 adds PractRand wrapper self-tests to native validation
+(`compare/results/s4-m391-validate-practrand-self-test.md`) so broad native
+validation exercises no-external PractRand wrapper command construction while
+S4-M11 remains blocked.

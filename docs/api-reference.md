@@ -3489,6 +3489,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build doccheck`
 - `zig build apicheck`
 - `zig build validate`
+- `zig build practrand-self-test`
 - `zig build validate-local`
 - `zig build rand-bench-test`
 - `zig build rand-bench-smoke`
@@ -3515,7 +3516,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build -Doptimize=ReleaseFast -Dcpu=native ziggurat-probe`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native cauchy-probe`
 
-Use `zig build validate` for broad native API checks. Use `zig build
+Use `zig build validate` for broad native API checks, including `zig build practrand-self-test` for no-external PractRand wrapper validation. Use `zig build
 validate-local` when API work changes local `rand` / `rand_distr` comparison
 evidence because it adds `rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`; the smoke wrapper supports `ALEA_RAND_BENCH_MANIFEST` / `ALEA_RAND_BENCH_EXPECTED_ROW` overrides for custom local Rust comparison checks.
 Use `zig build validate-all` for portability-sensitive API evidence because it adds cross-target

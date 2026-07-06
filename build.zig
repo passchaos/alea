@@ -1583,6 +1583,7 @@ pub fn build(b: *std.Build) void {
     validate_step.dependOn(distcheck_step);
     validate_step.dependOn(distcheck_libc_step);
     validate_step.dependOn(profilecheck_step);
+    validate_step.dependOn(practrand_self_test_step);
 
     const validate_local_step = b.step("validate-local", "Run native validation plus local Rust surface checks");
     validate_local_step.dependOn(validate_step);

@@ -188,6 +188,7 @@ zig build roadmapcheck
 zig build surfacecheck
 zig build runtimecheck
 zig build doccheck
+zig build practrand-self-test
 zig build validate
 zig build validate-local
 zig build rand-bench-test
@@ -217,6 +218,8 @@ zig build -Doptimize=ReleaseFast -Dcpu=native ziggurat-probe
 RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/rand_bench/Cargo.toml
 RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/rand_bench/Cargo.toml -- "standard-normal"
 ```
+
+Use `zig build validate` for broad native checks including the no-external PractRand wrapper self-test.
 
 Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
 comparison work: it runs native validation plus `rand-bench-test`, `rand-bench-smoke`,

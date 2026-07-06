@@ -30,7 +30,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build wasi-dry-run` | Print Node WASI runner argv without executing wasm. |
 | `zig build wasi-self-test` | Run Node WASI runner self-tests for dry-run output and missing-argument usage without reading or executing wasm. |
 | `zig build wasi-report` | Run the chained wasm32-wasi repro/statcheck/distcheck/profile checks through Node's WASI runtime. |
-| `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, and accepted-profile checks. |
+| `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, accepted-profile, and no-external PractRand-wrapper self-test checks. |
 | `zig build validate-local` | Run native validation plus the Rust comparison benchmark helper tests, a tiny Rust comparison smoke run, smoke-wrapper self-tests, local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker, and runtime-runner availability checker. |
 | `zig build validate-all` | Run native validation plus cross-target compile checks and WASI runtime checks. |
 
@@ -41,8 +41,8 @@ the full `zig build readmecheck` step including its helper tests, and the full
 `zig build roadmapcheck` step including
 its helper tests. `zig build
 validate` depends on `zig build examples`, `zig build doccheck`, the full
-`zig build statcheck` step including its helper tests, `zig build distcheck`, `zig build distcheck-libc`, and `zig build
-profilecheck`. `zig build validate-local` adds `zig build rand-bench-test`, `zig build rand-bench-smoke`,
+`zig build statcheck` step including its helper tests, `zig build distcheck`, `zig build distcheck-libc`, `zig build
+profilecheck`, and `zig build practrand-self-test`. `zig build validate-local` adds `zig build rand-bench-test`, `zig build rand-bench-smoke`,
 `zig build rand-bench-smoke-self-test`, `zig build surfacecheck`, and
 `zig build runtimecheck` to native validation for
 this Linux-first local comparison environment. `zig build validate-all` adds `zig build crosscheck`,

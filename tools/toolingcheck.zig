@@ -181,6 +181,7 @@ const validate_dependencies = [_][]const u8{
     "validate_step.dependOn(distcheck_step)",
     "validate_step.dependOn(distcheck_libc_step)",
     "validate_step.dependOn(profilecheck_step)",
+    "validate_step.dependOn(practrand_self_test_step)",
 };
 
 const validate_all_dependencies = [_][]const u8{
@@ -234,6 +235,7 @@ const wasi_report_dependencies = [_][]const u8{
 
 const core_guide_validation_tokens = [_][]const u8{
     "Use `zig build validate` for broad native checks",
+    "includes `zig build practrand-self-test`",
     "Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`",
     "rand-bench-test`, `rand-bench-smoke`,",
     "`rand-bench-smoke-self-test`, `surfacecheck`, and",
@@ -247,6 +249,7 @@ const core_guide_validation_tokens = [_][]const u8{
 
 const api_reference_validation_tokens = [_][]const u8{
     "Use `zig build validate` for broad native API checks",
+    "including `zig build practrand-self-test`",
     "Use `zig build",
     "validate-local` when API work changes local `rand` / `rand_distr` comparison",
     "rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`",
