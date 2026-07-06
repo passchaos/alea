@@ -1522,3 +1522,8 @@ S4-M459 keeps that latest validate-local evidence pointer visible in the current
 status snapshot (`compare/results/s4-m459-current-status-latest-evidence.md`) so
 `compare/results/s4-m420-current-rand-status.md` mirrors the script-friendly
 status schema while S4-M11 remains blocked.
+
+S4-M460 synchronizes S4-M11 blocker evidence with that latest-evidence JSON
+field (`compare/results/s4-m460-blocker-latest-evidence-sync.md`), keeping the
+blocker audit current with script-friendly validate-local artifact links while
+S4-M11 remains blocked.
