@@ -338,6 +338,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M340", .path = "compare/results/s4-m340-api-reference-validation-prose.md" },
     .{ .milestone = "S4-M341", .path = "compare/results/s4-m341-active-completion-criteria-guard.md" },
     .{ .milestone = "S4-M342", .path = "compare/results/s4-m342-current-rule-guard.md" },
+    .{ .milestone = "S4-M343", .path = "compare/results/s4-m343-long-term-track-guard.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -345,7 +346,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M343",
+    "S4-M344",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -395,6 +396,30 @@ const current_rule_tokens = [_][]const u8{
     "Defer pure",
     "micro-optimization until feature, correctness, and validation milestones are in",
     "place",
+};
+
+const long_term_track_tokens = [_][]const u8{
+    "## Long-Term Product Tracks",
+    "Closing a stage means the",
+    "current evidence bar was met, not that Alea has finished surpassing Rust",
+    "`rand` / `rand_distr` as a product",
+    "| Feature breadth |",
+    "Core random workflows should be available in one Zig-native library",
+    "without forcing users into companion packages",
+    "| Statistical confidence |",
+    "Engine and distribution evidence should keep getting longer, broader, and easier to reproduce",
+    "compare/results/practrand-observation-followup.md",
+    "compare/results/reproducibility-matrix.md",
+    "| Performance |",
+    "Fast paths should be competitive with or faster than local Rust evidence",
+    "compare/results/performance-triage.md",
+    "| Ergonomics |",
+    "APIs should feel natural in Zig",
+    "allocation-free and comptime-friendly workflows",
+    "| Portability |",
+    "Stable-output expectations should be clear across targets",
+    "Keep the Linux and wasm32-wasi stable-output suites green",
+    "QEMU/Wine/native second-OS runners",
 };
 
 const local_rand_manifest_tokens = [_][]const u8{
@@ -517,15 +542,22 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
+    inline for (long_term_track_tokens) |token| {
+        if (std.mem.indexOf(u8, roadmap, token) == null) {
+            try stderr.print("roadmapcheck: core-rand-coverage.md missing long-term-track token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+
     try checkManifestTokens(stderr, "local Rust public-surface manifest", local_rand_manifest, local_rand_manifest_tokens[0..], &missing);
     try checkManifestTokens(stderr, "local rand_distr public-surface manifest", local_rand_distr_manifest, local_rand_distr_manifest_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M343 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M343 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M344 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M344 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M343 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M343 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M344 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M344 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {

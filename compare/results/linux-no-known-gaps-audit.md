@@ -907,3 +907,9 @@ verify concrete prioritization and validation guidance for earliest unblocked
 work, blocker evidence, `validate`, `validate-local`, public-surface/local
 `rand` evidence, `statcheck`, `stream`, and deferred micro-optimization while
 S4-M11 remains blocked.
+
+S4-M343 hardens long-term product-track evidence
+(`compare/results/s4-m343-long-term-track-guard.md`) by making `roadmapcheck`
+verify the roadmap's Long-Term Product Tracks section, non-completion framing,
+feature breadth, statistical confidence, performance, ergonomics, and portability
+pressure tokens while S4-M11 remains blocked.
