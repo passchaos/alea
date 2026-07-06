@@ -39,6 +39,7 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "targets without executing them", .reason = "README crosscheck no-execute guidance" },
     .{ .token = "zig build wasi-dry-run", .reason = "WASI dry-run build step" },
     .{ .token = "zig build wasi-self-test", .reason = "WASI runner self-test build step" },
+    .{ .token = "Node WASI runner dry-run and missing-argument paths without wasm", .reason = "WASI self-test usage guidance" },
     .{ .token = "Node WASI runner arguments without", .reason = "WASI dry-run usage guidance" },
     .{ .token = "reading or executing a wasm file", .reason = "WASI dry-run no-execution explanation" },
     .{ .token = "portability-sensitive releases or evidence", .reason = "validate-all usage guidance" },
@@ -216,15 +217,20 @@ test "required-token helper covers WASI dry-run guidance" {
         .token = "zig build wasi-self-test",
         .reason = "WASI runner self-test build step",
     };
+    const wasi_self_test_usage = RequiredToken{
+        .token = "Node WASI runner dry-run and missing-argument paths without wasm",
+        .reason = "WASI self-test usage guidance",
+    };
 
     const text =
         \\Use `zig build wasi-dry-run` to verify the Node WASI runner arguments without
         \\reading or executing a wasm file.
-        \\Use `zig build wasi-self-test` to test runner dry-run paths.
+        \\Use `zig build wasi-self-test` to self-test the Node WASI runner dry-run and missing-argument paths without wasm.
     ;
     try std.testing.expect(hasRequiredToken(text, wasi_dry_run));
     try std.testing.expect(hasRequiredToken(text, no_execution));
     try std.testing.expect(hasRequiredToken(text, wasi_self_test));
+    try std.testing.expect(hasRequiredToken(text, wasi_self_test_usage));
     try std.testing.expect(!hasRequiredToken("run zig build test-wasi before WASI debugging", wasi_dry_run));
 }
 

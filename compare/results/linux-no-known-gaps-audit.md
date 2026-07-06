@@ -1245,3 +1245,8 @@ S4-M403 documents WASI runner self-test usage
 (`compare/results/s4-m403-wasi-self-test-usage.md`) so `tools/run_wasi_test.js
 --help` explains no-wasm dry-run/missing-argument validation while S4-M11
 remains blocked.
+
+S4-M404 guards README WASI self-test prose
+(`compare/results/s4-m404-readme-wasi-self-test-guard.md`) so README keeps
+no-wasm dry-run/missing-argument runner coverage visible while S4-M11 remains
+blocked.
