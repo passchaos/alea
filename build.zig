@@ -1575,7 +1575,7 @@ pub fn build(b: *std.Build) void {
     profilelongcheck_step.dependOn(&run_profilelongcheck_tests.step);
     profilelongcheck_step.dependOn(&run_profilelongcheck.step);
 
-    const validate_step = b.step("validate", "Run unit, API, statistical, and distribution checks");
+    const validate_step = b.step("validate", "Run native unit, docs, statistical, distribution, profile, and wrapper checks");
     validate_step.dependOn(&run_tests.step);
     validate_step.dependOn(examples_step);
     validate_step.dependOn(doccheck_step);
@@ -1585,7 +1585,7 @@ pub fn build(b: *std.Build) void {
     validate_step.dependOn(profilecheck_step);
     validate_step.dependOn(practrand_self_test_step);
 
-    const validate_local_step = b.step("validate-local", "Run native validation plus local Rust surface checks");
+    const validate_local_step = b.step("validate-local", "Run native validation plus local Rust comparison and runtime checks");
     validate_local_step.dependOn(validate_step);
     validate_local_step.dependOn(rand_bench_test_step);
     validate_local_step.dependOn(rand_bench_smoke_step);
@@ -1593,7 +1593,7 @@ pub fn build(b: *std.Build) void {
     validate_local_step.dependOn(surfacecheck_step);
     validate_local_step.dependOn(runtimecheck_step);
 
-    const validate_all_step = b.step("validate-all", "Run native validation plus cross-target and WASI runtime checks");
+    const validate_all_step = b.step("validate-all", "Run native validation plus cross-target, WASI dry/self, and runtime checks");
     validate_all_step.dependOn(validate_step);
     validate_all_step.dependOn(crosscheck_step);
     validate_all_step.dependOn(wasi_test_step);

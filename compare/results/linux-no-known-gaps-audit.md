@@ -1191,3 +1191,8 @@ S4-M392 refreshes native validation evidence
 (`compare/results/s4-m392-validate-practrand-refresh.md`). `zig build validate`
 passed after adding `practrand-self-test`, proving broad native validation now
 includes the no-external PractRand wrapper check while S4-M11 remains blocked.
+
+S4-M393 guards validation build-step descriptions
+(`compare/results/s4-m393-validation-description-guard.md`) so `validate`,
+`validate-local`, and `validate-all` descriptions keep matching their expanded
+dependency scopes while S4-M11 remains blocked.
