@@ -1893,3 +1893,9 @@ S4-M524 adds root no-replacement value array choose aliases
 system-entropy callers can now use `chooseArray*` names for fixed-size
 no-replacement value arrays directly from the root API while S4-M11 remains
 blocked.
+
+S4-M525 adds root one-shot index-weighted index helpers
+(`compare/results/s4-m525-root-weighted-by-index-helpers.md`):
+system-entropy callers can now sample one `usize` or `u32` weighted index from a
+length and comptime index-weight function directly from the root API while
+S4-M11 remains blocked.
