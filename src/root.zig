@@ -2325,6 +2325,39 @@ pub fn fillChooseWeightedConstPtrByIndexChecked(comptime T: type, comptime Weigh
     try seq.fillChooseWeightedConstPtrByIndexChecked(random_source, T, Weight, dest, items, weightFn);
 }
 
+pub fn fillChooseWeightedPtrByIndex(comptime T: type, comptime Weight: type, io: std.Io, dest: []?*T, items: []T, comptime weightFn: fn (usize) Weight) !void {
+    if (dest.len == 0) return;
+    switch (try rootWeightedIndexStateByIndex(Weight, items.len, weightFn)) {
+        .empty => {
+            @memset(dest, @as(?*T, null));
+            return;
+        },
+        .single => |index| {
+            @memset(dest, @as(?*T, &items[index]));
+            return;
+        },
+        .random => {},
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.fillChooseWeightedPtrByIndex(random_source, T, Weight, dest, items, weightFn);
+}
+
+pub fn fillChooseWeightedPtrByIndexChecked(comptime T: type, comptime Weight: type, io: std.Io, dest: []*T, items: []T, comptime weightFn: fn (usize) Weight) !void {
+    if (dest.len == 0) return;
+    switch (try rootWeightedIndexStateByIndex(Weight, items.len, weightFn)) {
+        .empty => return error.EmptyInput,
+        .single => |index| {
+            @memset(dest, &items[index]);
+            return;
+        },
+        .random => {},
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.fillChooseWeightedPtrByIndexChecked(random_source, T, Weight, dest, items, weightFn);
+}
+
 pub fn fillChooseWeighted(comptime T: type, io: std.Io, dest: []?T, items: []const T, weights: []const f64) !void {
     if (dest.len == 0) return;
     if (items.len != weights.len) return error.InvalidParameter;
@@ -3926,6 +3959,12 @@ test "root random helpers use explicit system entropy" {
     try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, weighted_mut_ptr_by_index.*) != null);
     const weighted_mut_ptr_by_index_checked = try chooseWeightedPtrByIndexChecked(u8, f64, io, &weighted_mut_choice_items, RootIndexWeight.weight);
     try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, weighted_mut_ptr_by_index_checked.*) != null);
+    var weighted_mut_ptr_by_index_fill: [4]?*u8 = undefined;
+    try fillChooseWeightedPtrByIndex(u8, f64, io, &weighted_mut_ptr_by_index_fill, &weighted_mut_choice_items, RootIndexWeight.weight);
+    for (weighted_mut_ptr_by_index_fill) |ptr| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, ptr.?.*) != null);
+    var weighted_mut_ptr_by_index_checked_fill: [4]*u8 = undefined;
+    try fillChooseWeightedPtrByIndexChecked(u8, f64, io, &weighted_mut_ptr_by_index_checked_fill, &weighted_mut_choice_items, RootIndexWeight.weight);
+    for (weighted_mut_ptr_by_index_checked_fill) |ptr| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, ptr.*) != null);
     var weighted_index_by_index_fill: [4]?usize = undefined;
     try fillWeightedIndexByIndex(f64, io, &weighted_index_by_index_fill, weights.len, RootIndexWeight.weight);
     for (weighted_index_by_index_fill) |value| try std.testing.expect(value.? < weights.len);
@@ -5223,6 +5262,26 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(&weighted_by_index_mut_items[1], try chooseWeightedPtrByIndexChecked(u8, f64, failing, &weighted_by_index_mut_items, RootByIndexWeights.single));
     try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrByIndex(u8, f64, failing, &weighted_by_index_mut_items, RootByIndexWeights.invalid));
     try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrByIndexChecked(u8, f64, failing, &weighted_by_index_mut_items, RootByIndexWeights.invalid));
+    var weighted_mut_ptr_by_index_empty_fill: [0]?*u8 = .{};
+    try fillChooseWeightedPtrByIndex(u8, f64, failing, &weighted_mut_ptr_by_index_empty_fill, &weighted_by_index_mut_items, RootByIndexWeights.invalid);
+    var weighted_mut_ptr_by_index_empty_checked_fill: [0]*u8 = .{};
+    try fillChooseWeightedPtrByIndexChecked(u8, f64, failing, &weighted_mut_ptr_by_index_empty_checked_fill, &weighted_by_index_mut_items, RootByIndexWeights.invalid);
+    var weighted_mut_ptr_by_index_zero_fill: [3]?*u8 = undefined;
+    try fillChooseWeightedPtrByIndex(u8, f64, failing, &weighted_mut_ptr_by_index_zero_fill, &weighted_by_index_mut_items, RootByIndexWeights.zero);
+    try std.testing.expectEqual(@as(?*u8, null), weighted_mut_ptr_by_index_zero_fill[0]);
+    try std.testing.expectEqual(@as(?*u8, null), weighted_mut_ptr_by_index_zero_fill[1]);
+    try std.testing.expectEqual(@as(?*u8, null), weighted_mut_ptr_by_index_zero_fill[2]);
+    var weighted_mut_ptr_by_index_checked_fill: [3]*u8 = undefined;
+    try std.testing.expectError(error.EmptyInput, fillChooseWeightedPtrByIndexChecked(u8, f64, failing, &weighted_mut_ptr_by_index_checked_fill, &weighted_by_index_mut_items, RootByIndexWeights.zero));
+    try fillChooseWeightedPtrByIndex(u8, f64, failing, &weighted_mut_ptr_by_index_zero_fill, &weighted_by_index_mut_items, RootByIndexWeights.single);
+    for (weighted_mut_ptr_by_index_zero_fill) |ptr| try std.testing.expectEqual(&weighted_by_index_mut_items[1], ptr.?);
+    weighted_mut_ptr_by_index_zero_fill[0].?.* = 22;
+    try std.testing.expectEqual(@as(u8, 22), weighted_by_index_mut_items[1]);
+    weighted_by_index_mut_items[1] = 20;
+    try fillChooseWeightedPtrByIndexChecked(u8, f64, failing, &weighted_mut_ptr_by_index_checked_fill, &weighted_by_index_mut_items, RootByIndexWeights.single);
+    for (weighted_mut_ptr_by_index_checked_fill) |ptr| try std.testing.expectEqual(&weighted_by_index_mut_items[1], ptr);
+    try std.testing.expectError(error.InvalidWeight, fillChooseWeightedPtrByIndex(u8, f64, failing, &weighted_mut_ptr_by_index_zero_fill, &weighted_by_index_mut_items, RootByIndexWeights.invalid));
+    try std.testing.expectError(error.InvalidWeight, fillChooseWeightedPtrByIndexChecked(u8, f64, failing, &weighted_mut_ptr_by_index_checked_fill, &weighted_by_index_mut_items, RootByIndexWeights.invalid));
     var by_index_empty: [0]?usize = .{};
     try fillWeightedIndexByIndex(f64, failing, &by_index_empty, 3, RootByIndexWeights.invalid);
     var by_index_empty_checked: [0]usize = .{};
@@ -5910,6 +5969,10 @@ test "root random helpers validate deterministic cases before entropy" {
     var weighted_mut_by_index_pair = [_]u8{ 1, 2 };
     try std.testing.expectError(error.EntropyUnavailable, chooseWeightedPtrByIndex(u8, f64, failing, &weighted_mut_by_index_pair, RootByIndexWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, chooseWeightedPtrByIndexChecked(u8, f64, failing, &weighted_mut_by_index_pair, RootByIndexWeights.weight));
+    var weighted_mut_ptr_by_index_entropy: [1]?*u8 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillChooseWeightedPtrByIndex(u8, f64, failing, &weighted_mut_ptr_by_index_entropy, &weighted_mut_by_index_pair, RootByIndexWeights.weight));
+    var weighted_mut_ptr_by_index_checked_entropy: [1]*u8 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillChooseWeightedPtrByIndexChecked(u8, f64, failing, &weighted_mut_ptr_by_index_checked_entropy, &weighted_mut_by_index_pair, RootByIndexWeights.weight));
     var by_index_entropy: [1]?usize = undefined;
     try std.testing.expectError(error.EntropyUnavailable, fillWeightedIndexByIndex(f64, failing, &by_index_entropy, 2, RootByIndexWeights.weight));
     var by_index_checked_entropy: [1]usize = undefined;
