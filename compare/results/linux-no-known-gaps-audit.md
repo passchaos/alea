@@ -1846,3 +1846,8 @@ S4-M516 adds root one-shot no-replacement const-pointer sampling
 (`compare/results/s4-m516-root-one-shot-const-ptr-sampling-helpers.md`):
 system-entropy callers can now allocate no-replacement const-pointer samples
 directly from the root API while S4-M11 remains blocked.
+
+S4-M517 adds root one-shot no-replacement mutable-pointer sampling
+(`compare/results/s4-m517-root-one-shot-mut-ptr-sampling-helpers.md`):
+system-entropy callers can now allocate no-replacement mutable-pointer samples
+directly from the root API while S4-M11 remains blocked.
