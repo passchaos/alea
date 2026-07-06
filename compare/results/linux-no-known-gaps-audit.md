@@ -1413,3 +1413,9 @@ S4-M437 refreshes validate-local evidence after adding `rand-status-self-test`
 (`compare/results/s4-m437-validate-local-after-rand-status-self-test.md`); the
 aggregate passes with text/JSON/self-test status output, Rust smoke/parser tests,
 surfacecheck, and runtimecheck while S4-M11 remains blocked.
+
+S4-M438 synchronizes S4-M11 blocker evidence after the rand-status-self-test
+aggregate refresh
+(`compare/results/s4-m438-blocker-rand-status-self-test-sync.md`), keeping the
+blocker audit current with S4-M437 `validate-local` output while S4-M11 remains
+blocked.
