@@ -304,6 +304,19 @@ pub fn fill(comptime T: type, io: std.Io, dest: []T) !void {
     random_source.fill(T, dest);
 }
 
+pub fn valueBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try fill(T, io, out);
+    return out;
+}
+
+pub fn valueBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
+    return valueBatch(T, io, allocator, count);
+}
+
 pub fn fillRange(comptime T: type, io: std.Io, dest: []T, min: T, max: T) !void {
     if (dest.len == 0) return;
     switch (@typeInfo(T)) {
@@ -351,6 +364,21 @@ pub fn fillRangeChecked(comptime T: type, io: std.Io, dest: []T, min: T, max: T)
     random_source.fillRange(T, dest, min, max);
 }
 
+pub fn rangeBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try fillRange(T, io, out, min, max);
+    return out;
+}
+
+pub fn rangeBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try fillRangeChecked(T, io, out, min, max);
+    return out;
+}
+
 pub fn fillRangeAtMost(comptime T: type, io: std.Io, dest: []T, min: T, max: T) !void {
     comptime if (@typeInfo(T) != .int) @compileError("alea.fillRangeAtMost supports integer slices");
     if (dest.len == 0) return;
@@ -374,6 +402,21 @@ pub fn fillRangeAtMostChecked(comptime T: type, io: std.Io, dest: []T, min: T, m
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     random_source.fillRangeAtMost(T, dest, min, max);
+}
+
+pub fn rangeAtMostBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try fillRangeAtMost(T, io, out, min, max);
+    return out;
+}
+
+pub fn rangeAtMostBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try fillRangeAtMostChecked(T, io, out, min, max);
+    return out;
 }
 
 pub fn fillRandomBool(io: std.Io, dest: []bool, p: f64) !void {
@@ -408,6 +451,21 @@ pub fn fillRandomBoolChecked(io: std.Io, dest: []bool, p: f64) !void {
     random_source.fillChance(dest, p);
 }
 
+pub fn randomBoolBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, p: f64) ![]bool {
+    const out = try allocator.alloc(bool, count);
+    errdefer allocator.free(out);
+    try fillRandomBool(io, out, p);
+    return out;
+}
+
+pub fn randomBoolBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, p: f64) ![]bool {
+    if (count == 0) return allocator.alloc(bool, 0);
+    const out = try allocator.alloc(bool, count);
+    errdefer allocator.free(out);
+    try fillRandomBoolChecked(io, out, p);
+    return out;
+}
+
 pub fn fillRandomRatio(io: std.Io, dest: []bool, numerator: u32, denominator: u32) !void {
     if (dest.len == 0) return;
     std.debug.assert(denominator > 0 and numerator <= denominator);
@@ -438,6 +496,21 @@ pub fn fillRandomRatioChecked(io: std.Io, dest: []bool, numerator: u32, denomina
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     random_source.fillRatio(dest, numerator, denominator);
+}
+
+pub fn randomRatioBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]bool {
+    const out = try allocator.alloc(bool, count);
+    errdefer allocator.free(out);
+    try fillRandomRatio(io, out, numerator, denominator);
+    return out;
+}
+
+pub fn randomRatioBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]bool {
+    if (count == 0) return allocator.alloc(bool, 0);
+    const out = try allocator.alloc(bool, count);
+    errdefer allocator.free(out);
+    try fillRandomRatioChecked(io, out, numerator, denominator);
+    return out;
 }
 
 fn rootValueTypeHasEmptyEnum(comptime T: type) bool {
@@ -754,23 +827,53 @@ test "root random helpers use explicit system entropy" {
     try fill(u8, io, &random_bytes);
     var random_words: [4]u16 = undefined;
     try fill(u16, io, &random_words);
+    const owned_values = try valueBatch(u16, io, std.testing.allocator, 4);
+    defer std.testing.allocator.free(owned_values);
+    try std.testing.expectEqual(@as(usize, 4), owned_values.len);
+    const owned_checked_values = try valueBatchChecked(u16, io, std.testing.allocator, 4);
+    defer std.testing.allocator.free(owned_checked_values);
+    try std.testing.expectEqual(@as(usize, 4), owned_checked_values.len);
     var random_range_values: [4]u8 = undefined;
     try fillRange(u8, io, &random_range_values, 1, 7);
     for (random_range_values) |value| try std.testing.expect(value >= 1 and value < 7);
+    const owned_range_values = try rangeBatch(u8, io, std.testing.allocator, 4, 1, 7);
+    defer std.testing.allocator.free(owned_range_values);
+    for (owned_range_values) |value| try std.testing.expect(value >= 1 and value < 7);
     var random_checked_range_values: [4]i16 = undefined;
     try fillRangeChecked(i16, io, &random_checked_range_values, -5, 5);
     for (random_checked_range_values) |value| try std.testing.expect(value >= -5 and value < 5);
+    const owned_checked_range_values = try rangeBatchChecked(i16, io, std.testing.allocator, 4, -5, 5);
+    defer std.testing.allocator.free(owned_checked_range_values);
+    for (owned_checked_range_values) |value| try std.testing.expect(value >= -5 and value < 5);
     var random_inclusive_values: [4]u8 = undefined;
     try fillRangeAtMost(u8, io, &random_inclusive_values, 1, 6);
     for (random_inclusive_values) |value| try std.testing.expect(value >= 1 and value <= 6);
+    const owned_inclusive_values = try rangeAtMostBatch(u8, io, std.testing.allocator, 4, 1, 6);
+    defer std.testing.allocator.free(owned_inclusive_values);
+    for (owned_inclusive_values) |value| try std.testing.expect(value >= 1 and value <= 6);
     var random_checked_inclusive_values: [4]i16 = undefined;
     try fillRangeAtMostChecked(i16, io, &random_checked_inclusive_values, -5, 5);
     for (random_checked_inclusive_values) |value| try std.testing.expect(value >= -5 and value <= 5);
+    const owned_checked_inclusive_values = try rangeAtMostBatchChecked(i16, io, std.testing.allocator, 4, -5, 5);
+    defer std.testing.allocator.free(owned_checked_inclusive_values);
+    for (owned_checked_inclusive_values) |value| try std.testing.expect(value >= -5 and value <= 5);
     var random_bool_values: [4]bool = undefined;
     try fillRandomBool(io, &random_bool_values, 0.25);
     try fillRandomBoolChecked(io, &random_bool_values, 0.75);
+    const owned_bool_values = try randomBoolBatch(io, std.testing.allocator, 4, 0.25);
+    defer std.testing.allocator.free(owned_bool_values);
+    try std.testing.expectEqual(@as(usize, 4), owned_bool_values.len);
+    const owned_checked_bool_values = try randomBoolBatchChecked(io, std.testing.allocator, 4, 0.75);
+    defer std.testing.allocator.free(owned_checked_bool_values);
+    try std.testing.expectEqual(@as(usize, 4), owned_checked_bool_values.len);
     try fillRandomRatio(io, &random_bool_values, 3, 8);
     try fillRandomRatioChecked(io, &random_bool_values, 5, 8);
+    const owned_ratio_values = try randomRatioBatch(io, std.testing.allocator, 4, 3, 8);
+    defer std.testing.allocator.free(owned_ratio_values);
+    try std.testing.expectEqual(@as(usize, 4), owned_ratio_values.len);
+    const owned_checked_ratio_values = try randomRatioBatchChecked(io, std.testing.allocator, 4, 5, 8);
+    defer std.testing.allocator.free(owned_checked_ratio_values);
+    try std.testing.expectEqual(@as(usize, 4), owned_checked_ratio_values.len);
 }
 
 test "root random helpers validate deterministic cases before entropy" {
@@ -813,11 +916,39 @@ test "root random helpers validate deterministic cases before entropy" {
     try fillRandomRatio(failing, &empty_bool, 0, 7);
     try fillRandomRatioChecked(failing, &empty_bool, 2, 1);
 
+    const empty_owned = try valueBatch(u8, failing, std.testing.allocator, 0);
+    defer std.testing.allocator.free(empty_owned);
+    try std.testing.expectEqual(@as(usize, 0), empty_owned.len);
+    const empty_checked_owned = try valueBatchChecked(u8, failing, std.testing.allocator, 0);
+    defer std.testing.allocator.free(empty_checked_owned);
+    try std.testing.expectEqual(@as(usize, 0), empty_checked_owned.len);
+    const empty_bad_value_checked = try valueBatchChecked(EmptyEnum, failing, std.testing.allocator, 0);
+    defer std.testing.allocator.free(empty_bad_value_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_value_checked.len);
+    const empty_bad_range_checked = try rangeBatchChecked(u8, failing, std.testing.allocator, 0, 3, 3);
+    defer std.testing.allocator.free(empty_bad_range_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_range_checked.len);
+    const empty_bad_inclusive_checked = try rangeAtMostBatchChecked(u8, failing, std.testing.allocator, 0, 6, 5);
+    defer std.testing.allocator.free(empty_bad_inclusive_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_inclusive_checked.len);
+    const empty_bad_bool_checked = try randomBoolBatchChecked(failing, std.testing.allocator, 0, 1.1);
+    defer std.testing.allocator.free(empty_bad_bool_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_bool_checked.len);
+    const empty_bad_ratio_checked = try randomRatioBatchChecked(failing, std.testing.allocator, 0, 2, 1);
+    defer std.testing.allocator.free(empty_bad_ratio_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_ratio_checked.len);
+
     var collapsed_exclusive: [3]u8 = undefined;
     try fillRange(u8, failing, &collapsed_exclusive, 3, 4);
     try std.testing.expectEqualSlices(u8, &.{ 3, 3, 3 }, &collapsed_exclusive);
     try fillRangeChecked(u8, failing, &collapsed_exclusive, 3, 4);
     try std.testing.expectEqualSlices(u8, &.{ 3, 3, 3 }, &collapsed_exclusive);
+    const collapsed_owned = try rangeBatch(u8, failing, std.testing.allocator, 3, 3, 4);
+    defer std.testing.allocator.free(collapsed_owned);
+    try std.testing.expectEqualSlices(u8, &.{ 3, 3, 3 }, collapsed_owned);
+    const collapsed_checked_owned = try rangeBatchChecked(u8, failing, std.testing.allocator, 3, 3, 4);
+    defer std.testing.allocator.free(collapsed_checked_owned);
+    try std.testing.expectEqualSlices(u8, &.{ 3, 3, 3 }, collapsed_checked_owned);
     var collapsed_float: [2]f64 = undefined;
     try fillRange(f64, failing, &collapsed_float, 2.5, 2.5);
     try std.testing.expectEqualSlices(f64, &.{ 2.5, 2.5 }, &collapsed_float);
@@ -828,15 +959,33 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqualSlices(u8, &.{ 5, 5, 5 }, &collapsed_inclusive);
     try fillRangeAtMostChecked(u8, failing, &collapsed_inclusive, 5, 5);
     try std.testing.expectEqualSlices(u8, &.{ 5, 5, 5 }, &collapsed_inclusive);
+    const collapsed_inclusive_owned = try rangeAtMostBatch(u8, failing, std.testing.allocator, 3, 5, 5);
+    defer std.testing.allocator.free(collapsed_inclusive_owned);
+    try std.testing.expectEqualSlices(u8, &.{ 5, 5, 5 }, collapsed_inclusive_owned);
+    const collapsed_checked_inclusive_owned = try rangeAtMostBatchChecked(u8, failing, std.testing.allocator, 3, 5, 5);
+    defer std.testing.allocator.free(collapsed_checked_inclusive_owned);
+    try std.testing.expectEqualSlices(u8, &.{ 5, 5, 5 }, collapsed_checked_inclusive_owned);
     var deterministic_bool: [3]bool = undefined;
     try fillRandomBool(failing, &deterministic_bool, 0);
     try std.testing.expectEqualSlices(bool, &.{ false, false, false }, &deterministic_bool);
     try fillRandomBoolChecked(failing, &deterministic_bool, 1);
     try std.testing.expectEqualSlices(bool, &.{ true, true, true }, &deterministic_bool);
+    const deterministic_bool_owned = try randomBoolBatch(failing, std.testing.allocator, 3, 0);
+    defer std.testing.allocator.free(deterministic_bool_owned);
+    try std.testing.expectEqualSlices(bool, &.{ false, false, false }, deterministic_bool_owned);
+    const deterministic_checked_bool_owned = try randomBoolBatchChecked(failing, std.testing.allocator, 3, 1);
+    defer std.testing.allocator.free(deterministic_checked_bool_owned);
+    try std.testing.expectEqualSlices(bool, &.{ true, true, true }, deterministic_checked_bool_owned);
     try fillRandomRatio(failing, &deterministic_bool, 0, 7);
     try std.testing.expectEqualSlices(bool, &.{ false, false, false }, &deterministic_bool);
     try fillRandomRatioChecked(failing, &deterministic_bool, 7, 7);
     try std.testing.expectEqualSlices(bool, &.{ true, true, true }, &deterministic_bool);
+    const deterministic_ratio_owned = try randomRatioBatch(failing, std.testing.allocator, 3, 0, 7);
+    defer std.testing.allocator.free(deterministic_ratio_owned);
+    try std.testing.expectEqualSlices(bool, &.{ false, false, false }, deterministic_ratio_owned);
+    const deterministic_checked_ratio_owned = try randomRatioBatchChecked(failing, std.testing.allocator, 3, 7, 7);
+    defer std.testing.allocator.free(deterministic_checked_ratio_owned);
+    try std.testing.expectEqualSlices(bool, &.{ true, true, true }, deterministic_checked_ratio_owned);
     try std.testing.expectError(error.EmptyRange, fillRangeChecked(u8, failing, &collapsed_exclusive, 3, 3));
     try std.testing.expectError(error.EmptyRange, fillRangeAtMostChecked(u8, failing, &collapsed_inclusive, 6, 5));
     try std.testing.expectError(error.InvalidProbability, fillRandomBoolChecked(failing, &deterministic_bool, 1.1));
@@ -847,10 +996,15 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, randomIter(u8, failing));
     var byte: [1]u8 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, fill(u8, failing, &byte));
+    try std.testing.expectError(error.EntropyUnavailable, valueBatch(u8, failing, std.testing.allocator, 1));
     try std.testing.expectError(error.EntropyUnavailable, fillRange(u8, failing, &byte, 3, 5));
+    try std.testing.expectError(error.EntropyUnavailable, rangeBatch(u8, failing, std.testing.allocator, 1, 3, 5));
     try std.testing.expectError(error.EntropyUnavailable, fillRangeAtMost(u8, failing, &byte, 3, 5));
+    try std.testing.expectError(error.EntropyUnavailable, rangeAtMostBatch(u8, failing, std.testing.allocator, 1, 3, 5));
     try std.testing.expectError(error.EntropyUnavailable, fillRandomBool(failing, &deterministic_bool, 0.5));
+    try std.testing.expectError(error.EntropyUnavailable, randomBoolBatch(failing, std.testing.allocator, 1, 0.5));
     try std.testing.expectError(error.EntropyUnavailable, fillRandomRatio(failing, &deterministic_bool, 1, 2));
+    try std.testing.expectError(error.EntropyUnavailable, randomRatioBatch(failing, std.testing.allocator, 1, 1, 2));
 }
 
 fn engineFromSeed(comptime Engine: type, seed: u64) Engine {

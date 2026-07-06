@@ -35,9 +35,12 @@ command matrix evidence.
   `randomValueChecked`, `randomIter`, `randomRange`, `randomRangeChecked`,
   `randomRangeAtMost`, `randomRangeAtMostChecked`, `randomBool`,
   `randomBoolChecked`, `randomRatio`, `randomRatioChecked`, `fill`,
-  `fillRange`, `fillRangeChecked`, `fillRangeAtMost`,
-  `fillRangeAtMostChecked`, `fillRandomBool`, `fillRandomBoolChecked`,
-  `fillRandomRatio`, `fillRandomRatioChecked`
+  `valueBatch`, `valueBatchChecked`, `fillRange`, `fillRangeChecked`,
+  `rangeBatch`, `rangeBatchChecked`, `fillRangeAtMost`,
+  `fillRangeAtMostChecked`, `rangeAtMostBatch`, `rangeAtMostBatchChecked`,
+  `fillRandomBool`, `fillRandomBoolChecked`, `randomBoolBatch`,
+  `randomBoolBatchChecked`, `fillRandomRatio`, `fillRandomRatioChecked`,
+  `randomRatioBatch`, `randomRatioBatchChecked`
 - Root reader aliases: `RngReader(Source)`, `rngReader`
 - `RandomIterator(T)`: `RandomIterator.next`, `RandomIterator.nextValue`,
   `RandomIterator.fill`, `RandomIterator.sizeHint`

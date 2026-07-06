@@ -1586,3 +1586,10 @@ S4-M471 adds root one-shot caller-owned fill helpers
 callers can now fill range and probability buffers directly from the root API,
 with deterministic no-entropy paths for empty/collapsed cases, while S4-M11
 remains blocked.
+
+
+S4-M472 adds root one-shot allocation-returning batch helpers
+(`compare/results/s4-m472-root-one-shot-batch-helpers.md`): system-entropy
+callers can now allocate random value, range, and probability batches directly
+from the root API, complementing the S4-M471 caller-owned fill helpers while
+S4-M11 remains blocked.

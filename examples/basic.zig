@@ -60,6 +60,14 @@ pub fn main(init: std.process.Init) !void {
     try alea.fillRandomBool(io, &root_random_bools, 0.25);
     var root_random_ratios: [8]bool = undefined;
     try alea.fillRandomRatio(io, &root_random_ratios, 3, 8);
+    const root_random_value_batch = try alea.valueBatch(u16, io, init.gpa, 4);
+    defer init.gpa.free(root_random_value_batch);
+    const root_random_range_batch = try alea.rangeBatch(u8, io, init.gpa, 4, 1, 7);
+    defer init.gpa.free(root_random_range_batch);
+    const root_random_bool_batch = try alea.randomBoolBatch(io, init.gpa, 4, 0.25);
+    defer init.gpa.free(root_random_bool_batch);
+    const root_random_ratio_batch = try alea.randomRatioBatch(io, init.gpa, 4, 3, 8);
+    defer init.gpa.free(root_random_ratio_batch);
     var root_random_iter = try alea.randomIter(u8, io);
     const root_random_iter_hint = root_random_iter.sizeHint();
     const root_random_iter_next = root_random_iter.next().?;
@@ -154,7 +162,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("uintLessThanBatch u16 <1000: {any}\n", .{bounded_words});
     try stdout.print("uintAtMostBatch u16 <=999: {any}\n", .{inclusive_words});
     try stdout.print("randomBool p=.25: {}, randomRatio 3/8: {}\n", .{ random_bool, random_ratio });
-    try stdout.print("root random helpers: random={}, range={}, bool={}, fill={any}, rangeFill={any}, inclusiveFill={any}, boolFill={any}, ratioFill={any}, iterNext={}, iterUnbounded={}\n", .{ root_random_value, root_random_range, root_random_bool, root_random_bytes, root_random_range_values, root_random_inclusive_values, root_random_bools, root_random_ratios, root_random_iter_next, root_random_iter_hint.upper == null });
+    try stdout.print("root random helpers: random={}, range={}, bool={}, fill={any}, rangeFill={any}, inclusiveFill={any}, boolFill={any}, ratioFill={any}, valueBatch={any}, rangeBatch={any}, boolBatch={any}, ratioBatch={any}, iterNext={}, iterUnbounded={}\n", .{ root_random_value, root_random_range, root_random_bool, root_random_bytes, root_random_range_values, root_random_inclusive_values, root_random_bools, root_random_ratios, root_random_value_batch, root_random_range_batch, root_random_bool_batch, root_random_ratio_batch, root_random_iter_next, root_random_iter_hint.upper == null });
     try stdout.print("chanceBatch p=.25: {any}\n", .{chance_flags});
     try stdout.print("ratioBatch 3/8: {any}\n", .{ratio_flags});
     try stdout.print("vectorChanceBatch boolx8 p=.25: {any}\n", .{vector_chance_flags});
