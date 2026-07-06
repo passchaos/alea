@@ -25,6 +25,8 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build validate-local", .reason = "native plus local rand validation command" },
     .{ .token = "comparison work: it runs native validation plus `surfacecheck`", .reason = "validate-local component explanation" },
     .{ .token = "zig build validate-all", .reason = "broad validation command" },
+    .{ .token = "portability-sensitive releases or evidence", .reason = "validate-all usage guidance" },
+    .{ .token = "cross-target compile checks, WASI unit", .reason = "validate-all component explanation" },
     .{ .token = "zig build run-basic", .reason = "runnable example entry point" },
     .{ .token = "zig build examples", .reason = "aggregate examples command" },
     .{ .token = "zig build -l", .reason = "generated build-step list discovery" },

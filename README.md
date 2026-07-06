@@ -212,6 +212,10 @@ Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
 comparison work: it runs native validation plus `surfacecheck` and
 `runtimecheck`.
 
+Use `zig build validate-all` before portability-sensitive releases or evidence
+refreshes: it runs native validation plus cross-target compile checks, WASI unit
+tests, and the chained WASI report.
+
 The Rust command benchmarks against the local `rand` checkout in
 `~/Work/rand`. Latest comparison data is kept under
 `compare/results/`. Use `vectorbench` for focused vector-slice evidence such

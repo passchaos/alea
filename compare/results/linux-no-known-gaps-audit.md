@@ -875,3 +875,9 @@ S4-M337 hardens the WASI report chain
 verify the chained repro, statcheck, distcheck, profilecheck, tail, stress, and
 long-profile WASI dependency tokens plus the no-Node failure path. This improves
 portability evidence ergonomics while S4-M11 remains blocked.
+
+S4-M338 documents `validate-all` usage in README prose
+(`compare/results/s4-m338-readme-validate-all-prose.md`) and guards the
+portability-sensitive aggregate explanation with `readmecheck`, making the broad
+native-plus-cross/WASI validation path easier to discover while S4-M11 remains
+blocked.
