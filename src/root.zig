@@ -764,6 +764,42 @@ pub fn sampleIndexVecChecked(io: std.Io, allocator: std.mem.Allocator, length: u
     return try seq.sampleIndexVecCheckedFrom(allocator, random_source, length, amount);
 }
 
+pub fn sampleArray(io: std.Io, comptime N: usize, length: usize) !?[N]usize {
+    if (N == 0) return .{};
+    if (N > length) return null;
+    if (N == length and length <= 1024) return rootIndexArrayAll(N);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return seq.sampleArray(random_source, N, length);
+}
+
+pub fn sampleArrayChecked(io: std.Io, comptime N: usize, length: usize) ![N]usize {
+    if (N == 0) return .{};
+    if (N > length) return error.InvalidParameter;
+    if (N == length and length <= 1024) return rootIndexArrayAll(N);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleArrayChecked(random_source, N, length);
+}
+
+pub fn sampleArrayU32(io: std.Io, comptime N: usize, length: u32) !?[N]u32 {
+    if (N == 0) return .{};
+    if (N > @as(usize, length)) return null;
+    if (N == @as(usize, length) and length <= 1024) return rootIndexArrayAllU32(N);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return seq.sampleArrayU32(random_source, N, length);
+}
+
+pub fn sampleArrayU32Checked(io: std.Io, comptime N: usize, length: u32) ![N]u32 {
+    if (N == 0) return .{};
+    if (N > @as(usize, length)) return error.InvalidParameter;
+    if (N == @as(usize, length) and length <= 1024) return rootIndexArrayAllU32(N);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleArrayU32Checked(random_source, N, length);
+}
+
 pub fn sampleIndices(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) ![]usize {
     std.debug.assert(amount <= length);
     return try sampleIndicesChecked(io, allocator, length, amount);
@@ -2374,6 +2410,18 @@ fn rootIndexVecAll(allocator: std.mem.Allocator, length: usize) !IndexVec {
     return .{ .usize = out };
 }
 
+fn rootIndexArrayAll(comptime N: usize) [N]usize {
+    var out: [N]usize = undefined;
+    for (&out, 0..) |*item, index| item.* = index;
+    return out;
+}
+
+fn rootIndexArrayAllU32(comptime N: usize) [N]u32 {
+    var out: [N]u32 = undefined;
+    for (&out, 0..) |*item, index| item.* = @intCast(index);
+    return out;
+}
+
 fn rootIndexVecSingle(allocator: std.mem.Allocator, length: usize, index: usize) !IndexVec {
     if (length <= std.math.maxInt(u32)) {
         const out = try allocator.alloc(u32, 1);
@@ -2887,6 +2935,14 @@ test "root random helpers use explicit system entropy" {
     try std.testing.expectEqual(@as(usize, 3), index_vec_checked.len());
     var index_vec_checked_iter = index_vec_checked.iter();
     while (index_vec_checked_iter.next()) |value| try std.testing.expect(value < no_replacement_items.len);
+    const index_array = (try sampleArray(io, 3, no_replacement_items.len)).?;
+    for (index_array) |value| try std.testing.expect(value < no_replacement_items.len);
+    const index_array_checked = try sampleArrayChecked(io, 3, no_replacement_items.len);
+    for (index_array_checked) |value| try std.testing.expect(value < no_replacement_items.len);
+    const index_array_u32 = (try sampleArrayU32(io, 3, @intCast(no_replacement_items.len))).?;
+    for (index_array_u32) |value| try std.testing.expect(value < no_replacement_items.len);
+    const index_array_u32_checked = try sampleArrayU32Checked(io, 3, @intCast(no_replacement_items.len));
+    for (index_array_u32_checked) |value| try std.testing.expect(value < no_replacement_items.len);
     const weights = [_]f64{ 1, 2, 3, 4 };
     const weighted_index_value = (try weightedIndex(io, &weights)).?;
     try std.testing.expect(weighted_index_value < weights.len);
@@ -3495,6 +3551,18 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 1), all_index_vec_checked.at(1));
     try std.testing.expectEqual(@as(usize, 2), all_index_vec_checked.at(2));
     try std.testing.expectError(error.InvalidParameter, sampleIndexVecChecked(failing, std.testing.allocator, 3, 4));
+    try std.testing.expect((try sampleArray(failing, 0, 0)) != null);
+    try std.testing.expectEqual(@as(usize, 0), (try sampleArrayChecked(failing, 0, 0)).len);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 1, 2 }, &(try sampleArray(failing, 3, 3)).?);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 1, 2 }, &(try sampleArrayChecked(failing, 3, 3)));
+    try std.testing.expectEqual(@as(?[4]usize, null), try sampleArray(failing, 4, 3));
+    try std.testing.expectError(error.InvalidParameter, sampleArrayChecked(failing, 4, 3));
+    try std.testing.expect((try sampleArrayU32(failing, 0, 0)) != null);
+    try std.testing.expectEqual(@as(usize, 0), (try sampleArrayU32Checked(failing, 0, 0)).len);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 1, 2 }, &(try sampleArrayU32(failing, 3, 3)).?);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 1, 2 }, &(try sampleArrayU32Checked(failing, 3, 3)));
+    try std.testing.expectEqual(@as(?[4]u32, null), try sampleArrayU32(failing, 4, 3));
+    try std.testing.expectError(error.InvalidParameter, sampleArrayU32Checked(failing, 4, 3));
     const empty_sample_indices = try sampleIndices(failing, std.testing.allocator, 5, 0);
     defer std.testing.allocator.free(empty_sample_indices);
     try std.testing.expectEqual(@as(usize, 0), empty_sample_indices.len);
@@ -4110,6 +4178,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, 1));
     try std.testing.expectError(error.EntropyUnavailable, sampleIndexVec(failing, std.testing.allocator, 5, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleIndexVecChecked(failing, std.testing.allocator, 5, 2));
+    try std.testing.expectError(error.EntropyUnavailable, sampleArray(failing, 2, 5));
+    try std.testing.expectError(error.EntropyUnavailable, sampleArrayChecked(failing, 2, 5));
+    try std.testing.expectError(error.EntropyUnavailable, sampleArrayU32(failing, 2, 5));
+    try std.testing.expectError(error.EntropyUnavailable, sampleArrayU32Checked(failing, 2, 5));
     try std.testing.expectError(error.EntropyUnavailable, sampleIndices(failing, std.testing.allocator, 5, 2));
     var sample_indices_one: [1]usize = undefined;
     try std.testing.expectError(error.EntropyUnavailable, sampleIndicesInto(failing, 5, &sample_indices_one));
