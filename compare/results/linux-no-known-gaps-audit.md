@@ -1186,3 +1186,8 @@ S4-M391 adds PractRand wrapper self-tests to native validation
 (`compare/results/s4-m391-validate-practrand-self-test.md`) so broad native
 validation exercises no-external PractRand wrapper command construction while
 S4-M11 remains blocked.
+
+S4-M392 refreshes native validation evidence
+(`compare/results/s4-m392-validate-practrand-refresh.md`). `zig build validate`
+passed after adding `practrand-self-test`, proving broad native validation now
+includes the no-external PractRand wrapper check while S4-M11 remains blocked.
