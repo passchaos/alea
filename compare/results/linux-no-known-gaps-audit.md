@@ -1354,3 +1354,7 @@ S4-M425 adds a `rand-status` status printer
 (`compare/results/s4-m425-rand-status-step.md`) so `zig build rand-status`
 prints the current local `rand`/`rand_distr` comparison status while S4-M11
 remains blocked.
+
+S4-M426 exposes `rand-status` from the core guide and API reference
+(`compare/results/s4-m426-guide-api-rand-status.md`) so detailed docs mention
+the quick current-status command while S4-M11 remains blocked.

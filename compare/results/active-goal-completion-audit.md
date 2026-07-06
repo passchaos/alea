@@ -446,7 +446,8 @@ complete.
 | S4-M423 tooling current rand status discovery | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m423-tooling-current-rand-status.md` | Closed for the current bar: tooling catalog now links the current local rand comparison status snapshot. |
 | S4-M424 current rand status token guard | `compare/results/s4-m420-current-rand-status.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m424-current-rand-status-guard.md` | Closed for the current bar: roadmapcheck guards essential tokens in the current local rand comparison status snapshot. |
 | S4-M425 `rand-status` status printer | `tools/rand_status.zig`, `build.zig`, `README.md`, `docs/tooling.md`, `tools/readmecheck.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m425-rand-status-step.md` | Closed for the current bar: `zig build rand-status` prints current local rand/rand_distr comparison status. |
-| S4-M426 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M426 guide/API `rand-status` discovery | `docs/core-guide.md`, `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m426-guide-api-rand-status.md` | Closed for the current bar: core guide/API now list `zig build rand-status`. |
+| S4-M427 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -989,6 +990,9 @@ or complete the long-term objective.
 S4-M425 additionally adds a `rand-status` status printer for current local
 `rand` / `rand_distr` comparison evidence; it is tooling/discoverability and
 does not resolve S4-M11 or complete the long-term objective.
+S4-M426 additionally exposes `rand-status` from the core guide and API
+reference; it is documentation discoverability and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
