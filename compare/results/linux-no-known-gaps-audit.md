@@ -893,3 +893,10 @@ S4-M340 documents validation aggregate selection in the API reference
 `validate` / `validate-local` / `validate-all` guidance with `toolingcheck`, so
 API work can choose the right native, local-comparison, or portability-sensitive
 validation path while S4-M11 remains blocked.
+
+S4-M341 hardens active-goal completion criteria evidence
+(`compare/results/s4-m341-active-completion-criteria-guard.md`) by making
+`roadmapcheck` verify the active audit's Required Next Work section, including
+the exact/default dense SIMD candidate criterion, scalar lane-fill comparison,
+rejected-lane stream-shape requirement, later-roadmap-audit escape clause, and
+no-completion warning while S4-M11 remains blocked.

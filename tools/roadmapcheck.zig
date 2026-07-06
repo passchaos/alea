@@ -336,6 +336,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M338", .path = "compare/results/s4-m338-readme-validate-all-prose.md" },
     .{ .milestone = "S4-M339", .path = "compare/results/s4-m339-core-guide-validation-prose.md" },
     .{ .milestone = "S4-M340", .path = "compare/results/s4-m340-api-reference-validation-prose.md" },
+    .{ .milestone = "S4-M341", .path = "compare/results/s4-m341-active-completion-criteria-guard.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -343,7 +344,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M341",
+    "S4-M342",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -366,6 +367,16 @@ const blocker_tokens = [_][]const u8{
     "runtimecheck ok: no additional runtime runner available",
     "No new unblocked public-surface gap",
     "Do not call `update_goal(status=complete)`",
+};
+
+const active_completion_tokens = [_][]const u8{
+    "## Required Next Work Before Completion",
+    "a default/exact-compatible dense SIMD normal/exponential candidate beats",
+    "scalar lane-fill in the real vector-slice harness",
+    "preserving or",
+    "deliberately versioning rejected-lane stream shape",
+    "a later roadmap audit raises/reshapes the bar again",
+    "Until then, do not call `update_goal(status=complete)`",
 };
 
 const local_rand_manifest_tokens = [_][]const u8{
@@ -474,15 +485,22 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
+    inline for (active_completion_tokens) |token| {
+        if (std.mem.indexOf(u8, audit, token) == null) {
+            try stderr.print("roadmapcheck: active audit missing completion-criteria token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+
     try checkManifestTokens(stderr, "local Rust public-surface manifest", local_rand_manifest, local_rand_manifest_tokens[0..], &missing);
     try checkManifestTokens(stderr, "local rand_distr public-surface manifest", local_rand_distr_manifest, local_rand_distr_manifest_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M341 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M341 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M342 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M342 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M341 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M341 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M342 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M342 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
