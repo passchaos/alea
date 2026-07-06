@@ -1479,3 +1479,7 @@ S4-M450 refreshes the `rand-status` command matrix
 (`compare/results/s4-m450-rand-status-command-matrix.md`) so text, JSON,
 schema-version, self-test, and help outputs are all freshly verified while
 S4-M11 remains blocked.
+
+S4-M451 guards the `rand-status` command matrix evidence
+(`compare/results/s4-m451-rand-status-matrix-guard.md`) so that status command
+coverage cannot silently narrow while S4-M11 remains blocked.

@@ -446,6 +446,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M448", .path = "compare/results/s4-m448-validate-local-after-rand-status-schema-version.md" },
     .{ .milestone = "S4-M449", .path = "compare/results/s4-m449-blocker-rand-status-schema-version-sync.md" },
     .{ .milestone = "S4-M450", .path = "compare/results/s4-m450-rand-status-command-matrix.md" },
+    .{ .milestone = "S4-M451", .path = "compare/results/s4-m451-rand-status-matrix-guard.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -453,7 +454,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M451",
+    "S4-M452",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -610,6 +611,25 @@ const current_rand_status_tokens = [_][]const u8{
     "no known unblocked core RNG gap versus locally available `rand` / `rand_distr`",
 };
 
+const rand_status_matrix_tokens = [_][]const u8{
+    "# S4-M450 `rand-status` Command Matrix Refresh",
+    "$ zig build rand-status",
+    "Alea local rand/rand_distr status (2026-07-06)",
+    "$ zig build rand-status-json",
+    "\"schema_version\": 1",
+    "\"validate_local_passes\": true",
+    "\"opportunity_runners_available\": false",
+    "\"no_known_unblocked_gap\": true",
+    "\"s4_m11_blocked\": true",
+    "$ zig build rand-status-schema-version",
+    "$ zig build rand-status-self-test",
+    "rand-status self-test ok",
+    "$ zig build rand-status -- --help",
+    "--schema-version prints the stable JSON schema version",
+    "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
+    "S4-M11 and is not whole-goal completion evidence",
+};
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     var stdout_buffer: [1024]u8 = undefined;
@@ -641,6 +661,8 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(local_rand_distr_manifest);
     const current_rand_status = try readFile(io, allocator, "compare/results/s4-m420-current-rand-status.md");
     defer allocator.free(current_rand_status);
+    const rand_status_matrix = try readFile(io, allocator, "compare/results/s4-m450-rand-status-command-matrix.md");
+    defer allocator.free(rand_status_matrix);
 
     var missing: usize = 0;
 
@@ -706,13 +728,14 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "local Rust public-surface manifest", local_rand_manifest, local_rand_manifest_tokens[0..], &missing);
     try checkManifestTokens(stderr, "local rand_distr public-surface manifest", local_rand_distr_manifest, local_rand_distr_manifest_tokens[0..], &missing);
     try checkManifestTokens(stderr, "current local rand status", current_rand_status, current_rand_status_tokens[0..], &missing);
+    try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M451 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M451 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M452 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M452 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M451 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M451 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M452 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M452 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
