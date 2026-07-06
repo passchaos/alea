@@ -1619,3 +1619,9 @@ S4-M476 adds root one-shot Unicode scalar range helpers
 system-entropy callers can now fill and allocate Unicode scalar ranges directly
 from the root API, complementing S4-M473 UTF-8/string helpers while S4-M11
 remains blocked.
+
+
+S4-M477 adds root one-shot sampler helpers
+(`compare/results/s4-m477-root-one-shot-sampler-helpers.md`): system-entropy
+callers can now sample, fill, and allocate from arbitrary reusable samplers
+directly from the root API while S4-M11 remains blocked.

@@ -304,6 +304,26 @@ pub fn fill(comptime T: type, io: std.Io, dest: []T) !void {
     random_source.fill(T, dest);
 }
 
+pub fn sample(comptime T: type, io: std.Io, sampler: anytype) !T {
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.sample(T, sampler);
+}
+
+pub fn fillSample(comptime T: type, io: std.Io, dest: []T, sampler: anytype) !void {
+    if (dest.len == 0) return;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillSample(T, dest, sampler);
+}
+
+pub fn sampleBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, sampler: anytype, count: usize) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try fillSample(T, io, out, sampler);
+    return out;
+}
+
 pub fn valueBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize) ![]T {
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
@@ -1126,6 +1146,15 @@ test "root random helpers use explicit system entropy" {
     try fill(u8, io, &random_bytes);
     var random_words: [4]u16 = undefined;
     try fill(u16, io, &random_words);
+    const die_sampler = try distributions.Uniform(u8).initInclusive(1, 6);
+    const sampled_die = try sample(u8, io, die_sampler);
+    try std.testing.expect(sampled_die >= 1 and sampled_die <= 6);
+    var sampled_dice: [4]u8 = undefined;
+    try fillSample(u8, io, &sampled_dice, die_sampler);
+    for (sampled_dice) |value| try std.testing.expect(value >= 1 and value <= 6);
+    const sampled_die_batch = try sampleBatch(u8, io, std.testing.allocator, die_sampler, 4);
+    defer std.testing.allocator.free(sampled_die_batch);
+    for (sampled_die_batch) |value| try std.testing.expect(value >= 1 and value <= 6);
     const owned_values = try valueBatch(u16, io, std.testing.allocator, 4);
     defer std.testing.allocator.free(owned_values);
     try std.testing.expectEqual(@as(usize, 4), owned_values.len);
@@ -1295,6 +1324,11 @@ test "root random helpers validate deterministic cases before entropy" {
 
     var empty: [0]u8 = .{};
     try fill(u8, failing, &empty);
+    const die_sampler = try distributions.Uniform(u8).initInclusive(1, 6);
+    try fillSample(u8, failing, &empty, die_sampler);
+    const empty_sample_batch = try sampleBatch(u8, failing, std.testing.allocator, die_sampler, 0);
+    defer std.testing.allocator.free(empty_sample_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_sample_batch.len);
     try fillRange(u8, failing, &empty, 3, 4);
     try fillRangeChecked(u8, failing, &empty, 3, 3);
     try fillRangeAtMost(u8, failing, &empty, 6, 5);
@@ -1480,6 +1514,9 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, randomIter(u8, failing));
     var byte: [1]u8 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, fill(u8, failing, &byte));
+    try std.testing.expectError(error.EntropyUnavailable, sample(u8, failing, die_sampler));
+    try std.testing.expectError(error.EntropyUnavailable, fillSample(u8, failing, &byte, die_sampler));
+    try std.testing.expectError(error.EntropyUnavailable, sampleBatch(u8, failing, std.testing.allocator, die_sampler, 1));
     try std.testing.expectError(error.EntropyUnavailable, valueBatch(u8, failing, std.testing.allocator, 1));
     try std.testing.expectError(error.EntropyUnavailable, fillRange(u8, failing, &byte, 3, 5));
     try std.testing.expectError(error.EntropyUnavailable, rangeBatch(u8, failing, std.testing.allocator, 1, 3, 5));
