@@ -1934,3 +1934,9 @@ S4-M531 adds root one-shot index-weighted mutable-pointer choice helpers
 system-entropy callers can now choose mutable pointers from a mutable item slice
 and comptime index-weight function directly from the root API while S4-M11
 remains blocked.
+
+S4-M532 adds root one-shot index-weighted value fill helpers
+(`compare/results/s4-m532-root-weighted-value-by-index-fill-helpers.md`):
+system-entropy callers can now fill caller-owned value buffers from an item
+slice and comptime index-weight function directly from the root API while
+S4-M11 remains blocked.
