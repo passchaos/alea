@@ -43,6 +43,11 @@ const stream_dependencies = [_][]const u8{
     "stream_step.dependOn(&run_stream.step)",
 };
 
+const repro_dependencies = [_][]const u8{
+    "repro_step.dependOn(&run_repro_tests.step)",
+    "repro_step.dependOn(&run_repro.step)",
+};
+
 const distcheck_dependencies = [_][]const u8{
     "distcheck_step.dependOn(&run_distcheck_tests.step)",
     "distcheck_step.dependOn(&run_distcheck.step)",
@@ -464,6 +469,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (stream_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: stream missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (repro_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: repro missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

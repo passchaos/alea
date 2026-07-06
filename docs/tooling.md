@@ -12,7 +12,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build test` | Run unit tests and API reference coverage checks. |
 | `zig build apicheck` | Run apicheck helper tests, then verify public symbols are covered by `docs/api-reference.md`. |
 | `zig build examplecheck` | Run examplecheck helper tests, then verify `docs/examples.md` covers every checked-in runnable example/focused `run-*` step, every cataloged example remains wired into aggregate `zig build examples`, and key examples still contain expected adoption-output tokens. |
-| `zig build toolingcheck` | Run toolingcheck helper tests, then verify this tooling catalog covers every project-defined build step/checked-in tool file, that doccheck, validate, validate-all, and wasi-report keep their aggregate dependencies, and that apicheck/examplecheck/readmecheck/statcheck/stream/distcheck/distcheck-libc/profilecheck/profilecheck-tail/profilecheck-stress/profilecheck-long/surfacecheck/runtimecheck/roadmapcheck/toolingcheck run helper tests before their executable checks. |
+| `zig build toolingcheck` | Run toolingcheck helper tests, then verify this tooling catalog covers every project-defined build step/checked-in tool file, that doccheck, validate, validate-all, and wasi-report keep their aggregate dependencies, and that apicheck/examplecheck/readmecheck/statcheck/stream/repro/distcheck/distcheck-libc/profilecheck/profilecheck-tail/profilecheck-stress/profilecheck-long/surfacecheck/runtimecheck/roadmapcheck/toolingcheck run helper tests before their executable checks. |
 | `zig build readmecheck` | Run readmecheck helper tests, then verify README discovery links, quick-start API tokens, and core validation commands stay visible. |
 | `zig build roadmapcheck` | Run roadmapcheck helper tests, then verify roadmap, active-audit milestone evidence, public-surface manifests, and concrete S4-M11 blocker tokens stay synchronized. |
 | `zig build surfacecheck` | Run surfacecheck helper tests, compare the local Rust `rand` / resolved `rand_core` / cached `rand_distr` public surface against the checked-in manifests, guard against unlisted public source files, and print file/token coverage summaries; defaults are resolved relative to `$HOME`, and `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` override local paths. |
@@ -146,7 +146,7 @@ The plain step names below are what the catalog checker tracks.
 | Step | Purpose |
 | --- | --- |
 | `zig build stream` | Run stream helper tests, then write raw RNG bytes to stdout for external statistical tools, for example `zig build stream -- --engine fast --bytes 1048576`. |
-| `zig build repro` | Print deterministic reproducibility snapshots. |
+| `zig build repro` | Run repro helper tests, then print deterministic reproducibility snapshots. |
 
 `tools/practrand.sh` wraps `zig build stream` for PractRand runs and writes
 checked-in evidence under `compare/results/` when a report is accepted.
@@ -193,7 +193,7 @@ new helpers that need documentation.
 | `tools/profilestresscheck.zig` | Accepted vector profile multi-seed stress checker with focused helper tests. |
 | `tools/profiletailcheck.zig` | Accepted vector profile tail checker with focused helper tests. |
 | `tools/rayleigh_probe.zig` | Rayleigh performance probe. |
-| `tools/repro.zig` | Reproducibility snapshot printer. |
+| `tools/repro.zig` | Reproducibility snapshot printer with focused helper tests. |
 | `tools/readmecheck.zig` | README discovery and quick-start token checker. |
 | `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, public-surface manifest, and S4-M11 blocker-token checker with focused helper tests. |
 | `tools/runtimecheck.zig` | S4-M11 runtime-runner availability checker. |

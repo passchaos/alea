@@ -1532,7 +1532,19 @@ pub fn build(b: *std.Build) void {
     const run_repro = b.addRunArtifact(repro);
     if (b.args) |args| run_repro.addArgs(args);
 
+    const repro_tests = b.addTest(.{
+        .name = "alea-repro-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/repro.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "alea", .module = module }},
+        }),
+    });
+    const run_repro_tests = b.addRunArtifact(repro_tests);
+
     const repro_step = b.step("repro", "Print deterministic reproducibility snapshots");
+    repro_step.dependOn(&run_repro_tests.step);
     repro_step.dependOn(&run_repro.step);
 }
 

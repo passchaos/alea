@@ -31,7 +31,7 @@ fn printReport(stdout: ?*std.Io.Writer) !void {
 }
 
 fn printEngine(stdout: ?*std.Io.Writer, comptime name: []const u8, comptime Engine: type, seed: u64) !void {
-    var engine = if (Engine == alea.ChaCha) Engine.initFromU64(seed) else Engine.init(seed);
+    var engine = initEngine(Engine, seed);
     try emit(stdout, "{s}", .{name});
     var i: usize = 0;
     while (i < 8) : (i += 1) {
@@ -40,10 +40,34 @@ fn printEngine(stdout: ?*std.Io.Writer, comptime name: []const u8, comptime Engi
     try emit(stdout, "\n", .{});
 }
 
+fn initEngine(comptime Engine: type, seed: u64) Engine {
+    return if (Engine == alea.ChaCha) Engine.initFromU64(seed) else Engine.init(seed);
+}
+
 fn emit(stdout: ?*std.Io.Writer, comptime fmt: []const u8, args: anytype) !void {
     if (builtin.target.os.tag == .wasi) {
         std.debug.print(fmt, args);
     } else {
         try stdout.?.print(fmt, args);
     }
+}
+
+test "initEngine matches canonical deterministic initialization" {
+    var fast = initEngine(alea.Alea4x64, 0x1234);
+    var fast_expected = alea.Alea4x64.init(0x1234);
+    try std.testing.expectEqual(fast_expected.next(), fast.next());
+
+    var pcg = initEngine(alea.Pcg64, 0x1234);
+    var pcg_expected = alea.Pcg64.init(0x1234);
+    try std.testing.expectEqual(pcg_expected.next(), pcg.next());
+
+    var chacha = initEngine(alea.ChaCha, 0x1234);
+    var chacha_expected = alea.ChaCha.initFromU64(0x1234);
+    try std.testing.expectEqual(chacha_expected.next(), chacha.next());
+}
+
+test "repro seed stream snapshot is stable" {
+    const seed = alea.Seed.fromString("repro");
+    try std.testing.expectEqual(@as(u64, 0x80d3f431deaa1604), seed.state);
+    try std.testing.expectEqual(@as(u64, 0x57d26fe02eebb5a4), seed.stream(7).state);
 }

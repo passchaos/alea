@@ -986,3 +986,9 @@ S4-M355 adds stream helper tests
 `zig build stream`, with `toolingcheck` guarding that tests run before raw RNG
 bytes are emitted. This improves raw stream exporter reliability while S4-M11
 remains blocked.
+
+S4-M356 adds repro helper tests
+(`compare/results/s4-m356-repro-helper-tests.md`) and wires them into
+`zig build repro`, with `toolingcheck` guarding that tests run before deterministic
+snapshot output. This improves reproducibility snapshot reliability while S4-M11
+remains blocked.
