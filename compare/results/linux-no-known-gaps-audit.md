@@ -1887,3 +1887,9 @@ S4-M523 adds root iterator sample-fill aliases
 system-entropy callers can now use Rust-discoverable `sampleIteratorFill*` names
 for caller-owned iterator reservoir sampling directly from the root API while
 S4-M11 remains blocked.
+
+S4-M524 adds root no-replacement value array choose aliases
+(`compare/results/s4-m524-root-choose-array-aliases.md`):
+system-entropy callers can now use `chooseArray*` names for fixed-size
+no-replacement value arrays directly from the root API while S4-M11 remains
+blocked.

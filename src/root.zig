@@ -800,6 +800,14 @@ pub fn sampleItemsArrayChecked(comptime T: type, io: std.Io, comptime N: usize, 
     return try seq.sampleItemsArrayChecked(random_source, T, N, items);
 }
 
+pub fn chooseArray(comptime T: type, io: std.Io, comptime N: usize, items: []const T) !?[N]T {
+    return try sampleItemsArray(T, io, N, items);
+}
+
+pub fn chooseArrayChecked(comptime T: type, io: std.Io, comptime N: usize, items: []const T) ![N]T {
+    return try sampleItemsArrayChecked(T, io, N, items);
+}
+
 pub fn samplePtrArray(comptime T: type, io: std.Io, comptime N: usize, items: []const T) !?[N]*const T {
     var out: [N]*const T = undefined;
     if (N == 0) return out;
@@ -3384,6 +3392,10 @@ test "root random helpers use explicit system entropy" {
     for (no_replacement_array) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
     const no_replacement_array_checked = try sampleItemsArrayChecked(u8, io, 3, &no_replacement_items);
     for (no_replacement_array_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    const no_replacement_choose_array = (try chooseArray(u8, io, 3, &no_replacement_items)).?;
+    for (no_replacement_choose_array) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    const no_replacement_choose_array_checked = try chooseArrayChecked(u8, io, 3, &no_replacement_items);
+    for (no_replacement_choose_array_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
     const no_replacement_ptr_array = (try samplePtrArray(u8, io, 3, &no_replacement_items)).?;
     for (no_replacement_ptr_array) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
     const no_replacement_ptr_array_checked = try samplePtrArrayChecked(u8, io, 3, &no_replacement_items);
@@ -4179,6 +4191,12 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqualSlices(u8, &sample_items, &(try sampleItemsArrayChecked(u8, failing, 3, &sample_items)));
     try std.testing.expectEqual(@as(?[4]u8, null), try sampleItemsArray(u8, failing, 4, &sample_items));
     try std.testing.expectError(error.InvalidParameter, sampleItemsArrayChecked(u8, failing, 4, &sample_items));
+    try std.testing.expect((try chooseArray(u8, failing, 0, &sample_items)) != null);
+    try std.testing.expectEqual(@as(usize, 0), (try chooseArrayChecked(u8, failing, 0, &sample_items)).len);
+    try std.testing.expectEqualSlices(u8, &sample_items, &(try chooseArray(u8, failing, 3, &sample_items)).?);
+    try std.testing.expectEqualSlices(u8, &sample_items, &(try chooseArrayChecked(u8, failing, 3, &sample_items)));
+    try std.testing.expectEqual(@as(?[4]u8, null), try chooseArray(u8, failing, 4, &sample_items));
+    try std.testing.expectError(error.InvalidParameter, chooseArrayChecked(u8, failing, 4, &sample_items));
     try std.testing.expect((try samplePtrArray(u8, failing, 0, &sample_items)) != null);
     try std.testing.expectEqual(@as(usize, 0), (try samplePtrArrayChecked(u8, failing, 0, &sample_items)).len);
     const all_ptr_array = (try samplePtrArray(u8, failing, 3, &sample_items)).?;
@@ -5103,6 +5121,8 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, chooseMultipleChecked(u8, failing, std.testing.allocator, &sample_items, 1));
     try std.testing.expectError(error.EntropyUnavailable, sampleItemsArray(u8, failing, 2, &sample_items));
     try std.testing.expectError(error.EntropyUnavailable, sampleItemsArrayChecked(u8, failing, 2, &sample_items));
+    try std.testing.expectError(error.EntropyUnavailable, chooseArray(u8, failing, 2, &sample_items));
+    try std.testing.expectError(error.EntropyUnavailable, chooseArrayChecked(u8, failing, 2, &sample_items));
     try std.testing.expectError(error.EntropyUnavailable, samplePtrArray(u8, failing, 2, &sample_items));
     try std.testing.expectError(error.EntropyUnavailable, samplePtrArrayChecked(u8, failing, 2, &sample_items));
     try std.testing.expectError(error.EntropyUnavailable, samplePtrs(u8, failing, std.testing.allocator, &sample_items, 2));

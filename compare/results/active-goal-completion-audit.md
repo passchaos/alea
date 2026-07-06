@@ -562,7 +562,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M521 root one-shot reservoir value and pointer helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m521-root-reservoir-helpers.md` | Closed for the current bar: root system-entropy helpers can now create allocation-returning and caller-owned value, const-pointer, and mutable-pointer reservoir samples directly. |
 | S4-M522 root repeated with-replacement fixed-size choice arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m522-root-repeated-choice-array-helpers.md` | Closed for the current bar: root system-entropy helpers now include explicit repeated with-replacement fixed-size value, const-pointer, and mutable-pointer choice array aliases. |
 | S4-M523 root iterator sample-fill aliases | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m523-root-iterator-sample-fill-aliases.md` | Closed for the current bar: root system-entropy helpers now include Rust-discoverable `sampleIteratorFill*` aliases for caller-owned iterator reservoir sampling. |
-| S4-M524 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M524 root no-replacement value array choose aliases | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m524-root-choose-array-aliases.md` | Closed for the current bar: root system-entropy helpers now include Rust-discoverable `chooseArray*` aliases for fixed-size no-replacement value arrays. |
+| S4-M525 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1392,6 +1393,9 @@ aliases; it is API ergonomics/discoverability work and does not resolve S4-M11
 or complete the long-term objective.
 S4-M523 additionally adds root iterator sample-fill aliases; it is API
 ergonomics/discoverability work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M524 additionally adds root no-replacement value array choose aliases; it is
+API ergonomics/discoverability work and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
