@@ -949,6 +949,32 @@ pub fn sampleIteratorChecked(comptime T: type, io: std.Io, allocator: std.mem.Al
     return out;
 }
 
+pub fn sampleIteratorInto(comptime T: type, io: std.Io, iterator: anytype, out: []T) !usize {
+    if (out.len == 0) return 0;
+
+    var filled: usize = 0;
+    while (filled < out.len) : (filled += 1) {
+        out[filled] = iterator.next() orelse return filled;
+    }
+
+    var seen = out.len;
+    var engine: ?SecurePrng = null;
+    while (iterator.next()) |item| {
+        seen += 1;
+        if (engine == null) engine = try secure(io);
+        const random_source = Rng.init(&engine.?);
+        const index = random_source.uintLessThan(usize, seen);
+        if (index < out.len) out[index] = item;
+    }
+
+    return out.len;
+}
+
+pub fn sampleIteratorIntoChecked(comptime T: type, io: std.Io, iterator: anytype, out: []T) !void {
+    const filled = try sampleIteratorInto(T, io, iterator, out);
+    if (filled != out.len) return error.InvalidParameter;
+}
+
 pub fn weightedIndex(io: std.Io, weights: []const f64) !?usize {
     switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
         .empty => return null,
@@ -2628,6 +2654,18 @@ test "root random helpers use explicit system entropy" {
     defer std.testing.allocator.free(unicode_text);
     try std.testing.expect(unicode_text.len <= 16);
     try std.testing.expectEqual(@as(usize, 16), try unicodeUtf8Capacity(4));
+    const RootSampleIter = struct {
+        next_value: u8 = 0,
+        pub fn next(self: *@This()) ?u8 {
+            if (self.next_value == 8) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+    var sample_iter = RootSampleIter{};
+    var sample_iter_out: [4]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 4), try sampleIteratorInto(u8, io, &sample_iter, &sample_iter_out));
 }
 
 test "root random helpers validate deterministic cases before entropy" {
@@ -3389,6 +3427,22 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleIterator(u8, failing, std.testing.allocator, &sample_iter_entropy, 2));
     var sample_iter_entropy_checked = SliceIter{ .items = &.{ 1, 2, 3 } };
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorChecked(u8, failing, std.testing.allocator, &sample_iter_entropy_checked, 2));
+    var sample_into_empty_iter = SliceIter{ .items = &.{} };
+    var sample_into_empty: [0]u8 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleIteratorInto(u8, failing, &sample_into_empty_iter, &sample_into_empty));
+    var sample_into_short_iter = SliceIter{ .items = &.{ 1, 2 } };
+    var sample_into_short: [4]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), try sampleIteratorInto(u8, failing, &sample_into_short_iter, &sample_into_short));
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample_into_short[0..2]);
+    var sample_into_exact_iter = SliceIter{ .items = &.{ 1, 2 } };
+    var sample_into_exact: [2]u8 = undefined;
+    try sampleIteratorIntoChecked(u8, failing, &sample_into_exact_iter, &sample_into_exact);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, &sample_into_exact);
+    var sample_into_short_checked_iter = SliceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorIntoChecked(u8, failing, &sample_into_short_checked_iter, &sample_into_short));
+    var sample_into_entropy_iter = SliceIter{ .items = &.{ 1, 2, 3 } };
+    var sample_into_entropy: [2]u8 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorInto(u8, failing, &sample_into_entropy_iter, &sample_into_entropy));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
     var weighted_one: [1]?usize = undefined;

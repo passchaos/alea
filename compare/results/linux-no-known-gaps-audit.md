@@ -1727,3 +1727,9 @@ S4-M494 adds root one-shot iterator sampling helpers
 (`compare/results/s4-m494-root-one-shot-iterator-sampling-helpers.md`):
 system-entropy callers can now allocate iterator samples directly from the root
 API while S4-M11 remains blocked.
+
+
+S4-M495 adds root one-shot caller-owned iterator sampling
+(`compare/results/s4-m495-root-one-shot-iterator-into-helpers.md`):
+system-entropy callers can now fill caller-owned iterator sample buffers
+directly from the root API while S4-M11 remains blocked.
