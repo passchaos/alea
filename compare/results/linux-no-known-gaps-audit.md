@@ -1309,3 +1309,8 @@ S4-M416 documents core-guide/API WASI help-output self-test coverage
 (`compare/results/s4-m416-guide-api-wasi-help-self-test.md`) so detailed docs
 state that `zig build wasi-self-test` / direct runner self-test covers help
 output while S4-M11 remains blocked.
+
+S4-M417 refreshes broad native validate evidence
+(`compare/results/s4-m417-validate-after-wasi-help-docs.md`) after the WASI
+help-output documentation updates; the aggregate still passes while S4-M11
+remains blocked.
