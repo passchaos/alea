@@ -4,8 +4,26 @@ const builtin = @import("builtin");
 
 const MiB = 1024 * 1024;
 const trials = 3;
+const default_bytes = 128 * MiB;
+
+const Options = struct {
+    bytes: usize = default_bytes,
+    filter: ?[]const u8 = null,
+};
 
 var bench_filter: ?[]const u8 = null;
+
+fn parseOptions(args: []const []const u8) Options {
+    var options: Options = .{};
+    if (args.len > 1) {
+        options.bytes = std.fmt.parseInt(usize, args[1], 10) catch blk: {
+            options.filter = args[1];
+            break :blk default_bytes;
+        };
+    }
+    if (args.len > 2) options.filter = args[2];
+    return options;
+}
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -13,17 +31,12 @@ pub fn main(init: std.process.Init) !void {
     var stdout_file = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_file.interface;
 
-    var args = std.process.Args.Iterator.init(init.minimal.args);
-    defer args.deinit();
-    _ = args.next();
-    var bytes: usize = 128 * MiB;
-    if (args.next()) |arg| {
-        bytes = std.fmt.parseInt(usize, arg, 10) catch blk: {
-            bench_filter = arg;
-            break :blk bytes;
-        };
-    }
-    if (args.next()) |arg| bench_filter = arg;
+    var arena = std.heap.ArenaAllocator.init(init.gpa);
+    defer arena.deinit();
+    const args = try init.minimal.args.toSlice(arena.allocator());
+    const options = parseOptions(args);
+    const bytes = options.bytes;
+    bench_filter = options.filter;
     var buffer: [4096]u8 = undefined;
 
     try stdout.print("byte throughput\n", .{});
@@ -11012,4 +11025,22 @@ fn benchZetaFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+test "parseOptions accepts default, byte-count, filter-only, and count-plus-filter" {
+    const defaults = parseOptions(&.{"bench"});
+    try std.testing.expectEqual(@as(usize, default_bytes), defaults.bytes);
+    try std.testing.expect(defaults.filter == null);
+
+    const counted = parseOptions(&.{ "bench", "1024" });
+    try std.testing.expectEqual(@as(usize, 1024), counted.bytes);
+    try std.testing.expect(counted.filter == null);
+
+    const filtered = parseOptions(&.{ "bench", "standard-normal" });
+    try std.testing.expectEqual(@as(usize, default_bytes), filtered.bytes);
+    try std.testing.expectEqualStrings("standard-normal", filtered.filter.?);
+
+    const counted_filtered = parseOptions(&.{ "bench", "2048", "normal" });
+    try std.testing.expectEqual(@as(usize, 2048), counted_filtered.bytes);
+    try std.testing.expectEqualStrings("normal", counted_filtered.filter.?);
 }

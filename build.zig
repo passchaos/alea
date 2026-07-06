@@ -347,7 +347,19 @@ pub fn build(b: *std.Build) void {
     const run_bench = b.addRunArtifact(bench);
     if (b.args) |args| run_bench.addArgs(args);
 
+    const bench_tests = b.addTest(.{
+        .name = "alea-bench-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/throughput.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "alea", .module = module }},
+        }),
+    });
+    const run_bench_tests = b.addRunArtifact(bench_tests);
+
     const bench_step = b.step("bench", "Run the alea throughput benchmark");
+    bench_step.dependOn(&run_bench_tests.step);
     bench_step.dependOn(&run_bench.step);
 
     const libc_module = b.createModule(.{
