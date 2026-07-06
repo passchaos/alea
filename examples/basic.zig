@@ -68,6 +68,14 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(root_random_bool_batch);
     const root_random_ratio_batch = try alea.randomRatioBatch(io, init.gpa, 4, 3, 8);
     defer init.gpa.free(root_random_ratio_batch);
+    var root_open_values: [4]f32 = undefined;
+    try alea.fillOpen(f32, io, &root_open_values);
+    const root_open_batch = try alea.openBatch(f64, io, init.gpa, 4);
+    defer init.gpa.free(root_open_batch);
+    var root_open_closed_values: [4]f32 = undefined;
+    try alea.fillOpenClosed(f32, io, &root_open_closed_values);
+    const root_open_closed_batch = try alea.openClosedBatch(f64, io, init.gpa, 4);
+    defer init.gpa.free(root_open_closed_batch);
     const root_char = try alea.char(io);
     const root_string = try alea.string(init.gpa, io, 8);
     defer init.gpa.free(root_string);
@@ -176,6 +184,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("uintAtMostBatch u16 <=999: {any}\n", .{inclusive_words});
     try stdout.print("randomBool p=.25: {}, randomRatio 3/8: {}\n", .{ random_bool, random_ratio });
     try stdout.print("root random helpers: random={}, range={}, bool={}, fill={any}, rangeFill={any}, inclusiveFill={any}, boolFill={any}, ratioFill={any}, valueBatch={any}, rangeBatch={any}, boolBatch={any}, ratioBatch={any}, iterNext={}, iterUnbounded={}\n", .{ root_random_value, root_random_range, root_random_bool, root_random_bytes, root_random_range_values, root_random_inclusive_values, root_random_bools, root_random_ratios, root_random_value_batch, root_random_range_batch, root_random_bool_batch, root_random_ratio_batch, root_random_iter_next, root_random_iter_hint.upper == null });
+    try stdout.print("root endpoint float helpers: openFill={any}, openBatch={any}, openClosedFill={any}, openClosedBatch={any}\n", .{ root_open_values, root_open_batch, root_open_closed_values, root_open_closed_batch });
     try stdout.print("root string helpers: char={c}, string={s}, sampleString={s}, appendString={s}, unicodeScalar=U+{X}, unicodeInto={s}, unicodeAlloc={s}\n", .{ root_char, root_string, root_sample_string, root_append_buffer.items, root_unicode_scalar, root_unicode_into, root_unicode_alloc });
     try stdout.print("chanceBatch p=.25: {any}\n", .{chance_flags});
     try stdout.print("ratioBatch 3/8: {any}\n", .{ratio_flags});

@@ -40,9 +40,10 @@ command matrix evidence.
   `fillRangeAtMostChecked`, `rangeAtMostBatch`, `rangeAtMostBatchChecked`,
   `fillRandomBool`, `fillRandomBoolChecked`, `randomBoolBatch`,
   `randomBoolBatchChecked`, `fillRandomRatio`, `fillRandomRatioChecked`,
-  `randomRatioBatch`, `randomRatioBatchChecked`, `char`, `string`,
-  `sampleString`, `appendString`, `unicodeScalar`, `unicodeUtf8Capacity`,
-  `unicodeUtf8Into`, `unicodeUtf8Alloc`
+  `randomRatioBatch`, `randomRatioBatchChecked`, `fillOpen`, `openBatch`,
+  `fillOpenClosed`, `openClosedBatch`, `char`, `string`, `sampleString`,
+  `appendString`, `unicodeScalar`, `unicodeUtf8Capacity`, `unicodeUtf8Into`,
+  `unicodeUtf8Alloc`
 - Root reader aliases: `RngReader(Source)`, `rngReader`
 - `RandomIterator(T)`: `RandomIterator.next`, `RandomIterator.nextValue`,
   `RandomIterator.fill`, `RandomIterator.sizeHint`

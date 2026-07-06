@@ -513,6 +513,34 @@ pub fn randomRatioBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: 
     return out;
 }
 
+pub fn fillOpen(comptime T: type, io: std.Io, dest: []T) !void {
+    if (dest.len == 0) return;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillOpen(T, dest);
+}
+
+pub fn openBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try fillOpen(T, io, out);
+    return out;
+}
+
+pub fn fillOpenClosed(comptime T: type, io: std.Io, dest: []T) !void {
+    if (dest.len == 0) return;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillOpenClosed(T, dest);
+}
+
+pub fn openClosedBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize) ![]T {
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try fillOpenClosed(T, io, out);
+    return out;
+}
+
 pub fn char(io: std.Io) !u8 {
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -928,6 +956,19 @@ test "root random helpers use explicit system entropy" {
     defer std.testing.allocator.free(owned_checked_ratio_values);
     try std.testing.expectEqual(@as(usize, 4), owned_checked_ratio_values.len);
 
+    var open_values: [4]f32 = undefined;
+    try fillOpen(f32, io, &open_values);
+    for (open_values) |value| try std.testing.expect(value > 0 and value < 1);
+    const owned_open_values = try openBatch(f64, io, std.testing.allocator, 4);
+    defer std.testing.allocator.free(owned_open_values);
+    for (owned_open_values) |value| try std.testing.expect(value > 0 and value < 1);
+    var open_closed_values: [4]f32 = undefined;
+    try fillOpenClosed(f32, io, &open_closed_values);
+    for (open_closed_values) |value| try std.testing.expect(value > 0 and value <= 1);
+    const owned_open_closed_values = try openClosedBatch(f64, io, std.testing.allocator, 4);
+    defer std.testing.allocator.free(owned_open_closed_values);
+    for (owned_open_closed_values) |value| try std.testing.expect(value > 0 and value <= 1);
+
     _ = try char(io);
     const token = try string(std.testing.allocator, io, 8);
     defer std.testing.allocator.free(token);
@@ -1059,6 +1100,15 @@ test "root random helpers validate deterministic cases before entropy" {
     const deterministic_checked_ratio_owned = try randomRatioBatchChecked(failing, std.testing.allocator, 3, 7, 7);
     defer std.testing.allocator.free(deterministic_checked_ratio_owned);
     try std.testing.expectEqualSlices(bool, &.{ true, true, true }, deterministic_checked_ratio_owned);
+    var empty_float: [0]f32 = .{};
+    try fillOpen(f32, failing, &empty_float);
+    try fillOpenClosed(f32, failing, &empty_float);
+    const empty_open_owned = try openBatch(f32, failing, std.testing.allocator, 0);
+    defer std.testing.allocator.free(empty_open_owned);
+    try std.testing.expectEqual(@as(usize, 0), empty_open_owned.len);
+    const empty_open_closed_owned = try openClosedBatch(f32, failing, std.testing.allocator, 0);
+    defer std.testing.allocator.free(empty_open_closed_owned);
+    try std.testing.expectEqual(@as(usize, 0), empty_open_closed_owned.len);
     const empty_string = try string(std.testing.allocator, failing, 0);
     defer std.testing.allocator.free(empty_string);
     try std.testing.expectEqual(@as(usize, 0), empty_string.len);
@@ -1094,6 +1144,11 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, randomBoolBatch(failing, std.testing.allocator, 1, 0.5));
     try std.testing.expectError(error.EntropyUnavailable, fillRandomRatio(failing, &deterministic_bool, 1, 2));
     try std.testing.expectError(error.EntropyUnavailable, randomRatioBatch(failing, std.testing.allocator, 1, 1, 2));
+    var open_one: [1]f32 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillOpen(f32, failing, &open_one));
+    try std.testing.expectError(error.EntropyUnavailable, openBatch(f32, failing, std.testing.allocator, 1));
+    try std.testing.expectError(error.EntropyUnavailable, fillOpenClosed(f32, failing, &open_one));
+    try std.testing.expectError(error.EntropyUnavailable, openClosedBatch(f32, failing, std.testing.allocator, 1));
     try std.testing.expectError(error.EntropyUnavailable, char(failing));
     try std.testing.expectError(error.EntropyUnavailable, string(std.testing.allocator, failing, 1));
     try std.testing.expectError(error.EntropyUnavailable, sampleString(std.testing.allocator, failing, 1));

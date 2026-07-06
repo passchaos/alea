@@ -1600,3 +1600,9 @@ S4-M473 adds root one-shot string and Unicode helpers
 callers can now generate alphanumeric strings plus Unicode scalars/UTF-8 from
 the root API without manually constructing a secure engine, while S4-M11 remains
 blocked.
+
+
+S4-M474 adds root one-shot endpoint-float helpers
+(`compare/results/s4-m474-root-one-shot-endpoint-float-helpers.md`):
+system-entropy callers can now fill or allocate strict `(0,1)` and `(0,1]`
+float samples directly from the root API while S4-M11 remains blocked.
