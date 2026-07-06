@@ -1928,3 +1928,9 @@ S4-M530 adds root one-shot index-weighted const-pointer choice helpers
 system-entropy callers can now choose const pointers from an item slice and
 comptime index-weight function directly from the root API while S4-M11 remains
 blocked.
+
+S4-M531 adds root one-shot index-weighted mutable-pointer choice helpers
+(`compare/results/s4-m531-root-weighted-mut-ptr-by-index-helpers.md`):
+system-entropy callers can now choose mutable pointers from a mutable item slice
+and comptime index-weight function directly from the root API while S4-M11
+remains blocked.

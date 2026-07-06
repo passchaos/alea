@@ -123,6 +123,7 @@ command matrix evidence.
   `weightedIndexU32ArrayChecked`, `chooseWeighted`, `chooseWeightedChecked`,
   `chooseWeightedByIndex`, `chooseWeightedByIndexChecked`,
   `chooseWeightedConstPtrByIndex`, `chooseWeightedConstPtrByIndexChecked`,
+  `chooseWeightedPtrByIndex`, `chooseWeightedPtrByIndexChecked`,
   `fillChooseWeighted`, `fillChooseWeightedChecked`, `chooseWeightedBatch`,
   `chooseWeightedBatchChecked`, `chooseWeightedValueArray`,
   `chooseWeightedValueArrayChecked`, `chooseWeightedConstPtr`,
