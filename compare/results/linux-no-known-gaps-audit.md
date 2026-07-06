@@ -1831,3 +1831,8 @@ S4-M513 adds root one-shot no-replacement fixed-size value arrays
 (`compare/results/s4-m513-root-one-shot-value-array-helpers.md`):
 system-entropy callers can now produce fixed-size no-replacement value arrays
 directly from the root API while S4-M11 remains blocked.
+
+S4-M514 adds root one-shot no-replacement fixed-size const-pointer arrays
+(`compare/results/s4-m514-root-one-shot-const-ptr-array-helpers.md`):
+system-entropy callers can now produce fixed-size no-replacement const-pointer
+arrays directly from the root API while S4-M11 remains blocked.
