@@ -1679,3 +1679,9 @@ S4-M486 adds root one-shot weighted index array helpers
 (`compare/results/s4-m486-root-one-shot-weighted-index-array-helpers.md`):
 system-entropy callers can now produce fixed-size weighted `usize`/`u32` index
 arrays directly from the root API while S4-M11 remains blocked.
+
+
+S4-M487 adds root one-shot weighted value helpers
+(`compare/results/s4-m487-root-one-shot-weighted-value-helpers.md`):
+system-entropy callers can now sample weighted values directly from the root API
+while S4-M11 remains blocked.
