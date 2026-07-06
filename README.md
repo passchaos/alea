@@ -254,6 +254,8 @@ argument parsing and `ALEA_RAND_BENCH_MANIFEST` /
 `compare/results/`; start with `compare/results/s4-m420-current-rand-status.md`
 or `zig build rand-status` for the current local `rand` / `rand_distr`
 comparison status, `zig build rand-status-json` / `zig build rand-status -- --json` for stable JSON, `zig build rand-status-schema-version` / `zig build rand-status -- --schema-version` for the schema version, or `zig build rand-status-self-test` / `zig build rand-status -- --self-test` for no-Rust status-output self-tests. Use
+`compare/results/s4-m450-rand-status-command-matrix.md` for the latest status
+command matrix evidence. Use
 `tools/practrand.sh --dry-run` to verify the PractRand pipeline command without requiring `RNG_test`, run `tools/practrand.sh --self-test` / `zig build practrand-self-test` to self-test wrapper command construction without `RNG_test`, and set `PRACTRAND_BIN` if the executable is not named `RNG_test`. Use `vectorbench` for focused vector-slice evidence such
 as packed bool chance/ratio, strict-interval vector float fills, vector ranges,
 distribution-namespace vector Bernoulli/binomial/binomial-approx/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/Poisson-AD/uniform/normal/log-normal/approx-log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/cauchy/laplace/logistic/log-logistic/kumaraswamy/power-function/rayleigh/maxwell/pareto/weibull/gumbel/frechet/skew-normal/PERT/inverse-Gaussian/normal-inverse-Gaussian/Zipf/Zeta/unit-circle/unit-disc/unit-sphere/unit-ball/exponential wrappers,

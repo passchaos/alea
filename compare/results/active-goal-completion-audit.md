@@ -472,7 +472,8 @@ complete.
 | S4-M449 S4-M11 blocker sync after schema-version validate-local | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m449-blocker-rand-status-schema-version-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites fresh S4-M448 `validate-local` output including schema-version status. |
 | S4-M450 `rand-status` command matrix refresh | `compare/results/s4-m450-rand-status-command-matrix.md` | Closed for the current bar: all `rand-status` text/JSON/schema/self-test/help commands pass. |
 | S4-M451 `rand-status` command matrix guard | `compare/results/s4-m450-rand-status-command-matrix.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m451-rand-status-matrix-guard.md` | Closed for the current bar: roadmapcheck guards essential command-matrix evidence tokens. |
-| S4-M452 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M452 README rand-status command matrix discovery | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m452-readme-rand-status-matrix.md` | Closed for the current bar: README now links the latest `rand-status` command matrix evidence. |
+| S4-M453 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1092,6 +1093,9 @@ validation evidence and does not resolve S4-M11 or complete the long-term
 objective.
 S4-M451 additionally guards that `rand-status` command matrix evidence; it is
 evidence-quality maintenance and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M452 additionally exposes that command matrix from README; it is
+documentation discoverability and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

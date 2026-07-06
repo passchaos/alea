@@ -1483,3 +1483,7 @@ S4-M11 remains blocked.
 S4-M451 guards the `rand-status` command matrix evidence
 (`compare/results/s4-m451-rand-status-matrix-guard.md`) so that status command
 coverage cannot silently narrow while S4-M11 remains blocked.
+
+S4-M452 exposes the `rand-status` command matrix from README
+(`compare/results/s4-m452-readme-rand-status-matrix.md`) so users can find the
+latest status command evidence while S4-M11 remains blocked.
