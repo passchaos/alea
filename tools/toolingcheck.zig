@@ -389,6 +389,10 @@ pub fn main(init: std.process.Init) !void {
             try stderr.print("toolingcheck: build.zig missing tool token `{s}` for `{s}`\n", .{ tool.build_token, tool.path });
             missing += 1;
         }
+        if (isShellTool(tool.path) and !isExecutable(io, tool.path)) {
+            try stderr.print("toolingcheck: shell tool {s} must be executable\n", .{tool.path});
+            missing += 1;
+        }
     }
 
     var dir = try std.Io.Dir.cwd().openDir(io, "tools", .{ .iterate = true });
@@ -673,6 +677,15 @@ fn knownTool(path: []const u8) bool {
     return false;
 }
 
+fn isShellTool(path: []const u8) bool {
+    return std.mem.endsWith(u8, path, ".sh");
+}
+
+fn isExecutable(io: std.Io, path: []const u8) bool {
+    std.Io.Dir.cwd().access(io, path, .{ .execute = true }) catch return false;
+    return true;
+}
+
 test "known build steps include validation aggregates" {
     try std.testing.expect(knownBuildStep("toolingcheck"));
     try std.testing.expect(knownBuildStep("validate"));
@@ -685,4 +698,10 @@ test "known tools include tooling and roadmap checkers" {
     try std.testing.expect(knownTool("tools/toolingcheck.zig"));
     try std.testing.expect(knownTool("tools/roadmapcheck.zig"));
     try std.testing.expect(!knownTool("tools/definitely-missing.zig"));
+}
+
+test "shell tool detection is extension based" {
+    try std.testing.expect(isShellTool("tools/practrand.sh"));
+    try std.testing.expect(!isShellTool("tools/toolingcheck.zig"));
+    try std.testing.expect(!isShellTool("tools/run_wasi_test.js"));
 }

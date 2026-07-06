@@ -1016,3 +1016,9 @@ S4-M360 strengthens core-guide and API-reference PractRand dry-run discovery
 `toolingcheck` require the dry-run script command, `zig build practrand-dry-run`,
 and `PRACTRAND_BIN` guidance in the relevant docs. This improves external
 statistical evidence discoverability while S4-M11 remains blocked.
+
+S4-M361 adds a shell-tool executable-bit guard
+(`compare/results/s4-m361-shell-tool-executable-guard.md`) by making
+`toolingcheck` require executable access for checked-in `.sh` tools such as
+`tools/practrand.sh`, protecting script-backed build steps while S4-M11 remains
+blocked.
