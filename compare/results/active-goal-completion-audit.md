@@ -343,7 +343,8 @@ complete.
 | S4-M320 current-rule validate-local guidance | `compare/results/core-rand-coverage.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m320-current-rule-validate-local.md` | Closed for the current bar: the Current Rule now directs local `rand` / `rand_distr` comparison or public-surface evidence changes to use `zig build validate-local`, and `roadmapcheck` guards that token. |
 | S4-M321 runtime runner availability checker | `tools/runtimecheck.zig`, `build.zig`, `docs/tooling.md`, `compare/results/s4-m321-runtimecheck.md` | Closed for the current bar: `zig build runtimecheck` automates the S4-M11 runner-availability branch, is wired into `validate-local`, and fails if a new QEMU/Wine/wasmtime/wasmer opportunity runner appears. |
 | S4-M322 runtimecheck helper tests | `tools/runtimecheck.zig`, `build.zig`, `docs/tooling.md`, `compare/results/s4-m322-runtimecheck-tests.md` | Closed for the current bar: runtimecheck helper tests cover PATH discovery and missing/non-executable entries, and `zig build runtimecheck` runs those tests before the executable check. |
-| S4-M323 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M323 roadmapcheck runtimecheck OK token | `tools/roadmapcheck.zig`, `compare/results/s4-m11-blocker-audit.md`, `compare/results/s4-m323-roadmapcheck-runtime-ok.md` | Closed for the current bar: `roadmapcheck` now requires the S4-M11 blocker audit to keep the current `runtimecheck ok: no additional runtime runner available` conclusion. |
+| S4-M324 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -566,6 +567,9 @@ long-term objective.
 S4-M322 additionally adds runtimecheck helper tests and build-step wiring; it is
 an evidence/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M323 additionally hardens `roadmapcheck` for the runtimecheck OK conclusion;
+it is an evidence/tooling improvement and does not resolve S4-M11 or complete
+the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

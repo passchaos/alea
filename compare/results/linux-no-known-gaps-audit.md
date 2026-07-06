@@ -815,3 +815,7 @@ available for broader validation.
 S4-M322 adds focused tests for runtimecheck executable discovery
 (`compare/results/s4-m322-runtimecheck-tests.md`) and wires them into
 `zig build runtimecheck`.
+S4-M323 hardens `roadmapcheck`
+(`compare/results/s4-m323-roadmapcheck-runtime-ok.md`) so the S4-M11 blocker
+audit must retain the current `runtimecheck ok: no additional runtime runner
+available` conclusion.

@@ -318,6 +318,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M320", .path = "compare/results/s4-m320-current-rule-validate-local.md" },
     .{ .milestone = "S4-M321", .path = "compare/results/s4-m321-runtimecheck.md" },
     .{ .milestone = "S4-M322", .path = "compare/results/s4-m322-runtimecheck-tests.md" },
+    .{ .milestone = "S4-M323", .path = "compare/results/s4-m323-roadmapcheck-runtime-ok.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -325,7 +326,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M323",
+    "S4-M324",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -341,6 +342,7 @@ const blocker_tokens = [_][]const u8{
     "surfacecheck local rand",
     "zig build validate-local",
     "zig build runtimecheck",
+    "runtimecheck ok: no additional runtime runner available",
     "No new unblocked public-surface gap",
     "Do not call `update_goal(status=complete)`",
 };
@@ -454,12 +456,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "local Rust public-surface manifest", local_rand_manifest, local_rand_manifest_tokens[0..], &missing);
     try checkManifestTokens(stderr, "local rand_distr public-surface manifest", local_rand_distr_manifest, local_rand_distr_manifest_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M323 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M323 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M324 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M324 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M323 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M323 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M324 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M324 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
