@@ -1388,3 +1388,8 @@ S4-M432 adds a dedicated `rand-status-json` build step
 (`compare/results/s4-m432-rand-status-json-step.md`) and includes it in
 `validate-local`, so stable JSON status output is exercised by the local Rust
 comparison aggregate while S4-M11 remains blocked.
+
+S4-M433 refreshes validate-local evidence after adding `rand-status-json`
+(`compare/results/s4-m433-validate-local-after-rand-status-json.md`); the
+aggregate passes with text and JSON status output, Rust smoke/parser tests,
+surfacecheck, and runtimecheck while S4-M11 remains blocked.
