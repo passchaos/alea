@@ -84,6 +84,7 @@ fn runSelfTest(stdout: *std.Io.Writer) !void {
     try printJson(&json_writer);
     const json = std.Io.Writer.buffered(&json_writer);
     if (!hasAll(json, &.{
+        "\"schema_version\": 1",
         "\"baseline\"",
         "\"rand\": \"~/Work/rand\"",
         "\"validate_local_passes\": true",
@@ -134,6 +135,7 @@ fn printStatus(stdout: *std.Io.Writer) !void {
 fn printJson(stdout: *std.Io.Writer) !void {
     try stdout.writeAll(
         \\{
+        \\  "schema_version": 1,
         \\  "date": "2026-07-06",
         \\  "baseline": {
         \\    "rand": "~/Work/rand",
@@ -178,6 +180,7 @@ test "json output keeps stable machine-readable status keys" {
     try printJson(&writer);
     const out = std.Io.Writer.buffered(&writer);
 
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"schema_version\": 1") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"baseline\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"rand\": \"~/Work/rand\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"rand_distr\": \"cached rand_distr 0.6.0\"") != null);

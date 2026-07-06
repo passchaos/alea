@@ -1439,3 +1439,7 @@ S4-M442 keeps the JSON boolean fields visible in the current status snapshot
 (`compare/results/s4-m442-current-status-json-booleans.md`) so
 `compare/results/s4-m420-current-rand-status.md` also records script-friendly
 status signals while S4-M11 remains blocked.
+
+S4-M443 adds a `schema_version` field to `rand-status-json`
+(`compare/results/s4-m443-rand-status-schema-version.md`) so scripts can detect
+future status schema changes while S4-M11 remains blocked.
