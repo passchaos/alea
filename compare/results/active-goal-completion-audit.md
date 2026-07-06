@@ -414,7 +414,8 @@ complete.
 | S4-M391 validate PractRand wrapper self-test | `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m391-validate-practrand-self-test.md` | Closed for the current bar: native `validate` now runs `practrand-self-test`, and docs/checkers guard it. |
 | S4-M392 validate refresh after PractRand self-test | `zig build validate`, `compare/results/s4-m392-validate-practrand-refresh.md` | Closed for the current bar: native `validate` passes with `practrand-self-test` included. |
 | S4-M393 validation build-step description guard | `build.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m393-validation-description-guard.md` | Closed for the current bar: validation aggregate build descriptions match their current dependency scope and toolingcheck guards them. |
-| S4-M394 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M394 test-step doccheck description guard | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m394-test-doccheck-description.md` | Closed for the current bar: tooling docs and toolingcheck now reflect that `zig build test` runs full doccheck. |
+| S4-M395 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -860,6 +861,9 @@ not resolve S4-M11 or complete the long-term objective.
 S4-M393 additionally updates and guards validation aggregate build descriptions;
 it is validation tooling reliability and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M394 additionally updates and guards `zig build test` tooling docs for the
+full doccheck aggregate; it is validation documentation reliability and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

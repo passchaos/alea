@@ -1196,3 +1196,7 @@ S4-M393 guards validation build-step descriptions
 (`compare/results/s4-m393-validation-description-guard.md`) so `validate`,
 `validate-local`, and `validate-all` descriptions keep matching their expanded
 dependency scopes while S4-M11 remains blocked.
+
+S4-M394 guards `zig build test` tooling documentation
+(`compare/results/s4-m394-test-doccheck-description.md`) so the tooling catalog
+reflects its full `doccheck` dependency while S4-M11 remains blocked.

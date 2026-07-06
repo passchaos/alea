@@ -9,7 +9,7 @@ with `build.zig` and the checked-in `tools/` directory.
 
 | Step | Purpose |
 | --- | --- |
-| `zig build test` | Run unit tests and API reference coverage checks. |
+| `zig build test` | Run unit tests plus the full `doccheck` aggregate (API, examples, tooling, README, and roadmap checks). |
 | `zig build apicheck` | Run apicheck helper tests, then verify public symbols are covered by `docs/api-reference.md`. |
 | `zig build examplecheck` | Run examplecheck helper tests, then verify `docs/examples.md` covers every checked-in runnable example/focused `run-*` step, every cataloged example remains wired into aggregate `zig build examples`, and key examples still contain expected adoption-output tokens. |
 | `zig build toolingcheck` | Run toolingcheck helper tests, then verify this tooling catalog covers every project-defined build step/checked-in tool file, executable bits on checked-in shell tools, WASI runner and PractRand wrapper file inputs, that doccheck, validate, validate-all, and wasi-report keep their aggregate dependencies, and that apicheck/examplecheck/readmecheck/statcheck/bench/bench-libc/vectorbench/stream/repro/distcheck/distcheck-libc/profilecheck/profilecheck-tail/profilecheck-stress/profilecheck-long/surfacecheck/runtimecheck/roadmapcheck/toolingcheck run helper tests before their executable checks. |

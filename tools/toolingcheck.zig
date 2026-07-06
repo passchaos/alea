@@ -10,6 +10,11 @@ const Tool = struct {
     build_token: []const u8 = "",
 };
 
+const test_doc_tokens = [_][]const u8{
+    "Run unit tests plus the full `doccheck` aggregate",
+    "API, examples, tooling, README, and roadmap checks",
+};
+
 const doccheck_dependencies = [_][]const u8{
     "doccheck_step.dependOn(apicheck_step)",
     "doccheck_step.dependOn(examplecheck_step)",
@@ -693,6 +698,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (runtimecheck_doc_tokens) |token| {
         if (std.mem.indexOf(u8, tooling, token) == null) {
             try stderr.print("toolingcheck: docs/tooling.md missing runtimecheck token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (test_doc_tokens) |token| {
+        if (std.mem.indexOf(u8, tooling, token) == null) {
+            try stderr.print("toolingcheck: docs/tooling.md missing test-step token `{s}`\n", .{token});
             missing += 1;
         }
     }
