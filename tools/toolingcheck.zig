@@ -270,6 +270,9 @@ const core_guide_validation_tokens = [_][]const u8{
     "refreshes because it adds cross-target compile checks, WASI unit tests",
     "WASI unit tests, WASI",
     "dry/self tests",
+    "compare/results/s4-m420-current-rand-status.md",
+    "current local",
+    "`rand` / `rand_distr` comparison status snapshot",
 };
 
 const api_reference_wasi_tokens = [_][]const u8{
@@ -293,6 +296,8 @@ const api_reference_validation_tokens = [_][]const u8{
     "node tools/run_wasi_test.js --dry-run <test.wasm>",
     "without reading or executing a",
     "wasm file",
+    "compare/results/s4-m420-current-rand-status.md",
+    "current local `rand` / `rand_distr` comparison status",
 };
 
 const practrand_doc_tokens = [_][]const u8{

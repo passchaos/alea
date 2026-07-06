@@ -1333,3 +1333,8 @@ finding, and S4-M11 blocker state.
 S4-M421 exposes that current comparison snapshot from README
 (`compare/results/s4-m421-readme-current-rand-status.md`) so the latest local
 `rand`/`rand_distr` status is easy to find while S4-M11 remains blocked.
+
+S4-M422 exposes that current comparison snapshot from the core guide and API
+reference (`compare/results/s4-m422-guide-api-current-rand-status.md`) so
+detailed docs also point to the latest local `rand`/`rand_distr` status while
+S4-M11 remains blocked.

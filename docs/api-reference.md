@@ -3,7 +3,8 @@
 This reference lists the public API surface by module. See `docs/core-guide.md`
 for usage guidance, `docs/examples.md` for runnable examples, `docs/tooling.md`
 for build/tool catalogs, and `compare/results/reproducibility-matrix.md` for
-stability expectations.
+stability expectations. See `compare/results/s4-m420-current-rand-status.md` for
+the current local `rand` / `rand_distr` comparison status.
 
 ## Root Module
 
