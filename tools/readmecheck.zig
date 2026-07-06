@@ -41,7 +41,7 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "node tools/run_wasi_test.js --dry-run <test.wasm>", .reason = "direct WASI runner dry-run command" },
     .{ .token = "zig build wasi-self-test", .reason = "WASI runner self-test build step" },
     .{ .token = "node tools/run_wasi_test.js --self-test", .reason = "direct WASI runner self-test command" },
-    .{ .token = "Node WASI runner dry-run and missing-argument paths without wasm", .reason = "WASI self-test usage guidance" },
+    .{ .token = "Node WASI runner dry-run, help-output, and missing-argument paths without wasm", .reason = "WASI self-test usage guidance" },
     .{ .token = "Node WASI runner arguments without", .reason = "WASI dry-run usage guidance" },
     .{ .token = "reading or executing a wasm file", .reason = "WASI dry-run no-execution explanation" },
     .{ .token = "portability-sensitive releases or evidence", .reason = "validate-all usage guidance" },
@@ -228,7 +228,7 @@ test "required-token helper covers WASI dry-run guidance" {
         .reason = "direct WASI runner self-test command",
     };
     const wasi_self_test_usage = RequiredToken{
-        .token = "Node WASI runner dry-run and missing-argument paths without wasm",
+        .token = "Node WASI runner dry-run, help-output, and missing-argument paths without wasm",
         .reason = "WASI self-test usage guidance",
     };
 
@@ -237,7 +237,7 @@ test "required-token helper covers WASI dry-run guidance" {
         \\`node tools/run_wasi_test.js --dry-run <test.wasm>` to verify the Node WASI
         \\runner arguments without reading or executing a wasm file.
         \\Use `zig build wasi-self-test` or `node tools/run_wasi_test.js --self-test`
-        \\to self-test the Node WASI runner dry-run and missing-argument paths without wasm.
+        \\to self-test the Node WASI runner dry-run, help-output, and missing-argument paths without wasm.
     ;
     try std.testing.expect(hasRequiredToken(text, wasi_dry_run));
     try std.testing.expect(hasRequiredToken(text, direct_wasi_dry_run));

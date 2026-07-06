@@ -237,7 +237,7 @@ Use `zig build wasi-dry-run` or
 `node tools/run_wasi_test.js --dry-run <test.wasm>` to verify the
 Node WASI runner arguments without reading or executing a wasm file, and use
 `zig build wasi-self-test` or `node tools/run_wasi_test.js --self-test` to self-test the
-Node WASI runner dry-run and missing-argument paths without wasm.
+Node WASI runner dry-run, help-output, and missing-argument paths without wasm.
 
 The Rust command benchmarks against the local `rand` checkout in
 `~/Work/rand`; run `zig build rand-bench-test` for the Rust comparison
