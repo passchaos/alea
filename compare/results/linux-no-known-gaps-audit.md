@@ -1419,3 +1419,8 @@ aggregate refresh
 (`compare/results/s4-m438-blocker-rand-status-self-test-sync.md`), keeping the
 blocker audit current with S4-M437 `validate-local` output while S4-M11 remains
 blocked.
+
+S4-M439 aligns the `validate-local` build-step description
+(`compare/results/s4-m439-validate-local-status-description.md`) so the build
+catalog describes local Rust comparison, status, and runtime checks while S4-M11
+remains blocked.

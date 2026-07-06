@@ -459,7 +459,8 @@ complete.
 | S4-M436 `rand-status` self-test step | `tools/rand_status.zig`, `build.zig`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/tooling.md`, `tools/readmecheck.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m436-rand-status-self-test.md` | Closed for the current bar: `rand-status` can self-test text/JSON/help output and `validate-local` runs that step. |
 | S4-M437 validate-local refresh after rand-status self-test aggregate | `compare/results/s4-m437-validate-local-after-rand-status-self-test.md`, `compare/results/s4-m420-current-rand-status.md` | Closed for the current bar: `zig build validate-local` passed with `rand-status-self-test` included. |
 | S4-M438 S4-M11 blocker sync after rand-status self-test validate-local | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m438-blocker-rand-status-self-test-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites fresh S4-M437 `validate-local` output including `rand-status-self-test`. |
-| S4-M439 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M439 validate-local description includes status checks | `build.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m439-validate-local-status-description.md` | Closed for the current bar: `validate-local` build-step description now includes status checks. |
+| S4-M440 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1041,6 +1042,9 @@ resolve S4-M11 or complete the long-term objective.
 S4-M438 additionally syncs S4-M11 blocker evidence with the fresh
 rand-status-self-test `validate-local` output; it is blocker-evidence
 maintenance and does not resolve S4-M11 or complete the long-term objective.
+S4-M439 additionally aligns the `validate-local` build-step description with the
+expanded status checks; it is tooling accuracy and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

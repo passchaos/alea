@@ -1626,7 +1626,7 @@ pub fn build(b: *std.Build) void {
     validate_step.dependOn(profilecheck_step);
     validate_step.dependOn(practrand_self_test_step);
 
-    const validate_local_step = b.step("validate-local", "Run native validation plus local Rust comparison and runtime checks");
+    const validate_local_step = b.step("validate-local", "Run native validation plus local Rust comparison, status, and runtime checks");
     validate_local_step.dependOn(validate_step);
     validate_local_step.dependOn(rand_bench_test_step);
     validate_local_step.dependOn(rand_bench_smoke_step);

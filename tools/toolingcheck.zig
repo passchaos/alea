@@ -269,7 +269,7 @@ const validate_all_doc_tokens = [_][]const u8{
 
 const validate_description_tokens = [_][]const u8{
     "Run native unit, docs, statistical, distribution, profile, and wrapper checks",
-    "Run native validation plus local Rust comparison and runtime checks",
+    "Run native validation plus local Rust comparison, status, and runtime checks",
     "Run native validation plus cross-target, WASI dry/self, and runtime checks",
 };
 
