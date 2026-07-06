@@ -217,8 +217,8 @@ const rand_status_doc_tokens = [_][]const u8{
     "`schema_version`, `date`, `baseline.rand`, `baseline.rand_distr`, `latest_gate`",
     "`validate_local_passes`, `public_surface`, `rust_comparison`, `runtime_runners`",
     "`opportunity_runners_available`, `current_conclusion`",
-    "`no_known_unblocked_gap`, `remaining_blocker`, `s4_m11_blocked`, `details`, and",
-    "`latest_validate_local_evidence`",
+    "`no_known_unblocked_gap`, `remaining_blocker`, `s4_m11_blocked`, `details`",
+    "`blocker_audit`, and `latest_validate_local_evidence`",
     "tools/rand_status.zig",
 };
 
@@ -237,6 +237,8 @@ const rand_status_source_tokens = [_][]const u8{
     "\"no_known_unblocked_gap\"",
     "\"remaining_blocker\"",
     "\"s4_m11_blocked\"",
+    "\"blocker_audit\"",
+    "compare/results/s4-m11-blocker-audit.md",
     "\"latest_validate_local_evidence\"",
     "compare/results/s4-m448-validate-local-after-rand-status-schema-version.md",
     "Baseline: ~/Work/rand plus cached rand_distr 0.6.0",

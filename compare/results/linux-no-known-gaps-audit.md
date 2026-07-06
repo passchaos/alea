@@ -1527,3 +1527,8 @@ S4-M460 synchronizes S4-M11 blocker evidence with that latest-evidence JSON
 field (`compare/results/s4-m460-blocker-latest-evidence-sync.md`), keeping the
 blocker audit current with script-friendly validate-local artifact links while
 S4-M11 remains blocked.
+
+S4-M461 adds a blocker-audit link to `rand-status-json`
+(`compare/results/s4-m461-rand-status-blocker-audit-field.md`) so scripts can
+jump from current status to `compare/results/s4-m11-blocker-audit.md` while
+S4-M11 remains blocked.
