@@ -1424,3 +1424,8 @@ S4-M439 aligns the `validate-local` build-step description
 (`compare/results/s4-m439-validate-local-status-description.md`) so the build
 catalog describes local Rust comparison, status, and runtime checks while S4-M11
 remains blocked.
+
+S4-M440 adds stable boolean fields to `rand-status-json`
+(`compare/results/s4-m440-rand-status-json-booleans.md`) so scripts can consume
+validate-local pass, no-known-gap, S4-M11 blocker, and runtime-opportunity state
+without parsing prose while S4-M11 remains blocked.

@@ -59,8 +59,10 @@ wasi-self-test`, and `zig build wasi-report`.
 `zig build rand-status-self-test` validates text, JSON, and help output without
 invoking Rust tools. Current JSON fields are
 `date`, `baseline.rand`, `baseline.rand_distr`, `latest_gate`,
-`public_surface`, `rust_comparison`, `runtime_runners`, `current_conclusion`,
-`remaining_blocker`, and `details`; `details` points back to
+`validate_local_passes`, `public_surface`, `rust_comparison`, `runtime_runners`,
+`opportunity_runners_available`, `current_conclusion`,
+`no_known_unblocked_gap`, `remaining_blocker`, `s4_m11_blocked`, and `details`;
+`details` points back to
 `compare/results/s4-m420-current-rand-status.md`.
 
 `zig build runtimecheck` treats `node`, `cargo`, and `rustc` as required local
