@@ -971,6 +971,7 @@ zig build validate
 zig build validate-local
 zig build rand-status
 zig build rand-status-json
+zig build rand-status-schema-version
 zig build rand-status-self-test
 zig build rand-bench-test
 zig build rand-bench-smoke
@@ -999,7 +1000,7 @@ zig build practrand-self-test
 Use `zig build validate` for broad native checks before ordinary local changes; it includes `zig build practrand-self-test` so the PractRand wrapper is checked without requiring `RNG_test`.
 Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
 comparison work because it adds `rand-bench-test`, `rand-bench-smoke`,
-`rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `rand-status-self-test`, `surfacecheck`, and `runtimecheck`.
+`rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `rand-status-schema-version`, `rand-status-self-test`, `surfacecheck`, and `runtimecheck`.
 Use `zig build validate-all` for portability-sensitive changes or evidence
 refreshes because it adds cross-target compile checks, WASI unit tests, WASI
 dry/self tests, and the chained WASI report. `zig build crosscheck` compiles `wasm32-wasi`,
@@ -1025,7 +1026,7 @@ S4-M11 opportunity runner appears (`qemu-aarch64`, `qemu-aarch64-static`,
 `qemu-riscv64`, `qemu-riscv64-static`, `qemu-x86_64`,
 `qemu-x86_64-static`, `wine`, `wine64`, `wasmtime`, or `wasmer`), prompting a
 blocker-audit refresh.
-Use `zig build rand-status`, `zig build rand-status-json`, `zig build rand-status-self-test`, `zig build rand-status -- --json`, or
+Use `zig build rand-status`, `zig build rand-status-json`, `zig build rand-status-schema-version`, `zig build rand-status-self-test`, `zig build rand-status -- --json`, or
 `compare/results/s4-m420-current-rand-status.md` for the current local
 `rand` / `rand_distr` comparison status snapshot.
 

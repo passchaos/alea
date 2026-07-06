@@ -1457,3 +1457,7 @@ blocked.
 S4-M446 extends `rand-status` self-tests to the bad-argument path
 (`compare/results/s4-m446-rand-status-bad-arg-self-test.md`) so the status tool
 guards script misuse diagnostics while S4-M11 remains blocked.
+
+S4-M447 adds a `rand-status` schema-version command
+(`compare/results/s4-m447-rand-status-schema-version-step.md`) so scripts can
+cheaply check stable JSON schema compatibility while S4-M11 remains blocked.

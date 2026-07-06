@@ -193,6 +193,7 @@ zig build validate
 zig build validate-local
 zig build rand-status
 zig build rand-status-json
+zig build rand-status-schema-version
 zig build rand-status-self-test
 zig build rand-bench-test
 zig build rand-bench-smoke
@@ -228,7 +229,7 @@ Use `zig build validate` for broad native checks including the no-external Pract
 
 Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
 comparison work: it runs native validation plus `rand-bench-test`, `rand-bench-smoke`,
-`rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `rand-status-self-test`, `surfacecheck`, and `runtimecheck`.
+`rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `rand-status-schema-version`, `rand-status-self-test`, `surfacecheck`, and `runtimecheck`.
 
 Use `zig build validate-all` before portability-sensitive releases or evidence
 refreshes: it runs native validation plus cross-target compile checks, WASI unit
@@ -252,7 +253,7 @@ argument parsing and `ALEA_RAND_BENCH_MANIFEST` /
 `ALEA_RAND_BENCH_EXPECTED_ROW` overrides without cargo. Latest comparison data is kept under
 `compare/results/`; start with `compare/results/s4-m420-current-rand-status.md`
 or `zig build rand-status` for the current local `rand` / `rand_distr`
-comparison status, `zig build rand-status-json` / `zig build rand-status -- --json` for stable JSON, or `zig build rand-status-self-test` / `zig build rand-status -- --self-test` for no-Rust status-output self-tests. Use
+comparison status, `zig build rand-status-json` / `zig build rand-status -- --json` for stable JSON, `zig build rand-status-schema-version` / `zig build rand-status -- --schema-version` for the schema version, or `zig build rand-status-self-test` / `zig build rand-status -- --self-test` for no-Rust status-output self-tests. Use
 `tools/practrand.sh --dry-run` to verify the PractRand pipeline command without requiring `RNG_test`, run `tools/practrand.sh --self-test` / `zig build practrand-self-test` to self-test wrapper command construction without `RNG_test`, and set `PRACTRAND_BIN` if the executable is not named `RNG_test`. Use `vectorbench` for focused vector-slice evidence such
 as packed bool chance/ratio, strict-interval vector float fills, vector ranges,
 distribution-namespace vector Bernoulli/binomial/binomial-approx/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/Poisson-AD/uniform/normal/log-normal/approx-log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/cauchy/laplace/logistic/log-logistic/kumaraswamy/power-function/rayleigh/maxwell/pareto/weibull/gumbel/frechet/skew-normal/PERT/inverse-Gaussian/normal-inverse-Gaussian/Zipf/Zeta/unit-circle/unit-disc/unit-sphere/unit-ball/exponential wrappers,

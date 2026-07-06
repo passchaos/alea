@@ -193,6 +193,12 @@ const rand_status_json_dependencies = [_][]const u8{
     "rand_status_json_step.dependOn(&run_rand_status_json.step)",
 };
 
+const rand_status_schema_version_dependencies = [_][]const u8{
+    "run_rand_status_schema_version.addArg(\"--schema-version\")",
+    "rand_status_schema_version_step.dependOn(&run_rand_status_tests.step)",
+    "rand_status_schema_version_step.dependOn(&run_rand_status_schema_version.step)",
+};
+
 const rand_status_self_test_dependencies = [_][]const u8{
     "run_rand_status_self_test.addArg(\"--self-test\")",
     "rand_status_self_test_step.dependOn(&run_rand_status_tests.step)",
@@ -202,6 +208,7 @@ const rand_status_self_test_dependencies = [_][]const u8{
 const rand_status_doc_tokens = [_][]const u8{
     "zig build rand-status",
     "zig build rand-status-json",
+    "zig build rand-status-schema-version",
     "zig build rand-status-self-test",
     "current local `rand` / `rand_distr` comparison status summary",
     "pass `-- --json` for stable JSON",
@@ -216,6 +223,7 @@ const rand_status_doc_tokens = [_][]const u8{
 
 const rand_status_source_tokens = [_][]const u8{
     "--json prints the current local rand/rand_distr status as stable JSON",
+    "--schema-version prints the stable JSON schema version",
     "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
     "--definitely-bad",
     "rand-status self-test ok",
@@ -325,7 +333,7 @@ const core_guide_validation_tokens = [_][]const u8{
     "includes `zig build practrand-self-test`",
     "Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`",
     "rand-bench-test`, `rand-bench-smoke`,",
-    "`rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `rand-status-self-test`, `surfacecheck`, and",
+    "`rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `rand-status-schema-version`, `rand-status-self-test`, `surfacecheck`, and",
     "ALEA_RAND_BENCH_MANIFEST",
     "`runtimecheck`",
     "Use `zig build validate-all` for portability-sensitive changes or evidence",
@@ -351,7 +359,7 @@ const api_reference_validation_tokens = [_][]const u8{
     "no-external PractRand wrapper validation",
     "Use `zig build",
     "validate-local` when API work changes local `rand` / `rand_distr` comparison",
-    "rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `rand-status-self-test`, `surfacecheck`, and `runtimecheck`",
+    "rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `rand-status-schema-version`, `rand-status-self-test`, `surfacecheck`, and `runtimecheck`",
     "ALEA_RAND_BENCH_EXPECTED_ROW",
     "Use `zig build",
     "validate-all` for portability-sensitive API evidence",
@@ -544,6 +552,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "roadmapcheck", .build_token = "b.step(\"roadmapcheck\"" },
     .{ .name = "rand-status", .build_token = "b.step(\"rand-status\"" },
     .{ .name = "rand-status-json", .build_token = "b.step(\"rand-status-json\"" },
+    .{ .name = "rand-status-schema-version", .build_token = "b.step(\"rand-status-schema-version\"" },
     .{ .name = "rand-status-self-test", .build_token = "b.step(\"rand-status-self-test\"" },
     .{ .name = "surfacecheck", .build_token = "b.step(\"surfacecheck\"" },
     .{ .name = "runtimecheck", .build_token = "b.step(\"runtimecheck\"" },
@@ -920,11 +929,12 @@ pub fn main(init: std.process.Init) !void {
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_smoke_self_test_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_status_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_status_json_step)") == null or
+        std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_status_schema_version_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_status_self_test_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(surfacecheck_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(runtimecheck_step)") == null)
     {
-        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, rand-bench-smoke, rand-bench-smoke-self-test, rand-status, rand-status-json, rand-status-self-test, surfacecheck, and runtimecheck\n", .{});
+        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, rand-bench-smoke, rand-bench-smoke-self-test, rand-status, rand-status-json, rand-status-schema-version, rand-status-self-test, surfacecheck, and runtimecheck\n", .{});
         missing += 1;
     }
     inline for (doccheck_dependencies) |token| {
@@ -1100,6 +1110,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (rand_status_json_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: rand-status-json missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (rand_status_schema_version_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: rand-status-schema-version missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

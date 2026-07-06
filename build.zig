@@ -1261,6 +1261,13 @@ pub fn build(b: *std.Build) void {
     rand_status_json_step.dependOn(&run_rand_status_tests.step);
     rand_status_json_step.dependOn(&run_rand_status_json.step);
 
+    const run_rand_status_schema_version = b.addRunArtifact(rand_status);
+    run_rand_status_schema_version.addArg("--schema-version");
+
+    const rand_status_schema_version_step = b.step("rand-status-schema-version", "Print rand-status JSON schema version");
+    rand_status_schema_version_step.dependOn(&run_rand_status_tests.step);
+    rand_status_schema_version_step.dependOn(&run_rand_status_schema_version.step);
+
     const run_rand_status_self_test = b.addRunArtifact(rand_status);
     run_rand_status_self_test.addArg("--self-test");
 
@@ -1633,6 +1640,7 @@ pub fn build(b: *std.Build) void {
     validate_local_step.dependOn(rand_bench_smoke_self_test_step);
     validate_local_step.dependOn(rand_status_step);
     validate_local_step.dependOn(rand_status_json_step);
+    validate_local_step.dependOn(rand_status_schema_version_step);
     validate_local_step.dependOn(rand_status_self_test_step);
     validate_local_step.dependOn(surfacecheck_step);
     validate_local_step.dependOn(runtimecheck_step);

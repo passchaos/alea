@@ -1,6 +1,8 @@
 const std = @import("std");
 
-const OutputMode = enum { text, json, help, self_test };
+const schema_version = 1;
+
+const OutputMode = enum { text, json, schema_version, help, self_test };
 
 pub fn main(init: std.process.Init) !void {
     var stdout_buffer: [4096]u8 = undefined;
@@ -25,6 +27,7 @@ pub fn main(init: std.process.Init) !void {
     switch (mode) {
         .text => try printStatus(stdout),
         .json => try printJson(stdout),
+        .schema_version => try printSchemaVersion(stdout),
         .help => try printUsage(stdout),
         .self_test => try runSelfTest(stdout),
     }
@@ -49,6 +52,7 @@ fn parseModeSlice(args: []const []const u8) !OutputMode {
 
 fn parseModeArg(current: OutputMode, arg: []const u8) !OutputMode {
     if (std.mem.eql(u8, arg, "--json")) return .json;
+    if (std.mem.eql(u8, arg, "--schema-version")) return .schema_version;
     if (std.mem.eql(u8, arg, "--help")) return .help;
     if (std.mem.eql(u8, arg, "--self-test")) return .self_test;
     _ = current;
@@ -58,9 +62,11 @@ fn parseModeArg(current: OutputMode, arg: []const u8) !OutputMode {
 fn printUsage(writer: *std.Io.Writer) !void {
     try writer.print(
         \\usage: rand-status [--json]
+        \\       rand-status --schema-version
         \\       rand-status --self-test
         \\       rand-status --help
         \\       --json prints the current local rand/rand_distr status as stable JSON
+        \\       --schema-version prints the stable JSON schema version
         \\       --self-test validates text, JSON, help, and bad-argument paths without Rust tools
         \\
     , .{});
@@ -102,10 +108,16 @@ fn runSelfTest(stdout: *std.Io.Writer) !void {
     const help = std.Io.Writer.buffered(&help_writer);
     if (!hasAll(help, &.{
         "usage: rand-status [--json]",
+        "rand-status --schema-version",
         "rand-status --self-test",
         "--json prints the current local rand/rand_distr status as stable JSON",
+        "--schema-version prints the stable JSON schema version",
         "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
     })) return error.SelfTestFailed;
+    var version_buf: [32]u8 = undefined;
+    var version_writer = std.Io.Writer.fixed(&version_buf);
+    try printSchemaVersion(&version_writer);
+    if (!std.mem.eql(u8, std.Io.Writer.buffered(&version_writer), "1\n")) return error.SelfTestFailed;
     if (parseModeSlice(&.{"--definitely-bad"})) |_| {
         return error.SelfTestFailed;
     } else |err| {
@@ -135,6 +147,10 @@ fn printStatus(stdout: *std.Io.Writer) !void {
         \\- Details: compare/results/s4-m420-current-rand-status.md
         \\
     , .{});
+}
+
+fn printSchemaVersion(stdout: *std.Io.Writer) !void {
+    try stdout.print("{d}\n", .{schema_version});
 }
 
 fn printJson(stdout: *std.Io.Writer) !void {
@@ -201,6 +217,7 @@ test "json output keeps stable machine-readable status keys" {
 test "argument parser supports text json and help" {
     try std.testing.expectEqual(OutputMode.text, try parseModeSlice(&.{}));
     try std.testing.expectEqual(OutputMode.json, try parseModeSlice(&.{"--json"}));
+    try std.testing.expectEqual(OutputMode.schema_version, try parseModeSlice(&.{"--schema-version"}));
     try std.testing.expectEqual(OutputMode.help, try parseModeSlice(&.{"--help"}));
     try std.testing.expectEqual(OutputMode.self_test, try parseModeSlice(&.{"--self-test"}));
     try std.testing.expectEqual(OutputMode.help, try parseModeSlice(&.{ "--json", "--help" }));
