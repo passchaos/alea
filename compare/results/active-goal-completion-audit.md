@@ -564,7 +564,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M523 root iterator sample-fill aliases | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m523-root-iterator-sample-fill-aliases.md` | Closed for the current bar: root system-entropy helpers now include Rust-discoverable `sampleIteratorFill*` aliases for caller-owned iterator reservoir sampling. |
 | S4-M524 root no-replacement value array choose aliases | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m524-root-choose-array-aliases.md` | Closed for the current bar: root system-entropy helpers now include Rust-discoverable `chooseArray*` aliases for fixed-size no-replacement value arrays. |
 | S4-M525 root one-shot index-weighted index helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m525-root-weighted-by-index-helpers.md` | Closed for the current bar: root system-entropy helpers can now sample one `usize` or `u32` weighted index from a length and comptime index-weight function directly. |
-| S4-M526 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M526 root one-shot index-weighted fill helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m526-root-weighted-by-index-fill-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned `usize` or `u32` weighted indexes from a length and comptime index-weight function directly. |
+| S4-M527 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1400,6 +1401,9 @@ API ergonomics/discoverability work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M525 additionally adds root one-shot index-weighted index helpers; it is API
 ergonomics work and does not resolve S4-M11 or complete the long-term objective.
+S4-M526 additionally adds root one-shot index-weighted caller-owned fill helpers;
+it is API ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
