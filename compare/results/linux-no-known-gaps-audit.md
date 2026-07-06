@@ -831,3 +831,7 @@ S4-M326 documents the runtimecheck runner sets in the tooling catalog
 S4-M327 adds runtimecheck summary counts
 (`compare/results/s4-m327-runtimecheck-summary.md`) and records the current
 required/opportunity counts in S4-M11 blocker evidence.
+S4-M328 strengthens runtimecheck documentation guards
+(`compare/results/s4-m328-runtimecheck-doc-token-guard.md`) so `toolingcheck`
+requires all required and opportunity runner names to remain visible in
+`docs/tooling.md`.

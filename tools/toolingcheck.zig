@@ -28,6 +28,20 @@ const runtimecheck_dependencies = [_][]const u8{
     "runtimecheck_step.dependOn(&run_runtimecheck.step)",
 };
 
+const runtimecheck_doc_tokens = [_][]const u8{
+    "zig build runtimecheck",
+    "node",
+    "cargo",
+    "rustc",
+    "qemu-aarch64",
+    "qemu-riscv64",
+    "qemu-x86_64",
+    "wine",
+    "wine64",
+    "wasmtime",
+    "wasmer",
+};
+
 const build_steps = [_]BuildStep{
     .{ .name = "run-basic", .build_token = "b.step(\"run-basic\"" },
     .{ .name = "run-vector-profiles", .build_token = "b.step(\"run-vector-profiles\"" },
@@ -260,12 +274,11 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("toolingcheck: docs/core-guide.md must link docs/tooling.md and mention `zig build toolingcheck`\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, tooling, "zig build runtimecheck") == null or
-        std.mem.indexOf(u8, tooling, "qemu-aarch64") == null or
-        std.mem.indexOf(u8, tooling, "wasmtime") == null)
-    {
-        try stderr.print("toolingcheck: docs/tooling.md must document runtimecheck and S4-M11 opportunity runners\n", .{});
-        missing += 1;
+    inline for (runtimecheck_doc_tokens) |token| {
+        if (std.mem.indexOf(u8, tooling, token) == null) {
+            try stderr.print("toolingcheck: docs/tooling.md missing runtimecheck token `{s}`\n", .{token});
+            missing += 1;
+        }
     }
     if (std.mem.indexOf(u8, build, "validate_step.dependOn(doccheck_step)") == null) {
         try stderr.print("toolingcheck: zig build validate must depend on doccheck\n", .{});
