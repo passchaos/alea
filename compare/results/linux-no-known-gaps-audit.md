@@ -919,3 +919,9 @@ S4-M344 adds roadmapcheck helper tests
 `zig build roadmapcheck`, with `toolingcheck` guarding that tests run before the
 roadmap/audit executable. This improves evidence-checker reliability while
 S4-M11 remains blocked.
+
+S4-M345 adds toolingcheck helper tests
+(`compare/results/s4-m345-toolingcheck-helper-tests.md`) and wires them into
+`zig build toolingcheck`, with `toolingcheck` guarding that tests run before its
+executable audit. This improves tooling-catalog checker reliability while S4-M11
+remains blocked.

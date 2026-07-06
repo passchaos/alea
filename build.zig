@@ -1053,7 +1053,18 @@ pub fn build(b: *std.Build) void {
     const run_toolingcheck = b.addRunArtifact(toolingcheck);
     if (b.args) |args| run_toolingcheck.addArgs(args);
 
+    const toolingcheck_tests = b.addTest(.{
+        .name = "alea-toolingcheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/toolingcheck.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_toolingcheck_tests = b.addRunArtifact(toolingcheck_tests);
+
     const toolingcheck_step = b.step("toolingcheck", "Check build/tooling catalog coverage");
+    toolingcheck_step.dependOn(&run_toolingcheck_tests.step);
     toolingcheck_step.dependOn(&run_toolingcheck.step);
 
     const readmecheck_mod = b.createModule(.{
@@ -1156,7 +1167,7 @@ pub fn build(b: *std.Build) void {
     const doccheck_step = b.step("doccheck", "Run documentation, catalog, and roadmap coverage checks");
     doccheck_step.dependOn(&run_apicheck.step);
     doccheck_step.dependOn(&run_examplecheck.step);
-    doccheck_step.dependOn(&run_toolingcheck.step);
+    doccheck_step.dependOn(toolingcheck_step);
     doccheck_step.dependOn(&run_readmecheck.step);
     doccheck_step.dependOn(roadmapcheck_step);
 

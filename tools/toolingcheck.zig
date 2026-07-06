@@ -13,7 +13,7 @@ const Tool = struct {
 const doccheck_dependencies = [_][]const u8{
     "doccheck_step.dependOn(&run_apicheck.step)",
     "doccheck_step.dependOn(&run_examplecheck.step)",
-    "doccheck_step.dependOn(&run_toolingcheck.step)",
+    "doccheck_step.dependOn(toolingcheck_step)",
     "doccheck_step.dependOn(&run_readmecheck.step)",
     "doccheck_step.dependOn(roadmapcheck_step)",
 };
@@ -26,6 +26,11 @@ const surfacecheck_dependencies = [_][]const u8{
 const runtimecheck_dependencies = [_][]const u8{
     "runtimecheck_step.dependOn(&run_runtimecheck_tests.step)",
     "runtimecheck_step.dependOn(&run_runtimecheck.step)",
+};
+
+const toolingcheck_dependencies = [_][]const u8{
+    "toolingcheck_step.dependOn(&run_toolingcheck_tests.step)",
+    "toolingcheck_step.dependOn(&run_toolingcheck.step)",
 };
 
 const roadmapcheck_dependencies = [_][]const u8{
@@ -389,6 +394,12 @@ pub fn main(init: std.process.Init) !void {
             missing += 1;
         }
     }
+    inline for (toolingcheck_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: toolingcheck missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
     inline for (roadmapcheck_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: roadmapcheck missing dependency token `{s}`\n", .{token});
@@ -467,4 +478,18 @@ fn knownTool(path: []const u8) bool {
         if (std.mem.eql(u8, path, tool.path)) return true;
     }
     return false;
+}
+
+test "known build steps include validation aggregates" {
+    try std.testing.expect(knownBuildStep("toolingcheck"));
+    try std.testing.expect(knownBuildStep("validate"));
+    try std.testing.expect(knownBuildStep("validate-local"));
+    try std.testing.expect(knownBuildStep("validate-all"));
+    try std.testing.expect(!knownBuildStep("definitely-missing-step"));
+}
+
+test "known tools include tooling and roadmap checkers" {
+    try std.testing.expect(knownTool("tools/toolingcheck.zig"));
+    try std.testing.expect(knownTool("tools/roadmapcheck.zig"));
+    try std.testing.expect(!knownTool("tools/definitely-missing.zig"));
 }
