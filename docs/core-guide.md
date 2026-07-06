@@ -971,6 +971,7 @@ zig build validate-local
 zig build rand-bench-test
 zig build rand-bench-smoke
 zig build rand-bench-smoke-dry-run
+zig build rand-bench-smoke-self-test
 zig build validate-all
 zig build crosscheck
 zig build test-wasi
@@ -991,7 +992,7 @@ zig build practrand-dry-run
 Use `zig build validate` for broad native checks before ordinary local changes.
 Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
 comparison work because it adds `rand-bench-test`, `rand-bench-smoke`,
-`surfacecheck`, and `runtimecheck`.
+`rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`.
 Use `zig build validate-all` for portability-sensitive changes or evidence
 refreshes because it adds cross-target compile checks, WASI unit tests, and the
 chained WASI report. `zig build crosscheck` compiles `wasm32-wasi`,
@@ -1039,7 +1040,8 @@ Rust comparison binary accepts the same argument shape; `zig build
 rand-bench-test` runs its parser/helper tests without a throughput run, and
 `zig build rand-bench-smoke` runs a tiny filtered Rust comparison smoke row;
 `zig build rand-bench-smoke-dry-run` previews that cargo command without running
-cargo.
+cargo, and `zig build rand-bench-smoke-self-test` tests the wrapper argument
+parsing without cargo.
 `alea.Rng` has
 function-pointer dispatch comparable to
 `std.Random`; direct helpers are closer to Rust's monomorphized `SmallRng`

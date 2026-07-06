@@ -3493,6 +3493,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build rand-bench-test`
 - `zig build rand-bench-smoke`
 - `zig build rand-bench-smoke-dry-run`
+- `zig build rand-bench-smoke-self-test`
 - `zig build validate-all`
 - `zig build statcheck`
 - `zig build distcheck`
@@ -3512,7 +3513,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 
 Use `zig build validate` for broad native API checks. Use `zig build
 validate-local` when API work changes local `rand` / `rand_distr` comparison
-evidence because it adds `rand-bench-test`, `rand-bench-smoke`, `surfacecheck`, and `runtimecheck`.
+evidence because it adds `rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`.
 Use `zig build validate-all` for portability-sensitive API evidence because it adds cross-target
 compile checks, WASI unit tests, and the chained WASI report. `zig build
 crosscheck` compiles `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`,

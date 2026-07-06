@@ -81,6 +81,7 @@ const rand_bench_smoke_dependencies = [_][]const u8{
 const rand_bench_smoke_doc_tokens = [_][]const u8{
     "zig build rand-bench-smoke",
     "zig build rand-bench-smoke-dry-run",
+    "zig build rand-bench-smoke-self-test",
     "tools/rand_bench_smoke.sh 1024 standard-normal",
     "tools/rand_bench_smoke.sh --dry-run 1024 standard-normal",
     "tiny filtered Rust comparison benchmark smoke test",
@@ -93,10 +94,19 @@ const rand_bench_smoke_dry_run_dependencies = [_][]const u8{
     "rand_bench_smoke_dry_run_step.dependOn(&run_rand_bench_smoke_dry_run.step)",
 };
 
+const rand_bench_smoke_self_test_dependencies = [_][]const u8{
+    "b.addSystemCommand(&.{ \"tools/rand_bench_smoke.sh\", \"--self-test\" })",
+    "run_rand_bench_smoke_self_test.addFileInput(b.path(\"tools/rand_bench_smoke.sh\"))",
+    "b.step(\"rand-bench-smoke-self-test\"",
+    "rand_bench_smoke_self_test_step.dependOn(&run_rand_bench_smoke_self_test.step)",
+};
+
 const rand_bench_smoke_script_tokens = [_][]const u8{
     "--dry-run",
+    "--self-test",
     "cargo run --manifest-path",
     "expected row substring",
+    "rand_bench_smoke self-test ok",
 };
 
 const stream_dependencies = [_][]const u8{
@@ -212,7 +222,7 @@ const core_guide_validation_tokens = [_][]const u8{
     "Use `zig build validate` for broad native checks",
     "Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`",
     "rand-bench-test`, `rand-bench-smoke`,",
-    "`surfacecheck`, and",
+    "`rand-bench-smoke-self-test`, `surfacecheck`, and",
     "`runtimecheck`",
     "Use `zig build validate-all` for portability-sensitive changes or evidence",
     "refreshes because it adds cross-target compile checks, WASI unit tests",
@@ -222,7 +232,7 @@ const api_reference_validation_tokens = [_][]const u8{
     "Use `zig build validate` for broad native API checks",
     "Use `zig build",
     "validate-local` when API work changes local `rand` / `rand_distr` comparison",
-    "rand-bench-test`, `rand-bench-smoke`, `surfacecheck`, and `runtimecheck`",
+    "rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`",
     "Use `zig build",
     "validate-all` for portability-sensitive API evidence",
     "compile checks, WASI unit tests",
@@ -331,6 +341,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "rand-bench-test", .build_token = "b.step(\"rand-bench-test\"" },
     .{ .name = "rand-bench-smoke", .build_token = "b.step(\"rand-bench-smoke\"" },
     .{ .name = "rand-bench-smoke-dry-run", .build_token = "b.step(\"rand-bench-smoke-dry-run\"" },
+    .{ .name = "rand-bench-smoke-self-test", .build_token = "b.step(\"rand-bench-smoke-self-test\"" },
     .{ .name = "ziggurat-stats", .build_token = "b.step(\"ziggurat-stats\"" },
     .{ .name = "ziggurat-probe", .build_token = "b.step(\"ziggurat-probe\"" },
     .{ .name = "cauchy-probe", .build_token = "b.step(\"cauchy-probe\"" },
@@ -673,10 +684,11 @@ pub fn main(init: std.process.Init) !void {
     if (std.mem.indexOf(u8, build, "validate_local_step.dependOn(validate_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_test_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_smoke_step)") == null or
+        std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_smoke_self_test_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(surfacecheck_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(runtimecheck_step)") == null)
     {
-        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, rand-bench-smoke, surfacecheck, and runtimecheck\n", .{});
+        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, rand-bench-smoke, rand-bench-smoke-self-test, surfacecheck, and runtimecheck\n", .{});
         missing += 1;
     }
     inline for (doccheck_dependencies) |token| {
@@ -754,6 +766,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (rand_bench_smoke_dry_run_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: rand-bench-smoke-dry-run missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (rand_bench_smoke_self_test_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: rand-bench-smoke-self-test missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

@@ -459,6 +459,11 @@ pub fn build(b: *std.Build) void {
     const rand_bench_smoke_dry_run_step = b.step("rand-bench-smoke-dry-run", "Print the Rust comparison benchmark smoke command without running cargo");
     rand_bench_smoke_dry_run_step.dependOn(&run_rand_bench_smoke_dry_run.step);
 
+    const run_rand_bench_smoke_self_test = b.addSystemCommand(&.{ "tools/rand_bench_smoke.sh", "--self-test" });
+    run_rand_bench_smoke_self_test.addFileInput(b.path("tools/rand_bench_smoke.sh"));
+    const rand_bench_smoke_self_test_step = b.step("rand-bench-smoke-self-test", "Run Rust comparison smoke wrapper self-tests without cargo");
+    rand_bench_smoke_self_test_step.dependOn(&run_rand_bench_smoke_self_test.step);
+
     const ziggurat_stats_mod = b.createModule(.{
         .root_source_file = b.path("tools/ziggurat_stats.zig"),
         .target = target,
@@ -1571,6 +1576,7 @@ pub fn build(b: *std.Build) void {
     validate_local_step.dependOn(validate_step);
     validate_local_step.dependOn(rand_bench_test_step);
     validate_local_step.dependOn(rand_bench_smoke_step);
+    validate_local_step.dependOn(rand_bench_smoke_self_test_step);
     validate_local_step.dependOn(surfacecheck_step);
     validate_local_step.dependOn(runtimecheck_step);
 
