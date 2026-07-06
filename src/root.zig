@@ -975,6 +975,20 @@ pub fn sampleIteratorIntoChecked(comptime T: type, io: std.Io, iterator: anytype
     if (filled != out.len) return error.InvalidParameter;
 }
 
+pub fn sampleIteratorArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]T {
+    var out: [N]T = undefined;
+    if (N == 0) return out;
+    const filled = try sampleIteratorInto(T, io, iterator, &out);
+    return if (filled == N) out else null;
+}
+
+pub fn sampleIteratorArrayChecked(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) ![N]T {
+    var out: [N]T = undefined;
+    if (N == 0) return out;
+    try sampleIteratorIntoChecked(T, io, iterator, &out);
+    return out;
+}
+
 pub fn weightedIndex(io: std.Io, weights: []const f64) !?usize {
     switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
         .empty => return null,
@@ -3443,6 +3457,16 @@ test "root random helpers validate deterministic cases before entropy" {
     var sample_into_entropy_iter = SliceIter{ .items = &.{ 1, 2, 3 } };
     var sample_into_entropy: [2]u8 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorInto(u8, failing, &sample_into_entropy_iter, &sample_into_entropy));
+    var sample_array_empty_iter = SliceIter{ .items = &.{} };
+    try std.testing.expectEqual(@as(usize, 0), (try sampleIteratorArray(u8, failing, 0, &sample_array_empty_iter)).?.len);
+    var sample_array_short_iter = SliceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectEqual(@as(?[3]u8, null), try sampleIteratorArray(u8, failing, 3, &sample_array_short_iter));
+    var sample_array_exact_iter = SliceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, &(try sampleIteratorArrayChecked(u8, failing, 2, &sample_array_exact_iter)));
+    var sample_array_short_checked_iter = SliceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorArrayChecked(u8, failing, 3, &sample_array_short_checked_iter));
+    var sample_array_entropy_iter = SliceIter{ .items = &.{ 1, 2, 3 } };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorArray(u8, failing, 2, &sample_array_entropy_iter));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
     var weighted_one: [1]?usize = undefined;
