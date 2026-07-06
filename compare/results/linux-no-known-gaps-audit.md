@@ -1796,3 +1796,8 @@ S4-M506 adds root one-shot weighted no-replacement caller-owned value buffers
 (`compare/results/s4-m506-root-one-shot-weighted-no-replacement-value-into-helpers.md`):
 system-entropy callers can now fill caller-owned weighted no-replacement value
 buffers directly from the root API while S4-M11 remains blocked.
+
+S4-M507 adds root one-shot weighted no-replacement caller-owned const-pointer buffers
+(`compare/results/s4-m507-root-one-shot-weighted-no-replacement-const-ptr-into-helpers.md`):
+system-entropy callers can now fill caller-owned weighted no-replacement const
+pointer buffers directly from the root API while S4-M11 remains blocked.
