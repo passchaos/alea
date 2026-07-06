@@ -64,6 +64,16 @@ const core_guide_validation_tokens = [_][]const u8{
     "refreshes because it adds cross-target compile checks, WASI unit tests",
 };
 
+const api_reference_validation_tokens = [_][]const u8{
+    "Use `zig build validate` for broad native API checks",
+    "Use `zig build",
+    "validate-local` when API work changes local `rand` / `rand_distr` comparison",
+    "surfacecheck` and `runtimecheck`",
+    "Use `zig build",
+    "validate-all` for portability-sensitive API evidence",
+    "compile checks, WASI unit tests",
+};
+
 const runtimecheck_doc_tokens = [_][]const u8{
     "zig build runtimecheck",
     "node",
@@ -306,6 +316,12 @@ pub fn main(init: std.process.Init) !void {
     {
         try stderr.print("toolingcheck: docs/api-reference.md must link docs/tooling.md and mention `zig build toolingcheck`\n", .{});
         missing += 1;
+    }
+    inline for (api_reference_validation_tokens) |token| {
+        if (std.mem.indexOf(u8, api, token) == null) {
+            try stderr.print("toolingcheck: docs/api-reference.md missing validation-guidance token `{s}`\n", .{token});
+            missing += 1;
+        }
     }
     if (std.mem.indexOf(u8, core_guide, "docs/tooling.md") == null or
         std.mem.indexOf(u8, core_guide, "zig build toolingcheck") == null)

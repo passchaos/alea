@@ -887,3 +887,9 @@ S4-M339 documents validation aggregate selection in the core guide
 `validate` / `validate-local` / `validate-all` guidance with `toolingcheck`, so
 users can choose the right native, local-comparison, or portability-sensitive
 validation path while S4-M11 remains blocked.
+
+S4-M340 documents validation aggregate selection in the API reference
+(`compare/results/s4-m340-api-reference-validation-prose.md`) and guards the API
+`validate` / `validate-local` / `validate-all` guidance with `toolingcheck`, so
+API work can choose the right native, local-comparison, or portability-sensitive
+validation path while S4-M11 remains blocked.

@@ -3503,6 +3503,12 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build -Doptimize=ReleaseFast -Dcpu=native ziggurat-probe`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native cauchy-probe`
 
+Use `zig build validate` for broad native API checks. Use `zig build
+validate-local` when API work changes local `rand` / `rand_distr` comparison
+evidence because it adds `surfacecheck` and `runtimecheck`. Use `zig build
+validate-all` for portability-sensitive API evidence because it adds cross-target
+compile checks, WASI unit tests, and the chained WASI report.
+
 See `docs/tooling.md` for the complete build-step and checked-tool catalog.
 
 Tools:
