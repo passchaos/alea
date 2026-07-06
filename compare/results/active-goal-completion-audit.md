@@ -1,6 +1,6 @@
 # Active Goal Completion Audit
 
-Date: 2026-07-05
+Date: 2026-07-06
 
 Active objective: keep working toward Alea's project mission until the goal is
 actually achieved. In concrete terms for the current thread, this means driving
@@ -12,6 +12,24 @@ finished.
 This audit is intentionally not a completion claim. It records the current
 prompt-to-artifact checklist and the evidence that prevents calling the goal
 complete.
+
+## Current Completion Audit Refresh
+
+Objective restated as concrete deliverables: Alea must have no known core RNG
+functionality, ergonomics, reproducibility, statistical-quality, or performance
+gaps versus the locally available Rust `rand` / `rand_distr` evidence; local
+Linux comparison, validation, and status evidence must be current; and any next
+raised roadmap bar must be closed before the active goal can be marked complete.
+
+Current evidence is not sufficient for completion. S4-M420 records the current
+local `rand` / `rand_distr` status snapshot, S4-M450/S4-M455 record the
+`rand-status` command matrices, S4-M437/S4-M448 record recent
+`zig build validate-local` passes, and S4-M438/S4-M449 keep the S4-M11 blocker
+audit synchronized with those status signals. However, S4-M11 remains
+unresolved: no exact/default-compatible dense SIMD normal/exponential winner is
+known, no new genuine runtime/architecture runner is available, and no new local
+Rust core gap is currently identified. Therefore do not call
+`update_goal(status=complete)`.
 
 ## Prompt-to-Artifact Checklist
 
@@ -476,7 +494,8 @@ complete.
 | S4-M453 guide/API rand-status matrix discovery | `docs/core-guide.md`, `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m453-guide-api-rand-status-matrix.md` | Closed for the current bar: core guide/API now link the latest `rand-status` command matrix evidence. |
 | S4-M454 tooling rand-status matrix discovery | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m454-tooling-rand-status-matrix.md` | Closed for the current bar: tooling catalog now links the latest `rand-status` command matrix evidence. |
 | S4-M455 direct `rand-status` command matrix | `compare/results/s4-m455-rand-status-direct-matrix.md`, `tools/roadmapcheck.zig` | Closed for the current bar: direct documented JSON/schema/self-test `rand-status` forms pass and are guarded. |
-| S4-M456 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M456 active completion audit refresh | `compare/results/active-goal-completion-audit.md`, `compare/results/s4-m456-active-completion-audit-refresh.md` | Closed for the current bar: active audit restates concrete deliverables, cites current rand-status / validate-local / blocker evidence, and explicitly remains not complete due to S4-M11. |
+| S4-M457 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1109,6 +1128,9 @@ long-term objective.
 S4-M455 additionally records and guards direct documented `rand-status` command
 forms; it is tooling validation evidence and does not resolve S4-M11 or complete
 the long-term objective.
+S4-M456 additionally refreshes this active completion audit with current
+rand-status, validate-local, and S4-M11 blocker evidence; it is audit
+maintenance and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

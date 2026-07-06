@@ -1502,3 +1502,8 @@ S4-M455 records direct `rand-status` command forms
 (`compare/results/s4-m455-rand-status-direct-matrix.md`) so the documented
 `zig build rand-status -- --json`, `--schema-version`, and `--self-test` paths
 stay freshly verified while S4-M11 remains blocked.
+
+S4-M456 refreshes the active completion audit
+(`compare/results/s4-m456-active-completion-audit-refresh.md`) with current
+rand-status, validate-local, and S4-M11 blocker evidence, preserving the
+non-completion decision while S4-M11 remains blocked.
