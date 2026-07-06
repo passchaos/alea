@@ -955,3 +955,9 @@ S4-M350 adds distcheck helper tests
 `zig build distcheck` and `zig build distcheck-libc`, with `toolingcheck`
 guarding that tests run before the distribution-grid executables. This improves
 distribution checker reliability while S4-M11 remains blocked.
+
+S4-M351 adds profilecheck helper tests
+(`compare/results/s4-m351-profilecheck-helper-tests.md`) and wires them into
+`zig build profilecheck`, with `toolingcheck` guarding that tests run before the
+accepted vector-profile executable. This improves profile checker reliability
+while S4-M11 remains blocked.

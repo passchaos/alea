@@ -1367,7 +1367,19 @@ pub fn build(b: *std.Build) void {
     const run_profilecheck = b.addRunArtifact(profilecheck);
     if (b.args) |args| run_profilecheck.addArgs(args);
 
+    const profilecheck_tests = b.addTest(.{
+        .name = "alea-profilecheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/profilecheck.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "alea", .module = module }},
+        }),
+    });
+    const run_profilecheck_tests = b.addRunArtifact(profilecheck_tests);
+
     const profilecheck_step = b.step("profilecheck", "Run accepted vector profile distribution checks");
+    profilecheck_step.dependOn(&run_profilecheck_tests.step);
     profilecheck_step.dependOn(&run_profilecheck.step);
 
     const profiletailcheck_mod = b.createModule(.{
@@ -1428,7 +1440,7 @@ pub fn build(b: *std.Build) void {
     validate_step.dependOn(statcheck_step);
     validate_step.dependOn(distcheck_step);
     validate_step.dependOn(distcheck_libc_step);
-    validate_step.dependOn(&run_profilecheck.step);
+    validate_step.dependOn(profilecheck_step);
 
     const validate_local_step = b.step("validate-local", "Run native validation plus local Rust surface checks");
     validate_local_step.dependOn(validate_step);

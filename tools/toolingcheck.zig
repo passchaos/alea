@@ -48,6 +48,11 @@ const distcheck_libc_dependencies = [_][]const u8{
     "distcheck_libc_step.dependOn(&run_distcheck_libc.step)",
 };
 
+const profilecheck_dependencies = [_][]const u8{
+    "profilecheck_step.dependOn(&run_profilecheck_tests.step)",
+    "profilecheck_step.dependOn(&run_profilecheck.step)",
+};
+
 const surfacecheck_dependencies = [_][]const u8{
     "surfacecheck_step.dependOn(&run_surfacecheck_tests.step)",
     "surfacecheck_step.dependOn(&run_surfacecheck.step)",
@@ -75,7 +80,7 @@ const validate_dependencies = [_][]const u8{
     "validate_step.dependOn(statcheck_step)",
     "validate_step.dependOn(distcheck_step)",
     "validate_step.dependOn(distcheck_libc_step)",
-    "validate_step.dependOn(&run_profilecheck.step)",
+    "validate_step.dependOn(profilecheck_step)",
 };
 
 const validate_all_dependencies = [_][]const u8{
@@ -445,6 +450,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (distcheck_libc_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: distcheck-libc missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (profilecheck_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: profilecheck missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

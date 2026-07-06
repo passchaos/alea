@@ -118,10 +118,29 @@ fn checkProfile(
 }
 
 fn expectFloatBetween(comptime profile_name: []const u8, comptime metric: []const u8, value: f64, min: f64, max: f64) !void {
-    if (!(value >= min and value <= max)) {
+    if (!floatInClosedRange(value, min, max)) {
         std.debug.print("{s} {s}: {d:.8} not in [{d:.8}, {d:.8}]\n", .{ profile_name, metric, value, min, max });
         return error.ProfileCheckFailed;
     }
+}
+
+fn floatInClosedRange(value: f64, min: f64, max: f64) bool {
+    return value >= min and value <= max;
+}
+
+test "profile vector type selection matches accepted profiles" {
+    try std.testing.expectEqual(@as(usize, 8), @typeInfo(profileVectorType(.normal_table_f32)).vector.len);
+    try std.testing.expectEqual(@as(usize, 4), @typeInfo(profileVectorType(.normal_table_f64)).vector.len);
+    try std.testing.expectEqual(@as(usize, 8), @typeInfo(profileVectorType(.exponential_approx_log_f32)).vector.len);
+}
+
+test "float closed-range predicate accepts boundaries and rejects NaN" {
+    try std.testing.expect(floatInClosedRange(0.0, 0.0, 1.0));
+    try std.testing.expect(floatInClosedRange(1.0, 0.0, 1.0));
+    try std.testing.expect(floatInClosedRange(0.5, 0.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(-0.01, 0.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(1.01, 0.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(std.math.nan(f64), 0.0, 1.0));
 }
 
 fn emit(stdout: ?*std.Io.Writer, comptime fmt: []const u8, args: anytype) !void {
