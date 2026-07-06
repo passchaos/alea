@@ -1214,3 +1214,9 @@ while S4-M11 remains blocked.
 S4-M397 guards API reference validate/PractRand prose
 (`compare/results/s4-m397-api-validate-practrand-guard.md`) so API docs keep
 no-external PractRand wrapper validation visible while S4-M11 remains blocked.
+
+S4-M398 guards `validate` tooling-row precision
+(`compare/results/s4-m398-validate-tooling-row.md`) so the tooling catalog keeps
+native unit/example/catalog/API/statistical/distribution/libc/profile and
+no-external PractRand wrapper self-test coverage visible while S4-M11 remains
+blocked.
