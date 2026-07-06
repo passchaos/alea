@@ -520,7 +520,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M479 root one-shot shuffle helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m479-root-one-shot-shuffle-helpers.md` | Closed for the current bar: root system-entropy helpers can now run full and partial in-place shuffles directly. |
 | S4-M480 root one-shot weighted index helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m480-root-one-shot-weighted-index-helpers.md` | Closed for the current bar: root system-entropy helpers can now sample weighted indices directly. |
 | S4-M481 root one-shot compact index choice helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m481-root-one-shot-compact-index-helpers.md` | Closed for the current bar: root system-entropy helpers can now choose compact `u32` indices directly. |
-| S4-M482 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M482 root one-shot fixed-size choice arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m482-root-one-shot-choice-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size index/value choice arrays directly. |
+| S4-M483 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1225,6 +1226,9 @@ ergonomics work and does not resolve S4-M11 or complete the long-term objective.
 S4-M480 additionally adds root one-shot weighted index helpers; it is API
 ergonomics work and does not resolve S4-M11 or complete the long-term objective.
 S4-M481 additionally adds root one-shot compact index choice helpers; it is
+API ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M482 additionally adds root one-shot fixed-size choice arrays; it is
 API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 

@@ -1649,3 +1649,9 @@ S4-M481 adds root one-shot compact index choice helpers
 (`compare/results/s4-m481-root-one-shot-compact-index-helpers.md`):
 system-entropy callers can now choose compact `u32` indices directly from the
 root API while S4-M11 remains blocked.
+
+
+S4-M482 adds root one-shot fixed-size choice-array helpers
+(`compare/results/s4-m482-root-one-shot-choice-array-helpers.md`):
+system-entropy callers can now produce stack-friendly index and value choice
+arrays directly from the root API while S4-M11 remains blocked.
