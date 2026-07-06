@@ -528,7 +528,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M487 root one-shot weighted value helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m487-root-one-shot-weighted-value-helpers.md` | Closed for the current bar: root system-entropy helpers can now sample weighted values directly. |
 | S4-M488 root one-shot weighted const-pointer helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m488-root-one-shot-weighted-const-ptr-helpers.md` | Closed for the current bar: root system-entropy helpers can now sample weighted const pointers directly. |
 | S4-M489 root one-shot weighted mutable-pointer helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m489-root-one-shot-weighted-mut-ptr-helpers.md` | Closed for the current bar: root system-entropy helpers can now sample weighted mutable pointers directly. |
-| S4-M490 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M490 root one-shot no-replacement value sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m490-root-one-shot-no-replacement-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate no-replacement value samples directly. |
+| S4-M491 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1256,6 +1257,9 @@ S4-M488 additionally adds root one-shot weighted const-pointer helpers; it
 is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 S4-M489 additionally adds root one-shot weighted mutable-pointer helpers; it
+is API ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M490 additionally adds root one-shot no-replacement value sampling; it
 is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 

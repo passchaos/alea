@@ -735,6 +735,20 @@ pub fn partialShuffleTailSplitChecked(comptime T: type, io: std.Io, items: []T, 
     return partialShuffleTailSplit(T, io, items, amount);
 }
 
+pub fn sampleWithoutReplacement(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
+    std.debug.assert(count <= items.len);
+    return try sampleWithoutReplacementChecked(T, io, allocator, items, count);
+}
+
+pub fn sampleWithoutReplacementChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (count > items.len) return error.InvalidParameter;
+    if (count == items.len) return allocator.dupe(T, items);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try random_source.sampleWithoutReplacementChecked(T, allocator, items, count);
+}
+
 pub fn weightedIndex(io: std.Io, weights: []const f64) !?usize {
     switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
         .empty => return null,
@@ -2101,6 +2115,15 @@ test "root random helpers use explicit system entropy" {
     const tail_split_checked = try partialShuffleTailSplitChecked(u8, io, &tail_split_checked_values, 2);
     try std.testing.expectEqual(@as(usize, 2), tail_split_checked.selected.len);
     try std.testing.expectEqual(@as(usize, 2), tail_split_checked.rest.len);
+    const no_replacement_items = [_]u8{ 10, 20, 30, 40 };
+    const no_replacement = try sampleWithoutReplacement(u8, io, std.testing.allocator, &no_replacement_items, 3);
+    defer std.testing.allocator.free(no_replacement);
+    try std.testing.expectEqual(@as(usize, 3), no_replacement.len);
+    for (no_replacement) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    const no_replacement_checked = try sampleWithoutReplacementChecked(u8, io, std.testing.allocator, &no_replacement_items, 3);
+    defer std.testing.allocator.free(no_replacement_checked);
+    try std.testing.expectEqual(@as(usize, 3), no_replacement_checked.len);
+    for (no_replacement_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
     const weights = [_]f64{ 1, 2, 3, 4 };
     const weighted_index_value = (try weightedIndex(io, &weights)).?;
     try std.testing.expect(weighted_index_value < weights.len);
@@ -2558,6 +2581,20 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.InvalidParameter, partialShuffleSplitChecked(u8, failing, &empty_shuffle, 1));
     try std.testing.expectError(error.InvalidParameter, partialShuffleTailChecked(u8, failing, &empty_shuffle, 1));
     try std.testing.expectError(error.InvalidParameter, partialShuffleTailSplitChecked(u8, failing, &empty_shuffle, 1));
+    const sample_items = [_]u8{ 10, 20, 30 };
+    const empty_without_replacement = try sampleWithoutReplacement(u8, failing, std.testing.allocator, &sample_items, 0);
+    defer std.testing.allocator.free(empty_without_replacement);
+    try std.testing.expectEqual(@as(usize, 0), empty_without_replacement.len);
+    const empty_without_replacement_checked = try sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, 0);
+    defer std.testing.allocator.free(empty_without_replacement_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_without_replacement_checked.len);
+    const all_without_replacement = try sampleWithoutReplacement(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
+    defer std.testing.allocator.free(all_without_replacement);
+    try std.testing.expectEqualSlices(u8, &sample_items, all_without_replacement);
+    const all_without_replacement_checked = try sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
+    defer std.testing.allocator.free(all_without_replacement_checked);
+    try std.testing.expectEqualSlices(u8, &sample_items, all_without_replacement_checked);
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
     const empty_weights = [_]f64{ 0, 0, 0 };
     try std.testing.expectEqual(@as(?usize, null), try weightedIndex(failing, &empty_weights));
     try std.testing.expectEqual(@as(?usize, null), try weightedIndexChecked(failing, &empty_weights));
@@ -2940,6 +2977,8 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, partialShuffleSplit(u8, failing, &shuffle_pair, 1));
     try std.testing.expectError(error.EntropyUnavailable, partialShuffleTail(u8, failing, &shuffle_pair, 1));
     try std.testing.expectError(error.EntropyUnavailable, partialShuffleTailSplit(u8, failing, &shuffle_pair, 1));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWithoutReplacement(u8, failing, std.testing.allocator, &sample_items, 1));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, 1));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
     var weighted_one: [1]?usize = undefined;

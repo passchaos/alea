@@ -1697,3 +1697,9 @@ S4-M489 adds root one-shot weighted mutable-pointer helpers
 (`compare/results/s4-m489-root-one-shot-weighted-mut-ptr-helpers.md`):
 system-entropy callers can now sample weighted writable references directly from
 the root API while S4-M11 remains blocked.
+
+
+S4-M490 adds root one-shot no-replacement value sampling
+(`compare/results/s4-m490-root-one-shot-no-replacement-helpers.md`):
+system-entropy callers can now allocate no-replacement value samples directly
+from the root API while S4-M11 remains blocked.
