@@ -1497,3 +1497,8 @@ S4-M454 exposes the `rand-status` command matrix from the tooling catalog
 (`compare/results/s4-m454-tooling-rand-status-matrix.md`) so validation/tooling
 docs also point to the latest status command evidence while S4-M11 remains
 blocked.
+
+S4-M455 records direct `rand-status` command forms
+(`compare/results/s4-m455-rand-status-direct-matrix.md`) so the documented
+`zig build rand-status -- --json`, `--schema-version`, and `--self-test` paths
+stay freshly verified while S4-M11 remains blocked.

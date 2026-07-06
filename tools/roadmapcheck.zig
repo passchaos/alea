@@ -450,6 +450,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M452", .path = "compare/results/s4-m452-readme-rand-status-matrix.md" },
     .{ .milestone = "S4-M453", .path = "compare/results/s4-m453-guide-api-rand-status-matrix.md" },
     .{ .milestone = "S4-M454", .path = "compare/results/s4-m454-tooling-rand-status-matrix.md" },
+    .{ .milestone = "S4-M455", .path = "compare/results/s4-m455-rand-status-direct-matrix.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -457,7 +458,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M455",
+    "S4-M456",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -633,6 +634,20 @@ const rand_status_matrix_tokens = [_][]const u8{
     "S4-M11 and is not whole-goal completion evidence",
 };
 
+const rand_status_direct_matrix_tokens = [_][]const u8{
+    "# S4-M455 Direct `rand-status` Command Matrix",
+    "$ zig build rand-status -- --json",
+    "\"schema_version\": 1",
+    "\"validate_local_passes\": true",
+    "\"opportunity_runners_available\": false",
+    "\"no_known_unblocked_gap\": true",
+    "\"s4_m11_blocked\": true",
+    "$ zig build rand-status -- --schema-version",
+    "$ zig build rand-status -- --self-test",
+    "rand-status self-test ok",
+    "does not resolve S4-M11",
+};
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     var stdout_buffer: [1024]u8 = undefined;
@@ -666,6 +681,8 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(current_rand_status);
     const rand_status_matrix = try readFile(io, allocator, "compare/results/s4-m450-rand-status-command-matrix.md");
     defer allocator.free(rand_status_matrix);
+    const rand_status_direct_matrix = try readFile(io, allocator, "compare/results/s4-m455-rand-status-direct-matrix.md");
+    defer allocator.free(rand_status_direct_matrix);
 
     var missing: usize = 0;
 
@@ -732,13 +749,14 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "local rand_distr public-surface manifest", local_rand_distr_manifest, local_rand_distr_manifest_tokens[0..], &missing);
     try checkManifestTokens(stderr, "current local rand status", current_rand_status, current_rand_status_tokens[0..], &missing);
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
+    try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M455 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M455 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M456 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M456 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M455 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M455 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M456 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M456 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {

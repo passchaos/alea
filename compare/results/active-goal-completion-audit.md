@@ -475,7 +475,8 @@ complete.
 | S4-M452 README rand-status command matrix discovery | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m452-readme-rand-status-matrix.md` | Closed for the current bar: README now links the latest `rand-status` command matrix evidence. |
 | S4-M453 guide/API rand-status matrix discovery | `docs/core-guide.md`, `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m453-guide-api-rand-status-matrix.md` | Closed for the current bar: core guide/API now link the latest `rand-status` command matrix evidence. |
 | S4-M454 tooling rand-status matrix discovery | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m454-tooling-rand-status-matrix.md` | Closed for the current bar: tooling catalog now links the latest `rand-status` command matrix evidence. |
-| S4-M455 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M455 direct `rand-status` command matrix | `compare/results/s4-m455-rand-status-direct-matrix.md`, `tools/roadmapcheck.zig` | Closed for the current bar: direct documented JSON/schema/self-test `rand-status` forms pass and are guarded. |
+| S4-M456 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1105,6 +1106,9 @@ complete the long-term objective.
 S4-M454 additionally exposes that command matrix from the tooling catalog; it is
 documentation discoverability and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M455 additionally records and guards direct documented `rand-status` command
+forms; it is tooling validation evidence and does not resolve S4-M11 or complete
+the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
