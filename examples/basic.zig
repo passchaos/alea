@@ -99,6 +99,9 @@ pub fn main(init: std.process.Init) !void {
     const root_weighted_value_array = (try alea.chooseWeightedValueArray([]const u8, io, 4, root_weighted_items, &root_weights)).?;
     const root_weighted_ptr = (try alea.chooseWeightedConstPtr([]const u8, io, root_weighted_items, &root_weights)).?;
     const root_weighted_ptr_array_checked = try alea.chooseWeightedConstPtrArrayChecked([]const u8, io, 4, root_weighted_items, &root_weights);
+    var root_weighted_mut_items = root_weighted_items.*;
+    const root_weighted_mut_ptr = (try alea.chooseWeightedPtr([]const u8, io, &root_weighted_mut_items, &root_weights)).?;
+    const root_weighted_mut_ptr_array_checked = try alea.chooseWeightedPtrArrayChecked([]const u8, io, 4, &root_weighted_mut_items, &root_weights);
     const root_weighted_index_batch = try alea.weightedIndexBatch(io, init.gpa, 4, &root_weights);
     defer init.gpa.free(root_weighted_index_batch);
     const root_weighted_index_u32_batch = try alea.weightedIndexU32Batch(io, init.gpa, 4, &root_weights);
@@ -107,6 +110,8 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(root_weighted_value_batch);
     const root_weighted_ptr_batch_checked = try alea.chooseWeightedConstPtrBatchChecked([]const u8, io, init.gpa, 4, root_weighted_items, &root_weights);
     defer init.gpa.free(root_weighted_ptr_batch_checked);
+    const root_weighted_mut_ptr_batch_checked = try alea.chooseWeightedPtrBatchChecked([]const u8, io, init.gpa, 4, &root_weighted_mut_items, &root_weights);
+    defer init.gpa.free(root_weighted_mut_ptr_batch_checked);
     var root_random_bytes: [4]u8 = undefined;
     try alea.fill(u8, io, &root_random_bytes);
     var root_random_range_values: [4]u8 = undefined;
@@ -260,6 +265,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("root weighted helpers: weightedIndex={}, weightedIndexU32={}, fill={any}, fillU32={any}, array={any}, arrayU32={any}, batch={any}, batchU32={any}\n", .{ root_weighted_index, root_weighted_index_u32, root_weighted_indices, root_weighted_indices_u32, root_weighted_index_array, root_weighted_index_u32_array, root_weighted_index_batch, root_weighted_index_u32_batch });
     try stdout.print("root weighted value helpers: value={s}, fill=[{?s}, {?s}, {?s}, {?s}], array=[{s}, {s}, {s}, {s}], batch=[{?s}, {?s}, {?s}, {?s}]\n", .{ root_weighted_value, root_weighted_values[0], root_weighted_values[1], root_weighted_values[2], root_weighted_values[3], root_weighted_value_array[0], root_weighted_value_array[1], root_weighted_value_array[2], root_weighted_value_array[3], root_weighted_value_batch[0], root_weighted_value_batch[1], root_weighted_value_batch[2], root_weighted_value_batch[3] });
     try stdout.print("root weighted pointer helpers: ptr={s}, ptrArray=[{s}, {s}, {s}, {s}], ptrBatch=[{s}, {s}, {s}, {s}]\n", .{ root_weighted_ptr.*, root_weighted_ptr_array_checked[0].*, root_weighted_ptr_array_checked[1].*, root_weighted_ptr_array_checked[2].*, root_weighted_ptr_array_checked[3].*, root_weighted_ptr_batch_checked[0].*, root_weighted_ptr_batch_checked[1].*, root_weighted_ptr_batch_checked[2].*, root_weighted_ptr_batch_checked[3].* });
+    try stdout.print("root weighted mutable pointer helpers: ptr={s}, ptrArray=[{s}, {s}, {s}, {s}], ptrBatch=[{s}, {s}, {s}, {s}]\n", .{ root_weighted_mut_ptr.*, root_weighted_mut_ptr_array_checked[0].*, root_weighted_mut_ptr_array_checked[1].*, root_weighted_mut_ptr_array_checked[2].*, root_weighted_mut_ptr_array_checked[3].*, root_weighted_mut_ptr_batch_checked[0].*, root_weighted_mut_ptr_batch_checked[1].*, root_weighted_mut_ptr_batch_checked[2].*, root_weighted_mut_ptr_batch_checked[3].* });
     try stdout.print("root random helpers: random={}, range={}, bool={}, fill={any}, rangeFill={any}, inclusiveFill={any}, boolFill={any}, ratioFill={any}, valueBatch={any}, rangeBatch={any}, boolBatch={any}, ratioBatch={any}, iterNext={}, iterUnbounded={}\n", .{ root_random_value, root_random_range, root_random_bool, root_random_bytes, root_random_range_values, root_random_inclusive_values, root_random_bools, root_random_ratios, root_random_value_batch, root_random_range_batch, root_random_bool_batch, root_random_ratio_batch, root_random_iter_next, root_random_iter_hint.upper == null });
     try stdout.print("root endpoint float helpers: openFill={any}, openBatch={any}, openClosedFill={any}, openClosedBatch={any}\n", .{ root_open_values, root_open_batch, root_open_closed_values, root_open_closed_batch });
     try stdout.print("root duration helpers: lessThan={}ns, atMost={}ns, lessThanBatch={any}, atMostBatch={any}\n", .{ root_duration_less_than.nanoseconds, root_duration_at_most.nanoseconds, root_duration_less_than_batch, root_duration_at_most_batch });

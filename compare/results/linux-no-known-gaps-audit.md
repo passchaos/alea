@@ -1691,3 +1691,9 @@ S4-M488 adds root one-shot weighted const-pointer helpers
 (`compare/results/s4-m488-root-one-shot-weighted-const-ptr-helpers.md`):
 system-entropy callers can now sample weighted borrowed references directly from
 the root API while S4-M11 remains blocked.
+
+
+S4-M489 adds root one-shot weighted mutable-pointer helpers
+(`compare/results/s4-m489-root-one-shot-weighted-mut-ptr-helpers.md`):
+system-entropy callers can now sample weighted writable references directly from
+the root API while S4-M11 remains blocked.
