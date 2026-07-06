@@ -931,3 +931,9 @@ S4-M346 adds apicheck helper tests
 `zig build apicheck`, with `toolingcheck` guarding that tests run before the API
 coverage executable. This improves API-reference checker reliability while
 S4-M11 remains blocked.
+
+S4-M347 adds examplecheck helper tests
+(`compare/results/s4-m347-examplecheck-helper-tests.md`) and wires them into
+`zig build examplecheck`, with `toolingcheck` guarding that tests run before the
+examples-catalog executable. This improves examples-catalog checker reliability
+while S4-M11 remains blocked.

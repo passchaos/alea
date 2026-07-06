@@ -1048,7 +1048,18 @@ pub fn build(b: *std.Build) void {
     const run_examplecheck = b.addRunArtifact(examplecheck);
     if (b.args) |args| run_examplecheck.addArgs(args);
 
+    const examplecheck_tests = b.addTest(.{
+        .name = "alea-examplecheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/examplecheck.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_examplecheck_tests = b.addRunArtifact(examplecheck_tests);
+
     const examplecheck_step = b.step("examplecheck", "Check runnable examples catalog coverage");
+    examplecheck_step.dependOn(&run_examplecheck_tests.step);
     examplecheck_step.dependOn(&run_examplecheck.step);
 
     const toolingcheck_mod = b.createModule(.{
@@ -1177,7 +1188,7 @@ pub fn build(b: *std.Build) void {
 
     const doccheck_step = b.step("doccheck", "Run documentation, catalog, and roadmap coverage checks");
     doccheck_step.dependOn(apicheck_step);
-    doccheck_step.dependOn(&run_examplecheck.step);
+    doccheck_step.dependOn(examplecheck_step);
     doccheck_step.dependOn(toolingcheck_step);
     doccheck_step.dependOn(&run_readmecheck.step);
     doccheck_step.dependOn(roadmapcheck_step);

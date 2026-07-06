@@ -12,7 +12,7 @@ const Tool = struct {
 
 const doccheck_dependencies = [_][]const u8{
     "doccheck_step.dependOn(apicheck_step)",
-    "doccheck_step.dependOn(&run_examplecheck.step)",
+    "doccheck_step.dependOn(examplecheck_step)",
     "doccheck_step.dependOn(toolingcheck_step)",
     "doccheck_step.dependOn(&run_readmecheck.step)",
     "doccheck_step.dependOn(roadmapcheck_step)",
@@ -21,6 +21,11 @@ const doccheck_dependencies = [_][]const u8{
 const apicheck_dependencies = [_][]const u8{
     "apicheck_step.dependOn(&run_apicheck_tests.step)",
     "apicheck_step.dependOn(&run_apicheck.step)",
+};
+
+const examplecheck_dependencies = [_][]const u8{
+    "examplecheck_step.dependOn(&run_examplecheck_tests.step)",
+    "examplecheck_step.dependOn(&run_examplecheck.step)",
 };
 
 const surfacecheck_dependencies = [_][]const u8{
@@ -390,6 +395,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (apicheck_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: apicheck missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (examplecheck_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: examplecheck missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

@@ -145,3 +145,19 @@ fn knownExample(path: []const u8) bool {
     }
     return false;
 }
+
+test "known examples include representative runnable catalog entries" {
+    try std.testing.expect(knownExample("examples/basic.zig"));
+    try std.testing.expect(knownExample("examples/weighted_sampling.zig"));
+    try std.testing.expect(knownExample("examples/string_generation.zig"));
+    try std.testing.expect(!knownExample("examples/definitely-missing.zig"));
+}
+
+test "cataloged examples have build and aggregate tokens" {
+    inline for (examples) |example| {
+        try std.testing.expect(std.mem.startsWith(u8, example.path, "examples/"));
+        try std.testing.expect(std.mem.endsWith(u8, example.path, ".zig"));
+        try std.testing.expect(std.mem.startsWith(u8, example.step, "zig build run-"));
+        try std.testing.expect(std.mem.startsWith(u8, example.aggregate_token, "examples_step.dependOn("));
+    }
+}
