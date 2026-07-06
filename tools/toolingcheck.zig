@@ -193,6 +193,18 @@ const rand_status_doc_tokens = [_][]const u8{
     "tools/rand_status.zig",
 };
 
+const rand_status_source_tokens = [_][]const u8{
+    "Alea local rand/rand_distr status (2026-07-06)",
+    "Baseline: ~/Work/rand plus cached rand_distr 0.6.0",
+    "Latest gate: zig build validate-local passes",
+    "Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests",
+    "Rust comparison: parser tests and rand-bench-smoke pass",
+    "Runtime runners: node/cargo/rustc found; qemu/wine/wasmtime/wasmer not available",
+    "Current conclusion: no known unblocked local Rust core RNG gap",
+    "Remaining blocker: S4-M11 exact/default dense SIMD winner, new runtime, or new local Rust gap",
+    "Details: compare/results/s4-m420-current-rand-status.md",
+};
+
 const validate_dependencies = [_][]const u8{
     "validate_step.dependOn(&run_tests.step)",
     "validate_step.dependOn(examples_step)",
@@ -766,6 +778,14 @@ pub fn main(init: std.process.Init) !void {
     inline for (tooling_wasi_runner_tool_tokens) |token| {
         if (std.mem.indexOf(u8, tooling, token) == null) {
             try stderr.print("toolingcheck: docs/tooling.md missing WASI runner tool token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    const rand_status_source = try std.Io.Dir.cwd().readFileAlloc(io, "tools/rand_status.zig", allocator, .limited(64 * 1024));
+    defer allocator.free(rand_status_source);
+    inline for (rand_status_source_tokens) |token| {
+        if (std.mem.indexOf(u8, rand_status_source, token) == null) {
+            try stderr.print("toolingcheck: tools/rand_status.zig missing token `{s}`\n", .{token});
             missing += 1;
         }
     }

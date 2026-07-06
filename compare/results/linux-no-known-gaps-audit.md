@@ -1373,3 +1373,8 @@ S4-M429 synchronizes S4-M11 blocker evidence after the rand-status aggregate
 refresh (`compare/results/s4-m429-blocker-rand-status-sync.md`), keeping the
 blocker audit current with S4-M428 `validate-local` output while S4-M11 remains
 blocked.
+
+S4-M430 guards `rand-status` output tokens
+(`compare/results/s4-m430-rand-status-output-guard.md`) so the quick status
+printer keeps baseline, validation, no-new-gap, details, and S4-M11 blocker
+signals while S4-M11 remains blocked.
