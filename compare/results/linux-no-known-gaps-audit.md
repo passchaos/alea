@@ -1034,3 +1034,8 @@ S4-M363 adds a WASI dry-run build step
 exercises `tools/run_wasi_test.js --dry-run sample.wasm --flag` without reading
 or executing wasm. This improves WASI validation discoverability while S4-M11
 remains blocked.
+
+S4-M364 strengthens README WASI dry-run discovery
+(`compare/results/s4-m364-readme-wasi-dry-run-guard.md`) by making
+`readmecheck` require the `zig build wasi-dry-run` command in README. This
+improves portability validation discoverability while S4-M11 remains blocked.

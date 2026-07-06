@@ -25,6 +25,7 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build validate-local", .reason = "native plus local rand validation command" },
     .{ .token = "comparison work: it runs native validation plus `surfacecheck`", .reason = "validate-local component explanation" },
     .{ .token = "zig build validate-all", .reason = "broad validation command" },
+    .{ .token = "zig build wasi-dry-run", .reason = "WASI dry-run build step" },
     .{ .token = "portability-sensitive releases or evidence", .reason = "validate-all usage guidance" },
     .{ .token = "cross-target compile checks, WASI unit", .reason = "validate-all component explanation" },
     .{ .token = "tools/practrand.sh --dry-run", .reason = "PractRand dry-run command" },
@@ -140,6 +141,16 @@ test "required-token helper covers PractRand dry-run guidance" {
     try std.testing.expect(hasRequiredToken(text, dry_run));
     try std.testing.expect(hasRequiredToken(text, build_step));
     try std.testing.expect(hasRequiredToken(text, binary));
+}
+
+test "required-token helper covers WASI dry-run guidance" {
+    const wasi_dry_run = RequiredToken{
+        .token = "zig build wasi-dry-run",
+        .reason = "WASI dry-run build step",
+    };
+
+    try std.testing.expect(hasRequiredToken("run zig build wasi-dry-run before WASI debugging", wasi_dry_run));
+    try std.testing.expect(!hasRequiredToken("run zig build test-wasi before WASI debugging", wasi_dry_run));
 }
 
 test "project positioning and local rand note helpers require full phrases" {
