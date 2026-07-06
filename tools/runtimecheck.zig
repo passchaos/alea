@@ -52,18 +52,25 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    if (missing_required != 0) {
-        try stderr.flush();
-        return error.RequiredRuntimeMissing;
-    }
-    if (opportunities != 0) {
-        try stderr.print("runtimecheck: additional runtime runner available; refresh S4-M11 blocker evidence before continuing\n", .{});
-        try stderr.flush();
-        return error.RuntimeOpportunityAvailable;
-    }
+    evaluateRuntimeState(missing_required, opportunities) catch |err| switch (err) {
+        error.RequiredRuntimeMissing => {
+            try stderr.flush();
+            return err;
+        },
+        error.RuntimeOpportunityAvailable => {
+            try stderr.print("runtimecheck: additional runtime runner available; refresh S4-M11 blocker evidence before continuing\n", .{});
+            try stderr.flush();
+            return err;
+        },
+    };
 
     try stdout.print("runtimecheck ok: no additional runtime runner available\n", .{});
     try stdout.flush();
+}
+
+fn evaluateRuntimeState(missing_required: usize, opportunities: usize) error{ RequiredRuntimeMissing, RuntimeOpportunityAvailable }!void {
+    if (missing_required != 0) return error.RequiredRuntimeMissing;
+    if (opportunities != 0) return error.RuntimeOpportunityAvailable;
 }
 
 fn findExecutable(io: std.Io, allocator: std.mem.Allocator, path_env: []const u8, name: []const u8) !?[]u8 {
@@ -123,4 +130,11 @@ test "findExecutable ignores non-executable and missing entries" {
     if (std.Io.File.Permissions.has_executable_bit) {
         try std.testing.expect(try findExecutable(std.testing.io, allocator, dir_path, "plain") == null);
     }
+}
+
+test "runtime state decision prioritizes missing required tools then opportunities" {
+    try evaluateRuntimeState(0, 0);
+    try std.testing.expectError(error.RequiredRuntimeMissing, evaluateRuntimeState(1, 0));
+    try std.testing.expectError(error.RuntimeOpportunityAvailable, evaluateRuntimeState(0, 1));
+    try std.testing.expectError(error.RequiredRuntimeMissing, evaluateRuntimeState(1, 1));
 }

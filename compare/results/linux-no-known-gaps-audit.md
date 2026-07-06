@@ -822,3 +822,6 @@ available` conclusion.
 S4-M324 synchronizes the original `validate-local` evidence
 (`compare/results/s4-m324-validate-local-runtime-evidence.md`) with the later
 runtimecheck dependency, keeping the aggregate validation documentation accurate.
+S4-M325 adds focused decision tests for `runtimecheck`
+(`compare/results/s4-m325-runtimecheck-decision-tests.md`), covering pass,
+missing-required, opportunity-runner, and missing-required-priority outcomes.
