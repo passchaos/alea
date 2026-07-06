@@ -1061,3 +1061,9 @@ S4-M368 documents WASI dry-run usage in the API reference
 `zig build wasi-dry-run` / Node runner dry-run no-wasm-execution explanation with
 `toolingcheck`, improving portability validation discoverability while S4-M11
 remains blocked.
+
+S4-M369 documents and guards the crosscheck target set
+(`compare/results/s4-m369-crosscheck-target-guard.md`) by making `toolingcheck`
+verify `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`, `x86_64-windows`,
+`x86_64-macos`, and `aarch64-macos` in both `build.zig` and `docs/tooling.md`,
+protecting portability compile coverage while S4-M11 remains blocked.

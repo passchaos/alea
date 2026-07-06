@@ -115,6 +115,15 @@ const validate_all_dependencies = [_][]const u8{
     "validate_all_step.dependOn(wasi_report_step)",
 };
 
+const crosscheck_target_tokens = [_][]const u8{
+    "wasm32-wasi",
+    "aarch64-linux",
+    "riscv64-linux",
+    "x86_64-windows",
+    "x86_64-macos",
+    "aarch64-macos",
+};
+
 const wasi_dry_run_dependencies = [_][]const u8{
     "b.addSystemCommand(&.{ node_path, \"--no-warnings\", \"tools/run_wasi_test.js\", \"--dry-run\", \"sample.wasm\", \"--flag\" })",
     "wasi_dry_run_step.dependOn(&wasi_dry_run.step)",
@@ -532,6 +541,16 @@ pub fn main(init: std.process.Init) !void {
     inline for (validate_all_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: validate-all missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (crosscheck_target_tokens) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: build.zig missing crosscheck target `{s}`\n", .{token});
+            missing += 1;
+        }
+        if (std.mem.indexOf(u8, tooling, token) == null) {
+            try stderr.print("toolingcheck: docs/tooling.md missing crosscheck target `{s}`\n", .{token});
             missing += 1;
         }
     }

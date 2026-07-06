@@ -25,7 +25,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build profilecheck-tail` | Run profiletailcheck helper tests, then accepted vector profile tail checks. |
 | `zig build profilecheck-stress` | Run profilestresscheck helper tests, then accepted vector profile multi-seed stress checks. |
 | `zig build profilecheck-long` | Run profilelongcheck helper tests, then accepted vector profile long stress checks. |
-| `zig build crosscheck` | Compile unit tests for secondary targets without executing them. |
+| `zig build crosscheck` | Compile unit tests for secondary targets without executing them: `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`, `x86_64-windows`, `x86_64-macos`, and `aarch64-macos`. |
 | `zig build test-wasi` | Run wasm32-wasi unit tests through Node's WASI runtime. |
 | `zig build wasi-dry-run` | Print Node WASI runner argv without executing wasm. |
 | `zig build wasi-report` | Run the chained wasm32-wasi repro/statcheck/distcheck/profile checks through Node's WASI runtime. |
