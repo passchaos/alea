@@ -219,6 +219,9 @@ Use `zig build validate-all` before portability-sensitive releases or evidence
 refreshes: it runs native validation plus cross-target compile checks, WASI unit
 tests, and the chained WASI report.
 
+Use `zig build wasi-dry-run` to verify the Node WASI runner arguments without
+reading or executing a wasm file.
+
 The Rust command benchmarks against the local `rand` checkout in
 `~/Work/rand`. Latest comparison data is kept under
 `compare/results/`. Use `tools/practrand.sh --dry-run` to verify the PractRand pipeline command without requiring `RNG_test`, and set `PRACTRAND_BIN` if the executable is not named `RNG_test`. Use `vectorbench` for focused vector-slice evidence such

@@ -26,6 +26,8 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "comparison work: it runs native validation plus `surfacecheck`", .reason = "validate-local component explanation" },
     .{ .token = "zig build validate-all", .reason = "broad validation command" },
     .{ .token = "zig build wasi-dry-run", .reason = "WASI dry-run build step" },
+    .{ .token = "Node WASI runner arguments without", .reason = "WASI dry-run usage guidance" },
+    .{ .token = "reading or executing a wasm file", .reason = "WASI dry-run no-execution explanation" },
     .{ .token = "portability-sensitive releases or evidence", .reason = "validate-all usage guidance" },
     .{ .token = "cross-target compile checks, WASI unit", .reason = "validate-all component explanation" },
     .{ .token = "tools/practrand.sh --dry-run", .reason = "PractRand dry-run command" },
@@ -148,8 +150,17 @@ test "required-token helper covers WASI dry-run guidance" {
         .token = "zig build wasi-dry-run",
         .reason = "WASI dry-run build step",
     };
+    const no_execution = RequiredToken{
+        .token = "reading or executing a wasm file",
+        .reason = "WASI dry-run no-execution explanation",
+    };
 
-    try std.testing.expect(hasRequiredToken("run zig build wasi-dry-run before WASI debugging", wasi_dry_run));
+    const text =
+        \\Use `zig build wasi-dry-run` to verify the Node WASI runner arguments without
+        \\reading or executing a wasm file.
+    ;
+    try std.testing.expect(hasRequiredToken(text, wasi_dry_run));
+    try std.testing.expect(hasRequiredToken(text, no_execution));
     try std.testing.expect(!hasRequiredToken("run zig build test-wasi before WASI debugging", wasi_dry_run));
 }
 
