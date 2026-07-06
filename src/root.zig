@@ -2014,6 +2014,39 @@ pub fn weightedIndexU32ByIndexChecked(comptime Weight: type, io: std.Io, length:
     return (try weightedIndexU32ByIndex(Weight, io, length, weightFn)) orelse error.EmptyInput;
 }
 
+pub fn fillWeightedIndexBy(comptime T: type, comptime Weight: type, io: std.Io, dest: []?usize, items: []const T, comptime weightFn: fn (*const T) Weight) !void {
+    if (dest.len == 0) return;
+    switch (try rootWeightedIndexStateBy(T, Weight, items, weightFn)) {
+        .empty => {
+            @memset(dest, @as(?usize, null));
+            return;
+        },
+        .single => |index| {
+            @memset(dest, @as(?usize, index));
+            return;
+        },
+        .random => {},
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.fillWeightedIndexBy(random_source, T, Weight, dest, items, weightFn);
+}
+
+pub fn fillWeightedIndexByChecked(comptime T: type, comptime Weight: type, io: std.Io, dest: []usize, items: []const T, comptime weightFn: fn (*const T) Weight) !void {
+    if (dest.len == 0) return;
+    switch (try rootWeightedIndexStateBy(T, Weight, items, weightFn)) {
+        .empty => return error.EmptyInput,
+        .single => |index| {
+            @memset(dest, index);
+            return;
+        },
+        .random => {},
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.fillWeightedIndexByChecked(random_source, T, Weight, dest, items, weightFn);
+}
+
 pub fn fillWeightedIndexByIndex(comptime Weight: type, io: std.Io, dest: []?usize, length: usize, comptime weightFn: fn (usize) Weight) !void {
     if (dest.len == 0) return;
     switch (try rootWeightedIndexStateByIndex(Weight, length, weightFn)) {
@@ -4091,6 +4124,12 @@ test "root random helpers use explicit system entropy" {
     try std.testing.expect(weighted_index_u32_by_value < weighted_index_by_items.len);
     const weighted_index_u32_by_checked_value = try weightedIndexU32ByChecked(RootItemWeight.Entry, f64, io, &weighted_index_by_items, RootItemWeight.weight);
     try std.testing.expect(weighted_index_u32_by_checked_value < weighted_index_by_items.len);
+    var weighted_index_by_fill: [4]?usize = undefined;
+    try fillWeightedIndexBy(RootItemWeight.Entry, f64, io, &weighted_index_by_fill, &weighted_index_by_items, RootItemWeight.weight);
+    for (weighted_index_by_fill) |index| try std.testing.expect(index.? < weighted_index_by_items.len);
+    var weighted_index_by_checked_fill: [4]usize = undefined;
+    try fillWeightedIndexByChecked(RootItemWeight.Entry, f64, io, &weighted_index_by_checked_fill, &weighted_index_by_items, RootItemWeight.weight);
+    for (weighted_index_by_checked_fill) |index| try std.testing.expect(index < weighted_index_by_items.len);
     const weighted_index_u32_by_index_value = (try weightedIndexU32ByIndex(f64, io, weights.len, RootIndexWeight.weight)).?;
     try std.testing.expect(weighted_index_u32_by_index_value < weights.len);
     const weighted_index_u32_by_index_checked_value = try weightedIndexU32ByIndexChecked(f64, io, weights.len, RootIndexWeight.weight);
@@ -5434,6 +5473,21 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32ByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_items, RootItemWeights.invalid));
     const huge_weighted_by_items = @as([*]const RootItemWeights.Entry, @ptrFromInt(0x1000))[0 .. @as(usize, std.math.maxInt(u32)) + 1];
     try std.testing.expectError(error.InvalidParameter, weightedIndexU32By(RootItemWeights.Entry, f64, failing, huge_weighted_by_items, RootItemWeights.single));
+    var weighted_by_empty_fill: [0]?usize = .{};
+    try fillWeightedIndexBy(RootItemWeights.Entry, f64, failing, &weighted_by_empty_fill, &weighted_by_items, RootItemWeights.invalid);
+    var weighted_by_empty_checked_fill: [0]usize = .{};
+    try fillWeightedIndexByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_empty_checked_fill, &weighted_by_items, RootItemWeights.invalid);
+    var weighted_by_zero_fill: [3]?usize = undefined;
+    try fillWeightedIndexBy(RootItemWeights.Entry, f64, failing, &weighted_by_zero_fill, &weighted_by_items, RootItemWeights.zero);
+    try std.testing.expectEqualSlices(?usize, &.{ null, null, null }, &weighted_by_zero_fill);
+    var weighted_by_checked_fill: [3]usize = undefined;
+    try std.testing.expectError(error.EmptyInput, fillWeightedIndexByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_checked_fill, &weighted_by_items, RootItemWeights.zero));
+    try fillWeightedIndexBy(RootItemWeights.Entry, f64, failing, &weighted_by_zero_fill, &weighted_by_items, RootItemWeights.single);
+    try std.testing.expectEqualSlices(?usize, &.{ 1, 1, 1 }, &weighted_by_zero_fill);
+    try fillWeightedIndexByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_checked_fill, &weighted_by_items, RootItemWeights.single);
+    try std.testing.expectEqualSlices(usize, &.{ 1, 1, 1 }, &weighted_by_checked_fill);
+    try std.testing.expectError(error.InvalidWeight, fillWeightedIndexBy(RootItemWeights.Entry, f64, failing, &weighted_by_zero_fill, &weighted_by_items, RootItemWeights.invalid));
+    try std.testing.expectError(error.InvalidWeight, fillWeightedIndexByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_checked_fill, &weighted_by_items, RootItemWeights.invalid));
     const weighted_by_index_items = [_]u8{ 10, 20, 30 };
     try std.testing.expectEqual(@as(?u8, null), try chooseWeightedByIndex(u8, f64, failing, &.{}, RootByIndexWeights.single));
     try std.testing.expectEqual(@as(?u8, null), try chooseWeightedByIndex(u8, f64, failing, &weighted_by_index_items, RootByIndexWeights.zero));
@@ -6278,6 +6332,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexByChecked(RootItemWeights.Entry, f64, failing, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexU32By(RootItemWeights.Entry, f64, failing, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexU32ByChecked(RootItemWeights.Entry, f64, failing, weighted_by_items[0..2], RootItemWeights.weight));
+    var weighted_by_entropy: [1]?usize = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillWeightedIndexBy(RootItemWeights.Entry, f64, failing, &weighted_by_entropy, weighted_by_items[0..2], RootItemWeights.weight));
+    var weighted_by_checked_entropy: [1]usize = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillWeightedIndexByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_checked_entropy, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexU32ByIndex(f64, failing, 2, RootByIndexWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexU32ByIndexChecked(f64, failing, 2, RootByIndexWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, chooseWeightedByIndex(u8, f64, failing, &.{ 1, 2 }, RootByIndexWeights.weight));
