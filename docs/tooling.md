@@ -12,7 +12,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build test` | Run unit tests and API reference coverage checks. |
 | `zig build apicheck` | Verify public symbols are covered by `docs/api-reference.md`. |
 | `zig build examplecheck` | Verify `docs/examples.md` covers every checked-in runnable example/focused `run-*` step, every cataloged example remains wired into aggregate `zig build examples`, and key examples still contain expected adoption-output tokens. |
-| `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step/checked-in tool file, that doccheck runs every documentation/catalog checker, and that surfacecheck/runtimecheck run helper tests before their executable checks. |
+| `zig build toolingcheck` | Verify this tooling catalog covers every project-defined build step/checked-in tool file, that doccheck and validate keep their aggregate dependencies, and that surfacecheck/runtimecheck run helper tests before their executable checks. |
 | `zig build readmecheck` | Verify README discovery links, quick-start API tokens, and core validation commands stay visible. |
 | `zig build roadmapcheck` | Verify roadmap, active-audit milestone evidence, public-surface manifests, and concrete S4-M11 blocker tokens stay synchronized. |
 | `zig build surfacecheck` | Run surfacecheck helper tests, compare the local Rust `rand` / resolved `rand_core` / cached `rand_distr` public surface against the checked-in manifests, guard against unlisted public source files, and print file/token coverage summaries; defaults are resolved relative to `$HOME`, and `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` override local paths. |

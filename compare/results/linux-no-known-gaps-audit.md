@@ -857,3 +857,9 @@ S4-M334 hardens example validation
 verify that every cataloged runnable example remains wired into the aggregate
 `zig build examples` step used by `zig build validate`. This improves adoption
 and validation ergonomics while S4-M11 remains blocked.
+
+S4-M335 hardens the native validation aggregate
+(`compare/results/s4-m335-validate-dependency-guard.md`) by making
+`toolingcheck` verify all current `zig build validate` dependency tokens: unit
+tests, examples, doccheck, statcheck, distcheck, distcheck-libc, and accepted
+profilecheck. This improves validation ergonomics while S4-M11 remains blocked.

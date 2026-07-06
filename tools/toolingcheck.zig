@@ -28,6 +28,16 @@ const runtimecheck_dependencies = [_][]const u8{
     "runtimecheck_step.dependOn(&run_runtimecheck.step)",
 };
 
+const validate_dependencies = [_][]const u8{
+    "validate_step.dependOn(&run_tests.step)",
+    "validate_step.dependOn(examples_step)",
+    "validate_step.dependOn(doccheck_step)",
+    "validate_step.dependOn(&run_statcheck.step)",
+    "validate_step.dependOn(&run_distcheck.step)",
+    "validate_step.dependOn(&run_distcheck_libc.step)",
+    "validate_step.dependOn(&run_profilecheck.step)",
+};
+
 const runtimecheck_doc_tokens = [_][]const u8{
     "zig build runtimecheck",
     "node",
@@ -283,9 +293,11 @@ pub fn main(init: std.process.Init) !void {
             missing += 1;
         }
     }
-    if (std.mem.indexOf(u8, build, "validate_step.dependOn(doccheck_step)") == null) {
-        try stderr.print("toolingcheck: zig build validate must depend on doccheck\n", .{});
-        missing += 1;
+    inline for (validate_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: validate missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
     }
     if (std.mem.indexOf(u8, build, "validate_local_step.dependOn(validate_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(surfacecheck_step)") == null or
