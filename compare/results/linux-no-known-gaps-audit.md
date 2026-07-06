@@ -1240,3 +1240,8 @@ S4-M402 documents PractRand wrapper self-test usage
 (`compare/results/s4-m402-practrand-self-test-usage.md`) so `tools/practrand.sh
 --help` explains no-`RNG_test` command-construction validation while S4-M11
 remains blocked.
+
+S4-M403 documents WASI runner self-test usage
+(`compare/results/s4-m403-wasi-self-test-usage.md`) so `tools/run_wasi_test.js
+--help` explains no-wasm dry-run/missing-argument validation while S4-M11
+remains blocked.

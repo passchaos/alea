@@ -363,6 +363,7 @@ const tooling_wasi_dry_run_tokens = [_][]const u8{
 const wasi_runner_tokens = [_][]const u8{
     "--dry-run",
     "--self-test",
+    "validates dry-run and missing-argument paths without wasm",
     "run_wasi_test self-test ok",
     "--help",
     "dryRunLine",

@@ -423,7 +423,8 @@ complete.
 | S4-M400 wrapper self-test temp-file safety | `tools/practrand.sh`, `tools/rand_bench_smoke.sh`, `tools/toolingcheck.zig`, `compare/results/s4-m400-wrapper-self-test-tempfiles.md` | Closed for the current bar: wrapper self-tests use `mktemp` and trap cleanup, and toolingcheck guards it. |
 | S4-M401 Rust bench smoke self-test usage | `tools/rand_bench_smoke.sh`, `tools/toolingcheck.zig`, `compare/results/s4-m401-rand-bench-smoke-self-test-usage.md` | Closed for the current bar: smoke wrapper help now documents `--self-test` and toolingcheck guards it. |
 | S4-M402 PractRand self-test usage prose | `tools/practrand.sh`, `tools/toolingcheck.zig`, `compare/results/s4-m402-practrand-self-test-usage.md` | Closed for the current bar: PractRand wrapper help now explains no-`RNG_test` self-test semantics and toolingcheck guards it. |
-| S4-M403 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M403 WASI self-test usage prose | `tools/run_wasi_test.js`, `tools/toolingcheck.zig`, `compare/results/s4-m403-wasi-self-test-usage.md` | Closed for the current bar: WASI runner help explains no-wasm `--self-test` semantics and toolingcheck guards it. |
+| S4-M404 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -896,6 +897,9 @@ resolve S4-M11 or complete the long-term objective.
 S4-M402 additionally documents and guards PractRand wrapper `--self-test` usage
 semantics; it is external-statistical-tooling reliability and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M403 additionally documents and guards WASI runner `--self-test` usage
+semantics; it is portability tooling reliability and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
