@@ -1532,3 +1532,8 @@ S4-M461 adds a blocker-audit link to `rand-status-json`
 (`compare/results/s4-m461-rand-status-blocker-audit-field.md`) so scripts can
 jump from current status to `compare/results/s4-m11-blocker-audit.md` while
 S4-M11 remains blocked.
+
+S4-M462 keeps that blocker-audit link visible in the current status snapshot
+(`compare/results/s4-m462-current-status-blocker-audit.md`) so
+`compare/results/s4-m420-current-rand-status.md` mirrors the script-friendly
+status schema while S4-M11 remains blocked.
