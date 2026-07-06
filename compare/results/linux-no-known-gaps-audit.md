@@ -1270,3 +1270,8 @@ S4-M408 tightens that checked-tool row guard
 (`compare/results/s4-m408-tooling-wasi-runner-row-atomic.md`) so the full
 `tools/run_wasi_test.js` row keeps dry-run/self-test/no-wasm semantics together
 while S4-M11 remains blocked.
+
+S4-M409 documents direct README discovery for the Node WASI runner self-test
+(`compare/results/s4-m409-readme-direct-wasi-self-test.md`) so users can run
+`node tools/run_wasi_test.js --self-test` without the build graph while S4-M11
+remains blocked.

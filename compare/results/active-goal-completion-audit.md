@@ -429,7 +429,8 @@ complete.
 | S4-M406 tooling WASI self-test prose guard | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m406-tooling-wasi-self-test-guard.md` | Closed for the current bar: toolingcheck guards tooling catalog prose for no-wasm WASI runner self-test semantics. |
 | S4-M407 tooling WASI runner tool-row self-test semantics | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m407-tooling-wasi-runner-row.md` | Closed for the current bar: toolingcheck guards the checked-tool row for no-wasm WASI runner self-test semantics. |
 | S4-M408 atomic tooling WASI runner row guard | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m408-tooling-wasi-runner-row-atomic.md` | Closed for the current bar: toolingcheck requires the full checked-tool row for no-wasm WASI runner self-test semantics. |
-| S4-M409 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M409 README direct WASI self-test command | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m409-readme-direct-wasi-self-test.md` | Closed for the current bar: README lists and explains direct `node tools/run_wasi_test.js --self-test` runner validation. |
+| S4-M410 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -921,6 +922,9 @@ S4-M408 additionally tightens that checked-tool row guard so the full WASI runne
 self-test semantics must stay together in the row; it is portability
 documentation reliability and does not resolve S4-M11 or complete the long-term
 objective.
+S4-M409 additionally documents and guards direct Node WASI runner self-test
+invocation in README; it is portability documentation reliability and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

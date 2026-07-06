@@ -200,6 +200,7 @@ zig build crosscheck
 zig build test-wasi
 zig build wasi-dry-run
 zig build wasi-self-test
+node tools/run_wasi_test.js --self-test
 zig build wasi-report
 zig build run-basic
 zig build examples
@@ -232,7 +233,8 @@ tests, WASI dry/self tests, and the chained WASI report. `zig build crosscheck` 
 `x86_64-macos`, and `aarch64-macos` targets without executing them.
 
 Use `zig build wasi-dry-run` to verify the Node WASI runner arguments without
-reading or executing a wasm file, and `zig build wasi-self-test` to self-test the
+reading or executing a wasm file, and use `zig build wasi-self-test` or
+`node tools/run_wasi_test.js --self-test` to self-test the
 Node WASI runner dry-run and missing-argument paths without wasm.
 
 The Rust command benchmarks against the local `rand` checkout in
