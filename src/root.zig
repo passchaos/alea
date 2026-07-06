@@ -432,6 +432,67 @@ pub fn chooseBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Alloc
     return out;
 }
 
+pub fn shuffle(comptime T: type, io: std.Io, items: []T) !void {
+    if (items.len <= 1) return;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    seq.shuffle(random_source, T, items);
+}
+
+pub fn partialShuffle(comptime T: type, io: std.Io, items: []T, amount: usize) ![]T {
+    const count = @min(amount, items.len);
+    if (count == 0) return items[0..0];
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return seq.partialShuffle(random_source, T, items, amount);
+}
+
+pub fn partialShuffleChecked(comptime T: type, io: std.Io, items: []T, amount: usize) ![]T {
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffle(T, io, items, amount);
+}
+
+pub fn PartialShuffleSplit(comptime T: type) type {
+    return seq.PartialShuffleSplit(T);
+}
+
+pub fn PartialShuffleTailSplit(comptime T: type) type {
+    return seq.PartialShuffleTailSplit(T);
+}
+
+pub fn partialShuffleSplit(comptime T: type, io: std.Io, items: []T, amount: usize) !PartialShuffleSplit(T) {
+    const selected = try partialShuffle(T, io, items, amount);
+    return .{ .selected = selected, .rest = items[selected.len..] };
+}
+
+pub fn partialShuffleSplitChecked(comptime T: type, io: std.Io, items: []T, amount: usize) !PartialShuffleSplit(T) {
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffleSplit(T, io, items, amount);
+}
+
+pub fn partialShuffleTail(comptime T: type, io: std.Io, items: []T, amount: usize) ![]T {
+    const count = @min(amount, items.len);
+    if (count == 0) return items[items.len..];
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return seq.partialShuffleTail(random_source, T, items, amount);
+}
+
+pub fn partialShuffleTailChecked(comptime T: type, io: std.Io, items: []T, amount: usize) ![]T {
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffleTail(T, io, items, amount);
+}
+
+pub fn partialShuffleTailSplit(comptime T: type, io: std.Io, items: []T, amount: usize) !PartialShuffleTailSplit(T) {
+    const selected = try partialShuffleTail(T, io, items, amount);
+    return .{ .selected = selected, .rest = items[0 .. items.len - selected.len] };
+}
+
+pub fn partialShuffleTailSplitChecked(comptime T: type, io: std.Io, items: []T, amount: usize) !PartialShuffleTailSplit(T) {
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffleTailSplit(T, io, items, amount);
+}
+
 pub fn valueBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize) ![]T {
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
@@ -1294,6 +1355,37 @@ test "root random helpers use explicit system entropy" {
     const chosen_value_batch_checked = try chooseBatchChecked(u8, io, std.testing.allocator, 4, &colors);
     defer std.testing.allocator.free(chosen_value_batch_checked);
     for (chosen_value_batch_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value) != null);
+    var shuffle_values = [_]u8{ 1, 2, 3, 4 };
+    try shuffle(u8, io, &shuffle_values);
+    try std.testing.expectEqual(@as(usize, 4), shuffle_values.len);
+    var partial_values = [_]u8{ 1, 2, 3, 4 };
+    const partial = try partialShuffle(u8, io, &partial_values, 2);
+    try std.testing.expectEqual(@as(usize, 2), partial.len);
+    var partial_checked_values = [_]u8{ 1, 2, 3, 4 };
+    const partial_checked = try partialShuffleChecked(u8, io, &partial_checked_values, 2);
+    try std.testing.expectEqual(@as(usize, 2), partial_checked.len);
+    var split_values = [_]u8{ 1, 2, 3, 4 };
+    const split = try partialShuffleSplit(u8, io, &split_values, 2);
+    try std.testing.expectEqual(@as(usize, 2), split.selected.len);
+    try std.testing.expectEqual(@as(usize, 2), split.rest.len);
+    var split_checked_values = [_]u8{ 1, 2, 3, 4 };
+    const split_checked = try partialShuffleSplitChecked(u8, io, &split_checked_values, 2);
+    try std.testing.expectEqual(@as(usize, 2), split_checked.selected.len);
+    try std.testing.expectEqual(@as(usize, 2), split_checked.rest.len);
+    var tail_values = [_]u8{ 1, 2, 3, 4 };
+    const tail = try partialShuffleTail(u8, io, &tail_values, 2);
+    try std.testing.expectEqual(@as(usize, 2), tail.len);
+    var tail_checked_values = [_]u8{ 1, 2, 3, 4 };
+    const tail_checked = try partialShuffleTailChecked(u8, io, &tail_checked_values, 2);
+    try std.testing.expectEqual(@as(usize, 2), tail_checked.len);
+    var tail_split_values = [_]u8{ 1, 2, 3, 4 };
+    const tail_split = try partialShuffleTailSplit(u8, io, &tail_split_values, 2);
+    try std.testing.expectEqual(@as(usize, 2), tail_split.selected.len);
+    try std.testing.expectEqual(@as(usize, 2), tail_split.rest.len);
+    var tail_split_checked_values = [_]u8{ 1, 2, 3, 4 };
+    const tail_split_checked = try partialShuffleTailSplitChecked(u8, io, &tail_split_checked_values, 2);
+    try std.testing.expectEqual(@as(usize, 2), tail_split_checked.selected.len);
+    try std.testing.expectEqual(@as(usize, 2), tail_split_checked.rest.len);
     const owned_values = try valueBatch(u16, io, std.testing.allocator, 4);
     defer std.testing.allocator.free(owned_values);
     try std.testing.expectEqual(@as(usize, 4), owned_values.len);
@@ -1519,6 +1611,33 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(fixed_choose_batch_checked);
     try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, fixed_choose_batch_checked);
     try std.testing.expectError(error.EmptyRange, chooseBatchChecked(u8, failing, std.testing.allocator, 3, &.{}));
+    var empty_shuffle: [0]u8 = .{};
+    try shuffle(u8, failing, &empty_shuffle);
+    try std.testing.expectEqual(@as(usize, 0), (try partialShuffle(u8, failing, &empty_shuffle, 3)).len);
+    try std.testing.expectEqual(@as(usize, 0), (try partialShuffleChecked(u8, failing, &empty_shuffle, 0)).len);
+    const empty_split = try partialShuffleSplit(u8, failing, &empty_shuffle, 3);
+    try std.testing.expectEqual(@as(usize, 0), empty_split.selected.len);
+    try std.testing.expectEqual(@as(usize, 0), empty_split.rest.len);
+    const empty_split_checked = try partialShuffleSplitChecked(u8, failing, &empty_shuffle, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_split_checked.selected.len);
+    try std.testing.expectEqual(@as(usize, 0), empty_split_checked.rest.len);
+    const empty_tail = try partialShuffleTail(u8, failing, &empty_shuffle, 3);
+    try std.testing.expectEqual(@as(usize, 0), empty_tail.len);
+    const empty_tail_checked = try partialShuffleTailChecked(u8, failing, &empty_shuffle, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_tail_checked.len);
+    const empty_tail_split = try partialShuffleTailSplit(u8, failing, &empty_shuffle, 3);
+    try std.testing.expectEqual(@as(usize, 0), empty_tail_split.selected.len);
+    try std.testing.expectEqual(@as(usize, 0), empty_tail_split.rest.len);
+    const empty_tail_split_checked = try partialShuffleTailSplitChecked(u8, failing, &empty_shuffle, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_tail_split_checked.selected.len);
+    try std.testing.expectEqual(@as(usize, 0), empty_tail_split_checked.rest.len);
+    var singleton_shuffle = [_]u8{42};
+    try shuffle(u8, failing, &singleton_shuffle);
+    try std.testing.expectEqualSlices(u8, &.{42}, &singleton_shuffle);
+    try std.testing.expectError(error.InvalidParameter, partialShuffleChecked(u8, failing, &empty_shuffle, 1));
+    try std.testing.expectError(error.InvalidParameter, partialShuffleSplitChecked(u8, failing, &empty_shuffle, 1));
+    try std.testing.expectError(error.InvalidParameter, partialShuffleTailChecked(u8, failing, &empty_shuffle, 1));
+    try std.testing.expectError(error.InvalidParameter, partialShuffleTailSplitChecked(u8, failing, &empty_shuffle, 1));
     try fillRange(u8, failing, &empty, 3, 4);
     try fillRangeChecked(u8, failing, &empty, 3, 3);
     try fillRangeAtMost(u8, failing, &empty, 6, 5);
@@ -1714,6 +1833,12 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, choose(u8, failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, fillChoose(u8, failing, &byte, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, chooseBatch(u8, failing, std.testing.allocator, 1, &.{ 1, 2 }));
+    var shuffle_pair = [_]u8{ 1, 2 };
+    try std.testing.expectError(error.EntropyUnavailable, shuffle(u8, failing, &shuffle_pair));
+    try std.testing.expectError(error.EntropyUnavailable, partialShuffle(u8, failing, &shuffle_pair, 1));
+    try std.testing.expectError(error.EntropyUnavailable, partialShuffleSplit(u8, failing, &shuffle_pair, 1));
+    try std.testing.expectError(error.EntropyUnavailable, partialShuffleTail(u8, failing, &shuffle_pair, 1));
+    try std.testing.expectError(error.EntropyUnavailable, partialShuffleTailSplit(u8, failing, &shuffle_pair, 1));
     try std.testing.expectError(error.EntropyUnavailable, valueBatch(u8, failing, std.testing.allocator, 1));
     try std.testing.expectError(error.EntropyUnavailable, fillRange(u8, failing, &byte, 3, 5));
     try std.testing.expectError(error.EntropyUnavailable, rangeBatch(u8, failing, std.testing.allocator, 1, 3, 5));

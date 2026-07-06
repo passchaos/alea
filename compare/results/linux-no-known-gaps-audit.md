@@ -1631,3 +1631,9 @@ S4-M478 adds root one-shot choice helpers
 (`compare/results/s4-m478-root-one-shot-choice-helpers.md`): system-entropy
 callers can now choose indices and values directly from the root API while
 S4-M11 remains blocked.
+
+
+S4-M479 adds root one-shot shuffle helpers
+(`compare/results/s4-m479-root-one-shot-shuffle-helpers.md`): system-entropy
+callers can now run full and partial in-place shuffles directly from the root API
+while S4-M11 remains blocked.
