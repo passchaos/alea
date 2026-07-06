@@ -971,6 +971,7 @@ zig build validate-local
 zig build validate-all
 zig build crosscheck
 zig build test-wasi
+zig build wasi-dry-run
 zig build wasi-report
 zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast profilecheck
@@ -989,7 +990,9 @@ Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
 comparison work because it adds `surfacecheck` and `runtimecheck`.
 Use `zig build validate-all` for portability-sensitive changes or evidence
 refreshes because it adds cross-target compile checks, WASI unit tests, and the
-chained WASI report.
+chained WASI report. Use `zig build wasi-dry-run` or
+`node tools/run_wasi_test.js --dry-run <test.wasm>` to verify Node WASI runner
+arguments without reading or executing a wasm file.
 
 `zig build roadmapcheck` also guards the local Rust `rand` and cached
 `rand_distr` public-surface manifests: it verifies scanned-source/version

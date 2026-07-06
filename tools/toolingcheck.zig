@@ -161,6 +161,12 @@ const core_guide_practrand_tokens = [_][]const u8{
     "PRACTRAND_BIN",
 };
 
+const core_guide_wasi_tokens = [_][]const u8{
+    "zig build wasi-dry-run",
+    "node tools/run_wasi_test.js --dry-run <test.wasm>",
+    "without reading or executing a wasm file",
+};
+
 const api_reference_practrand_tokens = [_][]const u8{
     "tools/practrand.sh --dry-run fast 1048576",
     "zig build practrand-dry-run",
@@ -461,6 +467,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (core_guide_practrand_tokens) |token| {
         if (std.mem.indexOf(u8, core_guide, token) == null) {
             try stderr.print("toolingcheck: docs/core-guide.md missing PractRand token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (core_guide_wasi_tokens) |token| {
+        if (std.mem.indexOf(u8, core_guide, token) == null) {
+            try stderr.print("toolingcheck: docs/core-guide.md missing WASI token `{s}`\n", .{token});
             missing += 1;
         }
     }

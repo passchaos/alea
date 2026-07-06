@@ -1039,3 +1039,8 @@ S4-M364 strengthens README WASI dry-run discovery
 (`compare/results/s4-m364-readme-wasi-dry-run-guard.md`) by making
 `readmecheck` require the `zig build wasi-dry-run` command in README. This
 improves portability validation discoverability while S4-M11 remains blocked.
+
+S4-M365 documents WASI dry-run usage in the core guide
+(`compare/results/s4-m365-core-guide-wasi-dry-run.md`) and guards the
+`zig build wasi-dry-run` / Node runner dry-run guidance with `toolingcheck`,
+improving portability validation discoverability while S4-M11 remains blocked.
