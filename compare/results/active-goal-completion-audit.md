@@ -349,7 +349,8 @@ complete.
 | S4-M326 runtimecheck runner-set docs | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m326-runtimecheck-docs.md` | Closed for the current bar: tooling docs now list runtimecheck's required and opportunity runner sets, and toolingcheck guards those tokens. |
 | S4-M327 runtimecheck summary counts | `tools/runtimecheck.zig`, `compare/results/s4-m11-blocker-audit.md`, `compare/results/s4-m327-runtimecheck-summary.md` | Closed for the current bar: runtimecheck now prints required/opportunity summary counts, and S4-M11 blocker evidence plus roadmapcheck require the current no-extra-runner summary. |
 | S4-M328 runtimecheck documentation token guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m328-runtimecheck-doc-token-guard.md` | Closed for the current bar: toolingcheck now requires docs/tooling to keep the full runtimecheck required/opportunity runner set visible. |
-| S4-M329 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M329 runtimecheck evidence sync | `compare/results/s4-m321-runtimecheck.md`, `compare/results/s4-m329-runtimecheck-evidence-sync.md` | Closed for the current bar: the original runtimecheck evidence now includes the summary-count output added in S4-M327. |
+| S4-M330 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -589,6 +590,9 @@ complete the long-term objective.
 S4-M328 additionally strengthens runtimecheck documentation guards; it is an
 evidence/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M329 additionally synchronizes earlier runtimecheck evidence with the current
+summary output; it is an evidence-quality improvement and does not resolve S4-M11
+or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

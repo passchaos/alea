@@ -835,3 +835,6 @@ S4-M328 strengthens runtimecheck documentation guards
 (`compare/results/s4-m328-runtimecheck-doc-token-guard.md`) so `toolingcheck`
 requires all required and opportunity runner names to remain visible in
 `docs/tooling.md`.
+S4-M329 syncs the original runtimecheck evidence
+(`compare/results/s4-m329-runtimecheck-evidence-sync.md`) with the current
+summary-count output added after S4-M327.

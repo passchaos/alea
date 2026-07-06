@@ -39,6 +39,7 @@ runtimecheck opportunity wine: missing
 runtimecheck opportunity wine64: missing
 runtimecheck opportunity wasmtime: missing
 runtimecheck opportunity wasmer: missing
+runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=7
 runtimecheck ok: no additional runtime runner available
 ```
 
