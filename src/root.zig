@@ -861,6 +861,69 @@ pub fn sampleWeightedIndicesU32Checked(comptime Weight: type, io: std.Io, alloca
     return try seq.sampleWeightedIndicesU32Checked(allocator, random_source, Weight, weights, amount);
 }
 
+pub fn sampleWeightedIndicesInto(comptime Weight: type, io: std.Io, weights: []const Weight, out: []usize, scratch_keys: []f64) !usize {
+    if (out.len == 0) return 0;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (weights.len == 0) return error.EmptyInput;
+    const state = try rootPositiveWeightState(Weight, weights);
+    const count = @min(out.len, state.count);
+    if (count == 0) return 0;
+    if (state.count == 1) {
+        out[0] = state.single_index.?;
+        return 1;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedIndicesInto(random_source, Weight, weights, out, scratch_keys);
+}
+
+pub fn sampleWeightedIndicesIntoChecked(comptime Weight: type, io: std.Io, weights: []const Weight, out: []usize, scratch_keys: []f64) !void {
+    if (out.len == 0) return;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (out.len > weights.len) return error.InvalidParameter;
+    const state = try rootPositiveWeightState(Weight, weights);
+    if (state.count < out.len) return error.InvalidParameter;
+    if (state.count == 1) {
+        out[0] = state.single_index.?;
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.sampleWeightedIndicesIntoChecked(random_source, Weight, weights, out, scratch_keys);
+}
+
+pub fn sampleWeightedIndicesU32Into(comptime Weight: type, io: std.Io, weights: []const Weight, out: []u32, scratch_keys: []f64) !usize {
+    if (out.len == 0) return 0;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (weights.len == 0) return error.EmptyInput;
+    if (weights.len > std.math.maxInt(u32)) return error.InvalidParameter;
+    const state = try rootPositiveWeightState(Weight, weights);
+    const count = @min(out.len, state.count);
+    if (count == 0) return 0;
+    if (state.count == 1) {
+        out[0] = @intCast(state.single_index.?);
+        return 1;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedIndicesU32Into(random_source, Weight, weights, out, scratch_keys);
+}
+
+pub fn sampleWeightedIndicesU32IntoChecked(comptime Weight: type, io: std.Io, weights: []const Weight, out: []u32, scratch_keys: []f64) !void {
+    if (out.len == 0) return;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (out.len > weights.len or weights.len > std.math.maxInt(u32)) return error.InvalidParameter;
+    const state = try rootPositiveWeightState(Weight, weights);
+    if (state.count < out.len) return error.InvalidParameter;
+    if (state.count == 1) {
+        out[0] = @intCast(state.single_index.?);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.sampleWeightedIndicesU32IntoChecked(random_source, Weight, weights, out, scratch_keys);
+}
+
 pub fn sampleWeighted(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, weights: []const Weight, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     var engine = try secure(io);
@@ -2092,6 +2155,24 @@ fn rootWeightAsF64(comptime Weight: type, weight: Weight) f64 {
     };
 }
 
+const RootPositiveWeightState = struct {
+    count: usize,
+    single_index: ?usize,
+};
+
+fn rootPositiveWeightState(comptime Weight: type, weights: []const Weight) !RootPositiveWeightState {
+    var state = RootPositiveWeightState{ .count = 0, .single_index = null };
+    for (weights, 0..) |weight, index| {
+        const value = rootWeightAsF64(Weight, weight);
+        if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
+        if (value > 0) {
+            state.count += 1;
+            state.single_index = if (state.count == 1) index else null;
+        }
+    }
+    return state;
+}
+
 const RootWeightedIndexState = union(enum) {
     empty,
     single: usize,
@@ -2625,6 +2706,22 @@ test "root random helpers use explicit system entropy" {
     for (weighted_index_u32_array_values) |value| try std.testing.expect(value < weights.len);
     const weighted_index_u32_array_checked_values = try weightedIndexU32ArrayChecked(io, 4, &weights);
     for (weighted_index_u32_array_checked_values) |value| try std.testing.expect(value < weights.len);
+    var weighted_sample_indices_into: [2]usize = undefined;
+    var weighted_sample_keys: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), try sampleWeightedIndicesInto(f64, io, &weights, &weighted_sample_indices_into, &weighted_sample_keys));
+    try std.testing.expect(weighted_sample_indices_into[0] != weighted_sample_indices_into[1]);
+    for (weighted_sample_indices_into) |value| try std.testing.expect(value < weights.len);
+    try sampleWeightedIndicesIntoChecked(f64, io, &weights, &weighted_sample_indices_into, &weighted_sample_keys);
+    try std.testing.expect(weighted_sample_indices_into[0] != weighted_sample_indices_into[1]);
+    for (weighted_sample_indices_into) |value| try std.testing.expect(value < weights.len);
+    var weighted_sample_indices_u32_into: [2]u32 = undefined;
+    var weighted_sample_u32_keys: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), try sampleWeightedIndicesU32Into(f64, io, &weights, &weighted_sample_indices_u32_into, &weighted_sample_u32_keys));
+    try std.testing.expect(weighted_sample_indices_u32_into[0] != weighted_sample_indices_u32_into[1]);
+    for (weighted_sample_indices_u32_into) |value| try std.testing.expect(value < weights.len);
+    try sampleWeightedIndicesU32IntoChecked(f64, io, &weights, &weighted_sample_indices_u32_into, &weighted_sample_u32_keys);
+    try std.testing.expect(weighted_sample_indices_u32_into[0] != weighted_sample_indices_u32_into[1]);
+    for (weighted_sample_indices_u32_into) |value| try std.testing.expect(value < weights.len);
     const weighted_items = [_]u8{ 10, 20, 30, 40 };
     var weighted_mut_nr_items = weighted_items;
     const weighted_mut_ptrs = try sampleWeightedMutPtrs(u8, f64, io, std.testing.allocator, &weighted_mut_nr_items, &weights, 2);
@@ -3160,6 +3257,41 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_weighted_nr_u32 = try sampleWeightedIndicesU32(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 0);
     defer std.testing.allocator.free(empty_weighted_nr_u32);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_nr_u32.len);
+    var empty_weighted_indices_into: [0]usize = .{};
+    var empty_weighted_keys: [0]f64 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesInto(f64, failing, &.{-1}, &empty_weighted_indices_into, &empty_weighted_keys));
+    try sampleWeightedIndicesIntoChecked(f64, failing, &.{-1}, &empty_weighted_indices_into, &empty_weighted_keys);
+    var empty_weighted_indices_u32_into: [0]u32 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesU32Into(f64, failing, &.{-1}, &empty_weighted_indices_u32_into, &empty_weighted_keys));
+    try sampleWeightedIndicesU32IntoChecked(f64, failing, &.{-1}, &empty_weighted_indices_u32_into, &empty_weighted_keys);
+    var weighted_indices_into_bad_scratch: [2]usize = undefined;
+    var weighted_indices_one_key: [1]f64 = undefined;
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedIndicesInto(f64, failing, &.{ 1, 2, 3 }, &weighted_indices_into_bad_scratch, &weighted_indices_one_key));
+    var weighted_indices_too_many: [4]usize = undefined;
+    var weighted_indices_keys_four: [4]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesIntoChecked(f64, failing, &.{ 1, 2, 3 }, &weighted_indices_too_many, &weighted_indices_keys_four));
+    var weighted_indices_zero: [2]usize = undefined;
+    var weighted_indices_keys_two: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesInto(f64, failing, &.{ 0, 0, 0 }, &weighted_indices_zero, &weighted_indices_keys_two));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesIntoChecked(f64, failing, &.{ 0, 0, 0 }, &weighted_indices_zero, &weighted_indices_keys_two));
+    var weighted_indices_single: [1]usize = undefined;
+    var weighted_indices_single_key: [1]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 1), try sampleWeightedIndicesInto(f64, failing, &.{ 0, 5, 0 }, &weighted_indices_single, &weighted_indices_single_key));
+    try std.testing.expectEqual(@as(usize, 1), weighted_indices_single[0]);
+    try sampleWeightedIndicesIntoChecked(f64, failing, &.{ 0, 5, 0 }, &weighted_indices_single, &weighted_indices_single_key);
+    try std.testing.expectEqual(@as(usize, 1), weighted_indices_single[0]);
+    var weighted_indices_u32_bad_scratch: [2]u32 = undefined;
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedIndicesU32Into(f64, failing, &.{ 1, 2, 3 }, &weighted_indices_u32_bad_scratch, &weighted_indices_one_key));
+    var weighted_indices_u32_too_many: [4]u32 = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32IntoChecked(f64, failing, &.{ 1, 2, 3 }, &weighted_indices_u32_too_many, &weighted_indices_keys_four));
+    var weighted_indices_u32_zero: [2]u32 = undefined;
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesU32Into(f64, failing, &.{ 0, 0, 0 }, &weighted_indices_u32_zero, &weighted_indices_keys_two));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32IntoChecked(f64, failing, &.{ 0, 0, 0 }, &weighted_indices_u32_zero, &weighted_indices_keys_two));
+    var weighted_indices_u32_single: [1]u32 = undefined;
+    try std.testing.expectEqual(@as(usize, 1), try sampleWeightedIndicesU32Into(f64, failing, &.{ 0, 5, 0 }, &weighted_indices_u32_single, &weighted_indices_single_key));
+    try std.testing.expectEqual(@as(u32, 1), weighted_indices_u32_single[0]);
+    try sampleWeightedIndicesU32IntoChecked(f64, failing, &.{ 0, 5, 0 }, &weighted_indices_u32_single, &weighted_indices_single_key);
+    try std.testing.expectEqual(@as(u32, 1), weighted_indices_u32_single[0]);
     const empty_weighted_values_nr = try sampleWeighted(u8, f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }, 0);
     defer std.testing.allocator.free(empty_weighted_values_nr);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_values_nr.len);
@@ -3596,6 +3728,13 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleIndicesU32Into(failing, 5, &sample_indices_u32_one));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndices(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesU32(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 2));
+    var weighted_indices_entropy: [2]usize = undefined;
+    var weighted_indices_entropy_keys: [2]f64 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesInto(f64, failing, &.{ 1, 2, 3 }, &weighted_indices_entropy, &weighted_indices_entropy_keys));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesIntoChecked(f64, failing, &.{ 1, 2, 3 }, &weighted_indices_entropy, &weighted_indices_entropy_keys));
+    var weighted_indices_u32_entropy: [2]u32 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesU32Into(f64, failing, &.{ 1, 2, 3 }, &weighted_indices_u32_entropy, &weighted_indices_entropy_keys));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesU32IntoChecked(f64, failing, &.{ 1, 2, 3 }, &weighted_indices_u32_entropy, &weighted_indices_entropy_keys));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeighted(u8, f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedArray(u8, f64, failing, 2, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedPtrs(u8, f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }, 2));

@@ -1786,3 +1786,8 @@ S4-M504 adds root one-shot weighted no-replacement mutable-pointer sampling
 (`compare/results/s4-m504-root-one-shot-weighted-no-replacement-mut-ptr-helpers.md`):
 system-entropy callers can now allocate weighted no-replacement mutable borrowed
 reference samples directly from the root API while S4-M11 remains blocked.
+
+S4-M505 adds root one-shot weighted no-replacement caller-owned index buffers
+(`compare/results/s4-m505-root-one-shot-weighted-no-replacement-index-into-helpers.md`):
+system-entropy callers can now fill caller-owned weighted no-replacement usize
+and u32 index buffers directly from the root API while S4-M11 remains blocked.
