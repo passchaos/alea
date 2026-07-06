@@ -1324,3 +1324,8 @@ S4-M419 synchronizes S4-M11 blocker evidence
 (`compare/results/s4-m419-blocker-validate-local-sync.md`) with the fresh
 S4-M418 `validate-local` output, keeping the no-new-local-gap blocker audit
 current while S4-M11 remains blocked.
+
+S4-M420 records a concise current local Rust comparison snapshot
+(`compare/results/s4-m420-current-rand-status.md`) summarizing the local
+`rand`/`rand_distr` baseline, latest `validate-local` evidence, no-known-gap
+finding, and S4-M11 blocker state.
