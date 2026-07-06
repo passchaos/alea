@@ -404,7 +404,8 @@ complete.
 | S4-M381 Rust comparison bench smoke step | `tools/rand_bench_smoke.sh`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m381-rand-bench-smoke.md` | Closed for the current bar: local Rust comparison benchmark filtering is smoke-tested through `zig build rand-bench-smoke` / `validate-local`. |
 | S4-M382 Rust bench smoke dry-run | `tools/rand_bench_smoke.sh`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m382-rand-bench-smoke-dry-run.md` | Closed for the current bar: Rust comparison smoke command shape can be previewed through `zig build rand-bench-smoke-dry-run` without running cargo. |
 | S4-M383 Rust bench smoke self-tests | `tools/rand_bench_smoke.sh`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m383-rand-bench-smoke-self-test.md` | Closed for the current bar: Rust comparison smoke wrapper dry-run argument parsing is self-tested through `zig build rand-bench-smoke-self-test` and included in `validate-local`. |
-| S4-M384 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M384 Rust bench smoke env overrides | `tools/rand_bench_smoke.sh`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m384-rand-bench-smoke-env-overrides.md` | Closed for the current bar: smoke wrapper manifest/expected-row overrides are self-tested and documented. |
+| S4-M385 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -817,6 +818,10 @@ S4-M382 additionally adds a `zig build rand-bench-smoke-dry-run` command preview
 for the Rust comparison smoke wrapper; it is local comparison benchmark tooling
 and does not resolve S4-M11 or complete the long-term objective.
 S4-M383 additionally adds no-cargo self-tests for the Rust comparison smoke
+wrapper; it is local comparison benchmark tooling and does not resolve S4-M11 or
+complete the long-term objective.
+S4-M384 additionally guards `ALEA_RAND_BENCH_MANIFEST` and
+`ALEA_RAND_BENCH_EXPECTED_ROW` override paths for the Rust comparison smoke
 wrapper; it is local comparison benchmark tooling and does not resolve S4-M11 or
 complete the long-term objective.
 

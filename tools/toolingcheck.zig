@@ -85,6 +85,8 @@ const rand_bench_smoke_doc_tokens = [_][]const u8{
     "tools/rand_bench_smoke.sh 1024 standard-normal",
     "tools/rand_bench_smoke.sh --dry-run 1024 standard-normal",
     "tiny filtered Rust comparison benchmark smoke test",
+    "ALEA_RAND_BENCH_MANIFEST",
+    "ALEA_RAND_BENCH_EXPECTED_ROW",
 };
 
 const rand_bench_smoke_dry_run_dependencies = [_][]const u8{
@@ -107,6 +109,8 @@ const rand_bench_smoke_script_tokens = [_][]const u8{
     "cargo run --manifest-path",
     "expected row substring",
     "rand_bench_smoke self-test ok",
+    "ALEA_RAND_BENCH_MANIFEST",
+    "ALEA_RAND_BENCH_EXPECTED_ROW",
 };
 
 const stream_dependencies = [_][]const u8{
@@ -223,6 +227,7 @@ const core_guide_validation_tokens = [_][]const u8{
     "Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`",
     "rand-bench-test`, `rand-bench-smoke`,",
     "`rand-bench-smoke-self-test`, `surfacecheck`, and",
+    "ALEA_RAND_BENCH_MANIFEST",
     "`runtimecheck`",
     "Use `zig build validate-all` for portability-sensitive changes or evidence",
     "refreshes because it adds cross-target compile checks, WASI unit tests",
@@ -233,6 +238,7 @@ const api_reference_validation_tokens = [_][]const u8{
     "Use `zig build",
     "validate-local` when API work changes local `rand` / `rand_distr` comparison",
     "rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`",
+    "ALEA_RAND_BENCH_EXPECTED_ROW",
     "Use `zig build",
     "validate-all` for portability-sensitive API evidence",
     "compile checks, WASI unit tests",

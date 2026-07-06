@@ -28,6 +28,8 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build rand-bench-smoke", .reason = "Rust comparison benchmark smoke command" },
     .{ .token = "zig build rand-bench-smoke-dry-run", .reason = "Rust comparison benchmark smoke dry-run command" },
     .{ .token = "zig build rand-bench-smoke-self-test", .reason = "Rust comparison benchmark smoke self-test command" },
+    .{ .token = "ALEA_RAND_BENCH_MANIFEST", .reason = "Rust comparison smoke manifest override" },
+    .{ .token = "ALEA_RAND_BENCH_EXPECTED_ROW", .reason = "Rust comparison smoke expected-row override" },
     .{ .token = "zig build validate-all", .reason = "broad validation command" },
     .{ .token = "wasm32-wasi`, `aarch64-linux`, `riscv64-linux`", .reason = "README crosscheck Linux/WASI targets" },
     .{ .token = "x86_64-windows", .reason = "README crosscheck Windows target" },
@@ -211,6 +213,14 @@ test "required-token helper covers Rust comparison bench test guidance" {
         .token = "zig build rand-bench-smoke-self-test",
         .reason = "Rust comparison benchmark smoke self-test command",
     };
+    const manifest_override = RequiredToken{
+        .token = "ALEA_RAND_BENCH_MANIFEST",
+        .reason = "Rust comparison smoke manifest override",
+    };
+    const expected_override = RequiredToken{
+        .token = "ALEA_RAND_BENCH_EXPECTED_ROW",
+        .reason = "Rust comparison smoke expected-row override",
+    };
 
     const text =
         \\Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
@@ -220,12 +230,15 @@ test "required-token helper covers Rust comparison bench test guidance" {
         \\Run `zig build rand-bench-smoke` for a tiny filtered Rust comparison run.
         \\Run `zig build rand-bench-smoke-dry-run` to preview the cargo command.
         \\Run `zig build rand-bench-smoke-self-test` to test wrapper arguments.
+        \\Set ALEA_RAND_BENCH_MANIFEST and ALEA_RAND_BENCH_EXPECTED_ROW for custom smoke checks.
     ;
     try std.testing.expect(hasRequiredToken(text, rand_bench_test));
     try std.testing.expect(hasRequiredToken(text, validate_local));
     try std.testing.expect(hasRequiredToken(text, rand_bench_smoke));
     try std.testing.expect(hasRequiredToken(text, rand_bench_smoke_dry_run));
     try std.testing.expect(hasRequiredToken(text, rand_bench_smoke_self_test));
+    try std.testing.expect(hasRequiredToken(text, manifest_override));
+    try std.testing.expect(hasRequiredToken(text, expected_override));
     try std.testing.expect(!hasRequiredToken("run cargo test directly", rand_bench_test));
     try std.testing.expect(!hasRequiredToken("run cargo run directly", rand_bench_smoke));
     try std.testing.expect(!hasRequiredToken("run shell dry run directly", rand_bench_smoke_dry_run));

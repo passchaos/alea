@@ -1145,3 +1145,8 @@ S4-M383 adds no-cargo self-tests for the Rust comparison smoke wrapper
 (`compare/results/s4-m383-rand-bench-smoke-self-test.md`) so default, filter-only,
 count-plus-filter, and invalid filter-only dry-run argument paths are guarded
 while S4-M11 remains blocked.
+
+S4-M384 guards Rust comparison smoke wrapper env overrides
+(`compare/results/s4-m384-rand-bench-smoke-env-overrides.md`) so
+`ALEA_RAND_BENCH_MANIFEST` and `ALEA_RAND_BENCH_EXPECTED_ROW` custom local
+comparison paths are self-tested and documented while S4-M11 remains blocked.

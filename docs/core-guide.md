@@ -1041,7 +1041,8 @@ rand-bench-test` runs its parser/helper tests without a throughput run, and
 `zig build rand-bench-smoke` runs a tiny filtered Rust comparison smoke row;
 `zig build rand-bench-smoke-dry-run` previews that cargo command without running
 cargo, and `zig build rand-bench-smoke-self-test` tests the wrapper argument
-parsing without cargo.
+parsing plus `ALEA_RAND_BENCH_MANIFEST` / `ALEA_RAND_BENCH_EXPECTED_ROW`
+overrides without cargo.
 `alea.Rng` has
 function-pointer dispatch comparable to
 `std.Random`; direct helpers are closer to Rust's monomorphized `SmallRng`

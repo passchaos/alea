@@ -44,6 +44,16 @@ if [[ "${1:-}" == "--self-test" ]]; then
         exit 1
     }
 
+    override_output=$(ALEA_RAND_BENCH_MANIFEST=/tmp/custom-rand-bench.toml ALEA_RAND_BENCH_EXPECTED_ROW=custom-row "$self_path" --dry-run 4096 exp)
+    [[ "$override_output" == *"cargo run --manifest-path /tmp/custom-rand-bench.toml -- 4096 exp"* ]] || {
+        echo "rand_bench_smoke self-test: manifest override dry-run command mismatch" >&2
+        exit 1
+    }
+    [[ "$override_output" == *"expected row substring: custom-row"* ]] || {
+        echo "rand_bench_smoke self-test: expected-row override mismatch" >&2
+        exit 1
+    }
+
     if "$self_path" --dry-run normal exp >/tmp/alea-rand-bench-smoke-self-test.out 2>&1; then
         echo "rand_bench_smoke self-test: invalid filter-only argument unexpectedly succeeded" >&2
         exit 1

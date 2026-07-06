@@ -206,7 +206,7 @@ new helpers that need documentation.
 | `tools/rayleigh_probe.zig` | Rayleigh performance probe. |
 | `tools/repro.zig` | Reproducibility snapshot printer with focused helper tests. |
 | `tools/readmecheck.zig` | README discovery and quick-start token checker. |
-| `tools/rand_bench_smoke.sh` | Tiny filtered Rust comparison benchmark smoke-test wrapper with `--dry-run` command preview and `--self-test` parser coverage. |
+| `tools/rand_bench_smoke.sh` | Tiny filtered Rust comparison benchmark smoke-test wrapper with `--dry-run` command preview, `--self-test` parser/env coverage, and `ALEA_RAND_BENCH_MANIFEST` / `ALEA_RAND_BENCH_EXPECTED_ROW` overrides. |
 | `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, public-surface manifest, and S4-M11 blocker-token checker with focused helper tests. |
 | `tools/runtimecheck.zig` | S4-M11 runtime-runner availability checker. |
 | `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps, with `--dry-run` argument reporting. |
