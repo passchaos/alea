@@ -148,6 +148,8 @@ const api_reference_validation_tokens = [_][]const u8{
     "Use `zig build",
     "validate-all` for portability-sensitive API evidence",
     "compile checks, WASI unit tests",
+    "node tools/run_wasi_test.js --dry-run <test.wasm>",
+    "without reading or executing a wasm file",
 };
 
 const practrand_doc_tokens = [_][]const u8{

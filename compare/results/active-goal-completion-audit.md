@@ -388,7 +388,8 @@ complete.
 | S4-M365 core-guide WASI dry-run guidance | `docs/core-guide.md`, `tools/toolingcheck.zig`, `compare/results/s4-m365-core-guide-wasi-dry-run.md` | Closed for the current bar: the core guide now documents WASI dry-run command usage, and toolingcheck guards the tokens. |
 | S4-M366 README WASI dry-run prose | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m366-readme-wasi-dry-run-prose.md` | Closed for the current bar: README now explains `wasi-dry-run` usage, and readmecheck guards the prose. |
 | S4-M367 tooling WASI dry-run prose guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m367-tooling-wasi-dry-run-prose.md` | Closed for the current bar: `toolingcheck` now guards the tooling catalog's WASI dry-run prose. |
-| S4-M368 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M368 API reference WASI dry-run prose | `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m368-api-wasi-dry-run-prose.md` | Closed for the current bar: the API reference now explains WASI dry-run usage, and toolingcheck guards the prose. |
+| S4-M369 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -753,6 +754,9 @@ S4-M11 or complete the long-term objective.
 S4-M367 additionally strengthens `toolingcheck` so docs/tooling keeps WASI
 dry-run prose visible; it is an evidence/tooling improvement and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M368 additionally documents WASI dry-run usage in the API reference and guards
+it with `toolingcheck`; it is an evidence/tooling improvement and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

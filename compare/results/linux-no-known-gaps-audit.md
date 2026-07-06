@@ -1055,3 +1055,9 @@ S4-M367 strengthens tooling-catalog WASI dry-run prose
 `toolingcheck` require the Node WASI dry-run command and no-read/no-execute
 explanation in `docs/tooling.md`, improving portability validation discoverability
 while S4-M11 remains blocked.
+
+S4-M368 documents WASI dry-run usage in the API reference
+(`compare/results/s4-m368-api-wasi-dry-run-prose.md`) and guards the
+`zig build wasi-dry-run` / Node runner dry-run no-wasm-execution explanation with
+`toolingcheck`, improving portability validation discoverability while S4-M11
+remains blocked.
