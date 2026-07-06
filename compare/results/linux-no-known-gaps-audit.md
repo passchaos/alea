@@ -844,3 +844,6 @@ runtimecheck required and opportunity runner lists.
 S4-M331 adds focused runtimecheck coverage
 (`compare/results/s4-m331-runtimecheck-empty-path.md`) for POSIX-style empty
 `PATH` segments resolving to the current directory.
+S4-M332 documents `validate-local` usage in README prose
+(`compare/results/s4-m332-readme-validate-local-prose.md`) and guards the
+explanation with `readmecheck`.

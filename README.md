@@ -208,6 +208,10 @@ RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/ran
 RUSTFLAGS="-C target-cpu=native" cargo run --release --manifest-path compare/rand_bench/Cargo.toml -- "standard-normal"
 ```
 
+Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
+comparison work: it runs native validation plus `surfacecheck` and
+`runtimecheck`.
+
 The Rust command benchmarks against the local `rand` checkout in
 `~/Work/rand`. Latest comparison data is kept under
 `compare/results/`. Use `vectorbench` for focused vector-slice evidence such
