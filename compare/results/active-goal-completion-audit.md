@@ -582,7 +582,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M541 root item-accessor weighted index helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m541-root-weighted-by-helpers.md` | Closed for the current bar: root system-entropy helpers can now sample weighted indices directly from an item slice and comptime item-weight accessor. |
 | S4-M542 root item-accessor weighted u32 index helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m542-root-weighted-u32-by-helpers.md` | Closed for the current bar: root system-entropy helpers can now sample compact `u32` weighted indices directly from an item slice and comptime item-weight accessor. |
 | S4-M543 root item-accessor weighted index fill helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m543-root-weighted-by-fill-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned weighted index buffers directly from an item slice and comptime item-weight accessor. |
-| S4-M544 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M544 root item-accessor weighted u32 index fill helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m544-root-weighted-u32-by-fill-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned compact `u32` weighted index buffers directly from an item slice and comptime item-weight accessor. |
+| S4-M545 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1470,6 +1471,9 @@ helpers; it is API ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M543 additionally adds root item-accessor weighted `usize` index fill
 helpers; it is API ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M544 additionally adds root item-accessor weighted `u32` index fill helpers;
+it is API ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

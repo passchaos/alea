@@ -2005,3 +2005,9 @@ S4-M543 adds root item-accessor weighted `usize` index fill helpers
 callers can now fill caller-owned weighted index buffers directly from an item
 slice and comptime item-weight accessor from the root API while S4-M11 remains
 blocked.
+
+S4-M544 adds root item-accessor weighted `u32` index fill helpers
+(`compare/results/s4-m544-root-weighted-u32-by-fill-helpers.md`):
+system-entropy callers can now fill caller-owned compact `u32` weighted index
+buffers directly from an item slice and comptime item-weight accessor from the
+root API while S4-M11 remains blocked.
