@@ -1294,3 +1294,8 @@ S4-M413 refreshes full validate-all evidence
 (`compare/results/s4-m413-validate-all-after-wasi-help.md`) after the WASI
 runner help/self-test changes; the aggregate still passes while S4-M11 remains
 blocked.
+
+S4-M414 documents the tooling row for WASI help self-test coverage
+(`compare/results/s4-m414-tooling-wasi-help-self-test.md`) so the tooling catalog
+states that `zig build wasi-self-test` covers help output while S4-M11 remains
+blocked.

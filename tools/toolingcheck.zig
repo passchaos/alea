@@ -363,6 +363,7 @@ const practrand_self_test_dependencies = [_][]const u8{
 };
 
 const tooling_wasi_dry_run_tokens = [_][]const u8{
+    "| `zig build wasi-self-test` | Run Node WASI runner self-tests for dry-run output, help output, and missing-argument usage without reading or executing wasm. |",
     "node tools/run_wasi_test.js --dry-run <test.wasm> [args...]",
     "node tools/run_wasi_test.js --self-test",
     "zig build wasi-self-test",

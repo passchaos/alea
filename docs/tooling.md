@@ -28,7 +28,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build crosscheck` | Compile unit tests for secondary targets without executing them: `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`, `x86_64-windows`, `x86_64-macos`, and `aarch64-macos`. |
 | `zig build test-wasi` | Run wasm32-wasi unit tests through Node's WASI runtime. |
 | `zig build wasi-dry-run` | Print Node WASI runner argv without executing wasm. |
-| `zig build wasi-self-test` | Run Node WASI runner self-tests for dry-run output and missing-argument usage without reading or executing wasm. |
+| `zig build wasi-self-test` | Run Node WASI runner self-tests for dry-run output, help output, and missing-argument usage without reading or executing wasm. |
 | `zig build wasi-report` | Run the chained wasm32-wasi repro/statcheck/distcheck/profile checks through Node's WASI runtime. |
 | `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, accepted-profile, and no-external PractRand-wrapper self-test checks. |
 | `zig build validate-local` | Run native validation plus the Rust comparison benchmark helper tests, a tiny Rust comparison smoke run, smoke-wrapper self-tests, local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker, and runtime-runner availability checker. |
