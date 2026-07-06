@@ -429,6 +429,18 @@ pub fn build(b: *std.Build) void {
     vectorbench_step.dependOn(&run_vectorbench_tests.step);
     vectorbench_step.dependOn(&run_vectorbench.step);
 
+    const rand_bench_test_step = b.step("rand-bench-test", "Run Rust comparison benchmark helper tests");
+    if (b.findProgram(&.{"cargo"}, &.{})) |_| {
+        const run_rand_bench_tests = b.addSystemCommand(&.{ "cargo", "test", "--manifest-path", "compare/rand_bench/Cargo.toml" });
+        run_rand_bench_tests.addFileInput(b.path("compare/rand_bench/Cargo.toml"));
+        run_rand_bench_tests.addFileInput(b.path("compare/rand_bench/Cargo.lock"));
+        run_rand_bench_tests.addFileInput(b.path("compare/rand_bench/src/main.rs"));
+        rand_bench_test_step.dependOn(&run_rand_bench_tests.step);
+    } else |_| {
+        const cargo_missing = b.addFail("zig build rand-bench-test requires cargo");
+        rand_bench_test_step.dependOn(&cargo_missing.step);
+    }
+
     const ziggurat_stats_mod = b.createModule(.{
         .root_source_file = b.path("tools/ziggurat_stats.zig"),
         .target = target,
@@ -1539,6 +1551,7 @@ pub fn build(b: *std.Build) void {
 
     const validate_local_step = b.step("validate-local", "Run native validation plus local Rust surface checks");
     validate_local_step.dependOn(validate_step);
+    validate_local_step.dependOn(rand_bench_test_step);
     validate_local_step.dependOn(surfacecheck_step);
     validate_local_step.dependOn(runtimecheck_step);
 

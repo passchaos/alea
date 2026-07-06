@@ -53,6 +53,21 @@ const vectorbench_dependencies = [_][]const u8{
     "vectorbench_step.dependOn(&run_vectorbench.step)",
 };
 
+const rand_bench_test_dependencies = [_][]const u8{
+    "b.addSystemCommand(&.{ \"cargo\", \"test\", \"--manifest-path\", \"compare/rand_bench/Cargo.toml\" })",
+    "run_rand_bench_tests.addFileInput(b.path(\"compare/rand_bench/Cargo.toml\"))",
+    "run_rand_bench_tests.addFileInput(b.path(\"compare/rand_bench/Cargo.lock\"))",
+    "run_rand_bench_tests.addFileInput(b.path(\"compare/rand_bench/src/main.rs\"))",
+    "rand_bench_test_step.dependOn(&run_rand_bench_tests.step)",
+    "zig build rand-bench-test requires cargo",
+};
+
+const rand_bench_doc_tokens = [_][]const u8{
+    "zig build rand-bench-test",
+    "cargo test --manifest-path compare/rand_bench/Cargo.toml",
+    "Rust comparison benchmark helper tests",
+};
+
 const stream_dependencies = [_][]const u8{
     "stream_step.dependOn(&run_stream_tests.step)",
     "stream_step.dependOn(&run_stream.step)",
@@ -165,7 +180,8 @@ const wasi_report_dependencies = [_][]const u8{
 const core_guide_validation_tokens = [_][]const u8{
     "Use `zig build validate` for broad native checks",
     "Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`",
-    "surfacecheck` and `runtimecheck`",
+    "rand-bench-test`, `surfacecheck`, and",
+    "`runtimecheck`",
     "Use `zig build validate-all` for portability-sensitive changes or evidence",
     "refreshes because it adds cross-target compile checks, WASI unit tests",
 };
@@ -174,7 +190,7 @@ const api_reference_validation_tokens = [_][]const u8{
     "Use `zig build validate` for broad native API checks",
     "Use `zig build",
     "validate-local` when API work changes local `rand` / `rand_distr` comparison",
-    "surfacecheck` and `runtimecheck`",
+    "rand-bench-test`, `surfacecheck`, and `runtimecheck`",
     "Use `zig build",
     "validate-all` for portability-sensitive API evidence",
     "compile checks, WASI unit tests",
@@ -280,6 +296,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "bench", .build_token = "b.step(\"bench\"" },
     .{ .name = "bench-libc", .build_token = "b.step(\"bench-libc\"" },
     .{ .name = "vectorbench", .build_token = "b.step(\"vectorbench\"" },
+    .{ .name = "rand-bench-test", .build_token = "b.step(\"rand-bench-test\"" },
     .{ .name = "ziggurat-stats", .build_token = "b.step(\"ziggurat-stats\"" },
     .{ .name = "ziggurat-probe", .build_token = "b.step(\"ziggurat-probe\"" },
     .{ .name = "cauchy-probe", .build_token = "b.step(\"cauchy-probe\"" },
@@ -619,10 +636,11 @@ pub fn main(init: std.process.Init) !void {
         }
     }
     if (std.mem.indexOf(u8, build, "validate_local_step.dependOn(validate_step)") == null or
+        std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_test_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(surfacecheck_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(runtimecheck_step)") == null)
     {
-        try stderr.print("toolingcheck: zig build validate-local must depend on validate, surfacecheck, and runtimecheck\n", .{});
+        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, surfacecheck, and runtimecheck\n", .{});
         missing += 1;
     }
     inline for (doccheck_dependencies) |token| {
@@ -670,6 +688,18 @@ pub fn main(init: std.process.Init) !void {
     inline for (vectorbench_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: vectorbench missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (rand_bench_test_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: rand-bench-test missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (rand_bench_doc_tokens) |token| {
+        if (std.mem.indexOf(u8, tooling, token) == null) {
+            try stderr.print("toolingcheck: docs/tooling.md missing rand-bench-test token `{s}`\n", .{token});
             missing += 1;
         }
     }

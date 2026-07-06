@@ -23,7 +23,8 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build doccheck", .reason = "aggregate documentation checker command" },
     .{ .token = "zig build validate", .reason = "native validation command" },
     .{ .token = "zig build validate-local", .reason = "native plus local rand validation command" },
-    .{ .token = "comparison work: it runs native validation plus `surfacecheck`", .reason = "validate-local component explanation" },
+    .{ .token = "comparison work: it runs native validation plus `rand-bench-test`", .reason = "validate-local component explanation" },
+    .{ .token = "zig build rand-bench-test", .reason = "Rust comparison benchmark helper-test command" },
     .{ .token = "zig build validate-all", .reason = "broad validation command" },
     .{ .token = "wasm32-wasi`, `aarch64-linux`, `riscv64-linux`", .reason = "README crosscheck Linux/WASI targets" },
     .{ .token = "x86_64-windows", .reason = "README crosscheck Windows target" },
@@ -184,6 +185,27 @@ test "required-token helper covers WASI dry-run guidance" {
     try std.testing.expect(hasRequiredToken(text, wasi_dry_run));
     try std.testing.expect(hasRequiredToken(text, no_execution));
     try std.testing.expect(!hasRequiredToken("run zig build test-wasi before WASI debugging", wasi_dry_run));
+}
+
+test "required-token helper covers Rust comparison bench test guidance" {
+    const rand_bench_test = RequiredToken{
+        .token = "zig build rand-bench-test",
+        .reason = "Rust comparison benchmark helper-test command",
+    };
+    const validate_local = RequiredToken{
+        .token = "comparison work: it runs native validation plus `rand-bench-test`",
+        .reason = "validate-local component explanation",
+    };
+
+    const text =
+        \\Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
+        \\comparison work: it runs native validation plus `rand-bench-test`,
+        \\`surfacecheck`, and `runtimecheck`.
+        \\Run `zig build rand-bench-test` for focused Rust parser coverage.
+    ;
+    try std.testing.expect(hasRequiredToken(text, rand_bench_test));
+    try std.testing.expect(hasRequiredToken(text, validate_local));
+    try std.testing.expect(!hasRequiredToken("run cargo test directly", rand_bench_test));
 }
 
 test "project positioning and local rand note helpers require full phrases" {

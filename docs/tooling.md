@@ -30,7 +30,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build wasi-dry-run` | Print Node WASI runner argv without executing wasm. |
 | `zig build wasi-report` | Run the chained wasm32-wasi repro/statcheck/distcheck/profile checks through Node's WASI runtime. |
 | `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, and accepted-profile checks. |
-| `zig build validate-local` | Run native validation plus the local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker and runtime-runner availability checker. |
+| `zig build validate-local` | Run native validation plus the Rust comparison benchmark helper tests, local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker, and runtime-runner availability checker. |
 | `zig build validate-all` | Run native validation plus cross-target compile checks and WASI runtime checks. |
 
 `zig build doccheck` depends on the full `zig build apicheck` step including its
@@ -41,9 +41,9 @@ the full `zig build readmecheck` step including its helper tests, and the full
 its helper tests. `zig build
 validate` depends on `zig build examples`, `zig build doccheck`, the full
 `zig build statcheck` step including its helper tests, `zig build distcheck`, `zig build distcheck-libc`, and `zig build
-profilecheck`. `zig build validate-local` adds `zig build surfacecheck` and
-`zig build runtimecheck` to native validation for this Linux-first local
-comparison environment. `zig build validate-all` adds `zig build crosscheck`,
+profilecheck`. `zig build validate-local` adds `zig build rand-bench-test`,
+`zig build surfacecheck`, and `zig build runtimecheck` to native validation for
+this Linux-first local comparison environment. `zig build validate-all` adds `zig build crosscheck`,
 `zig build test-wasi`, `zig build wasi-dry-run`, and
 `zig build wasi-report`.
 
@@ -106,6 +106,7 @@ The plain step names below are what the catalog checker tracks.
 | `zig build bench` | Run bench helper tests, then the main Alea throughput benchmark; accepts either `[bytes] [filter]` or filter-only arguments. |
 | `zig build bench-libc` | Run libc-linked bench helper tests, then the throughput benchmark for platform-backed opt-ins; accepts either `[bytes] [filter]` or filter-only arguments. |
 | `zig build vectorbench` | Run vectorbench helper tests, then vector/SIMD microbenchmarks; accepts either `[lanes] [filter]` or filter-only arguments. |
+| `zig build rand-bench-test` | Run Rust comparison benchmark helper tests with `cargo test --manifest-path compare/rand_bench/Cargo.toml`, including the `[bytes] [filter]` / filter-only parser used by the local `rand` throughput harness. |
 | `zig build ziggurat-stats` | Report ziggurat branch frequencies. |
 | `zig build ziggurat-probe` | Run ziggurat expression-shape microbenchmarks. |
 | `zig build cauchy-probe` | Run Cauchy expression-shape microbenchmarks. |

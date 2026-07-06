@@ -9,8 +9,40 @@ use std::time::Instant;
 
 const MIB: usize = 1024 * 1024;
 const TRIALS: usize = 3;
+const DEFAULT_BYTES: usize = 128 * MIB;
 
 static BENCH_FILTER: OnceLock<String> = OnceLock::new();
+
+#[derive(Debug, Eq, PartialEq)]
+struct Options {
+    bytes: usize,
+    filter: Option<String>,
+}
+
+fn parse_options<I, S>(args: I) -> Options
+where
+    I: IntoIterator<Item = S>,
+    S: Into<String>,
+{
+    let mut options = Options {
+        bytes: DEFAULT_BYTES,
+        filter: None,
+    };
+    let mut args = args.into_iter();
+    if let Some(arg) = args.next() {
+        let arg = arg.into();
+        match arg.parse::<usize>() {
+            Ok(value) => options.bytes = value,
+            Err(_) => options.filter = Some(arg),
+        }
+    }
+    if let Some(arg) = args.next() {
+        if options.filter.is_none() {
+            options.filter = Some(arg.into());
+        }
+    }
+    options
+}
 
 fn include_bench(name: &str) -> bool {
     BENCH_FILTER.get().map_or(true, |filter| {
@@ -20,18 +52,10 @@ fn include_bench(name: &str) -> bool {
 }
 
 fn main() {
-    let mut bytes = 128 * MIB;
-    let mut args = std::env::args().skip(1);
-    if let Some(arg) = args.next() {
-        match arg.parse::<usize>() {
-            Ok(value) => bytes = value,
-            Err(_) => {
-                let _ = BENCH_FILTER.set(arg);
-            }
-        }
-    }
-    if let Some(arg) = args.next() {
-        let _ = BENCH_FILTER.set(arg);
+    let options = parse_options(std::env::args().skip(1));
+    let bytes = options.bytes;
+    if let Some(filter) = options.filter {
+        let _ = BENCH_FILTER.set(filter);
     }
     let mut buffer = [0u8; 4096];
 
@@ -1201,4 +1225,64 @@ fn bench_distr_hypergeometric_skew_large(name: &str, count: usize) {
 
     black_box(best_checksum);
     println!("{name}: {best_million_per_s:.1} M samples/s checksum={best_checksum}");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_options_accepts_default() {
+        assert_eq!(
+            parse_options(std::iter::empty::<&str>()),
+            Options {
+                bytes: DEFAULT_BYTES,
+                filter: None,
+            }
+        );
+    }
+
+    #[test]
+    fn parse_options_accepts_byte_count() {
+        assert_eq!(
+            parse_options(["1024"]),
+            Options {
+                bytes: 1024,
+                filter: None,
+            }
+        );
+    }
+
+    #[test]
+    fn parse_options_accepts_filter_only() {
+        assert_eq!(
+            parse_options(["standard-normal"]),
+            Options {
+                bytes: DEFAULT_BYTES,
+                filter: Some("standard-normal".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn parse_options_accepts_count_plus_filter() {
+        assert_eq!(
+            parse_options(["2048", "normal"]),
+            Options {
+                bytes: 2048,
+                filter: Some("normal".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn parse_options_keeps_first_filter_when_two_filters_are_given() {
+        assert_eq!(
+            parse_options(["normal", "exp"]),
+            Options {
+                bytes: DEFAULT_BYTES,
+                filter: Some("normal".to_string()),
+            }
+        );
+    }
 }

@@ -384,6 +384,7 @@ zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
 zig build -Doptimize=ReleaseFast -Dcpu=native bench-libc
 zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench
+zig build rand-bench-test
 zig build crosscheck
 zig build validate-all
 RUSTFLAGS='-C target-cpu=native' cargo run --release --manifest-path compare/rand_bench/Cargo.toml
@@ -1122,3 +1123,8 @@ S4-M379 wires throughput parser helper tests into `bench-libc`
 (`compare/results/s4-m379-bench-libc-parser-tests.md`), improving libc-linked
 benchmark argument reliability for focused performance evidence while S4-M11
 remains blocked.
+
+S4-M380 adds helper-tested argument parsing to the Rust comparison benchmark
+(`compare/results/s4-m380-rand-bench-parser-tests.md`) and wires `zig build
+rand-bench-test` into `validate-local`, improving local `rand` / `rand_distr`
+comparison benchmark reliability while S4-M11 remains blocked.
