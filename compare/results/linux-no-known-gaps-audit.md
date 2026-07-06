@@ -1964,3 +1964,9 @@ S4-M536 adds root one-shot index-weighted const-pointer batch helpers
 system-entropy callers can now allocate const-pointer batches from an item slice
 and comptime index-weight function directly from the root API while S4-M11
 remains blocked.
+
+S4-M537 adds root one-shot index-weighted mutable-pointer batch helpers
+(`compare/results/s4-m537-root-weighted-mut-ptr-by-index-batch-helpers.md`):
+system-entropy callers can now allocate mutable-pointer batches from a mutable
+item slice and comptime index-weight function directly from the root API while
+S4-M11 remains blocked.
