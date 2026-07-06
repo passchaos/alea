@@ -3488,6 +3488,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build doccheck`
 - `zig build apicheck`
 - `zig build validate`
+- `zig build validate-local`
 - `zig build validate-all`
 - `zig build statcheck`
 - `zig build distcheck`

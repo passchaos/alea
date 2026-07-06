@@ -188,6 +188,7 @@ zig build roadmapcheck
 zig build surfacecheck
 zig build doccheck
 zig build validate
+zig build validate-local
 zig build validate-all
 zig build crosscheck
 zig build test-wasi

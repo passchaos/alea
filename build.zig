@@ -1311,6 +1311,10 @@ pub fn build(b: *std.Build) void {
     validate_step.dependOn(&run_distcheck_libc.step);
     validate_step.dependOn(&run_profilecheck.step);
 
+    const validate_local_step = b.step("validate-local", "Run native validation plus local Rust surface checks");
+    validate_local_step.dependOn(validate_step);
+    validate_local_step.dependOn(surfacecheck_step);
+
     const validate_all_step = b.step("validate-all", "Run native validation plus cross-target and WASI runtime checks");
     validate_all_step.dependOn(validate_step);
     validate_all_step.dependOn(crosscheck_step);

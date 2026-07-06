@@ -337,7 +337,8 @@ complete.
 | S4-M314 surfacecheck root resolution tests | `tools/surfacecheck.zig`, `compare/results/s4-m314-surfacecheck-root-tests.md` | Closed for the current bar: helper tests now cover `$HOME` suffix resolution, no-HOME fallback, and no-suffix fallback for surfacecheck default roots. |
 | S4-M315 roadmapcheck surface blocker tokens | `tools/roadmapcheck.zig`, `compare/results/s4-m11-blocker-audit.md`, `compare/results/s4-m315-roadmapcheck-surface-blocker.md` | Closed for the current bar: `roadmapcheck` now requires the S4-M11 blocker audit to keep current surfacecheck/no-public-gap evidence alongside SIMD/runtime blocker evidence. |
 | S4-M316 surfacecheck ignored-file guard | `tools/surfacecheck.zig`, `compare/results/s4-m316-surfacecheck-ignore-guard.md` | Closed for the current bar: `surfacecheck` now validates explicitly ignored public-looking helper files still exist and still look public, preventing stale ignores from masking source-list drift. |
-| S4-M317 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M317 validate-local aggregate | `build.zig`, `docs/tooling.md`, `README.md`, `compare/results/s4-m317-validate-local.md` | Closed for the current bar: `zig build validate-local` now runs native validation plus the local public-surface drift checker, and discovery/dependency guards cover the new aggregate. |
+| S4-M318 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -542,6 +543,9 @@ complete the long-term objective.
 S4-M316 additionally guards against stale `surfacecheck` ignored-file entries;
 it is an evidence/tooling improvement and does not resolve S4-M11 or complete
 the long-term objective.
+S4-M317 additionally adds a `validate-local` aggregate; it is an
+evidence/tooling improvement and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

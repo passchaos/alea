@@ -107,6 +107,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "profilecheck-stress", .build_token = "b.step(\"profilecheck-stress\"" },
     .{ .name = "profilecheck-long", .build_token = "b.step(\"profilecheck-long\"" },
     .{ .name = "validate", .build_token = "b.step(\"validate\"" },
+    .{ .name = "validate-local", .build_token = "b.step(\"validate-local\"" },
     .{ .name = "validate-all", .build_token = "b.step(\"validate-all\"" },
     .{ .name = "hypergeo-h2pe-probe", .build_token = "b.step(\"hypergeo-h2pe-probe\"" },
     .{ .name = "repro", .build_token = "b.step(\"repro\"" },
@@ -254,6 +255,12 @@ pub fn main(init: std.process.Init) !void {
     }
     if (std.mem.indexOf(u8, build, "validate_step.dependOn(doccheck_step)") == null) {
         try stderr.print("toolingcheck: zig build validate must depend on doccheck\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, build, "validate_local_step.dependOn(validate_step)") == null or
+        std.mem.indexOf(u8, build, "validate_local_step.dependOn(surfacecheck_step)") == null)
+    {
+        try stderr.print("toolingcheck: zig build validate-local must depend on validate and surfacecheck\n", .{});
         missing += 1;
     }
     inline for (doccheck_dependencies) |token| {

@@ -21,6 +21,7 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build surfacecheck", .reason = "local rand public-surface checker command" },
     .{ .token = "zig build doccheck", .reason = "aggregate documentation checker command" },
     .{ .token = "zig build validate", .reason = "native validation command" },
+    .{ .token = "zig build validate-local", .reason = "native plus local rand validation command" },
     .{ .token = "zig build validate-all", .reason = "broad validation command" },
     .{ .token = "zig build run-basic", .reason = "runnable example entry point" },
     .{ .token = "zig build examples", .reason = "aggregate examples command" },

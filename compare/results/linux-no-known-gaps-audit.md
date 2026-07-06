@@ -793,3 +793,7 @@ S4-M316 adds a stale-ignore guard to `surfacecheck`
 (`compare/results/s4-m316-surfacecheck-ignore-guard.md`), validating that
 explicitly ignored public-looking helper files still exist and still contain
 public-looking lines.
+S4-M317 adds `zig build validate-local`
+(`compare/results/s4-m317-validate-local.md`) as a Linux-first aggregate for
+native validation plus the local `rand` / `rand_core` / `rand_distr`
+public-surface drift checker.

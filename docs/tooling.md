@@ -28,6 +28,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build test-wasi` | Run wasm32-wasi unit tests through Node's WASI runtime. |
 | `zig build wasi-report` | Run the chained wasm32-wasi repro/statcheck/distcheck/profile checks through Node's WASI runtime. |
 | `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, and accepted-profile checks. |
+| `zig build validate-local` | Run native validation plus the local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker. |
 | `zig build validate-all` | Run native validation plus cross-target compile checks and WASI runtime checks. |
 
 `zig build doccheck` depends on `zig build apicheck`, `zig build
@@ -35,8 +36,10 @@ examplecheck`, `zig build toolingcheck`, `zig build readmecheck`, and `zig build
 roadmapcheck`. `zig build
 validate` depends on `zig build examples`, `zig build doccheck`, `zig build
 statcheck`, `zig build distcheck`, `zig build distcheck-libc`, and `zig build
-profilecheck`. `zig build validate-all` adds `zig build crosscheck`, `zig build
-test-wasi`, and `zig build wasi-report`.
+profilecheck`. `zig build validate-local` adds `zig build surfacecheck` to
+native validation for this Linux-first local comparison environment. `zig build
+validate-all` adds `zig build crosscheck`, `zig build test-wasi`, and
+`zig build wasi-report`.
 
 ## Runnable Examples
 
