@@ -1314,3 +1314,8 @@ S4-M417 refreshes broad native validate evidence
 (`compare/results/s4-m417-validate-after-wasi-help-docs.md`) after the WASI
 help-output documentation updates; the aggregate still passes while S4-M11
 remains blocked.
+
+S4-M418 refreshes validate-local evidence
+(`compare/results/s4-m418-validate-local-after-wasi-help-docs.md`) after the
+WASI help-output documentation updates; local Rust comparison, surfacecheck, and
+runtimecheck gates still pass while S4-M11 remains blocked.
