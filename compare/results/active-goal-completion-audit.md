@@ -373,7 +373,8 @@ complete.
 | S4-M350 distcheck helper tests | `tools/distcheck.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m350-distcheck-helper-tests.md` | Closed for the current bar: `distcheck` and `distcheck-libc` now run focused helper tests before their executable distribution audits, and `toolingcheck` guards that dependency shape. |
 | S4-M351 profilecheck helper tests | `tools/profilecheck.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m351-profilecheck-helper-tests.md` | Closed for the current bar: `profilecheck` now runs focused helper tests before its executable vector-profile audit, and `toolingcheck` guards that dependency shape. |
 | S4-M352 profiletailcheck helper tests | `tools/profiletailcheck.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m352-profiletailcheck-helper-tests.md` | Closed for the current bar: `profilecheck-tail` now runs focused helper tests before its executable tail audit, and `toolingcheck` guards that dependency shape. |
-| S4-M353 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M353 profilestresscheck helper tests | `tools/profilestresscheck.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m353-profilestresscheck-helper-tests.md` | Closed for the current bar: `profilecheck-stress` now runs focused helper tests before its executable stress audit, duplicate exponential aggregate-count accumulation was removed, and `toolingcheck` guards the dependency shape. |
+| S4-M354 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -692,6 +693,10 @@ resolve S4-M11 or complete the long-term objective.
 S4-M352 additionally adds focused profiletailcheck helper tests and wires them
 into `zig build profilecheck-tail`; it is an evidence/tooling improvement and
 does not resolve S4-M11 or complete the long-term objective.
+S4-M353 additionally adds focused profilestresscheck helper tests, removes
+duplicate exponential aggregate-count accumulation, and wires tests into
+`zig build profilecheck-stress`; it is an evidence/tooling improvement and does
+not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

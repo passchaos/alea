@@ -1425,7 +1425,19 @@ pub fn build(b: *std.Build) void {
     const run_profilestresscheck = b.addRunArtifact(profilestresscheck);
     if (b.args) |args| run_profilestresscheck.addArgs(args);
 
+    const profilestresscheck_tests = b.addTest(.{
+        .name = "alea-profilestresscheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/profilestresscheck.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "alea", .module = module }},
+        }),
+    });
+    const run_profilestresscheck_tests = b.addRunArtifact(profilestresscheck_tests);
+
     const profilestresscheck_step = b.step("profilecheck-stress", "Run accepted vector profile multi-seed stress checks");
+    profilestresscheck_step.dependOn(&run_profilestresscheck_tests.step);
     profilestresscheck_step.dependOn(&run_profilestresscheck.step);
 
     const profilelongcheck_mod = b.createModule(.{

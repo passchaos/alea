@@ -967,3 +967,10 @@ S4-M352 adds profiletailcheck helper tests
 `zig build profilecheck-tail`, with `toolingcheck` guarding that tests run before
 the accepted vector-profile tail executable. This improves tail checker
 reliability while S4-M11 remains blocked.
+
+S4-M353 adds profilestresscheck helper tests
+(`compare/results/s4-m353-profilestresscheck-helper-tests.md`), removes duplicate
+exponential aggregate-count accumulation in the stress checker, and wires tests
+into `zig build profilecheck-stress`, with `toolingcheck` guarding that tests run
+before the accepted vector-profile stress executable. This improves stress
+checker reliability while S4-M11 remains blocked.
