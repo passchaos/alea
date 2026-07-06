@@ -1881,3 +1881,9 @@ S4-M522 adds root repeated with-replacement fixed-size choice arrays
 system-entropy callers can now use explicit repeated-choice value, const-pointer,
 and mutable-pointer fixed-size arrays directly from the root API while S4-M11
 remains blocked.
+
+S4-M523 adds root iterator sample-fill aliases
+(`compare/results/s4-m523-root-iterator-sample-fill-aliases.md`):
+system-entropy callers can now use Rust-discoverable `sampleIteratorFill*` names
+for caller-owned iterator reservoir sampling directly from the root API while
+S4-M11 remains blocked.

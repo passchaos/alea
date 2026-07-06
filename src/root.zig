@@ -1783,9 +1783,17 @@ pub fn sampleIteratorInto(comptime T: type, io: std.Io, iterator: anytype, out: 
     return out.len;
 }
 
+pub fn sampleIteratorFill(comptime T: type, io: std.Io, iterator: anytype, out: []T) !usize {
+    return sampleIteratorInto(T, io, iterator, out);
+}
+
 pub fn sampleIteratorIntoChecked(comptime T: type, io: std.Io, iterator: anytype, out: []T) !void {
     const filled = try sampleIteratorInto(T, io, iterator, out);
     if (filled != out.len) return error.InvalidParameter;
+}
+
+pub fn sampleIteratorFillChecked(comptime T: type, io: std.Io, iterator: anytype, out: []T) !void {
+    try sampleIteratorIntoChecked(T, io, iterator, out);
 }
 
 pub fn sampleIteratorArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]T {
@@ -3878,6 +3886,11 @@ test "root random helpers use explicit system entropy" {
     var sample_iter = RootSampleIter{};
     var sample_iter_out: [4]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 4), try sampleIteratorInto(u8, io, &sample_iter, &sample_iter_out));
+    var sample_fill_iter = RootSampleIter{};
+    var sample_fill_out: [4]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 4), try sampleIteratorFill(u8, io, &sample_fill_iter, &sample_fill_out));
+    var sample_fill_checked_iter = RootSampleIter{};
+    try sampleIteratorFillChecked(u8, io, &sample_fill_checked_iter, &sample_fill_out);
     const RootWeightedSampleIter = struct {
         const Entry = struct { item: u8, weight: f64 };
         items: []const Entry,
@@ -5274,6 +5287,24 @@ test "root random helpers validate deterministic cases before entropy" {
     var sample_into_entropy_iter = SliceIter{ .items = &.{ 1, 2, 3 } };
     var sample_into_entropy: [2]u8 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorInto(u8, failing, &sample_into_entropy_iter, &sample_into_entropy));
+    var sample_fill_empty_iter = SliceIter{ .items = &.{} };
+    var sample_fill_empty: [0]u8 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleIteratorFill(u8, failing, &sample_fill_empty_iter, &sample_fill_empty));
+    var sample_fill_short_iter = SliceIter{ .items = &.{ 1, 2 } };
+    var sample_fill_short: [4]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), try sampleIteratorFill(u8, failing, &sample_fill_short_iter, &sample_fill_short));
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample_fill_short[0..2]);
+    var sample_fill_exact_iter = SliceIter{ .items = &.{ 1, 2 } };
+    var sample_fill_exact: [2]u8 = undefined;
+    try sampleIteratorFillChecked(u8, failing, &sample_fill_exact_iter, &sample_fill_exact);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, &sample_fill_exact);
+    var sample_fill_short_checked_iter = SliceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorFillChecked(u8, failing, &sample_fill_short_checked_iter, &sample_fill_short));
+    var sample_fill_entropy_iter = SliceIter{ .items = &.{ 1, 2, 3 } };
+    var sample_fill_entropy: [2]u8 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorFill(u8, failing, &sample_fill_entropy_iter, &sample_fill_entropy));
+    var sample_fill_entropy_checked_iter = SliceIter{ .items = &.{ 1, 2, 3 } };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorFillChecked(u8, failing, &sample_fill_entropy_checked_iter, &sample_fill_entropy));
     var sample_array_empty_iter = SliceIter{ .items = &.{} };
     try std.testing.expectEqual(@as(usize, 0), (try sampleIteratorArray(u8, failing, 0, &sample_array_empty_iter)).?.len);
     var sample_array_short_iter = SliceIter{ .items = &.{ 1, 2 } };
