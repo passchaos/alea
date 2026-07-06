@@ -27,6 +27,9 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build validate-all", .reason = "broad validation command" },
     .{ .token = "portability-sensitive releases or evidence", .reason = "validate-all usage guidance" },
     .{ .token = "cross-target compile checks, WASI unit", .reason = "validate-all component explanation" },
+    .{ .token = "tools/practrand.sh --dry-run", .reason = "PractRand dry-run command" },
+    .{ .token = "zig build practrand-dry-run", .reason = "PractRand dry-run build step" },
+    .{ .token = "PRACTRAND_BIN", .reason = "custom PractRand binary guidance" },
     .{ .token = "zig build run-basic", .reason = "runnable example entry point" },
     .{ .token = "zig build examples", .reason = "aggregate examples command" },
     .{ .token = "zig build -l", .reason = "generated build-step list discovery" },
@@ -113,6 +116,30 @@ test "required-token helper matches exact configured token" {
 
     try std.testing.expect(hasRequiredToken("run zig build validate-local before comparing", required));
     try std.testing.expect(!hasRequiredToken("run zig build validate before comparing", required));
+}
+
+test "required-token helper covers PractRand dry-run guidance" {
+    const dry_run = RequiredToken{
+        .token = "tools/practrand.sh --dry-run",
+        .reason = "PractRand dry-run command",
+    };
+    const build_step = RequiredToken{
+        .token = "zig build practrand-dry-run",
+        .reason = "PractRand dry-run build step",
+    };
+    const binary = RequiredToken{
+        .token = "PRACTRAND_BIN",
+        .reason = "custom PractRand binary guidance",
+    };
+
+    const text =
+        \\sh tools/practrand.sh --dry-run fast 1048576
+        \\zig build practrand-dry-run
+        \\set PRACTRAND_BIN when the executable is not named RNG_test
+    ;
+    try std.testing.expect(hasRequiredToken(text, dry_run));
+    try std.testing.expect(hasRequiredToken(text, build_step));
+    try std.testing.expect(hasRequiredToken(text, binary));
 }
 
 test "project positioning and local rand note helpers require full phrases" {

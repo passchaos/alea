@@ -1004,3 +1004,9 @@ S4-M358 adds a PractRand dry-run build step
 practrand-dry-run` prints the default `zig build stream | RNG_test stdin64`
 pipeline without requiring PractRand. This improves external statistical
 evidence discoverability while S4-M11 remains blocked.
+
+S4-M359 strengthens README PractRand dry-run discovery
+(`compare/results/s4-m359-readme-practrand-dry-run-guard.md`) by making
+`readmecheck` require README tokens for `tools/practrand.sh --dry-run`,
+`zig build practrand-dry-run`, and `PRACTRAND_BIN`. This improves external
+statistical evidence discoverability while S4-M11 remains blocked.

@@ -379,7 +379,8 @@ complete.
 | S4-M356 repro helper tests | `tools/repro.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m356-repro-helper-tests.md` | Closed for the current bar: `repro` now runs focused helper tests before printing deterministic snapshots, and `toolingcheck` guards that dependency shape. |
 | S4-M357 PractRand wrapper dry-run | `tools/practrand.sh`, `tools/toolingcheck.zig`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/tooling.md`, `compare/results/s4-m357-practrand-dry-run.md` | Closed for the current bar: PractRand wrapper dry-run and custom binary support are documented and guarded, allowing pipeline validation even when PractRand is unavailable. |
 | S4-M358 PractRand dry-run build step | `build.zig`, `tools/toolingcheck.zig`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/tooling.md`, `compare/results/s4-m358-practrand-dry-run-step.md` | Closed for the current bar: `zig build practrand-dry-run` now exposes PractRand pipeline validation through the build graph, and toolingcheck guards it. |
-| S4-M359 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M359 README PractRand dry-run guard | `tools/readmecheck.zig`, `README.md`, `compare/results/s4-m359-readme-practrand-dry-run-guard.md` | Closed for the current bar: `readmecheck` now guards README PractRand dry-run, build-step, and custom-binary guidance. |
+| S4-M360 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -717,6 +718,9 @@ does not resolve S4-M11 or complete the long-term objective.
 S4-M358 additionally adds a discoverable `zig build practrand-dry-run` step for
 PractRand pipeline validation; it is an evidence/tooling improvement and does
 not resolve S4-M11 or complete the long-term objective.
+S4-M359 additionally strengthens `readmecheck` so README keeps PractRand dry-run
+and custom-binary guidance visible; it is an evidence/tooling improvement and
+does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
