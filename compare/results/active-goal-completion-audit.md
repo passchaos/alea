@@ -395,7 +395,8 @@ complete.
 | S4-M372 validate-all after crosscheck fix | `compare/results/s4-m372-validate-all-after-crosscheck.md` | Closed for the current bar: after S4-M371, `zig build validate-all` passes across native validation, crosscheck, test-wasi, and wasi-report. |
 | S4-M373 validate-local refresh | `compare/results/s4-m373-validate-local-refresh.md` | Closed for the current bar: `zig build validate-local` passes after recent tooling and portability changes, including native validation, surfacecheck, and runtimecheck. |
 | S4-M374 API reference crosscheck target prose | `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m374-api-crosscheck-targets.md` | Closed for the current bar: API reference crosscheck target set and no-execute guidance are documented and guarded. |
-| S4-M375 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M375 core-guide crosscheck target prose | `docs/core-guide.md`, `tools/toolingcheck.zig`, `compare/results/s4-m375-core-guide-crosscheck-targets.md` | Closed for the current bar: the core guide now documents the exact crosscheck target set, and toolingcheck guards it. |
+| S4-M376 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -781,6 +782,9 @@ evidence and does not resolve S4-M11 or complete the long-term objective.
 S4-M374 additionally documents the exact crosscheck target set in the API
 reference and guards it with `toolingcheck`; it is an evidence/tooling
 improvement and does not resolve S4-M11 or complete the long-term objective.
+S4-M375 additionally documents the exact crosscheck target set in the core guide
+and guards it with `toolingcheck`; it is an evidence/tooling improvement and does
+not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

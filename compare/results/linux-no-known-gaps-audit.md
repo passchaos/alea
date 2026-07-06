@@ -1095,3 +1095,8 @@ S4-M374 documents the exact crosscheck target set in the API reference
 (`compare/results/s4-m374-api-crosscheck-targets.md`) and guards the target list
 plus no-execute guidance with `toolingcheck`, improving portability compile
 coverage discoverability while S4-M11 remains blocked.
+
+S4-M375 documents the exact crosscheck target set in the core guide
+(`compare/results/s4-m375-core-guide-crosscheck-targets.md`) and guards the
+target list plus no-execute guidance with `toolingcheck`, improving portability
+compile coverage discoverability while S4-M11 remains blocked.

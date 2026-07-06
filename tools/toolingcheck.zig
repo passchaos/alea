@@ -180,6 +180,12 @@ const core_guide_wasi_tokens = [_][]const u8{
     "wasm file",
 };
 
+const core_guide_crosscheck_tokens = [_][]const u8{
+    "crosscheck` compiles `wasm32-wasi`",
+    "`aarch64-linux`, `riscv64-linux`, `x86_64-windows`, `x86_64-macos`, and",
+    "`aarch64-macos` without executing them",
+};
+
 const api_reference_practrand_tokens = [_][]const u8{
     "tools/practrand.sh --dry-run fast 1048576",
     "zig build practrand-dry-run",
@@ -496,6 +502,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (core_guide_wasi_tokens) |token| {
         if (std.mem.indexOf(u8, core_guide, token) == null) {
             try stderr.print("toolingcheck: docs/core-guide.md missing WASI token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (core_guide_crosscheck_tokens) |token| {
+        if (std.mem.indexOf(u8, core_guide, token) == null) {
+            try stderr.print("toolingcheck: docs/core-guide.md missing crosscheck token `{s}`\n", .{token});
             missing += 1;
         }
     }
