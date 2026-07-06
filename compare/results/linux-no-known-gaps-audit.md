@@ -1067,3 +1067,8 @@ S4-M369 documents and guards the crosscheck target set
 verify `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`, `x86_64-windows`,
 `x86_64-macos`, and `aarch64-macos` in both `build.zig` and `docs/tooling.md`,
 protecting portability compile coverage while S4-M11 remains blocked.
+
+S4-M370 documents the exact crosscheck target set in README
+(`compare/results/s4-m370-readme-crosscheck-targets.md`) and guards the target
+list plus no-execute guidance with `readmecheck`, improving portability compile
+coverage discoverability while S4-M11 remains blocked.

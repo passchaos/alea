@@ -217,7 +217,9 @@ comparison work: it runs native validation plus `surfacecheck` and
 
 Use `zig build validate-all` before portability-sensitive releases or evidence
 refreshes: it runs native validation plus cross-target compile checks, WASI unit
-tests, and the chained WASI report.
+tests, and the chained WASI report. `zig build crosscheck` currently compiles
+`wasm32-wasi`, `aarch64-linux`, `riscv64-linux`, `x86_64-windows`,
+`x86_64-macos`, and `aarch64-macos` targets without executing them.
 
 Use `zig build wasi-dry-run` to verify the Node WASI runner arguments without
 reading or executing a wasm file.

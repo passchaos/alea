@@ -25,6 +25,10 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build validate-local", .reason = "native plus local rand validation command" },
     .{ .token = "comparison work: it runs native validation plus `surfacecheck`", .reason = "validate-local component explanation" },
     .{ .token = "zig build validate-all", .reason = "broad validation command" },
+    .{ .token = "wasm32-wasi`, `aarch64-linux`, `riscv64-linux`", .reason = "README crosscheck Linux/WASI targets" },
+    .{ .token = "x86_64-windows", .reason = "README crosscheck Windows target" },
+    .{ .token = "x86_64-macos`, and `aarch64-macos`", .reason = "README crosscheck macOS targets" },
+    .{ .token = "targets without executing them", .reason = "README crosscheck no-execute guidance" },
     .{ .token = "zig build wasi-dry-run", .reason = "WASI dry-run build step" },
     .{ .token = "Node WASI runner arguments without", .reason = "WASI dry-run usage guidance" },
     .{ .token = "reading or executing a wasm file", .reason = "WASI dry-run no-execution explanation" },
@@ -143,6 +147,24 @@ test "required-token helper covers PractRand dry-run guidance" {
     try std.testing.expect(hasRequiredToken(text, dry_run));
     try std.testing.expect(hasRequiredToken(text, build_step));
     try std.testing.expect(hasRequiredToken(text, binary));
+}
+
+test "required-token helper covers crosscheck target guidance" {
+    const targets = RequiredToken{
+        .token = "wasm32-wasi`, `aarch64-linux`, `riscv64-linux`",
+        .reason = "README crosscheck Linux/WASI targets",
+    };
+    const no_execute = RequiredToken{
+        .token = "targets without executing them",
+        .reason = "README crosscheck no-execute guidance",
+    };
+
+    const text =
+        \\`zig build crosscheck` currently compiles `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`,
+        \\`x86_64-macos`, and `aarch64-macos` targets without executing them.
+    ;
+    try std.testing.expect(hasRequiredToken(text, targets));
+    try std.testing.expect(hasRequiredToken(text, no_execute));
 }
 
 test "required-token helper covers WASI dry-run guidance" {
