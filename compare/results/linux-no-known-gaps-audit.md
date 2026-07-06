@@ -1171,3 +1171,8 @@ S4-M388 expands `validate-all` WASI coverage
 (`compare/results/s4-m388-validate-all-wasi-self-test.md`) so the aggregate now
 includes `wasi-dry-run` and `wasi-self-test` alongside WASI unit execution and
 the report chain while S4-M11 remains blocked.
+
+S4-M389 refreshes expanded `validate-all` evidence
+(`compare/results/s4-m389-validate-all-refresh.md`). The aggregate passed with
+native validation, crosscheck, `test-wasi`, `wasi-dry-run`, `wasi-self-test`, and
+the chained WASI report while S4-M11 remains blocked.
