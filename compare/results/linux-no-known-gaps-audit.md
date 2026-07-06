@@ -825,3 +825,6 @@ runtimecheck dependency, keeping the aggregate validation documentation accurate
 S4-M325 adds focused decision tests for `runtimecheck`
 (`compare/results/s4-m325-runtimecheck-decision-tests.md`), covering pass,
 missing-required, opportunity-runner, and missing-required-priority outcomes.
+S4-M326 documents the runtimecheck runner sets in the tooling catalog
+(`compare/results/s4-m326-runtimecheck-docs.md`) and guards those docs with
+`toolingcheck`.

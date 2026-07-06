@@ -346,7 +346,8 @@ complete.
 | S4-M323 roadmapcheck runtimecheck OK token | `tools/roadmapcheck.zig`, `compare/results/s4-m11-blocker-audit.md`, `compare/results/s4-m323-roadmapcheck-runtime-ok.md` | Closed for the current bar: `roadmapcheck` now requires the S4-M11 blocker audit to keep the current `runtimecheck ok: no additional runtime runner available` conclusion. |
 | S4-M324 validate-local runtime evidence sync | `compare/results/s4-m317-validate-local.md`, `compare/results/s4-m324-validate-local-runtime-evidence.md` | Closed for the current bar: the original `validate-local` evidence now lists `runtimecheck` as part of the aggregate and notes that `toolingcheck` verifies all three dependencies. |
 | S4-M325 runtimecheck decision tests | `tools/runtimecheck.zig`, `compare/results/s4-m325-runtimecheck-decision-tests.md` | Closed for the current bar: runtimecheck now tests final decision outcomes for pass, missing required tools, opportunity runners, and missing-required priority. |
-| S4-M326 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M326 runtimecheck runner-set docs | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m326-runtimecheck-docs.md` | Closed for the current bar: tooling docs now list runtimecheck's required and opportunity runner sets, and toolingcheck guards those tokens. |
+| S4-M327 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -577,6 +578,9 @@ runtimecheck dependency added later; it is an evidence-quality improvement and
 does not resolve S4-M11 or complete the long-term objective.
 S4-M325 additionally adds runtimecheck decision tests; it is an evidence/tooling
 improvement and does not resolve S4-M11 or complete the long-term objective.
+S4-M326 additionally documents and guards runtimecheck's runner sets; it is an
+evidence/tooling improvement and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

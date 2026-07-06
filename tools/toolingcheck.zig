@@ -260,6 +260,13 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("toolingcheck: docs/core-guide.md must link docs/tooling.md and mention `zig build toolingcheck`\n", .{});
         missing += 1;
     }
+    if (std.mem.indexOf(u8, tooling, "zig build runtimecheck") == null or
+        std.mem.indexOf(u8, tooling, "qemu-aarch64") == null or
+        std.mem.indexOf(u8, tooling, "wasmtime") == null)
+    {
+        try stderr.print("toolingcheck: docs/tooling.md must document runtimecheck and S4-M11 opportunity runners\n", .{});
+        missing += 1;
+    }
     if (std.mem.indexOf(u8, build, "validate_step.dependOn(doccheck_step)") == null) {
         try stderr.print("toolingcheck: zig build validate must depend on doccheck\n", .{});
         missing += 1;

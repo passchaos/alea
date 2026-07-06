@@ -43,6 +43,12 @@ comparison environment. `zig build validate-all` adds `zig build crosscheck`,
 `zig build test-wasi`, and
 `zig build wasi-report`.
 
+`zig build runtimecheck` treats `node`, `cargo`, and `rustc` as required local
+tools. It treats `qemu-aarch64`, `qemu-riscv64`, `qemu-x86_64`, `wine`,
+`wine64`, `wasmtime`, and `wasmer` as S4-M11 opportunity runners: if any of
+those appear, refresh the blocker audit and run the newly available validation
+path instead of continuing to treat that branch as blocked.
+
 ## Runnable Examples
 
 See `docs/examples.md` for adoption guidance and API coverage. The focused
