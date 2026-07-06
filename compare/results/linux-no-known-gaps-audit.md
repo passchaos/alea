@@ -1150,3 +1150,9 @@ S4-M384 guards Rust comparison smoke wrapper env overrides
 (`compare/results/s4-m384-rand-bench-smoke-env-overrides.md`) so
 `ALEA_RAND_BENCH_MANIFEST` and `ALEA_RAND_BENCH_EXPECTED_ROW` custom local
 comparison paths are self-tested and documented while S4-M11 remains blocked.
+
+S4-M385 synchronizes S4-M11 blocker evidence
+(`compare/results/s4-m385-blocker-benchmark-gates.md`) with the current Rust
+comparison benchmark gates in `validate-local`, so blocker audits retain
+`rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, and smoke
+override coverage while S4-M11 remains blocked.
