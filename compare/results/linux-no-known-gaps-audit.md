@@ -1078,3 +1078,8 @@ S4-M371 fixes wasm32 crosscheck test portability
 invalid-length tests to targets where `usize` is wider than 32 bits. `zig build
 crosscheck` now passes for the documented target set while S4-M11 remains
 blocked.
+
+S4-M372 records full `validate-all` evidence after the crosscheck fix
+(`compare/results/s4-m372-validate-all-after-crosscheck.md`). The aggregate
+passed after S4-M371, covering native validation, crosscheck, test-wasi, and the
+chained WASI report while S4-M11 remains blocked.
