@@ -1398,3 +1398,8 @@ S4-M434 synchronizes S4-M11 blocker evidence after the rand-status-json
 aggregate refresh (`compare/results/s4-m434-blocker-rand-status-json-sync.md`),
 keeping the blocker audit current with S4-M433 `validate-local` output while
 S4-M11 remains blocked.
+
+S4-M435 documents the `rand-status-json` schema
+(`compare/results/s4-m435-rand-status-json-schema.md`) so scripts have guarded
+field names for consuming current local `rand`/`rand_distr` status while S4-M11
+remains blocked.

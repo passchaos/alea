@@ -199,6 +199,9 @@ const rand_status_doc_tokens = [_][]const u8{
     "current local `rand` / `rand_distr` comparison status summary",
     "pass `-- --json` for stable JSON",
     "stable JSON",
+    "`date`, `baseline.rand`, `baseline.rand_distr`, `latest_gate`",
+    "`public_surface`, `rust_comparison`, `runtime_runners`, `current_conclusion`",
+    "`remaining_blocker`, and `details`",
     "tools/rand_status.zig",
 };
 

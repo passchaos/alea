@@ -54,6 +54,12 @@ this Linux-first local comparison environment; see
 `zig build test-wasi`, `zig build wasi-dry-run`, `zig build
 wasi-self-test`, and `zig build wasi-report`.
 
+`zig build rand-status-json` emits stable JSON for scripts. Current fields are
+`date`, `baseline.rand`, `baseline.rand_distr`, `latest_gate`,
+`public_surface`, `rust_comparison`, `runtime_runners`, `current_conclusion`,
+`remaining_blocker`, and `details`; `details` points back to
+`compare/results/s4-m420-current-rand-status.md`.
+
 `zig build runtimecheck` treats `node`, `cargo`, and `rustc` as required local
 tools. It treats `qemu-aarch64`, `qemu-aarch64-static`, `qemu-riscv64`,
 `qemu-riscv64-static`, `qemu-x86_64`, `qemu-x86_64-static`, `wine`, `wine64`,
