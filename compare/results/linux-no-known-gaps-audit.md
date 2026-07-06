@@ -1512,3 +1512,8 @@ S4-M457 guards that active completion audit refresh
 (`compare/results/s4-m457-active-audit-refresh-guard.md`) so roadmapcheck keeps
 the objective restatement, evidence chain, S4-M11 non-completion reasons, and
 no-`update_goal` instruction visible while S4-M11 remains blocked.
+
+S4-M458 adds a latest validate-local evidence pointer to `rand-status-json`
+(`compare/results/s4-m458-rand-status-latest-evidence-field.md`) so scripts can
+jump from current status to the latest local comparison validation artifact while
+S4-M11 remains blocked.

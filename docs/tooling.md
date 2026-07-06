@@ -66,9 +66,11 @@ paths without invoking Rust tools. Current JSON fields are
 `schema_version`, `date`, `baseline.rand`, `baseline.rand_distr`, `latest_gate`,
 `validate_local_passes`, `public_surface`, `rust_comparison`, `runtime_runners`,
 `opportunity_runners_available`, `current_conclusion`,
-`no_known_unblocked_gap`, `remaining_blocker`, `s4_m11_blocked`, and `details`;
-`details` points back to
-`compare/results/s4-m420-current-rand-status.md`.
+`no_known_unblocked_gap`, `remaining_blocker`, `s4_m11_blocked`, `details`, and
+`latest_validate_local_evidence`; `details` points back to
+`compare/results/s4-m420-current-rand-status.md`, while
+`latest_validate_local_evidence` points to the current validate-local evidence
+file.
 
 `zig build runtimecheck` treats `node`, `cargo`, and `rustc` as required local
 tools. It treats `qemu-aarch64`, `qemu-aarch64-static`, `qemu-riscv64`,

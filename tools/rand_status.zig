@@ -100,6 +100,7 @@ fn runSelfTest(stdout: *std.Io.Writer) !void {
         "\"remaining_blocker\": \"S4-M11",
         "\"s4_m11_blocked\": true",
         "\"details\": \"compare/results/s4-m420-current-rand-status.md\"",
+        "\"latest_validate_local_evidence\": \"compare/results/s4-m448-validate-local-after-rand-status-schema-version.md\"",
     })) return error.SelfTestFailed;
 
     var help_buf: [1024]u8 = undefined;
@@ -172,7 +173,8 @@ fn printJson(stdout: *std.Io.Writer) !void {
         \\  "no_known_unblocked_gap": true,
         \\  "remaining_blocker": "S4-M11 exact/default dense SIMD winner, new runtime, or new local Rust gap",
         \\  "s4_m11_blocked": true,
-        \\  "details": "compare/results/s4-m420-current-rand-status.md"
+        \\  "details": "compare/results/s4-m420-current-rand-status.md",
+        \\  "latest_validate_local_evidence": "compare/results/s4-m448-validate-local-after-rand-status-schema-version.md"
         \\}
         \\
     );
@@ -212,6 +214,7 @@ test "json output keeps stable machine-readable status keys" {
     try std.testing.expect(std.mem.indexOf(u8, out, "\"remaining_blocker\": \"S4-M11") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"s4_m11_blocked\": true") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"details\": \"compare/results/s4-m420-current-rand-status.md\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"latest_validate_local_evidence\": \"compare/results/s4-m448-validate-local-after-rand-status-schema-version.md\"") != null);
 }
 
 test "argument parser supports text json and help" {

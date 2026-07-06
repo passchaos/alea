@@ -496,7 +496,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M455 direct `rand-status` command matrix | `compare/results/s4-m455-rand-status-direct-matrix.md`, `tools/roadmapcheck.zig` | Closed for the current bar: direct documented JSON/schema/self-test `rand-status` forms pass and are guarded. |
 | S4-M456 active completion audit refresh | `compare/results/active-goal-completion-audit.md`, `compare/results/s4-m456-active-completion-audit-refresh.md` | Closed for the current bar: active audit restates concrete deliverables, cites current rand-status / validate-local / blocker evidence, and explicitly remains not complete due to S4-M11. |
 | S4-M457 active completion audit refresh guard | `tools/roadmapcheck.zig`, `compare/results/s4-m457-active-audit-refresh-guard.md` | Closed for the current bar: roadmapcheck guards the active audit refresh section and non-completion reasons. |
-| S4-M458 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M458 latest validate-local evidence in `rand-status-json` | `tools/rand_status.zig`, `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m458-rand-status-latest-evidence-field.md` | Closed for the current bar: `rand-status-json` now links directly to the latest validate-local evidence file. |
+| S4-M459 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1134,6 +1135,9 @@ rand-status, validate-local, and S4-M11 blocker evidence; it is audit
 maintenance and does not resolve S4-M11 or complete the long-term objective.
 S4-M457 additionally guards this active completion audit refresh in
 roadmapcheck; it is audit quality maintenance and does not resolve S4-M11 or
+complete the long-term objective.
+S4-M458 additionally adds a latest-validate-local evidence pointer to
+`rand-status-json`; it is tooling ergonomics and does not resolve S4-M11 or
 complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
