@@ -1952,3 +1952,9 @@ S4-M534 adds root one-shot index-weighted mutable-pointer fill helpers
 system-entropy callers can now fill caller-owned mutable-pointer buffers from a
 mutable item slice and comptime index-weight function directly from the root API
 while S4-M11 remains blocked.
+
+S4-M535 adds root one-shot index-weighted value batch helpers
+(`compare/results/s4-m535-root-weighted-value-by-index-batch-helpers.md`):
+system-entropy callers can now allocate value batches from an item slice and
+comptime index-weight function directly from the root API while S4-M11 remains
+blocked.
