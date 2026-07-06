@@ -982,6 +982,13 @@ zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/
 sh tools/practrand.sh fast 1073741824
 ```
 
+Use `zig build validate` for broad native checks before ordinary local changes.
+Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
+comparison work because it adds `surfacecheck` and `runtimecheck`.
+Use `zig build validate-all` for portability-sensitive changes or evidence
+refreshes because it adds cross-target compile checks, WASI unit tests, and the
+chained WASI report.
+
 `zig build roadmapcheck` also guards the local Rust `rand` and cached
 `rand_distr` public-surface manifests: it verifies scanned-source/version
 tokens, major surface sections, representative Zig-native exclusions,

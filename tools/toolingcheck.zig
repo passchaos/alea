@@ -56,6 +56,14 @@ const wasi_report_dependencies = [_][]const u8{
     "wasi_report_step.dependOn(&node_missing.step)",
 };
 
+const core_guide_validation_tokens = [_][]const u8{
+    "Use `zig build validate` for broad native checks",
+    "Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`",
+    "surfacecheck` and `runtimecheck`",
+    "Use `zig build validate-all` for portability-sensitive changes or evidence",
+    "refreshes because it adds cross-target compile checks, WASI unit tests",
+};
+
 const runtimecheck_doc_tokens = [_][]const u8{
     "zig build runtimecheck",
     "node",
@@ -304,6 +312,12 @@ pub fn main(init: std.process.Init) !void {
     {
         try stderr.print("toolingcheck: docs/core-guide.md must link docs/tooling.md and mention `zig build toolingcheck`\n", .{});
         missing += 1;
+    }
+    inline for (core_guide_validation_tokens) |token| {
+        if (std.mem.indexOf(u8, core_guide, token) == null) {
+            try stderr.print("toolingcheck: docs/core-guide.md missing validation-guidance token `{s}`\n", .{token});
+            missing += 1;
+        }
     }
     inline for (runtimecheck_doc_tokens) |token| {
         if (std.mem.indexOf(u8, tooling, token) == null) {

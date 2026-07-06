@@ -359,7 +359,8 @@ complete.
 | S4-M336 validate-all aggregate dependency guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m336-validate-all-dependency-guard.md` | Closed for the current bar: `toolingcheck` now verifies the full current `zig build validate-all` dependency set, keeping native validation, crosscheck, test-wasi, and wasi-report wired. |
 | S4-M337 WASI report chain dependency guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m337-wasi-report-chain-guard.md` | Closed for the current bar: `toolingcheck` now verifies the current `zig build wasi-report` dependency chain from repro through statcheck, distcheck, profilecheck, tail, stress, and long-profile checks, plus the no-Node failure path. |
 | S4-M338 README validate-all prose | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m338-readme-validate-all-prose.md` | Closed for the current bar: README now explains `validate-all` as the portability-sensitive aggregate for native validation plus cross-target compile checks, WASI unit tests, and the chained WASI report, and readmecheck guards that prose. |
-| S4-M339 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M339 core-guide validation aggregate prose | `docs/core-guide.md`, `tools/toolingcheck.zig`, `compare/results/s4-m339-core-guide-validation-prose.md` | Closed for the current bar: the core guide now explains when to use `validate`, `validate-local`, and `validate-all`, and toolingcheck guards the guidance tokens. |
+| S4-M340 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -633,6 +634,10 @@ S4-M338 additionally documents `validate-all` usage in README prose and guards
 the portability-sensitive aggregate explanation with `readmecheck`; it is a
 documentation/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M339 additionally documents validation aggregate selection in the core guide
+and guards the `validate` / `validate-local` / `validate-all` guidance with
+`toolingcheck`; it is a documentation/tooling improvement and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

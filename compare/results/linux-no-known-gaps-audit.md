@@ -881,3 +881,9 @@ S4-M338 documents `validate-all` usage in README prose
 portability-sensitive aggregate explanation with `readmecheck`, making the broad
 native-plus-cross/WASI validation path easier to discover while S4-M11 remains
 blocked.
+
+S4-M339 documents validation aggregate selection in the core guide
+(`compare/results/s4-m339-core-guide-validation-prose.md`) and guards the
+`validate` / `validate-local` / `validate-all` guidance with `toolingcheck`, so
+users can choose the right native, local-comparison, or portability-sensitive
+validation path while S4-M11 remains blocked.
