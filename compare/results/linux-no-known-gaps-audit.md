@@ -1562,3 +1562,8 @@ S4-M467 synchronizes S4-M11 blocker evidence with that local-status JSON field
 (`compare/results/s4-m467-blocker-local-status-sync.md`), keeping the blocker
 audit current with the script-friendly current-status pointer while S4-M11
 remains blocked.
+
+S4-M468 refreshes validate-local evidence after adding `local_rand_status` to status output
+(`compare/results/s4-m468-validate-local-after-local-status-field.md`); the
+aggregate passes with local-status and blocker-audit status output, Rust
+smoke/parser tests, surfacecheck, and runtimecheck while S4-M11 remains blocked.

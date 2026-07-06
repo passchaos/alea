@@ -506,7 +506,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M465 explicit local-status link in `rand-status-json` | `tools/rand_status.zig`, `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m465-rand-status-local-status-field.md` | Closed for the current bar: `rand-status-json` now exposes `local_rand_status`. |
 | S4-M466 current status local-status field | `compare/results/s4-m420-current-rand-status.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m466-current-status-local-status.md` | Closed for the current bar: current status snapshot now includes and guards `local_rand_status`. |
 | S4-M467 S4-M11 blocker sync for local-status field | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m467-blocker-local-status-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites the JSON `local_rand_status` token. |
-| S4-M468 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M468 validate-local refresh after local-status field | `compare/results/s4-m468-validate-local-after-local-status-field.md`, `compare/results/s4-m420-current-rand-status.md` | Closed for the current bar: `zig build validate-local` passed with `local_rand_status` in JSON status output. |
+| S4-M469 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1175,6 +1176,9 @@ or complete the long-term objective.
 S4-M467 additionally syncs S4-M11 blocker evidence with that local-status JSON
 field; it is blocker-evidence maintenance and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M468 additionally refreshes `validate-local` evidence after adding that
+local-status field to status output; it is validation evidence and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

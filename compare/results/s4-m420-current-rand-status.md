@@ -19,12 +19,12 @@ Against the locally available Rust evidence on this Linux host:
 
 ## Latest Evidence
 
-S4-M463 refreshed `zig build validate-local` after adding `blocker_audit` to
+S4-M468 refreshed `zig build validate-local` after adding `local_rand_status` to
 `rand-status-json`. The passing run included:
 
 ```text
-rand_distr standard-normal: 60.2 M samples/s checksum=-3.640
-rand_distr standard-normal f32: 59.3 M samples/s checksum=-3.640
+rand_distr standard-normal: 61.1 M samples/s checksum=-3.640
+rand_distr standard-normal f32: 58.6 M samples/s checksum=-3.640
 1
 Alea local rand/rand_distr status (2026-07-06)
   "schema_version": 1,
