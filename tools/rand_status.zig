@@ -102,7 +102,7 @@ fn runSelfTest(stdout: *std.Io.Writer) !void {
         "\"details\": \"compare/results/s4-m420-current-rand-status.md\"",
         "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"",
         "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"",
-        "\"latest_validate_local_evidence\": \"compare/results/s4-m448-validate-local-after-rand-status-schema-version.md\"",
+        "\"latest_validate_local_evidence\": \"compare/results/s4-m469-latest-validate-local-evidence-pointer.md\"",
     })) return error.SelfTestFailed;
 
     var help_buf: [1024]u8 = undefined;
@@ -178,7 +178,7 @@ fn printJson(stdout: *std.Io.Writer) !void {
         \\  "details": "compare/results/s4-m420-current-rand-status.md",
         \\  "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
         \\  "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-        \\  "latest_validate_local_evidence": "compare/results/s4-m448-validate-local-after-rand-status-schema-version.md"
+        \\  "latest_validate_local_evidence": "compare/results/s4-m469-latest-validate-local-evidence-pointer.md"
         \\}
         \\
     );
@@ -220,7 +220,7 @@ test "json output keeps stable machine-readable status keys" {
     try std.testing.expect(std.mem.indexOf(u8, out, "\"details\": \"compare/results/s4-m420-current-rand-status.md\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"") != null);
-    try std.testing.expect(std.mem.indexOf(u8, out, "\"latest_validate_local_evidence\": \"compare/results/s4-m448-validate-local-after-rand-status-schema-version.md\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"latest_validate_local_evidence\": \"compare/results/s4-m469-latest-validate-local-evidence-pointer.md\"") != null);
 }
 
 test "argument parser supports text json and help" {

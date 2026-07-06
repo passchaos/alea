@@ -1567,3 +1567,9 @@ S4-M468 refreshes validate-local evidence after adding `local_rand_status` to st
 (`compare/results/s4-m468-validate-local-after-local-status-field.md`); the
 aggregate passes with local-status and blocker-audit status output, Rust
 smoke/parser tests, surfacecheck, and runtimecheck while S4-M11 remains blocked.
+
+
+S4-M469 updates `rand-status-json` so `latest_validate_local_evidence` points to
+`compare/results/s4-m469-latest-validate-local-evidence-pointer.md`; this keeps
+the script-friendly status pointer current with checked-in local validation
+evidence while S4-M11 remains blocked.

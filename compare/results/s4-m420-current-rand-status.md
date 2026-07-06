@@ -19,12 +19,12 @@ Against the locally available Rust evidence on this Linux host:
 
 ## Latest Evidence
 
-S4-M468 refreshed `zig build validate-local` after adding `local_rand_status` to
+S4-M469 refreshed `zig build validate-local` after updating `latest_validate_local_evidence` in
 `rand-status-json`. The passing run included:
 
 ```text
-rand_distr standard-normal: 61.1 M samples/s checksum=-3.640
-rand_distr standard-normal f32: 58.6 M samples/s checksum=-3.640
+rand_distr standard-normal: 40.4 M samples/s checksum=-3.640
+rand_distr standard-normal f32: 38.4 M samples/s checksum=-3.640
 1
 Alea local rand/rand_distr status (2026-07-06)
   "schema_version": 1,
@@ -34,7 +34,7 @@ Alea local rand/rand_distr status (2026-07-06)
   "s4_m11_blocked": true,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m448-validate-local-after-rand-status-schema-version.md",
+  "latest_validate_local_evidence": "compare/results/s4-m469-latest-validate-local-evidence-pointer.md",
 rand-status self-test ok
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137
@@ -46,7 +46,7 @@ runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=
 runtimecheck ok: no additional runtime runner available
 ```
 
-S4-M419 synchronized validate-local signals into `compare/results/s4-m11-blocker-audit.md`; S4-M428 confirmed `rand-status` output is part of the local aggregate; S4-M433 confirmed stable JSON status output is part of the local aggregate; S4-M437 additionally confirms the `rand-status` self-test is part of the local aggregate; S4-M442 keeps the JSON boolean status fields visible in this snapshot; S4-M444 keeps the JSON schema version visible here; S4-M448 confirms the schema-version build step is part of the local aggregate; S4-M459 keeps the latest validate-local evidence pointer visible here; S4-M462 keeps the blocker-audit pointer visible here; S4-M463 confirms that pointer is present in the latest validate-local aggregate output; S4-M466 also keeps the explicit local-status pointer visible here.
+S4-M419 synchronized validate-local signals into `compare/results/s4-m11-blocker-audit.md`; S4-M428 confirmed `rand-status` output is part of the local aggregate; S4-M433 confirmed stable JSON status output is part of the local aggregate; S4-M437 additionally confirms the `rand-status` self-test is part of the local aggregate; S4-M442 keeps the JSON boolean status fields visible in this snapshot; S4-M444 keeps the JSON schema version visible here; S4-M448 confirms the schema-version build step is part of the local aggregate; S4-M459 keeps the latest validate-local evidence pointer visible here; S4-M462 keeps the blocker-audit pointer visible here; S4-M463 confirms that pointer is present in the latest validate-local aggregate output; S4-M466 also keeps the explicit local-status pointer visible here; S4-M469 refreshes the latest validate-local evidence pointer to the current artifact.
 
 ## Current Blocker
 

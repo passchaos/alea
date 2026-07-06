@@ -241,7 +241,7 @@ const rand_status_source_tokens = [_][]const u8{
     "\"blocker_audit\"",
     "compare/results/s4-m11-blocker-audit.md",
     "\"latest_validate_local_evidence\"",
-    "compare/results/s4-m448-validate-local-after-rand-status-schema-version.md",
+    "compare/results/s4-m469-latest-validate-local-evidence-pointer.md",
     "Baseline: ~/Work/rand plus cached rand_distr 0.6.0",
     "Latest gate: zig build validate-local passes",
     "Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests",
