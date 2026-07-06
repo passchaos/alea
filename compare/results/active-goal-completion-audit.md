@@ -433,7 +433,8 @@ complete.
 | S4-M410 README direct WASI dry-run command | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m410-readme-direct-wasi-dry-run.md` | Closed for the current bar: README lists and explains direct `node tools/run_wasi_test.js --dry-run <test.wasm>` runner argv validation. |
 | S4-M411 WASI runner dry-run help prose | `tools/run_wasi_test.js`, `tools/toolingcheck.zig`, `compare/results/s4-m411-wasi-dry-run-help.md` | Closed for the current bar: WASI runner help explains no-wasm `--dry-run` semantics and toolingcheck guards it. |
 | S4-M412 WASI runner help self-test coverage | `tools/run_wasi_test.js`, `tools/toolingcheck.zig`, `compare/results/s4-m412-wasi-help-self-test.md` | Closed for the current bar: WASI runner self-test validates help output keeps no-wasm dry-run/self-test semantics. |
-| S4-M413 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M413 validate-all refresh after WASI runner help self-test | `compare/results/s4-m413-validate-all-after-wasi-help.md` | Closed for the current bar: full `zig build validate-all` passed after WASI runner help/self-test changes. |
+| S4-M414 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -937,6 +938,9 @@ objective.
 S4-M412 additionally makes the WASI runner self-test validate its help prose; it
 is portability tooling reliability and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M413 additionally refreshes full `validate-all` evidence after WASI runner
+help/self-test changes; it is validation evidence and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

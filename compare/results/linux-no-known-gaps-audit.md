@@ -1289,3 +1289,8 @@ S4-M412 extends the WASI runner self-test
 (`compare/results/s4-m412-wasi-help-self-test.md`) so the runner verifies its own
 help output keeps dry-run and self-test no-wasm semantics while S4-M11 remains
 blocked.
+
+S4-M413 refreshes full validate-all evidence
+(`compare/results/s4-m413-validate-all-after-wasi-help.md`) after the WASI
+runner help/self-test changes; the aggregate still passes while S4-M11 remains
+blocked.
