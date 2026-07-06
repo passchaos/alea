@@ -1542,3 +1542,8 @@ S4-M463 refreshes validate-local evidence after adding `blocker_audit` to status
 (`compare/results/s4-m463-validate-local-after-blocker-audit-field.md`); the
 aggregate passes with blocker-audit status output, Rust smoke/parser tests,
 surfacecheck, and runtimecheck while S4-M11 remains blocked.
+
+S4-M464 synchronizes S4-M11 blocker evidence after that blocker-audit aggregate
+refresh (`compare/results/s4-m464-blocker-blocker-audit-field-sync.md`), keeping
+the blocker audit current with S4-M463 `validate-local` output while S4-M11
+remains blocked.

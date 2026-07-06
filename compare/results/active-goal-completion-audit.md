@@ -502,7 +502,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M461 blocker audit link in `rand-status-json` | `tools/rand_status.zig`, `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m461-rand-status-blocker-audit-field.md` | Closed for the current bar: `rand-status-json` now links directly to the S4-M11 blocker audit. |
 | S4-M462 current status blocker-audit field | `compare/results/s4-m420-current-rand-status.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m462-current-status-blocker-audit.md` | Closed for the current bar: current status snapshot now includes and guards `blocker_audit`. |
 | S4-M463 validate-local refresh after blocker-audit status field | `compare/results/s4-m463-validate-local-after-blocker-audit-field.md`, `compare/results/s4-m420-current-rand-status.md` | Closed for the current bar: `zig build validate-local` passed with `blocker_audit` in JSON status output. |
-| S4-M464 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M464 S4-M11 blocker sync after blocker-audit validate-local | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m464-blocker-blocker-audit-field-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites fresh S4-M463 `validate-local` output including `blocker_audit`. |
+| S4-M465 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1159,6 +1160,9 @@ or complete the long-term objective.
 S4-M463 additionally refreshes `validate-local` evidence after adding that
 blocker-audit pointer to status output; it is validation evidence and does not
 resolve S4-M11 or complete the long-term objective.
+S4-M464 additionally syncs S4-M11 blocker evidence with that fresh blocker-audit
+`validate-local` output; it is blocker-evidence maintenance and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
