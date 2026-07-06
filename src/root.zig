@@ -833,6 +833,34 @@ pub fn sampleIndicesU32IntoChecked(io: std.Io, length: u32, out: []u32) !void {
     try seq.sampleIndicesU32IntoChecked(random_source, length, out);
 }
 
+pub fn sampleWeightedIndices(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, weights: []const Weight, amount: usize) ![]usize {
+    if (amount == 0) return allocator.alloc(usize, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedIndices(allocator, random_source, Weight, weights, amount);
+}
+
+pub fn sampleWeightedIndicesChecked(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, weights: []const Weight, amount: usize) ![]usize {
+    if (amount == 0) return allocator.alloc(usize, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedIndicesChecked(allocator, random_source, Weight, weights, amount);
+}
+
+pub fn sampleWeightedIndicesU32(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, weights: []const Weight, amount: usize) ![]u32 {
+    if (amount == 0) return allocator.alloc(u32, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedIndicesU32(allocator, random_source, Weight, weights, amount);
+}
+
+pub fn sampleWeightedIndicesU32Checked(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, weights: []const Weight, amount: usize) ![]u32 {
+    if (amount == 0) return allocator.alloc(u32, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedIndicesU32Checked(allocator, random_source, Weight, weights, amount);
+}
+
 pub fn chooseIterator(comptime T: type, io: std.Io, iterator: anytype) !?T {
     return try rootChooseIterator(T, io, iterator, .reservoir);
 }
@@ -3019,6 +3047,15 @@ test "root random helpers validate deterministic cases before entropy" {
     try sampleIndicesU32IntoChecked(failing, 3, &all_indices_u32_into);
     try std.testing.expectEqualSlices(u32, &.{ 0, 1, 2 }, &all_indices_u32_into);
     try std.testing.expectError(error.InvalidParameter, sampleIndicesU32Checked(failing, std.testing.allocator, 3, 4));
+    const empty_weighted_nr = try sampleWeightedIndices(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 0);
+    defer std.testing.allocator.free(empty_weighted_nr);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_nr.len);
+    const empty_weighted_nr_checked = try sampleWeightedIndicesChecked(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 0);
+    defer std.testing.allocator.free(empty_weighted_nr_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_nr_checked.len);
+    const empty_weighted_nr_u32 = try sampleWeightedIndicesU32(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 0);
+    defer std.testing.allocator.free(empty_weighted_nr_u32);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_nr_u32.len);
     const SliceIter = struct {
         items: []const u8,
         index: usize = 0,
@@ -3436,6 +3473,8 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleIndicesU32(failing, std.testing.allocator, 5, 2));
     var sample_indices_u32_one: [1]u32 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, sampleIndicesU32Into(failing, 5, &sample_indices_u32_one));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndices(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 2));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesU32(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 2));
     var entropy_iter = SliceIter{ .items = &.{ 1, 2 } };
     try std.testing.expectError(error.EntropyUnavailable, chooseIterator(u8, failing, &entropy_iter));
     var entropy_iter_checked = SliceIter{ .items = &.{ 1, 2 } };
