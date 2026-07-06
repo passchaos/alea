@@ -1557,3 +1557,8 @@ S4-M466 keeps that local-status link visible in the current status snapshot
 (`compare/results/s4-m466-current-status-local-status.md`) so
 `compare/results/s4-m420-current-rand-status.md` mirrors the script-friendly
 status schema while S4-M11 remains blocked.
+
+S4-M467 synchronizes S4-M11 blocker evidence with that local-status JSON field
+(`compare/results/s4-m467-blocker-local-status-sync.md`), keeping the blocker
+audit current with the script-friendly current-status pointer while S4-M11
+remains blocked.
