@@ -1072,3 +1072,9 @@ S4-M370 documents the exact crosscheck target set in README
 (`compare/results/s4-m370-readme-crosscheck-targets.md`) and guards the target
 list plus no-execute guidance with `readmecheck`, improving portability compile
 coverage discoverability while S4-M11 remains blocked.
+
+S4-M371 fixes wasm32 crosscheck test portability
+(`compare/results/s4-m371-crosscheck-wasm32-usize.md`) by gating `u32.max + 1`
+invalid-length tests to targets where `usize` is wider than 32 bits. `zig build
+crosscheck` now passes for the documented target set while S4-M11 remains
+blocked.

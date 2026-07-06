@@ -9756,11 +9756,13 @@ test "index vec conversion supports native backing" {
     defer std.testing.allocator.free(owned_u32);
     try std.testing.expectEqualSlices(u32, &.{ 5, 8, 13 }, owned_u32);
 
-    var too_large_backing = [_]usize{ 1, std.math.maxInt(u32) + 1 };
-    const too_large = IndexVec{ .usize = &too_large_backing };
-    var too_large_out: [2]u32 = undefined;
-    try std.testing.expectError(error.InvalidParameter, too_large.copyIntoU32(&too_large_out));
-    try std.testing.expectError(error.InvalidParameter, too_large.toOwnedU32Slice(std.testing.allocator));
+    if (comptime @bitSizeOf(usize) > 32) {
+        var too_large_backing = [_]usize{ 1, @as(usize, std.math.maxInt(u32)) + 1 };
+        const too_large = IndexVec{ .usize = &too_large_backing };
+        var too_large_out: [2]u32 = undefined;
+        try std.testing.expectError(error.InvalidParameter, too_large.copyIntoU32(&too_large_out));
+        try std.testing.expectError(error.InvalidParameter, too_large.toOwnedU32Slice(std.testing.allocator));
+    }
 }
 
 test "index vec equality compares contents across backing types" {
@@ -9922,11 +9924,13 @@ test "index vec consuming owned conversions transfer or narrow backing" {
     defer std.testing.allocator.free(native_u32_owned);
     try std.testing.expectEqualSlices(u32, &.{ 3, 5, 8 }, native_u32_owned);
 
-    const too_large_backing = try std.testing.allocator.alloc(usize, 2);
-    defer std.testing.allocator.free(too_large_backing);
-    too_large_backing[0..2].* = .{ 1, @as(usize, std.math.maxInt(u32)) + 1 };
-    const too_large_vec = IndexVec{ .usize = too_large_backing };
-    try std.testing.expectError(error.InvalidParameter, too_large_vec.intoOwnedU32Slice(std.testing.allocator));
+    if (comptime @bitSizeOf(usize) > 32) {
+        const too_large_backing = try std.testing.allocator.alloc(usize, 2);
+        defer std.testing.allocator.free(too_large_backing);
+        too_large_backing[0..2].* = .{ 1, @as(usize, std.math.maxInt(u32)) + 1 };
+        const too_large_vec = IndexVec{ .usize = too_large_backing };
+        try std.testing.expectError(error.InvalidParameter, too_large_vec.intoOwnedU32Slice(std.testing.allocator));
+    }
 
     var failing_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     const failing_backing = try std.testing.allocator.alloc(u32, 2);
@@ -13775,10 +13779,12 @@ test "index-weighted weightedIndexByIndex preserves stream shape and invalid pat
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32ArrayByIndexCheckedFrom(&invalid_engine, f64, 3, 8, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32ByIndexFrom(&invalid_engine, u32, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32ArrayByIndexFrom(&invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32ByIndexFrom(&invalid_engine, u32, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32ArrayByIndexFrom(&invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    }
 }
 
 test "index-weighted fillWeightedIndexByIndex fills caller-owned buffers" {
@@ -13928,8 +13934,10 @@ test "index-weighted fillWeightedIndexByIndex preserves stream shape and invalid
     var bad_indexes_u32: [3]u32 = undefined;
     try std.testing.expectError(error.InvalidWeight, fillWeightedIndexU32ByIndexCheckedFrom(&invalid_engine, f64, &bad_indexes_u32, 8, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32ByIndexFrom(&invalid_engine, u32, &optional_zero_u32, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32ByIndexFrom(&invalid_engine, u32, &optional_zero_u32, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    }
 }
 
 test "index-weighted weightedIndexBatchByIndex allocates index batches" {
@@ -14077,10 +14085,12 @@ test "index-weighted weightedIndexBatchByIndex preserves stream shape and invali
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, f64, 3, 8, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexFrom(std.testing.allocator, &invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexFrom(std.testing.allocator, &invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    }
 
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, weightedIndexBatchByIndexCheckedFrom(failing.allocator(), &invalid_engine, f64, 3, 8, IndexWeight.weightOf));
@@ -18220,10 +18230,12 @@ test "index-weighted no-replacement samples support length weight functions" {
     try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexIntoCheckedFrom(&no_consume_engine, u32, 8, single_into[0..2], single_keys[0..2], IndexWeight.sparse));
     try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexIntoFrom(&no_consume_engine, u32, @as(usize, std.math.maxInt(u32)) + 1, single_u32_into[0..1], single_u32_keys[0..1], IndexWeight.single));
-    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByIndexFrom(&no_consume_engine, u32, 1, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
-    try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexIntoFrom(&no_consume_engine, u32, @as(usize, std.math.maxInt(u32)) + 1, single_u32_into[0..1], single_u32_keys[0..1], IndexWeight.single));
+        try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByIndexFrom(&no_consume_engine, u32, 1, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
+    }
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesByIndexFrom(std.testing.allocator, &no_consume_engine, f64, 8, 2, IndexWeight.invalid));
     try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexArrayByIndexFrom(&no_consume_engine, f64, 2, 8, IndexWeight.invalid));
