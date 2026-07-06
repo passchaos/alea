@@ -46,8 +46,8 @@ profilecheck`. `zig build validate-local` adds `zig build rand-bench-test`, `zig
 `zig build rand-bench-smoke-self-test`, `zig build surfacecheck`, and
 `zig build runtimecheck` to native validation for
 this Linux-first local comparison environment. `zig build validate-all` adds `zig build crosscheck`,
-`zig build test-wasi`, `zig build wasi-dry-run`, and
-`zig build wasi-report`.
+`zig build test-wasi`, `zig build wasi-dry-run`, `zig build
+wasi-self-test`, and `zig build wasi-report`.
 
 `zig build runtimecheck` treats `node`, `cargo`, and `rustc` as required local
 tools. It treats `qemu-aarch64`, `qemu-aarch64-static`, `qemu-riscv64`,

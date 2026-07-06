@@ -187,6 +187,8 @@ const validate_all_dependencies = [_][]const u8{
     "validate_all_step.dependOn(validate_step)",
     "validate_all_step.dependOn(crosscheck_step)",
     "validate_all_step.dependOn(wasi_test_step)",
+    "validate_all_step.dependOn(wasi_dry_run_step)",
+    "validate_all_step.dependOn(wasi_self_test_step)",
     "validate_all_step.dependOn(wasi_report_step)",
 };
 
@@ -211,6 +213,7 @@ const wasi_self_test_dependencies = [_][]const u8{
     "wasi_self_test.addFileInput(b.path(\"tools/run_wasi_test.js\"))",
     "b.step(\"wasi-self-test\"",
     "wasi_self_test_step.dependOn(&wasi_self_test.step)",
+    "wasi_self_test_step.dependOn(&node_missing.step)",
 };
 
 const wasi_runner_file_input_tokens = [_][]const u8{
@@ -238,6 +241,8 @@ const core_guide_validation_tokens = [_][]const u8{
     "`runtimecheck`",
     "Use `zig build validate-all` for portability-sensitive changes or evidence",
     "refreshes because it adds cross-target compile checks, WASI unit tests",
+    "WASI unit tests, WASI",
+    "dry/self tests",
 };
 
 const api_reference_validation_tokens = [_][]const u8{
@@ -249,6 +254,7 @@ const api_reference_validation_tokens = [_][]const u8{
     "Use `zig build",
     "validate-all` for portability-sensitive API evidence",
     "compile checks, WASI unit tests",
+    "WASI dry/self tests",
     "node tools/run_wasi_test.js --dry-run <test.wasm>",
     "without reading or executing a",
     "wasm file",

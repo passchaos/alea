@@ -1166,3 +1166,8 @@ S4-M387 adds Node WASI runner self-tests
 (`compare/results/s4-m387-wasi-runner-self-test.md`) so dry-run argv output and
 missing-argument usage diagnostics are validated without reading or executing
 wasm while S4-M11 remains blocked.
+
+S4-M388 expands `validate-all` WASI coverage
+(`compare/results/s4-m388-validate-all-wasi-self-test.md`) so the aggregate now
+includes `wasi-dry-run` and `wasi-self-test` alongside WASI unit execution and
+the report chain while S4-M11 remains blocked.

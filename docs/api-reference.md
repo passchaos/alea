@@ -3519,7 +3519,7 @@ Use `zig build validate` for broad native API checks. Use `zig build
 validate-local` when API work changes local `rand` / `rand_distr` comparison
 evidence because it adds `rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`; the smoke wrapper supports `ALEA_RAND_BENCH_MANIFEST` / `ALEA_RAND_BENCH_EXPECTED_ROW` overrides for custom local Rust comparison checks.
 Use `zig build validate-all` for portability-sensitive API evidence because it adds cross-target
-compile checks, WASI unit tests, and the chained WASI report. `zig build
+compile checks, WASI unit tests, WASI dry/self tests, and the chained WASI report. `zig build
 crosscheck` compiles `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`,
 `x86_64-windows`, `x86_64-macos`, and `aarch64-macos` without executing them.
 Use `zig build wasi-dry-run` or `node tools/run_wasi_test.js --dry-run

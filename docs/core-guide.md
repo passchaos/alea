@@ -997,8 +997,8 @@ Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
 comparison work because it adds `rand-bench-test`, `rand-bench-smoke`,
 `rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`.
 Use `zig build validate-all` for portability-sensitive changes or evidence
-refreshes because it adds cross-target compile checks, WASI unit tests, and the
-chained WASI report. `zig build crosscheck` compiles `wasm32-wasi`,
+refreshes because it adds cross-target compile checks, WASI unit tests, WASI
+dry/self tests, and the chained WASI report. `zig build crosscheck` compiles `wasm32-wasi`,
 `aarch64-linux`, `riscv64-linux`, `x86_64-windows`, `x86_64-macos`, and
 `aarch64-macos` without executing them. Use `zig build wasi-dry-run` or
 `node tools/run_wasi_test.js --dry-run <test.wasm>` to verify Node WASI runner

@@ -1309,6 +1309,7 @@ pub fn build(b: *std.Build) void {
     const wasi_test_step = b.step("test-wasi", "Run wasm32-wasi unit tests through Node's WASI runtime");
     const wasi_report_step = b.step("wasi-report", "Run wasm32-wasi repro/statcheck/distcheck through Node's WASI runtime");
     const wasi_dry_run_step = b.step("wasi-dry-run", "Print Node WASI runner argv without executing wasm");
+    const wasi_self_test_step = b.step("wasi-self-test", "Run Node WASI runner self-tests without wasm");
     if (b.findProgram(&.{"node"}, &.{})) |node_path| {
         const wasi_tests = b.addTest(.{
             .name = "alea-tests-wasm32-wasi-node",
@@ -1330,7 +1331,6 @@ pub fn build(b: *std.Build) void {
 
         const wasi_self_test = b.addSystemCommand(&.{ node_path, "--no-warnings", "tools/run_wasi_test.js", "--self-test" });
         wasi_self_test.addFileInput(b.path("tools/run_wasi_test.js"));
-        const wasi_self_test_step = b.step("wasi-self-test", "Run Node WASI runner self-tests without wasm");
         wasi_self_test_step.dependOn(&wasi_self_test.step);
 
         const wasi_alea_mod = b.createModule(.{
@@ -1353,10 +1353,11 @@ pub fn build(b: *std.Build) void {
         wasi_profilelongcheck.step.dependOn(&wasi_profilestresscheck.step);
         wasi_report_step.dependOn(&wasi_profilelongcheck.step);
     } else |_| {
-        const node_missing = b.addFail("zig build test-wasi, zig build wasi-report, and zig build wasi-dry-run require node with node:wasi support");
+        const node_missing = b.addFail("zig build test-wasi, zig build wasi-report, zig build wasi-dry-run, and zig build wasi-self-test require node with node:wasi support");
         wasi_test_step.dependOn(&node_missing.step);
         wasi_report_step.dependOn(&node_missing.step);
         wasi_dry_run_step.dependOn(&node_missing.step);
+        wasi_self_test_step.dependOn(&node_missing.step);
     }
 
     const stream_mod = b.createModule(.{
@@ -1593,6 +1594,8 @@ pub fn build(b: *std.Build) void {
     validate_all_step.dependOn(validate_step);
     validate_all_step.dependOn(crosscheck_step);
     validate_all_step.dependOn(wasi_test_step);
+    validate_all_step.dependOn(wasi_dry_run_step);
+    validate_all_step.dependOn(wasi_self_test_step);
     validate_all_step.dependOn(wasi_report_step);
 
     const hypergeo_h2pe_probe_mod = b.createModule(.{

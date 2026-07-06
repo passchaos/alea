@@ -224,7 +224,7 @@ comparison work: it runs native validation plus `rand-bench-test`, `rand-bench-s
 
 Use `zig build validate-all` before portability-sensitive releases or evidence
 refreshes: it runs native validation plus cross-target compile checks, WASI unit
-tests, and the chained WASI report. `zig build crosscheck` currently compiles
+tests, WASI dry/self tests, and the chained WASI report. `zig build crosscheck` currently compiles
 `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`, `x86_64-windows`,
 `x86_64-macos`, and `aarch64-macos` targets without executing them.
 
