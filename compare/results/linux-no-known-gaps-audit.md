@@ -1593,3 +1593,10 @@ S4-M472 adds root one-shot allocation-returning batch helpers
 callers can now allocate random value, range, and probability batches directly
 from the root API, complementing the S4-M471 caller-owned fill helpers while
 S4-M11 remains blocked.
+
+
+S4-M473 adds root one-shot string and Unicode helpers
+(`compare/results/s4-m473-root-one-shot-string-helpers.md`): system-entropy
+callers can now generate alphanumeric strings plus Unicode scalars/UTF-8 from
+the root API without manually constructing a secure engine, while S4-M11 remains
+blocked.

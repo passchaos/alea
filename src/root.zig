@@ -513,6 +513,59 @@ pub fn randomRatioBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: 
     return out;
 }
 
+pub fn char(io: std.Io) !u8 {
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return ascii.char(random_source);
+}
+
+pub fn string(allocator: std.mem.Allocator, io: std.Io, len: usize) ![]u8 {
+    if (len == 0) return allocator.alloc(u8, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return ascii.string(allocator, random_source, len);
+}
+
+pub fn sampleString(allocator: std.mem.Allocator, io: std.Io, len: usize) ![]u8 {
+    if (len == 0) return allocator.alloc(u8, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return ascii.sampleString(allocator, random_source, len);
+}
+
+pub fn appendString(allocator: std.mem.Allocator, io: std.Io, string_buffer: *std.ArrayList(u8), len: usize) !void {
+    if (len == 0) return;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try ascii.appendString(allocator, random_source, string_buffer, len);
+}
+
+pub fn unicodeScalar(io: std.Io) !u21 {
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return ascii.unicodeScalar(random_source);
+}
+
+pub fn unicodeUtf8Capacity(len: usize) error{OutOfMemory}!usize {
+    return ascii.unicodeUtf8Capacity(len);
+}
+
+pub fn unicodeUtf8Into(io: std.Io, out: []u8, len: usize) ![]u8 {
+    if (len == 0) return out[0..0];
+    const capacity = try ascii.unicodeUtf8Capacity(len);
+    if (out.len < capacity) return error.NoSpaceLeft;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return ascii.unicodeUtf8Into(random_source, out, len);
+}
+
+pub fn unicodeUtf8Alloc(allocator: std.mem.Allocator, io: std.Io, len: usize) ![]u8 {
+    if (len == 0) return allocator.alloc(u8, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return ascii.unicodeUtf8Alloc(allocator, random_source, len);
+}
+
 fn rootValueTypeHasEmptyEnum(comptime T: type) bool {
     return switch (@typeInfo(T)) {
         .@"enum" => std.enums.values(T).len == 0,
@@ -874,6 +927,26 @@ test "root random helpers use explicit system entropy" {
     const owned_checked_ratio_values = try randomRatioBatchChecked(io, std.testing.allocator, 4, 5, 8);
     defer std.testing.allocator.free(owned_checked_ratio_values);
     try std.testing.expectEqual(@as(usize, 4), owned_checked_ratio_values.len);
+
+    _ = try char(io);
+    const token = try string(std.testing.allocator, io, 8);
+    defer std.testing.allocator.free(token);
+    try std.testing.expectEqual(@as(usize, 8), token.len);
+    const sampled_token = try sampleString(std.testing.allocator, io, 8);
+    defer std.testing.allocator.free(sampled_token);
+    try std.testing.expectEqual(@as(usize, 8), sampled_token.len);
+    var appended = try std.ArrayList(u8).initCapacity(std.testing.allocator, 16);
+    defer appended.deinit(std.testing.allocator);
+    try appendString(std.testing.allocator, io, &appended, 8);
+    try std.testing.expectEqual(@as(usize, 8), appended.items.len);
+    _ = try unicodeScalar(io);
+    var utf8_buffer: [16]u8 = undefined;
+    const utf8_slice = try unicodeUtf8Into(io, &utf8_buffer, 4);
+    try std.testing.expect(utf8_slice.len <= utf8_buffer.len);
+    const unicode_text = try unicodeUtf8Alloc(std.testing.allocator, io, 4);
+    defer std.testing.allocator.free(unicode_text);
+    try std.testing.expect(unicode_text.len <= 16);
+    try std.testing.expectEqual(@as(usize, 16), try unicodeUtf8Capacity(4));
 }
 
 test "root random helpers validate deterministic cases before entropy" {
@@ -986,6 +1059,22 @@ test "root random helpers validate deterministic cases before entropy" {
     const deterministic_checked_ratio_owned = try randomRatioBatchChecked(failing, std.testing.allocator, 3, 7, 7);
     defer std.testing.allocator.free(deterministic_checked_ratio_owned);
     try std.testing.expectEqualSlices(bool, &.{ true, true, true }, deterministic_checked_ratio_owned);
+    const empty_string = try string(std.testing.allocator, failing, 0);
+    defer std.testing.allocator.free(empty_string);
+    try std.testing.expectEqual(@as(usize, 0), empty_string.len);
+    const empty_sample_string = try sampleString(std.testing.allocator, failing, 0);
+    defer std.testing.allocator.free(empty_sample_string);
+    try std.testing.expectEqual(@as(usize, 0), empty_sample_string.len);
+    var unchanged = try std.ArrayList(u8).initCapacity(std.testing.allocator, 0);
+    defer unchanged.deinit(std.testing.allocator);
+    try appendString(std.testing.allocator, failing, &unchanged, 0);
+    try std.testing.expectEqual(@as(usize, 0), unchanged.items.len);
+    var no_utf8: [0]u8 = .{};
+    try std.testing.expectEqualSlices(u8, "", try unicodeUtf8Into(failing, &no_utf8, 0));
+    const empty_unicode_text = try unicodeUtf8Alloc(std.testing.allocator, failing, 0);
+    defer std.testing.allocator.free(empty_unicode_text);
+    try std.testing.expectEqual(@as(usize, 0), empty_unicode_text.len);
+    try std.testing.expectError(error.NoSpaceLeft, unicodeUtf8Into(failing, &no_utf8, 1));
     try std.testing.expectError(error.EmptyRange, fillRangeChecked(u8, failing, &collapsed_exclusive, 3, 3));
     try std.testing.expectError(error.EmptyRange, fillRangeAtMostChecked(u8, failing, &collapsed_inclusive, 6, 5));
     try std.testing.expectError(error.InvalidProbability, fillRandomBoolChecked(failing, &deterministic_bool, 1.1));
@@ -1005,6 +1094,14 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, randomBoolBatch(failing, std.testing.allocator, 1, 0.5));
     try std.testing.expectError(error.EntropyUnavailable, fillRandomRatio(failing, &deterministic_bool, 1, 2));
     try std.testing.expectError(error.EntropyUnavailable, randomRatioBatch(failing, std.testing.allocator, 1, 1, 2));
+    try std.testing.expectError(error.EntropyUnavailable, char(failing));
+    try std.testing.expectError(error.EntropyUnavailable, string(std.testing.allocator, failing, 1));
+    try std.testing.expectError(error.EntropyUnavailable, sampleString(std.testing.allocator, failing, 1));
+    try std.testing.expectError(error.EntropyUnavailable, appendString(std.testing.allocator, failing, &unchanged, 1));
+    try std.testing.expectError(error.EntropyUnavailable, unicodeScalar(failing));
+    var utf8_buffer: [4]u8 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, unicodeUtf8Into(failing, &utf8_buffer, 1));
+    try std.testing.expectError(error.EntropyUnavailable, unicodeUtf8Alloc(std.testing.allocator, failing, 1));
 }
 
 fn engineFromSeed(comptime Engine: type, seed: u64) Engine {
