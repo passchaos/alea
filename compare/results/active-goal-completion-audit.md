@@ -383,7 +383,8 @@ complete.
 | S4-M360 guide/API PractRand dry-run guards | `tools/toolingcheck.zig`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m360-guide-api-practrand-guards.md` | Closed for the current bar: `toolingcheck` now guards PractRand dry-run discovery in the core guide and API reference. |
 | S4-M361 shell tool executable-bit guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m361-shell-tool-executable-guard.md` | Closed for the current bar: `toolingcheck` now ensures checked-in `.sh` tools remain executable and covers shell-tool detection with focused tests. |
 | S4-M362 WASI runner dry-run | `tools/run_wasi_test.js`, `tools/toolingcheck.zig`, `docs/tooling.md`, `docs/api-reference.md`, `compare/results/s4-m362-wasi-runner-dry-run.md` | Closed for the current bar: the Node WASI runner now has a dry-run mode for argument validation, and toolingcheck guards its support tokens. |
-| S4-M363 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M363 WASI dry-run build step | `build.zig`, `tools/toolingcheck.zig`, `README.md`, `docs/api-reference.md`, `docs/tooling.md`, `compare/results/s4-m363-wasi-dry-run-step.md` | Closed for the current bar: `zig build wasi-dry-run` now exposes Node WASI argv validation through the build graph, and toolingcheck guards it. |
+| S4-M364 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -732,6 +733,9 @@ executable permissions; it is an evidence/tooling improvement and does not
 resolve S4-M11 or complete the long-term objective.
 S4-M362 additionally adds dry-run support to the Node WASI runner and guards it
 with `toolingcheck`; it is an evidence/tooling improvement and does not resolve
+S4-M11 or complete the long-term objective.
+S4-M363 additionally adds a discoverable `zig build wasi-dry-run` step for Node
+WASI argv validation; it is an evidence/tooling improvement and does not resolve
 S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

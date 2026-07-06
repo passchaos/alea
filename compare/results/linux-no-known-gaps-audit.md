@@ -1028,3 +1028,9 @@ S4-M362 adds Node WASI runner dry-run support
 validated without reading or executing a wasm file, and guards those runner tokens
 with `toolingcheck`. This improves WASI validation ergonomics while S4-M11
 remains blocked.
+
+S4-M363 adds a WASI dry-run build step
+(`compare/results/s4-m363-wasi-dry-run-step.md`) so `zig build wasi-dry-run`
+exercises `tools/run_wasi_test.js --dry-run sample.wasm --flag` without reading
+or executing wasm. This improves WASI validation discoverability while S4-M11
+remains blocked.

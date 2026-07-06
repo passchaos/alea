@@ -27,6 +27,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build profilecheck-long` | Run profilelongcheck helper tests, then accepted vector profile long stress checks. |
 | `zig build crosscheck` | Compile unit tests for secondary targets without executing them. |
 | `zig build test-wasi` | Run wasm32-wasi unit tests through Node's WASI runtime. |
+| `zig build wasi-dry-run` | Print Node WASI runner argv without executing wasm. |
 | `zig build wasi-report` | Run the chained wasm32-wasi repro/statcheck/distcheck/profile checks through Node's WASI runtime. |
 | `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, and accepted-profile checks. |
 | `zig build validate-local` | Run native validation plus the local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker and runtime-runner availability checker. |
@@ -43,7 +44,7 @@ validate` depends on `zig build examples`, `zig build doccheck`, the full
 profilecheck`. `zig build validate-local` adds `zig build surfacecheck` and
 `zig build runtimecheck` to native validation for this Linux-first local
 comparison environment. `zig build validate-all` adds `zig build crosscheck`,
-`zig build test-wasi`, and
+`zig build test-wasi`, `zig build wasi-dry-run`, and
 `zig build wasi-report`.
 
 `zig build runtimecheck` treats `node`, `cargo`, and `rustc` as required local

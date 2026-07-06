@@ -115,6 +115,12 @@ const validate_all_dependencies = [_][]const u8{
     "validate_all_step.dependOn(wasi_report_step)",
 };
 
+const wasi_dry_run_dependencies = [_][]const u8{
+    "b.addSystemCommand(&.{ node_path, \"--no-warnings\", \"tools/run_wasi_test.js\", \"--dry-run\", \"sample.wasm\", \"--flag\" })",
+    "wasi_dry_run_step.dependOn(&wasi_dry_run.step)",
+    "wasi_dry_run_step.dependOn(&node_missing.step)",
+};
+
 const wasi_report_dependencies = [_][]const u8{
     "wasi_statcheck.step.dependOn(&wasi_repro.step)",
     "wasi_distcheck.step.dependOn(&wasi_statcheck.step)",
@@ -265,6 +271,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "test", .build_token = "b.step(\"test\"" },
     .{ .name = "crosscheck", .build_token = "b.step(\"crosscheck\"" },
     .{ .name = "test-wasi", .build_token = "b.step(\"test-wasi\"" },
+    .{ .name = "wasi-dry-run", .build_token = "b.step(\"wasi-dry-run\"" },
     .{ .name = "wasi-report", .build_token = "b.step(\"wasi-report\"" },
     .{ .name = "wasi-repro", .build_token = "\"repro\", \"tools/repro.zig\"" },
     .{ .name = "wasi-statcheck", .build_token = "\"statcheck\", \"tools/statcheck.zig\"" },
@@ -500,6 +507,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (validate_all_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: validate-all missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (wasi_dry_run_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: wasi-dry-run missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

@@ -1236,6 +1236,7 @@ pub fn build(b: *std.Build) void {
 
     const wasi_test_step = b.step("test-wasi", "Run wasm32-wasi unit tests through Node's WASI runtime");
     const wasi_report_step = b.step("wasi-report", "Run wasm32-wasi repro/statcheck/distcheck through Node's WASI runtime");
+    const wasi_dry_run_step = b.step("wasi-dry-run", "Print Node WASI runner argv without executing wasm");
     if (b.findProgram(&.{"node"}, &.{})) |node_path| {
         const wasi_tests = b.addTest(.{
             .name = "alea-tests-wasm32-wasi-node",
@@ -1250,6 +1251,10 @@ pub fn build(b: *std.Build) void {
         const run_wasi_tests = b.addRunArtifact(wasi_tests);
         run_wasi_tests.addFileInput(b.path("tools/run_wasi_test.js"));
         wasi_test_step.dependOn(&run_wasi_tests.step);
+
+        const wasi_dry_run = b.addSystemCommand(&.{ node_path, "--no-warnings", "tools/run_wasi_test.js", "--dry-run", "sample.wasm", "--flag" });
+        wasi_dry_run.addFileInput(b.path("tools/run_wasi_test.js"));
+        wasi_dry_run_step.dependOn(&wasi_dry_run.step);
 
         const wasi_alea_mod = b.createModule(.{
             .root_source_file = b.path("src/root.zig"),
@@ -1271,9 +1276,10 @@ pub fn build(b: *std.Build) void {
         wasi_profilelongcheck.step.dependOn(&wasi_profilestresscheck.step);
         wasi_report_step.dependOn(&wasi_profilelongcheck.step);
     } else |_| {
-        const node_missing = b.addFail("zig build test-wasi and zig build wasi-report require node with node:wasi support");
+        const node_missing = b.addFail("zig build test-wasi, zig build wasi-report, and zig build wasi-dry-run require node with node:wasi support");
         wasi_test_step.dependOn(&node_missing.step);
         wasi_report_step.dependOn(&node_missing.step);
+        wasi_dry_run_step.dependOn(&node_missing.step);
     }
 
     const stream_mod = b.createModule(.{

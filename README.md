@@ -193,6 +193,7 @@ zig build validate-local
 zig build validate-all
 zig build crosscheck
 zig build test-wasi
+zig build wasi-dry-run
 zig build wasi-report
 zig build run-basic
 zig build examples
