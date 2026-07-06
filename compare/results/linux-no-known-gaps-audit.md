@@ -1492,3 +1492,8 @@ S4-M453 exposes the `rand-status` command matrix from the core guide and API
 reference (`compare/results/s4-m453-guide-api-rand-status-matrix.md`) so
 detailed docs also point to the latest status command evidence while S4-M11
 remains blocked.
+
+S4-M454 exposes the `rand-status` command matrix from the tooling catalog
+(`compare/results/s4-m454-tooling-rand-status-matrix.md`) so validation/tooling
+docs also point to the latest status command evidence while S4-M11 remains
+blocked.

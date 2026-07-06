@@ -53,7 +53,9 @@ profilecheck`, and `zig build practrand-self-test`. `zig build validate-local` a
 `zig build runtimecheck` to native validation for
 this Linux-first local comparison environment; see
 `compare/results/s4-m420-current-rand-status.md` for the current local `rand` /
-`rand_distr` comparison status. `zig build validate-all` adds `zig build crosscheck`,
+`rand_distr` comparison status and
+`compare/results/s4-m450-rand-status-command-matrix.md` for the latest status
+command matrix evidence. `zig build validate-all` adds `zig build crosscheck`,
 `zig build test-wasi`, `zig build wasi-dry-run`, `zig build
 wasi-self-test`, and `zig build wasi-report`.
 

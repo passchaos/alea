@@ -273,8 +273,11 @@ const validate_doc_tokens = [_][]const u8{
 
 const validate_local_status_tokens = [_][]const u8{
     "compare/results/s4-m420-current-rand-status.md",
+    "compare/results/s4-m450-rand-status-command-matrix.md",
     "current local `rand` /",
     "`rand_distr` comparison status",
+    "latest status",
+    "command matrix evidence",
 };
 
 const validate_all_doc_tokens = [_][]const u8{
