@@ -339,7 +339,8 @@ complete.
 | S4-M316 surfacecheck ignored-file guard | `tools/surfacecheck.zig`, `compare/results/s4-m316-surfacecheck-ignore-guard.md` | Closed for the current bar: `surfacecheck` now validates explicitly ignored public-looking helper files still exist and still look public, preventing stale ignores from masking source-list drift. |
 | S4-M317 validate-local aggregate | `build.zig`, `docs/tooling.md`, `README.md`, `compare/results/s4-m317-validate-local.md` | Closed for the current bar: `zig build validate-local` now runs native validation plus the local public-surface drift checker, and discovery/dependency guards cover the new aggregate. |
 | S4-M318 validate-local evidence normalization | `compare/results/s4-m317-validate-local.md`, `compare/results/s4-m318-validate-local-evidence.md` | Closed for the current bar: S4-M317 evidence now separates the generic `zig build validate-local` feature command from the actual `zig build -Doptimize=ReleaseFast validate-local` validation run. |
-| S4-M319 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M319 roadmapcheck validate-local blocker token | `tools/roadmapcheck.zig`, `compare/results/s4-m11-blocker-audit.md`, `compare/results/s4-m319-roadmapcheck-validate-local-blocker.md` | Closed for the current bar: S4-M11 blocker evidence now keeps `zig build validate-local` visible, and `roadmapcheck` requires that token alongside surfacecheck/no-public-gap evidence. |
+| S4-M320 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -549,6 +550,9 @@ evidence/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M318 additionally normalizes `validate-local` evidence wording; it is an
 evidence-quality improvement and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M319 additionally keeps `validate-local` visible in S4-M11 blocker checks; it
+is an evidence/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

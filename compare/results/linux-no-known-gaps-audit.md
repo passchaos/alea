@@ -800,3 +800,7 @@ public-surface drift checker.
 S4-M318 normalizes the `validate-local` evidence
 (`compare/results/s4-m318-validate-local-evidence.md`) so the generic feature
 command and the actual ReleaseFast validation run are recorded separately.
+S4-M319 adds `zig build validate-local` to the S4-M11 blocker audit and
+`roadmapcheck` required tokens
+(`compare/results/s4-m319-roadmapcheck-validate-local-blocker.md`), keeping the
+local aggregate validation entry point tied to blocker evidence.
