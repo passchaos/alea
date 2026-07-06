@@ -856,6 +856,75 @@ pub fn sampleMutPtrsChecked(comptime T: type, io: std.Io, allocator: std.mem.All
     return try seq.sampleMutPtrsChecked(allocator, random_source, T, items, amount);
 }
 
+pub fn sampleItemsInto(comptime T: type, io: std.Io, items: []const T, out: []T, scratch_indices: []usize) !usize {
+    const count = @min(out.len, items.len);
+    if (count == 0) return 0;
+    if (scratch_indices.len < count) return error.LengthMismatch;
+    if (count == items.len) return rootItemsIntoPrefix(T, items, out, count);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleItemsInto(random_source, T, items, out, scratch_indices);
+}
+
+pub fn sampleItemsIntoChecked(comptime T: type, io: std.Io, items: []const T, out: []T, scratch_indices: []usize) !void {
+    if (out.len > items.len) return error.InvalidParameter;
+    if (out.len == 0) return;
+    if (scratch_indices.len < out.len) return error.LengthMismatch;
+    if (out.len == items.len) {
+        _ = rootItemsIntoPrefix(T, items, out, out.len);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.sampleItemsIntoChecked(random_source, T, items, out, scratch_indices);
+}
+
+pub fn samplePtrsInto(comptime T: type, io: std.Io, items: []const T, out: []*const T, scratch_indices: []usize) !usize {
+    const count = @min(out.len, items.len);
+    if (count == 0) return 0;
+    if (scratch_indices.len < count) return error.LengthMismatch;
+    if (count == items.len) return rootPtrsIntoPrefix(T, items, out, count);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.samplePtrsInto(random_source, T, items, out, scratch_indices);
+}
+
+pub fn samplePtrsIntoChecked(comptime T: type, io: std.Io, items: []const T, out: []*const T, scratch_indices: []usize) !void {
+    if (out.len > items.len) return error.InvalidParameter;
+    if (out.len == 0) return;
+    if (scratch_indices.len < out.len) return error.LengthMismatch;
+    if (out.len == items.len) {
+        _ = rootPtrsIntoPrefix(T, items, out, out.len);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.samplePtrsIntoChecked(random_source, T, items, out, scratch_indices);
+}
+
+pub fn sampleMutPtrsInto(comptime T: type, io: std.Io, items: []T, out: []*T, scratch_indices: []usize) !usize {
+    const count = @min(out.len, items.len);
+    if (count == 0) return 0;
+    if (scratch_indices.len < count) return error.LengthMismatch;
+    if (count == items.len) return rootMutPtrsIntoPrefix(T, items, out, count);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleMutPtrsInto(random_source, T, items, out, scratch_indices);
+}
+
+pub fn sampleMutPtrsIntoChecked(comptime T: type, io: std.Io, items: []T, out: []*T, scratch_indices: []usize) !void {
+    if (out.len > items.len) return error.InvalidParameter;
+    if (out.len == 0) return;
+    if (scratch_indices.len < out.len) return error.LengthMismatch;
+    if (out.len == items.len) {
+        _ = rootMutPtrsIntoPrefix(T, items, out, out.len);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.sampleMutPtrsIntoChecked(random_source, T, items, out, scratch_indices);
+}
+
 pub fn sampleIndexVec(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) !IndexVec {
     std.debug.assert(amount <= length);
     return try sampleIndexVecChecked(io, allocator, length, amount);
@@ -2528,6 +2597,21 @@ fn rootMutPtrSliceAll(comptime T: type, allocator: std.mem.Allocator, items: []T
     return out;
 }
 
+fn rootItemsIntoPrefix(comptime T: type, items: []const T, out: []T, count: usize) usize {
+    for (out[0..count], 0..) |*slot, index| slot.* = items[index];
+    return count;
+}
+
+fn rootPtrsIntoPrefix(comptime T: type, items: []const T, out: []*const T, count: usize) usize {
+    for (out[0..count], 0..) |*slot, index| slot.* = &items[index];
+    return count;
+}
+
+fn rootMutPtrsIntoPrefix(comptime T: type, items: []T, out: []*T, count: usize) usize {
+    for (out[0..count], 0..) |*slot, index| slot.* = &items[index];
+    return count;
+}
+
 fn rootIndexArrayAll(comptime N: usize) [N]usize {
     var out: [N]usize = undefined;
     for (&out, 0..) |*item, index| item.* = index;
@@ -3072,6 +3156,24 @@ test "root random helpers use explicit system entropy" {
     defer std.testing.allocator.free(no_replacement_mut_ptrs_checked);
     try std.testing.expectEqual(@as(usize, 3), no_replacement_mut_ptrs_checked.len);
     for (no_replacement_mut_ptrs_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    var no_replacement_values_into: [3]u8 = undefined;
+    var no_replacement_value_indices: [3]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 3), try sampleItemsInto(u8, io, &no_replacement_items, &no_replacement_values_into, &no_replacement_value_indices));
+    for (no_replacement_values_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    try sampleItemsIntoChecked(u8, io, &no_replacement_items, &no_replacement_values_into, &no_replacement_value_indices);
+    for (no_replacement_values_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    var no_replacement_ptrs_into: [3]*const u8 = undefined;
+    var no_replacement_ptr_indices: [3]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 3), try samplePtrsInto(u8, io, &no_replacement_items, &no_replacement_ptrs_into, &no_replacement_ptr_indices));
+    for (no_replacement_ptrs_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    try samplePtrsIntoChecked(u8, io, &no_replacement_items, &no_replacement_ptrs_into, &no_replacement_ptr_indices);
+    for (no_replacement_ptrs_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    var no_replacement_mut_ptrs_into: [3]*u8 = undefined;
+    var no_replacement_mut_ptr_indices: [3]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 3), try sampleMutPtrsInto(u8, io, &no_replacement_mut_items, &no_replacement_mut_ptrs_into, &no_replacement_mut_ptr_indices));
+    for (no_replacement_mut_ptrs_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    try sampleMutPtrsIntoChecked(u8, io, &no_replacement_mut_items, &no_replacement_mut_ptrs_into, &no_replacement_mut_ptr_indices);
+    for (no_replacement_mut_ptrs_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
     const index_vec = try sampleIndexVec(io, std.testing.allocator, no_replacement_items.len, 3);
     defer index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 3), index_vec.len());
@@ -3728,6 +3830,57 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(all_mut_ptrs_checked);
     for (all_mut_ptrs_checked, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
     try std.testing.expectError(error.InvalidParameter, sampleMutPtrsChecked(u8, failing, std.testing.allocator, &mutable_sample_items, mutable_sample_items.len + 1));
+    var empty_values_into: [0]u8 = .{};
+    var empty_values_scratch: [0]usize = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleItemsInto(u8, failing, &sample_items, &empty_values_into, &empty_values_scratch));
+    try sampleItemsIntoChecked(u8, failing, &sample_items, &empty_values_into, &empty_values_scratch);
+    var all_values_into: [3]u8 = undefined;
+    var all_values_scratch: [3]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 3), try sampleItemsInto(u8, failing, &sample_items, &all_values_into, &all_values_scratch));
+    try std.testing.expectEqualSlices(u8, &sample_items, &all_values_into);
+    try sampleItemsIntoChecked(u8, failing, &sample_items, &all_values_into, &all_values_scratch);
+    try std.testing.expectEqualSlices(u8, &sample_items, &all_values_into);
+    var too_many_values_into: [4]u8 = undefined;
+    var too_many_values_scratch: [4]usize = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleItemsIntoChecked(u8, failing, &sample_items, &too_many_values_into, &too_many_values_scratch));
+    var one_value_into: [1]u8 = undefined;
+    var empty_value_scratch: [0]usize = .{};
+    try std.testing.expectError(error.LengthMismatch, sampleItemsInto(u8, failing, &sample_items, &one_value_into, &empty_value_scratch));
+    try std.testing.expectError(error.LengthMismatch, sampleItemsIntoChecked(u8, failing, &sample_items, &one_value_into, &empty_value_scratch));
+    var empty_ptrs_into: [0]*const u8 = .{};
+    var empty_ptrs_scratch: [0]usize = .{};
+    try std.testing.expectEqual(@as(usize, 0), try samplePtrsInto(u8, failing, &sample_items, &empty_ptrs_into, &empty_ptrs_scratch));
+    try samplePtrsIntoChecked(u8, failing, &sample_items, &empty_ptrs_into, &empty_ptrs_scratch);
+    var all_ptrs_into: [3]*const u8 = undefined;
+    var all_ptrs_scratch: [3]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 3), try samplePtrsInto(u8, failing, &sample_items, &all_ptrs_into, &all_ptrs_scratch));
+    for (all_ptrs_into, 0..) |value, index| try std.testing.expectEqual(&sample_items[index], value);
+    try samplePtrsIntoChecked(u8, failing, &sample_items, &all_ptrs_into, &all_ptrs_scratch);
+    for (all_ptrs_into, 0..) |value, index| try std.testing.expectEqual(&sample_items[index], value);
+    var too_many_ptrs_into: [4]*const u8 = undefined;
+    var too_many_ptrs_scratch: [4]usize = undefined;
+    try std.testing.expectError(error.InvalidParameter, samplePtrsIntoChecked(u8, failing, &sample_items, &too_many_ptrs_into, &too_many_ptrs_scratch));
+    var one_ptr_into: [1]*const u8 = undefined;
+    var empty_ptr_scratch: [0]usize = .{};
+    try std.testing.expectError(error.LengthMismatch, samplePtrsInto(u8, failing, &sample_items, &one_ptr_into, &empty_ptr_scratch));
+    try std.testing.expectError(error.LengthMismatch, samplePtrsIntoChecked(u8, failing, &sample_items, &one_ptr_into, &empty_ptr_scratch));
+    var empty_mut_ptrs_into: [0]*u8 = .{};
+    var empty_mut_ptrs_scratch: [0]usize = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleMutPtrsInto(u8, failing, &mutable_sample_items, &empty_mut_ptrs_into, &empty_mut_ptrs_scratch));
+    try sampleMutPtrsIntoChecked(u8, failing, &mutable_sample_items, &empty_mut_ptrs_into, &empty_mut_ptrs_scratch);
+    var all_mut_ptrs_into: [3]*u8 = undefined;
+    var all_mut_ptrs_scratch: [3]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 3), try sampleMutPtrsInto(u8, failing, &mutable_sample_items, &all_mut_ptrs_into, &all_mut_ptrs_scratch));
+    for (all_mut_ptrs_into, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
+    try sampleMutPtrsIntoChecked(u8, failing, &mutable_sample_items, &all_mut_ptrs_into, &all_mut_ptrs_scratch);
+    for (all_mut_ptrs_into, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
+    var too_many_mut_ptrs_into: [4]*u8 = undefined;
+    var too_many_mut_ptrs_scratch: [4]usize = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleMutPtrsIntoChecked(u8, failing, &mutable_sample_items, &too_many_mut_ptrs_into, &too_many_mut_ptrs_scratch));
+    var one_mut_ptr_into: [1]*u8 = undefined;
+    var empty_mut_ptr_scratch: [0]usize = .{};
+    try std.testing.expectError(error.LengthMismatch, sampleMutPtrsInto(u8, failing, &mutable_sample_items, &one_mut_ptr_into, &empty_mut_ptr_scratch));
+    try std.testing.expectError(error.LengthMismatch, sampleMutPtrsIntoChecked(u8, failing, &mutable_sample_items, &one_mut_ptr_into, &empty_mut_ptr_scratch));
     const empty_index_vec = try sampleIndexVec(failing, std.testing.allocator, 5, 0);
     defer empty_index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), empty_index_vec.len());
@@ -4382,6 +4535,18 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleMutPtrArrayChecked(u8, failing, 2, &mutable_sample_items));
     try std.testing.expectError(error.EntropyUnavailable, sampleMutPtrs(u8, failing, std.testing.allocator, &mutable_sample_items, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleMutPtrsChecked(u8, failing, std.testing.allocator, &mutable_sample_items, 2));
+    var values_entropy: [2]u8 = undefined;
+    var values_entropy_scratch: [2]usize = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, sampleItemsInto(u8, failing, &sample_items, &values_entropy, &values_entropy_scratch));
+    try std.testing.expectError(error.EntropyUnavailable, sampleItemsIntoChecked(u8, failing, &sample_items, &values_entropy, &values_entropy_scratch));
+    var ptrs_entropy: [2]*const u8 = undefined;
+    var ptrs_entropy_scratch: [2]usize = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, samplePtrsInto(u8, failing, &sample_items, &ptrs_entropy, &ptrs_entropy_scratch));
+    try std.testing.expectError(error.EntropyUnavailable, samplePtrsIntoChecked(u8, failing, &sample_items, &ptrs_entropy, &ptrs_entropy_scratch));
+    var mut_ptrs_entropy: [2]*u8 = undefined;
+    var mut_ptrs_entropy_scratch: [2]usize = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, sampleMutPtrsInto(u8, failing, &mutable_sample_items, &mut_ptrs_entropy, &mut_ptrs_entropy_scratch));
+    try std.testing.expectError(error.EntropyUnavailable, sampleMutPtrsIntoChecked(u8, failing, &mutable_sample_items, &mut_ptrs_entropy, &mut_ptrs_entropy_scratch));
     try std.testing.expectError(error.EntropyUnavailable, sampleIndexVec(failing, std.testing.allocator, 5, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleIndexVecChecked(failing, std.testing.allocator, 5, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleArray(failing, 2, 5));

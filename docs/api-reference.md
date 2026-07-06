@@ -57,6 +57,8 @@ command matrix evidence.
   `sampleItemsArrayChecked`, `samplePtrArray`, `samplePtrArrayChecked`,
   `sampleMutPtrArray`, `sampleMutPtrArrayChecked`, `samplePtrs`,
   `samplePtrsChecked`, `sampleMutPtrs`, `sampleMutPtrsChecked`,
+  `sampleItemsInto`, `sampleItemsIntoChecked`, `samplePtrsInto`,
+  `samplePtrsIntoChecked`, `sampleMutPtrsInto`, `sampleMutPtrsIntoChecked`,
   `sampleIndexVec`, `sampleIndexVecChecked`,
   `sampleArray`, `sampleArrayChecked`, `sampleArrayU32`,
   `sampleArrayU32Checked`, `sampleIndices`, `sampleIndicesChecked`,

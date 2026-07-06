@@ -556,7 +556,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M515 root one-shot no-replacement fixed-size mutable-pointer arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m515-root-one-shot-mut-ptr-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size no-replacement mutable-pointer arrays directly. |
 | S4-M516 root one-shot no-replacement const-pointer sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m516-root-one-shot-const-ptr-sampling-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate no-replacement const-pointer samples directly. |
 | S4-M517 root one-shot no-replacement mutable-pointer sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m517-root-one-shot-mut-ptr-sampling-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate no-replacement mutable-pointer samples directly. |
-| S4-M518 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M518 root one-shot no-replacement caller-owned value and pointer buffers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m518-root-one-shot-no-replacement-into-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned no-replacement value, const-pointer, and mutable-pointer buffers directly. |
+| S4-M519 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1369,6 +1370,9 @@ objective.
 S4-M517 additionally adds root one-shot no-replacement mutable-pointer sampling;
 it is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
+S4-M518 additionally adds root one-shot no-replacement caller-owned value and
+pointer buffers; it is API ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
