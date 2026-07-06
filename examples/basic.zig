@@ -68,10 +68,15 @@ pub fn main(init: std.process.Init) !void {
     const root_choice_value_array = (try alea.chooseValueArray([]const u8, io, 4, &root_colors)).?;
     const root_choice_ptr = (try alea.chooseConstPtr([]const u8, io, &root_colors)).?;
     const root_choice_ptr_array = (try alea.chooseConstPtrArray([]const u8, io, 4, &root_colors)).?;
+    var root_mutable_colors = root_colors;
+    const root_choice_mut_ptr = (try alea.choosePtr([]const u8, io, &root_mutable_colors)).?;
+    const root_choice_mut_ptr_array = (try alea.choosePtrArray([]const u8, io, 4, &root_mutable_colors)).?;
     const root_choice_batch = try alea.chooseBatch([]const u8, io, init.gpa, 4, &root_colors);
     defer init.gpa.free(root_choice_batch);
     const root_choice_ptr_batch = try alea.chooseConstPtrBatch([]const u8, io, init.gpa, 4, &root_colors);
     defer init.gpa.free(root_choice_ptr_batch);
+    const root_choice_mut_ptr_batch = try alea.choosePtrBatch([]const u8, io, init.gpa, 4, &root_mutable_colors);
+    defer init.gpa.free(root_choice_mut_ptr_batch);
     var root_shuffle_deck = [_]u8{ 1, 2, 3, 4, 5, 6 };
     try alea.shuffle(u8, io, &root_shuffle_deck);
     var root_partial_deck = [_]u8{ 1, 2, 3, 4, 5, 6 };
@@ -232,6 +237,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("root sampler helpers: sampleDie={}, sampleFill={any}, sampleBatch={any}\n", .{ root_sample_die, root_sample_dice_fill, root_sample_dice_batch });
     try stdout.print("root choice helpers: choiceIndex={} ({s}), choiceIndexU32={} ({s}), indexFill={any}, indexFillU32={any}, indexArray={any}, indexArrayU32={any}, valueArray=[{s}, {s}, {s}, {s}], choiceBatch=[{s}, {s}, {s}, {s}]\n", .{ root_choice_index, root_colors[root_choice_index], root_choice_index_u32, root_colors[root_choice_index_u32], root_choice_indices, root_choice_indices_u32, root_choice_index_array, root_choice_index_array_u32, root_choice_value_array[0], root_choice_value_array[1], root_choice_value_array[2], root_choice_value_array[3], root_choice_batch[0], root_choice_batch[1], root_choice_batch[2], root_choice_batch[3] });
     try stdout.print("root pointer choice helpers: ptr={s}, ptrArray=[{s}, {s}, {s}, {s}], ptrBatch=[{s}, {s}, {s}, {s}]\n", .{ root_choice_ptr.*, root_choice_ptr_array[0].*, root_choice_ptr_array[1].*, root_choice_ptr_array[2].*, root_choice_ptr_array[3].*, root_choice_ptr_batch[0].*, root_choice_ptr_batch[1].*, root_choice_ptr_batch[2].*, root_choice_ptr_batch[3].* });
+    try stdout.print("root mutable pointer choice helpers: ptr={s}, ptrArray=[{s}, {s}, {s}, {s}], ptrBatch=[{s}, {s}, {s}, {s}]\n", .{ root_choice_mut_ptr.*, root_choice_mut_ptr_array[0].*, root_choice_mut_ptr_array[1].*, root_choice_mut_ptr_array[2].*, root_choice_mut_ptr_array[3].*, root_choice_mut_ptr_batch[0].*, root_choice_mut_ptr_batch[1].*, root_choice_mut_ptr_batch[2].*, root_choice_mut_ptr_batch[3].* });
     try stdout.print("root shuffle helpers: shuffle={any}, partial={any}, tailPartial={any}\n", .{ root_shuffle_deck, root_partial_hand, root_tail_hand });
     try stdout.print("root weighted helpers: weightedIndex={}, fill={any}, batch={any}\n", .{ root_weighted_index, root_weighted_indices, root_weighted_index_batch });
     try stdout.print("root random helpers: random={}, range={}, bool={}, fill={any}, rangeFill={any}, inclusiveFill={any}, boolFill={any}, ratioFill={any}, valueBatch={any}, rangeBatch={any}, boolBatch={any}, ratioBatch={any}, iterNext={}, iterUnbounded={}\n", .{ root_random_value, root_random_range, root_random_bool, root_random_bytes, root_random_range_values, root_random_inclusive_values, root_random_bools, root_random_ratios, root_random_value_batch, root_random_range_batch, root_random_bool_batch, root_random_ratio_batch, root_random_iter_next, root_random_iter_hint.upper == null });

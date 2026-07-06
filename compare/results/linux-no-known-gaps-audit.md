@@ -1661,3 +1661,9 @@ S4-M483 adds root one-shot const-pointer choice helpers
 (`compare/results/s4-m483-root-one-shot-const-ptr-choice-helpers.md`):
 system-entropy callers can now choose const pointers directly from the root API
 while S4-M11 remains blocked.
+
+
+S4-M484 adds root one-shot mutable-pointer choice helpers
+(`compare/results/s4-m484-root-one-shot-mut-ptr-choice-helpers.md`):
+system-entropy callers can now choose mutable pointers directly from the root API
+while S4-M11 remains blocked.
