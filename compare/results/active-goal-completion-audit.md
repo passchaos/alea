@@ -452,7 +452,8 @@ complete.
 | S4-M429 S4-M11 blocker sync after rand-status validate-local | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m429-blocker-rand-status-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites fresh S4-M428 `validate-local` output including `rand-status`. |
 | S4-M430 `rand-status` output token guard | `tools/rand_status.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m430-rand-status-output-guard.md` | Closed for the current bar: toolingcheck guards essential `rand-status` output tokens. |
 | S4-M431 `rand-status` JSON/help output | `tools/rand_status.zig`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/tooling.md`, `tools/readmecheck.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m431-rand-status-json.md` | Closed for the current bar: `rand-status` now has stable JSON and help output. |
-| S4-M432 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M432 `rand-status-json` build step and aggregate | `build.zig`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/tooling.md`, `tools/readmecheck.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m432-rand-status-json-step.md` | Closed for the current bar: `rand-status-json` prints stable JSON and is included in `validate-local`. |
+| S4-M433 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1013,6 +1014,9 @@ long-term objective.
 S4-M431 additionally adds scriptable JSON/help output to `rand-status`; it is
 tooling ergonomics and does not resolve S4-M11 or complete the long-term
 objective.
+S4-M432 additionally adds a dedicated `rand-status-json` build step and includes
+it in `validate-local`; it is local comparison validation ergonomics and does
+not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

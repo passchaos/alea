@@ -26,8 +26,9 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "broad native checks including the no-external PractRand wrapper self-test", .reason = "validate PractRand self-test explanation" },
     .{ .token = "zig build validate-local", .reason = "native plus local rand validation command" },
     .{ .token = "comparison work: it runs native validation plus `rand-bench-test`", .reason = "validate-local component explanation" },
-    .{ .token = "`rand-bench-smoke-self-test`, `rand-status`, `surfacecheck`, and `runtimecheck`", .reason = "validate-local smoke/self-test/status explanation" },
+    .{ .token = "`rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `surfacecheck`, and `runtimecheck`", .reason = "validate-local smoke/self-test/status explanation" },
     .{ .token = "zig build rand-status", .reason = "current local rand status command" },
+    .{ .token = "zig build rand-status-json", .reason = "current local rand JSON status command" },
     .{ .token = "zig build rand-status -- --json", .reason = "current local rand status JSON command" },
     .{ .token = "zig build rand-bench-test", .reason = "Rust comparison benchmark helper-test command" },
     .{ .token = "zig build rand-bench-smoke", .reason = "Rust comparison benchmark smoke command" },
@@ -262,8 +263,12 @@ test "required-token helper covers Rust comparison bench test guidance" {
         .reason = "validate-local component explanation",
     };
     const validate_local_smoke = RequiredToken{
-        .token = "`rand-bench-smoke-self-test`, `rand-status`, `surfacecheck`, and `runtimecheck`",
+        .token = "`rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `surfacecheck`, and `runtimecheck`",
         .reason = "validate-local smoke/self-test/status explanation",
+    };
+    const rand_status_json = RequiredToken{
+        .token = "zig build rand-status-json",
+        .reason = "current local rand JSON status command",
     };
     const rand_bench_smoke = RequiredToken{
         .token = "zig build rand-bench-smoke",
@@ -289,7 +294,8 @@ test "required-token helper covers Rust comparison bench test guidance" {
     const text =
         \\Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
         \\comparison work: it runs native validation plus `rand-bench-test`, `rand-bench-smoke`,
-        \\`rand-bench-smoke-self-test`, `rand-status`, `surfacecheck`, and `runtimecheck`.
+        \\`rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `surfacecheck`, and `runtimecheck`.
+        \\Run `zig build rand-status-json` for stable JSON status.
         \\Run `zig build rand-bench-test` for focused Rust parser coverage.
         \\Run `zig build rand-bench-smoke` for a tiny filtered Rust comparison run.
         \\Run `zig build rand-bench-smoke-dry-run` to preview the cargo command.
@@ -299,6 +305,7 @@ test "required-token helper covers Rust comparison bench test guidance" {
     try std.testing.expect(hasRequiredToken(text, rand_bench_test));
     try std.testing.expect(hasRequiredToken(text, validate_local));
     try std.testing.expect(hasRequiredToken(text, validate_local_smoke));
+    try std.testing.expect(hasRequiredToken(text, rand_status_json));
     try std.testing.expect(hasRequiredToken(text, rand_bench_smoke));
     try std.testing.expect(hasRequiredToken(text, rand_bench_smoke_dry_run));
     try std.testing.expect(hasRequiredToken(text, rand_bench_smoke_self_test));

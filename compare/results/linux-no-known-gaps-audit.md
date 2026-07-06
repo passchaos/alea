@@ -1383,3 +1383,8 @@ S4-M431 adds scriptable JSON/help output to `rand-status`
 (`compare/results/s4-m431-rand-status-json.md`) so the current local
 `rand`/`rand_distr` comparison status can be consumed by scripts while S4-M11
 remains blocked.
+
+S4-M432 adds a dedicated `rand-status-json` build step
+(`compare/results/s4-m432-rand-status-json-step.md`) and includes it in
+`validate-local`, so stable JSON status output is exercised by the local Rust
+comparison aggregate while S4-M11 remains blocked.

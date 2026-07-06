@@ -33,6 +33,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, accepted-profile, and no-external PractRand-wrapper self-test checks. |
 | `zig build validate-local` | Run native validation plus the Rust comparison benchmark helper tests, a tiny Rust comparison smoke run, smoke-wrapper self-tests, local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker, and runtime-runner availability checker. |
 | `zig build rand-status` | Run rand-status helper tests, then print the current local `rand` / `rand_distr` comparison status summary and status-file path; pass `-- --json` for stable JSON. |
+| `zig build rand-status-json` | Run rand-status helper tests, then print the current local `rand` / `rand_distr` comparison status summary as stable JSON. |
 | `zig build validate-all` | Run native validation plus cross-target compile checks, WASI unit execution, WASI dry/self tests, and the chained WASI report. |
 
 `zig build doccheck` depends on the full `zig build apicheck` step including its
@@ -45,7 +46,8 @@ validate` depends on `zig build examples`, `zig build doccheck`, the full
 `zig build statcheck` step including its helper tests, `zig build distcheck`, `zig build distcheck-libc`, `zig build
 profilecheck`, and `zig build practrand-self-test`. `zig build validate-local` adds `zig build rand-bench-test`, `zig build rand-bench-smoke`,
 `zig build rand-bench-smoke-self-test`, `zig build rand-status`,
-`zig build surfacecheck`, and `zig build runtimecheck` to native validation for
+`zig build rand-status-json`, `zig build surfacecheck`, and
+`zig build runtimecheck` to native validation for
 this Linux-first local comparison environment; see
 `compare/results/s4-m420-current-rand-status.md` for the current local `rand` /
 `rand_distr` comparison status. `zig build validate-all` adds `zig build crosscheck`,

@@ -187,10 +187,18 @@ const rand_status_dependencies = [_][]const u8{
     "rand_status_step.dependOn(&run_rand_status.step)",
 };
 
+const rand_status_json_dependencies = [_][]const u8{
+    "run_rand_status_json.addArg(\"--json\")",
+    "rand_status_json_step.dependOn(&run_rand_status_tests.step)",
+    "rand_status_json_step.dependOn(&run_rand_status_json.step)",
+};
+
 const rand_status_doc_tokens = [_][]const u8{
     "zig build rand-status",
+    "zig build rand-status-json",
     "current local `rand` / `rand_distr` comparison status summary",
     "pass `-- --json` for stable JSON",
+    "stable JSON",
     "tools/rand_status.zig",
 };
 
@@ -297,7 +305,7 @@ const core_guide_validation_tokens = [_][]const u8{
     "includes `zig build practrand-self-test`",
     "Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`",
     "rand-bench-test`, `rand-bench-smoke`,",
-    "`rand-bench-smoke-self-test`, `rand-status`, `surfacecheck`, and",
+    "`rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `surfacecheck`, and",
     "ALEA_RAND_BENCH_MANIFEST",
     "`runtimecheck`",
     "Use `zig build validate-all` for portability-sensitive changes or evidence",
@@ -323,7 +331,7 @@ const api_reference_validation_tokens = [_][]const u8{
     "no-external PractRand wrapper validation",
     "Use `zig build",
     "validate-local` when API work changes local `rand` / `rand_distr` comparison",
-    "rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `rand-status`, `surfacecheck`, and `runtimecheck`",
+    "rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `surfacecheck`, and `runtimecheck`",
     "ALEA_RAND_BENCH_EXPECTED_ROW",
     "Use `zig build",
     "validate-all` for portability-sensitive API evidence",
@@ -515,6 +523,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "readmecheck", .build_token = "b.step(\"readmecheck\"" },
     .{ .name = "roadmapcheck", .build_token = "b.step(\"roadmapcheck\"" },
     .{ .name = "rand-status", .build_token = "b.step(\"rand-status\"" },
+    .{ .name = "rand-status-json", .build_token = "b.step(\"rand-status-json\"" },
     .{ .name = "surfacecheck", .build_token = "b.step(\"surfacecheck\"" },
     .{ .name = "runtimecheck", .build_token = "b.step(\"runtimecheck\"" },
     .{ .name = "doccheck", .build_token = "b.step(\"doccheck\"" },
@@ -889,10 +898,11 @@ pub fn main(init: std.process.Init) !void {
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_smoke_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_smoke_self_test_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_status_step)") == null or
+        std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_status_json_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(surfacecheck_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(runtimecheck_step)") == null)
     {
-        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, rand-bench-smoke, rand-bench-smoke-self-test, rand-status, surfacecheck, and runtimecheck\n", .{});
+        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, rand-bench-smoke, rand-bench-smoke-self-test, rand-status, rand-status-json, surfacecheck, and runtimecheck\n", .{});
         missing += 1;
     }
     inline for (doccheck_dependencies) |token| {
@@ -1062,6 +1072,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (rand_status_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: rand-status missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (rand_status_json_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: rand-status-json missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }
