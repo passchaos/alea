@@ -851,3 +851,9 @@ S4-M333 expands runtimecheck opportunity-runner detection
 (`compare/results/s4-m333-runtimecheck-static-qemu.md`) to include static QEMU
 binary names (`qemu-aarch64-static`, `qemu-riscv64-static`, and
 `qemu-x86_64-static`), with current opportunity count remaining zero found.
+
+S4-M334 hardens example validation
+(`compare/results/s4-m334-example-aggregate-guard.md`) by making `examplecheck`
+verify that every cataloged runnable example remains wired into the aggregate
+`zig build examples` step used by `zig build validate`. This improves adoption
+and validation ergonomics while S4-M11 remains blocked.
