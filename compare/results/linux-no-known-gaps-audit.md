@@ -1655,3 +1655,9 @@ S4-M482 adds root one-shot fixed-size choice-array helpers
 (`compare/results/s4-m482-root-one-shot-choice-array-helpers.md`):
 system-entropy callers can now produce stack-friendly index and value choice
 arrays directly from the root API while S4-M11 remains blocked.
+
+
+S4-M483 adds root one-shot const-pointer choice helpers
+(`compare/results/s4-m483-root-one-shot-const-ptr-choice-helpers.md`):
+system-entropy callers can now choose const pointers directly from the root API
+while S4-M11 remains blocked.

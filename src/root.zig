@@ -534,6 +534,76 @@ pub fn chooseValueArrayChecked(comptime T: type, io: std.Io, comptime N: usize, 
     return out;
 }
 
+pub fn chooseConstPtr(comptime T: type, io: std.Io, items: []const T) !?*const T {
+    if (items.len == 0) return null;
+    if (items.len == 1) return &items[0];
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.chooseConstPtr(T, items);
+}
+
+pub fn chooseConstPtrChecked(comptime T: type, io: std.Io, items: []const T) !*const T {
+    if (items.len == 0) return error.EmptyRange;
+    if (items.len == 1) return &items[0];
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try random_source.chooseConstPtrChecked(T, items);
+}
+
+pub fn fillChooseConstPtr(comptime T: type, io: std.Io, dest: []*const T, items: []const T) !void {
+    if (dest.len == 0) return;
+    if (items.len == 1) {
+        @memset(dest, &items[0]);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillChooseConstPtr(T, dest, items);
+}
+
+pub fn fillChooseConstPtrChecked(comptime T: type, io: std.Io, dest: []*const T, items: []const T) !void {
+    if (dest.len == 0) return;
+    if (items.len == 0) return error.EmptyRange;
+    if (items.len == 1) {
+        @memset(dest, &items[0]);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try random_source.fillChooseConstPtrChecked(T, dest, items);
+}
+
+pub fn chooseConstPtrBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T) ![]*const T {
+    const out = try allocator.alloc(*const T, count);
+    errdefer allocator.free(out);
+    try fillChooseConstPtr(T, io, out, items);
+    return out;
+}
+
+pub fn chooseConstPtrBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T) ![]*const T {
+    if (count == 0) return allocator.alloc(*const T, 0);
+    const out = try allocator.alloc(*const T, count);
+    errdefer allocator.free(out);
+    try fillChooseConstPtrChecked(T, io, out, items);
+    return out;
+}
+
+pub fn chooseConstPtrArray(comptime T: type, io: std.Io, comptime N: usize, items: []const T) !?[N]*const T {
+    var out: [N]*const T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return null;
+    try fillChooseConstPtr(T, io, &out, items);
+    return out;
+}
+
+pub fn chooseConstPtrArrayChecked(comptime T: type, io: std.Io, comptime N: usize, items: []const T) ![N]*const T {
+    var out: [N]*const T = undefined;
+    if (N == 0) return out;
+    if (items.len == 0) return error.EmptyRange;
+    try fillChooseConstPtrChecked(T, io, &out, items);
+    return out;
+}
+
 pub fn shuffle(comptime T: type, io: std.Io, items: []T) !void {
     if (items.len <= 1) return;
     var engine = try secure(io);
@@ -1586,6 +1656,25 @@ test "root random helpers use explicit system entropy" {
     for (chosen_value_array) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value) != null);
     const chosen_value_array_checked = try chooseValueArrayChecked(u8, io, 4, &colors);
     for (chosen_value_array_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value) != null);
+    const chosen_const_ptr = (try chooseConstPtr(u8, io, &colors)).?;
+    try std.testing.expect(std.mem.indexOfScalar(u8, &colors, chosen_const_ptr.*) != null);
+    const chosen_const_ptr_checked = try chooseConstPtrChecked(u8, io, &colors);
+    try std.testing.expect(std.mem.indexOfScalar(u8, &colors, chosen_const_ptr_checked.*) != null);
+    var chosen_const_ptrs: [4]*const u8 = undefined;
+    try fillChooseConstPtr(u8, io, &chosen_const_ptrs, &colors);
+    for (chosen_const_ptrs) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value.*) != null);
+    try fillChooseConstPtrChecked(u8, io, &chosen_const_ptrs, &colors);
+    for (chosen_const_ptrs) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value.*) != null);
+    const chosen_const_ptr_batch = try chooseConstPtrBatch(u8, io, std.testing.allocator, 4, &colors);
+    defer std.testing.allocator.free(chosen_const_ptr_batch);
+    for (chosen_const_ptr_batch) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value.*) != null);
+    const chosen_const_ptr_batch_checked = try chooseConstPtrBatchChecked(u8, io, std.testing.allocator, 4, &colors);
+    defer std.testing.allocator.free(chosen_const_ptr_batch_checked);
+    for (chosen_const_ptr_batch_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value.*) != null);
+    const chosen_const_ptr_array = (try chooseConstPtrArray(u8, io, 4, &colors)).?;
+    for (chosen_const_ptr_array) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value.*) != null);
+    const chosen_const_ptr_array_checked = try chooseConstPtrArrayChecked(u8, io, 4, &colors);
+    for (chosen_const_ptr_array_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &colors, value.*) != null);
     var shuffle_values = [_]u8{ 1, 2, 3, 4 };
     try shuffle(u8, io, &shuffle_values);
     try std.testing.expectEqual(@as(usize, 4), shuffle_values.len);
@@ -1896,6 +1985,38 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(?[3]u8, null), try chooseValueArray(u8, failing, 3, &.{}));
     try std.testing.expectError(error.EmptyRange, chooseValueArrayChecked(u8, failing, 3, &.{}));
     try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, &(try chooseValueArrayChecked(u8, failing, 3, &singleton)));
+    try std.testing.expect((try chooseConstPtrArray(u8, failing, 0, &.{})) != null);
+    try std.testing.expectEqual(@as(?*const u8, null), try chooseConstPtr(u8, failing, &.{}));
+    try std.testing.expectEqual(@as(*const u8, &singleton[0]), (try chooseConstPtr(u8, failing, &singleton)).?);
+    try std.testing.expectEqual(@as(*const u8, &singleton[0]), try chooseConstPtrChecked(u8, failing, &singleton));
+    try std.testing.expectError(error.EmptyRange, chooseConstPtrChecked(u8, failing, &.{}));
+    var empty_const_ptrs: [0]*const u8 = .{};
+    try fillChooseConstPtr(u8, failing, &empty_const_ptrs, &.{});
+    try fillChooseConstPtrChecked(u8, failing, &empty_const_ptrs, &.{});
+    var fixed_const_ptrs: [3]*const u8 = undefined;
+    try fillChooseConstPtr(u8, failing, &fixed_const_ptrs, &singleton);
+    for (fixed_const_ptrs) |value| try std.testing.expectEqual(&singleton[0], value);
+    try fillChooseConstPtrChecked(u8, failing, &fixed_const_ptrs, &singleton);
+    for (fixed_const_ptrs) |value| try std.testing.expectEqual(&singleton[0], value);
+    const empty_const_ptr_batch = try chooseConstPtrBatch(u8, failing, std.testing.allocator, 0, &.{});
+    defer std.testing.allocator.free(empty_const_ptr_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_const_ptr_batch.len);
+    const empty_const_ptr_batch_checked = try chooseConstPtrBatchChecked(u8, failing, std.testing.allocator, 0, &.{});
+    defer std.testing.allocator.free(empty_const_ptr_batch_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_const_ptr_batch_checked.len);
+    const fixed_const_ptr_batch = try chooseConstPtrBatch(u8, failing, std.testing.allocator, 3, &singleton);
+    defer std.testing.allocator.free(fixed_const_ptr_batch);
+    for (fixed_const_ptr_batch) |value| try std.testing.expectEqual(&singleton[0], value);
+    const fixed_const_ptr_batch_checked = try chooseConstPtrBatchChecked(u8, failing, std.testing.allocator, 3, &singleton);
+    defer std.testing.allocator.free(fixed_const_ptr_batch_checked);
+    for (fixed_const_ptr_batch_checked) |value| try std.testing.expectEqual(&singleton[0], value);
+    try std.testing.expectEqual(@as(?[3]*const u8, null), try chooseConstPtrArray(u8, failing, 3, &.{}));
+    try std.testing.expectError(error.EmptyRange, chooseConstPtrArrayChecked(u8, failing, 3, &.{}));
+    const fixed_const_ptr_array = (try chooseConstPtrArray(u8, failing, 3, &singleton)).?;
+    for (fixed_const_ptr_array) |value| try std.testing.expectEqual(&singleton[0], value);
+    const fixed_const_ptr_array_checked = try chooseConstPtrArrayChecked(u8, failing, 3, &singleton);
+    for (fixed_const_ptr_array_checked) |value| try std.testing.expectEqual(&singleton[0], value);
+    try std.testing.expectError(error.EmptyRange, chooseConstPtrBatchChecked(u8, failing, std.testing.allocator, 3, &.{}));
     var empty_shuffle: [0]u8 = .{};
     try shuffle(u8, failing, &empty_shuffle);
     try std.testing.expectEqual(@as(usize, 0), (try partialShuffle(u8, failing, &empty_shuffle, 3)).len);
@@ -2156,6 +2277,11 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, fillChoose(u8, failing, &byte, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, chooseBatch(u8, failing, std.testing.allocator, 1, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, chooseValueArray(u8, failing, 1, &.{ 1, 2 }));
+    try std.testing.expectError(error.EntropyUnavailable, chooseConstPtr(u8, failing, &.{ 1, 2 }));
+    var one_const_ptr: [1]*const u8 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillChooseConstPtr(u8, failing, &one_const_ptr, &.{ 1, 2 }));
+    try std.testing.expectError(error.EntropyUnavailable, chooseConstPtrBatch(u8, failing, std.testing.allocator, 1, &.{ 1, 2 }));
+    try std.testing.expectError(error.EntropyUnavailable, chooseConstPtrArray(u8, failing, 1, &.{ 1, 2 }));
     var shuffle_pair = [_]u8{ 1, 2 };
     try std.testing.expectError(error.EntropyUnavailable, shuffle(u8, failing, &shuffle_pair));
     try std.testing.expectError(error.EntropyUnavailable, partialShuffle(u8, failing, &shuffle_pair, 1));
