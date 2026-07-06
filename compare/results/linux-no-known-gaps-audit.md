@@ -1667,3 +1667,9 @@ S4-M484 adds root one-shot mutable-pointer choice helpers
 (`compare/results/s4-m484-root-one-shot-mut-ptr-choice-helpers.md`):
 system-entropy callers can now choose mutable pointers directly from the root API
 while S4-M11 remains blocked.
+
+
+S4-M485 adds root one-shot compact weighted index helpers
+(`compare/results/s4-m485-root-one-shot-weighted-u32-index-helpers.md`):
+system-entropy callers can now sample compact `u32` weighted indices directly
+from the root API while S4-M11 remains blocked.
