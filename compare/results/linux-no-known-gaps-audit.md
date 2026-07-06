@@ -1739,3 +1739,9 @@ S4-M496 adds root one-shot fixed-size iterator sample arrays
 (`compare/results/s4-m496-root-one-shot-iterator-array-helpers.md`):
 system-entropy callers can now produce fixed-size iterator sample arrays directly
 from the root API while S4-M11 remains blocked.
+
+
+S4-M497 adds root one-shot weighted iterator sampling
+(`compare/results/s4-m497-root-one-shot-weighted-iterator-sampling-helpers.md`):
+system-entropy callers can now allocate weighted iterator samples directly from
+the root API while S4-M11 remains blocked.

@@ -989,6 +989,20 @@ pub fn sampleIteratorArrayChecked(comptime T: type, io: std.Io, comptime N: usiz
     return out;
 }
 
+pub fn sampleIteratorWeighted(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleIteratorWeighted(allocator, random_source, T, iterator, amount);
+}
+
+pub fn sampleIteratorWeightedChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleIteratorWeightedChecked(allocator, random_source, T, iterator, amount);
+}
+
 pub fn weightedIndex(io: std.Io, weights: []const f64) !?usize {
     switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
         .empty => return null,
@@ -2680,6 +2694,26 @@ test "root random helpers use explicit system entropy" {
     var sample_iter = RootSampleIter{};
     var sample_iter_out: [4]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 4), try sampleIteratorInto(u8, io, &sample_iter, &sample_iter_out));
+    const RootWeightedSampleIter = struct {
+        const Entry = struct { item: u8, weight: f64 };
+        items: []const Entry,
+        index: usize = 0,
+        pub fn next(self: *@This()) ?Entry {
+            if (self.index == self.items.len) return null;
+            const value = self.items[self.index];
+            self.index += 1;
+            return value;
+        }
+    };
+    const weighted_sample_entries = [_]RootWeightedSampleIter.Entry{
+        .{ .item = 1, .weight = 1 },
+        .{ .item = 2, .weight = 2 },
+        .{ .item = 3, .weight = 3 },
+    };
+    var weighted_sample_iter = RootWeightedSampleIter{ .items = &weighted_sample_entries };
+    const weighted_sample = try sampleIteratorWeighted(u8, io, std.testing.allocator, &weighted_sample_iter, 2);
+    defer std.testing.allocator.free(weighted_sample);
+    try std.testing.expectEqual(@as(usize, 2), weighted_sample.len);
 }
 
 test "root random helpers validate deterministic cases before entropy" {
@@ -3467,6 +3501,12 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.InvalidParameter, sampleIteratorArrayChecked(u8, failing, 3, &sample_array_short_checked_iter));
     var sample_array_entropy_iter = SliceIter{ .items = &.{ 1, 2, 3 } };
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorArray(u8, failing, 2, &sample_array_entropy_iter));
+    var weighted_sample_empty = WeightedIter{ .items = &weighted_empty_entries };
+    const weighted_sample_empty_out = try sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_empty, 0);
+    defer std.testing.allocator.free(weighted_sample_empty_out);
+    try std.testing.expectEqual(@as(usize, 0), weighted_sample_empty_out.len);
+    var weighted_sample_entropy = WeightedIter{ .items = &weighted_entropy_entries };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_entropy, 1));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
     var weighted_one: [1]?usize = undefined;
