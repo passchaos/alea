@@ -1307,7 +1307,19 @@ pub fn build(b: *std.Build) void {
     const run_distcheck = b.addRunArtifact(distcheck);
     if (b.args) |args| run_distcheck.addArgs(args);
 
+    const distcheck_tests = b.addTest(.{
+        .name = "alea-distcheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/distcheck.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "alea", .module = module }},
+        }),
+    });
+    const run_distcheck_tests = b.addRunArtifact(distcheck_tests);
+
     const distcheck_step = b.step("distcheck", "Run parameter-grid distribution checks");
+    distcheck_step.dependOn(&run_distcheck_tests.step);
     distcheck_step.dependOn(&run_distcheck.step);
 
     const distcheck_libc_mod = b.createModule(.{
@@ -1325,7 +1337,20 @@ pub fn build(b: *std.Build) void {
     const run_distcheck_libc = b.addRunArtifact(distcheck_libc);
     if (b.args) |args| run_distcheck_libc.addArgs(args);
 
+    const distcheck_libc_tests = b.addTest(.{
+        .name = "alea-distcheck-libc-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/distcheck.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+            .imports = &.{.{ .name = "alea", .module = libc_module }},
+        }),
+    });
+    const run_distcheck_libc_tests = b.addRunArtifact(distcheck_libc_tests);
+
     const distcheck_libc_step = b.step("distcheck-libc", "Run libc-linked distribution checks");
+    distcheck_libc_step.dependOn(&run_distcheck_libc_tests.step);
     distcheck_libc_step.dependOn(&run_distcheck_libc.step);
 
     const profilecheck_mod = b.createModule(.{
@@ -1401,8 +1426,8 @@ pub fn build(b: *std.Build) void {
     validate_step.dependOn(examples_step);
     validate_step.dependOn(doccheck_step);
     validate_step.dependOn(statcheck_step);
-    validate_step.dependOn(&run_distcheck.step);
-    validate_step.dependOn(&run_distcheck_libc.step);
+    validate_step.dependOn(distcheck_step);
+    validate_step.dependOn(distcheck_libc_step);
     validate_step.dependOn(&run_profilecheck.step);
 
     const validate_local_step = b.step("validate-local", "Run native validation plus local Rust surface checks");

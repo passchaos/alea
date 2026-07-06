@@ -949,3 +949,9 @@ S4-M349 adds statcheck helper tests
 `zig build statcheck`, with `toolingcheck` guarding that tests run before the
 statistical smoke-check executable. This improves statistical checker reliability
 while S4-M11 remains blocked.
+
+S4-M350 adds distcheck helper tests
+(`compare/results/s4-m350-distcheck-helper-tests.md`) and wires them into
+`zig build distcheck` and `zig build distcheck-libc`, with `toolingcheck`
+guarding that tests run before the distribution-grid executables. This improves
+distribution checker reliability while S4-M11 remains blocked.

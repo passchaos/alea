@@ -750,8 +750,21 @@ fn expectVectorCdfAt(comptime VectorType: type, comptime label: []const u8, samp
 }
 
 fn expectFloatBetween(comptime label: []const u8, value: f64, min: f64, max: f64) !void {
-    if (!(value >= min and value <= max)) {
+    if (!floatInClosedRange(value, min, max)) {
         std.debug.print("{s}: {d:.6} not in [{d:.6}, {d:.6}]\n", .{ label, value, min, max });
         return error.DistributionCheckFailed;
     }
+}
+
+fn floatInClosedRange(value: f64, min: f64, max: f64) bool {
+    return value >= min and value <= max;
+}
+
+test "float closed-range predicate accepts finite inclusive boundaries" {
+    try std.testing.expect(floatInClosedRange(0.0, 0.0, 1.0));
+    try std.testing.expect(floatInClosedRange(1.0, 0.0, 1.0));
+    try std.testing.expect(floatInClosedRange(0.5, 0.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(-0.01, 0.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(1.01, 0.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(std.math.nan(f64), 0.0, 1.0));
 }

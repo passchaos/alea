@@ -12,15 +12,15 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build test` | Run unit tests and API reference coverage checks. |
 | `zig build apicheck` | Run apicheck helper tests, then verify public symbols are covered by `docs/api-reference.md`. |
 | `zig build examplecheck` | Run examplecheck helper tests, then verify `docs/examples.md` covers every checked-in runnable example/focused `run-*` step, every cataloged example remains wired into aggregate `zig build examples`, and key examples still contain expected adoption-output tokens. |
-| `zig build toolingcheck` | Run toolingcheck helper tests, then verify this tooling catalog covers every project-defined build step/checked-in tool file, that doccheck, validate, validate-all, and wasi-report keep their aggregate dependencies, and that apicheck/examplecheck/readmecheck/statcheck/surfacecheck/runtimecheck/roadmapcheck/toolingcheck run helper tests before their executable checks. |
+| `zig build toolingcheck` | Run toolingcheck helper tests, then verify this tooling catalog covers every project-defined build step/checked-in tool file, that doccheck, validate, validate-all, and wasi-report keep their aggregate dependencies, and that apicheck/examplecheck/readmecheck/statcheck/distcheck/distcheck-libc/surfacecheck/runtimecheck/roadmapcheck/toolingcheck run helper tests before their executable checks. |
 | `zig build readmecheck` | Run readmecheck helper tests, then verify README discovery links, quick-start API tokens, and core validation commands stay visible. |
 | `zig build roadmapcheck` | Run roadmapcheck helper tests, then verify roadmap, active-audit milestone evidence, public-surface manifests, and concrete S4-M11 blocker tokens stay synchronized. |
 | `zig build surfacecheck` | Run surfacecheck helper tests, compare the local Rust `rand` / resolved `rand_core` / cached `rand_distr` public surface against the checked-in manifests, guard against unlisted public source files, and print file/token coverage summaries; defaults are resolved relative to `$HOME`, and `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` override local paths. |
 | `zig build runtimecheck` | Run runtimecheck helper tests, then check S4-M11 runtime-runner availability: required local tools (`node`, `cargo`, `rustc`) must exist, while extra runners such as QEMU/Wine/wasmtime/wasmer cause the check to fail so blocker evidence can be refreshed. |
 | `zig build doccheck` | Run API, examples, tooling, README, and roadmap documentation checks together. |
 | `zig build statcheck` | Run statcheck helper tests, then extended statistical smoke checks. |
-| `zig build distcheck` | Run parameter-grid distribution checks. |
-| `zig build distcheck-libc` | Run libc-linked distribution checks for platform-backed opt-ins. |
+| `zig build distcheck` | Run distcheck helper tests, then parameter-grid distribution checks. |
+| `zig build distcheck-libc` | Run libc-linked distcheck helper tests, then distribution checks for platform-backed opt-ins. |
 | `zig build profilecheck` | Run accepted vector profile distribution checks. |
 | `zig build profilecheck-tail` | Run accepted vector profile tail checks. |
 | `zig build profilecheck-stress` | Run accepted vector profile multi-seed stress checks. |
@@ -163,7 +163,7 @@ new helpers that need documentation.
 | `tools/beta_special_probe.zig` | Beta special-case performance probe. |
 | `tools/cauchy_probe.zig` | Cauchy expression-shape performance probe. |
 | `tools/chi_probe.zig` | Chi performance probe. |
-| `tools/distcheck.zig` | Distribution parameter-grid checker. |
+| `tools/distcheck.zig` | Distribution parameter-grid checker with focused helper tests. |
 | `tools/erlang_probe.zig` | Erlang performance probe. |
 | `tools/examplecheck.zig` | Examples catalog and key-output-token checker with focused helper tests. |
 | `tools/exponential_rate_probe.zig` | Exponential-rate performance probe. |
