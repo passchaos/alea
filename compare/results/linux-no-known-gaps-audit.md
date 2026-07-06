@@ -1225,3 +1225,8 @@ S4-M399 guards README `validate-local` smoke coverage
 (`compare/results/s4-m399-readme-validate-local-smoke-guard.md`) so README keeps
 Rust comparison smoke/self-test, surfacecheck, and runtimecheck coverage visible
 while S4-M11 remains blocked.
+
+S4-M400 makes wrapper self-test temp files safe
+(`compare/results/s4-m400-wrapper-self-test-tempfiles.md`) by switching
+PractRand and Rust comparison smoke wrapper diagnostics to `mktemp` plus trap
+cleanup while S4-M11 remains blocked.

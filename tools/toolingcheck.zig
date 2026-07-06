@@ -111,6 +111,8 @@ const rand_bench_smoke_self_test_dependencies = [_][]const u8{
 const rand_bench_smoke_script_tokens = [_][]const u8{
     "--dry-run",
     "--self-test",
+    "mktemp",
+    "trap",
     "cargo run --manifest-path",
     "expected row substring",
     "rand_bench_smoke self-test ok",
@@ -328,6 +330,8 @@ const api_reference_crosscheck_tokens = [_][]const u8{
 const practrand_script_tokens = [_][]const u8{
     "--dry-run",
     "--self-test",
+    "mktemp",
+    "trap",
     "practrand self-test ok",
     "PRACTRAND_BIN",
     "RNG_test",

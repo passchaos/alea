@@ -54,16 +54,17 @@ if [[ "${1:-}" == "--self-test" ]]; then
         exit 1
     }
 
-    if "$self_path" --dry-run normal exp >/tmp/alea-rand-bench-smoke-self-test.out 2>&1; then
+    self_test_output=$(mktemp "${TMPDIR:-/tmp}/alea-rand-bench-smoke-self-test.XXXXXX")
+    trap 'rm -f "$self_test_output"' EXIT
+    if "$self_path" --dry-run normal exp >"$self_test_output" 2>&1; then
         echo "rand_bench_smoke self-test: invalid filter-only argument unexpectedly succeeded" >&2
         exit 1
     fi
-    grep -Fq "filter-only mode accepts one argument" /tmp/alea-rand-bench-smoke-self-test.out || {
+    grep -Fq "filter-only mode accepts one argument" "$self_test_output" || {
         echo "rand_bench_smoke self-test: invalid filter-only diagnostic mismatch" >&2
-        cat /tmp/alea-rand-bench-smoke-self-test.out >&2
+        cat "$self_test_output" >&2
         exit 1
     }
-    rm -f /tmp/alea-rand-bench-smoke-self-test.out
 
     echo "rand_bench_smoke self-test ok"
     exit 0

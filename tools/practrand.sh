@@ -43,16 +43,17 @@ if [ "${1:-}" = "--self-test" ]; then
     exit 1
   fi
 
-  if "$SELF_PATH" --dry-run fast 1 extra >/tmp/alea-practrand-self-test.out 2>&1; then
+  SELF_TEST_OUTPUT=$(mktemp "${TMPDIR:-/tmp}/alea-practrand-self-test.XXXXXX")
+  trap 'rm -f "$SELF_TEST_OUTPUT"' EXIT
+  if "$SELF_PATH" --dry-run fast 1 extra >"$SELF_TEST_OUTPUT" 2>&1; then
     echo "practrand self-test: invalid argument count unexpectedly succeeded" >&2
     exit 1
   fi
-  grep -Fq "usage: tools/practrand.sh" /tmp/alea-practrand-self-test.out || {
+  grep -Fq "usage: tools/practrand.sh" "$SELF_TEST_OUTPUT" || {
     echo "practrand self-test: invalid argument usage output mismatch" >&2
-    cat /tmp/alea-practrand-self-test.out >&2
+    cat "$SELF_TEST_OUTPUT" >&2
     exit 1
   }
-  rm -f /tmp/alea-practrand-self-test.out
 
   echo "practrand self-test ok"
   exit 0
