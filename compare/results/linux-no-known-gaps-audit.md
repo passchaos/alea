@@ -1448,3 +1448,8 @@ S4-M444 keeps the status schema version visible in the current snapshot
 (`compare/results/s4-m444-current-status-schema-version.md`) so
 `compare/results/s4-m420-current-rand-status.md` mirrors the script-friendly
 schema while S4-M11 remains blocked.
+
+S4-M445 synchronizes S4-M11 blocker evidence with the status schema version
+(`compare/results/s4-m445-blocker-rand-status-schema-sync.md`), keeping the
+blocker audit current with script-friendly schema signals while S4-M11 remains
+blocked.
