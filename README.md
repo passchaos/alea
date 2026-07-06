@@ -199,6 +199,7 @@ zig build validate-all
 zig build crosscheck
 zig build test-wasi
 zig build wasi-dry-run
+node tools/run_wasi_test.js --dry-run <test.wasm>
 zig build wasi-self-test
 node tools/run_wasi_test.js --self-test
 zig build wasi-report
@@ -232,9 +233,10 @@ tests, WASI dry/self tests, and the chained WASI report. `zig build crosscheck` 
 `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`, `x86_64-windows`,
 `x86_64-macos`, and `aarch64-macos` targets without executing them.
 
-Use `zig build wasi-dry-run` to verify the Node WASI runner arguments without
-reading or executing a wasm file, and use `zig build wasi-self-test` or
-`node tools/run_wasi_test.js --self-test` to self-test the
+Use `zig build wasi-dry-run` or
+`node tools/run_wasi_test.js --dry-run <test.wasm>` to verify the
+Node WASI runner arguments without reading or executing a wasm file, and use
+`zig build wasi-self-test` or `node tools/run_wasi_test.js --self-test` to self-test the
 Node WASI runner dry-run and missing-argument paths without wasm.
 
 The Rust command benchmarks against the local `rand` checkout in

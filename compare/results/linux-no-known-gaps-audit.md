@@ -1275,3 +1275,8 @@ S4-M409 documents direct README discovery for the Node WASI runner self-test
 (`compare/results/s4-m409-readme-direct-wasi-self-test.md`) so users can run
 `node tools/run_wasi_test.js --self-test` without the build graph while S4-M11
 remains blocked.
+
+S4-M410 documents direct README discovery for the Node WASI runner dry-run
+(`compare/results/s4-m410-readme-direct-wasi-dry-run.md`) so users can run
+`node tools/run_wasi_test.js --dry-run <test.wasm>` without the build graph
+while S4-M11 remains blocked.

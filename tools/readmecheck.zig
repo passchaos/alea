@@ -38,6 +38,7 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "x86_64-macos`, and `aarch64-macos`", .reason = "README crosscheck macOS targets" },
     .{ .token = "targets without executing them", .reason = "README crosscheck no-execute guidance" },
     .{ .token = "zig build wasi-dry-run", .reason = "WASI dry-run build step" },
+    .{ .token = "node tools/run_wasi_test.js --dry-run <test.wasm>", .reason = "direct WASI runner dry-run command" },
     .{ .token = "zig build wasi-self-test", .reason = "WASI runner self-test build step" },
     .{ .token = "node tools/run_wasi_test.js --self-test", .reason = "direct WASI runner self-test command" },
     .{ .token = "Node WASI runner dry-run and missing-argument paths without wasm", .reason = "WASI self-test usage guidance" },
@@ -210,6 +211,10 @@ test "required-token helper covers WASI dry-run guidance" {
         .token = "zig build wasi-dry-run",
         .reason = "WASI dry-run build step",
     };
+    const direct_wasi_dry_run = RequiredToken{
+        .token = "node tools/run_wasi_test.js --dry-run <test.wasm>",
+        .reason = "direct WASI runner dry-run command",
+    };
     const no_execution = RequiredToken{
         .token = "reading or executing a wasm file",
         .reason = "WASI dry-run no-execution explanation",
@@ -228,12 +233,14 @@ test "required-token helper covers WASI dry-run guidance" {
     };
 
     const text =
-        \\Use `zig build wasi-dry-run` to verify the Node WASI runner arguments without
-        \\reading or executing a wasm file.
+        \\Use `zig build wasi-dry-run` or
+        \\`node tools/run_wasi_test.js --dry-run <test.wasm>` to verify the Node WASI
+        \\runner arguments without reading or executing a wasm file.
         \\Use `zig build wasi-self-test` or `node tools/run_wasi_test.js --self-test`
         \\to self-test the Node WASI runner dry-run and missing-argument paths without wasm.
     ;
     try std.testing.expect(hasRequiredToken(text, wasi_dry_run));
+    try std.testing.expect(hasRequiredToken(text, direct_wasi_dry_run));
     try std.testing.expect(hasRequiredToken(text, no_execution));
     try std.testing.expect(hasRequiredToken(text, wasi_self_test));
     try std.testing.expect(hasRequiredToken(text, direct_wasi_self_test));
