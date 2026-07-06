@@ -1612,3 +1612,10 @@ S4-M475 adds root one-shot `std.Io.Duration` range helpers
 (`compare/results/s4-m475-root-one-shot-duration-helpers.md`): system-entropy
 callers can now sample and allocate duration ranges directly from the root API
 while S4-M11 remains blocked.
+
+
+S4-M476 adds root one-shot Unicode scalar range helpers
+(`compare/results/s4-m476-root-one-shot-unicode-scalar-helpers.md`):
+system-entropy callers can now fill and allocate Unicode scalar ranges directly
+from the root API, complementing S4-M473 UTF-8/string helpers while S4-M11
+remains blocked.

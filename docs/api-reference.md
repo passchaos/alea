@@ -46,8 +46,15 @@ command matrix evidence.
   `durationRangeLessThanBatchChecked`, `durationRangeAtMost`,
   `durationRangeAtMostChecked`, `durationRangeAtMostBatch`,
   `durationRangeAtMostBatchChecked`, `char`, `string`, `sampleString`,
-  `appendString`, `unicodeScalar`, `unicodeUtf8Capacity`, `unicodeUtf8Into`,
-  `unicodeUtf8Alloc`
+  `appendString`, `unicodeScalar`, `unicodeScalarRangeLessThan`,
+  `unicodeScalarRangeLessThanChecked`, `unicodeScalarRangeAtMost`,
+  `unicodeScalarRangeAtMostChecked`, `fillUnicodeScalar`,
+  `fillUnicodeScalarRangeLessThan`, `fillUnicodeScalarRangeLessThanChecked`,
+  `fillUnicodeScalarRangeAtMost`, `fillUnicodeScalarRangeAtMostChecked`,
+  `unicodeScalarBatch`, `unicodeScalarRangeLessThanBatch`,
+  `unicodeScalarRangeLessThanBatchChecked`, `unicodeScalarRangeAtMostBatch`,
+  `unicodeScalarRangeAtMostBatchChecked`, `unicodeUtf8Capacity`,
+  `unicodeUtf8Into`, `unicodeUtf8Alloc`
 - Root reader aliases: `RngReader(Source)`, `rngReader`
 - `RandomIterator(T)`: `RandomIterator.next`, `RandomIterator.nextValue`,
   `RandomIterator.fill`, `RandomIterator.sizeHint`

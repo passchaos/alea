@@ -640,6 +640,130 @@ pub fn unicodeScalar(io: std.Io) !u21 {
     return ascii.unicodeScalar(random_source);
 }
 
+pub fn unicodeScalarRangeLessThan(io: std.Io, min: u21, less_than: u21) !u21 {
+    const fixed = unicodeScalarLessThanFixed(min, less_than) catch null;
+    if (fixed) |value| return value;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.unicodeScalarRangeLessThan(min, less_than);
+}
+
+pub fn unicodeScalarRangeLessThanChecked(io: std.Io, min: u21, less_than: u21) !u21 {
+    const fixed = try unicodeScalarLessThanFixed(min, less_than);
+    if (fixed) |value| return value;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.unicodeScalarRangeLessThanChecked(min, less_than);
+}
+
+pub fn unicodeScalarRangeAtMost(io: std.Io, min: u21, at_most: u21) !u21 {
+    const fixed = unicodeScalarAtMostFixed(min, at_most) catch null;
+    if (fixed) |value| return value;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.unicodeScalarRangeAtMost(min, at_most);
+}
+
+pub fn unicodeScalarRangeAtMostChecked(io: std.Io, min: u21, at_most: u21) !u21 {
+    const fixed = try unicodeScalarAtMostFixed(min, at_most);
+    if (fixed) |value| return value;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.unicodeScalarRangeAtMostChecked(min, at_most);
+}
+
+pub fn fillUnicodeScalar(io: std.Io, dest: []u21) !void {
+    if (dest.len == 0) return;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillUnicodeScalar(dest);
+}
+
+pub fn fillUnicodeScalarRangeLessThan(io: std.Io, dest: []u21, min: u21, less_than: u21) !void {
+    if (dest.len == 0) return;
+    const fixed = unicodeScalarLessThanFixed(min, less_than) catch null;
+    if (fixed) |value| {
+        @memset(dest, value);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillUnicodeScalarRangeLessThan(dest, min, less_than);
+}
+
+pub fn fillUnicodeScalarRangeLessThanChecked(io: std.Io, dest: []u21, min: u21, less_than: u21) !void {
+    if (dest.len == 0) return;
+    const fixed = try unicodeScalarLessThanFixed(min, less_than);
+    if (fixed) |value| {
+        @memset(dest, value);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try random_source.fillUnicodeScalarRangeLessThanChecked(dest, min, less_than);
+}
+
+pub fn fillUnicodeScalarRangeAtMost(io: std.Io, dest: []u21, min: u21, at_most: u21) !void {
+    if (dest.len == 0) return;
+    const fixed = unicodeScalarAtMostFixed(min, at_most) catch null;
+    if (fixed) |value| {
+        @memset(dest, value);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillUnicodeScalarRangeAtMost(dest, min, at_most);
+}
+
+pub fn fillUnicodeScalarRangeAtMostChecked(io: std.Io, dest: []u21, min: u21, at_most: u21) !void {
+    if (dest.len == 0) return;
+    const fixed = try unicodeScalarAtMostFixed(min, at_most);
+    if (fixed) |value| {
+        @memset(dest, value);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try random_source.fillUnicodeScalarRangeAtMostChecked(dest, min, at_most);
+}
+
+pub fn unicodeScalarBatch(io: std.Io, allocator: std.mem.Allocator, count: usize) ![]u21 {
+    const out = try allocator.alloc(u21, count);
+    errdefer allocator.free(out);
+    try fillUnicodeScalar(io, out);
+    return out;
+}
+
+pub fn unicodeScalarRangeLessThanBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, min: u21, less_than: u21) ![]u21 {
+    const out = try allocator.alloc(u21, count);
+    errdefer allocator.free(out);
+    try fillUnicodeScalarRangeLessThan(io, out, min, less_than);
+    return out;
+}
+
+pub fn unicodeScalarRangeLessThanBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, min: u21, less_than: u21) ![]u21 {
+    if (count == 0) return allocator.alloc(u21, 0);
+    const out = try allocator.alloc(u21, count);
+    errdefer allocator.free(out);
+    try fillUnicodeScalarRangeLessThanChecked(io, out, min, less_than);
+    return out;
+}
+
+pub fn unicodeScalarRangeAtMostBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, min: u21, at_most: u21) ![]u21 {
+    const out = try allocator.alloc(u21, count);
+    errdefer allocator.free(out);
+    try fillUnicodeScalarRangeAtMost(io, out, min, at_most);
+    return out;
+}
+
+pub fn unicodeScalarRangeAtMostBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, min: u21, at_most: u21) ![]u21 {
+    if (count == 0) return allocator.alloc(u21, 0);
+    const out = try allocator.alloc(u21, count);
+    errdefer allocator.free(out);
+    try fillUnicodeScalarRangeAtMostChecked(io, out, min, at_most);
+    return out;
+}
+
 pub fn unicodeUtf8Capacity(len: usize) error{OutOfMemory}!usize {
     return ascii.unicodeUtf8Capacity(len);
 }
@@ -658,6 +782,34 @@ pub fn unicodeUtf8Alloc(allocator: std.mem.Allocator, io: std.Io, len: usize) ![
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return ascii.unicodeUtf8Alloc(allocator, random_source, len);
+}
+
+fn unicodeScalarAtMostFixed(min: u21, at_most: u21) !?u21 {
+    if (!std.unicode.utf8ValidCodepoint(min) or !std.unicode.utf8ValidCodepoint(at_most)) return error.InvalidParameter;
+    if (min > at_most) return error.EmptyRange;
+    return if (min == at_most) min else null;
+}
+
+fn unicodeScalarLessThanFixed(min: u21, less_than: u21) !?u21 {
+    const compressed_min = try rootUnicodeScalarToCompressed(min);
+    const compressed_end = try rootUnicodeScalarExclusiveEndToCompressed(less_than);
+    if (compressed_min >= compressed_end) return error.EmptyRange;
+    return if (compressed_end - compressed_min == 1) rootUnicodeScalarFromCompressed(compressed_min) else null;
+}
+
+fn rootUnicodeScalarToCompressed(codepoint: u21) !u21 {
+    if (!std.unicode.utf8ValidCodepoint(codepoint)) return error.InvalidParameter;
+    return if (codepoint >= 0xE000) codepoint - 0x800 else codepoint;
+}
+
+fn rootUnicodeScalarExclusiveEndToCompressed(codepoint: u21) !u21 {
+    if (codepoint > 0x11_0000) return error.InvalidParameter;
+    if (codepoint == 0x11_0000) return 0x11_0000 - 0x800;
+    return rootUnicodeScalarToCompressed(codepoint);
+}
+
+fn rootUnicodeScalarFromCompressed(compressed: u21) u21 {
+    return if (compressed >= 0xD800) compressed + 0x800 else compressed;
 }
 
 fn rootValueTypeHasEmptyEnum(comptime T: type) bool {
@@ -1070,6 +1222,40 @@ test "root random helpers use explicit system entropy" {
     try appendString(std.testing.allocator, io, &appended, 8);
     try std.testing.expectEqual(@as(usize, 8), appended.items.len);
     _ = try unicodeScalar(io);
+    const ranged_scalar = try unicodeScalarRangeLessThan(io, 0x41, 0x5B);
+    try std.testing.expect(ranged_scalar >= 0x41 and ranged_scalar < 0x5B);
+    const ranged_scalar_checked = try unicodeScalarRangeLessThanChecked(io, 0x41, 0x5B);
+    try std.testing.expect(ranged_scalar_checked >= 0x41 and ranged_scalar_checked < 0x5B);
+    const ranged_scalar_at_most = try unicodeScalarRangeAtMost(io, 0x41, 0x5A);
+    try std.testing.expect(ranged_scalar_at_most >= 0x41 and ranged_scalar_at_most <= 0x5A);
+    const ranged_scalar_at_most_checked = try unicodeScalarRangeAtMostChecked(io, 0x41, 0x5A);
+    try std.testing.expect(ranged_scalar_at_most_checked >= 0x41 and ranged_scalar_at_most_checked <= 0x5A);
+    var scalar_fill: [4]u21 = undefined;
+    try fillUnicodeScalar(io, &scalar_fill);
+    for (scalar_fill) |value| try std.testing.expect(std.unicode.utf8ValidCodepoint(value));
+    try fillUnicodeScalarRangeLessThan(io, &scalar_fill, 0x41, 0x5B);
+    for (scalar_fill) |value| try std.testing.expect(value >= 0x41 and value < 0x5B);
+    try fillUnicodeScalarRangeLessThanChecked(io, &scalar_fill, 0x41, 0x5B);
+    for (scalar_fill) |value| try std.testing.expect(value >= 0x41 and value < 0x5B);
+    try fillUnicodeScalarRangeAtMost(io, &scalar_fill, 0x41, 0x5A);
+    for (scalar_fill) |value| try std.testing.expect(value >= 0x41 and value <= 0x5A);
+    try fillUnicodeScalarRangeAtMostChecked(io, &scalar_fill, 0x41, 0x5A);
+    for (scalar_fill) |value| try std.testing.expect(value >= 0x41 and value <= 0x5A);
+    const scalar_batch = try unicodeScalarBatch(io, std.testing.allocator, 4);
+    defer std.testing.allocator.free(scalar_batch);
+    for (scalar_batch) |value| try std.testing.expect(std.unicode.utf8ValidCodepoint(value));
+    const scalar_range_batch = try unicodeScalarRangeLessThanBatch(io, std.testing.allocator, 4, 0x41, 0x5B);
+    defer std.testing.allocator.free(scalar_range_batch);
+    for (scalar_range_batch) |value| try std.testing.expect(value >= 0x41 and value < 0x5B);
+    const scalar_range_batch_checked = try unicodeScalarRangeLessThanBatchChecked(io, std.testing.allocator, 4, 0x41, 0x5B);
+    defer std.testing.allocator.free(scalar_range_batch_checked);
+    for (scalar_range_batch_checked) |value| try std.testing.expect(value >= 0x41 and value < 0x5B);
+    const scalar_at_most_batch = try unicodeScalarRangeAtMostBatch(io, std.testing.allocator, 4, 0x41, 0x5A);
+    defer std.testing.allocator.free(scalar_at_most_batch);
+    for (scalar_at_most_batch) |value| try std.testing.expect(value >= 0x41 and value <= 0x5A);
+    const scalar_at_most_batch_checked = try unicodeScalarRangeAtMostBatchChecked(io, std.testing.allocator, 4, 0x41, 0x5A);
+    defer std.testing.allocator.free(scalar_at_most_batch_checked);
+    for (scalar_at_most_batch_checked) |value| try std.testing.expect(value >= 0x41 and value <= 0x5A);
     var utf8_buffer: [16]u8 = undefined;
     const utf8_slice = try unicodeUtf8Into(io, &utf8_buffer, 4);
     try std.testing.expect(utf8_slice.len <= utf8_buffer.len);
@@ -1239,6 +1425,51 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(empty_unicode_text);
     try std.testing.expectEqual(@as(usize, 0), empty_unicode_text.len);
     try std.testing.expectError(error.NoSpaceLeft, unicodeUtf8Into(failing, &no_utf8, 1));
+    try std.testing.expectEqual(@as(u21, 0x41), try unicodeScalarRangeAtMost(failing, 0x41, 0x41));
+    try std.testing.expectEqual(@as(u21, 0x41), try unicodeScalarRangeAtMostChecked(failing, 0x41, 0x41));
+    try std.testing.expectEqual(@as(u21, 0x41), try unicodeScalarRangeLessThan(failing, 0x41, 0x42));
+    try std.testing.expectEqual(@as(u21, 0x41), try unicodeScalarRangeLessThanChecked(failing, 0x41, 0x42));
+    var empty_scalars: [0]u21 = .{};
+    try fillUnicodeScalar(failing, &empty_scalars);
+    try fillUnicodeScalarRangeLessThan(failing, &empty_scalars, 0x41, 0x41);
+    try fillUnicodeScalarRangeLessThanChecked(failing, &empty_scalars, 0x41, 0x41);
+    try fillUnicodeScalarRangeAtMost(failing, &empty_scalars, 0x42, 0x41);
+    try fillUnicodeScalarRangeAtMostChecked(failing, &empty_scalars, 0x42, 0x41);
+    var fixed_scalars: [3]u21 = undefined;
+    try fillUnicodeScalarRangeLessThan(failing, &fixed_scalars, 0x41, 0x42);
+    try std.testing.expectEqualSlices(u21, &.{ 0x41, 0x41, 0x41 }, &fixed_scalars);
+    try fillUnicodeScalarRangeLessThanChecked(failing, &fixed_scalars, 0x41, 0x42);
+    try std.testing.expectEqualSlices(u21, &.{ 0x41, 0x41, 0x41 }, &fixed_scalars);
+    try fillUnicodeScalarRangeAtMost(failing, &fixed_scalars, 0x41, 0x41);
+    try std.testing.expectEqualSlices(u21, &.{ 0x41, 0x41, 0x41 }, &fixed_scalars);
+    try fillUnicodeScalarRangeAtMostChecked(failing, &fixed_scalars, 0x41, 0x41);
+    try std.testing.expectEqualSlices(u21, &.{ 0x41, 0x41, 0x41 }, &fixed_scalars);
+    const empty_scalar_batch = try unicodeScalarBatch(failing, std.testing.allocator, 0);
+    defer std.testing.allocator.free(empty_scalar_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_scalar_batch.len);
+    const empty_bad_scalar_less_than = try unicodeScalarRangeLessThanBatchChecked(failing, std.testing.allocator, 0, 0x41, 0x41);
+    defer std.testing.allocator.free(empty_bad_scalar_less_than);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_scalar_less_than.len);
+    const empty_bad_scalar_at_most = try unicodeScalarRangeAtMostBatchChecked(failing, std.testing.allocator, 0, 0x42, 0x41);
+    defer std.testing.allocator.free(empty_bad_scalar_at_most);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_scalar_at_most.len);
+    const fixed_scalar_less_than_batch = try unicodeScalarRangeLessThanBatch(failing, std.testing.allocator, 3, 0x41, 0x42);
+    defer std.testing.allocator.free(fixed_scalar_less_than_batch);
+    try std.testing.expectEqualSlices(u21, &.{ 0x41, 0x41, 0x41 }, fixed_scalar_less_than_batch);
+    const fixed_scalar_less_than_batch_checked = try unicodeScalarRangeLessThanBatchChecked(failing, std.testing.allocator, 3, 0x41, 0x42);
+    defer std.testing.allocator.free(fixed_scalar_less_than_batch_checked);
+    try std.testing.expectEqualSlices(u21, &.{ 0x41, 0x41, 0x41 }, fixed_scalar_less_than_batch_checked);
+    const fixed_scalar_batch = try unicodeScalarRangeAtMostBatch(failing, std.testing.allocator, 3, 0x41, 0x41);
+    defer std.testing.allocator.free(fixed_scalar_batch);
+    try std.testing.expectEqualSlices(u21, &.{ 0x41, 0x41, 0x41 }, fixed_scalar_batch);
+    const fixed_scalar_batch_checked = try unicodeScalarRangeAtMostBatchChecked(failing, std.testing.allocator, 3, 0x41, 0x41);
+    defer std.testing.allocator.free(fixed_scalar_batch_checked);
+    try std.testing.expectEqualSlices(u21, &.{ 0x41, 0x41, 0x41 }, fixed_scalar_batch_checked);
+    try std.testing.expectError(error.EmptyRange, unicodeScalarRangeLessThanChecked(failing, 0x41, 0x41));
+    try std.testing.expectError(error.EmptyRange, unicodeScalarRangeAtMostChecked(failing, 0x42, 0x41));
+    try std.testing.expectError(error.InvalidParameter, unicodeScalarRangeAtMostChecked(failing, 0xD800, 0xD800));
+    try std.testing.expectError(error.EmptyRange, fillUnicodeScalarRangeLessThanChecked(failing, &fixed_scalars, 0x41, 0x41));
+    try std.testing.expectError(error.EmptyRange, fillUnicodeScalarRangeAtMostChecked(failing, &fixed_scalars, 0x42, 0x41));
     try std.testing.expectError(error.EmptyRange, fillRangeChecked(u8, failing, &collapsed_exclusive, 3, 3));
     try std.testing.expectError(error.EmptyRange, fillRangeAtMostChecked(u8, failing, &collapsed_inclusive, 6, 5));
     try std.testing.expectError(error.InvalidProbability, fillRandomBoolChecked(failing, &deterministic_bool, 1.1));
@@ -1272,6 +1503,15 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleString(std.testing.allocator, failing, 1));
     try std.testing.expectError(error.EntropyUnavailable, appendString(std.testing.allocator, failing, &unchanged, 1));
     try std.testing.expectError(error.EntropyUnavailable, unicodeScalar(failing));
+    try std.testing.expectError(error.EntropyUnavailable, unicodeScalarRangeLessThan(failing, 0x41, 0x5B));
+    try std.testing.expectError(error.EntropyUnavailable, unicodeScalarRangeAtMost(failing, 0x41, 0x5A));
+    var scalar_one: [1]u21 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillUnicodeScalar(failing, &scalar_one));
+    try std.testing.expectError(error.EntropyUnavailable, fillUnicodeScalarRangeLessThan(failing, &scalar_one, 0x41, 0x5B));
+    try std.testing.expectError(error.EntropyUnavailable, fillUnicodeScalarRangeAtMost(failing, &scalar_one, 0x41, 0x5A));
+    try std.testing.expectError(error.EntropyUnavailable, unicodeScalarBatch(failing, std.testing.allocator, 1));
+    try std.testing.expectError(error.EntropyUnavailable, unicodeScalarRangeLessThanBatch(failing, std.testing.allocator, 1, 0x41, 0x5B));
+    try std.testing.expectError(error.EntropyUnavailable, unicodeScalarRangeAtMostBatch(failing, std.testing.allocator, 1, 0x41, 0x5A));
     var utf8_buffer: [4]u8 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, unicodeUtf8Into(failing, &utf8_buffer, 1));
     try std.testing.expectError(error.EntropyUnavailable, unicodeUtf8Alloc(std.testing.allocator, failing, 1));

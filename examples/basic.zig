@@ -93,6 +93,10 @@ pub fn main(init: std.process.Init) !void {
     defer root_append_buffer.deinit(init.gpa);
     try alea.appendString(init.gpa, io, &root_append_buffer, 8);
     const root_unicode_scalar = try alea.unicodeScalar(io);
+    var root_unicode_scalar_fill: [4]u21 = undefined;
+    try alea.fillUnicodeScalarRangeAtMost(io, &root_unicode_scalar_fill, 0x41, 0x5A);
+    const root_unicode_scalar_batch = try alea.unicodeScalarRangeAtMostBatch(io, init.gpa, 4, 0x41, 0x5A);
+    defer init.gpa.free(root_unicode_scalar_batch);
     var root_unicode_buffer: [16]u8 = undefined;
     const root_unicode_into = try alea.unicodeUtf8Into(io, &root_unicode_buffer, 4);
     const root_unicode_alloc = try alea.unicodeUtf8Alloc(init.gpa, io, 4);
@@ -194,7 +198,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("root random helpers: random={}, range={}, bool={}, fill={any}, rangeFill={any}, inclusiveFill={any}, boolFill={any}, ratioFill={any}, valueBatch={any}, rangeBatch={any}, boolBatch={any}, ratioBatch={any}, iterNext={}, iterUnbounded={}\n", .{ root_random_value, root_random_range, root_random_bool, root_random_bytes, root_random_range_values, root_random_inclusive_values, root_random_bools, root_random_ratios, root_random_value_batch, root_random_range_batch, root_random_bool_batch, root_random_ratio_batch, root_random_iter_next, root_random_iter_hint.upper == null });
     try stdout.print("root endpoint float helpers: openFill={any}, openBatch={any}, openClosedFill={any}, openClosedBatch={any}\n", .{ root_open_values, root_open_batch, root_open_closed_values, root_open_closed_batch });
     try stdout.print("root duration helpers: lessThan={}ns, atMost={}ns, lessThanBatch={any}, atMostBatch={any}\n", .{ root_duration_less_than.nanoseconds, root_duration_at_most.nanoseconds, root_duration_less_than_batch, root_duration_at_most_batch });
-    try stdout.print("root string helpers: char={c}, string={s}, sampleString={s}, appendString={s}, unicodeScalar=U+{X}, unicodeInto={s}, unicodeAlloc={s}\n", .{ root_char, root_string, root_sample_string, root_append_buffer.items, root_unicode_scalar, root_unicode_into, root_unicode_alloc });
+    try stdout.print("root string helpers: char={c}, string={s}, sampleString={s}, appendString={s}, unicodeScalar=U+{X}, unicodeScalarFill={any}, unicodeScalarBatch={any}, unicodeInto={s}, unicodeAlloc={s}\n", .{ root_char, root_string, root_sample_string, root_append_buffer.items, root_unicode_scalar, root_unicode_scalar_fill, root_unicode_scalar_batch, root_unicode_into, root_unicode_alloc });
     try stdout.print("chanceBatch p=.25: {any}\n", .{chance_flags});
     try stdout.print("ratioBatch 3/8: {any}\n", .{ratio_flags});
     try stdout.print("vectorChanceBatch boolx8 p=.25: {any}\n", .{vector_chance_flags});
