@@ -32,7 +32,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build wasi-report` | Run the chained wasm32-wasi repro/statcheck/distcheck/profile checks through Node's WASI runtime. |
 | `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, accepted-profile, and no-external PractRand-wrapper self-test checks. |
 | `zig build validate-local` | Run native validation plus the Rust comparison benchmark helper tests, a tiny Rust comparison smoke run, smoke-wrapper self-tests, local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker, and runtime-runner availability checker. |
-| `zig build rand-status` | Run rand-status helper tests, then print the current local `rand` / `rand_distr` comparison status summary and status-file path. |
+| `zig build rand-status` | Run rand-status helper tests, then print the current local `rand` / `rand_distr` comparison status summary and status-file path; pass `-- --json` for stable JSON. |
 | `zig build validate-all` | Run native validation plus cross-target compile checks, WASI unit execution, WASI dry/self tests, and the chained WASI report. |
 
 `zig build doccheck` depends on the full `zig build apicheck` step including its

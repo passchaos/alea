@@ -3,7 +3,8 @@
 This reference lists the public API surface by module. See `docs/core-guide.md`
 for usage guidance, `docs/examples.md` for runnable examples, `docs/tooling.md`
 for build/tool catalogs, and `compare/results/reproducibility-matrix.md` for
-stability expectations. See `zig build rand-status` or
+stability expectations. See `zig build rand-status`,
+`zig build rand-status -- --json`, or
 `compare/results/s4-m420-current-rand-status.md` for the
 current local `rand` / `rand_distr` comparison status.
 
@@ -3494,6 +3495,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build practrand-self-test`
 - `zig build validate-local`
 - `zig build rand-status`
+- `zig build rand-status -- --json`
 - `zig build rand-bench-test`
 - `zig build rand-bench-smoke`
 - `zig build rand-bench-smoke-dry-run`

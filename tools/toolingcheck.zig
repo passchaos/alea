@@ -190,11 +190,16 @@ const rand_status_dependencies = [_][]const u8{
 const rand_status_doc_tokens = [_][]const u8{
     "zig build rand-status",
     "current local `rand` / `rand_distr` comparison status summary",
+    "pass `-- --json` for stable JSON",
     "tools/rand_status.zig",
 };
 
 const rand_status_source_tokens = [_][]const u8{
+    "--json prints the current local rand/rand_distr status as stable JSON",
     "Alea local rand/rand_distr status (2026-07-06)",
+    "\"baseline\"",
+    "\"current_conclusion\"",
+    "\"remaining_blocker\"",
     "Baseline: ~/Work/rand plus cached rand_distr 0.6.0",
     "Latest gate: zig build validate-local passes",
     "Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests",
@@ -300,6 +305,7 @@ const core_guide_validation_tokens = [_][]const u8{
     "WASI unit tests, WASI",
     "dry/self tests",
     "zig build rand-status",
+    "zig build rand-status -- --json",
     "compare/results/s4-m420-current-rand-status.md",
     "current local",
     "`rand` / `rand_distr` comparison status snapshot",
@@ -324,6 +330,7 @@ const api_reference_validation_tokens = [_][]const u8{
     "compile checks, WASI unit tests",
     "WASI dry/self tests",
     "zig build rand-status",
+    "zig build rand-status -- --json",
     "node tools/run_wasi_test.js --dry-run <test.wasm>",
     "without reading or executing a",
     "wasm file",

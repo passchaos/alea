@@ -1023,8 +1023,9 @@ S4-M11 opportunity runner appears (`qemu-aarch64`, `qemu-aarch64-static`,
 `qemu-riscv64`, `qemu-riscv64-static`, `qemu-x86_64`,
 `qemu-x86_64-static`, `wine`, `wine64`, `wasmtime`, or `wasmer`), prompting a
 blocker-audit refresh.
-Use `zig build rand-status` or `compare/results/s4-m420-current-rand-status.md`
-for the current local `rand` / `rand_distr` comparison status snapshot.
+Use `zig build rand-status`, `zig build rand-status -- --json`, or
+`compare/results/s4-m420-current-rand-status.md` for the current local
+`rand` / `rand_distr` comparison status snapshot.
 
 Use `tools/practrand.sh --dry-run` to verify the exact `zig build stream | RNG_test stdin64` pipeline without requiring PractRand, run `tools/practrand.sh --self-test` / `zig build practrand-self-test` to self-test wrapper command construction without `RNG_test`, and set `PRACTRAND_BIN` when the executable name differs. PractRand reports are stored under `compare/results/`.
 

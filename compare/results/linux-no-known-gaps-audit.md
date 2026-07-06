@@ -1378,3 +1378,8 @@ S4-M430 guards `rand-status` output tokens
 (`compare/results/s4-m430-rand-status-output-guard.md`) so the quick status
 printer keeps baseline, validation, no-new-gap, details, and S4-M11 blocker
 signals while S4-M11 remains blocked.
+
+S4-M431 adds scriptable JSON/help output to `rand-status`
+(`compare/results/s4-m431-rand-status-json.md`) so the current local
+`rand`/`rand_distr` comparison status can be consumed by scripts while S4-M11
+remains blocked.
