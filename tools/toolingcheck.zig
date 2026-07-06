@@ -63,6 +63,11 @@ const profilestresscheck_dependencies = [_][]const u8{
     "profilestresscheck_step.dependOn(&run_profilestresscheck.step)",
 };
 
+const profilelongcheck_dependencies = [_][]const u8{
+    "profilelongcheck_step.dependOn(&run_profilelongcheck_tests.step)",
+    "profilelongcheck_step.dependOn(&run_profilelongcheck.step)",
+};
+
 const surfacecheck_dependencies = [_][]const u8{
     "surfacecheck_step.dependOn(&run_surfacecheck_tests.step)",
     "surfacecheck_step.dependOn(&run_surfacecheck.step)",
@@ -478,6 +483,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (profilestresscheck_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: profilestresscheck missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (profilelongcheck_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: profilelongcheck missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

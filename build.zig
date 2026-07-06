@@ -1454,7 +1454,19 @@ pub fn build(b: *std.Build) void {
     const run_profilelongcheck = b.addRunArtifact(profilelongcheck);
     if (b.args) |args| run_profilelongcheck.addArgs(args);
 
+    const profilelongcheck_tests = b.addTest(.{
+        .name = "alea-profilelongcheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/profilelongcheck.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "alea", .module = module }},
+        }),
+    });
+    const run_profilelongcheck_tests = b.addRunArtifact(profilelongcheck_tests);
+
     const profilelongcheck_step = b.step("profilecheck-long", "Run accepted vector profile long stress checks");
+    profilelongcheck_step.dependOn(&run_profilelongcheck_tests.step);
     profilelongcheck_step.dependOn(&run_profilelongcheck.step);
 
     const validate_step = b.step("validate", "Run unit, API, statistical, and distribution checks");

@@ -257,14 +257,47 @@ fn exponentialSeedStats(comptime profile: Profile, comptime tail_gates: []const 
 }
 
 fn expectProbability(comptime profile_name: []const u8, comptime metric: []const u8, value: f64, expected: f64, tolerance: f64) !void {
-    try expectFloatBetween(profile_name, metric, value, @max(0, expected - tolerance), @min(1, expected + tolerance));
+    try expectFloatBetween(profile_name, metric, value, probabilityMin(expected, tolerance), probabilityMax(expected, tolerance));
 }
 
 fn expectFloatBetween(comptime profile_name: []const u8, comptime metric: []const u8, value: f64, min: f64, max: f64) !void {
-    if (!(value >= min and value <= max)) {
+    if (!floatInClosedRange(value, min, max)) {
         std.debug.print("{s} {s}: {d:.8} not in [{d:.8}, {d:.8}]\n", .{ profile_name, metric, value, min, max });
         return error.ProfileLongCheckFailed;
     }
+}
+
+fn probabilityMin(expected: f64, tolerance: f64) f64 {
+    return @max(0, expected - tolerance);
+}
+
+fn probabilityMax(expected: f64, tolerance: f64) f64 {
+    return @min(1, expected + tolerance);
+}
+
+fn floatInClosedRange(value: f64, min: f64, max: f64) bool {
+    return value >= min and value <= max;
+}
+
+test "profile long vector type selection matches accepted profiles" {
+    try std.testing.expectEqual(@as(usize, 8), @typeInfo(profileVectorType(.normal_table_f32)).vector.len);
+    try std.testing.expectEqual(@as(usize, 4), @typeInfo(profileVectorType(.normal_table_f64)).vector.len);
+    try std.testing.expectEqual(@as(usize, 8), @typeInfo(profileVectorType(.exponential_approx_log_f32)).vector.len);
+}
+
+test "long probability bounds clamp to valid probability range" {
+    try std.testing.expectEqual(@as(f64, 0.0), probabilityMin(0.01, 0.02));
+    try std.testing.expectEqual(@as(f64, 0.4), probabilityMin(0.5, 0.1));
+    try std.testing.expectEqual(@as(f64, 0.6), probabilityMax(0.5, 0.1));
+    try std.testing.expectEqual(@as(f64, 1.0), probabilityMax(0.99, 0.02));
+}
+
+test "long float closed-range predicate accepts boundaries and rejects NaN" {
+    try std.testing.expect(floatInClosedRange(0.0, 0.0, 1.0));
+    try std.testing.expect(floatInClosedRange(1.0, 0.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(-0.01, 0.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(1.01, 0.0, 1.0));
+    try std.testing.expect(!floatInClosedRange(std.math.nan(f64), 0.0, 1.0));
 }
 
 fn emit(stdout: ?*std.Io.Writer, comptime fmt: []const u8, args: anytype) !void {

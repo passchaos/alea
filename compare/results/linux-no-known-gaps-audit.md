@@ -974,3 +974,9 @@ exponential aggregate-count accumulation in the stress checker, and wires tests
 into `zig build profilecheck-stress`, with `toolingcheck` guarding that tests run
 before the accepted vector-profile stress executable. This improves stress
 checker reliability while S4-M11 remains blocked.
+
+S4-M354 adds profilelongcheck helper tests
+(`compare/results/s4-m354-profilelongcheck-helper-tests.md`) and wires them into
+`zig build profilecheck-long`, with `toolingcheck` guarding that tests run before
+the accepted vector-profile long-sweep executable. This improves long-sweep
+checker reliability while S4-M11 remains blocked.
