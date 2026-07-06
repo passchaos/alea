@@ -1284,3 +1284,8 @@ while S4-M11 remains blocked.
 S4-M411 documents WASI runner dry-run help
 (`compare/results/s4-m411-wasi-dry-run-help.md`) so `tools/run_wasi_test.js
 --help` explains no-wasm argv validation while S4-M11 remains blocked.
+
+S4-M412 extends the WASI runner self-test
+(`compare/results/s4-m412-wasi-help-self-test.md`) so the runner verifies its own
+help output keeps dry-run and self-test no-wasm semantics while S4-M11 remains
+blocked.

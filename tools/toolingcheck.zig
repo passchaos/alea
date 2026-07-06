@@ -376,6 +376,7 @@ const wasi_runner_tokens = [_][]const u8{
     "prints WASI argv without reading or executing wasm",
     "validates dry-run and missing-argument paths without wasm",
     "run_wasi_test self-test ok",
+    "help usage mismatch",
     "--help",
     "dryRunLine",
     "usage: run_wasi_test.js [--dry-run] <test.wasm> [args...]",

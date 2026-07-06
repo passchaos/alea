@@ -30,6 +30,17 @@ function selfTest() {
     process.exit(1);
   }
 
+  const helpRun = spawnSync(process.execPath, [script, '--help'], { encoding: 'utf8' });
+  if (
+    helpRun.status !== 0 ||
+    !helpRun.stderr.includes('--dry-run prints WASI argv without reading or executing wasm') ||
+    !helpRun.stderr.includes('--self-test validates dry-run and missing-argument paths without wasm')
+  ) {
+    console.error('run_wasi_test self-test: help usage mismatch');
+    console.error(helpRun.stdout || helpRun.stderr);
+    process.exit(1);
+  }
+
   console.log('run_wasi_test self-test ok');
 }
 
