@@ -808,3 +808,7 @@ S4-M320 updates the roadmap Current Rule
 (`compare/results/s4-m320-current-rule-validate-local.md`) so changes affecting
 local `rand` / `rand_distr` comparison workflows or public-surface evidence use
 `zig build validate-local`.
+S4-M321 adds `zig build runtimecheck`
+(`compare/results/s4-m321-runtimecheck.md`) to automate S4-M11 runtime-runner
+availability checks and fail when a new QEMU/Wine/wasmtime/wasmer runner becomes
+available for broader validation.

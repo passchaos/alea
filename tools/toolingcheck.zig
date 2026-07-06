@@ -87,6 +87,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "readmecheck", .build_token = "b.step(\"readmecheck\"" },
     .{ .name = "roadmapcheck", .build_token = "b.step(\"roadmapcheck\"" },
     .{ .name = "surfacecheck", .build_token = "b.step(\"surfacecheck\"" },
+    .{ .name = "runtimecheck", .build_token = "b.step(\"runtimecheck\"" },
     .{ .name = "doccheck", .build_token = "b.step(\"doccheck\"" },
     .{ .name = "test", .build_token = "b.step(\"test\"" },
     .{ .name = "crosscheck", .build_token = "b.step(\"crosscheck\"" },
@@ -152,6 +153,7 @@ const tools = [_]Tool{
     .{ .path = "tools/repro.zig", .build_token = "tools/repro.zig" },
     .{ .path = "tools/readmecheck.zig", .build_token = "tools/readmecheck.zig" },
     .{ .path = "tools/roadmapcheck.zig", .build_token = "tools/roadmapcheck.zig" },
+    .{ .path = "tools/runtimecheck.zig", .build_token = "tools/runtimecheck.zig" },
     .{ .path = "tools/run_wasi_test.js", .build_token = "tools/run_wasi_test.js" },
     .{ .path = "tools/skew_normal_probe.zig", .build_token = "tools/skew_normal_probe.zig" },
     .{ .path = "tools/standard_fill_probe.zig", .build_token = "tools/standard_fill_probe.zig" },
@@ -258,9 +260,10 @@ pub fn main(init: std.process.Init) !void {
         missing += 1;
     }
     if (std.mem.indexOf(u8, build, "validate_local_step.dependOn(validate_step)") == null or
-        std.mem.indexOf(u8, build, "validate_local_step.dependOn(surfacecheck_step)") == null)
+        std.mem.indexOf(u8, build, "validate_local_step.dependOn(surfacecheck_step)") == null or
+        std.mem.indexOf(u8, build, "validate_local_step.dependOn(runtimecheck_step)") == null)
     {
-        try stderr.print("toolingcheck: zig build validate-local must depend on validate and surfacecheck\n", .{});
+        try stderr.print("toolingcheck: zig build validate-local must depend on validate, surfacecheck, and runtimecheck\n", .{});
         missing += 1;
     }
     inline for (doccheck_dependencies) |token| {

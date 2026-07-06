@@ -3485,6 +3485,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build readmecheck`
 - `zig build roadmapcheck`
 - `zig build surfacecheck`
+- `zig build runtimecheck`
 - `zig build doccheck`
 - `zig build apicheck`
 - `zig build validate`
@@ -3517,6 +3518,7 @@ Tools:
 - `tools/readmecheck.zig`
 - `tools/roadmapcheck.zig` (roadmap, active-audit evidence,
   public-surface manifest, and S4-M11 blocker-token coverage)
+- `tools/runtimecheck.zig`
 - `tools/surfacecheck.zig` (optional local Rust `rand` / `rand_core` /
   `rand_distr` manifest drift checker)
 - `tools/toolingcheck.zig`

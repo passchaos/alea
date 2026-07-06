@@ -16,6 +16,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build readmecheck` | Verify README discovery links, quick-start API tokens, and core validation commands stay visible. |
 | `zig build roadmapcheck` | Verify roadmap, active-audit milestone evidence, public-surface manifests, and concrete S4-M11 blocker tokens stay synchronized. |
 | `zig build surfacecheck` | Run surfacecheck helper tests, compare the local Rust `rand` / resolved `rand_core` / cached `rand_distr` public surface against the checked-in manifests, guard against unlisted public source files, and print file/token coverage summaries; defaults are resolved relative to `$HOME`, and `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, and `ALEA_RAND_DISTR_ROOT` override local paths. |
+| `zig build runtimecheck` | Check S4-M11 runtime-runner availability: required local tools (`node`, `cargo`, `rustc`) must exist, while extra runners such as QEMU/Wine/wasmtime/wasmer cause the check to fail so blocker evidence can be refreshed. |
 | `zig build doccheck` | Run API, examples, tooling, README, and roadmap documentation checks together. |
 | `zig build statcheck` | Run extended statistical smoke checks. |
 | `zig build distcheck` | Run parameter-grid distribution checks. |
@@ -28,7 +29,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build test-wasi` | Run wasm32-wasi unit tests through Node's WASI runtime. |
 | `zig build wasi-report` | Run the chained wasm32-wasi repro/statcheck/distcheck/profile checks through Node's WASI runtime. |
 | `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, and accepted-profile checks. |
-| `zig build validate-local` | Run native validation plus the local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker. |
+| `zig build validate-local` | Run native validation plus the local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker and runtime-runner availability checker. |
 | `zig build validate-all` | Run native validation plus cross-target compile checks and WASI runtime checks. |
 
 `zig build doccheck` depends on `zig build apicheck`, `zig build
@@ -36,9 +37,10 @@ examplecheck`, `zig build toolingcheck`, `zig build readmecheck`, and `zig build
 roadmapcheck`. `zig build
 validate` depends on `zig build examples`, `zig build doccheck`, `zig build
 statcheck`, `zig build distcheck`, `zig build distcheck-libc`, and `zig build
-profilecheck`. `zig build validate-local` adds `zig build surfacecheck` to
-native validation for this Linux-first local comparison environment. `zig build
-validate-all` adds `zig build crosscheck`, `zig build test-wasi`, and
+profilecheck`. `zig build validate-local` adds `zig build surfacecheck` and
+`zig build runtimecheck` to native validation for this Linux-first local
+comparison environment. `zig build validate-all` adds `zig build crosscheck`,
+`zig build test-wasi`, and
 `zig build wasi-report`.
 
 ## Runnable Examples
@@ -184,6 +186,7 @@ new helpers that need documentation.
 | `tools/repro.zig` | Reproducibility snapshot printer. |
 | `tools/readmecheck.zig` | README discovery and quick-start token checker. |
 | `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, public-surface manifest, and S4-M11 blocker-token checker. |
+| `tools/runtimecheck.zig` | S4-M11 runtime-runner availability checker. |
 | `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps. |
 | `tools/skew_normal_probe.zig` | SkewNormal performance probe. |
 | `tools/standard_fill_probe.zig` | Standard distribution fill performance probe. |

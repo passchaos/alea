@@ -964,6 +964,7 @@ zig build toolingcheck
 zig build readmecheck
 zig build roadmapcheck
 zig build surfacecheck
+zig build runtimecheck
 zig build doccheck
 zig build validate
 zig build validate-local
@@ -990,6 +991,9 @@ Run `zig build surfacecheck` when the local Rust checkouts/caches are available
 to re-scan `~/Work/rand`, resolved `rand_core`, and cached `rand_distr` public
 declarations/re-exports against those manifests; override the default local
 paths with `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, or `ALEA_RAND_DISTR_ROOT`.
+Run `zig build runtimecheck` to refresh S4-M11 runtime-runner availability: it
+requires the current local `node`/`cargo`/`rustc` tools and fails if extra
+QEMU/Wine/wasmtime/wasmer runners appear, prompting a blocker-audit refresh.
 
 PractRand reports are stored under `compare/results/`.
 

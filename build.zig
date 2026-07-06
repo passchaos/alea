@@ -1115,6 +1115,22 @@ pub fn build(b: *std.Build) void {
     surfacecheck_step.dependOn(&run_surfacecheck_tests.step);
     surfacecheck_step.dependOn(&run_surfacecheck.step);
 
+    const runtimecheck_mod = b.createModule(.{
+        .root_source_file = b.path("tools/runtimecheck.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const runtimecheck = b.addExecutable(.{
+        .name = "alea-runtimecheck",
+        .root_module = runtimecheck_mod,
+    });
+    const run_runtimecheck = b.addRunArtifact(runtimecheck);
+    if (b.args) |args| run_runtimecheck.addArgs(args);
+
+    const runtimecheck_step = b.step("runtimecheck", "Check S4-M11 runtime runner availability");
+    runtimecheck_step.dependOn(&run_runtimecheck.step);
+
     const doccheck_step = b.step("doccheck", "Run documentation, catalog, and roadmap coverage checks");
     doccheck_step.dependOn(&run_apicheck.step);
     doccheck_step.dependOn(&run_examplecheck.step);
@@ -1314,6 +1330,7 @@ pub fn build(b: *std.Build) void {
     const validate_local_step = b.step("validate-local", "Run native validation plus local Rust surface checks");
     validate_local_step.dependOn(validate_step);
     validate_local_step.dependOn(surfacecheck_step);
+    validate_local_step.dependOn(runtimecheck_step);
 
     const validate_all_step = b.step("validate-all", "Run native validation plus cross-target and WASI runtime checks");
     validate_all_step.dependOn(validate_step);
