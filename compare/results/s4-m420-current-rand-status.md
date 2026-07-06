@@ -19,12 +19,12 @@ Against the locally available Rust evidence on this Linux host:
 
 ## Latest Evidence
 
-S4-M448 refreshed `zig build validate-local` after adding `rand-status-schema-version`
-to the local aggregate. The passing run included:
+S4-M463 refreshed `zig build validate-local` after adding `blocker_audit` to
+`rand-status-json`. The passing run included:
 
 ```text
-rand_distr standard-normal: 40.5 M samples/s checksum=-3.640
-rand_distr standard-normal f32: 38.8 M samples/s checksum=-3.640
+rand_distr standard-normal: 60.2 M samples/s checksum=-3.640
+rand_distr standard-normal f32: 59.3 M samples/s checksum=-3.640
 1
 Alea local rand/rand_distr status (2026-07-06)
   "schema_version": 1,
@@ -45,7 +45,7 @@ runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=
 runtimecheck ok: no additional runtime runner available
 ```
 
-S4-M419 synchronized validate-local signals into `compare/results/s4-m11-blocker-audit.md`; S4-M428 confirmed `rand-status` output is part of the local aggregate; S4-M433 confirmed stable JSON status output is part of the local aggregate; S4-M437 additionally confirms the `rand-status` self-test is part of the local aggregate; S4-M442 keeps the JSON boolean status fields visible in this snapshot; S4-M444 keeps the JSON schema version visible here; S4-M448 confirms the schema-version build step is part of the local aggregate; S4-M459 keeps the latest validate-local evidence pointer visible here; S4-M462 also keeps the blocker-audit pointer visible here.
+S4-M419 synchronized validate-local signals into `compare/results/s4-m11-blocker-audit.md`; S4-M428 confirmed `rand-status` output is part of the local aggregate; S4-M433 confirmed stable JSON status output is part of the local aggregate; S4-M437 additionally confirms the `rand-status` self-test is part of the local aggregate; S4-M442 keeps the JSON boolean status fields visible in this snapshot; S4-M444 keeps the JSON schema version visible here; S4-M448 confirms the schema-version build step is part of the local aggregate; S4-M459 keeps the latest validate-local evidence pointer visible here; S4-M462 keeps the blocker-audit pointer visible here; S4-M463 confirms that pointer is present in the latest validate-local aggregate output.
 
 ## Current Blocker
 

@@ -1537,3 +1537,8 @@ S4-M462 keeps that blocker-audit link visible in the current status snapshot
 (`compare/results/s4-m462-current-status-blocker-audit.md`) so
 `compare/results/s4-m420-current-rand-status.md` mirrors the script-friendly
 status schema while S4-M11 remains blocked.
+
+S4-M463 refreshes validate-local evidence after adding `blocker_audit` to status output
+(`compare/results/s4-m463-validate-local-after-blocker-audit-field.md`); the
+aggregate passes with blocker-audit status output, Rust smoke/parser tests,
+surfacecheck, and runtimecheck while S4-M11 remains blocked.
