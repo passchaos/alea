@@ -1517,3 +1517,8 @@ S4-M458 adds a latest validate-local evidence pointer to `rand-status-json`
 (`compare/results/s4-m458-rand-status-latest-evidence-field.md`) so scripts can
 jump from current status to the latest local comparison validation artifact while
 S4-M11 remains blocked.
+
+S4-M459 keeps that latest validate-local evidence pointer visible in the current
+status snapshot (`compare/results/s4-m459-current-status-latest-evidence.md`) so
+`compare/results/s4-m420-current-rand-status.md` mirrors the script-friendly
+status schema while S4-M11 remains blocked.
