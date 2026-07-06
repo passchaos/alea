@@ -1507,3 +1507,8 @@ S4-M456 refreshes the active completion audit
 (`compare/results/s4-m456-active-completion-audit-refresh.md`) with current
 rand-status, validate-local, and S4-M11 blocker evidence, preserving the
 non-completion decision while S4-M11 remains blocked.
+
+S4-M457 guards that active completion audit refresh
+(`compare/results/s4-m457-active-audit-refresh-guard.md`) so roadmapcheck keeps
+the objective restatement, evidence chain, S4-M11 non-completion reasons, and
+no-`update_goal` instruction visible while S4-M11 remains blocked.

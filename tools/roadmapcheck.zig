@@ -452,6 +452,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M454", .path = "compare/results/s4-m454-tooling-rand-status-matrix.md" },
     .{ .milestone = "S4-M455", .path = "compare/results/s4-m455-rand-status-direct-matrix.md" },
     .{ .milestone = "S4-M456", .path = "compare/results/s4-m456-active-completion-audit-refresh.md" },
+    .{ .milestone = "S4-M457", .path = "compare/results/s4-m457-active-audit-refresh-guard.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -459,7 +460,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M457",
+    "S4-M458",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -508,6 +509,19 @@ const blocker_tokens = [_][]const u8{
 };
 
 const active_completion_tokens = [_][]const u8{
+    "## Current Completion Audit Refresh",
+    "Objective restated as concrete deliverables",
+    "Linux comparison, validation, and status evidence must be current",
+    "Current evidence is not sufficient for completion",
+    "S4-M420 records the current",
+    "S4-M450/S4-M455 record the",
+    "S4-M437/S4-M448 record recent",
+    "S4-M438/S4-M449 keep the S4-M11 blocker",
+    "S4-M11 remains",
+    "no exact/default-compatible dense SIMD normal/exponential winner is",
+    "no new genuine runtime/architecture runner is available",
+    "no new local",
+    "Therefore do not call",
     "## Required Next Work Before Completion",
     "a default/exact-compatible dense SIMD normal/exponential candidate beats",
     "scalar lane-fill in the real vector-slice harness",
@@ -752,12 +766,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M457 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M457 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M458 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M458 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M457 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M457 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M458 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M458 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
