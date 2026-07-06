@@ -19,12 +19,13 @@ Against the locally available Rust evidence on this Linux host:
 
 ## Latest Evidence
 
-S4-M437 refreshed `zig build validate-local` after adding `rand-status-self-test`
+S4-M448 refreshed `zig build validate-local` after adding `rand-status-schema-version`
 to the local aggregate. The passing run included:
 
 ```text
-rand_distr standard-normal: 39.6 M samples/s checksum=-3.640
-rand_distr standard-normal f32: 37.2 M samples/s checksum=-3.640
+rand_distr standard-normal: 40.5 M samples/s checksum=-3.640
+rand_distr standard-normal f32: 38.8 M samples/s checksum=-3.640
+1
 Alea local rand/rand_distr status (2026-07-06)
   "schema_version": 1,
   "validate_local_passes": true,
@@ -42,7 +43,7 @@ runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=
 runtimecheck ok: no additional runtime runner available
 ```
 
-S4-M419 synchronized validate-local signals into `compare/results/s4-m11-blocker-audit.md`; S4-M428 confirmed `rand-status` output is part of the local aggregate; S4-M433 confirmed stable JSON status output is part of the local aggregate; S4-M437 additionally confirms the `rand-status` self-test is part of the local aggregate; S4-M442 keeps the JSON boolean status fields visible in this snapshot; S4-M444 also keeps the JSON schema version visible here.
+S4-M419 synchronized validate-local signals into `compare/results/s4-m11-blocker-audit.md`; S4-M428 confirmed `rand-status` output is part of the local aggregate; S4-M433 confirmed stable JSON status output is part of the local aggregate; S4-M437 additionally confirms the `rand-status` self-test is part of the local aggregate; S4-M442 keeps the JSON boolean status fields visible in this snapshot; S4-M444 keeps the JSON schema version visible here; S4-M448 additionally confirms the schema-version build step is part of the local aggregate.
 
 ## Current Blocker
 

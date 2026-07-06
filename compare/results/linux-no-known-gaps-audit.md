@@ -1461,3 +1461,10 @@ guards script misuse diagnostics while S4-M11 remains blocked.
 S4-M447 adds a `rand-status` schema-version command
 (`compare/results/s4-m447-rand-status-schema-version-step.md`) so scripts can
 cheaply check stable JSON schema compatibility while S4-M11 remains blocked.
+
+S4-M448 refreshes validate-local evidence after adding
+`rand-status-schema-version`
+(`compare/results/s4-m448-validate-local-after-rand-status-schema-version.md`);
+the aggregate passes with schema-version, text/JSON/self-test status output,
+Rust smoke/parser tests, surfacecheck, and runtimecheck while S4-M11 remains
+blocked.
