@@ -1210,3 +1210,7 @@ S4-M396 guards README validate/PractRand prose
 (`compare/results/s4-m396-readme-validate-practrand-guard.md`) so README keeps
 the no-external PractRand wrapper self-test visible in broad native validation
 while S4-M11 remains blocked.
+
+S4-M397 guards API reference validate/PractRand prose
+(`compare/results/s4-m397-api-validate-practrand-guard.md`) so API docs keep
+no-external PractRand wrapper validation visible while S4-M11 remains blocked.

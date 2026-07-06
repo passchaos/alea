@@ -266,6 +266,7 @@ const core_guide_validation_tokens = [_][]const u8{
 const api_reference_validation_tokens = [_][]const u8{
     "Use `zig build validate` for broad native API checks",
     "including `zig build practrand-self-test`",
+    "no-external PractRand wrapper validation",
     "Use `zig build",
     "validate-local` when API work changes local `rand` / `rand_distr` comparison",
     "rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`",

@@ -417,7 +417,8 @@ complete.
 | S4-M394 test-step doccheck description guard | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m394-test-doccheck-description.md` | Closed for the current bar: tooling docs and toolingcheck now reflect that `zig build test` runs full doccheck. |
 | S4-M395 validate-all tooling row precision | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m395-validate-all-tooling-row.md` | Closed for the current bar: validate-all tooling row now names WASI unit execution, dry/self tests, and report chain, and toolingcheck guards it. |
 | S4-M396 README validate PractRand prose guard | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m396-readme-validate-practrand-guard.md` | Closed for the current bar: readmecheck guards README prose that `validate` includes the no-external PractRand wrapper self-test. |
-| S4-M397 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M397 API validate PractRand prose guard | `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m397-api-validate-practrand-guard.md` | Closed for the current bar: toolingcheck guards API prose that `validate` includes no-external PractRand wrapper validation. |
+| S4-M398 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -872,6 +873,9 @@ the long-term objective.
 S4-M396 additionally guards README prose for `validate` including PractRand
 wrapper self-tests; it is validation documentation reliability and does not
 resolve S4-M11 or complete the long-term objective.
+S4-M397 additionally guards API reference prose for no-external PractRand wrapper
+validation; it is validation documentation reliability and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
