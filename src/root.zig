@@ -1048,6 +1048,96 @@ pub fn sampleMutPtrsIterChecked(comptime T: type, io: std.Io, allocator: std.mem
     return try seq.sampleMutPtrsIterChecked(allocator, random_source, T, items, amount);
 }
 
+pub fn reservoirSample(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) ![]T {
+    const count = @min(amount, items.len);
+    if (count == 0) return allocator.alloc(T, 0);
+    if (count == items.len) return allocator.dupe(T, items);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.reservoirSample(allocator, random_source, T, items, amount);
+}
+
+pub fn reservoirSampleChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) ![]T {
+    if (amount > items.len) return error.InvalidParameter;
+    return try reservoirSample(T, io, allocator, items, amount);
+}
+
+pub fn reservoirSamplePtrs(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) ![]*const T {
+    const count = @min(amount, items.len);
+    if (count == 0) return allocator.alloc(*const T, 0);
+    if (count == items.len) return try rootPtrSliceAll(T, allocator, items);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.reservoirSamplePtrs(allocator, random_source, T, items, amount);
+}
+
+pub fn reservoirSamplePtrsChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) ![]*const T {
+    if (amount > items.len) return error.InvalidParameter;
+    return try reservoirSamplePtrs(T, io, allocator, items, amount);
+}
+
+pub fn reservoirSampleMutPtrs(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []T, amount: usize) ![]*T {
+    const count = @min(amount, items.len);
+    if (count == 0) return allocator.alloc(*T, 0);
+    if (count == items.len) return try rootMutPtrSliceAll(T, allocator, items);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.reservoirSampleMutPtrs(allocator, random_source, T, items, amount);
+}
+
+pub fn reservoirSampleMutPtrsChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []T, amount: usize) ![]*T {
+    if (amount > items.len) return error.InvalidParameter;
+    return try reservoirSampleMutPtrs(T, io, allocator, items, amount);
+}
+
+pub fn reservoirSampleInto(comptime T: type, io: std.Io, items: []const T, out: []T) !void {
+    try reservoirSampleIntoChecked(T, io, items, out);
+}
+
+pub fn reservoirSampleIntoChecked(comptime T: type, io: std.Io, items: []const T, out: []T) !void {
+    if (out.len > items.len) return error.InvalidParameter;
+    if (out.len == 0) return;
+    if (out.len == items.len) {
+        _ = rootItemsIntoPrefix(T, items, out, out.len);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.reservoirSampleInto(random_source, T, items, out);
+}
+
+pub fn reservoirSamplePtrsInto(comptime T: type, io: std.Io, items: []const T, out: []*const T) !void {
+    try reservoirSamplePtrsIntoChecked(T, io, items, out);
+}
+
+pub fn reservoirSamplePtrsIntoChecked(comptime T: type, io: std.Io, items: []const T, out: []*const T) !void {
+    if (out.len > items.len) return error.InvalidParameter;
+    if (out.len == 0) return;
+    if (out.len == items.len) {
+        _ = rootPtrsIntoPrefix(T, items, out, out.len);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.reservoirSamplePtrsInto(random_source, T, items, out);
+}
+
+pub fn reservoirSampleMutPtrsInto(comptime T: type, io: std.Io, items: []T, out: []*T) !void {
+    try reservoirSampleMutPtrsIntoChecked(T, io, items, out);
+}
+
+pub fn reservoirSampleMutPtrsIntoChecked(comptime T: type, io: std.Io, items: []T, out: []*T) !void {
+    if (out.len > items.len) return error.InvalidParameter;
+    if (out.len == 0) return;
+    if (out.len == items.len) {
+        _ = rootMutPtrsIntoPrefix(T, items, out, out.len);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.reservoirSampleMutPtrsInto(random_source, T, items, out);
+}
+
 pub fn sampleIndexVec(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) !IndexVec {
     std.debug.assert(amount <= length);
     return try sampleIndexVecChecked(io, allocator, length, amount);
@@ -3369,6 +3459,45 @@ test "root random helpers use explicit system entropy" {
     var no_replacement_mut_ptrs_iter_checked_out: [3]*u8 = undefined;
     try std.testing.expectEqual(@as(usize, 3), no_replacement_mut_ptrs_iter_checked.fill(&no_replacement_mut_ptrs_iter_checked_out));
     for (no_replacement_mut_ptrs_iter_checked_out) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    const reservoir_values = try reservoirSample(u8, io, std.testing.allocator, &no_replacement_items, 3);
+    defer std.testing.allocator.free(reservoir_values);
+    try std.testing.expectEqual(@as(usize, 3), reservoir_values.len);
+    for (reservoir_values) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    const reservoir_values_checked = try reservoirSampleChecked(u8, io, std.testing.allocator, &no_replacement_items, 3);
+    defer std.testing.allocator.free(reservoir_values_checked);
+    try std.testing.expectEqual(@as(usize, 3), reservoir_values_checked.len);
+    for (reservoir_values_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    var reservoir_values_into: [3]u8 = undefined;
+    try reservoirSampleInto(u8, io, &no_replacement_items, &reservoir_values_into);
+    for (reservoir_values_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    try reservoirSampleIntoChecked(u8, io, &no_replacement_items, &reservoir_values_into);
+    for (reservoir_values_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    const reservoir_ptrs = try reservoirSamplePtrs(u8, io, std.testing.allocator, &no_replacement_items, 3);
+    defer std.testing.allocator.free(reservoir_ptrs);
+    try std.testing.expectEqual(@as(usize, 3), reservoir_ptrs.len);
+    for (reservoir_ptrs) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    const reservoir_ptrs_checked = try reservoirSamplePtrsChecked(u8, io, std.testing.allocator, &no_replacement_items, 3);
+    defer std.testing.allocator.free(reservoir_ptrs_checked);
+    try std.testing.expectEqual(@as(usize, 3), reservoir_ptrs_checked.len);
+    for (reservoir_ptrs_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    var reservoir_ptrs_into: [3]*const u8 = undefined;
+    try reservoirSamplePtrsInto(u8, io, &no_replacement_items, &reservoir_ptrs_into);
+    for (reservoir_ptrs_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    try reservoirSamplePtrsIntoChecked(u8, io, &no_replacement_items, &reservoir_ptrs_into);
+    for (reservoir_ptrs_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    const reservoir_mut_ptrs = try reservoirSampleMutPtrs(u8, io, std.testing.allocator, &no_replacement_mut_items, 3);
+    defer std.testing.allocator.free(reservoir_mut_ptrs);
+    try std.testing.expectEqual(@as(usize, 3), reservoir_mut_ptrs.len);
+    for (reservoir_mut_ptrs) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    const reservoir_mut_ptrs_checked = try reservoirSampleMutPtrsChecked(u8, io, std.testing.allocator, &no_replacement_mut_items, 3);
+    defer std.testing.allocator.free(reservoir_mut_ptrs_checked);
+    try std.testing.expectEqual(@as(usize, 3), reservoir_mut_ptrs_checked.len);
+    for (reservoir_mut_ptrs_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    var reservoir_mut_ptrs_into: [3]*u8 = undefined;
+    try reservoirSampleMutPtrsInto(u8, io, &no_replacement_mut_items, &reservoir_mut_ptrs_into);
+    for (reservoir_mut_ptrs_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    try reservoirSampleMutPtrsIntoChecked(u8, io, &no_replacement_mut_items, &reservoir_mut_ptrs_into);
+    for (reservoir_mut_ptrs_into) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
     const index_vec = try sampleIndexVec(io, std.testing.allocator, no_replacement_items.len, 3);
     defer index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 3), index_vec.len());
@@ -4199,6 +4328,75 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 3), all_mut_ptrs_iter_checked.fill(&all_mut_ptrs_iter_checked_out));
     for (all_mut_ptrs_iter_checked_out, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
     try std.testing.expectError(error.InvalidParameter, sampleMutPtrsIterChecked(u8, failing, std.testing.allocator, &mutable_sample_items, mutable_sample_items.len + 1));
+    const empty_reservoir = try reservoirSample(u8, failing, std.testing.allocator, &sample_items, 0);
+    defer std.testing.allocator.free(empty_reservoir);
+    try std.testing.expectEqual(@as(usize, 0), empty_reservoir.len);
+    const empty_reservoir_checked = try reservoirSampleChecked(u8, failing, std.testing.allocator, &sample_items, 0);
+    defer std.testing.allocator.free(empty_reservoir_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_reservoir_checked.len);
+    const all_reservoir = try reservoirSample(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
+    defer std.testing.allocator.free(all_reservoir);
+    try std.testing.expectEqualSlices(u8, &sample_items, all_reservoir);
+    const all_reservoir_checked = try reservoirSampleChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
+    defer std.testing.allocator.free(all_reservoir_checked);
+    try std.testing.expectEqualSlices(u8, &sample_items, all_reservoir_checked);
+    try std.testing.expectError(error.InvalidParameter, reservoirSampleChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
+    var empty_reservoir_into: [0]u8 = .{};
+    try reservoirSampleInto(u8, failing, &sample_items, &empty_reservoir_into);
+    try reservoirSampleIntoChecked(u8, failing, &sample_items, &empty_reservoir_into);
+    var all_reservoir_into: [3]u8 = undefined;
+    try reservoirSampleInto(u8, failing, &sample_items, &all_reservoir_into);
+    try std.testing.expectEqualSlices(u8, &sample_items, &all_reservoir_into);
+    try reservoirSampleIntoChecked(u8, failing, &sample_items, &all_reservoir_into);
+    try std.testing.expectEqualSlices(u8, &sample_items, &all_reservoir_into);
+    var too_many_reservoir_into: [4]u8 = undefined;
+    try std.testing.expectError(error.InvalidParameter, reservoirSampleIntoChecked(u8, failing, &sample_items, &too_many_reservoir_into));
+    const empty_reservoir_ptrs = try reservoirSamplePtrs(u8, failing, std.testing.allocator, &sample_items, 0);
+    defer std.testing.allocator.free(empty_reservoir_ptrs);
+    try std.testing.expectEqual(@as(usize, 0), empty_reservoir_ptrs.len);
+    const empty_reservoir_ptrs_checked = try reservoirSamplePtrsChecked(u8, failing, std.testing.allocator, &sample_items, 0);
+    defer std.testing.allocator.free(empty_reservoir_ptrs_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_reservoir_ptrs_checked.len);
+    const all_reservoir_ptrs = try reservoirSamplePtrs(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
+    defer std.testing.allocator.free(all_reservoir_ptrs);
+    for (all_reservoir_ptrs, 0..) |value, index| try std.testing.expectEqual(&sample_items[index], value);
+    const all_reservoir_ptrs_checked = try reservoirSamplePtrsChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
+    defer std.testing.allocator.free(all_reservoir_ptrs_checked);
+    for (all_reservoir_ptrs_checked, 0..) |value, index| try std.testing.expectEqual(&sample_items[index], value);
+    try std.testing.expectError(error.InvalidParameter, reservoirSamplePtrsChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
+    var empty_reservoir_ptrs_into: [0]*const u8 = .{};
+    try reservoirSamplePtrsInto(u8, failing, &sample_items, &empty_reservoir_ptrs_into);
+    try reservoirSamplePtrsIntoChecked(u8, failing, &sample_items, &empty_reservoir_ptrs_into);
+    var all_reservoir_ptrs_into: [3]*const u8 = undefined;
+    try reservoirSamplePtrsInto(u8, failing, &sample_items, &all_reservoir_ptrs_into);
+    for (all_reservoir_ptrs_into, 0..) |value, index| try std.testing.expectEqual(&sample_items[index], value);
+    try reservoirSamplePtrsIntoChecked(u8, failing, &sample_items, &all_reservoir_ptrs_into);
+    for (all_reservoir_ptrs_into, 0..) |value, index| try std.testing.expectEqual(&sample_items[index], value);
+    var too_many_reservoir_ptrs_into: [4]*const u8 = undefined;
+    try std.testing.expectError(error.InvalidParameter, reservoirSamplePtrsIntoChecked(u8, failing, &sample_items, &too_many_reservoir_ptrs_into));
+    const empty_reservoir_mut_ptrs = try reservoirSampleMutPtrs(u8, failing, std.testing.allocator, &mutable_sample_items, 0);
+    defer std.testing.allocator.free(empty_reservoir_mut_ptrs);
+    try std.testing.expectEqual(@as(usize, 0), empty_reservoir_mut_ptrs.len);
+    const empty_reservoir_mut_ptrs_checked = try reservoirSampleMutPtrsChecked(u8, failing, std.testing.allocator, &mutable_sample_items, 0);
+    defer std.testing.allocator.free(empty_reservoir_mut_ptrs_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_reservoir_mut_ptrs_checked.len);
+    const all_reservoir_mut_ptrs = try reservoirSampleMutPtrs(u8, failing, std.testing.allocator, &mutable_sample_items, mutable_sample_items.len);
+    defer std.testing.allocator.free(all_reservoir_mut_ptrs);
+    for (all_reservoir_mut_ptrs, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
+    const all_reservoir_mut_ptrs_checked = try reservoirSampleMutPtrsChecked(u8, failing, std.testing.allocator, &mutable_sample_items, mutable_sample_items.len);
+    defer std.testing.allocator.free(all_reservoir_mut_ptrs_checked);
+    for (all_reservoir_mut_ptrs_checked, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
+    try std.testing.expectError(error.InvalidParameter, reservoirSampleMutPtrsChecked(u8, failing, std.testing.allocator, &mutable_sample_items, mutable_sample_items.len + 1));
+    var empty_reservoir_mut_ptrs_into: [0]*u8 = .{};
+    try reservoirSampleMutPtrsInto(u8, failing, &mutable_sample_items, &empty_reservoir_mut_ptrs_into);
+    try reservoirSampleMutPtrsIntoChecked(u8, failing, &mutable_sample_items, &empty_reservoir_mut_ptrs_into);
+    var all_reservoir_mut_ptrs_into: [3]*u8 = undefined;
+    try reservoirSampleMutPtrsInto(u8, failing, &mutable_sample_items, &all_reservoir_mut_ptrs_into);
+    for (all_reservoir_mut_ptrs_into, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
+    try reservoirSampleMutPtrsIntoChecked(u8, failing, &mutable_sample_items, &all_reservoir_mut_ptrs_into);
+    for (all_reservoir_mut_ptrs_into, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
+    var too_many_reservoir_mut_ptrs_into: [4]*u8 = undefined;
+    try std.testing.expectError(error.InvalidParameter, reservoirSampleMutPtrsIntoChecked(u8, failing, &mutable_sample_items, &too_many_reservoir_mut_ptrs_into));
     const empty_index_vec = try sampleIndexVec(failing, std.testing.allocator, 5, 0);
     defer empty_index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), empty_index_vec.len());
@@ -4865,6 +5063,21 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, samplePtrsIterChecked(u8, failing, std.testing.allocator, &sample_items, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleMutPtrsIter(u8, failing, std.testing.allocator, &mutable_sample_items, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleMutPtrsIterChecked(u8, failing, std.testing.allocator, &mutable_sample_items, 2));
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSample(u8, failing, std.testing.allocator, &sample_items, 2));
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSampleChecked(u8, failing, std.testing.allocator, &sample_items, 2));
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSamplePtrs(u8, failing, std.testing.allocator, &sample_items, 2));
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSamplePtrsChecked(u8, failing, std.testing.allocator, &sample_items, 2));
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSampleMutPtrs(u8, failing, std.testing.allocator, &mutable_sample_items, 2));
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSampleMutPtrsChecked(u8, failing, std.testing.allocator, &mutable_sample_items, 2));
+    var reservoir_values_entropy: [2]u8 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSampleInto(u8, failing, &sample_items, &reservoir_values_entropy));
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSampleIntoChecked(u8, failing, &sample_items, &reservoir_values_entropy));
+    var reservoir_ptrs_entropy: [2]*const u8 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSamplePtrsInto(u8, failing, &sample_items, &reservoir_ptrs_entropy));
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSamplePtrsIntoChecked(u8, failing, &sample_items, &reservoir_ptrs_entropy));
+    var reservoir_mut_ptrs_entropy: [2]*u8 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSampleMutPtrsInto(u8, failing, &mutable_sample_items, &reservoir_mut_ptrs_entropy));
+    try std.testing.expectError(error.EntropyUnavailable, reservoirSampleMutPtrsIntoChecked(u8, failing, &mutable_sample_items, &reservoir_mut_ptrs_entropy));
     var values_entropy: [2]u8 = undefined;
     var values_entropy_scratch: [2]usize = undefined;
     try std.testing.expectError(error.EntropyUnavailable, sampleItemsInto(u8, failing, &sample_items, &values_entropy, &values_entropy_scratch));

@@ -1869,3 +1869,9 @@ S4-M520 adds root sampled no-replacement value and pointer iterators
 system-entropy callers can now create owned sampled value, const-pointer, and
 mutable-pointer iterators directly from the root API while S4-M11 remains
 blocked.
+
+S4-M521 adds root one-shot reservoir value and pointer helpers
+(`compare/results/s4-m521-root-reservoir-helpers.md`):
+system-entropy callers can now create allocation-returning and caller-owned
+value, const-pointer, and mutable-pointer reservoir samples directly from the
+root API while S4-M11 remains blocked.
