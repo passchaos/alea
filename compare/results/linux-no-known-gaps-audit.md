@@ -1970,3 +1970,9 @@ S4-M537 adds root one-shot index-weighted mutable-pointer batch helpers
 system-entropy callers can now allocate mutable-pointer batches from a mutable
 item slice and comptime index-weight function directly from the root API while
 S4-M11 remains blocked.
+
+S4-M538 adds root one-shot index-weighted value array helpers
+(`compare/results/s4-m538-root-weighted-value-by-index-array-helpers.md`):
+system-entropy callers can now produce fixed-size value arrays from an item slice
+and comptime index-weight function directly from the root API while S4-M11
+remains blocked.
