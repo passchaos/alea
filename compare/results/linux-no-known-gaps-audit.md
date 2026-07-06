@@ -1579,3 +1579,10 @@ S4-M470 synchronizes S4-M11 blocker evidence with the S4-M469 latest-evidence
 pointer (`compare/results/s4-m470-blocker-latest-evidence-pointer-sync.md`),
 keeping the blocker audit current with the script-friendly validate-local
 evidence path while S4-M11 remains blocked.
+
+
+S4-M471 adds root one-shot caller-owned fill helpers
+(`compare/results/s4-m471-root-one-shot-fill-helpers.md`): system-entropy
+callers can now fill range and probability buffers directly from the root API,
+with deterministic no-entropy paths for empty/collapsed cases, while S4-M11
+remains blocked.

@@ -304,6 +304,142 @@ pub fn fill(comptime T: type, io: std.Io, dest: []T) !void {
     random_source.fill(T, dest);
 }
 
+pub fn fillRange(comptime T: type, io: std.Io, dest: []T, min: T, max: T) !void {
+    if (dest.len == 0) return;
+    switch (@typeInfo(T)) {
+        .int => {
+            std.debug.assert(min < max);
+            if (rootExclusiveIntRangeHasSingleValue(T, min, max)) {
+                @memset(dest, min);
+                return;
+            }
+        },
+        .float => {
+            std.debug.assert(min <= max);
+            if (min == max) {
+                @memset(dest, min);
+                return;
+            }
+        },
+        else => @compileError("alea.fillRange supports integer and floating-point slices"),
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillRange(T, dest, min, max);
+}
+
+pub fn fillRangeChecked(comptime T: type, io: std.Io, dest: []T, min: T, max: T) !void {
+    if (dest.len == 0) return;
+    try rootValidateRangeParams(T, min, max);
+    switch (@typeInfo(T)) {
+        .int => {
+            if (rootExclusiveIntRangeHasSingleValue(T, min, max)) {
+                @memset(dest, min);
+                return;
+            }
+        },
+        .float => {
+            if (min == max) {
+                @memset(dest, min);
+                return;
+            }
+        },
+        else => unreachable,
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillRange(T, dest, min, max);
+}
+
+pub fn fillRangeAtMost(comptime T: type, io: std.Io, dest: []T, min: T, max: T) !void {
+    comptime if (@typeInfo(T) != .int) @compileError("alea.fillRangeAtMost supports integer slices");
+    if (dest.len == 0) return;
+    std.debug.assert(min <= max);
+    if (min == max) {
+        @memset(dest, min);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillRangeAtMost(T, dest, min, max);
+}
+
+pub fn fillRangeAtMostChecked(comptime T: type, io: std.Io, dest: []T, min: T, max: T) !void {
+    if (dest.len == 0) return;
+    try rootValidateRangeAtMostParams(T, min, max);
+    if (min == max) {
+        @memset(dest, min);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillRangeAtMost(T, dest, min, max);
+}
+
+pub fn fillRandomBool(io: std.Io, dest: []bool, p: f64) !void {
+    if (dest.len == 0) return;
+    std.debug.assert(p >= 0 and p <= 1);
+    if (p == 0) {
+        @memset(dest, false);
+        return;
+    }
+    if (p == 1) {
+        @memset(dest, true);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillChance(dest, p);
+}
+
+pub fn fillRandomBoolChecked(io: std.Io, dest: []bool, p: f64) !void {
+    if (dest.len == 0) return;
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+    if (p == 0) {
+        @memset(dest, false);
+        return;
+    }
+    if (p == 1) {
+        @memset(dest, true);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillChance(dest, p);
+}
+
+pub fn fillRandomRatio(io: std.Io, dest: []bool, numerator: u32, denominator: u32) !void {
+    if (dest.len == 0) return;
+    std.debug.assert(denominator > 0 and numerator <= denominator);
+    if (numerator == 0) {
+        @memset(dest, false);
+        return;
+    }
+    if (numerator == denominator) {
+        @memset(dest, true);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillRatio(dest, numerator, denominator);
+}
+
+pub fn fillRandomRatioChecked(io: std.Io, dest: []bool, numerator: u32, denominator: u32) !void {
+    if (dest.len == 0) return;
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
+    if (numerator == 0) {
+        @memset(dest, false);
+        return;
+    }
+    if (numerator == denominator) {
+        @memset(dest, true);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillRatio(dest, numerator, denominator);
+}
+
 fn rootValueTypeHasEmptyEnum(comptime T: type) bool {
     return switch (@typeInfo(T)) {
         .@"enum" => std.enums.values(T).len == 0,
@@ -327,7 +463,7 @@ fn rootValidateRangeParams(comptime T: type, min: T, max: T) Rng.Error!void {
         .float => {
             if (!(min <= max) or !std.math.isFinite(min) or !std.math.isFinite(max)) return error.EmptyRange;
         },
-        else => @compileError("alea.randomRangeChecked supports integer and floating-point values"),
+        else => @compileError("alea checked range helpers support integer and floating-point values"),
     }
 }
 
@@ -336,7 +472,7 @@ fn rootValidateRangeAtMostParams(comptime T: type, min: T, max: T) Rng.Error!voi
         .int => {
             if (min > max) return error.EmptyRange;
         },
-        else => @compileError("alea.randomRangeAtMostChecked supports integer values"),
+        else => @compileError("alea checked inclusive range helpers support integer values"),
     }
 }
 
@@ -618,6 +754,23 @@ test "root random helpers use explicit system entropy" {
     try fill(u8, io, &random_bytes);
     var random_words: [4]u16 = undefined;
     try fill(u16, io, &random_words);
+    var random_range_values: [4]u8 = undefined;
+    try fillRange(u8, io, &random_range_values, 1, 7);
+    for (random_range_values) |value| try std.testing.expect(value >= 1 and value < 7);
+    var random_checked_range_values: [4]i16 = undefined;
+    try fillRangeChecked(i16, io, &random_checked_range_values, -5, 5);
+    for (random_checked_range_values) |value| try std.testing.expect(value >= -5 and value < 5);
+    var random_inclusive_values: [4]u8 = undefined;
+    try fillRangeAtMost(u8, io, &random_inclusive_values, 1, 6);
+    for (random_inclusive_values) |value| try std.testing.expect(value >= 1 and value <= 6);
+    var random_checked_inclusive_values: [4]i16 = undefined;
+    try fillRangeAtMostChecked(i16, io, &random_checked_inclusive_values, -5, 5);
+    for (random_checked_inclusive_values) |value| try std.testing.expect(value >= -5 and value <= 5);
+    var random_bool_values: [4]bool = undefined;
+    try fillRandomBool(io, &random_bool_values, 0.25);
+    try fillRandomBoolChecked(io, &random_bool_values, 0.75);
+    try fillRandomRatio(io, &random_bool_values, 3, 8);
+    try fillRandomRatioChecked(io, &random_bool_values, 5, 8);
 }
 
 test "root random helpers validate deterministic cases before entropy" {
@@ -650,12 +803,54 @@ test "root random helpers validate deterministic cases before entropy" {
 
     var empty: [0]u8 = .{};
     try fill(u8, failing, &empty);
+    try fillRange(u8, failing, &empty, 3, 4);
+    try fillRangeChecked(u8, failing, &empty, 3, 3);
+    try fillRangeAtMost(u8, failing, &empty, 6, 5);
+    try fillRangeAtMostChecked(u8, failing, &empty, 6, 5);
+    var empty_bool: [0]bool = .{};
+    try fillRandomBool(failing, &empty_bool, 0);
+    try fillRandomBoolChecked(failing, &empty_bool, 1.1);
+    try fillRandomRatio(failing, &empty_bool, 0, 7);
+    try fillRandomRatioChecked(failing, &empty_bool, 2, 1);
+
+    var collapsed_exclusive: [3]u8 = undefined;
+    try fillRange(u8, failing, &collapsed_exclusive, 3, 4);
+    try std.testing.expectEqualSlices(u8, &.{ 3, 3, 3 }, &collapsed_exclusive);
+    try fillRangeChecked(u8, failing, &collapsed_exclusive, 3, 4);
+    try std.testing.expectEqualSlices(u8, &.{ 3, 3, 3 }, &collapsed_exclusive);
+    var collapsed_float: [2]f64 = undefined;
+    try fillRange(f64, failing, &collapsed_float, 2.5, 2.5);
+    try std.testing.expectEqualSlices(f64, &.{ 2.5, 2.5 }, &collapsed_float);
+    try fillRangeChecked(f64, failing, &collapsed_float, 2.5, 2.5);
+    try std.testing.expectEqualSlices(f64, &.{ 2.5, 2.5 }, &collapsed_float);
+    var collapsed_inclusive: [3]u8 = undefined;
+    try fillRangeAtMost(u8, failing, &collapsed_inclusive, 5, 5);
+    try std.testing.expectEqualSlices(u8, &.{ 5, 5, 5 }, &collapsed_inclusive);
+    try fillRangeAtMostChecked(u8, failing, &collapsed_inclusive, 5, 5);
+    try std.testing.expectEqualSlices(u8, &.{ 5, 5, 5 }, &collapsed_inclusive);
+    var deterministic_bool: [3]bool = undefined;
+    try fillRandomBool(failing, &deterministic_bool, 0);
+    try std.testing.expectEqualSlices(bool, &.{ false, false, false }, &deterministic_bool);
+    try fillRandomBoolChecked(failing, &deterministic_bool, 1);
+    try std.testing.expectEqualSlices(bool, &.{ true, true, true }, &deterministic_bool);
+    try fillRandomRatio(failing, &deterministic_bool, 0, 7);
+    try std.testing.expectEqualSlices(bool, &.{ false, false, false }, &deterministic_bool);
+    try fillRandomRatioChecked(failing, &deterministic_bool, 7, 7);
+    try std.testing.expectEqualSlices(bool, &.{ true, true, true }, &deterministic_bool);
+    try std.testing.expectError(error.EmptyRange, fillRangeChecked(u8, failing, &collapsed_exclusive, 3, 3));
+    try std.testing.expectError(error.EmptyRange, fillRangeAtMostChecked(u8, failing, &collapsed_inclusive, 6, 5));
+    try std.testing.expectError(error.InvalidProbability, fillRandomBoolChecked(failing, &deterministic_bool, 1.1));
+    try std.testing.expectError(error.InvalidProbability, fillRandomRatioChecked(failing, &deterministic_bool, 2, 1));
 
     try std.testing.expectError(error.EntropyUnavailable, randomValue(u8, failing));
     try std.testing.expectError(error.EntropyUnavailable, randomRangeChecked(u8, failing, 3, 5));
     try std.testing.expectError(error.EntropyUnavailable, randomIter(u8, failing));
     var byte: [1]u8 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, fill(u8, failing, &byte));
+    try std.testing.expectError(error.EntropyUnavailable, fillRange(u8, failing, &byte, 3, 5));
+    try std.testing.expectError(error.EntropyUnavailable, fillRangeAtMost(u8, failing, &byte, 3, 5));
+    try std.testing.expectError(error.EntropyUnavailable, fillRandomBool(failing, &deterministic_bool, 0.5));
+    try std.testing.expectError(error.EntropyUnavailable, fillRandomRatio(failing, &deterministic_bool, 1, 2));
 }
 
 fn engineFromSeed(comptime Engine: type, seed: u64) Engine {

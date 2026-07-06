@@ -34,7 +34,10 @@ command matrix evidence.
 - System-entropy helpers: `makeRng`, `random`, `randomValue`,
   `randomValueChecked`, `randomIter`, `randomRange`, `randomRangeChecked`,
   `randomRangeAtMost`, `randomRangeAtMostChecked`, `randomBool`,
-  `randomBoolChecked`, `randomRatio`, `randomRatioChecked`, `fill`
+  `randomBoolChecked`, `randomRatio`, `randomRatioChecked`, `fill`,
+  `fillRange`, `fillRangeChecked`, `fillRangeAtMost`,
+  `fillRangeAtMostChecked`, `fillRandomBool`, `fillRandomBoolChecked`,
+  `fillRandomRatio`, `fillRandomRatioChecked`
 - Root reader aliases: `RngReader(Source)`, `rngReader`
 - `RandomIterator(T)`: `RandomIterator.next`, `RandomIterator.nextValue`,
   `RandomIterator.fill`, `RandomIterator.sizeHint`
