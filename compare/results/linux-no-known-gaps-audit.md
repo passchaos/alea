@@ -1721,3 +1721,9 @@ S4-M493 adds root one-shot weighted iterator choice helpers
 (`compare/results/s4-m493-root-one-shot-weighted-iterator-choice-helpers.md`):
 system-entropy callers can now choose one item from weighted iterators directly
 from the root API while S4-M11 remains blocked.
+
+
+S4-M494 adds root one-shot iterator sampling helpers
+(`compare/results/s4-m494-root-one-shot-iterator-sampling-helpers.md`):
+system-entropy callers can now allocate iterator samples directly from the root
+API while S4-M11 remains blocked.

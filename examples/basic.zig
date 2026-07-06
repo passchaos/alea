@@ -120,6 +120,9 @@ pub fn main(init: std.process.Init) !void {
     };
     var root_weighted_iter = RootWeightedIter{ .items = &root_weighted_iter_entries };
     const root_weighted_iterator_choice = (try alea.chooseIteratorWeighted(u8, io, &root_weighted_iter)).?;
+    var root_sample_iter = RootIter{};
+    const root_iterator_sample = try alea.sampleIterator(u8, io, init.gpa, &root_sample_iter, 4);
+    defer init.gpa.free(root_iterator_sample);
     const root_weights = [_]f64{ 0.1, 0.2, 0.7 };
     const root_weighted_items = root_colors[0..3];
     const root_weighted_index = (try alea.weightedIndex(io, &root_weights)).?;
@@ -300,7 +303,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("root mutable pointer choice helpers: ptr={s}, ptrArray=[{s}, {s}, {s}, {s}], ptrBatch=[{s}, {s}, {s}, {s}]\n", .{ root_choice_mut_ptr.*, root_choice_mut_ptr_array[0].*, root_choice_mut_ptr_array[1].*, root_choice_mut_ptr_array[2].*, root_choice_mut_ptr_array[3].*, root_choice_mut_ptr_batch[0].*, root_choice_mut_ptr_batch[1].*, root_choice_mut_ptr_batch[2].*, root_choice_mut_ptr_batch[3].* });
     try stdout.print("root shuffle helpers: shuffle={any}, partial={any}, tailPartial={any}\n", .{ root_shuffle_deck, root_partial_hand, root_tail_hand });
     try stdout.print("root no-replacement helpers: sample={any}, indices={any}, indicesInto={any}, indicesU32={any}\n", .{ root_no_replacement, root_sample_indices, root_sample_indices_into, root_sample_indices_u32 });
-    try stdout.print("root iterator helpers: choice={}, weightedChoice={}\n", .{ root_iterator_choice, root_weighted_iterator_choice });
+    try stdout.print("root iterator helpers: choice={}, weightedChoice={}, sample={any}\n", .{ root_iterator_choice, root_weighted_iterator_choice, root_iterator_sample });
     try stdout.print("root weighted helpers: weightedIndex={}, weightedIndexU32={}, fill={any}, fillU32={any}, array={any}, arrayU32={any}, batch={any}, batchU32={any}\n", .{ root_weighted_index, root_weighted_index_u32, root_weighted_indices, root_weighted_indices_u32, root_weighted_index_array, root_weighted_index_u32_array, root_weighted_index_batch, root_weighted_index_u32_batch });
     try stdout.print("root weighted value helpers: value={s}, fill=[{?s}, {?s}, {?s}, {?s}], array=[{s}, {s}, {s}, {s}], batch=[{?s}, {?s}, {?s}, {?s}]\n", .{ root_weighted_value, root_weighted_values[0], root_weighted_values[1], root_weighted_values[2], root_weighted_values[3], root_weighted_value_array[0], root_weighted_value_array[1], root_weighted_value_array[2], root_weighted_value_array[3], root_weighted_value_batch[0], root_weighted_value_batch[1], root_weighted_value_batch[2], root_weighted_value_batch[3] });
     try stdout.print("root weighted pointer helpers: ptr={s}, ptrArray=[{s}, {s}, {s}, {s}], ptrBatch=[{s}, {s}, {s}, {s}]\n", .{ root_weighted_ptr.*, root_weighted_ptr_array_checked[0].*, root_weighted_ptr_array_checked[1].*, root_weighted_ptr_array_checked[2].*, root_weighted_ptr_array_checked[3].*, root_weighted_ptr_batch_checked[0].*, root_weighted_ptr_batch_checked[1].*, root_weighted_ptr_batch_checked[2].*, root_weighted_ptr_batch_checked[3].* });

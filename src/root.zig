@@ -901,6 +901,54 @@ pub fn chooseIteratorWeightedChecked(comptime T: type, io: std.Io, iterator: any
     return (try chooseIteratorWeighted(T, io, iterator)) orelse error.EmptyInput;
 }
 
+pub fn sampleIterator(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
+
+    var reservoir = try std.ArrayList(T).initCapacity(allocator, amount);
+    errdefer reservoir.deinit(allocator);
+
+    while (reservoir.items.len < amount) {
+        const item = iterator.next() orelse return reservoir.toOwnedSlice(allocator);
+        try reservoir.append(allocator, item);
+    }
+
+    var seen = reservoir.items.len;
+    var engine: ?SecurePrng = null;
+    while (iterator.next()) |item| {
+        seen += 1;
+        if (engine == null) engine = try secure(io);
+        const random_source = Rng.init(&engine.?);
+        const index = random_source.uintLessThan(usize, seen);
+        if (index < amount) reservoir.items[index] = item;
+    }
+
+    return reservoir.toOwnedSliceAssert();
+}
+
+pub fn sampleIteratorChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
+
+    const out = try allocator.alloc(T, amount);
+    errdefer allocator.free(out);
+
+    var filled: usize = 0;
+    while (filled < amount) : (filled += 1) {
+        out[filled] = iterator.next() orelse return error.InvalidParameter;
+    }
+
+    var seen = amount;
+    var engine: ?SecurePrng = null;
+    while (iterator.next()) |item| {
+        seen += 1;
+        if (engine == null) engine = try secure(io);
+        const random_source = Rng.init(&engine.?);
+        const index = random_source.uintLessThan(usize, seen);
+        if (index < amount) out[index] = item;
+    }
+
+    return out;
+}
+
 pub fn weightedIndex(io: std.Io, weights: []const f64) !?usize {
     switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
         .empty => return null,
@@ -3323,6 +3371,24 @@ test "root random helpers validate deterministic cases before entropy" {
     };
     var weighted_entropy = WeightedIter{ .items = &weighted_entropy_entries };
     try std.testing.expectError(error.EntropyUnavailable, chooseIteratorWeighted(u8, failing, &weighted_entropy));
+    var sample_iter_empty = SliceIter{ .items = &.{} };
+    const sample_iter_empty_out = try sampleIterator(u8, failing, std.testing.allocator, &sample_iter_empty, 0);
+    defer std.testing.allocator.free(sample_iter_empty_out);
+    try std.testing.expectEqual(@as(usize, 0), sample_iter_empty_out.len);
+    var sample_iter_short = SliceIter{ .items = &.{ 1, 2 } };
+    const sample_iter_short_out = try sampleIterator(u8, failing, std.testing.allocator, &sample_iter_short, 4);
+    defer std.testing.allocator.free(sample_iter_short_out);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample_iter_short_out);
+    var sample_iter_exact = SliceIter{ .items = &.{ 1, 2 } };
+    const sample_iter_exact_out = try sampleIteratorChecked(u8, failing, std.testing.allocator, &sample_iter_exact, 2);
+    defer std.testing.allocator.free(sample_iter_exact_out);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample_iter_exact_out);
+    var sample_iter_short_checked = SliceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorChecked(u8, failing, std.testing.allocator, &sample_iter_short_checked, 3));
+    var sample_iter_entropy = SliceIter{ .items = &.{ 1, 2, 3 } };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIterator(u8, failing, std.testing.allocator, &sample_iter_entropy, 2));
+    var sample_iter_entropy_checked = SliceIter{ .items = &.{ 1, 2, 3 } };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorChecked(u8, failing, std.testing.allocator, &sample_iter_entropy_checked, 2));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
     var weighted_one: [1]?usize = undefined;
