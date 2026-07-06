@@ -226,7 +226,7 @@ Use `zig build validate` for broad native checks including the no-external Pract
 
 Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
 comparison work: it runs native validation plus `rand-bench-test`, `rand-bench-smoke`,
-`rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`.
+`rand-bench-smoke-self-test`, `rand-status`, `surfacecheck`, and `runtimecheck`.
 
 Use `zig build validate-all` before portability-sensitive releases or evidence
 refreshes: it runs native validation plus cross-target compile checks, WASI unit

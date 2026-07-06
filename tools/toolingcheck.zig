@@ -280,7 +280,7 @@ const core_guide_validation_tokens = [_][]const u8{
     "includes `zig build practrand-self-test`",
     "Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`",
     "rand-bench-test`, `rand-bench-smoke`,",
-    "`rand-bench-smoke-self-test`, `surfacecheck`, and",
+    "`rand-bench-smoke-self-test`, `rand-status`, `surfacecheck`, and",
     "ALEA_RAND_BENCH_MANIFEST",
     "`runtimecheck`",
     "Use `zig build validate-all` for portability-sensitive changes or evidence",
@@ -305,7 +305,7 @@ const api_reference_validation_tokens = [_][]const u8{
     "no-external PractRand wrapper validation",
     "Use `zig build",
     "validate-local` when API work changes local `rand` / `rand_distr` comparison",
-    "rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`",
+    "rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `rand-status`, `surfacecheck`, and `runtimecheck`",
     "ALEA_RAND_BENCH_EXPECTED_ROW",
     "Use `zig build",
     "validate-all` for portability-sensitive API evidence",
@@ -861,10 +861,11 @@ pub fn main(init: std.process.Init) !void {
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_test_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_smoke_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_bench_smoke_self_test_step)") == null or
+        std.mem.indexOf(u8, build, "validate_local_step.dependOn(rand_status_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(surfacecheck_step)") == null or
         std.mem.indexOf(u8, build, "validate_local_step.dependOn(runtimecheck_step)") == null)
     {
-        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, rand-bench-smoke, rand-bench-smoke-self-test, surfacecheck, and runtimecheck\n", .{});
+        try stderr.print("toolingcheck: zig build validate-local must depend on validate, rand-bench-test, rand-bench-smoke, rand-bench-smoke-self-test, rand-status, surfacecheck, and runtimecheck\n", .{});
         missing += 1;
     }
     inline for (doccheck_dependencies) |token| {

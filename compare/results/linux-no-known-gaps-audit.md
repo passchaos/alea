@@ -1358,3 +1358,8 @@ remains blocked.
 S4-M426 exposes `rand-status` from the core guide and API reference
 (`compare/results/s4-m426-guide-api-rand-status.md`) so detailed docs mention
 the quick current-status command while S4-M11 remains blocked.
+
+S4-M427 includes `rand-status` in `validate-local`
+(`compare/results/s4-m427-validate-local-rand-status.md`) so the local Rust
+comparison aggregate now exercises the current-status printer while S4-M11
+remains blocked.

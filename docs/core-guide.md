@@ -997,7 +997,7 @@ zig build practrand-self-test
 Use `zig build validate` for broad native checks before ordinary local changes; it includes `zig build practrand-self-test` so the PractRand wrapper is checked without requiring `RNG_test`.
 Use `zig build validate-local` for Linux-first local `rand` / `rand_distr`
 comparison work because it adds `rand-bench-test`, `rand-bench-smoke`,
-`rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`.
+`rand-bench-smoke-self-test`, `rand-status`, `surfacecheck`, and `runtimecheck`.
 Use `zig build validate-all` for portability-sensitive changes or evidence
 refreshes because it adds cross-target compile checks, WASI unit tests, WASI
 dry/self tests, and the chained WASI report. `zig build crosscheck` compiles `wasm32-wasi`,

@@ -1617,6 +1617,7 @@ pub fn build(b: *std.Build) void {
     validate_local_step.dependOn(rand_bench_test_step);
     validate_local_step.dependOn(rand_bench_smoke_step);
     validate_local_step.dependOn(rand_bench_smoke_self_test_step);
+    validate_local_step.dependOn(rand_status_step);
     validate_local_step.dependOn(surfacecheck_step);
     validate_local_step.dependOn(runtimecheck_step);
 
