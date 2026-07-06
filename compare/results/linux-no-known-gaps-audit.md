@@ -1474,3 +1474,8 @@ refresh
 (`compare/results/s4-m449-blocker-rand-status-schema-version-sync.md`), keeping
 the blocker audit current with S4-M448 `validate-local` output while S4-M11
 remains blocked.
+
+S4-M450 refreshes the `rand-status` command matrix
+(`compare/results/s4-m450-rand-status-command-matrix.md`) so text, JSON,
+schema-version, self-test, and help outputs are all freshly verified while
+S4-M11 remains blocked.

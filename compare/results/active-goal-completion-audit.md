@@ -470,7 +470,8 @@ complete.
 | S4-M447 `rand-status` schema-version command | `tools/rand_status.zig`, `build.zig`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/tooling.md`, `tools/readmecheck.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m447-rand-status-schema-version-step.md` | Closed for the current bar: `rand-status` exposes a schema-version command and build step. |
 | S4-M448 validate-local refresh after rand-status-schema-version aggregate | `compare/results/s4-m448-validate-local-after-rand-status-schema-version.md`, `compare/results/s4-m420-current-rand-status.md` | Closed for the current bar: `zig build validate-local` passed with `rand-status-schema-version` included. |
 | S4-M449 S4-M11 blocker sync after schema-version validate-local | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m449-blocker-rand-status-schema-version-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites fresh S4-M448 `validate-local` output including schema-version status. |
-| S4-M450 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M450 `rand-status` command matrix refresh | `compare/results/s4-m450-rand-status-command-matrix.md` | Closed for the current bar: all `rand-status` text/JSON/schema/self-test/help commands pass. |
+| S4-M451 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1085,6 +1086,9 @@ not resolve S4-M11 or complete the long-term objective.
 S4-M449 additionally syncs S4-M11 blocker evidence with the fresh schema-version
 `validate-local` output; it is blocker-evidence maintenance and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M450 additionally refreshes the `rand-status` command matrix; it is tooling
+validation evidence and does not resolve S4-M11 or complete the long-term
+objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
