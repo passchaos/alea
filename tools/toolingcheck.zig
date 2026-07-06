@@ -367,6 +367,7 @@ const tooling_wasi_dry_run_tokens = [_][]const u8{
     "node tools/run_wasi_test.js --self-test",
     "zig build wasi-self-test",
     "verify WASI runner arguments without reading or executing a wasm file",
+    "dry-run and missing-argument paths without wasm",
 };
 
 const wasi_runner_tokens = [_][]const u8{

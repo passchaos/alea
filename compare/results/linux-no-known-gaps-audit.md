@@ -1255,3 +1255,8 @@ S4-M405 guards core-guide/API WASI self-test prose
 (`compare/results/s4-m405-guide-api-wasi-self-test-guards.md`) so detailed docs
 keep no-wasm dry-run/missing-argument runner coverage visible while S4-M11
 remains blocked.
+
+S4-M406 guards tooling-catalog WASI self-test prose
+(`compare/results/s4-m406-tooling-wasi-self-test-guard.md`) so the tooling
+catalog keeps no-wasm dry-run/missing-argument runner coverage visible while
+S4-M11 remains blocked.
