@@ -12,6 +12,9 @@ Arguments:
   ENGINE  Alea stream engine name accepted by `zig build stream` (default: fast)
   BYTES   Number of bytes to stream (default: 1073741824)
 
+Self-test:
+  --self-test validates dry-run command construction without requiring RNG_test.
+
 Environment:
   PRACTRAND_BIN  PractRand executable to run (default: RNG_test)
 

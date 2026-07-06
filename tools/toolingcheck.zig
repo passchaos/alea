@@ -332,6 +332,7 @@ const api_reference_crosscheck_tokens = [_][]const u8{
 const practrand_script_tokens = [_][]const u8{
     "--dry-run",
     "--self-test",
+    "validates dry-run command construction without requiring RNG_test",
     "mktemp",
     "trap",
     "practrand self-test ok",

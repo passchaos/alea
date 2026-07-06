@@ -1235,3 +1235,8 @@ S4-M401 documents Rust comparison smoke self-test usage
 (`compare/results/s4-m401-rand-bench-smoke-self-test-usage.md`) so
 `tools/rand_bench_smoke.sh --help` exposes `--self-test` and toolingcheck guards
 that discoverability while S4-M11 remains blocked.
+
+S4-M402 documents PractRand wrapper self-test usage
+(`compare/results/s4-m402-practrand-self-test-usage.md`) so `tools/practrand.sh
+--help` explains no-`RNG_test` command-construction validation while S4-M11
+remains blocked.
