@@ -838,3 +838,6 @@ requires all required and opportunity runner names to remain visible in
 S4-M329 syncs the original runtimecheck evidence
 (`compare/results/s4-m329-runtimecheck-evidence-sync.md`) with the current
 summary-count output added after S4-M327.
+S4-M330 syncs `docs/core-guide.md`
+(`compare/results/s4-m330-core-guide-runtimecheck.md`) with the exact
+runtimecheck required and opportunity runner lists.
