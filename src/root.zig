@@ -378,6 +378,60 @@ pub fn chooseIndexBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: 
     return out;
 }
 
+pub fn chooseIndexU32(io: std.Io, length: u32) !?u32 {
+    if (length == 0) return null;
+    if (length == 1) return 0;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.chooseIndexU32(length);
+}
+
+pub fn chooseIndexU32Checked(io: std.Io, length: u32) !u32 {
+    if (length == 0) return error.EmptyRange;
+    if (length == 1) return 0;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try random_source.chooseIndexU32Checked(length);
+}
+
+pub fn fillChooseIndexU32(io: std.Io, dest: []u32, length: u32) !void {
+    if (dest.len == 0) return;
+    if (length == 1) {
+        @memset(dest, 0);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillChooseIndexU32(dest, length);
+}
+
+pub fn fillChooseIndexU32Checked(io: std.Io, dest: []u32, length: u32) !void {
+    if (dest.len == 0) return;
+    if (length == 0) return error.EmptyRange;
+    if (length == 1) {
+        @memset(dest, 0);
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try random_source.fillChooseIndexU32Checked(dest, length);
+}
+
+pub fn chooseIndexU32Batch(io: std.Io, allocator: std.mem.Allocator, count: usize, length: u32) ![]u32 {
+    const out = try allocator.alloc(u32, count);
+    errdefer allocator.free(out);
+    try fillChooseIndexU32(io, out, length);
+    return out;
+}
+
+pub fn chooseIndexU32BatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, length: u32) ![]u32 {
+    if (count == 0) return allocator.alloc(u32, 0);
+    const out = try allocator.alloc(u32, count);
+    errdefer allocator.free(out);
+    try fillChooseIndexU32Checked(io, out, length);
+    return out;
+}
+
 pub fn choose(comptime T: type, io: std.Io, items: []const T) !?T {
     if (items.len == 0) return null;
     if (items.len == 1) return items[0];
@@ -1442,6 +1496,21 @@ test "root random helpers use explicit system entropy" {
     const chosen_index_batch_checked = try chooseIndexBatchChecked(io, std.testing.allocator, 4, colors.len);
     defer std.testing.allocator.free(chosen_index_batch_checked);
     for (chosen_index_batch_checked) |value| try std.testing.expect(value < colors.len);
+    const chosen_index_u32 = (try chooseIndexU32(io, @intCast(colors.len))).?;
+    try std.testing.expect(chosen_index_u32 < colors.len);
+    const chosen_index_u32_checked = try chooseIndexU32Checked(io, @intCast(colors.len));
+    try std.testing.expect(chosen_index_u32_checked < colors.len);
+    var chosen_indices_u32: [4]u32 = undefined;
+    try fillChooseIndexU32(io, &chosen_indices_u32, @intCast(colors.len));
+    for (chosen_indices_u32) |value| try std.testing.expect(value < colors.len);
+    try fillChooseIndexU32Checked(io, &chosen_indices_u32, @intCast(colors.len));
+    for (chosen_indices_u32) |value| try std.testing.expect(value < colors.len);
+    const chosen_index_u32_batch = try chooseIndexU32Batch(io, std.testing.allocator, 4, @intCast(colors.len));
+    defer std.testing.allocator.free(chosen_index_u32_batch);
+    for (chosen_index_u32_batch) |value| try std.testing.expect(value < colors.len);
+    const chosen_index_u32_batch_checked = try chooseIndexU32BatchChecked(io, std.testing.allocator, 4, @intCast(colors.len));
+    defer std.testing.allocator.free(chosen_index_u32_batch_checked);
+    for (chosen_index_u32_batch_checked) |value| try std.testing.expect(value < colors.len);
     const chosen_value = (try choose(u8, io, &colors)).?;
     try std.testing.expect(std.mem.indexOfScalar(u8, &colors, chosen_value) != null);
     const chosen_value_checked = try chooseChecked(u8, io, &colors);
@@ -1704,6 +1773,31 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(fixed_index_batch_checked);
     try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0 }, fixed_index_batch_checked);
     try std.testing.expectError(error.EmptyRange, chooseIndexBatchChecked(failing, std.testing.allocator, 3, 0));
+    try std.testing.expectEqual(@as(?u32, null), try chooseIndexU32(failing, 0));
+    try std.testing.expectEqual(@as(?u32, 0), try chooseIndexU32(failing, 1));
+    try std.testing.expectEqual(@as(u32, 0), try chooseIndexU32Checked(failing, 1));
+    try std.testing.expectError(error.EmptyRange, chooseIndexU32Checked(failing, 0));
+    var empty_indices_u32: [0]u32 = .{};
+    try fillChooseIndexU32(failing, &empty_indices_u32, 0);
+    try fillChooseIndexU32Checked(failing, &empty_indices_u32, 0);
+    var fixed_indices_u32: [3]u32 = undefined;
+    try fillChooseIndexU32(failing, &fixed_indices_u32, 1);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0 }, &fixed_indices_u32);
+    try fillChooseIndexU32Checked(failing, &fixed_indices_u32, 1);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0 }, &fixed_indices_u32);
+    const empty_index_u32_batch = try chooseIndexU32Batch(failing, std.testing.allocator, 0, 0);
+    defer std.testing.allocator.free(empty_index_u32_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_index_u32_batch.len);
+    const empty_index_u32_batch_checked = try chooseIndexU32BatchChecked(failing, std.testing.allocator, 0, 0);
+    defer std.testing.allocator.free(empty_index_u32_batch_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_index_u32_batch_checked.len);
+    const fixed_index_u32_batch = try chooseIndexU32Batch(failing, std.testing.allocator, 3, 1);
+    defer std.testing.allocator.free(fixed_index_u32_batch);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0 }, fixed_index_u32_batch);
+    const fixed_index_u32_batch_checked = try chooseIndexU32BatchChecked(failing, std.testing.allocator, 3, 1);
+    defer std.testing.allocator.free(fixed_index_u32_batch_checked);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0 }, fixed_index_u32_batch_checked);
+    try std.testing.expectError(error.EmptyRange, chooseIndexU32BatchChecked(failing, std.testing.allocator, 3, 0));
     const singleton = [_]u8{42};
     try std.testing.expectEqual(@as(?u8, null), try choose(u8, failing, &.{}));
     try std.testing.expectEqual(@as(?u8, 42), try choose(u8, failing, &singleton));
@@ -1980,6 +2074,10 @@ test "root random helpers validate deterministic cases before entropy" {
     var one_index: [1]usize = undefined;
     try std.testing.expectError(error.EntropyUnavailable, fillChooseIndex(failing, &one_index, 2));
     try std.testing.expectError(error.EntropyUnavailable, chooseIndexBatch(failing, std.testing.allocator, 1, 2));
+    try std.testing.expectError(error.EntropyUnavailable, chooseIndexU32(failing, 2));
+    var one_index_u32: [1]u32 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillChooseIndexU32(failing, &one_index_u32, 2));
+    try std.testing.expectError(error.EntropyUnavailable, chooseIndexU32Batch(failing, std.testing.allocator, 1, 2));
     try std.testing.expectError(error.EntropyUnavailable, choose(u8, failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, fillChoose(u8, failing, &byte, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, chooseBatch(u8, failing, std.testing.allocator, 1, &.{ 1, 2 }));
