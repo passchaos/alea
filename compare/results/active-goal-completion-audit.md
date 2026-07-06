@@ -439,7 +439,8 @@ complete.
 | S4-M416 guide/API WASI help-output self-test prose | `docs/core-guide.md`, `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m416-guide-api-wasi-help-self-test.md` | Closed for the current bar: core guide/API now state and guard that `wasi-self-test` covers help output. |
 | S4-M417 validate refresh after WASI help-output docs | `compare/results/s4-m417-validate-after-wasi-help-docs.md` | Closed for the current bar: broad native `zig build validate` passed after WASI help-output documentation/guard updates. |
 | S4-M418 validate-local refresh after WASI help-output docs | `compare/results/s4-m418-validate-local-after-wasi-help-docs.md` | Closed for the current bar: `zig build validate-local` passed after WASI help-output docs/guard updates. |
-| S4-M419 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M419 S4-M11 validate-local blocker sync | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m419-blocker-validate-local-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites fresh S4-M418 `validate-local` Rust comparison/surface/runtime output. |
+| S4-M420 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -961,6 +962,9 @@ resolve S4-M11 or complete the long-term objective.
 S4-M418 additionally refreshes local Rust comparison `validate-local` evidence
 after the WASI help-output documentation updates; it is validation evidence and
 does not resolve S4-M11 or complete the long-term objective.
+S4-M419 additionally syncs S4-M11 blocker evidence with the fresh
+`validate-local` output; it is blocker-evidence maintenance and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

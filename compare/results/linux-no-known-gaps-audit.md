@@ -1319,3 +1319,8 @@ S4-M418 refreshes validate-local evidence
 (`compare/results/s4-m418-validate-local-after-wasi-help-docs.md`) after the
 WASI help-output documentation updates; local Rust comparison, surfacecheck, and
 runtimecheck gates still pass while S4-M11 remains blocked.
+
+S4-M419 synchronizes S4-M11 blocker evidence
+(`compare/results/s4-m419-blocker-validate-local-sync.md`) with the fresh
+S4-M418 `validate-local` output, keeping the no-new-local-gap blocker audit
+current while S4-M11 remains blocked.
