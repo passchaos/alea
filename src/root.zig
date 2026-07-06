@@ -2165,6 +2165,22 @@ pub fn weightedIndexBatchByChecked(comptime T: type, comptime Weight: type, io: 
     return out;
 }
 
+pub fn weightedIndexU32BatchBy(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, comptime weightFn: fn (*const T) Weight) ![]?u32 {
+    if (count == 0) return allocator.alloc(?u32, 0);
+    const out = try allocator.alloc(?u32, count);
+    errdefer allocator.free(out);
+    try fillWeightedIndexU32By(T, Weight, io, out, items, weightFn);
+    return out;
+}
+
+pub fn weightedIndexU32BatchByChecked(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, comptime weightFn: fn (*const T) Weight) ![]u32 {
+    if (count == 0) return allocator.alloc(u32, 0);
+    const out = try allocator.alloc(u32, count);
+    errdefer allocator.free(out);
+    try fillWeightedIndexU32ByChecked(T, Weight, io, out, items, weightFn);
+    return out;
+}
+
 pub fn weightedIndexBatchByIndex(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, length: usize, comptime weightFn: fn (usize) Weight) ![]?usize {
     const out = try allocator.alloc(?usize, count);
     errdefer allocator.free(out);
@@ -4192,6 +4208,12 @@ test "root random helpers use explicit system entropy" {
     const weighted_index_by_batch_checked_values = try weightedIndexBatchByChecked(RootItemWeight.Entry, f64, io, std.testing.allocator, 4, &weighted_index_by_items, RootItemWeight.weight);
     defer std.testing.allocator.free(weighted_index_by_batch_checked_values);
     for (weighted_index_by_batch_checked_values) |index| try std.testing.expect(index < weighted_index_by_items.len);
+    const weighted_index_u32_by_batch_values = try weightedIndexU32BatchBy(RootItemWeight.Entry, f64, io, std.testing.allocator, 4, &weighted_index_by_items, RootItemWeight.weight);
+    defer std.testing.allocator.free(weighted_index_u32_by_batch_values);
+    for (weighted_index_u32_by_batch_values) |index| try std.testing.expect(index.? < weighted_index_by_items.len);
+    const weighted_index_u32_by_batch_checked_values = try weightedIndexU32BatchByChecked(RootItemWeight.Entry, f64, io, std.testing.allocator, 4, &weighted_index_by_items, RootItemWeight.weight);
+    defer std.testing.allocator.free(weighted_index_u32_by_batch_checked_values);
+    for (weighted_index_u32_by_batch_checked_values) |index| try std.testing.expect(index < weighted_index_by_items.len);
     const weighted_index_u32_by_index_value = (try weightedIndexU32ByIndex(f64, io, weights.len, RootIndexWeight.weight)).?;
     try std.testing.expect(weighted_index_u32_by_index_value < weights.len);
     const weighted_index_u32_by_index_checked_value = try weightedIndexU32ByIndexChecked(f64, io, weights.len, RootIndexWeight.weight);
@@ -5587,6 +5609,26 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqualSlices(usize, &.{ 1, 1, 1 }, single_weighted_by_checked_batch);
     try std.testing.expectError(error.InvalidWeight, weightedIndexBatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.invalid));
     try std.testing.expectError(error.InvalidWeight, weightedIndexBatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.invalid));
+    const empty_weighted_u32_by_batch = try weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 0, &weighted_by_items, RootItemWeights.invalid);
+    defer std.testing.allocator.free(empty_weighted_u32_by_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_u32_by_batch.len);
+    const empty_weighted_u32_by_checked_batch = try weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 0, &weighted_by_items, RootItemWeights.invalid);
+    defer std.testing.allocator.free(empty_weighted_u32_by_checked_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_u32_by_checked_batch.len);
+    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, huge_weighted_by_items, RootItemWeights.single));
+    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, huge_weighted_by_items, RootItemWeights.single));
+    const zero_weighted_u32_by_batch = try weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.zero);
+    defer std.testing.allocator.free(zero_weighted_u32_by_batch);
+    try std.testing.expectEqualSlices(?u32, &.{ null, null, null }, zero_weighted_u32_by_batch);
+    try std.testing.expectError(error.EmptyInput, weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.zero));
+    const single_weighted_u32_by_batch = try weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.single);
+    defer std.testing.allocator.free(single_weighted_u32_by_batch);
+    try std.testing.expectEqualSlices(?u32, &.{ 1, 1, 1 }, single_weighted_u32_by_batch);
+    const single_weighted_u32_by_checked_batch = try weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.single);
+    defer std.testing.allocator.free(single_weighted_u32_by_checked_batch);
+    try std.testing.expectEqualSlices(u32, &.{ 1, 1, 1 }, single_weighted_u32_by_checked_batch);
+    try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.invalid));
+    try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.invalid));
     const weighted_by_index_items = [_]u8{ 10, 20, 30 };
     try std.testing.expectEqual(@as(?u8, null), try chooseWeightedByIndex(u8, f64, failing, &.{}, RootByIndexWeights.single));
     try std.testing.expectEqual(@as(?u8, null), try chooseWeightedByIndex(u8, f64, failing, &weighted_by_index_items, RootByIndexWeights.zero));
@@ -6441,6 +6483,8 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, fillWeightedIndexU32ByChecked(RootItemWeights.Entry, f64, failing, &weighted_u32_by_checked_entropy, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexBatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexBatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, weighted_by_items[0..2], RootItemWeights.weight));
+    try std.testing.expectError(error.EntropyUnavailable, weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, weighted_by_items[0..2], RootItemWeights.weight));
+    try std.testing.expectError(error.EntropyUnavailable, weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexU32ByIndex(f64, failing, 2, RootByIndexWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexU32ByIndexChecked(f64, failing, 2, RootByIndexWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, chooseWeightedByIndex(u8, f64, failing, &.{ 1, 2 }, RootByIndexWeights.weight));
