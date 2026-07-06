@@ -198,6 +198,11 @@ const validate_all_dependencies = [_][]const u8{
     "validate_all_step.dependOn(wasi_report_step)",
 };
 
+const validate_all_doc_tokens = [_][]const u8{
+    "Run native validation plus cross-target compile checks, WASI unit execution",
+    "WASI dry/self tests, and the chained WASI report",
+};
+
 const validate_description_tokens = [_][]const u8{
     "Run native unit, docs, statistical, distribution, profile, and wrapper checks",
     "Run native validation plus local Rust comparison and runtime checks",
@@ -722,6 +727,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (validate_description_tokens) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: build.zig missing validation description token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (validate_all_doc_tokens) |token| {
+        if (std.mem.indexOf(u8, tooling, token) == null) {
+            try stderr.print("toolingcheck: docs/tooling.md missing validate-all row token `{s}`\n", .{token});
             missing += 1;
         }
     }
