@@ -9,6 +9,8 @@ The project focus is Linux-first local parity against the available Rust `rand`
 Alea validation and `zig build surfacecheck` covered local Rust public-surface
 manifest drift, but there was no aggregate step that combined both for the local
 comparison workflow.
+S4-M321 later added `zig build runtimecheck` to the same aggregate so runtime
+runner availability evidence is checked with the local public-surface scan.
 
 ## Change
 
@@ -22,6 +24,7 @@ The new step depends on:
 
 - `zig build validate`
 - `zig build surfacecheck`
+- `zig build runtimecheck`
 
 Documentation and guards were updated:
 
@@ -29,7 +32,7 @@ Documentation and guards were updated:
   `docs/tooling.md` list `zig build validate-local`;
 - `tools/readmecheck.zig` requires the README command token;
 - `tools/toolingcheck.zig` requires the build step and checks that it depends on
-  both `validate` and `surfacecheck`.
+  `validate`, `surfacecheck`, and `runtimecheck`.
 
 ## Validation
 

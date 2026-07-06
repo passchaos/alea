@@ -819,3 +819,6 @@ S4-M323 hardens `roadmapcheck`
 (`compare/results/s4-m323-roadmapcheck-runtime-ok.md`) so the S4-M11 blocker
 audit must retain the current `runtimecheck ok: no additional runtime runner
 available` conclusion.
+S4-M324 synchronizes the original `validate-local` evidence
+(`compare/results/s4-m324-validate-local-runtime-evidence.md`) with the later
+runtimecheck dependency, keeping the aggregate validation documentation accurate.
