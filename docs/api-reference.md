@@ -3526,7 +3526,7 @@ crosscheck` compiles `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`,
 Use `zig build wasi-dry-run` or `node tools/run_wasi_test.js --dry-run
 <test.wasm>` to verify Node WASI runner arguments without reading or executing a
 wasm file; use `zig build wasi-self-test` or `node tools/run_wasi_test.js
---self-test` to test runner dry-run and missing-argument paths without wasm.
+--self-test` to test runner dry-run, help-output, and missing-argument paths without wasm.
 
 See `docs/tooling.md` for the complete build-step and checked-tool catalog.
 

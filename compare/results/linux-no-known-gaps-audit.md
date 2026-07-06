@@ -1304,3 +1304,8 @@ S4-M415 documents README WASI help-output self-test coverage
 (`compare/results/s4-m415-readme-wasi-help-self-test.md`) so README states that
 `zig build wasi-self-test` / direct runner self-test covers help output while
 S4-M11 remains blocked.
+
+S4-M416 documents core-guide/API WASI help-output self-test coverage
+(`compare/results/s4-m416-guide-api-wasi-help-self-test.md`) so detailed docs
+state that `zig build wasi-self-test` / direct runner self-test covers help
+output while S4-M11 remains blocked.

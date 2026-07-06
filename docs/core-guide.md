@@ -1005,7 +1005,7 @@ dry/self tests, and the chained WASI report. `zig build crosscheck` compiles `wa
 `node tools/run_wasi_test.js --dry-run <test.wasm>` to verify Node WASI runner
 arguments without reading or executing a wasm file; use `zig build
 wasi-self-test` or `node tools/run_wasi_test.js --self-test` to test the runner
-dry-run and missing-argument paths without wasm.
+dry-run, help-output, and missing-argument paths without wasm.
 
 `zig build roadmapcheck` also guards the local Rust `rand` and cached
 `rand_distr` public-surface manifests: it verifies scanned-source/version

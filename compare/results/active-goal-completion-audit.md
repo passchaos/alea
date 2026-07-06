@@ -436,7 +436,8 @@ complete.
 | S4-M413 validate-all refresh after WASI runner help self-test | `compare/results/s4-m413-validate-all-after-wasi-help.md` | Closed for the current bar: full `zig build validate-all` passed after WASI runner help/self-test changes. |
 | S4-M414 tooling row for WASI help self-test | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m414-tooling-wasi-help-self-test.md` | Closed for the current bar: tooling catalog now states and guards that `wasi-self-test` covers help output. |
 | S4-M415 README WASI help-output self-test prose | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m415-readme-wasi-help-self-test.md` | Closed for the current bar: README now states and guards that `wasi-self-test` covers help output. |
-| S4-M416 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M416 guide/API WASI help-output self-test prose | `docs/core-guide.md`, `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m416-guide-api-wasi-help-self-test.md` | Closed for the current bar: core guide/API now state and guard that `wasi-self-test` covers help output. |
+| S4-M417 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -949,6 +950,9 @@ reliability and does not resolve S4-M11 or complete the long-term objective.
 S4-M415 additionally documents and guards README prose for WASI help-output
 self-test coverage; it is portability documentation reliability and does not
 resolve S4-M11 or complete the long-term objective.
+S4-M416 additionally documents and guards core-guide/API prose for WASI
+help-output self-test coverage; it is portability documentation reliability and
+does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

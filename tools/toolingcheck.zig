@@ -275,7 +275,7 @@ const core_guide_validation_tokens = [_][]const u8{
 const api_reference_wasi_tokens = [_][]const u8{
     "zig build wasi-self-test",
     "node tools/run_wasi_test.js --self-test",
-    "dry-run and missing-argument paths without wasm",
+    "dry-run, help-output, and missing-argument paths without wasm",
 };
 
 const api_reference_validation_tokens = [_][]const u8{
@@ -315,7 +315,7 @@ const core_guide_wasi_tokens = [_][]const u8{
     "node tools/run_wasi_test.js --dry-run <test.wasm>",
     "zig build wasi-self-test",
     "node tools/run_wasi_test.js --self-test",
-    "dry-run and missing-argument paths without wasm",
+    "dry-run, help-output, and missing-argument paths without wasm",
     "without reading or executing a",
     "wasm file",
 };
