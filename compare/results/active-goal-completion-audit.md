@@ -397,7 +397,8 @@ complete.
 | S4-M374 API reference crosscheck target prose | `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m374-api-crosscheck-targets.md` | Closed for the current bar: API reference crosscheck target set and no-execute guidance are documented and guarded. |
 | S4-M375 core-guide crosscheck target prose | `docs/core-guide.md`, `tools/toolingcheck.zig`, `compare/results/s4-m375-core-guide-crosscheck-targets.md` | Closed for the current bar: the core guide now documents the exact crosscheck target set, and toolingcheck guards it. |
 | S4-M376 WASI runner file-input guard | `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m376-wasi-runner-file-input-guard.md` | Closed for the current bar: `toolingcheck` now guards `tools/run_wasi_test.js` file inputs for WASI build steps. |
-| S4-M377 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M377 vectorbench filter-only arguments | `bench/vector.zig`, `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m377-vectorbench-filter-args.md` | Closed for the current bar: vectorbench now supports filter-only arguments, helper tests run before the executable, and toolingcheck guards that shape. |
+| S4-M378 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -789,6 +790,9 @@ not resolve S4-M11 or complete the long-term objective.
 S4-M376 additionally guards WASI runner file inputs in build steps; it is an
 evidence/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M377 additionally improves vectorbench filter-only argument ergonomics and
+wires parser tests into `zig build vectorbench`; it is a performance-tooling
+improvement and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

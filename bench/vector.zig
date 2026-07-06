@@ -185,10 +185,29 @@ fn inverseCdfNormalTailInit(q: f64) f64 {
     return num / den;
 }
 
+const default_lanes = 16 * 1024 * 1024;
+
+const Options = struct {
+    lanes: usize = default_lanes,
+    filter: ?[]const u8 = null,
+};
+
 var bench_filter: ?[]const u8 = null;
 
 fn shouldRun(name: []const u8) bool {
     return bench_filter == null or std.mem.indexOf(u8, name, bench_filter.?) != null;
+}
+
+fn parseOptions(args: []const []const u8) Options {
+    var options: Options = .{};
+    if (args.len > 1) {
+        options.lanes = std.fmt.parseInt(usize, args[1], 10) catch blk: {
+            options.filter = args[1];
+            break :blk default_lanes;
+        };
+    }
+    if (args.len > 2) options.filter = args[2];
+    return options;
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -197,14 +216,12 @@ pub fn main(init: std.process.Init) !void {
     var stdout_file = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_file.interface;
 
-    var args = std.process.Args.Iterator.init(init.minimal.args);
-    defer args.deinit();
-    _ = args.next();
-    const lanes: usize = if (args.next()) |arg|
-        std.fmt.parseInt(usize, arg, 10) catch 16 * 1024 * 1024
-    else
-        16 * 1024 * 1024;
-    bench_filter = args.next();
+    var arena = std.heap.ArenaAllocator.init(init.gpa);
+    defer arena.deinit();
+    const args = try init.minimal.args.toSlice(arena.allocator());
+    const options = parseOptions(args);
+    const lanes = options.lanes;
+    bench_filter = options.filter;
     try stdout.print("vector microbench lanes={} filter={s}\n", .{ lanes, bench_filter orelse "<all>" });
     try benchFillVectorChanceBool(io, stdout, "alea fillVectorChance boolx64 p=0.25", lanes);
     try benchFillVectorRatioBool(io, stdout, "alea fillVectorRatio boolx64 1/4", lanes);
@@ -5111,4 +5128,22 @@ fn thresholdExponentialFastWithInitial(engine: *alea.FastPrng, initial_bits: u64
         if (ziggurat.ExpDist.f[i + 1] + (ziggurat.ExpDist.f[i] - ziggurat.ExpDist.f[i + 1]) * alea.Rng.floatFrom(engine, f64) < @exp(-x)) return x;
         bits = engine.next();
     }
+}
+
+test "parseOptions accepts default, lane-count, filter-only, and count-plus-filter" {
+    const defaults = parseOptions(&.{"vectorbench"});
+    try std.testing.expectEqual(@as(usize, default_lanes), defaults.lanes);
+    try std.testing.expect(defaults.filter == null);
+
+    const counted = parseOptions(&.{ "vectorbench", "1024" });
+    try std.testing.expectEqual(@as(usize, 1024), counted.lanes);
+    try std.testing.expect(counted.filter == null);
+
+    const filtered = parseOptions(&.{ "vectorbench", "normal" });
+    try std.testing.expectEqual(@as(usize, default_lanes), filtered.lanes);
+    try std.testing.expectEqualStrings("normal", filtered.filter.?);
+
+    const counted_filtered = parseOptions(&.{ "vectorbench", "2048", "normal" });
+    try std.testing.expectEqual(@as(usize, 2048), counted_filtered.lanes);
+    try std.testing.expectEqualStrings("normal", counted_filtered.filter.?);
 }

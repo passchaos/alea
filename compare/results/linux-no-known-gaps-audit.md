@@ -1106,3 +1106,9 @@ S4-M376 guards WASI runner file inputs
 `toolingcheck` require `tools/run_wasi_test.js` to be registered as an input for
 WASI test, dry-run, and report tool build steps, improving rebuild reliability
 while S4-M11 remains blocked.
+
+S4-M377 improves vectorbench filter ergonomics
+(`compare/results/s4-m377-vectorbench-filter-args.md`) by making filter-only
+arguments work like the main throughput benchmark and by wiring parser tests into
+`zig build vectorbench`, improving focused SIMD evidence collection while S4-M11
+remains blocked.

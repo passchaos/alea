@@ -389,7 +389,19 @@ pub fn build(b: *std.Build) void {
     const run_vectorbench = b.addRunArtifact(vectorbench);
     if (b.args) |args| run_vectorbench.addArgs(args);
 
+    const vectorbench_tests = b.addTest(.{
+        .name = "alea-vectorbench-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/vector.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "alea", .module = module }},
+        }),
+    });
+    const run_vectorbench_tests = b.addRunArtifact(vectorbench_tests);
+
     const vectorbench_step = b.step("vectorbench", "Run vector/SIMD microbenchmarks");
+    vectorbench_step.dependOn(&run_vectorbench_tests.step);
     vectorbench_step.dependOn(&run_vectorbench.step);
 
     const ziggurat_stats_mod = b.createModule(.{
