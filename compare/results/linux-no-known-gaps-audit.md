@@ -1443,3 +1443,8 @@ status signals while S4-M11 remains blocked.
 S4-M443 adds a `schema_version` field to `rand-status-json`
 (`compare/results/s4-m443-rand-status-schema-version.md`) so scripts can detect
 future status schema changes while S4-M11 remains blocked.
+
+S4-M444 keeps the status schema version visible in the current snapshot
+(`compare/results/s4-m444-current-status-schema-version.md`) so
+`compare/results/s4-m420-current-rand-status.md` mirrors the script-friendly
+schema while S4-M11 remains blocked.
