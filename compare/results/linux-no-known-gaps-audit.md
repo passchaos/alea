@@ -797,3 +797,6 @@ S4-M317 adds `zig build validate-local`
 (`compare/results/s4-m317-validate-local.md`) as a Linux-first aggregate for
 native validation plus the local `rand` / `rand_core` / `rand_distr`
 public-surface drift checker.
+S4-M318 normalizes the `validate-local` evidence
+(`compare/results/s4-m318-validate-local-evidence.md`) so the generic feature
+command and the actual ReleaseFast validation run are recorded separately.

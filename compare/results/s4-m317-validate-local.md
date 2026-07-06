@@ -15,7 +15,7 @@ comparison workflow.
 Added:
 
 ```sh
-zig build -Doptimize=ReleaseFast validate-local
+zig build validate-local
 ```
 
 The new step depends on:
@@ -37,7 +37,7 @@ Relevant validation:
 
 ```sh
 zig fmt build.zig tools/readmecheck.zig tools/toolingcheck.zig tools/roadmapcheck.zig
-zig build validate-local
+zig build -Doptimize=ReleaseFast validate-local
 zig build toolingcheck
 zig build readmecheck
 zig build roadmapcheck
