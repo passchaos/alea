@@ -1806,3 +1806,8 @@ S4-M508 adds root one-shot weighted no-replacement caller-owned mutable-pointer 
 (`compare/results/s4-m508-root-one-shot-weighted-no-replacement-mut-ptr-into-helpers.md`):
 system-entropy callers can now fill caller-owned weighted no-replacement mutable
 pointer buffers directly from the root API while S4-M11 remains blocked.
+
+S4-M509 adds root one-shot weighted no-replacement fixed-size index arrays
+(`compare/results/s4-m509-root-one-shot-weighted-no-replacement-index-array-helpers.md`):
+system-entropy callers can now produce fixed-size weighted no-replacement usize
+and u32 index arrays directly from the root API while S4-M11 remains blocked.
