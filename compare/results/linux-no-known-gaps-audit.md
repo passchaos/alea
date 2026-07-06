@@ -1988,3 +1988,8 @@ S4-M540 adds root one-shot index-weighted mutable-pointer array helpers
 system-entropy callers can now produce fixed-size mutable-pointer arrays from a
 mutable item slice and comptime index-weight function directly from the root API
 while S4-M11 remains blocked.
+
+S4-M541 adds root one-shot item-accessor weighted index helpers
+(`compare/results/s4-m541-root-weighted-by-helpers.md`): system-entropy callers
+can now sample weighted indices directly from an item slice and comptime
+item-weight accessor from the root API while S4-M11 remains blocked.

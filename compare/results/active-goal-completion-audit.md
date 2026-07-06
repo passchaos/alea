@@ -579,7 +579,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M538 root one-shot index-weighted value array helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m538-root-weighted-value-by-index-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size value arrays from an item slice and comptime index-weight function directly. |
 | S4-M539 root one-shot index-weighted const-pointer array helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m539-root-weighted-const-ptr-by-index-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size const-pointer arrays from an item slice and comptime index-weight function directly. |
 | S4-M540 root one-shot index-weighted mutable-pointer array helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m540-root-weighted-mut-ptr-by-index-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size mutable-pointer arrays from a mutable item slice and comptime index-weight function directly. |
-| S4-M541 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M541 root item-accessor weighted index helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m541-root-weighted-by-helpers.md` | Closed for the current bar: root system-entropy helpers can now sample weighted indices directly from an item slice and comptime item-weight accessor. |
+| S4-M542 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1459,6 +1460,9 @@ S4-M11 or complete the long-term objective.
 S4-M540 additionally adds root one-shot index-weighted fixed-size
 mutable-pointer array helpers; it is API ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M541 additionally adds root one-shot item-accessor weighted index helpers;
+it is API ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
