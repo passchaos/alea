@@ -869,3 +869,9 @@ S4-M336 hardens the broad validation aggregate
 `toolingcheck` verify all current `zig build validate-all` dependency tokens:
 native validation, crosscheck, test-wasi, and wasi-report. This improves
 portability validation ergonomics while S4-M11 remains blocked.
+
+S4-M337 hardens the WASI report chain
+(`compare/results/s4-m337-wasi-report-chain-guard.md`) by making `toolingcheck`
+verify the chained repro, statcheck, distcheck, profilecheck, tail, stress, and
+long-profile WASI dependency tokens plus the no-Node failure path. This improves
+portability evidence ergonomics while S4-M11 remains blocked.

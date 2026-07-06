@@ -45,6 +45,17 @@ const validate_all_dependencies = [_][]const u8{
     "validate_all_step.dependOn(wasi_report_step)",
 };
 
+const wasi_report_dependencies = [_][]const u8{
+    "wasi_statcheck.step.dependOn(&wasi_repro.step)",
+    "wasi_distcheck.step.dependOn(&wasi_statcheck.step)",
+    "wasi_profilecheck.step.dependOn(&wasi_distcheck.step)",
+    "wasi_profiletailcheck.step.dependOn(&wasi_profilecheck.step)",
+    "wasi_profilestresscheck.step.dependOn(&wasi_profiletailcheck.step)",
+    "wasi_profilelongcheck.step.dependOn(&wasi_profilestresscheck.step)",
+    "wasi_report_step.dependOn(&wasi_profilelongcheck.step)",
+    "wasi_report_step.dependOn(&node_missing.step)",
+};
+
 const runtimecheck_doc_tokens = [_][]const u8{
     "zig build runtimecheck",
     "node",
@@ -309,6 +320,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (validate_all_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: validate-all missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (wasi_report_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: wasi-report missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }
