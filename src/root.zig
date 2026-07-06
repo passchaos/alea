@@ -833,6 +833,30 @@ pub fn sampleIndicesU32IntoChecked(io: std.Io, length: u32, out: []u32) !void {
     try seq.sampleIndicesU32IntoChecked(random_source, length, out);
 }
 
+pub fn chooseIterator(comptime T: type, io: std.Io, iterator: anytype) !?T {
+    return try rootChooseIterator(T, io, iterator, .reservoir);
+}
+
+pub fn chooseIteratorChecked(comptime T: type, io: std.Io, iterator: anytype) !T {
+    return (try chooseIterator(T, io, iterator)) orelse error.EmptyInput;
+}
+
+pub fn chooseIteratorHinted(comptime T: type, io: std.Io, iterator: anytype) !?T {
+    return try rootChooseIterator(T, io, iterator, .hinted);
+}
+
+pub fn chooseIteratorHintedChecked(comptime T: type, io: std.Io, iterator: anytype) !T {
+    return (try chooseIteratorHinted(T, io, iterator)) orelse error.EmptyInput;
+}
+
+pub fn chooseIteratorStable(comptime T: type, io: std.Io, iterator: anytype) !?T {
+    return try chooseIterator(T, io, iterator);
+}
+
+pub fn chooseIteratorStableChecked(comptime T: type, io: std.Io, iterator: anytype) !T {
+    return try chooseIteratorChecked(T, io, iterator);
+}
+
 pub fn weightedIndex(io: std.Io, weights: []const f64) !?usize {
     switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
         .empty => return null,
@@ -1714,6 +1738,61 @@ fn rootUnicodeScalarExclusiveEndToCompressed(codepoint: u21) !u21 {
 
 fn rootUnicodeScalarFromCompressed(compressed: u21) u21 {
     return if (compressed >= 0xD800) compressed + 0x800 else compressed;
+}
+
+const RootIteratorChoiceMode = enum { reservoir, hinted };
+
+fn rootChooseIterator(comptime T: type, io: std.Io, iterator: anytype, mode: RootIteratorChoiceMode) !?T {
+    if (mode == .hinted) {
+        if (rootIteratorExactRemaining(iterator)) |remaining| {
+            if (remaining == 0) return null;
+            const first = iterator.next() orelse return null;
+            if (remaining == 1) return first;
+
+            var engine = try secure(io);
+            const random_source = Rng.init(&engine);
+            if (random_source.uintLessThan(usize, remaining) == 0) return first;
+
+            var index: usize = 1;
+            while (index < remaining) : (index += 1) {
+                const item = iterator.next() orelse return null;
+                if (random_source.uintLessThan(usize, remaining - index) == 0) return item;
+            }
+            return null;
+        }
+    }
+
+    var first = iterator.next() orelse return null;
+    var seen: usize = 1;
+    const second = iterator.next() orelse return first;
+
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    if (random_source.uintLessThan(usize, 2) == 0) first = second;
+    seen = 2;
+
+    while (iterator.next()) |item| {
+        seen += 1;
+        if (random_source.uintLessThan(usize, seen) == 0) first = item;
+    }
+
+    return first;
+}
+
+fn rootIteratorExactRemaining(iterator: anytype) ?usize {
+    const Iterator = switch (@typeInfo(@TypeOf(iterator))) {
+        .pointer => |pointer| pointer.child,
+        else => @TypeOf(iterator),
+    };
+    if (comptime @hasDecl(Iterator, "sizeHint")) {
+        const hint = iterator.sizeHint();
+        if (hint.upper) |upper| {
+            if (upper == hint.lower) return upper;
+        }
+    }
+    if (comptime @hasDecl(Iterator, "len")) return iterator.len();
+    if (comptime @hasDecl(Iterator, "remaining")) return iterator.remaining();
+    return null;
 }
 
 const RootWeightedIndexState = union(enum) {
@@ -2723,6 +2802,33 @@ test "root random helpers validate deterministic cases before entropy" {
     try sampleIndicesU32IntoChecked(failing, 3, &all_indices_u32_into);
     try std.testing.expectEqualSlices(u32, &.{ 0, 1, 2 }, &all_indices_u32_into);
     try std.testing.expectError(error.InvalidParameter, sampleIndicesU32Checked(failing, std.testing.allocator, 3, 4));
+    const SliceIter = struct {
+        items: []const u8,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.index >= self.items.len) return null;
+            const value = self.items[self.index];
+            self.index += 1;
+            return value;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+    var empty_iter = SliceIter{ .items = &.{} };
+    try std.testing.expectEqual(@as(?u8, null), try chooseIterator(u8, failing, &empty_iter));
+    var empty_iter_checked = SliceIter{ .items = &.{} };
+    try std.testing.expectError(error.EmptyInput, chooseIteratorChecked(u8, failing, &empty_iter_checked));
+    var singleton_iter = SliceIter{ .items = &.{42} };
+    try std.testing.expectEqual(@as(?u8, 42), try chooseIterator(u8, failing, &singleton_iter));
+    var singleton_iter_checked = SliceIter{ .items = &.{42} };
+    try std.testing.expectEqual(@as(u8, 42), try chooseIteratorChecked(u8, failing, &singleton_iter_checked));
+    var hinted_singleton = SliceIter{ .items = &.{77} };
+    try std.testing.expectEqual(@as(?u8, 77), try chooseIteratorHinted(u8, failing, &hinted_singleton));
+    var stable_singleton = SliceIter{ .items = &.{88} };
+    try std.testing.expectEqual(@as(?u8, 88), try chooseIteratorStable(u8, failing, &stable_singleton));
     const empty_weights = [_]f64{ 0, 0, 0 };
     try std.testing.expectEqual(@as(?usize, null), try weightedIndex(failing, &empty_weights));
     try std.testing.expectEqual(@as(?usize, null), try weightedIndexChecked(failing, &empty_weights));
@@ -3113,6 +3219,14 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleIndicesU32(failing, std.testing.allocator, 5, 2));
     var sample_indices_u32_one: [1]u32 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, sampleIndicesU32Into(failing, 5, &sample_indices_u32_one));
+    var entropy_iter = SliceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectError(error.EntropyUnavailable, chooseIterator(u8, failing, &entropy_iter));
+    var entropy_iter_checked = SliceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectError(error.EntropyUnavailable, chooseIteratorChecked(u8, failing, &entropy_iter_checked));
+    var entropy_hinted = SliceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectError(error.EntropyUnavailable, chooseIteratorHinted(u8, failing, &entropy_hinted));
+    var entropy_stable = SliceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectError(error.EntropyUnavailable, chooseIteratorStable(u8, failing, &entropy_stable));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
     var weighted_one: [1]?usize = undefined;

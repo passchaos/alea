@@ -1709,3 +1709,9 @@ S4-M491 adds root one-shot no-replacement index sampling
 (`compare/results/s4-m491-root-one-shot-no-replacement-index-helpers.md`):
 system-entropy callers can now allocate and fill no-replacement index samples
 directly from the root API while S4-M11 remains blocked.
+
+
+S4-M492 adds root one-shot iterator choice helpers
+(`compare/results/s4-m492-root-one-shot-iterator-choice-helpers.md`):
+system-entropy callers can now choose one item from iterators directly from the
+root API while S4-M11 remains blocked.
