@@ -362,7 +362,8 @@ complete.
 | S4-M339 core-guide validation aggregate prose | `docs/core-guide.md`, `tools/toolingcheck.zig`, `compare/results/s4-m339-core-guide-validation-prose.md` | Closed for the current bar: the core guide now explains when to use `validate`, `validate-local`, and `validate-all`, and toolingcheck guards the guidance tokens. |
 | S4-M340 API reference validation aggregate prose | `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m340-api-reference-validation-prose.md` | Closed for the current bar: the API reference now explains when API-related work should use `validate`, `validate-local`, or `validate-all`, and toolingcheck guards the guidance tokens. |
 | S4-M341 active completion criteria guard | `tools/roadmapcheck.zig`, `compare/results/active-goal-completion-audit.md`, `compare/results/s4-m341-active-completion-criteria-guard.md` | Closed for the current bar: `roadmapcheck` now verifies that this active audit keeps the concrete required-next-work criteria for whole-goal completion visible. |
-| S4-M342 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M342 roadmap current-rule guard | `tools/roadmapcheck.zig`, `compare/results/core-rand-coverage.md`, `compare/results/s4-m342-current-rule-guard.md` | Closed for the current bar: `roadmapcheck` now verifies the living Current Rule's validation and prioritization guidance, including unblocked work, blocker evidence, local comparison checks, statcheck, stream validation, and deferred micro-optimization. |
+| S4-M343 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -646,6 +647,9 @@ documentation/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M341 additionally hardens `roadmapcheck` so the active audit must retain the
 concrete required-next-work completion criteria; it is an evidence/tooling
+improvement and does not resolve S4-M11 or complete the long-term objective.
+S4-M342 additionally hardens `roadmapcheck` so the roadmap Current Rule must
+retain concrete validation and prioritization guidance; it is an evidence/tooling
 improvement and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

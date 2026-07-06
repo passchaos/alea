@@ -900,3 +900,10 @@ S4-M341 hardens active-goal completion criteria evidence
 the exact/default dense SIMD candidate criterion, scalar lane-fill comparison,
 rejected-lane stream-shape requirement, later-roadmap-audit escape clause, and
 no-completion warning while S4-M11 remains blocked.
+
+S4-M342 hardens the roadmap Current Rule
+(`compare/results/s4-m342-current-rule-guard.md`) by making `roadmapcheck`
+verify concrete prioritization and validation guidance for earliest unblocked
+work, blocker evidence, `validate`, `validate-local`, public-surface/local
+`rand` evidence, `statcheck`, `stream`, and deferred micro-optimization while
+S4-M11 remains blocked.
