@@ -158,7 +158,8 @@ const api_reference_validation_tokens = [_][]const u8{
     "validate-all` for portability-sensitive API evidence",
     "compile checks, WASI unit tests",
     "node tools/run_wasi_test.js --dry-run <test.wasm>",
-    "without reading or executing a wasm file",
+    "without reading or executing a",
+    "wasm file",
 };
 
 const practrand_doc_tokens = [_][]const u8{
@@ -175,12 +176,18 @@ const core_guide_practrand_tokens = [_][]const u8{
 const core_guide_wasi_tokens = [_][]const u8{
     "zig build wasi-dry-run",
     "node tools/run_wasi_test.js --dry-run <test.wasm>",
-    "without reading or executing a wasm file",
+    "without reading or executing a",
+    "wasm file",
 };
 
 const api_reference_practrand_tokens = [_][]const u8{
     "tools/practrand.sh --dry-run fast 1048576",
     "zig build practrand-dry-run",
+};
+
+const api_reference_crosscheck_tokens = [_][]const u8{
+    "crosscheck` compiles `wasm32-wasi`, `aarch64-linux`, `riscv64-linux`",
+    "`x86_64-windows`, `x86_64-macos`, and `aarch64-macos` without executing them",
 };
 
 const practrand_script_tokens = [_][]const u8{
@@ -495,6 +502,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (api_reference_practrand_tokens) |token| {
         if (std.mem.indexOf(u8, api, token) == null) {
             try stderr.print("toolingcheck: docs/api-reference.md missing PractRand token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (api_reference_crosscheck_tokens) |token| {
+        if (std.mem.indexOf(u8, api, token) == null) {
+            try stderr.print("toolingcheck: docs/api-reference.md missing crosscheck token `{s}`\n", .{token});
             missing += 1;
         }
     }
