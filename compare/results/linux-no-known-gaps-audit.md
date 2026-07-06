@@ -1769,3 +1769,9 @@ S4-M501 adds root one-shot weighted no-replacement value sampling
 (`compare/results/s4-m501-root-one-shot-weighted-no-replacement-value-helpers.md`):
 system-entropy callers can now allocate weighted no-replacement value samples
 directly from the root API while S4-M11 remains blocked.
+
+
+S4-M502 adds root one-shot weighted no-replacement value arrays
+(`compare/results/s4-m502-root-one-shot-weighted-no-replacement-array-helpers.md`):
+system-entropy callers can now produce fixed-size weighted no-replacement value
+arrays directly from the root API while S4-M11 remains blocked.

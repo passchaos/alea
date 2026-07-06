@@ -540,7 +540,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M499 root one-shot fixed-size weighted iterator arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m499-root-one-shot-weighted-iterator-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size weighted iterator sample arrays directly. |
 | S4-M500 root one-shot weighted no-replacement index sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m500-root-one-shot-weighted-no-replacement-index-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate weighted no-replacement index samples directly. |
 | S4-M501 root one-shot weighted no-replacement value sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m501-root-one-shot-weighted-no-replacement-value-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate weighted no-replacement value samples directly. |
-| S4-M502 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M502 root one-shot weighted no-replacement value arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m502-root-one-shot-weighted-no-replacement-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size weighted no-replacement value arrays directly. |
+| S4-M503 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1304,6 +1305,9 @@ S4-M500 additionally adds root one-shot weighted no-replacement index sampling;
 it is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 S4-M501 additionally adds root one-shot weighted no-replacement value sampling;
+it is API ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M502 additionally adds root one-shot weighted no-replacement value arrays;
 it is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 
