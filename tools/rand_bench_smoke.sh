@@ -5,10 +5,13 @@ usage() {
     cat <<'USAGE'
 usage: rand_bench_smoke.sh [bytes] [filter]
        rand_bench_smoke.sh [filter]
+       rand_bench_smoke.sh --dry-run [bytes] [filter]
+       rand_bench_smoke.sh --dry-run [filter]
 
 Runs a tiny filtered local Rust rand/rand_distr comparison benchmark and checks
 that the requested filtered row appears while unrelated byte-throughput rows do
-not. Defaults to: bytes=1024 filter=standard-normal.
+not. Defaults to: bytes=1024 filter=standard-normal. --dry-run prints the cargo
+command without executing it.
 USAGE
 }
 
@@ -17,14 +20,15 @@ if [[ "${1:-}" == "--help" ]]; then
     exit 0
 fi
 
+dry_run=0
+if [[ "${1:-}" == "--dry-run" ]]; then
+    dry_run=1
+    shift
+fi
+
 if (( $# > 2 )); then
     usage >&2
     exit 2
-fi
-
-if ! command -v cargo >/dev/null 2>&1; then
-    echo "rand_bench_smoke: cargo is required" >&2
-    exit 127
 fi
 
 bytes=1024
@@ -47,6 +51,17 @@ fi
 
 manifest="${ALEA_RAND_BENCH_MANIFEST:-compare/rand_bench/Cargo.toml}"
 expected_row="${ALEA_RAND_BENCH_EXPECTED_ROW:-$filter}"
+
+if (( dry_run )); then
+    printf 'cargo run --manifest-path %q -- %q %q\n' "$manifest" "$bytes" "$filter"
+    printf 'expected row substring: %s\n' "$expected_row"
+    exit 0
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+    echo "rand_bench_smoke: cargo is required" >&2
+    exit 127
+fi
 
 output=$(cargo run --manifest-path "$manifest" -- "$bytes" "$filter")
 printf '%s\n' "$output"

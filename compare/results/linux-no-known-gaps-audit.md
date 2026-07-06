@@ -386,6 +386,7 @@ zig build -Doptimize=ReleaseFast -Dcpu=native bench-libc
 zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench
 zig build rand-bench-test
 zig build rand-bench-smoke
+zig build rand-bench-smoke-dry-run
 zig build crosscheck
 zig build validate-all
 RUSTFLAGS='-C target-cpu=native' cargo run --release --manifest-path compare/rand_bench/Cargo.toml
@@ -1134,3 +1135,7 @@ S4-M381 adds a tiny filtered Rust comparison benchmark smoke step
 (`compare/results/s4-m381-rand-bench-smoke.md`) and wires `zig build
 rand-bench-smoke` into `validate-local`, improving end-to-end local Rust
 comparison benchmark reliability while S4-M11 remains blocked.
+
+S4-M382 adds a dry-run preview for the Rust comparison smoke wrapper
+(`compare/results/s4-m382-rand-bench-smoke-dry-run.md`) so local comparison
+command shape can be checked without running cargo while S4-M11 remains blocked.

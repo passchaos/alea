@@ -402,7 +402,8 @@ complete.
 | S4-M379 bench-libc parser helper tests | `build.zig`, `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m379-bench-libc-parser-tests.md` | Closed for the current bar: `bench-libc` now runs libc-linked throughput parser helper tests before the executable, and toolingcheck guards it. |
 | S4-M380 Rust comparison bench parser tests | `compare/rand_bench/src/main.rs`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m380-rand-bench-parser-tests.md` | Closed for the current bar: local Rust comparison benchmark argument parsing is helper-tested and guarded through `zig build rand-bench-test` / `validate-local`. |
 | S4-M381 Rust comparison bench smoke step | `tools/rand_bench_smoke.sh`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m381-rand-bench-smoke.md` | Closed for the current bar: local Rust comparison benchmark filtering is smoke-tested through `zig build rand-bench-smoke` / `validate-local`. |
-| S4-M382 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M382 Rust bench smoke dry-run | `tools/rand_bench_smoke.sh`, `build.zig`, `tools/toolingcheck.zig`, `tools/readmecheck.zig`, `docs/tooling.md`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m382-rand-bench-smoke-dry-run.md` | Closed for the current bar: Rust comparison smoke command shape can be previewed through `zig build rand-bench-smoke-dry-run` without running cargo. |
+| S4-M383 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -811,6 +812,9 @@ S4-M381 additionally adds a tiny filtered `zig build rand-bench-smoke`
 end-to-end run for the Rust comparison benchmark; it is local comparison
 benchmark tooling and does not resolve S4-M11 or complete the long-term
 objective.
+S4-M382 additionally adds a `zig build rand-bench-smoke-dry-run` command preview
+for the Rust comparison smoke wrapper; it is local comparison benchmark tooling
+and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

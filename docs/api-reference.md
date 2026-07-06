@@ -3492,6 +3492,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build validate-local`
 - `zig build rand-bench-test`
 - `zig build rand-bench-smoke`
+- `zig build rand-bench-smoke-dry-run`
 - `zig build validate-all`
 - `zig build statcheck`
 - `zig build distcheck`

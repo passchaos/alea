@@ -108,6 +108,7 @@ The plain step names below are what the catalog checker tracks.
 | `zig build vectorbench` | Run vectorbench helper tests, then vector/SIMD microbenchmarks; accepts either `[lanes] [filter]` or filter-only arguments. |
 | `zig build rand-bench-test` | Run Rust comparison benchmark helper tests with `cargo test --manifest-path compare/rand_bench/Cargo.toml`, including the `[bytes] [filter]` / filter-only parser used by the local `rand` throughput harness. |
 | `zig build rand-bench-smoke` | Run a tiny filtered Rust comparison benchmark smoke test via `tools/rand_bench_smoke.sh 1024 standard-normal`, checking that the filtered `rand_distr standard-normal` rows appear and unrelated byte-throughput rows stay filtered out. |
+| `zig build rand-bench-smoke-dry-run` | Print the Rust comparison smoke cargo command via `tools/rand_bench_smoke.sh --dry-run 1024 standard-normal` without running cargo. |
 | `zig build ziggurat-stats` | Report ziggurat branch frequencies. |
 | `zig build ziggurat-probe` | Run ziggurat expression-shape microbenchmarks. |
 | `zig build cauchy-probe` | Run Cauchy expression-shape microbenchmarks. |
@@ -203,7 +204,7 @@ new helpers that need documentation.
 | `tools/rayleigh_probe.zig` | Rayleigh performance probe. |
 | `tools/repro.zig` | Reproducibility snapshot printer with focused helper tests. |
 | `tools/readmecheck.zig` | README discovery and quick-start token checker. |
-| `tools/rand_bench_smoke.sh` | Tiny filtered Rust comparison benchmark smoke-test wrapper. |
+| `tools/rand_bench_smoke.sh` | Tiny filtered Rust comparison benchmark smoke-test wrapper with `--dry-run` command preview support. |
 | `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, public-surface manifest, and S4-M11 blocker-token checker with focused helper tests. |
 | `tools/runtimecheck.zig` | S4-M11 runtime-runner availability checker. |
 | `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps, with `--dry-run` argument reporting. |

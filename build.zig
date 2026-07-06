@@ -454,6 +454,11 @@ pub fn build(b: *std.Build) void {
         rand_bench_smoke_step.dependOn(&cargo_missing.step);
     }
 
+    const run_rand_bench_smoke_dry_run = b.addSystemCommand(&.{ "tools/rand_bench_smoke.sh", "--dry-run", "1024", "standard-normal" });
+    run_rand_bench_smoke_dry_run.addFileInput(b.path("tools/rand_bench_smoke.sh"));
+    const rand_bench_smoke_dry_run_step = b.step("rand-bench-smoke-dry-run", "Print the Rust comparison benchmark smoke command without running cargo");
+    rand_bench_smoke_dry_run_step.dependOn(&run_rand_bench_smoke_dry_run.step);
+
     const ziggurat_stats_mod = b.createModule(.{
         .root_source_file = b.path("tools/ziggurat_stats.zig"),
         .target = target,

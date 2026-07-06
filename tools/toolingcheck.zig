@@ -80,8 +80,23 @@ const rand_bench_smoke_dependencies = [_][]const u8{
 
 const rand_bench_smoke_doc_tokens = [_][]const u8{
     "zig build rand-bench-smoke",
+    "zig build rand-bench-smoke-dry-run",
     "tools/rand_bench_smoke.sh 1024 standard-normal",
+    "tools/rand_bench_smoke.sh --dry-run 1024 standard-normal",
     "tiny filtered Rust comparison benchmark smoke test",
+};
+
+const rand_bench_smoke_dry_run_dependencies = [_][]const u8{
+    "b.addSystemCommand(&.{ \"tools/rand_bench_smoke.sh\", \"--dry-run\", \"1024\", \"standard-normal\" })",
+    "run_rand_bench_smoke_dry_run.addFileInput(b.path(\"tools/rand_bench_smoke.sh\"))",
+    "b.step(\"rand-bench-smoke-dry-run\"",
+    "rand_bench_smoke_dry_run_step.dependOn(&run_rand_bench_smoke_dry_run.step)",
+};
+
+const rand_bench_smoke_script_tokens = [_][]const u8{
+    "--dry-run",
+    "cargo run --manifest-path",
+    "expected row substring",
 };
 
 const stream_dependencies = [_][]const u8{
@@ -315,6 +330,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "vectorbench", .build_token = "b.step(\"vectorbench\"" },
     .{ .name = "rand-bench-test", .build_token = "b.step(\"rand-bench-test\"" },
     .{ .name = "rand-bench-smoke", .build_token = "b.step(\"rand-bench-smoke\"" },
+    .{ .name = "rand-bench-smoke-dry-run", .build_token = "b.step(\"rand-bench-smoke-dry-run\"" },
     .{ .name = "ziggurat-stats", .build_token = "b.step(\"ziggurat-stats\"" },
     .{ .name = "ziggurat-probe", .build_token = "b.step(\"ziggurat-probe\"" },
     .{ .name = "cauchy-probe", .build_token = "b.step(\"cauchy-probe\"" },
@@ -732,6 +748,20 @@ pub fn main(init: std.process.Init) !void {
     inline for (rand_bench_smoke_doc_tokens) |token| {
         if (std.mem.indexOf(u8, tooling, token) == null) {
             try stderr.print("toolingcheck: docs/tooling.md missing rand-bench-smoke token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (rand_bench_smoke_dry_run_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: rand-bench-smoke-dry-run missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    const rand_bench_smoke_source = try std.Io.Dir.cwd().readFileAlloc(io, "tools/rand_bench_smoke.sh", allocator, .limited(64 * 1024));
+    defer allocator.free(rand_bench_smoke_source);
+    inline for (rand_bench_smoke_script_tokens) |token| {
+        if (std.mem.indexOf(u8, rand_bench_smoke_source, token) == null) {
+            try stderr.print("toolingcheck: tools/rand_bench_smoke.sh missing token `{s}`\n", .{token});
             missing += 1;
         }
     }

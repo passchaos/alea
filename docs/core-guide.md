@@ -970,6 +970,7 @@ zig build validate
 zig build validate-local
 zig build rand-bench-test
 zig build rand-bench-smoke
+zig build rand-bench-smoke-dry-run
 zig build validate-all
 zig build crosscheck
 zig build test-wasi
@@ -1036,7 +1037,9 @@ count and filters row names by case-insensitive substring for focused
 full-harness reruns; the
 Rust comparison binary accepts the same argument shape; `zig build
 rand-bench-test` runs its parser/helper tests without a throughput run, and
-`zig build rand-bench-smoke` runs a tiny filtered Rust comparison smoke row.
+`zig build rand-bench-smoke` runs a tiny filtered Rust comparison smoke row;
+`zig build rand-bench-smoke-dry-run` previews that cargo command without running
+cargo.
 `alea.Rng` has
 function-pointer dispatch comparable to
 `std.Random`; direct helpers are closer to Rust's monomorphized `SmallRng`
