@@ -212,3 +212,29 @@ fn consumeToken(rest: *[]const u8, token: []const u8) bool {
     rest.* = s;
     return true;
 }
+
+test "containsSymbol uses identifier boundaries" {
+    try std.testing.expect(containsSymbol("alpha beta gamma", "beta"));
+    try std.testing.expect(!containsSymbol("alphabet betamax gamma", "beta"));
+    try std.testing.expect(!containsSymbol("alpha_beta gamma", "alpha"));
+    try std.testing.expect(containsSymbol("`alpha`", "alpha"));
+}
+
+test "containsNestedSymbol accepts dotted and generic-parent documentation" {
+    try std.testing.expect(containsNestedSymbol("Sampler.init", "Sampler", "init"));
+    try std.testing.expect(containsNestedSymbol("Sampler(u32).init", "Sampler", "init"));
+    try std.testing.expect(!containsNestedSymbol("Sampler(u32).initializer", "Sampler", "init"));
+}
+
+test "public symbol parsing handles functions, constants, and inline functions" {
+    try std.testing.expectEqualStrings("sample", publicSymbolName("pub fn sample() void {").?);
+    try std.testing.expectEqualStrings("sampleFast", publicSymbolName("pub inline fn sampleFast() void {").?);
+    try std.testing.expectEqualStrings("Value", publicSymbolName("pub const Value = u64;").?);
+    try std.testing.expect(publicSymbolName("const Private = u64;") == null);
+}
+
+test "public type parsing tracks structs and generic type factories" {
+    try std.testing.expectEqualStrings("Sampler", publicTypeName("pub const Sampler = struct {").?);
+    try std.testing.expectEqualStrings("Choice", publicTypeName("pub fn Choice(comptime T: type) type {").?);
+    try std.testing.expect(publicTypeName("pub const value = 1;") == null);
+}

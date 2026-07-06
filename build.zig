@@ -1021,7 +1021,18 @@ pub fn build(b: *std.Build) void {
     const run_apicheck = b.addRunArtifact(apicheck);
     if (b.args) |args| run_apicheck.addArgs(args);
 
+    const apicheck_tests = b.addTest(.{
+        .name = "alea-apicheck-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/apicheck.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_apicheck_tests = b.addRunArtifact(apicheck_tests);
+
     const apicheck_step = b.step("apicheck", "Check public API reference coverage");
+    apicheck_step.dependOn(&run_apicheck_tests.step);
     apicheck_step.dependOn(&run_apicheck.step);
 
     const examplecheck_mod = b.createModule(.{
@@ -1165,7 +1176,7 @@ pub fn build(b: *std.Build) void {
     runtimecheck_step.dependOn(&run_runtimecheck.step);
 
     const doccheck_step = b.step("doccheck", "Run documentation, catalog, and roadmap coverage checks");
-    doccheck_step.dependOn(&run_apicheck.step);
+    doccheck_step.dependOn(apicheck_step);
     doccheck_step.dependOn(&run_examplecheck.step);
     doccheck_step.dependOn(toolingcheck_step);
     doccheck_step.dependOn(&run_readmecheck.step);
