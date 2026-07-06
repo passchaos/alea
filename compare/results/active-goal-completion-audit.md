@@ -536,7 +536,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M495 root one-shot caller-owned iterator sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m495-root-one-shot-iterator-into-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned iterator sample buffers directly. |
 | S4-M496 root one-shot fixed-size iterator sample arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m496-root-one-shot-iterator-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size iterator sample arrays directly. |
 | S4-M497 root one-shot weighted iterator sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m497-root-one-shot-weighted-iterator-sampling-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate weighted iterator samples directly. |
-| S4-M498 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M498 root one-shot caller-owned weighted iterator sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m498-root-one-shot-weighted-iterator-into-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned weighted iterator sample buffers directly. |
+| S4-M499 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1289,6 +1290,9 @@ it is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 S4-M497 additionally adds root one-shot weighted iterator sampling; it is
 API ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M498 additionally adds root one-shot caller-owned weighted iterator sampling;
+it is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

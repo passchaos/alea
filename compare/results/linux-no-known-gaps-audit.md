@@ -1745,3 +1745,9 @@ S4-M497 adds root one-shot weighted iterator sampling
 (`compare/results/s4-m497-root-one-shot-weighted-iterator-sampling-helpers.md`):
 system-entropy callers can now allocate weighted iterator samples directly from
 the root API while S4-M11 remains blocked.
+
+
+S4-M498 adds root one-shot caller-owned weighted iterator sampling
+(`compare/results/s4-m498-root-one-shot-weighted-iterator-into-helpers.md`):
+system-entropy callers can now fill caller-owned weighted iterator sample buffers
+directly from the root API while S4-M11 remains blocked.

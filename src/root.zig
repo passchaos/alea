@@ -1003,6 +1003,22 @@ pub fn sampleIteratorWeightedChecked(comptime T: type, io: std.Io, allocator: st
     return try seq.sampleIteratorWeightedChecked(allocator, random_source, T, iterator, amount);
 }
 
+pub fn sampleIteratorWeightedInto(comptime T: type, io: std.Io, iterator: anytype, out: []T, scratch_keys: []f64) !usize {
+    if (out.len == 0) return 0;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleIteratorWeightedInto(random_source, T, iterator, out, scratch_keys);
+}
+
+pub fn sampleIteratorWeightedIntoChecked(comptime T: type, io: std.Io, iterator: anytype, out: []T, scratch_keys: []f64) !void {
+    if (out.len == 0) return;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.sampleIteratorWeightedIntoChecked(random_source, T, iterator, out, scratch_keys);
+}
+
 pub fn weightedIndex(io: std.Io, weights: []const f64) !?usize {
     switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
         .empty => return null,
@@ -3507,6 +3523,17 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), weighted_sample_empty_out.len);
     var weighted_sample_entropy = WeightedIter{ .items = &weighted_entropy_entries };
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_entropy, 1));
+    var weighted_into_empty = WeightedIter{ .items = &weighted_entropy_entries };
+    var weighted_into_empty_out: [0]u8 = .{};
+    var weighted_into_empty_keys: [0]f64 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleIteratorWeightedInto(u8, failing, &weighted_into_empty, &weighted_into_empty_out, &weighted_into_empty_keys));
+    var weighted_into_short_scratch = WeightedIter{ .items = &weighted_entropy_entries };
+    var weighted_into_out: [1]u8 = undefined;
+    var weighted_into_bad_keys: [0]f64 = .{};
+    try std.testing.expectError(error.LengthMismatch, sampleIteratorWeightedInto(u8, failing, &weighted_into_short_scratch, &weighted_into_out, &weighted_into_bad_keys));
+    var weighted_into_entropy = WeightedIter{ .items = &weighted_entropy_entries };
+    var weighted_into_keys: [1]f64 = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeightedInto(u8, failing, &weighted_into_entropy, &weighted_into_out, &weighted_into_keys));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
     var weighted_one: [1]?usize = undefined;
