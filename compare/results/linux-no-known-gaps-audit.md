@@ -1329,3 +1329,7 @@ S4-M420 records a concise current local Rust comparison snapshot
 (`compare/results/s4-m420-current-rand-status.md`) summarizing the local
 `rand`/`rand_distr` baseline, latest `validate-local` evidence, no-known-gap
 finding, and S4-M11 blocker state.
+
+S4-M421 exposes that current comparison snapshot from README
+(`compare/results/s4-m421-readme-current-rand-status.md`) so the latest local
+`rand`/`rand_distr` status is easy to find while S4-M11 remains blocked.

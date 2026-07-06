@@ -12,6 +12,7 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "docs/tooling.md", .reason = "build/tooling catalog discovery" },
     .{ .token = "compare/results/core-rand-coverage.md", .reason = "living roadmap discovery" },
     .{ .token = "compare/results/performance-triage.md", .reason = "performance evidence discovery" },
+    .{ .token = "compare/results/s4-m420-current-rand-status.md", .reason = "current local rand comparison status discovery" },
     .{ .token = "zig build test", .reason = "unit/documentation validation command" },
     .{ .token = "zig build apicheck", .reason = "API reference checker command" },
     .{ .token = "zig build examplecheck", .reason = "examples catalog checker command" },
@@ -66,6 +67,7 @@ const required_files = [_][]const u8{
     "docs/tooling.md",
     "compare/results/core-rand-coverage.md",
     "compare/results/performance-triage.md",
+    "compare/results/s4-m420-current-rand-status.md",
 };
 
 fn hasRequiredToken(readme: []const u8, required: RequiredToken) bool {
