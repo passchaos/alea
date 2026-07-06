@@ -1573,3 +1573,9 @@ S4-M469 updates `rand-status-json` so `latest_validate_local_evidence` points to
 `compare/results/s4-m469-latest-validate-local-evidence-pointer.md`; this keeps
 the script-friendly status pointer current with checked-in local validation
 evidence while S4-M11 remains blocked.
+
+
+S4-M470 synchronizes S4-M11 blocker evidence with the S4-M469 latest-evidence
+pointer (`compare/results/s4-m470-blocker-latest-evidence-pointer-sync.md`),
+keeping the blocker audit current with the script-friendly validate-local
+evidence path while S4-M11 remains blocked.
