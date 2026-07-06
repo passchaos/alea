@@ -1468,3 +1468,9 @@ S4-M448 refreshes validate-local evidence after adding
 the aggregate passes with schema-version, text/JSON/self-test status output,
 Rust smoke/parser tests, surfacecheck, and runtimecheck while S4-M11 remains
 blocked.
+
+S4-M449 synchronizes S4-M11 blocker evidence after the schema-version aggregate
+refresh
+(`compare/results/s4-m449-blocker-rand-status-schema-version-sync.md`), keeping
+the blocker audit current with S4-M448 `validate-local` output while S4-M11
+remains blocked.
