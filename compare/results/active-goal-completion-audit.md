@@ -353,7 +353,8 @@ complete.
 | S4-M330 core-guide runtimecheck runner list | `docs/core-guide.md`, `compare/results/s4-m330-core-guide-runtimecheck.md` | Closed for the current bar: the core guide now names runtimecheck's required tools and exact S4-M11 opportunity runner set. |
 | S4-M331 runtimecheck empty PATH segment test | `tools/runtimecheck.zig`, `compare/results/s4-m331-runtimecheck-empty-path.md` | Closed for the current bar: runtimecheck now tests that empty PATH segments normalize to the current directory while non-empty segments are preserved. |
 | S4-M332 README validate-local prose | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m332-readme-validate-local-prose.md` | Closed for the current bar: README now explains `validate-local` as the Linux-first local comparison aggregate and readmecheck guards that prose. |
-| S4-M333 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M333 runtimecheck static QEMU names | `tools/runtimecheck.zig`, `docs/tooling.md`, `docs/core-guide.md`, `compare/results/s4-m333-runtimecheck-static-qemu.md` | Closed for the current bar: runtimecheck now treats `qemu-aarch64-static`, `qemu-riscv64-static`, and `qemu-x86_64-static` as opportunity runners, and docs/evidence reflect ten current opportunity names. |
+| S4-M334 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -605,6 +606,8 @@ long-term objective.
 S4-M332 additionally documents `validate-local` usage in README prose; it is a
 documentation/tooling improvement and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M333 additionally broadens runtimecheck's QEMU opportunity names to include
+static binaries; it does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

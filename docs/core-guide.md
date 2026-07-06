@@ -993,8 +993,9 @@ declarations/re-exports against those manifests; override the default local
 paths with `ALEA_RAND_ROOT`, `ALEA_RAND_CORE_ROOT`, or `ALEA_RAND_DISTR_ROOT`.
 Run `zig build runtimecheck` to refresh S4-M11 runtime-runner availability: it
 requires the current local `node`, `cargo`, and `rustc` tools and fails if any
-S4-M11 opportunity runner appears (`qemu-aarch64`, `qemu-riscv64`,
-`qemu-x86_64`, `wine`, `wine64`, `wasmtime`, or `wasmer`), prompting a
+S4-M11 opportunity runner appears (`qemu-aarch64`, `qemu-aarch64-static`,
+`qemu-riscv64`, `qemu-riscv64-static`, `qemu-x86_64`,
+`qemu-x86_64-static`, `wine`, `wine64`, `wasmtime`, or `wasmer`), prompting a
 blocker-audit refresh.
 
 PractRand reports are stored under `compare/results/`.

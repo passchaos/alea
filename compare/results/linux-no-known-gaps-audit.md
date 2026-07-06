@@ -847,3 +847,7 @@ S4-M331 adds focused runtimecheck coverage
 S4-M332 documents `validate-local` usage in README prose
 (`compare/results/s4-m332-readme-validate-local-prose.md`) and guards the
 explanation with `readmecheck`.
+S4-M333 expands runtimecheck opportunity-runner detection
+(`compare/results/s4-m333-runtimecheck-static-qemu.md`) to include static QEMU
+binary names (`qemu-aarch64-static`, `qemu-riscv64-static`, and
+`qemu-x86_64-static`), with current opportunity count remaining zero found.

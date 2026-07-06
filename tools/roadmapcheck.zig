@@ -328,6 +328,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M330", .path = "compare/results/s4-m330-core-guide-runtimecheck.md" },
     .{ .milestone = "S4-M331", .path = "compare/results/s4-m331-runtimecheck-empty-path.md" },
     .{ .milestone = "S4-M332", .path = "compare/results/s4-m332-readme-validate-local-prose.md" },
+    .{ .milestone = "S4-M333", .path = "compare/results/s4-m333-runtimecheck-static-qemu.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -335,7 +336,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M333",
+    "S4-M334",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -343,7 +344,10 @@ const required_tokens = [_][]const u8{
 const blocker_tokens = [_][]const u8{
     "exact/default-compatible dense SIMD",
     "qemu-aarch64",
+    "qemu-aarch64-static",
     "qemu-riscv64",
+    "qemu-riscv64-static",
+    "qemu-x86_64-static",
     "wine",
     "wasmtime",
     "wasmer",
@@ -351,7 +355,7 @@ const blocker_tokens = [_][]const u8{
     "surfacecheck local rand",
     "zig build validate-local",
     "zig build runtimecheck",
-    "runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=7",
+    "runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=10",
     "runtimecheck ok: no additional runtime runner available",
     "No new unblocked public-surface gap",
     "Do not call `update_goal(status=complete)`",
@@ -466,12 +470,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "local Rust public-surface manifest", local_rand_manifest, local_rand_manifest_tokens[0..], &missing);
     try checkManifestTokens(stderr, "local rand_distr public-surface manifest", local_rand_distr_manifest, local_rand_distr_manifest_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M333 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M333 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M334 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M334 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M333 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M333 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M334 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M334 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {

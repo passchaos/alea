@@ -13,7 +13,7 @@ that earlier evidence file with the current checker output.
 `compare/results/s4-m321-runtimecheck.md` now includes:
 
 ```text
-runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=7
+runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=10
 ```
 
 before the final `runtimecheck ok` line.

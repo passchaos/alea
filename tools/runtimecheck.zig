@@ -8,8 +8,11 @@ const required_tools = [_][]const u8{
 
 const opportunity_tools = [_][]const u8{
     "qemu-aarch64",
+    "qemu-aarch64-static",
     "qemu-riscv64",
+    "qemu-riscv64-static",
     "qemu-x86_64",
+    "qemu-x86_64-static",
     "wine",
     "wine64",
     "wasmtime",

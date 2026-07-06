@@ -33,13 +33,16 @@ runtimecheck required node: found /home/passchaos/.pixi/bin/node
 runtimecheck required cargo: found /home/passchaos/.cargo/bin/cargo
 runtimecheck required rustc: found /home/passchaos/.cargo/bin/rustc
 runtimecheck opportunity qemu-aarch64: missing
+runtimecheck opportunity qemu-aarch64-static: missing
 runtimecheck opportunity qemu-riscv64: missing
+runtimecheck opportunity qemu-riscv64-static: missing
 runtimecheck opportunity qemu-x86_64: missing
+runtimecheck opportunity qemu-x86_64-static: missing
 runtimecheck opportunity wine: missing
 runtimecheck opportunity wine64: missing
 runtimecheck opportunity wasmtime: missing
 runtimecheck opportunity wasmer: missing
-runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=7
+runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=10
 runtimecheck ok: no additional runtime runner available
 ```
 
