@@ -154,13 +154,15 @@ The plain step names below are what the catalog checker tracks.
 | --- | --- |
 | `zig build stream` | Run stream helper tests, then write raw RNG bytes to stdout for external statistical tools, for example `zig build stream -- --engine fast --bytes 1048576`. |
 | `zig build practrand-dry-run` | Print the default PractRand stream pipeline without requiring `RNG_test`. |
+| `zig build practrand-self-test` | Run PractRand wrapper self-tests for dry-run defaults, `PRACTRAND_BIN`, and invalid argument counts without requiring `RNG_test`. |
 | `zig build repro` | Run repro helper tests, then print deterministic reproducibility snapshots. |
 
 `tools/practrand.sh` wraps `zig build stream` for PractRand runs and writes
 checked-in evidence under `compare/results/` when a report is accepted. Use
 `tools/practrand.sh --dry-run` to verify the exact stream and `RNG_test stdin64`
-command without requiring PractRand, and set `PRACTRAND_BIN` when the executable
-is not named `RNG_test`.
+command without requiring PractRand, run `tools/practrand.sh --self-test` or
+`zig build practrand-self-test` to self-test wrapper command construction without
+`RNG_test`, and set `PRACTRAND_BIN` when the executable name differs.
 
 ## Checked-In Tool Files
 
@@ -198,7 +200,7 @@ new helpers that need documentation.
 | `tools/pert_probe.zig` | PERT special-case performance probe. |
 | `tools/poisson_probe.zig` | Poisson performance probe. |
 | `tools/power_function_probe.zig` | PowerFunction performance probe. |
-| `tools/practrand.sh` | PractRand wrapper for accepted external statistical reports, with `--dry-run` and `PRACTRAND_BIN` support. |
+| `tools/practrand.sh` | PractRand wrapper for accepted external statistical reports, with `--dry-run`, `--self-test`, and `PRACTRAND_BIN` support. |
 | `tools/profilecheck.zig` | Accepted vector profile checker with focused helper tests. |
 | `tools/profilelongcheck.zig` | Accepted vector profile long-sweep checker with focused helper tests. |
 | `tools/profilestresscheck.zig` | Accepted vector profile multi-seed stress checker with focused helper tests. |

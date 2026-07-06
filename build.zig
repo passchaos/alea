@@ -1387,6 +1387,10 @@ pub fn build(b: *std.Build) void {
     const practrand_dry_run_step = b.step("practrand-dry-run", "Print the PractRand stream pipeline without running PractRand");
     practrand_dry_run_step.dependOn(&run_practrand_dry_run.step);
 
+    const run_practrand_self_test = b.addSystemCommand(&.{ "tools/practrand.sh", "--self-test" });
+    const practrand_self_test_step = b.step("practrand-self-test", "Run PractRand wrapper self-tests without RNG_test");
+    practrand_self_test_step.dependOn(&run_practrand_self_test.step);
+
     const distcheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/distcheck.zig"),
         .target = target,

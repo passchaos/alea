@@ -1156,3 +1156,8 @@ S4-M385 synchronizes S4-M11 blocker evidence
 comparison benchmark gates in `validate-local`, so blocker audits retain
 `rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, and smoke
 override coverage while S4-M11 remains blocked.
+
+S4-M386 adds PractRand wrapper self-tests
+(`compare/results/s4-m386-practrand-self-test.md`) so default dry-run, custom
+`PRACTRAND_BIN`, and invalid argument-count handling are validated without
+`RNG_test` while S4-M11 remains blocked.

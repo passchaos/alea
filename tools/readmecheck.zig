@@ -42,6 +42,8 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "cross-target compile checks, WASI unit", .reason = "validate-all component explanation" },
     .{ .token = "tools/practrand.sh --dry-run", .reason = "PractRand dry-run command" },
     .{ .token = "zig build practrand-dry-run", .reason = "PractRand dry-run build step" },
+    .{ .token = "tools/practrand.sh --self-test", .reason = "PractRand wrapper self-test command" },
+    .{ .token = "zig build practrand-self-test", .reason = "PractRand wrapper self-test build step" },
     .{ .token = "PRACTRAND_BIN", .reason = "custom PractRand binary guidance" },
     .{ .token = "zig build run-basic", .reason = "runnable example entry point" },
     .{ .token = "zig build examples", .reason = "aggregate examples command" },
@@ -140,6 +142,14 @@ test "required-token helper covers PractRand dry-run guidance" {
         .token = "zig build practrand-dry-run",
         .reason = "PractRand dry-run build step",
     };
+    const self_test = RequiredToken{
+        .token = "tools/practrand.sh --self-test",
+        .reason = "PractRand wrapper self-test command",
+    };
+    const self_test_step = RequiredToken{
+        .token = "zig build practrand-self-test",
+        .reason = "PractRand wrapper self-test build step",
+    };
     const binary = RequiredToken{
         .token = "PRACTRAND_BIN",
         .reason = "custom PractRand binary guidance",
@@ -148,10 +158,14 @@ test "required-token helper covers PractRand dry-run guidance" {
     const text =
         \\sh tools/practrand.sh --dry-run fast 1048576
         \\zig build practrand-dry-run
+        \\tools/practrand.sh --self-test
+        \\zig build practrand-self-test
         \\set PRACTRAND_BIN when the executable is not named RNG_test
     ;
     try std.testing.expect(hasRequiredToken(text, dry_run));
     try std.testing.expect(hasRequiredToken(text, build_step));
+    try std.testing.expect(hasRequiredToken(text, self_test));
+    try std.testing.expect(hasRequiredToken(text, self_test_step));
     try std.testing.expect(hasRequiredToken(text, binary));
 }
 

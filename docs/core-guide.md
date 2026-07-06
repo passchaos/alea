@@ -986,7 +986,9 @@ zig build -Doptimize=ReleaseFast wasi-profilecheck
 zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/alea.bin
 sh tools/practrand.sh fast 1073741824
 sh tools/practrand.sh --dry-run fast 1048576
+tools/practrand.sh --self-test
 zig build practrand-dry-run
+zig build practrand-self-test
 ```
 
 Use `zig build validate` for broad native checks before ordinary local changes.
@@ -1017,7 +1019,7 @@ S4-M11 opportunity runner appears (`qemu-aarch64`, `qemu-aarch64-static`,
 `qemu-x86_64-static`, `wine`, `wine64`, `wasmtime`, or `wasmer`), prompting a
 blocker-audit refresh.
 
-Use `tools/practrand.sh --dry-run` to verify the exact `zig build stream | RNG_test stdin64` pipeline without requiring PractRand, and set `PRACTRAND_BIN` when the executable name differs. PractRand reports are stored under `compare/results/`.
+Use `tools/practrand.sh --dry-run` to verify the exact `zig build stream | RNG_test stdin64` pipeline without requiring PractRand, run `tools/practrand.sh --self-test` / `zig build practrand-self-test` to self-test wrapper command construction without `RNG_test`, and set `PRACTRAND_BIN` when the executable name differs. PractRand reports are stored under `compare/results/`.
 
 ## Benchmarks
 

@@ -249,12 +249,16 @@ const api_reference_validation_tokens = [_][]const u8{
 
 const practrand_doc_tokens = [_][]const u8{
     "tools/practrand.sh --dry-run",
+    "tools/practrand.sh --self-test",
+    "zig build practrand-self-test",
     "PRACTRAND_BIN",
 };
 
 const core_guide_practrand_tokens = [_][]const u8{
     "tools/practrand.sh --dry-run fast 1048576",
+    "tools/practrand.sh --self-test",
     "zig build practrand-dry-run",
+    "zig build practrand-self-test",
     "PRACTRAND_BIN",
 };
 
@@ -273,7 +277,9 @@ const core_guide_crosscheck_tokens = [_][]const u8{
 
 const api_reference_practrand_tokens = [_][]const u8{
     "tools/practrand.sh --dry-run fast 1048576",
+    "tools/practrand.sh --self-test",
     "zig build practrand-dry-run",
+    "zig build practrand-self-test",
 };
 
 const api_reference_crosscheck_tokens = [_][]const u8{
@@ -283,6 +289,8 @@ const api_reference_crosscheck_tokens = [_][]const u8{
 
 const practrand_script_tokens = [_][]const u8{
     "--dry-run",
+    "--self-test",
+    "practrand self-test ok",
     "PRACTRAND_BIN",
     "RNG_test",
     "zig build -Doptimize=ReleaseFast stream -- --engine",
@@ -291,6 +299,11 @@ const practrand_script_tokens = [_][]const u8{
 const practrand_dry_run_dependencies = [_][]const u8{
     "b.addSystemCommand(&.{ \"tools/practrand.sh\", \"--dry-run\", \"fast\", \"1048576\" })",
     "practrand_dry_run_step.dependOn(&run_practrand_dry_run.step)",
+};
+
+const practrand_self_test_dependencies = [_][]const u8{
+    "b.addSystemCommand(&.{ \"tools/practrand.sh\", \"--self-test\" })",
+    "practrand_self_test_step.dependOn(&run_practrand_self_test.step)",
 };
 
 const tooling_wasi_dry_run_tokens = [_][]const u8{
@@ -406,6 +419,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "wasi-profilelongcheck", .build_token = "\"profilelongcheck\", \"tools/profilelongcheck.zig\"" },
     .{ .name = "stream", .build_token = "b.step(\"stream\"" },
     .{ .name = "practrand-dry-run", .build_token = "b.step(\"practrand-dry-run\"" },
+    .{ .name = "practrand-self-test", .build_token = "b.step(\"practrand-self-test\"" },
     .{ .name = "distcheck", .build_token = "b.step(\"distcheck\"" },
     .{ .name = "distcheck-libc", .build_token = "b.step(\"distcheck-libc\"" },
     .{ .name = "profilecheck", .build_token = "b.step(\"profilecheck\"" },
@@ -630,6 +644,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (practrand_dry_run_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: practrand-dry-run missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (practrand_self_test_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: practrand-self-test missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }

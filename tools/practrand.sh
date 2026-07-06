@@ -4,6 +4,7 @@ set -eu
 usage() {
   cat >&2 <<'USAGE'
 usage: tools/practrand.sh [--dry-run] [ENGINE] [BYTES]
+       tools/practrand.sh --self-test
 
 Runs Alea raw RNG output through PractRand RNG_test stdin64.
 
@@ -17,12 +18,43 @@ Environment:
 Examples:
   tools/practrand.sh fast 1073741824
   tools/practrand.sh --dry-run default 1048576
+  tools/practrand.sh --self-test
 USAGE
 }
 
 DRY_RUN=0
 if [ "${1:-}" = "--help" ]; then
   usage
+  exit 0
+fi
+if [ "${1:-}" = "--self-test" ]; then
+  SELF_PATH=$0
+  DEFAULT_OUTPUT=$("$SELF_PATH" --dry-run)
+  if [ "$DEFAULT_OUTPUT" != "zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1073741824 | RNG_test stdin64" ]; then
+    echo "practrand self-test: default dry-run command mismatch" >&2
+    printf '%s\n' "$DEFAULT_OUTPUT" >&2
+    exit 1
+  fi
+
+  CUSTOM_OUTPUT=$(PRACTRAND_BIN=/tmp/RNG_test_custom "$SELF_PATH" --dry-run default 1048576)
+  if [ "$CUSTOM_OUTPUT" != "zig build -Doptimize=ReleaseFast stream -- --engine default --bytes 1048576 | /tmp/RNG_test_custom stdin64" ]; then
+    echo "practrand self-test: custom dry-run command mismatch" >&2
+    printf '%s\n' "$CUSTOM_OUTPUT" >&2
+    exit 1
+  fi
+
+  if "$SELF_PATH" --dry-run fast 1 extra >/tmp/alea-practrand-self-test.out 2>&1; then
+    echo "practrand self-test: invalid argument count unexpectedly succeeded" >&2
+    exit 1
+  fi
+  grep -Fq "usage: tools/practrand.sh" /tmp/alea-practrand-self-test.out || {
+    echo "practrand self-test: invalid argument usage output mismatch" >&2
+    cat /tmp/alea-practrand-self-test.out >&2
+    exit 1
+  }
+  rm -f /tmp/alea-practrand-self-test.out
+
+  echo "practrand self-test ok"
   exit 0
 fi
 if [ "${1:-}" = "--dry-run" ]; then
