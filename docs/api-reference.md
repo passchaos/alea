@@ -115,6 +115,7 @@ command matrix evidence.
   `weightedIndexU32By`, `weightedIndexU32ByChecked`,
   `fillWeightedIndexBy`, `fillWeightedIndexByChecked`,
   `fillWeightedIndexU32By`, `fillWeightedIndexU32ByChecked`,
+  `weightedIndexBatchBy`, `weightedIndexBatchByChecked`,
   `weightedIndexU32ByIndex`, `weightedIndexU32ByIndexChecked`,
   `fillWeightedIndexByIndex`, `fillWeightedIndexByIndexChecked`,
   `fillWeightedIndexU32ByIndex`, `fillWeightedIndexU32ByIndexChecked`,

@@ -2011,3 +2011,9 @@ S4-M544 adds root item-accessor weighted `u32` index fill helpers
 system-entropy callers can now fill caller-owned compact `u32` weighted index
 buffers directly from an item slice and comptime item-weight accessor from the
 root API while S4-M11 remains blocked.
+
+S4-M545 adds root item-accessor weighted `usize` index batch helpers
+(`compare/results/s4-m545-root-weighted-by-batch-helpers.md`): system-entropy
+callers can now allocate repeated weighted index batches directly from an item
+slice and comptime item-weight accessor from the root API while S4-M11 remains
+blocked.
