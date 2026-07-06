@@ -1280,3 +1280,7 @@ S4-M410 documents direct README discovery for the Node WASI runner dry-run
 (`compare/results/s4-m410-readme-direct-wasi-dry-run.md`) so users can run
 `node tools/run_wasi_test.js --dry-run <test.wasm>` without the build graph
 while S4-M11 remains blocked.
+
+S4-M411 documents WASI runner dry-run help
+(`compare/results/s4-m411-wasi-dry-run-help.md`) so `tools/run_wasi_test.js
+--help` explains no-wasm argv validation while S4-M11 remains blocked.

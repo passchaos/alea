@@ -6,6 +6,7 @@ const { spawnSync } = require('node:child_process');
 function usage() {
   console.error('usage: run_wasi_test.js [--dry-run] <test.wasm> [args...]');
   console.error('       run_wasi_test.js --self-test');
+  console.error('       --dry-run prints WASI argv without reading or executing wasm');
   console.error('       --self-test validates dry-run and missing-argument paths without wasm');
 }
 
