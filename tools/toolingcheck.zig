@@ -184,6 +184,11 @@ const practrand_dry_run_dependencies = [_][]const u8{
     "practrand_dry_run_step.dependOn(&run_practrand_dry_run.step)",
 };
 
+const tooling_wasi_dry_run_tokens = [_][]const u8{
+    "node tools/run_wasi_test.js --dry-run <test.wasm> [args...]",
+    "verify WASI runner arguments without reading or executing a wasm file",
+};
+
 const wasi_runner_tokens = [_][]const u8{
     "--dry-run",
     "--help",
@@ -487,6 +492,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (practrand_script_tokens) |token| {
         if (std.mem.indexOf(u8, practrand_source, token) == null) {
             try stderr.print("toolingcheck: tools/practrand.sh missing token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (tooling_wasi_dry_run_tokens) |token| {
+        if (std.mem.indexOf(u8, tooling, token) == null) {
+            try stderr.print("toolingcheck: docs/tooling.md missing WASI dry-run token `{s}`\n", .{token});
             missing += 1;
         }
     }

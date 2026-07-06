@@ -387,7 +387,8 @@ complete.
 | S4-M364 README WASI dry-run guard | `tools/readmecheck.zig`, `README.md`, `compare/results/s4-m364-readme-wasi-dry-run-guard.md` | Closed for the current bar: `readmecheck` now guards README discovery of `zig build wasi-dry-run`. |
 | S4-M365 core-guide WASI dry-run guidance | `docs/core-guide.md`, `tools/toolingcheck.zig`, `compare/results/s4-m365-core-guide-wasi-dry-run.md` | Closed for the current bar: the core guide now documents WASI dry-run command usage, and toolingcheck guards the tokens. |
 | S4-M366 README WASI dry-run prose | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m366-readme-wasi-dry-run-prose.md` | Closed for the current bar: README now explains `wasi-dry-run` usage, and readmecheck guards the prose. |
-| S4-M367 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M367 tooling WASI dry-run prose guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m367-tooling-wasi-dry-run-prose.md` | Closed for the current bar: `toolingcheck` now guards the tooling catalog's WASI dry-run prose. |
+| S4-M368 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -748,6 +749,9 @@ with `toolingcheck`; it is an evidence/tooling improvement and does not resolve
 S4-M11 or complete the long-term objective.
 S4-M366 additionally documents WASI dry-run usage in README prose and guards it
 with `readmecheck`; it is an evidence/tooling improvement and does not resolve
+S4-M11 or complete the long-term objective.
+S4-M367 additionally strengthens `toolingcheck` so docs/tooling keeps WASI
+dry-run prose visible; it is an evidence/tooling improvement and does not resolve
 S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

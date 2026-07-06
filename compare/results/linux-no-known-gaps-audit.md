@@ -1049,3 +1049,9 @@ S4-M366 documents WASI dry-run usage in README prose
 (`compare/results/s4-m366-readme-wasi-dry-run-prose.md`) and guards the
 `zig build wasi-dry-run` no-wasm-execution explanation with `readmecheck`,
 improving portability validation discoverability while S4-M11 remains blocked.
+
+S4-M367 strengthens tooling-catalog WASI dry-run prose
+(`compare/results/s4-m367-tooling-wasi-dry-run-prose.md`) by making
+`toolingcheck` require the Node WASI dry-run command and no-read/no-execute
+explanation in `docs/tooling.md`, improving portability validation discoverability
+while S4-M11 remains blocked.
