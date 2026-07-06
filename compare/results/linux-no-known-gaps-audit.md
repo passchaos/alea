@@ -1349,3 +1349,8 @@ S4-M424 guards the current comparison snapshot
 `compare/results/s4-m420-current-rand-status.md` keeps its baseline,
 validate-local, no-new-gap, and S4-M11 blocker tokens while S4-M11 remains
 blocked.
+
+S4-M425 adds a `rand-status` status printer
+(`compare/results/s4-m425-rand-status-step.md`) so `zig build rand-status`
+prints the current local `rand`/`rand_distr` comparison status while S4-M11
+remains blocked.

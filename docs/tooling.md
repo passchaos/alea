@@ -32,6 +32,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build wasi-report` | Run the chained wasm32-wasi repro/statcheck/distcheck/profile checks through Node's WASI runtime. |
 | `zig build validate` | Run native unit, example, catalog, API, statistical, distribution, libc, accepted-profile, and no-external PractRand-wrapper self-test checks. |
 | `zig build validate-local` | Run native validation plus the Rust comparison benchmark helper tests, a tiny Rust comparison smoke run, smoke-wrapper self-tests, local Rust `rand` / `rand_core` / `rand_distr` public-surface drift checker, and runtime-runner availability checker. |
+| `zig build rand-status` | Run rand-status helper tests, then print the current local `rand` / `rand_distr` comparison status summary and status-file path. |
 | `zig build validate-all` | Run native validation plus cross-target compile checks, WASI unit execution, WASI dry/self tests, and the chained WASI report. |
 
 `zig build doccheck` depends on the full `zig build apicheck` step including its
@@ -214,6 +215,7 @@ new helpers that need documentation.
 | `tools/repro.zig` | Reproducibility snapshot printer with focused helper tests. |
 | `tools/readmecheck.zig` | README discovery and quick-start token checker. |
 | `tools/rand_bench_smoke.sh` | Tiny filtered Rust comparison benchmark smoke-test wrapper with `--dry-run` command preview, `--self-test` parser/env coverage, and `ALEA_RAND_BENCH_MANIFEST` / `ALEA_RAND_BENCH_EXPECTED_ROW` overrides. |
+| `tools/rand_status.zig` | Current local `rand` / `rand_distr` comparison status printer with helper tests. |
 | `tools/roadmapcheck.zig` | Roadmap, active-audit evidence, public-surface manifest, and S4-M11 blocker-token checker with focused helper tests. |
 | `tools/runtimecheck.zig` | S4-M11 runtime-runner availability checker. |
 | `tools/run_wasi_test.js` | Node WASI runner used by WASI build steps, with `--dry-run` argument reporting and `--self-test` coverage for dry-run and missing-argument paths without wasm. |

@@ -27,6 +27,7 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build validate-local", .reason = "native plus local rand validation command" },
     .{ .token = "comparison work: it runs native validation plus `rand-bench-test`", .reason = "validate-local component explanation" },
     .{ .token = "`rand-bench-smoke-self-test`, `surfacecheck`, and `runtimecheck`", .reason = "validate-local smoke/self-test explanation" },
+    .{ .token = "zig build rand-status", .reason = "current local rand status command" },
     .{ .token = "zig build rand-bench-test", .reason = "Rust comparison benchmark helper-test command" },
     .{ .token = "zig build rand-bench-smoke", .reason = "Rust comparison benchmark smoke command" },
     .{ .token = "zig build rand-bench-smoke-dry-run", .reason = "Rust comparison benchmark smoke dry-run command" },

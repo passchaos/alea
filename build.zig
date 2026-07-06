@@ -1227,6 +1227,33 @@ pub fn build(b: *std.Build) void {
     roadmapcheck_step.dependOn(&run_roadmapcheck_tests.step);
     roadmapcheck_step.dependOn(&run_roadmapcheck.step);
 
+    const rand_status_mod = b.createModule(.{
+        .root_source_file = b.path("tools/rand_status.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const rand_status = b.addExecutable(.{
+        .name = "alea-rand-status",
+        .root_module = rand_status_mod,
+    });
+    const run_rand_status = b.addRunArtifact(rand_status);
+    if (b.args) |args| run_rand_status.addArgs(args);
+
+    const rand_status_tests = b.addTest(.{
+        .name = "alea-rand-status-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/rand_status.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_rand_status_tests = b.addRunArtifact(rand_status_tests);
+
+    const rand_status_step = b.step("rand-status", "Print current local rand/rand_distr comparison status");
+    rand_status_step.dependOn(&run_rand_status_tests.step);
+    rand_status_step.dependOn(&run_rand_status.step);
+
     const surfacecheck_mod = b.createModule(.{
         .root_source_file = b.path("tools/surfacecheck.zig"),
         .target = target,
