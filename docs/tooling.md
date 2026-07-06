@@ -45,7 +45,9 @@ validate` depends on `zig build examples`, `zig build doccheck`, the full
 profilecheck`, and `zig build practrand-self-test`. `zig build validate-local` adds `zig build rand-bench-test`, `zig build rand-bench-smoke`,
 `zig build rand-bench-smoke-self-test`, `zig build surfacecheck`, and
 `zig build runtimecheck` to native validation for
-this Linux-first local comparison environment. `zig build validate-all` adds `zig build crosscheck`,
+this Linux-first local comparison environment; see
+`compare/results/s4-m420-current-rand-status.md` for the current local `rand` /
+`rand_distr` comparison status. `zig build validate-all` adds `zig build crosscheck`,
 `zig build test-wasi`, `zig build wasi-dry-run`, `zig build
 wasi-self-test`, and `zig build wasi-report`.
 

@@ -1338,3 +1338,8 @@ S4-M422 exposes that current comparison snapshot from the core guide and API
 reference (`compare/results/s4-m422-guide-api-current-rand-status.md`) so
 detailed docs also point to the latest local `rand`/`rand_distr` status while
 S4-M11 remains blocked.
+
+S4-M423 exposes that current comparison snapshot from the tooling catalog
+(`compare/results/s4-m423-tooling-current-rand-status.md`) so validation/tooling
+docs also point to the latest local `rand`/`rand_distr` status while S4-M11
+remains blocked.

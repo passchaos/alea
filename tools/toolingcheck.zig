@@ -207,6 +207,12 @@ const validate_doc_tokens = [_][]const u8{
     "no-external PractRand-wrapper self-test checks",
 };
 
+const validate_local_status_tokens = [_][]const u8{
+    "compare/results/s4-m420-current-rand-status.md",
+    "current local `rand` /",
+    "`rand_distr` comparison status",
+};
+
 const validate_all_doc_tokens = [_][]const u8{
     "Run native validation plus cross-target compile checks, WASI unit execution",
     "WASI dry/self tests, and the chained WASI report",
@@ -781,6 +787,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (validate_doc_tokens) |token| {
         if (std.mem.indexOf(u8, tooling, token) == null) {
             try stderr.print("toolingcheck: docs/tooling.md missing validate row token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (validate_local_status_tokens) |token| {
+        if (std.mem.indexOf(u8, tooling, token) == null) {
+            try stderr.print("toolingcheck: docs/tooling.md missing validate-local status token `{s}`\n", .{token});
             missing += 1;
         }
     }
