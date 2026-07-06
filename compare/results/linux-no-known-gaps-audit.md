@@ -1547,3 +1547,8 @@ S4-M464 synchronizes S4-M11 blocker evidence after that blocker-audit aggregate
 refresh (`compare/results/s4-m464-blocker-blocker-audit-field-sync.md`), keeping
 the blocker audit current with S4-M463 `validate-local` output while S4-M11
 remains blocked.
+
+S4-M465 adds an explicit local-status link to `rand-status-json`
+(`compare/results/s4-m465-rand-status-local-status-field.md`) so scripts can
+distinguish the current status snapshot from the generic details path while
+S4-M11 remains blocked.

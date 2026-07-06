@@ -67,7 +67,8 @@ paths without invoking Rust tools. Current JSON fields are
 `validate_local_passes`, `public_surface`, `rust_comparison`, `runtime_runners`,
 `opportunity_runners_available`, `current_conclusion`,
 `no_known_unblocked_gap`, `remaining_blocker`, `s4_m11_blocked`, `details`,
-`blocker_audit`, and `latest_validate_local_evidence`; `details` points back to
+`local_rand_status`, `blocker_audit`, and `latest_validate_local_evidence`;
+`details` and `local_rand_status` point back to
 `compare/results/s4-m420-current-rand-status.md`, while
 `blocker_audit` points to `compare/results/s4-m11-blocker-audit.md`, and
 `latest_validate_local_evidence` points to the current validate-local evidence

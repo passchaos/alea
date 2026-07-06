@@ -218,7 +218,7 @@ const rand_status_doc_tokens = [_][]const u8{
     "`validate_local_passes`, `public_surface`, `rust_comparison`, `runtime_runners`",
     "`opportunity_runners_available`, `current_conclusion`",
     "`no_known_unblocked_gap`, `remaining_blocker`, `s4_m11_blocked`, `details`",
-    "`blocker_audit`, and `latest_validate_local_evidence`",
+    "`local_rand_status`, `blocker_audit`, and `latest_validate_local_evidence`",
     "tools/rand_status.zig",
 };
 
@@ -237,6 +237,7 @@ const rand_status_source_tokens = [_][]const u8{
     "\"no_known_unblocked_gap\"",
     "\"remaining_blocker\"",
     "\"s4_m11_blocked\"",
+    "\"local_rand_status\"",
     "\"blocker_audit\"",
     "compare/results/s4-m11-blocker-audit.md",
     "\"latest_validate_local_evidence\"",
