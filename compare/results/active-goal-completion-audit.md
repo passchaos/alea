@@ -425,7 +425,8 @@ complete.
 | S4-M402 PractRand self-test usage prose | `tools/practrand.sh`, `tools/toolingcheck.zig`, `compare/results/s4-m402-practrand-self-test-usage.md` | Closed for the current bar: PractRand wrapper help now explains no-`RNG_test` self-test semantics and toolingcheck guards it. |
 | S4-M403 WASI self-test usage prose | `tools/run_wasi_test.js`, `tools/toolingcheck.zig`, `compare/results/s4-m403-wasi-self-test-usage.md` | Closed for the current bar: WASI runner help explains no-wasm `--self-test` semantics and toolingcheck guards it. |
 | S4-M404 README WASI self-test prose guard | `README.md`, `tools/readmecheck.zig`, `compare/results/s4-m404-readme-wasi-self-test-guard.md` | Closed for the current bar: readmecheck guards README prose for no-wasm WASI runner self-test semantics. |
-| S4-M405 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M405 guide/API WASI self-test prose guards | `docs/core-guide.md`, `docs/api-reference.md`, `tools/toolingcheck.zig`, `compare/results/s4-m405-guide-api-wasi-self-test-guards.md` | Closed for the current bar: toolingcheck guards core-guide/API prose for no-wasm WASI runner self-test semantics. |
+| S4-M406 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -904,6 +905,9 @@ complete the long-term objective.
 S4-M404 additionally guards README prose for WASI runner self-test semantics; it
 is portability documentation reliability and does not resolve S4-M11 or complete
 the long-term objective.
+S4-M405 additionally guards core-guide/API prose for WASI runner self-test
+semantics; it is portability documentation reliability and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

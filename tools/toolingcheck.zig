@@ -272,6 +272,12 @@ const core_guide_validation_tokens = [_][]const u8{
     "dry/self tests",
 };
 
+const api_reference_wasi_tokens = [_][]const u8{
+    "zig build wasi-self-test",
+    "node tools/run_wasi_test.js --self-test",
+    "dry-run and missing-argument paths without wasm",
+};
+
 const api_reference_validation_tokens = [_][]const u8{
     "Use `zig build validate` for broad native API checks",
     "including `zig build practrand-self-test`",
@@ -307,6 +313,9 @@ const core_guide_practrand_tokens = [_][]const u8{
 const core_guide_wasi_tokens = [_][]const u8{
     "zig build wasi-dry-run",
     "node tools/run_wasi_test.js --dry-run <test.wasm>",
+    "zig build wasi-self-test",
+    "node tools/run_wasi_test.js --self-test",
+    "dry-run and missing-argument paths without wasm",
     "without reading or executing a",
     "wasm file",
 };
@@ -677,6 +686,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (api_reference_crosscheck_tokens) |token| {
         if (std.mem.indexOf(u8, api, token) == null) {
             try stderr.print("toolingcheck: docs/api-reference.md missing crosscheck token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (api_reference_wasi_tokens) |token| {
+        if (std.mem.indexOf(u8, api, token) == null) {
+            try stderr.print("toolingcheck: docs/api-reference.md missing WASI self-test token `{s}`\n", .{token});
             missing += 1;
         }
     }
