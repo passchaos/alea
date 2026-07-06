@@ -551,7 +551,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M510 root one-shot compact index-vector sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m510-root-one-shot-indexvec-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate compact `IndexVec` no-replacement samples directly. |
 | S4-M511 root one-shot weighted no-replacement compact index-vector sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m511-root-one-shot-weighted-no-replacement-indexvec-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate compact weighted no-replacement `IndexVec` samples directly. |
 | S4-M512 root one-shot no-replacement fixed-size index arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m512-root-one-shot-index-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size no-replacement index arrays directly. |
-| S4-M513 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M513 root one-shot no-replacement fixed-size value arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m513-root-one-shot-value-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size no-replacement value arrays directly. |
+| S4-M514 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1347,6 +1348,9 @@ S4-M511 additionally adds root one-shot weighted no-replacement compact IndexVec
 sampling; it is API ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M512 additionally adds root one-shot no-replacement fixed-size index arrays;
+it is API ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M513 additionally adds root one-shot no-replacement fixed-size value arrays;
 it is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 

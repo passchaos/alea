@@ -1826,3 +1826,8 @@ S4-M512 adds root one-shot no-replacement fixed-size index arrays
 (`compare/results/s4-m512-root-one-shot-index-array-helpers.md`):
 system-entropy callers can now produce fixed-size no-replacement usize and u32
 index arrays directly from the root API while S4-M11 remains blocked.
+
+S4-M513 adds root one-shot no-replacement fixed-size value arrays
+(`compare/results/s4-m513-root-one-shot-value-array-helpers.md`):
+system-entropy callers can now produce fixed-size no-replacement value arrays
+directly from the root API while S4-M11 remains blocked.

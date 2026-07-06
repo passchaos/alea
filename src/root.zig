@@ -750,6 +750,32 @@ pub fn sampleWithoutReplacementChecked(comptime T: type, io: std.Io, allocator: 
     return try random_source.sampleWithoutReplacementChecked(T, allocator, items, count);
 }
 
+pub fn sampleItemsArray(comptime T: type, io: std.Io, comptime N: usize, items: []const T) !?[N]T {
+    var out: [N]T = undefined;
+    if (N == 0) return out;
+    if (N > items.len) return null;
+    if (N == items.len) {
+        for (&out, 0..) |*slot, index| slot.* = items[index];
+        return out;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return seq.sampleItemsArray(random_source, T, N, items);
+}
+
+pub fn sampleItemsArrayChecked(comptime T: type, io: std.Io, comptime N: usize, items: []const T) ![N]T {
+    var out: [N]T = undefined;
+    if (N == 0) return out;
+    if (N > items.len) return error.InvalidParameter;
+    if (N == items.len) {
+        for (&out, 0..) |*slot, index| slot.* = items[index];
+        return out;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleItemsArrayChecked(random_source, T, N, items);
+}
+
 pub fn sampleIndexVec(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) !IndexVec {
     std.debug.assert(amount <= length);
     return try sampleIndexVecChecked(io, allocator, length, amount);
@@ -2925,6 +2951,10 @@ test "root random helpers use explicit system entropy" {
     defer std.testing.allocator.free(no_replacement_checked);
     try std.testing.expectEqual(@as(usize, 3), no_replacement_checked.len);
     for (no_replacement_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    const no_replacement_array = (try sampleItemsArray(u8, io, 3, &no_replacement_items)).?;
+    for (no_replacement_array) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    const no_replacement_array_checked = try sampleItemsArrayChecked(u8, io, 3, &no_replacement_items);
+    for (no_replacement_array_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
     const index_vec = try sampleIndexVec(io, std.testing.allocator, no_replacement_items.len, 3);
     defer index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 3), index_vec.len());
@@ -3532,6 +3562,12 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(all_without_replacement_checked);
     try std.testing.expectEqualSlices(u8, &sample_items, all_without_replacement_checked);
     try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
+    try std.testing.expect((try sampleItemsArray(u8, failing, 0, &sample_items)) != null);
+    try std.testing.expectEqual(@as(usize, 0), (try sampleItemsArrayChecked(u8, failing, 0, &sample_items)).len);
+    try std.testing.expectEqualSlices(u8, &sample_items, &(try sampleItemsArray(u8, failing, 3, &sample_items)).?);
+    try std.testing.expectEqualSlices(u8, &sample_items, &(try sampleItemsArrayChecked(u8, failing, 3, &sample_items)));
+    try std.testing.expectEqual(@as(?[4]u8, null), try sampleItemsArray(u8, failing, 4, &sample_items));
+    try std.testing.expectError(error.InvalidParameter, sampleItemsArrayChecked(u8, failing, 4, &sample_items));
     const empty_index_vec = try sampleIndexVec(failing, std.testing.allocator, 5, 0);
     defer empty_index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), empty_index_vec.len());
@@ -4176,6 +4212,8 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, partialShuffleTailSplit(u8, failing, &shuffle_pair, 1));
     try std.testing.expectError(error.EntropyUnavailable, sampleWithoutReplacement(u8, failing, std.testing.allocator, &sample_items, 1));
     try std.testing.expectError(error.EntropyUnavailable, sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, 1));
+    try std.testing.expectError(error.EntropyUnavailable, sampleItemsArray(u8, failing, 2, &sample_items));
+    try std.testing.expectError(error.EntropyUnavailable, sampleItemsArrayChecked(u8, failing, 2, &sample_items));
     try std.testing.expectError(error.EntropyUnavailable, sampleIndexVec(failing, std.testing.allocator, 5, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleIndexVecChecked(failing, std.testing.allocator, 5, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleArray(failing, 2, 5));
