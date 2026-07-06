@@ -1408,3 +1408,8 @@ S4-M436 adds a `rand-status` self-test
 (`compare/results/s4-m436-rand-status-self-test.md`) so text, JSON, and help
 status output are validated without Rust tools and through `validate-local`
 while S4-M11 remains blocked.
+
+S4-M437 refreshes validate-local evidence after adding `rand-status-self-test`
+(`compare/results/s4-m437-validate-local-after-rand-status-self-test.md`); the
+aggregate passes with text/JSON/self-test status output, Rust smoke/parser tests,
+surfacecheck, and runtimecheck while S4-M11 remains blocked.

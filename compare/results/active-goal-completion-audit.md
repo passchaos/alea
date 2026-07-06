@@ -457,7 +457,8 @@ complete.
 | S4-M434 S4-M11 blocker sync after rand-status-json validate-local | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m434-blocker-rand-status-json-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites fresh S4-M433 `validate-local` output including JSON status. |
 | S4-M435 `rand-status-json` schema documentation | `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m435-rand-status-json-schema.md` | Closed for the current bar: tooling docs list and guard the stable `rand-status-json` fields. |
 | S4-M436 `rand-status` self-test step | `tools/rand_status.zig`, `build.zig`, `README.md`, `docs/core-guide.md`, `docs/api-reference.md`, `docs/tooling.md`, `tools/readmecheck.zig`, `tools/toolingcheck.zig`, `compare/results/s4-m436-rand-status-self-test.md` | Closed for the current bar: `rand-status` can self-test text/JSON/help output and `validate-local` runs that step. |
-| S4-M437 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M437 validate-local refresh after rand-status self-test aggregate | `compare/results/s4-m437-validate-local-after-rand-status-self-test.md`, `compare/results/s4-m420-current-rand-status.md` | Closed for the current bar: `zig build validate-local` passed with `rand-status-self-test` included. |
+| S4-M438 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1032,6 +1033,9 @@ tooling documentation reliability and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M436 additionally adds a direct `rand-status` self-test and includes it in
 `validate-local`; it is local comparison tooling reliability and does not
+resolve S4-M11 or complete the long-term objective.
+S4-M437 additionally refreshes `validate-local` evidence after adding
+`rand-status-self-test` to the aggregate; it is validation evidence and does not
 resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
