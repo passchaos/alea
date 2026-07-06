@@ -1940,3 +1940,9 @@ S4-M532 adds root one-shot index-weighted value fill helpers
 system-entropy callers can now fill caller-owned value buffers from an item
 slice and comptime index-weight function directly from the root API while
 S4-M11 remains blocked.
+
+S4-M533 adds root one-shot index-weighted const-pointer fill helpers
+(`compare/results/s4-m533-root-weighted-const-ptr-by-index-fill-helpers.md`):
+system-entropy callers can now fill caller-owned const-pointer buffers from an
+item slice and comptime index-weight function directly from the root API while
+S4-M11 remains blocked.
