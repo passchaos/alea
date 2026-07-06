@@ -1811,3 +1811,8 @@ S4-M509 adds root one-shot weighted no-replacement fixed-size index arrays
 (`compare/results/s4-m509-root-one-shot-weighted-no-replacement-index-array-helpers.md`):
 system-entropy callers can now produce fixed-size weighted no-replacement usize
 and u32 index arrays directly from the root API while S4-M11 remains blocked.
+
+S4-M510 adds root one-shot compact IndexVec sampling
+(`compare/results/s4-m510-root-one-shot-indexvec-helpers.md`):
+system-entropy callers can now allocate compact IndexVec no-replacement samples
+directly from the root API while S4-M11 remains blocked.

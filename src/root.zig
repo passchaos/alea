@@ -17,6 +17,7 @@ pub const quality = @import("quality.zig");
 pub const SysRng = Rng.SysRng;
 pub const SysError = SysRng.Error;
 pub const WeightError = seq.WeightError;
+pub const IndexVec = seq.IndexVec;
 
 pub const SplitMix64 = @import("engines/splitmix64.zig");
 pub const Wyhash64 = @import("engines/wyhash64.zig");
@@ -747,6 +748,20 @@ pub fn sampleWithoutReplacementChecked(comptime T: type, io: std.Io, allocator: 
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return try random_source.sampleWithoutReplacementChecked(T, allocator, items, count);
+}
+
+pub fn sampleIndexVec(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) !IndexVec {
+    std.debug.assert(amount <= length);
+    return try sampleIndexVecChecked(io, allocator, length, amount);
+}
+
+pub fn sampleIndexVecChecked(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) !IndexVec {
+    if (amount == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
+    if (amount > length) return error.InvalidParameter;
+    if (amount == length and length <= 1024) return try rootIndexVecAll(allocator, length);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleIndexVecCheckedFrom(allocator, random_source, length, amount);
 }
 
 pub fn sampleIndices(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) ![]usize {
@@ -2325,6 +2340,17 @@ fn rootPositiveWeightState(comptime Weight: type, weights: []const Weight) !Root
     return state;
 }
 
+fn rootIndexVecAll(allocator: std.mem.Allocator, length: usize) !IndexVec {
+    if (length <= std.math.maxInt(u32)) {
+        const out = try allocator.alloc(u32, length);
+        for (out, 0..) |*item, index| item.* = @intCast(index);
+        return .{ .u32 = out };
+    }
+    const out = try allocator.alloc(usize, length);
+    for (out, 0..) |*item, index| item.* = index;
+    return .{ .usize = out };
+}
+
 const RootWeightedIndexState = union(enum) {
     empty,
     single: usize,
@@ -2817,6 +2843,16 @@ test "root random helpers use explicit system entropy" {
     defer std.testing.allocator.free(no_replacement_checked);
     try std.testing.expectEqual(@as(usize, 3), no_replacement_checked.len);
     for (no_replacement_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value) != null);
+    const index_vec = try sampleIndexVec(io, std.testing.allocator, no_replacement_items.len, 3);
+    defer index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 3), index_vec.len());
+    var index_vec_iter = index_vec.iter();
+    while (index_vec_iter.next()) |value| try std.testing.expect(value < no_replacement_items.len);
+    const index_vec_checked = try sampleIndexVecChecked(io, std.testing.allocator, no_replacement_items.len, 3);
+    defer index_vec_checked.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 3), index_vec_checked.len());
+    var index_vec_checked_iter = index_vec_checked.iter();
+    while (index_vec_checked_iter.next()) |value| try std.testing.expect(value < no_replacement_items.len);
     const weights = [_]f64{ 1, 2, 3, 4 };
     const weighted_index_value = (try weightedIndex(io, &weights)).?;
     try std.testing.expect(weighted_index_value < weights.len);
@@ -3396,6 +3432,25 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(all_without_replacement_checked);
     try std.testing.expectEqualSlices(u8, &sample_items, all_without_replacement_checked);
     try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
+    const empty_index_vec = try sampleIndexVec(failing, std.testing.allocator, 5, 0);
+    defer empty_index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 0), empty_index_vec.len());
+    const empty_index_vec_checked = try sampleIndexVecChecked(failing, std.testing.allocator, 5, 0);
+    defer empty_index_vec_checked.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 0), empty_index_vec_checked.len());
+    const all_index_vec = try sampleIndexVec(failing, std.testing.allocator, 3, 3);
+    defer all_index_vec.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 3), all_index_vec.len());
+    try std.testing.expectEqual(@as(usize, 0), all_index_vec.at(0));
+    try std.testing.expectEqual(@as(usize, 1), all_index_vec.at(1));
+    try std.testing.expectEqual(@as(usize, 2), all_index_vec.at(2));
+    const all_index_vec_checked = try sampleIndexVecChecked(failing, std.testing.allocator, 3, 3);
+    defer all_index_vec_checked.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 3), all_index_vec_checked.len());
+    try std.testing.expectEqual(@as(usize, 0), all_index_vec_checked.at(0));
+    try std.testing.expectEqual(@as(usize, 1), all_index_vec_checked.at(1));
+    try std.testing.expectEqual(@as(usize, 2), all_index_vec_checked.at(2));
+    try std.testing.expectError(error.InvalidParameter, sampleIndexVecChecked(failing, std.testing.allocator, 3, 4));
     const empty_sample_indices = try sampleIndices(failing, std.testing.allocator, 5, 0);
     defer std.testing.allocator.free(empty_sample_indices);
     try std.testing.expectEqual(@as(usize, 0), empty_sample_indices.len);
@@ -3990,6 +4045,8 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, partialShuffleTailSplit(u8, failing, &shuffle_pair, 1));
     try std.testing.expectError(error.EntropyUnavailable, sampleWithoutReplacement(u8, failing, std.testing.allocator, &sample_items, 1));
     try std.testing.expectError(error.EntropyUnavailable, sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, 1));
+    try std.testing.expectError(error.EntropyUnavailable, sampleIndexVec(failing, std.testing.allocator, 5, 2));
+    try std.testing.expectError(error.EntropyUnavailable, sampleIndexVecChecked(failing, std.testing.allocator, 5, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleIndices(failing, std.testing.allocator, 5, 2));
     var sample_indices_one: [1]usize = undefined;
     try std.testing.expectError(error.EntropyUnavailable, sampleIndicesInto(failing, 5, &sample_indices_one));

@@ -19,7 +19,7 @@ command matrix evidence.
   `ChaCha20Rng`, `StepRng`
 - Aliases: `DefaultPrng`, `FastPrng`, `HashPrng`, `ReproduciblePrng`,
   `ScalarPrng`, `SecurePrng`, `ChaCha12Rng`, `StdRng`, `SmallRng`, `SysRng`,
-  `SysError`, `WeightError`
+  `SysError`, `WeightError`, `IndexVec`
 - `rngs` namespace aliases: `rngs.StdRng`, `rngs.SmallRng`, `rngs.SysRng`,
   `rngs.SysError`, `rngs.ChaCha8Rng`, `rngs.ChaCha12Rng`,
   `rngs.ChaCha20Rng`, `rngs.Xoshiro128PlusPlus`,
@@ -53,7 +53,8 @@ command matrix evidence.
   `PartialShuffleTailSplit`, `partialShuffleSplit`, `partialShuffleSplitChecked`,
   `partialShuffleTail`, `partialShuffleTailChecked`, `partialShuffleTailSplit`,
   `partialShuffleTailSplitChecked`, `sampleWithoutReplacement`,
-  `sampleWithoutReplacementChecked`, `sampleIndices`, `sampleIndicesChecked`,
+  `sampleWithoutReplacementChecked`, `sampleIndexVec`, `sampleIndexVecChecked`,
+  `sampleIndices`, `sampleIndicesChecked`,
   `sampleIndicesInto`, `sampleIndicesIntoChecked`, `sampleIndicesU32`,
   `sampleIndicesU32Checked`, `sampleIndicesU32Into`,
   `sampleIndicesU32IntoChecked`, `sampleWeightedIndices`,
