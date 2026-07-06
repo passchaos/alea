@@ -1637,3 +1637,9 @@ S4-M479 adds root one-shot shuffle helpers
 (`compare/results/s4-m479-root-one-shot-shuffle-helpers.md`): system-entropy
 callers can now run full and partial in-place shuffles directly from the root API
 while S4-M11 remains blocked.
+
+
+S4-M480 adds root one-shot weighted index helpers
+(`compare/results/s4-m480-root-one-shot-weighted-index-helpers.md`):
+system-entropy callers can now sample weighted indices directly from the root API
+while S4-M11 remains blocked.

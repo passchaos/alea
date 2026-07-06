@@ -68,6 +68,12 @@ pub fn main(init: std.process.Init) !void {
     const root_partial_hand = try alea.partialShuffle(u8, io, &root_partial_deck, 3);
     var root_tail_deck = [_]u8{ 1, 2, 3, 4, 5, 6 };
     const root_tail_hand = try alea.partialShuffleTail(u8, io, &root_tail_deck, 3);
+    const root_weights = [_]f64{ 0.1, 0.2, 0.7 };
+    const root_weighted_index = (try alea.weightedIndex(io, &root_weights)).?;
+    var root_weighted_indices: [4]?usize = undefined;
+    try alea.fillWeightedIndex(io, &root_weighted_indices, &root_weights);
+    const root_weighted_index_batch = try alea.weightedIndexBatch(io, init.gpa, 4, &root_weights);
+    defer init.gpa.free(root_weighted_index_batch);
     var root_random_bytes: [4]u8 = undefined;
     try alea.fill(u8, io, &root_random_bytes);
     var root_random_range_values: [4]u8 = undefined;
@@ -216,6 +222,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("root sampler helpers: sampleDie={}, sampleFill={any}, sampleBatch={any}\n", .{ root_sample_die, root_sample_dice_fill, root_sample_dice_batch });
     try stdout.print("root choice helpers: choiceIndex={} ({s}), indexFill={any}, choiceBatch=[{s}, {s}, {s}, {s}]\n", .{ root_choice_index, root_colors[root_choice_index], root_choice_indices, root_choice_batch[0], root_choice_batch[1], root_choice_batch[2], root_choice_batch[3] });
     try stdout.print("root shuffle helpers: shuffle={any}, partial={any}, tailPartial={any}\n", .{ root_shuffle_deck, root_partial_hand, root_tail_hand });
+    try stdout.print("root weighted helpers: weightedIndex={}, fill={any}, batch={any}\n", .{ root_weighted_index, root_weighted_indices, root_weighted_index_batch });
     try stdout.print("root random helpers: random={}, range={}, bool={}, fill={any}, rangeFill={any}, inclusiveFill={any}, boolFill={any}, ratioFill={any}, valueBatch={any}, rangeBatch={any}, boolBatch={any}, ratioBatch={any}, iterNext={}, iterUnbounded={}\n", .{ root_random_value, root_random_range, root_random_bool, root_random_bytes, root_random_range_values, root_random_inclusive_values, root_random_bools, root_random_ratios, root_random_value_batch, root_random_range_batch, root_random_bool_batch, root_random_ratio_batch, root_random_iter_next, root_random_iter_hint.upper == null });
     try stdout.print("root endpoint float helpers: openFill={any}, openBatch={any}, openClosedFill={any}, openClosedBatch={any}\n", .{ root_open_values, root_open_batch, root_open_closed_values, root_open_closed_batch });
     try stdout.print("root duration helpers: lessThan={}ns, atMost={}ns, lessThanBatch={any}, atMostBatch={any}\n", .{ root_duration_less_than.nanoseconds, root_duration_at_most.nanoseconds, root_duration_less_than_batch, root_duration_at_most_batch });

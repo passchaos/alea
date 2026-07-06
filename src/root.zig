@@ -493,6 +493,76 @@ pub fn partialShuffleTailSplitChecked(comptime T: type, io: std.Io, items: []T, 
     return partialShuffleTailSplit(T, io, items, amount);
 }
 
+pub fn weightedIndex(io: std.Io, weights: []const f64) !?usize {
+    switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
+        .empty => return null,
+        .single => |index| return index,
+        .random => {},
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.weightedIndex(weights);
+}
+
+pub fn weightedIndexChecked(io: std.Io, weights: []const f64) !?usize {
+    switch (try rootWeightedIndexStateAllowEmpty(weights)) {
+        .empty => return null,
+        .single => |index| return index,
+        .random => {},
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try random_source.weightedIndexChecked(weights);
+}
+
+pub fn fillWeightedIndex(io: std.Io, dest: []?usize, weights: []const f64) !void {
+    if (dest.len == 0) return;
+    switch (rootWeightedIndexStateAllowEmpty(weights) catch .random) {
+        .empty => {
+            @memset(dest, @as(?usize, null));
+            return;
+        },
+        .single => |index| {
+            @memset(dest, @as(?usize, index));
+            return;
+        },
+        .random => {},
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    random_source.fillWeightedIndex(dest, weights);
+}
+
+pub fn fillWeightedIndexChecked(io: std.Io, dest: []usize, weights: []const f64) !void {
+    if (dest.len == 0) return;
+    switch (try rootWeightedIndexState(weights)) {
+        .single => |index| {
+            @memset(dest, index);
+            return;
+        },
+        .random => {},
+        .empty => unreachable,
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try random_source.fillWeightedIndexChecked(dest, weights);
+}
+
+pub fn weightedIndexBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, weights: []const f64) ![]?usize {
+    const out = try allocator.alloc(?usize, count);
+    errdefer allocator.free(out);
+    try fillWeightedIndex(io, out, weights);
+    return out;
+}
+
+pub fn weightedIndexBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, weights: []const f64) ![]usize {
+    if (count == 0) return allocator.alloc(usize, 0);
+    const out = try allocator.alloc(usize, count);
+    errdefer allocator.free(out);
+    try fillWeightedIndexChecked(io, out, weights);
+    return out;
+}
+
 pub fn valueBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize) ![]T {
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
@@ -1001,6 +1071,38 @@ fn rootUnicodeScalarFromCompressed(compressed: u21) u21 {
     return if (compressed >= 0xD800) compressed + 0x800 else compressed;
 }
 
+const RootWeightedIndexState = union(enum) {
+    empty,
+    single: usize,
+    random,
+};
+
+fn rootWeightedIndexStateAllowEmpty(weights: []const f64) !RootWeightedIndexState {
+    var positive_index: ?usize = null;
+    var positive_count: usize = 0;
+    var total: f64 = 0;
+    for (weights, 0..) |weight, index| {
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        total += weight;
+        if (!std.math.isFinite(total)) return error.InvalidWeight;
+        if (weight > 0) {
+            positive_index = index;
+            positive_count += 1;
+        }
+    }
+    if (total == 0) return .empty;
+    if (positive_count == 1) return .{ .single = positive_index.? };
+    return .random;
+}
+
+fn rootWeightedIndexState(weights: []const f64) !RootWeightedIndexState {
+    const state = try rootWeightedIndexStateAllowEmpty(weights);
+    return switch (state) {
+        .empty => error.EmptyRange,
+        else => state,
+    };
+}
+
 fn rootValueTypeHasEmptyEnum(comptime T: type) bool {
     return switch (@typeInfo(T)) {
         .@"enum" => std.enums.values(T).len == 0,
@@ -1386,6 +1488,23 @@ test "root random helpers use explicit system entropy" {
     const tail_split_checked = try partialShuffleTailSplitChecked(u8, io, &tail_split_checked_values, 2);
     try std.testing.expectEqual(@as(usize, 2), tail_split_checked.selected.len);
     try std.testing.expectEqual(@as(usize, 2), tail_split_checked.rest.len);
+    const weights = [_]f64{ 1, 2, 3, 4 };
+    const weighted_index_value = (try weightedIndex(io, &weights)).?;
+    try std.testing.expect(weighted_index_value < weights.len);
+    const weighted_index_checked_value = (try weightedIndexChecked(io, &weights)).?;
+    try std.testing.expect(weighted_index_checked_value < weights.len);
+    var weighted_index_fill: [4]?usize = undefined;
+    try fillWeightedIndex(io, &weighted_index_fill, &weights);
+    for (weighted_index_fill) |value| try std.testing.expect(value.? < weights.len);
+    var weighted_index_checked_fill: [4]usize = undefined;
+    try fillWeightedIndexChecked(io, &weighted_index_checked_fill, &weights);
+    for (weighted_index_checked_fill) |value| try std.testing.expect(value < weights.len);
+    const weighted_index_batch_values = try weightedIndexBatch(io, std.testing.allocator, 4, &weights);
+    defer std.testing.allocator.free(weighted_index_batch_values);
+    for (weighted_index_batch_values) |value| try std.testing.expect(value.? < weights.len);
+    const weighted_index_batch_checked_values = try weightedIndexBatchChecked(io, std.testing.allocator, 4, &weights);
+    defer std.testing.allocator.free(weighted_index_batch_checked_values);
+    for (weighted_index_batch_checked_values) |value| try std.testing.expect(value < weights.len);
     const owned_values = try valueBatch(u16, io, std.testing.allocator, 4);
     defer std.testing.allocator.free(owned_values);
     try std.testing.expectEqual(@as(usize, 4), owned_values.len);
@@ -1638,6 +1757,37 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.InvalidParameter, partialShuffleSplitChecked(u8, failing, &empty_shuffle, 1));
     try std.testing.expectError(error.InvalidParameter, partialShuffleTailChecked(u8, failing, &empty_shuffle, 1));
     try std.testing.expectError(error.InvalidParameter, partialShuffleTailSplitChecked(u8, failing, &empty_shuffle, 1));
+    const empty_weights = [_]f64{ 0, 0, 0 };
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndex(failing, &empty_weights));
+    try std.testing.expectEqual(@as(?usize, null), try weightedIndexChecked(failing, &empty_weights));
+    var empty_weighted_fill: [3]?usize = undefined;
+    try fillWeightedIndex(failing, &empty_weighted_fill, &empty_weights);
+    try std.testing.expectEqualSlices(?usize, &.{ null, null, null }, &empty_weighted_fill);
+    const empty_weighted_batch = try weightedIndexBatch(failing, std.testing.allocator, 3, &empty_weights);
+    defer std.testing.allocator.free(empty_weighted_batch);
+    try std.testing.expectEqualSlices(?usize, &.{ null, null, null }, empty_weighted_batch);
+    var empty_weighted_checked_fill: [0]usize = .{};
+    try fillWeightedIndexChecked(failing, &empty_weighted_checked_fill, &empty_weights);
+    const empty_weighted_checked_batch = try weightedIndexBatchChecked(failing, std.testing.allocator, 0, &empty_weights);
+    defer std.testing.allocator.free(empty_weighted_checked_batch);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_checked_batch.len);
+    try std.testing.expectError(error.EmptyRange, weightedIndexBatchChecked(failing, std.testing.allocator, 3, &empty_weights));
+    const single_weight = [_]f64{ 0, 5, 0 };
+    try std.testing.expectEqual(@as(?usize, 1), try weightedIndex(failing, &single_weight));
+    try std.testing.expectEqual(@as(?usize, 1), try weightedIndexChecked(failing, &single_weight));
+    try fillWeightedIndex(failing, &empty_weighted_fill, &single_weight);
+    try std.testing.expectEqualSlices(?usize, &.{ 1, 1, 1 }, &empty_weighted_fill);
+    var single_weight_checked_fill: [3]usize = undefined;
+    try fillWeightedIndexChecked(failing, &single_weight_checked_fill, &single_weight);
+    try std.testing.expectEqualSlices(usize, &.{ 1, 1, 1 }, &single_weight_checked_fill);
+    const single_weight_batch = try weightedIndexBatch(failing, std.testing.allocator, 3, &single_weight);
+    defer std.testing.allocator.free(single_weight_batch);
+    try std.testing.expectEqualSlices(?usize, &.{ 1, 1, 1 }, single_weight_batch);
+    const single_weight_checked_batch = try weightedIndexBatchChecked(failing, std.testing.allocator, 3, &single_weight);
+    defer std.testing.allocator.free(single_weight_checked_batch);
+    try std.testing.expectEqualSlices(usize, &.{ 1, 1, 1 }, single_weight_checked_batch);
+    try std.testing.expectError(error.InvalidWeight, weightedIndexChecked(failing, &.{ 1, std.math.nan(f64) }));
+    try std.testing.expectError(error.InvalidWeight, fillWeightedIndexChecked(failing, &single_weight_checked_fill, &.{ -1, 2 }));
     try fillRange(u8, failing, &empty, 3, 4);
     try fillRangeChecked(u8, failing, &empty, 3, 3);
     try fillRangeAtMost(u8, failing, &empty, 6, 5);
@@ -1839,6 +1989,14 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, partialShuffleSplit(u8, failing, &shuffle_pair, 1));
     try std.testing.expectError(error.EntropyUnavailable, partialShuffleTail(u8, failing, &shuffle_pair, 1));
     try std.testing.expectError(error.EntropyUnavailable, partialShuffleTailSplit(u8, failing, &shuffle_pair, 1));
+    try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
+    try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
+    var weighted_one: [1]?usize = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillWeightedIndex(failing, &weighted_one, &.{ 1, 2 }));
+    var weighted_checked_one: [1]usize = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, fillWeightedIndexChecked(failing, &weighted_checked_one, &.{ 1, 2 }));
+    try std.testing.expectError(error.EntropyUnavailable, weightedIndexBatch(failing, std.testing.allocator, 1, &.{ 1, 2 }));
+    try std.testing.expectError(error.EntropyUnavailable, weightedIndexBatchChecked(failing, std.testing.allocator, 1, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, valueBatch(u8, failing, std.testing.allocator, 1));
     try std.testing.expectError(error.EntropyUnavailable, fillRange(u8, failing, &byte, 3, 5));
     try std.testing.expectError(error.EntropyUnavailable, rangeBatch(u8, failing, std.testing.allocator, 1, 3, 5));
