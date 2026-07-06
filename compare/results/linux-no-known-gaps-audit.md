@@ -1429,3 +1429,8 @@ S4-M440 adds stable boolean fields to `rand-status-json`
 (`compare/results/s4-m440-rand-status-json-booleans.md`) so scripts can consume
 validate-local pass, no-known-gap, S4-M11 blocker, and runtime-opportunity state
 without parsing prose while S4-M11 remains blocked.
+
+S4-M441 synchronizes S4-M11 blocker evidence with those JSON boolean fields
+(`compare/results/s4-m441-blocker-rand-status-boolean-sync.md`), keeping the
+blocker audit current with script-friendly status signals while S4-M11 remains
+blocked.
