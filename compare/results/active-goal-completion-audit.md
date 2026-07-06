@@ -544,7 +544,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M503 root one-shot weighted no-replacement const-pointer sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m503-root-one-shot-weighted-no-replacement-const-ptr-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate weighted no-replacement const-pointer samples directly. |
 | S4-M504 root one-shot weighted no-replacement mutable-pointer sampling | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m504-root-one-shot-weighted-no-replacement-mut-ptr-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate weighted no-replacement mutable-pointer samples directly. |
 | S4-M505 root one-shot weighted no-replacement caller-owned index buffers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m505-root-one-shot-weighted-no-replacement-index-into-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned weighted no-replacement index buffers directly. |
-| S4-M506 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M506 root one-shot weighted no-replacement caller-owned value buffers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m506-root-one-shot-weighted-no-replacement-value-into-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned weighted no-replacement value buffers directly. |
+| S4-M507 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1321,6 +1322,9 @@ sampling; it is API ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M505 additionally adds root one-shot weighted no-replacement caller-owned
 index buffers; it is API ergonomics work and does not resolve S4-M11 or complete
+the long-term objective.
+S4-M506 additionally adds root one-shot weighted no-replacement caller-owned
+value buffers; it is API ergonomics work and does not resolve S4-M11 or complete
 the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

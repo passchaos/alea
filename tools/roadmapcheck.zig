@@ -501,6 +501,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M503", .path = "compare/results/s4-m503-root-one-shot-weighted-no-replacement-const-ptr-helpers.md" },
     .{ .milestone = "S4-M504", .path = "compare/results/s4-m504-root-one-shot-weighted-no-replacement-mut-ptr-helpers.md" },
     .{ .milestone = "S4-M505", .path = "compare/results/s4-m505-root-one-shot-weighted-no-replacement-index-into-helpers.md" },
+    .{ .milestone = "S4-M506", .path = "compare/results/s4-m506-root-one-shot-weighted-no-replacement-value-into-helpers.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -508,7 +509,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M506",
+    "S4-M507",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -821,12 +822,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M506 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M506 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M507 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M507 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M506 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M506 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M507 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M507 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
