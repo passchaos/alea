@@ -1010,3 +1010,9 @@ S4-M359 strengthens README PractRand dry-run discovery
 `readmecheck` require README tokens for `tools/practrand.sh --dry-run`,
 `zig build practrand-dry-run`, and `PRACTRAND_BIN`. This improves external
 statistical evidence discoverability while S4-M11 remains blocked.
+
+S4-M360 strengthens core-guide and API-reference PractRand dry-run discovery
+(`compare/results/s4-m360-guide-api-practrand-guards.md`) by making
+`toolingcheck` require the dry-run script command, `zig build practrand-dry-run`,
+and `PRACTRAND_BIN` guidance in the relevant docs. This improves external
+statistical evidence discoverability while S4-M11 remains blocked.

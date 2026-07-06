@@ -149,6 +149,17 @@ const practrand_doc_tokens = [_][]const u8{
     "PRACTRAND_BIN",
 };
 
+const core_guide_practrand_tokens = [_][]const u8{
+    "tools/practrand.sh --dry-run fast 1048576",
+    "zig build practrand-dry-run",
+    "PRACTRAND_BIN",
+};
+
+const api_reference_practrand_tokens = [_][]const u8{
+    "tools/practrand.sh --dry-run fast 1048576",
+    "zig build practrand-dry-run",
+};
+
 const practrand_script_tokens = [_][]const u8{
     "--dry-run",
     "PRACTRAND_BIN",
@@ -426,6 +437,18 @@ pub fn main(init: std.process.Init) !void {
     inline for (practrand_doc_tokens) |token| {
         if (std.mem.indexOf(u8, tooling, token) == null) {
             try stderr.print("toolingcheck: docs/tooling.md missing PractRand token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (core_guide_practrand_tokens) |token| {
+        if (std.mem.indexOf(u8, core_guide, token) == null) {
+            try stderr.print("toolingcheck: docs/core-guide.md missing PractRand token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (api_reference_practrand_tokens) |token| {
+        if (std.mem.indexOf(u8, api, token) == null) {
+            try stderr.print("toolingcheck: docs/api-reference.md missing PractRand token `{s}`\n", .{token});
             missing += 1;
         }
     }
