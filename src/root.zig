@@ -917,6 +917,34 @@ pub fn sampleWeightedPtrArrayChecked(comptime T: type, comptime Weight: type, io
     return try seq.sampleWeightedPtrArrayChecked(random_source, T, Weight, N, items, weights);
 }
 
+pub fn sampleWeightedMutPtrs(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []T, weights: []const Weight, amount: usize) ![]*T {
+    if (amount == 0) return allocator.alloc(*T, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedMutPtrs(allocator, random_source, T, Weight, items, weights, amount);
+}
+
+pub fn sampleWeightedMutPtrsChecked(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []T, weights: []const Weight, amount: usize) ![]*T {
+    if (amount == 0) return allocator.alloc(*T, 0);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedMutPtrsChecked(allocator, random_source, T, Weight, items, weights, amount);
+}
+
+pub fn sampleWeightedMutPtrArray(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []T, weights: []const Weight) !?[N]*T {
+    if (N == 0) return .{};
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedMutPtrArray(random_source, T, Weight, N, items, weights);
+}
+
+pub fn sampleWeightedMutPtrArrayChecked(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []T, weights: []const Weight) ![N]*T {
+    if (N == 0) return .{};
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedMutPtrArrayChecked(random_source, T, Weight, N, items, weights);
+}
+
 pub fn chooseIterator(comptime T: type, io: std.Io, iterator: anytype) !?T {
     return try rootChooseIterator(T, io, iterator, .reservoir);
 }
@@ -2598,6 +2626,26 @@ test "root random helpers use explicit system entropy" {
     const weighted_index_u32_array_checked_values = try weightedIndexU32ArrayChecked(io, 4, &weights);
     for (weighted_index_u32_array_checked_values) |value| try std.testing.expect(value < weights.len);
     const weighted_items = [_]u8{ 10, 20, 30, 40 };
+    var weighted_mut_nr_items = weighted_items;
+    const weighted_mut_ptrs = try sampleWeightedMutPtrs(u8, f64, io, std.testing.allocator, &weighted_mut_nr_items, &weights, 2);
+    defer std.testing.allocator.free(weighted_mut_ptrs);
+    try std.testing.expectEqual(@as(usize, 2), weighted_mut_ptrs.len);
+    try std.testing.expect(weighted_mut_ptrs[0] != weighted_mut_ptrs[1]);
+    for (weighted_mut_ptrs) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &weighted_items, value.*) != null);
+    var weighted_mut_nr_checked_items = weighted_items;
+    const weighted_mut_ptrs_checked = try sampleWeightedMutPtrsChecked(u8, f64, io, std.testing.allocator, &weighted_mut_nr_checked_items, &weights, 2);
+    defer std.testing.allocator.free(weighted_mut_ptrs_checked);
+    try std.testing.expectEqual(@as(usize, 2), weighted_mut_ptrs_checked.len);
+    try std.testing.expect(weighted_mut_ptrs_checked[0] != weighted_mut_ptrs_checked[1]);
+    for (weighted_mut_ptrs_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &weighted_items, value.*) != null);
+    var weighted_mut_array_items = weighted_items;
+    const weighted_mut_ptr_array = (try sampleWeightedMutPtrArray(u8, f64, io, 2, &weighted_mut_array_items, &weights)).?;
+    try std.testing.expect(weighted_mut_ptr_array[0] != weighted_mut_ptr_array[1]);
+    for (weighted_mut_ptr_array) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &weighted_items, value.*) != null);
+    var weighted_mut_array_checked_items = weighted_items;
+    const weighted_mut_ptr_array_checked = try sampleWeightedMutPtrArrayChecked(u8, f64, io, 2, &weighted_mut_array_checked_items, &weights);
+    try std.testing.expect(weighted_mut_ptr_array_checked[0] != weighted_mut_ptr_array_checked[1]);
+    for (weighted_mut_ptr_array_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &weighted_items, value.*) != null);
     const weighted_choice_value = (try chooseWeighted(u8, io, &weighted_items, &weights)).?;
     try std.testing.expect(std.mem.indexOfScalar(u8, &weighted_items, weighted_choice_value) != null);
     const weighted_choice_checked_value = try chooseWeightedChecked(u8, io, &weighted_items, &weights);
@@ -3120,6 +3168,15 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(empty_weighted_ptrs_nr);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_ptrs_nr.len);
     try std.testing.expect((try sampleWeightedPtrArray(u8, f64, failing, 0, &.{ 1, 2, 3 }, &.{ 1, 2, 3 })) != null);
+    var weighted_mut_nr_items = [_]u8{ 1, 2, 3 };
+    const empty_weighted_mut_ptrs_nr = try sampleWeightedMutPtrs(u8, f64, failing, std.testing.allocator, &weighted_mut_nr_items, &.{ 1, 2, 3 }, 0);
+    defer std.testing.allocator.free(empty_weighted_mut_ptrs_nr);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_mut_ptrs_nr.len);
+    const empty_weighted_mut_ptrs_nr_checked = try sampleWeightedMutPtrsChecked(u8, f64, failing, std.testing.allocator, &weighted_mut_nr_items, &.{ 1, 2, 3 }, 0);
+    defer std.testing.allocator.free(empty_weighted_mut_ptrs_nr_checked);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_mut_ptrs_nr_checked.len);
+    try std.testing.expect((try sampleWeightedMutPtrArray(u8, f64, failing, 0, &weighted_mut_nr_items, &.{ 1, 2, 3 })) != null);
+    try std.testing.expectEqual(@as(usize, 0), (try sampleWeightedMutPtrArrayChecked(u8, f64, failing, 0, &weighted_mut_nr_items, &.{ 1, 2, 3 })).len);
     const SliceIter = struct {
         items: []const u8,
         index: usize = 0,
@@ -3543,6 +3600,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedArray(u8, f64, failing, 2, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedPtrs(u8, f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedPtrArray(u8, f64, failing, 2, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedMutPtrs(u8, f64, failing, std.testing.allocator, &weighted_mut_nr_items, &.{ 1, 2, 3 }, 2));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedMutPtrsChecked(u8, f64, failing, std.testing.allocator, &weighted_mut_nr_items, &.{ 1, 2, 3 }, 2));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedMutPtrArray(u8, f64, failing, 2, &weighted_mut_nr_items, &.{ 1, 2, 3 }));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedMutPtrArrayChecked(u8, f64, failing, 2, &weighted_mut_nr_items, &.{ 1, 2, 3 }));
     var entropy_iter = SliceIter{ .items = &.{ 1, 2 } };
     try std.testing.expectError(error.EntropyUnavailable, chooseIterator(u8, failing, &entropy_iter));
     var entropy_iter_checked = SliceIter{ .items = &.{ 1, 2 } };

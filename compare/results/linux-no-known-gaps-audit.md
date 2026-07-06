@@ -1781,3 +1781,8 @@ S4-M503 adds root one-shot weighted no-replacement const-pointer sampling
 (`compare/results/s4-m503-root-one-shot-weighted-no-replacement-const-ptr-helpers.md`):
 system-entropy callers can now allocate weighted no-replacement borrowed
 reference samples directly from the root API while S4-M11 remains blocked.
+
+S4-M504 adds root one-shot weighted no-replacement mutable-pointer sampling
+(`compare/results/s4-m504-root-one-shot-weighted-no-replacement-mut-ptr-helpers.md`):
+system-entropy callers can now allocate weighted no-replacement mutable borrowed
+reference samples directly from the root API while S4-M11 remains blocked.
