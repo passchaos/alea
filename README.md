@@ -200,6 +200,7 @@ zig build -Doptimize=ReleaseFast statcheck
 zig build -Doptimize=ReleaseFast distcheck
 zig build -Doptimize=ReleaseFast stream -- --engine fast --bytes 1048576 > /tmp/alea.bin
 sh tools/practrand.sh fast 1073741824
+sh tools/practrand.sh --dry-run fast 1048576
 zig build -Doptimize=ReleaseFast -Dcpu=native bench
 zig build -Doptimize=ReleaseFast -Dcpu=native bench -- "standard-normal"
 zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench
@@ -218,7 +219,7 @@ tests, and the chained WASI report.
 
 The Rust command benchmarks against the local `rand` checkout in
 `~/Work/rand`. Latest comparison data is kept under
-`compare/results/`. Use `vectorbench` for focused vector-slice evidence such
+`compare/results/`. Use `tools/practrand.sh --dry-run` to verify the PractRand pipeline command without requiring `RNG_test`, and set `PRACTRAND_BIN` if the executable is not named `RNG_test`. Use `vectorbench` for focused vector-slice evidence such
 as packed bool chance/ratio, strict-interval vector float fills, vector ranges,
 distribution-namespace vector Bernoulli/binomial/binomial-approx/negative-binomial/hypergeometric/geometric/standard-geometric/Poisson/Poisson-AD/uniform/normal/log-normal/approx-log-normal/half-normal/gamma/chi-squared/chi/erlang/beta/fisher-f/student-t/triangular/arcsine/cauchy/laplace/logistic/log-logistic/kumaraswamy/power-function/rayleigh/maxwell/pareto/weibull/gumbel/frechet/skew-normal/PERT/inverse-Gaussian/normal-inverse-Gaussian/Zipf/Zeta/unit-circle/unit-disc/unit-sphere/unit-ball/exponential wrappers,
 and scalar-lane normal/exponential

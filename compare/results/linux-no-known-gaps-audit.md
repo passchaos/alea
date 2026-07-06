@@ -992,3 +992,9 @@ S4-M356 adds repro helper tests
 `zig build repro`, with `toolingcheck` guarding that tests run before deterministic
 snapshot output. This improves reproducibility snapshot reliability while S4-M11
 remains blocked.
+
+S4-M357 adds PractRand wrapper dry-run support
+(`compare/results/s4-m357-practrand-dry-run.md`), allowing the exact
+`zig build stream | RNG_test stdin64` pipeline to be validated without requiring
+PractRand and documenting `PRACTRAND_BIN` for alternate executable names. This
+improves external statistical evidence ergonomics while S4-M11 remains blocked.

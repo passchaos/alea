@@ -3497,6 +3497,7 @@ Selected build steps (see `docs/tooling.md` for the complete catalog):
 - `zig build test-wasi`
 - `zig build wasi-report`
 - `zig build stream -- --engine <engine> --bytes <n>`
+- `tools/practrand.sh --dry-run fast 1048576`
 - `zig build repro`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native bench`
 - `zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench`

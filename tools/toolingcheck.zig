@@ -144,6 +144,18 @@ const api_reference_validation_tokens = [_][]const u8{
     "compile checks, WASI unit tests",
 };
 
+const practrand_doc_tokens = [_][]const u8{
+    "tools/practrand.sh --dry-run",
+    "PRACTRAND_BIN",
+};
+
+const practrand_script_tokens = [_][]const u8{
+    "--dry-run",
+    "PRACTRAND_BIN",
+    "RNG_test",
+    "zig build -Doptimize=ReleaseFast stream -- --engine",
+};
+
 const runtimecheck_doc_tokens = [_][]const u8{
     "zig build runtimecheck",
     "node",
@@ -402,6 +414,20 @@ pub fn main(init: std.process.Init) !void {
     inline for (core_guide_validation_tokens) |token| {
         if (std.mem.indexOf(u8, core_guide, token) == null) {
             try stderr.print("toolingcheck: docs/core-guide.md missing validation-guidance token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (practrand_doc_tokens) |token| {
+        if (std.mem.indexOf(u8, tooling, token) == null) {
+            try stderr.print("toolingcheck: docs/tooling.md missing PractRand token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    const practrand_source = try std.Io.Dir.cwd().readFileAlloc(io, "tools/practrand.sh", allocator, .limited(64 * 1024));
+    defer allocator.free(practrand_source);
+    inline for (practrand_script_tokens) |token| {
+        if (std.mem.indexOf(u8, practrand_source, token) == null) {
+            try stderr.print("toolingcheck: tools/practrand.sh missing token `{s}`\n", .{token});
             missing += 1;
         }
     }

@@ -149,7 +149,10 @@ The plain step names below are what the catalog checker tracks.
 | `zig build repro` | Run repro helper tests, then print deterministic reproducibility snapshots. |
 
 `tools/practrand.sh` wraps `zig build stream` for PractRand runs and writes
-checked-in evidence under `compare/results/` when a report is accepted.
+checked-in evidence under `compare/results/` when a report is accepted. Use
+`tools/practrand.sh --dry-run` to verify the exact stream and `RNG_test stdin64`
+command without requiring PractRand, and set `PRACTRAND_BIN` when the executable
+is not named `RNG_test`.
 
 ## Checked-In Tool Files
 
@@ -187,7 +190,7 @@ new helpers that need documentation.
 | `tools/pert_probe.zig` | PERT special-case performance probe. |
 | `tools/poisson_probe.zig` | Poisson performance probe. |
 | `tools/power_function_probe.zig` | PowerFunction performance probe. |
-| `tools/practrand.sh` | PractRand wrapper for accepted external statistical reports. |
+| `tools/practrand.sh` | PractRand wrapper for accepted external statistical reports, with `--dry-run` and `PRACTRAND_BIN` support. |
 | `tools/profilecheck.zig` | Accepted vector profile checker with focused helper tests. |
 | `tools/profilelongcheck.zig` | Accepted vector profile long-sweep checker with focused helper tests. |
 | `tools/profilestresscheck.zig` | Accepted vector profile multi-seed stress checker with focused helper tests. |
