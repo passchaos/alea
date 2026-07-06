@@ -1453,3 +1453,7 @@ S4-M445 synchronizes S4-M11 blocker evidence with the status schema version
 (`compare/results/s4-m445-blocker-rand-status-schema-sync.md`), keeping the
 blocker audit current with script-friendly schema signals while S4-M11 remains
 blocked.
+
+S4-M446 extends `rand-status` self-tests to the bad-argument path
+(`compare/results/s4-m446-rand-status-bad-arg-self-test.md`) so the status tool
+guards script misuse diagnostics while S4-M11 remains blocked.

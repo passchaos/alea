@@ -61,7 +61,7 @@ fn printUsage(writer: *std.Io.Writer) !void {
         \\       rand-status --self-test
         \\       rand-status --help
         \\       --json prints the current local rand/rand_distr status as stable JSON
-        \\       --self-test validates text, JSON, and help output without Rust tools
+        \\       --self-test validates text, JSON, help, and bad-argument paths without Rust tools
         \\
     , .{});
 }
@@ -104,8 +104,13 @@ fn runSelfTest(stdout: *std.Io.Writer) !void {
         "usage: rand-status [--json]",
         "rand-status --self-test",
         "--json prints the current local rand/rand_distr status as stable JSON",
-        "--self-test validates text, JSON, and help output without Rust tools",
+        "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
     })) return error.SelfTestFailed;
+    if (parseModeSlice(&.{"--definitely-bad"})) |_| {
+        return error.SelfTestFailed;
+    } else |err| {
+        if (err != error.UnknownArgument) return error.SelfTestFailed;
+    }
 
     try stdout.print("rand-status self-test ok\n", .{});
 }

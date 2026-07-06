@@ -56,8 +56,8 @@ this Linux-first local comparison environment; see
 wasi-self-test`, and `zig build wasi-report`.
 
 `zig build rand-status-json` emits stable JSON for scripts, and
-`zig build rand-status-self-test` validates text, JSON, and help output without
-invoking Rust tools. Current JSON fields are
+`zig build rand-status-self-test` validates text, JSON, help, and bad-argument
+paths without invoking Rust tools. Current JSON fields are
 `schema_version`, `date`, `baseline.rand`, `baseline.rand_distr`, `latest_gate`,
 `validate_local_passes`, `public_surface`, `rust_comparison`, `runtime_runners`,
 `opportunity_runners_available`, `current_conclusion`,

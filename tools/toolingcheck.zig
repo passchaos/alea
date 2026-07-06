@@ -206,7 +206,7 @@ const rand_status_doc_tokens = [_][]const u8{
     "current local `rand` / `rand_distr` comparison status summary",
     "pass `-- --json` for stable JSON",
     "stable JSON",
-    "validates text, JSON, and help output without",
+    "validates text, JSON, help, and bad-argument",
     "`schema_version`, `date`, `baseline.rand`, `baseline.rand_distr`, `latest_gate`",
     "`validate_local_passes`, `public_surface`, `rust_comparison`, `runtime_runners`",
     "`opportunity_runners_available`, `current_conclusion`",
@@ -216,7 +216,8 @@ const rand_status_doc_tokens = [_][]const u8{
 
 const rand_status_source_tokens = [_][]const u8{
     "--json prints the current local rand/rand_distr status as stable JSON",
-    "--self-test validates text, JSON, and help output without Rust tools",
+    "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
+    "--definitely-bad",
     "rand-status self-test ok",
     "Alea local rand/rand_distr status (2026-07-06)",
     "\"baseline\"",

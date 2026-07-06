@@ -466,7 +466,8 @@ complete.
 | S4-M443 `rand-status-json` schema version | `tools/rand_status.zig`, `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m443-rand-status-schema-version.md` | Closed for the current bar: `rand-status-json` now exposes a stable schema version field. |
 | S4-M444 current status snapshot schema version | `compare/results/s4-m420-current-rand-status.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m444-current-status-schema-version.md` | Closed for the current bar: current status snapshot now includes and guards `schema_version: 1`. |
 | S4-M445 S4-M11 blocker sync for rand-status schema version | `compare/results/s4-m11-blocker-audit.md`, `tools/roadmapcheck.zig`, `compare/results/s4-m445-blocker-rand-status-schema-sync.md` | Closed for the current bar: S4-M11 blocker evidence now cites the JSON `schema_version` token. |
-| S4-M446 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M446 `rand-status` bad-argument self-test | `tools/rand_status.zig`, `docs/tooling.md`, `tools/toolingcheck.zig`, `compare/results/s4-m446-rand-status-bad-arg-self-test.md` | Closed for the current bar: `rand-status --self-test` validates the bad-argument path. |
+| S4-M447 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1068,6 +1069,9 @@ snapshot; it is evidence-quality maintenance and does not resolve S4-M11 or
 complete the long-term objective.
 S4-M445 additionally syncs S4-M11 blocker evidence with that JSON schema version;
 it is blocker-evidence maintenance and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M446 additionally extends `rand-status` self-tests to cover the bad-argument
+path; it is tooling reliability and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
