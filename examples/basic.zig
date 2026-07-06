@@ -76,6 +76,14 @@ pub fn main(init: std.process.Init) !void {
     try alea.fillOpenClosed(f32, io, &root_open_closed_values);
     const root_open_closed_batch = try alea.openClosedBatch(f64, io, init.gpa, 4);
     defer init.gpa.free(root_open_closed_batch);
+    const root_duration_min: std.Io.Duration = .{ .nanoseconds = 10 * std.time.ns_per_ms };
+    const root_duration_max: std.Io.Duration = .{ .nanoseconds = 20 * std.time.ns_per_ms };
+    const root_duration_less_than = try alea.durationRangeLessThan(io, root_duration_min, root_duration_max);
+    const root_duration_at_most = try alea.durationRangeAtMost(io, root_duration_min, root_duration_max);
+    const root_duration_less_than_batch = try alea.durationRangeLessThanBatch(io, init.gpa, 3, root_duration_min, root_duration_max);
+    defer init.gpa.free(root_duration_less_than_batch);
+    const root_duration_at_most_batch = try alea.durationRangeAtMostBatch(io, init.gpa, 3, root_duration_min, root_duration_max);
+    defer init.gpa.free(root_duration_at_most_batch);
     const root_char = try alea.char(io);
     const root_string = try alea.string(init.gpa, io, 8);
     defer init.gpa.free(root_string);
@@ -185,6 +193,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("randomBool p=.25: {}, randomRatio 3/8: {}\n", .{ random_bool, random_ratio });
     try stdout.print("root random helpers: random={}, range={}, bool={}, fill={any}, rangeFill={any}, inclusiveFill={any}, boolFill={any}, ratioFill={any}, valueBatch={any}, rangeBatch={any}, boolBatch={any}, ratioBatch={any}, iterNext={}, iterUnbounded={}\n", .{ root_random_value, root_random_range, root_random_bool, root_random_bytes, root_random_range_values, root_random_inclusive_values, root_random_bools, root_random_ratios, root_random_value_batch, root_random_range_batch, root_random_bool_batch, root_random_ratio_batch, root_random_iter_next, root_random_iter_hint.upper == null });
     try stdout.print("root endpoint float helpers: openFill={any}, openBatch={any}, openClosedFill={any}, openClosedBatch={any}\n", .{ root_open_values, root_open_batch, root_open_closed_values, root_open_closed_batch });
+    try stdout.print("root duration helpers: lessThan={}ns, atMost={}ns, lessThanBatch={any}, atMostBatch={any}\n", .{ root_duration_less_than.nanoseconds, root_duration_at_most.nanoseconds, root_duration_less_than_batch, root_duration_at_most_batch });
     try stdout.print("root string helpers: char={c}, string={s}, sampleString={s}, appendString={s}, unicodeScalar=U+{X}, unicodeInto={s}, unicodeAlloc={s}\n", .{ root_char, root_string, root_sample_string, root_append_buffer.items, root_unicode_scalar, root_unicode_into, root_unicode_alloc });
     try stdout.print("chanceBatch p=.25: {any}\n", .{chance_flags});
     try stdout.print("ratioBatch 3/8: {any}\n", .{ratio_flags});

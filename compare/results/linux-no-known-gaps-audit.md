@@ -1606,3 +1606,9 @@ S4-M474 adds root one-shot endpoint-float helpers
 (`compare/results/s4-m474-root-one-shot-endpoint-float-helpers.md`):
 system-entropy callers can now fill or allocate strict `(0,1)` and `(0,1]`
 float samples directly from the root API while S4-M11 remains blocked.
+
+
+S4-M475 adds root one-shot `std.Io.Duration` range helpers
+(`compare/results/s4-m475-root-one-shot-duration-helpers.md`): system-entropy
+callers can now sample and allocate duration ranges directly from the root API
+while S4-M11 remains blocked.

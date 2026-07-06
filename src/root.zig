@@ -541,6 +541,72 @@ pub fn openClosedBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocato
     return out;
 }
 
+pub fn durationRangeLessThan(io: std.Io, min: std.Io.Duration, max: std.Io.Duration) !std.Io.Duration {
+    std.debug.assert(min.nanoseconds < max.nanoseconds);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.durationRangeLessThan(min, max);
+}
+
+pub fn durationRangeLessThanChecked(io: std.Io, min: std.Io.Duration, max: std.Io.Duration) !std.Io.Duration {
+    if (min.nanoseconds >= max.nanoseconds) return error.EmptyRange;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.durationRangeLessThan(min, max);
+}
+
+pub fn durationRangeLessThanBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    const out = try allocator.alloc(std.Io.Duration, count);
+    errdefer allocator.free(out);
+    if (count == 0) return out;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    for (out) |*item| item.* = random_source.durationRangeLessThan(min, max);
+    return out;
+}
+
+pub fn durationRangeLessThanBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    if (count == 0) return allocator.alloc(std.Io.Duration, 0);
+    if (min.nanoseconds >= max.nanoseconds) return error.EmptyRange;
+    return durationRangeLessThanBatch(io, allocator, count, min, max);
+}
+
+pub fn durationRangeAtMost(io: std.Io, min: std.Io.Duration, max: std.Io.Duration) !std.Io.Duration {
+    std.debug.assert(min.nanoseconds <= max.nanoseconds);
+    if (min.nanoseconds == max.nanoseconds) return min;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.durationRangeAtMost(min, max);
+}
+
+pub fn durationRangeAtMostChecked(io: std.Io, min: std.Io.Duration, max: std.Io.Duration) !std.Io.Duration {
+    if (min.nanoseconds > max.nanoseconds) return error.EmptyRange;
+    if (min.nanoseconds == max.nanoseconds) return min;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return random_source.durationRangeAtMost(min, max);
+}
+
+pub fn durationRangeAtMostBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    const out = try allocator.alloc(std.Io.Duration, count);
+    errdefer allocator.free(out);
+    if (count == 0) return out;
+    if (min.nanoseconds == max.nanoseconds) {
+        @memset(out, min);
+        return out;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    for (out) |*item| item.* = random_source.durationRangeAtMost(min, max);
+    return out;
+}
+
+pub fn durationRangeAtMostBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    if (count == 0) return allocator.alloc(std.Io.Duration, 0);
+    if (min.nanoseconds > max.nanoseconds) return error.EmptyRange;
+    return durationRangeAtMostBatch(io, allocator, count, min, max);
+}
+
 pub fn char(io: std.Io) !u8 {
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -969,6 +1035,29 @@ test "root random helpers use explicit system entropy" {
     defer std.testing.allocator.free(owned_open_closed_values);
     for (owned_open_closed_values) |value| try std.testing.expect(value > 0 and value <= 1);
 
+    const duration_min: std.Io.Duration = .{ .nanoseconds = 10 };
+    const duration_max: std.Io.Duration = .{ .nanoseconds = 20 };
+    const duration_less_than = try durationRangeLessThan(io, duration_min, duration_max);
+    try std.testing.expect(duration_less_than.nanoseconds >= duration_min.nanoseconds and duration_less_than.nanoseconds < duration_max.nanoseconds);
+    const duration_less_than_checked = try durationRangeLessThanChecked(io, duration_min, duration_max);
+    try std.testing.expect(duration_less_than_checked.nanoseconds >= duration_min.nanoseconds and duration_less_than_checked.nanoseconds < duration_max.nanoseconds);
+    const duration_less_than_batch = try durationRangeLessThanBatch(io, std.testing.allocator, 4, duration_min, duration_max);
+    defer std.testing.allocator.free(duration_less_than_batch);
+    for (duration_less_than_batch) |value| try std.testing.expect(value.nanoseconds >= duration_min.nanoseconds and value.nanoseconds < duration_max.nanoseconds);
+    const duration_less_than_batch_checked = try durationRangeLessThanBatchChecked(io, std.testing.allocator, 4, duration_min, duration_max);
+    defer std.testing.allocator.free(duration_less_than_batch_checked);
+    for (duration_less_than_batch_checked) |value| try std.testing.expect(value.nanoseconds >= duration_min.nanoseconds and value.nanoseconds < duration_max.nanoseconds);
+    const duration_at_most = try durationRangeAtMost(io, duration_min, duration_max);
+    try std.testing.expect(duration_at_most.nanoseconds >= duration_min.nanoseconds and duration_at_most.nanoseconds <= duration_max.nanoseconds);
+    const duration_at_most_checked = try durationRangeAtMostChecked(io, duration_min, duration_max);
+    try std.testing.expect(duration_at_most_checked.nanoseconds >= duration_min.nanoseconds and duration_at_most_checked.nanoseconds <= duration_max.nanoseconds);
+    const duration_at_most_batch = try durationRangeAtMostBatch(io, std.testing.allocator, 4, duration_min, duration_max);
+    defer std.testing.allocator.free(duration_at_most_batch);
+    for (duration_at_most_batch) |value| try std.testing.expect(value.nanoseconds >= duration_min.nanoseconds and value.nanoseconds <= duration_max.nanoseconds);
+    const duration_at_most_batch_checked = try durationRangeAtMostBatchChecked(io, std.testing.allocator, 4, duration_min, duration_max);
+    defer std.testing.allocator.free(duration_at_most_batch_checked);
+    for (duration_at_most_batch_checked) |value| try std.testing.expect(value.nanoseconds >= duration_min.nanoseconds and value.nanoseconds <= duration_max.nanoseconds);
+
     _ = try char(io);
     const token = try string(std.testing.allocator, io, 8);
     defer std.testing.allocator.free(token);
@@ -1109,6 +1198,31 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_open_closed_owned = try openClosedBatch(f32, failing, std.testing.allocator, 0);
     defer std.testing.allocator.free(empty_open_closed_owned);
     try std.testing.expectEqual(@as(usize, 0), empty_open_closed_owned.len);
+    const duration_min: std.Io.Duration = .{ .nanoseconds = 10 };
+    const duration_max: std.Io.Duration = .{ .nanoseconds = 20 };
+    const duration_same: std.Io.Duration = .{ .nanoseconds = 15 };
+    try std.testing.expectEqual(duration_same, try durationRangeAtMost(failing, duration_same, duration_same));
+    try std.testing.expectEqual(duration_same, try durationRangeAtMostChecked(failing, duration_same, duration_same));
+    const duration_same_batch = try durationRangeAtMostBatch(failing, std.testing.allocator, 3, duration_same, duration_same);
+    defer std.testing.allocator.free(duration_same_batch);
+    try std.testing.expectEqualSlices(std.Io.Duration, &.{ duration_same, duration_same, duration_same }, duration_same_batch);
+    const duration_same_batch_checked = try durationRangeAtMostBatchChecked(failing, std.testing.allocator, 3, duration_same, duration_same);
+    defer std.testing.allocator.free(duration_same_batch_checked);
+    try std.testing.expectEqualSlices(std.Io.Duration, &.{ duration_same, duration_same, duration_same }, duration_same_batch_checked);
+    const empty_duration_less_than = try durationRangeLessThanBatch(failing, std.testing.allocator, 0, duration_min, duration_max);
+    defer std.testing.allocator.free(empty_duration_less_than);
+    try std.testing.expectEqual(@as(usize, 0), empty_duration_less_than.len);
+    const empty_bad_duration_less_than = try durationRangeLessThanBatchChecked(failing, std.testing.allocator, 0, duration_same, duration_same);
+    defer std.testing.allocator.free(empty_bad_duration_less_than);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_duration_less_than.len);
+    const empty_duration_at_most = try durationRangeAtMostBatch(failing, std.testing.allocator, 0, duration_min, duration_max);
+    defer std.testing.allocator.free(empty_duration_at_most);
+    try std.testing.expectEqual(@as(usize, 0), empty_duration_at_most.len);
+    const empty_bad_duration_at_most = try durationRangeAtMostBatchChecked(failing, std.testing.allocator, 0, duration_max, duration_min);
+    defer std.testing.allocator.free(empty_bad_duration_at_most);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_duration_at_most.len);
+    try std.testing.expectError(error.EmptyRange, durationRangeLessThanChecked(failing, duration_same, duration_same));
+    try std.testing.expectError(error.EmptyRange, durationRangeAtMostChecked(failing, duration_max, duration_min));
     const empty_string = try string(std.testing.allocator, failing, 0);
     defer std.testing.allocator.free(empty_string);
     try std.testing.expectEqual(@as(usize, 0), empty_string.len);
@@ -1149,6 +1263,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, openBatch(f32, failing, std.testing.allocator, 1));
     try std.testing.expectError(error.EntropyUnavailable, fillOpenClosed(f32, failing, &open_one));
     try std.testing.expectError(error.EntropyUnavailable, openClosedBatch(f32, failing, std.testing.allocator, 1));
+    try std.testing.expectError(error.EntropyUnavailable, durationRangeLessThan(failing, duration_min, duration_max));
+    try std.testing.expectError(error.EntropyUnavailable, durationRangeLessThanBatch(failing, std.testing.allocator, 1, duration_min, duration_max));
+    try std.testing.expectError(error.EntropyUnavailable, durationRangeAtMost(failing, duration_min, duration_max));
+    try std.testing.expectError(error.EntropyUnavailable, durationRangeAtMostBatch(failing, std.testing.allocator, 1, duration_min, duration_max));
     try std.testing.expectError(error.EntropyUnavailable, char(failing));
     try std.testing.expectError(error.EntropyUnavailable, string(std.testing.allocator, failing, 1));
     try std.testing.expectError(error.EntropyUnavailable, sampleString(std.testing.allocator, failing, 1));

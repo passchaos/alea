@@ -41,7 +41,11 @@ command matrix evidence.
   `fillRandomBool`, `fillRandomBoolChecked`, `randomBoolBatch`,
   `randomBoolBatchChecked`, `fillRandomRatio`, `fillRandomRatioChecked`,
   `randomRatioBatch`, `randomRatioBatchChecked`, `fillOpen`, `openBatch`,
-  `fillOpenClosed`, `openClosedBatch`, `char`, `string`, `sampleString`,
+  `fillOpenClosed`, `openClosedBatch`, `durationRangeLessThan`,
+  `durationRangeLessThanChecked`, `durationRangeLessThanBatch`,
+  `durationRangeLessThanBatchChecked`, `durationRangeAtMost`,
+  `durationRangeAtMostChecked`, `durationRangeAtMostBatch`,
+  `durationRangeAtMostBatchChecked`, `char`, `string`, `sampleString`,
   `appendString`, `unicodeScalar`, `unicodeUtf8Capacity`, `unicodeUtf8Into`,
   `unicodeUtf8Alloc`
 - Root reader aliases: `RngReader(Source)`, `rngReader`

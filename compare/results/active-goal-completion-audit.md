@@ -513,7 +513,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M472 root one-shot allocation batch helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m472-root-one-shot-batch-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate random value/range/probability batches directly. |
 | S4-M473 root one-shot string helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m473-root-one-shot-string-helpers.md` | Closed for the current bar: root system-entropy helpers can now generate alphanumeric strings and Unicode UTF-8/scalars directly. |
 | S4-M474 root one-shot endpoint-float helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m474-root-one-shot-endpoint-float-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill or allocate strict `(0,1)` and `(0,1]` float samples directly. |
-| S4-M475 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M475 root one-shot duration helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m475-root-one-shot-duration-helpers.md` | Closed for the current bar: root system-entropy helpers can now sample and allocate `std.Io.Duration` ranges directly. |
+| S4-M476 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1201,6 +1202,9 @@ S4-M473 additionally adds root one-shot string and Unicode helpers; it is
 API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 S4-M474 additionally adds root one-shot endpoint-float helpers; it is
+API ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M475 additionally adds root one-shot duration range helpers; it is
 API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 
