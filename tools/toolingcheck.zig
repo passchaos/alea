@@ -381,9 +381,7 @@ const wasi_runner_tokens = [_][]const u8{
 };
 
 const tooling_wasi_runner_tool_tokens = [_][]const u8{
-    "`tools/run_wasi_test.js` | Node WASI runner used by WASI build steps",
-    "`--dry-run` argument reporting and `--self-test` coverage",
-    "dry-run and missing-argument paths without wasm",
+    "`tools/run_wasi_test.js` | Node WASI runner used by WASI build steps, with `--dry-run` argument reporting and `--self-test` coverage for dry-run and missing-argument paths without wasm.",
 };
 
 const runtimecheck_doc_tokens = [_][]const u8{

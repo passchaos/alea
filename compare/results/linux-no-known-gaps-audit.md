@@ -1265,3 +1265,8 @@ S4-M407 guards the checked-tool row for WASI runner self-test prose
 (`compare/results/s4-m407-tooling-wasi-runner-row.md`) so the tooling catalog's
 tool inventory keeps no-wasm dry-run/missing-argument runner coverage visible
 while S4-M11 remains blocked.
+
+S4-M408 tightens that checked-tool row guard
+(`compare/results/s4-m408-tooling-wasi-runner-row-atomic.md`) so the full
+`tools/run_wasi_test.js` row keeps dry-run/self-test/no-wasm semantics together
+while S4-M11 remains blocked.
