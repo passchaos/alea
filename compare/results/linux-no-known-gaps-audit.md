@@ -1117,3 +1117,8 @@ S4-M378 adds helper-tested argument parsing for the main throughput benchmark
 (`compare/results/s4-m378-bench-parser-tests.md`) and wires tests into
 `zig build bench`, improving focused performance evidence ergonomics while S4-M11
 remains blocked.
+
+S4-M379 wires throughput parser helper tests into `bench-libc`
+(`compare/results/s4-m379-bench-libc-parser-tests.md`), improving libc-linked
+benchmark argument reliability for focused performance evidence while S4-M11
+remains blocked.

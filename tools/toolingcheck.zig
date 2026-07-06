@@ -43,6 +43,11 @@ const bench_dependencies = [_][]const u8{
     "bench_step.dependOn(&run_bench.step)",
 };
 
+const bench_libc_dependencies = [_][]const u8{
+    "bench_libc_step.dependOn(&run_bench_libc_tests.step)",
+    "bench_libc_step.dependOn(&run_bench_libc.step)",
+};
+
 const vectorbench_dependencies = [_][]const u8{
     "vectorbench_step.dependOn(&run_vectorbench_tests.step)",
     "vectorbench_step.dependOn(&run_vectorbench.step)",
@@ -653,6 +658,12 @@ pub fn main(init: std.process.Init) !void {
     inline for (bench_dependencies) |token| {
         if (std.mem.indexOf(u8, build, token) == null) {
             try stderr.print("toolingcheck: bench missing dependency token `{s}`\n", .{token});
+            missing += 1;
+        }
+    }
+    inline for (bench_libc_dependencies) |token| {
+        if (std.mem.indexOf(u8, build, token) == null) {
+            try stderr.print("toolingcheck: bench-libc missing dependency token `{s}`\n", .{token});
             missing += 1;
         }
     }
