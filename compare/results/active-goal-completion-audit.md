@@ -553,7 +553,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M512 root one-shot no-replacement fixed-size index arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m512-root-one-shot-index-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size no-replacement index arrays directly. |
 | S4-M513 root one-shot no-replacement fixed-size value arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m513-root-one-shot-value-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size no-replacement value arrays directly. |
 | S4-M514 root one-shot no-replacement fixed-size const-pointer arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m514-root-one-shot-const-ptr-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size no-replacement const-pointer arrays directly. |
-| S4-M515 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M515 root one-shot no-replacement fixed-size mutable-pointer arrays | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m515-root-one-shot-mut-ptr-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size no-replacement mutable-pointer arrays directly. |
+| S4-M516 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1355,6 +1356,9 @@ S4-M513 additionally adds root one-shot no-replacement fixed-size value arrays;
 it is API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 S4-M514 additionally adds root one-shot no-replacement fixed-size const-pointer
+arrays; it is API ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M515 additionally adds root one-shot no-replacement fixed-size mutable-pointer
 arrays; it is API ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 

@@ -802,6 +802,32 @@ pub fn samplePtrArrayChecked(comptime T: type, io: std.Io, comptime N: usize, it
     return try seq.samplePtrArrayChecked(random_source, T, N, items);
 }
 
+pub fn sampleMutPtrArray(comptime T: type, io: std.Io, comptime N: usize, items: []T) !?[N]*T {
+    var out: [N]*T = undefined;
+    if (N == 0) return out;
+    if (N > items.len) return null;
+    if (N == items.len) {
+        for (&out, 0..) |*slot, index| slot.* = &items[index];
+        return out;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return seq.sampleMutPtrArray(random_source, T, N, items);
+}
+
+pub fn sampleMutPtrArrayChecked(comptime T: type, io: std.Io, comptime N: usize, items: []T) ![N]*T {
+    var out: [N]*T = undefined;
+    if (N == 0) return out;
+    if (N > items.len) return error.InvalidParameter;
+    if (N == items.len) {
+        for (&out, 0..) |*slot, index| slot.* = &items[index];
+        return out;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleMutPtrArrayChecked(random_source, T, N, items);
+}
+
 pub fn sampleIndexVec(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) !IndexVec {
     std.debug.assert(amount <= length);
     return try sampleIndexVecChecked(io, allocator, length, amount);
@@ -2985,6 +3011,11 @@ test "root random helpers use explicit system entropy" {
     for (no_replacement_ptr_array) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
     const no_replacement_ptr_array_checked = try samplePtrArrayChecked(u8, io, 3, &no_replacement_items);
     for (no_replacement_ptr_array_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    var no_replacement_mut_items = no_replacement_items;
+    const no_replacement_mut_ptr_array = (try sampleMutPtrArray(u8, io, 3, &no_replacement_mut_items)).?;
+    for (no_replacement_mut_ptr_array) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
+    const no_replacement_mut_ptr_array_checked = try sampleMutPtrArrayChecked(u8, io, 3, &no_replacement_mut_items);
+    for (no_replacement_mut_ptr_array_checked) |value| try std.testing.expect(std.mem.indexOfScalar(u8, &no_replacement_items, value.*) != null);
     const index_vec = try sampleIndexVec(io, std.testing.allocator, no_replacement_items.len, 3);
     defer index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 3), index_vec.len());
@@ -3606,6 +3637,15 @@ test "root random helpers validate deterministic cases before entropy" {
     for (all_ptr_array_checked, 0..) |value, index| try std.testing.expectEqual(&sample_items[index], value);
     try std.testing.expectEqual(@as(?[4]*const u8, null), try samplePtrArray(u8, failing, 4, &sample_items));
     try std.testing.expectError(error.InvalidParameter, samplePtrArrayChecked(u8, failing, 4, &sample_items));
+    var mutable_sample_items = sample_items;
+    try std.testing.expect((try sampleMutPtrArray(u8, failing, 0, &mutable_sample_items)) != null);
+    try std.testing.expectEqual(@as(usize, 0), (try sampleMutPtrArrayChecked(u8, failing, 0, &mutable_sample_items)).len);
+    const all_mut_ptr_array = (try sampleMutPtrArray(u8, failing, 3, &mutable_sample_items)).?;
+    for (all_mut_ptr_array, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
+    const all_mut_ptr_array_checked = try sampleMutPtrArrayChecked(u8, failing, 3, &mutable_sample_items);
+    for (all_mut_ptr_array_checked, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
+    try std.testing.expectEqual(@as(?[4]*u8, null), try sampleMutPtrArray(u8, failing, 4, &mutable_sample_items));
+    try std.testing.expectError(error.InvalidParameter, sampleMutPtrArrayChecked(u8, failing, 4, &mutable_sample_items));
     const empty_index_vec = try sampleIndexVec(failing, std.testing.allocator, 5, 0);
     defer empty_index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), empty_index_vec.len());
@@ -4254,6 +4294,8 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleItemsArrayChecked(u8, failing, 2, &sample_items));
     try std.testing.expectError(error.EntropyUnavailable, samplePtrArray(u8, failing, 2, &sample_items));
     try std.testing.expectError(error.EntropyUnavailable, samplePtrArrayChecked(u8, failing, 2, &sample_items));
+    try std.testing.expectError(error.EntropyUnavailable, sampleMutPtrArray(u8, failing, 2, &mutable_sample_items));
+    try std.testing.expectError(error.EntropyUnavailable, sampleMutPtrArrayChecked(u8, failing, 2, &mutable_sample_items));
     try std.testing.expectError(error.EntropyUnavailable, sampleIndexVec(failing, std.testing.allocator, 5, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleIndexVecChecked(failing, std.testing.allocator, 5, 2));
     try std.testing.expectError(error.EntropyUnavailable, sampleArray(failing, 2, 5));
