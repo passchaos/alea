@@ -1205,3 +1205,8 @@ S4-M395 guards `validate-all` tooling-row precision
 (`compare/results/s4-m395-validate-all-tooling-row.md`) so the tooling catalog
 keeps WASI unit execution, dry/self tests, and report-chain coverage visible
 while S4-M11 remains blocked.
+
+S4-M396 guards README validate/PractRand prose
+(`compare/results/s4-m396-readme-validate-practrand-guard.md`) so README keeps
+the no-external PractRand wrapper self-test visible in broad native validation
+while S4-M11 remains blocked.

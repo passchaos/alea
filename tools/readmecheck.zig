@@ -22,6 +22,7 @@ const required_tokens = [_]RequiredToken{
     .{ .token = "zig build runtimecheck", .reason = "runtime runner availability checker command" },
     .{ .token = "zig build doccheck", .reason = "aggregate documentation checker command" },
     .{ .token = "zig build validate", .reason = "native validation command" },
+    .{ .token = "broad native checks including the no-external PractRand wrapper self-test", .reason = "validate PractRand self-test explanation" },
     .{ .token = "zig build validate-local", .reason = "native plus local rand validation command" },
     .{ .token = "comparison work: it runs native validation plus `rand-bench-test`", .reason = "validate-local component explanation" },
     .{ .token = "zig build rand-bench-test", .reason = "Rust comparison benchmark helper-test command" },
@@ -132,6 +133,19 @@ test "required-token helper matches exact configured token" {
 
     try std.testing.expect(hasRequiredToken("run zig build validate-local before comparing", required));
     try std.testing.expect(!hasRequiredToken("run zig build validate before comparing", required));
+}
+
+test "required-token helper covers validate PractRand self-test prose" {
+    const required = RequiredToken{
+        .token = "broad native checks including the no-external PractRand wrapper self-test",
+        .reason = "validate PractRand self-test explanation",
+    };
+
+    try std.testing.expect(hasRequiredToken(
+        "Use `zig build validate` for broad native checks including the no-external PractRand wrapper self-test.",
+        required,
+    ));
+    try std.testing.expect(!hasRequiredToken("Use `zig build validate` for broad native checks.", required));
 }
 
 test "required-token helper covers PractRand dry-run guidance" {
