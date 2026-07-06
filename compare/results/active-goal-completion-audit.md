@@ -351,7 +351,8 @@ complete.
 | S4-M328 runtimecheck documentation token guard | `tools/toolingcheck.zig`, `docs/tooling.md`, `compare/results/s4-m328-runtimecheck-doc-token-guard.md` | Closed for the current bar: toolingcheck now requires docs/tooling to keep the full runtimecheck required/opportunity runner set visible. |
 | S4-M329 runtimecheck evidence sync | `compare/results/s4-m321-runtimecheck.md`, `compare/results/s4-m329-runtimecheck-evidence-sync.md` | Closed for the current bar: the original runtimecheck evidence now includes the summary-count output added in S4-M327. |
 | S4-M330 core-guide runtimecheck runner list | `docs/core-guide.md`, `compare/results/s4-m330-core-guide-runtimecheck.md` | Closed for the current bar: the core guide now names runtimecheck's required tools and exact S4-M11 opportunity runner set. |
-| S4-M331 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M331 runtimecheck empty PATH segment test | `tools/runtimecheck.zig`, `compare/results/s4-m331-runtimecheck-empty-path.md` | Closed for the current bar: runtimecheck now tests that empty PATH segments normalize to the current directory while non-empty segments are preserved. |
+| S4-M332 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -597,6 +598,9 @@ or complete the long-term objective.
 S4-M330 additionally syncs the core guide runtimecheck runner list; it is a
 documentation improvement and does not resolve S4-M11 or complete the long-term
 objective.
+S4-M331 additionally adds runtimecheck empty-PATH-segment coverage; it is an
+evidence/tooling improvement and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

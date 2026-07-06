@@ -85,12 +85,16 @@ fn evaluateRuntimeState(missing_required: usize, opportunities: usize) error{ Re
 fn findExecutable(io: std.Io, allocator: std.mem.Allocator, path_env: []const u8, name: []const u8) !?[]u8 {
     var it = std.mem.splitScalar(u8, path_env, ':');
     while (it.next()) |raw_dir| {
-        const dir = if (raw_dir.len == 0) "." else raw_dir;
+        const dir = pathSegmentDir(raw_dir);
         const candidate = try std.fs.path.join(allocator, &.{ dir, name });
         if (isExecutable(io, candidate)) return candidate;
         allocator.free(candidate);
     }
     return null;
+}
+
+fn pathSegmentDir(raw_dir: []const u8) []const u8 {
+    return if (raw_dir.len == 0) "." else raw_dir;
 }
 
 fn isExecutable(io: std.Io, path: []const u8) bool {
@@ -146,4 +150,9 @@ test "runtime state decision prioritizes missing required tools then opportuniti
     try std.testing.expectError(error.RequiredRuntimeMissing, evaluateRuntimeState(1, 0));
     try std.testing.expectError(error.RuntimeOpportunityAvailable, evaluateRuntimeState(0, 1));
     try std.testing.expectError(error.RequiredRuntimeMissing, evaluateRuntimeState(1, 1));
+}
+
+test "empty PATH segments resolve to current directory" {
+    try std.testing.expectEqualStrings(".", pathSegmentDir(""));
+    try std.testing.expectEqualStrings("/bin", pathSegmentDir("/bin"));
 }
