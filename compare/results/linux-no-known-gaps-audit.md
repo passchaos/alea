@@ -3486,3 +3486,10 @@ accessor streams
 `chooseWeightedIterByCheckedFrom` and `chooseWeightedIterByIndexCheckedFrom` now
 have focused parity evidence against reusable `WeightedChoice` iterators. This
 improves iterator API reliability evidence but does not resolve S4-M11.
+
+S4-M757 adds checked direct-source convenience iterator coverage for parallel
+weighted streams (`compare/results/s4-m757-parallel-weighted-iterator-checked-from.md`):
+`chooseWeightedIterCheckedFrom` now has focused parity evidence against reusable
+`WeightedChoice` iterators. This completes the matching direct-source coverage
+for parallel/accessor/index weighted iterator convenience helpers but does not
+resolve S4-M11.

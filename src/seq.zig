@@ -22281,6 +22281,22 @@ test "weighted choice iterator streams repeated const pointers" {
             try std.testing.expectEqualStrings(direct_item.*, facade_item.*);
         }
         try std.testing.expectEqual(checked_facade_engine.next(), checked_direct_engine.next());
+
+        var checked_from_engine = Engine.init(0x5150_1786);
+        var checked_from_direct_engine = Engine.init(0x5150_1786);
+        var checked_from_iter = try chooseWeightedIterCheckedFrom(std.testing.allocator, &checked_from_engine, []const u8, u32, &items, &weights);
+        defer checked_from_iter.deinit();
+        var checked_from_direct_choice = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &items, &weights);
+        defer checked_from_direct_choice.deinit();
+        var checked_from_direct_iter = checked_from_direct_choice.iterFrom(&checked_from_direct_engine);
+        var checked_from_out: [4]*const []const u8 = undefined;
+        var checked_from_direct_out: [4]*const []const u8 = undefined;
+        checked_from_iter.fill(&checked_from_out);
+        checked_from_direct_iter.fill(&checked_from_direct_out);
+        for (checked_from_direct_out, checked_from_out) |direct_item, item| {
+            try std.testing.expectEqualStrings(direct_item.*, item.*);
+        }
+        try std.testing.expectEqual(checked_from_direct_engine.next(), checked_from_engine.next());
     }
 
     var single_engine = alea.ScalarPrng.init(0x5150_1783);
