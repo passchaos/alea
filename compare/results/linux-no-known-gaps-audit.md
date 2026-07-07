@@ -2052,3 +2052,9 @@ S4-M551 adds root item-accessor weighted mutable-pointer choice helpers
 callers can now choose weighted mutable pointers directly from a mutable item
 slice and comptime item-weight accessor from the root API while S4-M11 remains
 blocked.
+
+S4-M552 adds root item-accessor weighted value fill helpers
+(`compare/results/s4-m552-root-weighted-by-value-fill-helpers.md`):
+system-entropy callers can now fill caller-owned weighted value buffers directly
+from an item slice and comptime item-weight accessor from the root API while
+S4-M11 remains blocked.

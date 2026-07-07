@@ -590,7 +590,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M549 root item-accessor weighted value choice helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m549-root-weighted-by-value-helpers.md` | Closed for the current bar: root system-entropy helpers can now choose weighted values directly from an item slice and comptime item-weight accessor. |
 | S4-M550 root item-accessor weighted const-pointer choice helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m550-root-weighted-by-const-ptr-helpers.md` | Closed for the current bar: root system-entropy helpers can now choose weighted const pointers directly from an item slice and comptime item-weight accessor. |
 | S4-M551 root item-accessor weighted mutable-pointer choice helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m551-root-weighted-by-mut-ptr-helpers.md` | Closed for the current bar: root system-entropy helpers can now choose weighted mutable pointers directly from a mutable item slice and comptime item-weight accessor. |
-| S4-M552 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M552 root item-accessor weighted value fill helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m552-root-weighted-by-value-fill-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned weighted value buffers directly from an item slice and comptime item-weight accessor. |
+| S4-M553 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1503,6 +1504,9 @@ long-term objective.
 S4-M551 additionally adds root item-accessor weighted mutable-pointer choice
 helpers; it is API ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M552 additionally adds root item-accessor weighted value fill helpers; it is
+API ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
