@@ -4895,6 +4895,9 @@ pub fn sampleIteratorArrayFrom(source: anytype, comptime T: type, comptime N: us
     var out: [N]T = undefined;
     if (comptime N == 0) return out;
     if (comptime valueTypeHasEmptyEnum(T)) return null;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining < N) return null;
+    }
 
     var filled: usize = 0;
     while (filled < N) : (filled += 1) {
@@ -5254,6 +5257,9 @@ pub fn sampleIteratorWeightedArray(rng: Rng, comptime T: type, comptime N: usize
 
 pub fn sampleIteratorWeightedArrayFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) !?[N]T {
     if (comptime N != 0 and valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining < N) return null;
+    }
     const candidates = (try sampleIteratorWeightedCandidateArrayFrom(source, T, N, iterator)) orelse return null;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = candidates[i].item;
@@ -11764,6 +11770,34 @@ test "checked iterator samples use exact remaining before allocation" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "optional iterator arrays use exact remaining before consuming" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7719);
+    var control = alea.ScalarPrng.init(0x5150_7719);
+
+    const ExactIter = struct {
+        next_value: u8 = 0,
+        end: u8 = 2,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn sizeHint(self: @This()) SizeHint {
+            const remaining = self.end - self.next_value;
+            return .{ .lower = remaining, .upper = remaining };
+        }
+    };
+
+    var iter = ExactIter{};
+    try std.testing.expect(sampleIteratorArrayFrom(&engine, u8, 3, &iter) == null);
+    try std.testing.expectEqual(@as(u8, 0), iter.next_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "sampleIteratorFill aliases caller-owned iterator reservoirs" {
     const alea = @import("root.zig");
 
@@ -12323,6 +12357,40 @@ test "checked weighted iterator samples use exact remaining before allocation" {
     var array_iter = ExactWeightedIter{ .items = &entries };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedArrayCheckedFrom(&engine, u8, 3, &array_iter));
     try std.testing.expectEqual(@as(usize, 0), array_iter.index);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "optional weighted iterator arrays use exact remaining before consuming" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_771a);
+    var control = alea.ScalarPrng.init(0x5150_771a);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const ExactWeightedIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+
+        fn sizeHint(self: @This()) SizeHint {
+            const remaining = self.items.len - self.index;
+            return .{ .lower = remaining, .upper = remaining };
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 1, .weight = 1 },
+        .{ .item = 2, .weight = 3 },
+    };
+
+    var iter = ExactWeightedIter{ .items = &entries };
+    try std.testing.expect((try sampleIteratorWeightedArrayFrom(&engine, u8, 3, &iter)) == null);
+    try std.testing.expectEqual(@as(usize, 0), iter.index);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

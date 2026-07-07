@@ -3513,3 +3513,9 @@ checked allocation-returning, caller-owned, fixed-array, and weighted iterator
 sampling helpers now reject exact-size short sources before allocation, iterator
 consumption, or random-stream use. This improves iterator sampling reliability
 evidence but does not resolve S4-M11.
+
+S4-M761 tightens optional iterator-array exact-remaining prevalidation
+(`compare/results/s4-m761-seq-optional-iterator-array-exact-remaining.md`):
+optional unweighted and weighted fixed-size iterator array helpers now return
+`null` before consuming exact-size short sources. This improves iterator sampling
+reliability evidence but does not resolve S4-M11.

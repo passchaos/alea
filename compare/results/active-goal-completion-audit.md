@@ -799,7 +799,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M758 weighted checked u32 iterator facades | `src/distributions.zig`, `compare/results/s4-m758-weighted-checked-u32-iterator-facades.md` | Closed for the current bar: checked compact `u32` iterator facade constructors for `AliasTable`, `WeightedTree`, and `WeightedIntTree` now have direct-source stream-shape coverage. |
 | S4-M759 choice convenience checked iterator coverage | `src/seq.zig`, `compare/results/s4-m759-choice-convenience-checked-iterator.md` | Closed for the current bar: `chooseIterChecked` and `chooseIterCheckedFrom` now have reusable `Choice` stream-shape coverage. |
 | S4-M760 seq checked iterator exact-remaining prevalidation | `src/seq.zig`, `compare/results/s4-m760-seq-checked-iterator-exact-remaining-prevalidation.md` | Closed for the current bar: checked iterator sampling helpers now reject exact-size short iterators before allocation, iterator consumption, or random-stream use. |
-| S4-M761 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M761 seq optional iterator array exact-remaining prevalidation | `src/seq.zig`, `compare/results/s4-m761-seq-optional-iterator-array-exact-remaining.md` | Closed for the current bar: optional fixed-size iterator array helpers now return null for exact-size short iterators before consuming the iterator or random stream. |
+| S4-M762 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2349,6 +2350,9 @@ resolve S4-M11 or complete the long-term objective.
 S4-M760 additionally tightens checked iterator sampling prevalidation for exact
 short iterators; it is reliability/validation work and does not resolve S4-M11
 or complete the long-term objective.
+S4-M761 additionally tightens optional fixed-size iterator array helpers for
+exact short iterators; it is reliability/validation work and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
