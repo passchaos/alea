@@ -992,6 +992,7 @@ pub fn sampleMutPtrsIntoChecked(comptime T: type, io: std.Io, items: []T, out: [
 pub fn chooseMultiple(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) ![]T {
     const count = @min(amount, items.len);
     if (count == 0) return allocator.alloc(T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (count == items.len) return allocator.dupe(T, items);
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -6828,6 +6829,16 @@ test "root random helpers validate deterministic cases before entropy" {
         empty_enum_sample_failed = true;
     }
     try std.testing.expect(empty_enum_sample_failed);
+    var empty_enum_choose_multiple_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var empty_enum_choose_multiple_failed = false;
+    if (chooseMultiple(EmptyEnum, failing, empty_enum_choose_multiple_alloc.allocator(), fake_empty_enum_items, 1)) |values| {
+        empty_enum_choose_multiple_alloc.allocator().free(values);
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        empty_enum_choose_multiple_failed = true;
+    }
+    try std.testing.expect(empty_enum_choose_multiple_failed);
+    try std.testing.expect(!empty_enum_choose_multiple_alloc.has_induced_failure);
     const all_without_replacement = try sampleWithoutReplacement(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
     defer std.testing.allocator.free(all_without_replacement);
     try std.testing.expectEqualSlices(u8, &sample_items, all_without_replacement);

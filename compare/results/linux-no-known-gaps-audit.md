@@ -2878,3 +2878,11 @@ value types before allocation and random-stream use in
 `sampleWithoutReplacementCheckedFrom`, while zero-count requests remain
 deterministic empty allocations. This improves failure determinism but does not
 resolve S4-M11.
+
+S4-M668 adds root `chooseMultiple` empty-type prevalidation
+(`compare/results/s4-m668-root-choose-multiple-empty-type-prevalidation.md`):
+root `chooseMultiple` value alias now rejects non-zero empty enum-containing
+value types before allocation and secure-engine construction, including full
+count deterministic alias requests, while zero-count requests remain
+deterministic empty allocations. This improves failure determinism but does not
+resolve S4-M11.
