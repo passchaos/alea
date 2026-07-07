@@ -646,7 +646,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M605 root by-index weighted mutable-pointer batch prevalidation | `src/root.zig`, `compare/results/s4-m605-root-weighted-by-index-mut-ptr-batch-prevalidation.md` | Closed for the current bar: root by-index weighted mutable-pointer batch helpers now prevalidate deterministic and invalid paths before random-output allocation and secure-engine construction. |
 | S4-M606 root item-accessor weighted index batch prevalidation | `src/root.zig`, `compare/results/s4-m606-root-weighted-by-index-batch-prevalidation.md` | Closed for the current bar: root item-accessor weighted index batch helpers now prevalidate deterministic and invalid paths before random-output allocation and secure-engine construction. |
 | S4-M607 root item-accessor weighted compact u32 index batch prevalidation | `src/root.zig`, `compare/results/s4-m607-root-weighted-by-u32-index-batch-prevalidation.md` | Closed for the current bar: root item-accessor weighted compact u32 index batch helpers now prevalidate deterministic and invalid paths before random-output allocation and secure-engine construction. |
-| S4-M608 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M608 root by-index weighted index batch prevalidation | `src/root.zig`, `compare/results/s4-m608-root-weighted-by-index-index-batch-prevalidation.md` | Closed for the current bar: root length/by-index weighted index batch helpers now prevalidate deterministic and invalid paths before random-output allocation and secure-engine construction. |
+| S4-M609 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1727,6 +1728,9 @@ or complete the long-term objective.
 S4-M607 additionally tightens root item-accessor weighted compact u32 index
 batch prevalidation; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M608 additionally tightens root by-index weighted index batch
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
