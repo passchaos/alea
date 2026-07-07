@@ -4236,6 +4236,8 @@ pub fn fillRandomBoolChecked(io: std.Io, dest: []bool, p: f64) !void {
 }
 
 pub fn randomBoolBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, p: f64) ![]bool {
+    if (count == 0) return allocator.alloc(bool, 0);
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
     const out = try allocator.alloc(bool, count);
     errdefer allocator.free(out);
     try fillRandomBool(io, out, p);
@@ -4284,6 +4286,8 @@ pub fn fillRandomRatioChecked(io: std.Io, dest: []bool, numerator: u32, denomina
 }
 
 pub fn randomRatioBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]bool {
+    if (count == 0) return allocator.alloc(bool, 0);
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     const out = try allocator.alloc(bool, count);
     errdefer allocator.free(out);
     try fillRandomRatio(io, out, numerator, denominator);
@@ -8564,6 +8568,16 @@ test "root random helpers validate deterministic cases before entropy" {
     try fillRandomBoolChecked(failing, &empty_bool, 1.1);
     try fillRandomRatio(failing, &empty_bool, 0, 7);
     try fillRandomRatioChecked(failing, &empty_bool, 2, 1);
+    const empty_bad_bool = try randomBoolBatch(failing, std.testing.allocator, 0, 1.1);
+    defer std.testing.allocator.free(empty_bad_bool);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_bool.len);
+    var bad_bool_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, randomBoolBatch(failing, bad_bool_unchecked_alloc.allocator(), 3, 1.1));
+    const empty_bad_ratio = try randomRatioBatch(failing, std.testing.allocator, 0, 2, 1);
+    defer std.testing.allocator.free(empty_bad_ratio);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_ratio.len);
+    var bad_ratio_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, randomRatioBatch(failing, bad_ratio_unchecked_alloc.allocator(), 3, 2, 1));
 
     const empty_owned = try valueBatch(u8, failing, std.testing.allocator, 0);
     defer std.testing.allocator.free(empty_owned);

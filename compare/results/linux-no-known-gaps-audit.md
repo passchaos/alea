@@ -2506,3 +2506,10 @@ system-entropy callers now get invalid exclusive and inclusive range failures
 before random-output allocation and secure-engine construction for `rangeBatch`
 and `rangeAtMostBatch`, while zero-count and deterministic collapsed paths remain
 allocation-only and S4-M11 remains blocked.
+
+S4-M619 adds root probability batch parameter prevalidation
+(`compare/results/s4-m619-root-probability-batch-prevalidation.md`): root
+system-entropy callers now get invalid probability and ratio failures before
+random-output allocation and secure-engine construction for `randomBoolBatch` and
+`randomRatioBatch`, while zero-count and endpoint deterministic paths remain
+allocation-only and S4-M11 remains blocked.
