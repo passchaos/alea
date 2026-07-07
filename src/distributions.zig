@@ -687,6 +687,7 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillIndicesU32From(source, out);
@@ -32840,6 +32841,26 @@ test "distribution Choose sampler mirrors slice choices" {
 
     try std.testing.expect(Choose(u8).new(&.{}) == null);
     try std.testing.expectError(error.EmptyRange, Choose(u8).newChecked(&.{}));
+}
+
+test "distribution Choose owned u32 indices reject oversized population before allocation" {
+    const root = @import("root.zig");
+    const oversized_len = @as(usize, std.math.maxInt(u32)) + 1;
+    const oversized_items = @as([*]const u8, @ptrFromInt(0x2000))[0..oversized_len];
+    const choice = Choose(u8).new(oversized_items).?;
+
+    var engine = root.ScalarPrng.init(0x5150_c0f1);
+    var control = root.ScalarPrng.init(0x5150_c0f1);
+
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, choice.indicesU32From(alloc.allocator(), &engine, 1));
+    try std.testing.expect(!alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, choice.indicesU32CheckedFrom(checked_alloc.allocator(), &engine, 1));
+    try std.testing.expect(!checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "distribution Map and Iter aliases mirror concrete adapter types" {

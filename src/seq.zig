@@ -8306,6 +8306,7 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillIndicesU32From(source, out);
@@ -18325,6 +18326,26 @@ test "zero-length choice fills do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
     var weighted_index_u32_buf: [0]u32 = .{};
     try weighted.fillIndicesU32From(&engine, &weighted_index_u32_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "Choice owned u32 indices reject oversized population before allocation" {
+    const alea = @import("root.zig");
+    const oversized_len = @as(usize, std.math.maxInt(u32)) + 1;
+    const oversized_items = @as([*]const u8, @ptrFromInt(0x1000))[0..oversized_len];
+    const choice = Choice(u8).init(oversized_items).?;
+
+    var engine = alea.ScalarPrng.init(0x5150_c0f0);
+    var control = alea.ScalarPrng.init(0x5150_c0f0);
+
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, choice.indicesU32From(alloc.allocator(), &engine, 1));
+    try std.testing.expect(!alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, choice.indicesU32CheckedFrom(checked_alloc.allocator(), &engine, 1));
+    try std.testing.expect(!checked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

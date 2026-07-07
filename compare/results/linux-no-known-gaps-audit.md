@@ -3406,3 +3406,11 @@ now expose checked `iter`/`iterFrom` aliases for repeated pointer sampling, with
 focused tests proving checked aliases preserve existing pointer iterator stream
 shape for scalar draws and fill helpers. This improves API consistency and
 adoption ergonomics but does not resolve S4-M11.
+
+S4-M746 tightens owned compact index prevalidation for choice samplers
+(`compare/results/s4-m746-choice-owned-u32-index-prevalidation.md`):
+distribution-layer `Choose.indicesU32From` / `indicesU32CheckedFrom` and
+reusable `Choice.indicesU32From` / `indicesU32CheckedFrom` now reject populations
+whose length exceeds `u32` before allocation or random-stream use. This improves
+reliability evidence for Alea's compact index extension beyond local Rust's
+`usize`-oriented index APIs but does not resolve S4-M11.
