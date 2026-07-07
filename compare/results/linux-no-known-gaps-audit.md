@@ -3473,3 +3473,9 @@ S4-M754 fixes checked weighted iterator facade constructors
 `WeightedIntTree.iterChecked` now return facade iterator types directly and have
 focused facade/direct stream-shape coverage. This improves weighted iterator API
 correctness but does not resolve S4-M11.
+
+S4-M755 adds checked choice iterator facade coverage
+(`compare/results/s4-m755-choice-checked-iterator-facades.md`):
+`Choose`, `Choice`, and `WeightedChoice` checked value/index iterator facade
+constructors now have focused direct-source stream-shape coverage. This improves
+iterator API reliability evidence but does not resolve S4-M11.

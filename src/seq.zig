@@ -17942,6 +17942,12 @@ test "choice sampler repeatedly samples slice references" {
     var unchecked_value_iter = choice.valueIterFrom(&unchecked_value_iter_engine);
     try std.testing.expectEqual(unchecked_value_iter.next().?, checked_value_iter.next().?);
     try std.testing.expectEqual(unchecked_value_iter_engine.next(), checked_value_iter_engine.next());
+    var checked_value_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef2e);
+    var checked_value_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef2e);
+    var checked_value_iter_facade = try choice.valueIterChecked(Rng.init(&checked_value_iter_facade_engine));
+    var checked_value_iter_direct = try choice.valueIterCheckedFrom(&checked_value_iter_direct_engine);
+    try std.testing.expectEqual(checked_value_iter_direct.next().?, checked_value_iter_facade.next().?);
+    try std.testing.expectEqual(checked_value_iter_direct_engine.next(), checked_value_iter_facade_engine.next());
 
     const Empty = enum {};
     const empty_items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
@@ -18042,6 +18048,12 @@ test "choice sampler repeatedly samples slice references" {
     var unchecked_index_iter = choice.indexIterFrom(&unchecked_index_iter_engine);
     try std.testing.expectEqual(unchecked_index_iter.next().?, checked_index_iter.next().?);
     try std.testing.expectEqual(unchecked_index_iter_engine.next(), checked_index_iter_engine.next());
+    var checked_index_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef2f);
+    var checked_index_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef2f);
+    var checked_index_iter_facade = try choice.indexIterChecked(Rng.init(&checked_index_iter_facade_engine));
+    var checked_index_iter_direct = try choice.indexIterCheckedFrom(&checked_index_iter_direct_engine);
+    try std.testing.expectEqual(checked_index_iter_direct.next().?, checked_index_iter_facade.next().?);
+    try std.testing.expectEqual(checked_index_iter_direct_engine.next(), checked_index_iter_facade_engine.next());
     var checked_index_u32_engine = alea.DefaultPrng.init(0xc0_ef1b);
     var unchecked_index_u32_engine = alea.DefaultPrng.init(0xc0_ef1b);
     try std.testing.expectEqual(
@@ -18071,6 +18083,12 @@ test "choice sampler repeatedly samples slice references" {
     var unchecked_index_u32_iter = try choice.indexIterU32From(&unchecked_index_u32_iter_engine);
     try std.testing.expectEqual(unchecked_index_u32_iter.next().?, checked_index_u32_iter.next().?);
     try std.testing.expectEqual(unchecked_index_u32_iter_engine.next(), checked_index_u32_iter_engine.next());
+    var checked_index_u32_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef30);
+    var checked_index_u32_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef30);
+    var checked_index_u32_iter_facade = try choice.indexIterU32Checked(Rng.init(&checked_index_u32_iter_facade_engine));
+    var checked_index_u32_iter_direct = try choice.indexIterU32CheckedFrom(&checked_index_u32_iter_direct_engine);
+    try std.testing.expectEqual(checked_index_u32_iter_direct.next().?, checked_index_u32_iter_facade.next().?);
+    try std.testing.expectEqual(checked_index_u32_iter_direct_engine.next(), checked_index_u32_iter_facade_engine.next());
 
     var fill_engine = alea.ScalarPrng.init(0x5150_c0e0);
     var array_engine = alea.ScalarPrng.init(0x5150_c0e0);
@@ -18771,6 +18789,12 @@ test "weighted choice sampler maps alias indexes to items" {
     var unchecked_index_iter = choice.indexIterFrom(&unchecked_index_iter_engine);
     try std.testing.expectEqual(unchecked_index_iter.next().?, checked_index_iter.next().?);
     try std.testing.expectEqual(unchecked_index_iter_engine.next(), checked_index_iter_engine.next());
+    var checked_index_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef32);
+    var checked_index_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef32);
+    var checked_index_iter_facade = try choice.indexIterChecked(Rng.init(&checked_index_iter_facade_engine));
+    var checked_index_iter_direct = try choice.indexIterCheckedFrom(&checked_index_iter_direct_engine);
+    try std.testing.expectEqual(checked_index_iter_direct.next().?, checked_index_iter_facade.next().?);
+    try std.testing.expectEqual(checked_index_iter_direct_engine.next(), checked_index_iter_facade_engine.next());
     var checked_index_u32_engine = alea.DefaultPrng.init(0xc0_ef1f);
     var unchecked_index_u32_engine = alea.DefaultPrng.init(0xc0_ef1f);
     try std.testing.expectEqual(
@@ -18800,6 +18824,12 @@ test "weighted choice sampler maps alias indexes to items" {
     var unchecked_index_u32_iter = try choice.indexIterU32From(&unchecked_index_u32_iter_engine);
     try std.testing.expectEqual(unchecked_index_u32_iter.next().?, checked_index_u32_iter.next().?);
     try std.testing.expectEqual(unchecked_index_u32_iter_engine.next(), checked_index_u32_iter_engine.next());
+    var checked_index_u32_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef33);
+    var checked_index_u32_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef33);
+    var checked_index_u32_iter_facade = try choice.indexIterU32Checked(Rng.init(&checked_index_u32_iter_facade_engine));
+    var checked_index_u32_iter_direct = try choice.indexIterU32CheckedFrom(&checked_index_u32_iter_direct_engine);
+    try std.testing.expectEqual(checked_index_u32_iter_direct.next().?, checked_index_u32_iter_facade.next().?);
+    try std.testing.expectEqual(checked_index_u32_iter_direct_engine.next(), checked_index_u32_iter_facade_engine.next());
     const direct_value = choice.sampleValueFrom(&engine);
     try std.testing.expect(!std.mem.eql(u8, direct_value, "never"));
     var checked_value_engine = alea.DefaultPrng.init(0xc0_ef02);
@@ -18911,6 +18941,12 @@ test "weighted choice sampler maps alias indexes to items" {
     var unchecked_value_iter = choice.valueIterFrom(&unchecked_value_iter_engine);
     try std.testing.expectEqualSlices(u8, unchecked_value_iter.next().?, checked_value_iter.next().?);
     try std.testing.expectEqual(unchecked_value_iter_engine.next(), checked_value_iter_engine.next());
+    var checked_value_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef31);
+    var checked_value_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef31);
+    var checked_value_iter_facade = try choice.valueIterChecked(Rng.init(&checked_value_iter_facade_engine));
+    var checked_value_iter_direct = try choice.valueIterCheckedFrom(&checked_value_iter_direct_engine);
+    try std.testing.expectEqualSlices(u8, checked_value_iter_direct.next().?, checked_value_iter_facade.next().?);
+    try std.testing.expectEqual(checked_value_iter_direct_engine.next(), checked_value_iter_facade_engine.next());
 
     const Empty = enum {};
     const empty_items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
