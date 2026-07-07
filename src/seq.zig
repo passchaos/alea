@@ -3082,6 +3082,7 @@ pub fn chooseWeightedByIndexCheckedFrom(
     items: []const T,
     comptime weightFn: fn (usize) Weight,
 ) !T {
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     return (try chooseWeightedByIndexFrom(source, T, Weight, items, weightFn)) orelse error.EmptyInput;
 }
 
@@ -3092,6 +3093,7 @@ pub fn chooseWeightedByIndexFrom(
     items: []const T,
     comptime weightFn: fn (usize) Weight,
 ) !?T {
+    if (items.len != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const index = (try weightedIndexFromIndexWeights(source, Weight, items.len, weightFn)) orelse return null;
     return items[index];
 }
@@ -3117,6 +3119,7 @@ pub fn chooseWeightedValueArrayByIndexFrom(
 ) !?[N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, items.len, weightFn);
     if (validation.total == 0) return null;
     if (validation.single_positive) |index| {
@@ -3148,6 +3151,7 @@ pub fn chooseWeightedValueArrayByIndexCheckedFrom(
 ) ![N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByIndex(Weight, items.len, weightFn);
     if (validation.single_positive) |index| {
         @memset(out[0..], items[index]);
@@ -3177,6 +3181,7 @@ pub fn fillChooseWeightedByIndexFrom(
     comptime weightFn: fn (usize) Weight,
 ) !void {
     if (dest.len == 0) return;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, items.len, weightFn);
     if (validation.total == 0) {
         @memset(dest, null);
@@ -3209,6 +3214,7 @@ pub fn fillChooseWeightedByIndexCheckedFrom(
     comptime weightFn: fn (usize) Weight,
 ) !void {
     if (dest.len == 0) return;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByIndex(Weight, items.len, weightFn);
     if (validation.single_positive) |index| {
         @memset(dest, items[index]);
@@ -3239,6 +3245,7 @@ pub fn chooseWeightedBatchByIndexFrom(
     comptime weightFn: fn (usize) Weight,
 ) ![]?T {
     if (count == 0) return allocator.alloc(?T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, items.len, weightFn);
     const out = try allocator.alloc(?T, count);
     errdefer allocator.free(out);
@@ -3276,6 +3283,7 @@ pub fn chooseWeightedBatchByIndexCheckedFrom(
     comptime weightFn: fn (usize) Weight,
 ) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByIndex(Weight, items.len, weightFn);
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
@@ -15575,6 +15583,33 @@ test "index-weighted chooseWeightedByIndex preserves stream shape and invalid pa
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectEqual(@as(?[3]*BadEntry, null), try chooseWeightedPtrArrayByIndexFrom(&invalid_engine, BadEntry, u32, 3, &zero_mutable, IndexWeight.zero));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    const EmptyIndexValue = enum {};
+    const empty_index_items = @as([*]const EmptyIndexValue, @ptrFromInt(0x1000))[0..1];
+    if (chooseWeightedByIndexFrom(&invalid_engine, EmptyIndexValue, u32, empty_index_items, IndexWeight.single)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    if (chooseWeightedByIndexCheckedFrom(&invalid_engine, EmptyIndexValue, u32, empty_index_items, IndexWeight.single)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    if (chooseWeightedValueArrayByIndexFrom(&invalid_engine, EmptyIndexValue, u32, 1, empty_index_items, IndexWeight.single)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    if (chooseWeightedValueArrayByIndexCheckedFrom(&invalid_engine, EmptyIndexValue, u32, 1, empty_index_items, IndexWeight.single)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    var empty_index_fill: [1]?EmptyIndexValue = undefined;
+    try std.testing.expectError(error.EmptyInput, fillChooseWeightedByIndexFrom(&invalid_engine, EmptyIndexValue, u32, &empty_index_fill, empty_index_items, IndexWeight.single));
+    var empty_index_fill_checked: [1]EmptyIndexValue = undefined;
+    try std.testing.expectError(error.EmptyInput, fillChooseWeightedByIndexCheckedFrom(&invalid_engine, EmptyIndexValue, u32, &empty_index_fill_checked, empty_index_items, IndexWeight.single));
+
     const empty_value_array = try chooseWeightedValueArrayByIndexCheckedFrom(&invalid_engine, BadEntry, f64, 0, &bad_entries, IndexWeight.invalid);
     try std.testing.expectEqual(@as(usize, 0), empty_value_array.len);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
@@ -16087,6 +16122,26 @@ test "index-weighted chooseWeightedBatchByIndex preserves stream shape and inval
     const optional_zero_mut_ptrs = try chooseWeightedPtrBatchByIndexFrom(std.testing.allocator, &invalid_engine, BadEntry, u32, 3, &zero_mutable, IndexWeight.zero);
     defer std.testing.allocator.free(optional_zero_mut_ptrs);
     for (optional_zero_mut_ptrs) |ptr| try std.testing.expect(ptr == null);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    const EmptyIndexValue = enum {};
+    const empty_index_items = @as([*]const EmptyIndexValue, @ptrFromInt(0x1000))[0..1];
+    var empty_index_batch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchByIndexFrom(empty_index_batch_alloc.allocator(), &invalid_engine, EmptyIndexValue, u32, 1, empty_index_items, IndexWeight.single)) |values| {
+        empty_index_batch_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_index_batch_alloc.has_induced_failure);
+    var empty_index_batch_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchByIndexCheckedFrom(empty_index_batch_checked_alloc.allocator(), &invalid_engine, EmptyIndexValue, u32, 1, empty_index_items, IndexWeight.single)) |values| {
+        empty_index_batch_checked_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_index_batch_checked_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
     try std.testing.expectError(error.EmptyInput, chooseWeightedBatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, BadEntry, u32, 3, &empty_entries, IndexWeight.single));
