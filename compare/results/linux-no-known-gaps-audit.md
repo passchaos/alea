@@ -3008,3 +3008,10 @@ enum-containing value types before index-weight validation, weighted-index
 sampling, allocation, random-stream use, and value copying in scalar, fill,
 array, and batch value-choice paths. This improves failure determinism but does
 not resolve S4-M11.
+
+S4-M684 adds root accessor-weighted value choice empty-type prevalidation
+(`compare/results/s4-m684-root-weighted-by-value-empty-type-prevalidation.md`):
+root item-accessor weighted value choice helpers now reject non-zero
+uninhabited value types before accessor weight evaluation, allocation, entropy,
+and value copying in scalar, fill, array, and batch value-choice paths. This
+improves failure determinism but does not resolve S4-M11.

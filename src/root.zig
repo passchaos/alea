@@ -3328,11 +3328,13 @@ pub fn chooseWeightedChecked(comptime T: type, io: std.Io, items: []const T, wei
 }
 
 pub fn chooseWeightedBy(comptime T: type, comptime Weight: type, io: std.Io, items: []const T, comptime weightFn: fn (*const T) Weight) !?T {
+    if (items.len != 0 and comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const index = try weightedIndexBy(T, Weight, io, items, weightFn) orelse return null;
     return items[index];
 }
 
 pub fn chooseWeightedByChecked(comptime T: type, comptime Weight: type, io: std.Io, items: []const T, comptime weightFn: fn (*const T) Weight) !T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return (try chooseWeightedBy(T, Weight, io, items, weightFn)) orelse error.EmptyInput;
 }
 
@@ -3383,6 +3385,7 @@ pub fn chooseWeightedPtrByIndexChecked(comptime T: type, comptime Weight: type, 
 
 pub fn fillChooseWeightedBy(comptime T: type, comptime Weight: type, io: std.Io, dest: []?T, items: []const T, comptime weightFn: fn (*const T) Weight) !void {
     if (dest.len == 0) return;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     switch (try rootWeightedIndexStateBy(T, Weight, items, weightFn)) {
         .empty => {
             @memset(dest, @as(?T, null));
@@ -3401,6 +3404,7 @@ pub fn fillChooseWeightedBy(comptime T: type, comptime Weight: type, io: std.Io,
 
 pub fn fillChooseWeightedByChecked(comptime T: type, comptime Weight: type, io: std.Io, dest: []T, items: []const T, comptime weightFn: fn (*const T) Weight) !void {
     if (dest.len == 0) return;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     switch (try rootWeightedIndexStateBy(T, Weight, items, weightFn)) {
         .empty => return error.EmptyInput,
         .single => |index| {
@@ -3487,6 +3491,7 @@ pub fn chooseWeightedBatchByIndexChecked(comptime T: type, comptime Weight: type
 
 pub fn chooseWeightedBatchBy(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, comptime weightFn: fn (*const T) Weight) ![]?T {
     if (count == 0) return allocator.alloc(?T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     switch (try rootWeightedIndexStateBy(T, Weight, items, weightFn)) {
         .empty => {
             const out = try allocator.alloc(?T, count);
@@ -3508,6 +3513,7 @@ pub fn chooseWeightedBatchBy(comptime T: type, comptime Weight: type, io: std.Io
 
 pub fn chooseWeightedBatchByChecked(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, comptime weightFn: fn (*const T) Weight) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     switch (try rootWeightedIndexStateBy(T, Weight, items, weightFn)) {
         .empty => return error.EmptyInput,
         .single => |index| {
@@ -5270,7 +5276,6 @@ fn rootValueTypeHasEmptyEnum(comptime T: type) bool {
         .@"enum" => std.enums.values(T).len == 0,
         .array => |array_info| array_info.len != 0 and rootValueTypeHasEmptyEnum(array_info.child),
         .@"struct" => |struct_info| blk: {
-            if (!struct_info.is_tuple) break :blk false;
             inline for (struct_info.fields) |field| {
                 if (rootValueTypeHasEmptyEnum(field.type)) break :blk true;
             }
@@ -8305,6 +8310,55 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(u8, 20), single_weighted_value_by_checked.item);
     try std.testing.expectError(error.InvalidWeight, chooseWeightedBy(RootItemWeights.Entry, f64, failing, &weighted_by_items, RootItemWeights.invalid));
     try std.testing.expectError(error.InvalidWeight, chooseWeightedByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_items, RootItemWeights.invalid));
+    const EmptyAccessorRootValue = struct {
+        item: EmptyEnum,
+        weight: f64,
+
+        fn weightOf(_: *const @This()) f64 {
+            unreachable;
+        }
+    };
+    const empty_accessor_root_items = @as([*]const EmptyAccessorRootValue, @ptrFromInt(0x1000))[0..1];
+    if (chooseWeightedBy(EmptyAccessorRootValue, f64, failing, empty_accessor_root_items, EmptyAccessorRootValue.weightOf)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    if (chooseWeightedByChecked(EmptyAccessorRootValue, f64, failing, empty_accessor_root_items, EmptyAccessorRootValue.weightOf)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    var empty_accessor_root_fill: [1]?EmptyAccessorRootValue = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseWeightedBy(EmptyAccessorRootValue, f64, failing, &empty_accessor_root_fill, empty_accessor_root_items, EmptyAccessorRootValue.weightOf));
+    var empty_accessor_root_fill_checked: [1]EmptyAccessorRootValue = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseWeightedByChecked(EmptyAccessorRootValue, f64, failing, &empty_accessor_root_fill_checked, empty_accessor_root_items, EmptyAccessorRootValue.weightOf));
+    var empty_accessor_root_batch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchBy(EmptyAccessorRootValue, f64, failing, empty_accessor_root_batch_alloc.allocator(), 1, empty_accessor_root_items, EmptyAccessorRootValue.weightOf)) |values| {
+        empty_accessor_root_batch_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_accessor_root_batch_alloc.has_induced_failure);
+    var empty_accessor_root_batch_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchByChecked(EmptyAccessorRootValue, f64, failing, empty_accessor_root_batch_checked_alloc.allocator(), 1, empty_accessor_root_items, EmptyAccessorRootValue.weightOf)) |values| {
+        empty_accessor_root_batch_checked_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_accessor_root_batch_checked_alloc.has_induced_failure);
+    if (chooseWeightedValueArrayBy(EmptyAccessorRootValue, f64, failing, 1, empty_accessor_root_items, EmptyAccessorRootValue.weightOf)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    if (chooseWeightedValueArrayByChecked(EmptyAccessorRootValue, f64, failing, 1, empty_accessor_root_items, EmptyAccessorRootValue.weightOf)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     try std.testing.expectEqual(@as(?*const RootItemWeights.Entry, null), try chooseWeightedConstPtrBy(RootItemWeights.Entry, f64, failing, &.{}, RootItemWeights.single));
     try std.testing.expectEqual(@as(?*const RootItemWeights.Entry, null), try chooseWeightedConstPtrBy(RootItemWeights.Entry, f64, failing, &weighted_by_items, RootItemWeights.zero));
     try std.testing.expectError(error.EmptyInput, chooseWeightedConstPtrByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_items, RootItemWeights.zero));
