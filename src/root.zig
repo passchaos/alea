@@ -476,6 +476,7 @@ pub fn chooseIndexArrayU32Checked(io: std.Io, comptime N: usize, length: u32) ![
 
 pub fn choose(comptime T: type, io: std.Io, items: []const T) !?T {
     if (items.len == 0) return null;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (items.len == 1) return items[0];
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -484,6 +485,7 @@ pub fn choose(comptime T: type, io: std.Io, items: []const T) !?T {
 
 pub fn chooseChecked(comptime T: type, io: std.Io, items: []const T) !T {
     if (items.len == 0) return error.EmptyRange;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (items.len == 1) return items[0];
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -493,6 +495,7 @@ pub fn chooseChecked(comptime T: type, io: std.Io, items: []const T) !T {
 pub fn fillChoose(comptime T: type, io: std.Io, dest: []T, items: []const T) !void {
     if (dest.len == 0) return;
     if (items.len == 0) return error.EmptyRange;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (items.len == 1) {
         @memset(dest, items[0]);
         return;
@@ -505,6 +508,7 @@ pub fn fillChoose(comptime T: type, io: std.Io, dest: []T, items: []const T) !vo
 pub fn fillChooseChecked(comptime T: type, io: std.Io, dest: []T, items: []const T) !void {
     if (dest.len == 0) return;
     if (items.len == 0) return error.EmptyRange;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (items.len == 1) {
         @memset(dest, items[0]);
         return;
@@ -517,6 +521,7 @@ pub fn fillChooseChecked(comptime T: type, io: std.Io, dest: []T, items: []const
 pub fn chooseBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
     if (items.len == 0) return error.EmptyRange;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillChoose(T, io, out, items);
@@ -526,6 +531,7 @@ pub fn chooseBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, c
 pub fn chooseBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
     if (items.len == 0) return error.EmptyRange;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillChooseChecked(T, io, out, items);
@@ -536,6 +542,7 @@ pub fn chooseValueArray(comptime T: type, io: std.Io, comptime N: usize, items: 
     var out: [N]T = undefined;
     if (N == 0) return out;
     if (items.len == 0) return null;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     try fillChoose(T, io, &out, items);
     return out;
 }
@@ -544,6 +551,7 @@ pub fn chooseValueArrayChecked(comptime T: type, io: std.Io, comptime N: usize, 
     var out: [N]T = undefined;
     if (N == 0) return out;
     if (items.len == 0) return error.EmptyRange;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     try fillChooseChecked(T, io, &out, items);
     return out;
 }
@@ -6550,6 +6558,23 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0 }, &(try chooseIndexArrayU32Checked(failing, 3, 1)));
     const singleton = [_]u8{42};
     try std.testing.expectEqual(@as(?u8, null), try choose(u8, failing, &.{}));
+    const fake_empty_enum_choose_items = @as([*]const EmptyEnum, @ptrFromInt(0x1000))[0..1];
+    var choose_empty_type_failed = false;
+    if (choose(EmptyEnum, failing, fake_empty_enum_choose_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        choose_empty_type_failed = true;
+    }
+    try std.testing.expect(choose_empty_type_failed);
+    var choose_checked_empty_type_failed = false;
+    if (chooseChecked(EmptyEnum, failing, fake_empty_enum_choose_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        choose_checked_empty_type_failed = true;
+    }
+    try std.testing.expect(choose_checked_empty_type_failed);
     try std.testing.expectEqual(@as(?u8, 42), try choose(u8, failing, &singleton));
     try std.testing.expectEqual(@as(u8, 42), try chooseChecked(u8, failing, &singleton));
     try std.testing.expectError(error.EmptyRange, chooseChecked(u8, failing, &.{}));
@@ -6558,6 +6583,9 @@ test "root random helpers validate deterministic cases before entropy" {
     try fillChooseChecked(u8, failing, &empty_values, &.{});
     var empty_values_nonempty: [1]u8 = undefined;
     try std.testing.expectError(error.EmptyRange, fillChoose(u8, failing, &empty_values_nonempty, &.{}));
+    const empty_enum_choose_fill = @as([*]EmptyEnum, @ptrFromInt(0x1000))[0..1];
+    try std.testing.expectError(error.EmptyRange, fillChoose(EmptyEnum, failing, empty_enum_choose_fill, fake_empty_enum_choose_items));
+    try std.testing.expectError(error.EmptyRange, fillChooseChecked(EmptyEnum, failing, empty_enum_choose_fill, fake_empty_enum_choose_items));
     var fixed_values: [3]u8 = undefined;
     try fillChoose(u8, failing, &fixed_values, &singleton);
     try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, &fixed_values);
@@ -6567,6 +6595,15 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(empty_choose_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_choose_batch.len);
     try std.testing.expectError(error.EmptyRange, chooseBatch(u8, failing, std.testing.allocator, 1, &.{}));
+    var choose_batch_empty_type_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var choose_batch_empty_type_failed = false;
+    if (chooseBatch(EmptyEnum, failing, choose_batch_empty_type_alloc.allocator(), 1, fake_empty_enum_choose_items)) |values| {
+        choose_batch_empty_type_alloc.allocator().free(values);
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        choose_batch_empty_type_failed = true;
+    }
+    try std.testing.expect(choose_batch_empty_type_failed);
     const empty_choose_batch_checked = try chooseBatchChecked(u8, failing, std.testing.allocator, 0, &.{});
     defer std.testing.allocator.free(empty_choose_batch_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_choose_batch_checked.len);
@@ -6582,6 +6619,22 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expect((try chooseValueArray(u8, failing, 0, &.{})) != null);
     try std.testing.expectEqual(@as(?[3]u8, null), try chooseValueArray(u8, failing, 3, &.{}));
     try std.testing.expectError(error.EmptyRange, chooseValueArrayChecked(u8, failing, 3, &.{}));
+    var choose_value_array_empty_type_failed = false;
+    if (chooseValueArray(EmptyEnum, failing, 1, fake_empty_enum_choose_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        choose_value_array_empty_type_failed = true;
+    }
+    try std.testing.expect(choose_value_array_empty_type_failed);
+    var choose_value_array_checked_empty_type_failed = false;
+    if (chooseValueArrayChecked(EmptyEnum, failing, 1, fake_empty_enum_choose_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        choose_value_array_checked_empty_type_failed = true;
+    }
+    try std.testing.expect(choose_value_array_checked_empty_type_failed);
     try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, &(try chooseValueArrayChecked(u8, failing, 3, &singleton)));
     try std.testing.expect((try chooseRepeatedValueArray(u8, failing, 0, &.{})) != null);
     try std.testing.expectEqual(@as(?[3]u8, null), try chooseRepeatedValueArray(u8, failing, 3, &.{}));

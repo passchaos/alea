@@ -675,7 +675,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M634 root item-accessor weighted value choose array empty-type prevalidation | `src/root.zig`, `compare/results/s4-m634-root-weighted-by-value-choice-array-empty-type-prevalidation.md` | Closed for the current bar: root item-accessor weighted repeated-choice fixed-size value array helpers now prevalidate non-zero uninhabited value types before secure-engine construction. |
 | S4-M635 root weighted value choice array empty-type prevalidation | `src/root.zig`, `compare/results/s4-m635-root-weighted-value-choice-array-empty-type-prevalidation.md` | Closed for the current bar: root weighted repeated-choice fixed-size value array helpers now prevalidate non-zero uninhabited value types before secure-engine construction. |
 | S4-M636 root by-index weighted value choice array empty-type prevalidation | `src/root.zig`, `compare/results/s4-m636-root-weighted-by-index-value-choice-array-empty-type-prevalidation.md` | Closed for the current bar: root by-index weighted repeated-choice fixed-size value array helpers now prevalidate non-zero uninhabited value types before secure-engine construction. |
-| S4-M637 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M637 root unweighted value choose empty-type prevalidation | `src/root.zig`, `compare/results/s4-m637-root-value-choose-empty-type-prevalidation.md` | Closed for the current bar: root unweighted value choose helpers now prevalidate non-empty uninhabited value type requests before output allocation and secure-engine construction. |
+| S4-M638 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1843,6 +1844,9 @@ not resolve S4-M11 or complete the long-term objective.
 S4-M636 additionally tightens root by-index weighted repeated-choice fixed-size
 value array empty-type prevalidation; it is reliability/ergonomics work and does
 not resolve S4-M11 or complete the long-term objective.
+S4-M637 additionally tightens root unweighted value choose empty-type
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
