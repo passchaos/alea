@@ -774,6 +774,7 @@ pub fn choose(rng: Rng, comptime T: type, items: []const T) ?T {
 }
 
 pub fn chooseFrom(source: anytype, comptime T: type, items: []const T) ?T {
+    if (items.len != 0 and comptime valueTypeHasEmptyEnum(T)) return null;
     return Rng.chooseFrom(source, T, items);
 }
 
@@ -11849,6 +11850,18 @@ test "seq one-shot choice aliases mirror Rng choice helpers" {
     try std.testing.expectError(error.EmptyInput, chooseCheckedFrom(&empty_engine, u8, &.{}));
     try std.testing.expectError(error.EmptyInput, chooseConstPtrCheckedFrom(&empty_engine, u8, &.{}));
     try std.testing.expectError(error.EmptyInput, choosePtrCheckedFrom(&empty_engine, u8, &empty_mutable));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+    var empty_value_items: [1]Payload = undefined;
+    try std.testing.expect(chooseFrom(&empty_engine, Payload, &empty_value_items) == null);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    if (chooseCheckedFrom(&empty_engine, Payload, &empty_value_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
     var single_engine = alea.ScalarPrng.init(0x5150_0c04);
