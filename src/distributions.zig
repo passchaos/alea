@@ -521,6 +521,14 @@ pub fn Choose(comptime T: type) type {
             for (dest) |*slot| slot.* = self.sampleFrom(source);
         }
 
+        pub fn fillChecked(self: Self, rng: Rng, dest: []*const T) Error!void {
+            try self.fillCheckedFrom(rng, dest);
+        }
+
+        pub fn fillCheckedFrom(self: Self, source: anytype, dest: []*const T) Error!void {
+            self.fillFrom(source, dest);
+        }
+
         pub fn ptrs(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
             return self.ptrsFrom(allocator, rng, amount);
         }
@@ -532,6 +540,14 @@ pub fn Choose(comptime T: type) type {
             return out;
         }
 
+        pub fn ptrsChecked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
+            return self.ptrsCheckedFrom(allocator, rng, amount);
+        }
+
+        pub fn ptrsCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]*const T {
+            return self.ptrsFrom(allocator, source, amount);
+        }
+
         pub fn ptrArray(self: Self, rng: Rng, comptime N: usize) [N]*const T {
             return self.ptrArrayFrom(rng, N);
         }
@@ -540,6 +556,14 @@ pub fn Choose(comptime T: type) type {
             var out: [N]*const T = undefined;
             self.fillFrom(source, &out);
             return out;
+        }
+
+        pub fn ptrArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]*const T {
+            return self.ptrArrayCheckedFrom(rng, N);
+        }
+
+        pub fn ptrArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]*const T {
+            return self.ptrArrayFrom(source, N);
         }
 
         pub fn ptrIter(self: Self, rng: Rng) PtrIterator(Rng) {
@@ -32355,6 +32379,14 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillFrom(&ptrs_control, &ptrs_fill);
     try std.testing.expectEqualSlices(*const u8, &ptrs_fill, owned_ptrs);
     try std.testing.expectEqual(ptrs_control.next(), ptrs_engine.next());
+    var checked_ptrs_engine = root.DefaultPrng.init(0xc0_288);
+    var unchecked_ptrs_engine = root.DefaultPrng.init(0xc0_288);
+    const unchecked_ptrs = try choice.ptrsFrom(std.testing.allocator, &unchecked_ptrs_engine, 6);
+    defer std.testing.allocator.free(unchecked_ptrs);
+    const checked_ptrs = try choice.ptrsCheckedFrom(std.testing.allocator, &checked_ptrs_engine, 6);
+    defer std.testing.allocator.free(checked_ptrs);
+    try std.testing.expectEqualSlices(*const u8, unchecked_ptrs, checked_ptrs);
+    try std.testing.expectEqual(unchecked_ptrs_engine.next(), checked_ptrs_engine.next());
     var ptr_array_engine = root.DefaultPrng.init(0xc0_275);
     var ptr_array_control = root.DefaultPrng.init(0xc0_275);
     const ptr_array = choice.ptrArrayFrom(&ptr_array_engine, 6);
@@ -32362,6 +32394,20 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillFrom(&ptr_array_control, &ptr_array_fill);
     try std.testing.expectEqualSlices(*const u8, &ptr_array_fill, &ptr_array);
     try std.testing.expectEqual(ptr_array_control.next(), ptr_array_engine.next());
+    var checked_ptr_array_engine = root.DefaultPrng.init(0xc0_289);
+    var unchecked_ptr_array_engine = root.DefaultPrng.init(0xc0_289);
+    const unchecked_ptr_array = choice.ptrArrayFrom(&unchecked_ptr_array_engine, 6);
+    const checked_ptr_array = try choice.ptrArrayCheckedFrom(&checked_ptr_array_engine, 6);
+    try std.testing.expectEqualSlices(*const u8, &unchecked_ptr_array, &checked_ptr_array);
+    try std.testing.expectEqual(unchecked_ptr_array_engine.next(), checked_ptr_array_engine.next());
+    var checked_ptr_fill_engine = root.DefaultPrng.init(0xc0_28a);
+    var unchecked_ptr_fill_engine = root.DefaultPrng.init(0xc0_28a);
+    var checked_ptr_fill: [6]*const u8 = undefined;
+    var unchecked_ptr_fill: [6]*const u8 = undefined;
+    choice.fillFrom(&unchecked_ptr_fill_engine, &unchecked_ptr_fill);
+    try choice.fillCheckedFrom(&checked_ptr_fill_engine, &checked_ptr_fill);
+    try std.testing.expectEqualSlices(*const u8, &unchecked_ptr_fill, &checked_ptr_fill);
+    try std.testing.expectEqual(unchecked_ptr_fill_engine.next(), checked_ptr_fill_engine.next());
     var ptr_iter_engine = root.DefaultPrng.init(0xc0_287);
     var ptr_iter_control = root.DefaultPrng.init(0xc0_287);
     var ptr_iter = choice.ptrIterFrom(&ptr_iter_engine);

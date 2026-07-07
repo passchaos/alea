@@ -3241,3 +3241,9 @@ S4-M719 adds distribution-layer `Choose` pointer iterators
 (`compare/results/s4-m719-distribution-choose-pointer-iterators.md`):
 distribution-layer `Choose` now has reusable pointer iterators aligned with its
 fill helpers. This improves iterator ergonomics but does not resolve S4-M11.
+
+S4-M720 adds distribution-layer `Choose` checked pointer aliases
+(`compare/results/s4-m720-distribution-choose-checked-pointer-aliases.md`):
+distribution-layer `Choose` now has checked aliases for caller-owned, owned, and
+fixed-size pointer outputs. This improves discoverability but does not resolve
+S4-M11.
