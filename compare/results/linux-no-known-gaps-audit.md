@@ -3590,3 +3590,10 @@ seq/root allocation-returning weighted iterator samples now resolve exact-single
 sources after one validated entry without heap setup, extra probes, entropy, or
 random-stream use. This improves weighted iterator sampling reliability evidence
 but does not resolve S4-M11.
+
+S4-M773 avoids weighted iterator exact-single fill key sampling
+(`compare/results/s4-m773-weighted-iterator-fill-exact-single.md`):
+seq/root caller-owned weighted iterator fills now resolve exact-single sources
+after one validated entry without key sampling, extra probes, entropy, or
+random-stream use. This improves weighted iterator fill reliability evidence but
+does not resolve S4-M11.

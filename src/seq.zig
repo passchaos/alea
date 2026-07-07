@@ -5249,6 +5249,14 @@ pub fn sampleIteratorWeightedIntoFrom(source: anytype, comptime T: type, iterato
     if (scratch_keys.len < out.len) return error.LengthMismatch;
     if (iteratorExactRemaining(iterator)) |remaining| {
         if (remaining == 0) return 0;
+        if (remaining == 1) {
+            const entry = iterator.next() orelse return 0;
+            const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+            if (weight == 0) return 0;
+            out[0] = entry.item;
+            return 1;
+        }
     }
     return sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len]);
 }
@@ -5263,6 +5271,14 @@ pub fn sampleIteratorWeightedIntoCheckedFrom(source: anytype, comptime T: type, 
     if (scratch_keys.len < out.len) return error.LengthMismatch;
     if (iteratorExactRemaining(iterator)) |remaining| {
         if (remaining < out.len) return error.InvalidParameter;
+        if (remaining == 1) {
+            const entry = iterator.next() orelse return error.InvalidParameter;
+            const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+            if (weight == 0) return error.InvalidParameter;
+            out[0] = entry.item;
+            return;
+        }
     }
     const count = try sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len]);
     if (count != out.len) return error.InvalidParameter;
@@ -12758,6 +12774,54 @@ test "empty exact weighted iterator fills avoid source consumption" {
     var keys: [3]f64 = undefined;
     try std.testing.expectEqual(@as(usize, 0), try sampleIteratorWeightedIntoFrom(&engine, u8, &iter, &out, &keys));
     try std.testing.expectEqual(@as(usize, 0), iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "single exact weighted iterator fills avoid key sampling" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7724);
+    var control = alea.ScalarPrng.init(0x5150_7724);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const SingleExactIter = struct {
+        entry: Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index != 0) return null;
+            self.index = 1;
+            return self.entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return 1 - self.index;
+        }
+    };
+
+    var iter = SingleExactIter{ .entry = .{ .item = 42, .weight = 5 } };
+    var out: [3]u8 = undefined;
+    var keys: [3]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 1), try sampleIteratorWeightedIntoFrom(&engine, u8, &iter, &out, &keys));
+    try std.testing.expectEqual(@as(u8, 42), out[0]);
+    try std.testing.expectEqual(@as(usize, 1), iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_iter = SingleExactIter{ .entry = .{ .item = 42, .weight = 5 } };
+    try sampleIteratorWeightedIntoCheckedFrom(&engine, u8, &checked_iter, out[0..1], keys[0..1]);
+    try std.testing.expectEqual(@as(u8, 42), out[0]);
+    try std.testing.expectEqual(@as(usize, 1), checked_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var zero_iter = SingleExactIter{ .entry = .{ .item = 42, .weight = 0 } };
+    try std.testing.expectEqual(@as(usize, 0), try sampleIteratorWeightedIntoFrom(&engine, u8, &zero_iter, &out, &keys));
+    try std.testing.expectEqual(@as(usize, 1), zero_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_zero_iter = SingleExactIter{ .entry = .{ .item = 42, .weight = 0 } };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedIntoCheckedFrom(&engine, u8, &checked_zero_iter, out[0..1], keys[0..1]));
+    try std.testing.expectEqual(@as(usize, 1), checked_zero_iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
