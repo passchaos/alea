@@ -1742,6 +1742,7 @@ pub fn sampleWeightedIndexArrayU32ByIndexChecked(comptime Weight: type, io: std.
 pub fn sampleWeightedArrayBy(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, comptime weightFn: fn (*const T) Weight) !?[N]T {
     if (N == 0) return .{};
     if (items.len == 0) return null;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const state = try rootPositiveItemStateBy(T, Weight, items, weightFn);
     if (state.count < N) return null;
     if (comptime N == 1) {
@@ -1755,6 +1756,7 @@ pub fn sampleWeightedArrayBy(comptime T: type, comptime Weight: type, io: std.Io
 pub fn sampleWeightedArrayByChecked(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, comptime weightFn: fn (*const T) Weight) ![N]T {
     if (N == 0) return .{};
     if (N > items.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const state = try rootPositiveItemStateBy(T, Weight, items, weightFn);
     if (state.count < N) return error.InvalidParameter;
     if (comptime N == 1) {
@@ -7724,6 +7726,22 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), (try sampleWeightedArrayByChecked(RootItemWeights.Entry, f64, failing, 0, &weighted_by_items, RootItemWeights.invalid)).len);
     try std.testing.expectEqual(@as(?[2]RootItemWeights.Entry, null), try sampleWeightedArrayBy(RootItemWeights.Entry, f64, failing, 2, &weighted_by_items, RootItemWeights.zero));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedArrayByChecked(RootItemWeights.Entry, f64, failing, 2, &weighted_by_items, RootItemWeights.zero));
+    var weighted_array_by_empty_type_failed = false;
+    if (sampleWeightedArrayBy(EmptyEnum, f64, failing, 1, weighted_empty_enum_items, EmptyEnumWeight.positive)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        weighted_array_by_empty_type_failed = true;
+    }
+    try std.testing.expect(weighted_array_by_empty_type_failed);
+    var weighted_array_by_empty_type_checked_failed = false;
+    if (sampleWeightedArrayByChecked(EmptyEnum, f64, failing, 1, weighted_empty_enum_items, EmptyEnumWeight.positive)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        weighted_array_by_empty_type_checked_failed = true;
+    }
+    try std.testing.expect(weighted_array_by_empty_type_checked_failed);
     try std.testing.expectEqual(@as(u8, 20), (try sampleWeightedArrayBy(RootItemWeights.Entry, f64, failing, 1, &weighted_by_items, RootItemWeights.single)).?[0].item);
     try std.testing.expectEqual(@as(u8, 20), (try sampleWeightedArrayByChecked(RootItemWeights.Entry, f64, failing, 1, &weighted_by_items, RootItemWeights.single))[0].item);
     try std.testing.expectError(error.InvalidParameter, sampleWeightedArrayByChecked(RootItemWeights.Entry, f64, failing, 2, &weighted_by_items, RootItemWeights.single));

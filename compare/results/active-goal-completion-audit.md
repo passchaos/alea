@@ -671,7 +671,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M630 root weighted value sample empty-type prevalidation | `src/root.zig`, `compare/results/s4-m630-root-weighted-value-sample-empty-type-prevalidation.md` | Closed for the current bar: root weighted value sample helpers now prevalidate non-zero uninhabited value types before random-output allocation and secure-engine construction. |
 | S4-M631 root item-accessor weighted value sample empty-type prevalidation | `src/root.zig`, `compare/results/s4-m631-root-weighted-by-value-sample-empty-type-prevalidation.md` | Closed for the current bar: root item-accessor weighted value sample helpers now prevalidate non-zero uninhabited value types before random-output allocation and secure-engine construction. |
 | S4-M632 root weighted value array empty-type prevalidation | `src/root.zig`, `compare/results/s4-m632-root-weighted-value-array-empty-type-prevalidation.md` | Closed for the current bar: root weighted fixed-size value array helpers now prevalidate non-zero uninhabited value types before secure-engine construction. |
-| S4-M633 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M633 root item-accessor weighted value array empty-type prevalidation | `src/root.zig`, `compare/results/s4-m633-root-weighted-by-value-array-empty-type-prevalidation.md` | Closed for the current bar: root item-accessor weighted fixed-size value array helpers now prevalidate non-zero uninhabited value types before secure-engine construction. |
+| S4-M634 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1827,6 +1828,9 @@ S4-M11 or complete the long-term objective.
 S4-M632 additionally tightens root weighted fixed-size value array empty-type
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
+S4-M633 additionally tightens root item-accessor weighted fixed-size value
+array empty-type prevalidation; it is reliability/ergonomics work and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
