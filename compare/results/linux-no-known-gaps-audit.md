@@ -3036,3 +3036,11 @@ S4-M687 adds `Rng` regular-struct empty-type prevalidation
 fields before allocation and random-stream use in value batches, sampler
 batches, and no-replacement value samples. This improves failure determinism but
 does not resolve S4-M11.
+
+S4-M688 adds `seq` weighted sample empty-type prevalidation
+(`compare/results/s4-m688-seq-weighted-sample-empty-type-prevalidation.md`):
+`seq` parallel-weighted no-replacement value sample helpers now reject non-zero
+empty enum-containing value types before allocation, weighted-key sampling,
+random-stream use, and value copying in allocation-returning, caller-owned, and
+fixed-array paths. This improves failure determinism but does not resolve
+S4-M11.

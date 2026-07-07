@@ -6705,6 +6705,7 @@ pub fn sampleWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
     if (amount == 0) return allocator.alloc(T, 0);
     if (items.len != weights.len) return error.LengthMismatch;
     if (amount > items.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const positive = try countPositiveWeights(Weight, weights);
     if (positive < amount) return error.InvalidParameter;
     if (positive == 1 and amount == 1) return singlePositiveWeightItemAlloc(allocator, T, Weight, items, weights);
@@ -6722,6 +6723,7 @@ pub fn sampleWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptim
     if (amount == 0) return allocator.alloc(T, 0);
     if (items.len != weights.len) return error.LengthMismatch;
     if (items.len == 0) return error.EmptyInput;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     const positive = try countPositiveWeights(Weight, weights);
     const count = @min(amount, positive);
@@ -7079,6 +7081,7 @@ pub fn sampleWeightedIntoFrom(source: anytype, comptime T: type, comptime Weight
     if (out.len == 0) return 0;
     if (items.len != weights.len) return error.LengthMismatch;
     if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     const count = try sampleWeightedIndicesIntoFrom(source, Weight, weights, scratch_indices[0..out.len], scratch_keys[0..out.len]);
     for (scratch_indices[0..count], out[0..count]) |index, *slot| slot.* = items[index];
@@ -7093,6 +7096,8 @@ pub fn sampleWeightedIntoCheckedFrom(source: anytype, comptime T: type, comptime
     if (out.len == 0) return;
     if (items.len != weights.len) return error.LengthMismatch;
     if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
+    if (out.len > items.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     try sampleWeightedIndicesIntoCheckedFrom(source, Weight, weights, scratch_indices[0..out.len], scratch_keys[0..out.len]);
     for (scratch_indices[0..out.len], out) |index, *slot| slot.* = items[index];
@@ -7343,6 +7348,7 @@ pub fn sampleWeightedArrayFrom(source: anytype, comptime T: type, comptime Weigh
     if (comptime N == 0) return .{};
     if (items.len != weights.len) return error.LengthMismatch;
     if (items.len == 0) return null;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     const indices = (try sampleWeightedIndexArrayExactFrom(source, Weight, N, weights)) orelse return null;
     var out: [N]T = undefined;
@@ -7358,6 +7364,7 @@ pub fn sampleWeightedArrayCheckedFrom(source: anytype, comptime T: type, comptim
     if (comptime N == 0) return .{};
     if (items.len != weights.len) return error.LengthMismatch;
     if (N > items.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     const indices = (try sampleWeightedIndexArrayExactFrom(source, Weight, N, weights)) orelse return error.InvalidParameter;
     var out: [N]T = undefined;
@@ -10880,6 +10887,52 @@ test "single-positive weighted no-replacement does not consume random stream" {
     var u32_keys: [3]f64 = undefined;
     try std.testing.expectEqual(@as(usize, 1), try sampleWeightedIndicesU32IntoFrom(&engine, u32, &weights, &u32_out, &u32_keys));
     try std.testing.expectEqual(@as(u32, 1), u32_out[0]);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "weighted no-replacement samples produce support and validate inputs" {
+    const alea = @import("root.zig");
+    const support_items = [_]u8{ 10, 20, 30, 40, 50 };
+    const support_weights = [_]u32{ 0, 1, 5, 0, 9 };
+
+    var support_engine = alea.ScalarPrng.init(0x5150_7714);
+    const sample = try sampleWeightedFrom(std.testing.allocator, &support_engine, u8, u32, &support_items, &support_weights, 3);
+    defer std.testing.allocator.free(sample);
+    try std.testing.expectEqual(@as(usize, 3), sample.len);
+    for (sample) |item| try std.testing.expect(item == 20 or item == 30 or item == 50);
+
+    var checked_support_engine = alea.ScalarPrng.init(0x5150_7715);
+    const checked_sample = try sampleWeightedCheckedFrom(std.testing.allocator, &checked_support_engine, u8, u32, &support_items, &support_weights, 3);
+    defer std.testing.allocator.free(checked_sample);
+    try std.testing.expectEqual(@as(usize, 3), checked_sample.len);
+    for (checked_sample) |item| try std.testing.expect(item == 20 or item == 30 or item == 50);
+
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+    const items = @as([*]const Payload, @ptrFromInt(0x1000))[0..1];
+    const weights = [_]u32{1};
+
+    var engine = alea.ScalarPrng.init(0x5150_7713);
+    var control = alea.ScalarPrng.init(0x5150_7713);
+
+    var unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleWeightedFrom(unchecked_alloc.allocator(), &engine, Payload, u32, items, &weights, 1)) |unexpected| {
+        unchecked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleWeightedCheckedFrom(checked_alloc.allocator(), &engine, Payload, u32, items, &weights, 1)) |unexpected| {
+        checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!checked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -19805,6 +19858,31 @@ test "sampleWeightedArray returns fixed-size weighted item samples" {
     try std.testing.expectError(error.InvalidParameter, sampleWeightedArrayCheckedFrom(&empty_engine, u8, u32, 4, &items, &weights));
 }
 
+test "sampleWeightedArray validates empty value types before sampling" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+    const items = @as([*]const Payload, @ptrFromInt(0x1000))[0..1];
+    const weights = [_]u32{1};
+
+    var engine = alea.ScalarPrng.init(0x5150_ba0a);
+    var control = alea.ScalarPrng.init(0x5150_ba0a);
+
+    if (sampleWeightedArrayFrom(&engine, Payload, u32, 1, items, &weights)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (sampleWeightedArrayCheckedFrom(&engine, Payload, u32, 1, items, &weights)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "sampleWeightedArray preserves facade/direct stream shape and invalid paths do not consume" {
     const alea = @import("root.zig");
     const weights = [_]f64{ 1, 2, 6, 3 };
@@ -20619,6 +20697,22 @@ test "sampleWeightedInto fills caller-owned item buffers" {
     try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIntoFrom(&empty_engine, u8, u32, &items, &weights, &empty_out, &empty_indices, &empty_keys));
     try sampleWeightedIntoCheckedFrom(&empty_engine, u8, u32, &items, &weights, &empty_out, &empty_indices, &empty_keys);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+    const empty_value_items = @as([*]const Payload, @ptrFromInt(0x1000))[0..1];
+    const empty_value_weights = [_]u32{1};
+    var empty_value_engine = alea.ScalarPrng.init(0x5150_ba4a);
+    var empty_value_control = alea.ScalarPrng.init(0x5150_ba4a);
+    var empty_value_out: [1]Payload = undefined;
+    var empty_value_indices: [1]usize = undefined;
+    var empty_value_keys: [1]f64 = undefined;
+
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIntoFrom(&empty_value_engine, Payload, u32, empty_value_items, &empty_value_weights, &empty_value_out, &empty_value_indices, &empty_value_keys));
+    try std.testing.expectEqual(empty_value_control.next(), empty_value_engine.next());
+
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIntoCheckedFrom(&empty_value_engine, Payload, u32, empty_value_items, &empty_value_weights, &empty_value_out, &empty_value_indices, &empty_value_keys));
+    try std.testing.expectEqual(empty_value_control.next(), empty_value_engine.next());
 }
 
 test "sampleWeightedInto preserves facade/direct stream shape and invalid paths do not consume" {
