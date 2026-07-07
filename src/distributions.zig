@@ -574,6 +574,14 @@ pub fn Choose(comptime T: type) type {
             return .{ .source = source, .choice = self };
         }
 
+        pub fn ptrIterChecked(self: Self, rng: Rng) Error!PtrIterator(Rng) {
+            return self.ptrIterCheckedFrom(rng);
+        }
+
+        pub fn ptrIterCheckedFrom(self: Self, source: anytype) Error!PtrIterator(@TypeOf(source)) {
+            return self.ptrIterFrom(source);
+        }
+
         pub fn PtrIterator(comptime Source: type) type {
             return struct {
                 const SelfIter = @This();
@@ -719,6 +727,14 @@ pub fn Choose(comptime T: type) type {
             return .{ .source = source, .choice = self };
         }
 
+        pub fn indexIterChecked(self: Self, rng: Rng) Error!IndexIterator(Rng) {
+            return self.indexIterCheckedFrom(rng);
+        }
+
+        pub fn indexIterCheckedFrom(self: Self, source: anytype) Error!IndexIterator(@TypeOf(source)) {
+            return self.indexIterFrom(source);
+        }
+
         pub fn indexIterU32(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
             return self.indexIterU32From(rng);
         }
@@ -826,6 +842,15 @@ pub fn Choose(comptime T: type) type {
 
         pub fn valueIterFrom(self: Self, source: anytype) ValueIterator(@TypeOf(source)) {
             return .{ .source = source, .choice = self };
+        }
+
+        pub fn valueIterChecked(self: Self, rng: Rng) Error!ValueIterator(Rng) {
+            return self.valueIterCheckedFrom(rng);
+        }
+
+        pub fn valueIterCheckedFrom(self: Self, source: anytype) Error!ValueIterator(@TypeOf(source)) {
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+            return self.valueIterFrom(source);
         }
 
         pub fn ValueIterator(comptime Source: type) type {
@@ -32392,6 +32417,12 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillIndicesFrom(&index_iter_control, &index_iter_fill);
     try std.testing.expectEqualSlices(usize, &index_iter_fill, &index_iter_out);
     try std.testing.expectEqual(index_iter_control.next(), index_iter_engine.next());
+    var checked_index_iter_engine = root.DefaultPrng.init(0xc0_28c);
+    var unchecked_index_iter_engine = root.DefaultPrng.init(0xc0_28c);
+    var checked_index_iter = try choice.indexIterCheckedFrom(&checked_index_iter_engine);
+    var unchecked_index_iter = choice.indexIterFrom(&unchecked_index_iter_engine);
+    try std.testing.expectEqual(unchecked_index_iter.next().?, checked_index_iter.next().?);
+    try std.testing.expectEqual(unchecked_index_iter_engine.next(), checked_index_iter_engine.next());
     var index_iter_u32_engine = root.DefaultPrng.init(0xc0_27d);
     var index_iter_u32_control = root.DefaultPrng.init(0xc0_27d);
     var index_iter_u32 = try choice.indexIterU32From(&index_iter_u32_engine);
@@ -32447,6 +32478,12 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillFrom(&ptr_iter_control, &ptr_iter_fill);
     try std.testing.expectEqualSlices(*const u8, &ptr_iter_fill, &ptr_iter_out);
     try std.testing.expectEqual(ptr_iter_control.next(), ptr_iter_engine.next());
+    var checked_ptr_iter_engine = root.DefaultPrng.init(0xc0_28d);
+    var unchecked_ptr_iter_engine = root.DefaultPrng.init(0xc0_28d);
+    var checked_ptr_iter = try choice.ptrIterCheckedFrom(&checked_ptr_iter_engine);
+    var unchecked_ptr_iter = choice.ptrIterFrom(&unchecked_ptr_iter_engine);
+    try std.testing.expectEqual(unchecked_ptr_iter.next().?, checked_ptr_iter.next().?);
+    try std.testing.expectEqual(unchecked_ptr_iter_engine.next(), checked_ptr_iter_engine.next());
     var values_engine = root.DefaultPrng.init(0xc0_273);
     var values_control = root.DefaultPrng.init(0xc0_273);
     const owned_values = try choice.valuesFrom(std.testing.allocator, &values_engine, 6);
@@ -32464,6 +32501,12 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillValuesFrom(&value_iter_control, &value_iter_fill);
     try std.testing.expectEqualSlices(u8, &value_iter_fill, &value_iter_out);
     try std.testing.expectEqual(value_iter_control.next(), value_iter_engine.next());
+    var checked_value_iter_engine = root.DefaultPrng.init(0xc0_28e);
+    var unchecked_value_iter_engine = root.DefaultPrng.init(0xc0_28e);
+    var checked_value_iter = try choice.valueIterCheckedFrom(&checked_value_iter_engine);
+    var unchecked_value_iter = choice.valueIterFrom(&unchecked_value_iter_engine);
+    try std.testing.expectEqual(unchecked_value_iter.next().?, checked_value_iter.next().?);
+    try std.testing.expectEqual(unchecked_value_iter_engine.next(), checked_value_iter_engine.next());
     var value_array_engine = root.DefaultPrng.init(0xc0_272);
     var value_array_control = root.DefaultPrng.init(0xc0_272);
     const value_array = try choice.valueArrayCheckedFrom(&value_array_engine, 6);
@@ -32537,6 +32580,12 @@ test "distribution Choose sampler mirrors slice choices" {
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
     var empty_iter = empty_choice.valueIterFrom(&empty_engine);
     try std.testing.expect(empty_iter.next() == null);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    if (empty_choice.valueIterCheckedFrom(&empty_engine)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
     try std.testing.expect(Choose(u8).new(&.{}) == null);

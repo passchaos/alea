@@ -3253,3 +3253,9 @@ S4-M721 adds distribution-layer `Choose` value iterators
 distribution-layer `Choose` now has reusable value iterators aligned with its fill
 helpers, including empty-type no-consumption behavior. This improves iterator
 ergonomics but does not resolve S4-M11.
+
+S4-M722 adds distribution-layer `Choose` checked iterator aliases
+(`compare/results/s4-m722-distribution-choose-checked-iterator-aliases.md`):
+distribution-layer `Choose` now has checked aliases for value, pointer, and usize
+index iterators, including empty-type failures for checked value iterators. This
+improves discoverability but does not resolve S4-M11.
