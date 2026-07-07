@@ -2975,3 +2975,13 @@ random-stream use in `sampleIteratorWeightedFrom`,
 `sampleIteratorWeightedIntoCheckedFrom`, `sampleIteratorWeightedArrayFrom`, and
 `sampleIteratorWeightedArrayCheckedFrom`. This improves failure determinism but
 does not resolve S4-M11.
+
+S4-M680 adds root weighted iterator reservoir empty-type prevalidation
+(`compare/results/s4-m680-root-weighted-iterator-empty-type-prevalidation.md`):
+root weighted iterator reservoir value helpers now reject non-zero empty
+enum-containing value types before allocation, entropy, iterator consumption,
+heap allocation, and secure-engine construction in `sampleIteratorWeighted`,
+`sampleIteratorWeightedChecked`, `sampleIteratorWeightedInto`,
+`sampleIteratorWeightedIntoChecked`, `sampleIteratorWeightedArray`, and
+`sampleIteratorWeightedArrayChecked`. This improves failure determinism but does
+not resolve S4-M11.

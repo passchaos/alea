@@ -2561,10 +2561,12 @@ pub fn sampleIteratorArrayChecked(comptime T: type, io: std.Io, comptime N: usiz
 }
 
 pub fn sampleIteratorWeighted(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
+    if (amount != 0 and comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return try rootSampleIteratorWeightedAlloc(T, io, allocator, iterator, amount, false);
 }
 
 pub fn sampleIteratorWeightedChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
+    if (amount != 0 and comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (amount != 0) {
         if (rootIteratorExactRemaining(iterator)) |remaining| {
             if (remaining < amount) return error.InvalidParameter;
@@ -2575,12 +2577,14 @@ pub fn sampleIteratorWeightedChecked(comptime T: type, io: std.Io, allocator: st
 
 pub fn sampleIteratorWeightedInto(comptime T: type, io: std.Io, iterator: anytype, out: []T, scratch_keys: []f64) !usize {
     if (out.len == 0) return 0;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (scratch_keys.len < out.len) return error.LengthMismatch;
     return try rootSampleIteratorWeightedInto(T, io, iterator, out, scratch_keys[0..out.len], false);
 }
 
 pub fn sampleIteratorWeightedIntoChecked(comptime T: type, io: std.Io, iterator: anytype, out: []T, scratch_keys: []f64) !void {
     if (out.len == 0) return;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (scratch_keys.len < out.len) return error.LengthMismatch;
     if (rootIteratorExactRemaining(iterator)) |remaining| {
         if (remaining < out.len) return error.InvalidParameter;
@@ -2591,6 +2595,7 @@ pub fn sampleIteratorWeightedIntoChecked(comptime T: type, io: std.Io, iterator:
 
 pub fn sampleIteratorWeightedArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]T {
     if (N == 0) return .{};
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (rootIteratorExactRemaining(iterator)) |remaining| {
         if (remaining < N) return null;
     }
@@ -2602,6 +2607,7 @@ pub fn sampleIteratorWeightedArray(comptime T: type, io: std.Io, comptime N: usi
 
 pub fn sampleIteratorWeightedArrayChecked(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) ![N]T {
     if (N == 0) return .{};
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (rootIteratorExactRemaining(iterator)) |remaining| {
         if (remaining < N) return error.InvalidParameter;
     }
@@ -9621,6 +9627,49 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), sample_array_short_checked_iter.index);
     var sample_array_entropy_iter = SliceIter{ .items = &.{ 1, 2, 3 } };
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorArray(u8, failing, 2, &sample_array_entropy_iter));
+    const EmptyWeightedIteratorValue = enum {};
+    const EmptyWeightedValueIter = struct {
+        const Entry = struct { item: EmptyWeightedIteratorValue, weight: f64 };
+        fn next(_: *@This()) ?Entry {
+            unreachable;
+        }
+    };
+    var empty_weighted_value_iter = EmptyWeightedValueIter{};
+    var empty_weighted_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleIteratorWeighted(EmptyWeightedIteratorValue, failing, empty_weighted_value_alloc.allocator(), &empty_weighted_value_iter, 1)) |values| {
+        empty_weighted_value_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_weighted_value_alloc.has_induced_failure);
+    var empty_weighted_value_checked_iter = EmptyWeightedValueIter{};
+    var empty_weighted_value_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleIteratorWeightedChecked(EmptyWeightedIteratorValue, failing, empty_weighted_value_checked_alloc.allocator(), &empty_weighted_value_checked_iter, 1)) |values| {
+        empty_weighted_value_checked_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_weighted_value_checked_alloc.has_induced_failure);
+    var empty_weighted_value_into_iter = EmptyWeightedValueIter{};
+    var empty_weighted_value_into: [1]EmptyWeightedIteratorValue = undefined;
+    var empty_weighted_value_keys: [1]f64 = undefined;
+    try std.testing.expectError(error.EmptyRange, sampleIteratorWeightedInto(EmptyWeightedIteratorValue, failing, &empty_weighted_value_into_iter, &empty_weighted_value_into, &empty_weighted_value_keys));
+    var empty_weighted_value_into_checked_iter = EmptyWeightedValueIter{};
+    try std.testing.expectError(error.EmptyRange, sampleIteratorWeightedIntoChecked(EmptyWeightedIteratorValue, failing, &empty_weighted_value_into_checked_iter, &empty_weighted_value_into, &empty_weighted_value_keys));
+    var empty_weighted_value_array_iter = EmptyWeightedValueIter{};
+    if (sampleIteratorWeightedArray(EmptyWeightedIteratorValue, failing, 1, &empty_weighted_value_array_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    var empty_weighted_value_array_checked_iter = EmptyWeightedValueIter{};
+    if (sampleIteratorWeightedArrayChecked(EmptyWeightedIteratorValue, failing, 1, &empty_weighted_value_array_checked_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     var weighted_sample_empty = WeightedIter{ .items = &weighted_empty_entries };
     const weighted_sample_empty_out = try sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_empty, 0);
     defer std.testing.allocator.free(weighted_sample_empty_out);
