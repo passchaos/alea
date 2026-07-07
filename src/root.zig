@@ -3447,6 +3447,7 @@ pub fn chooseWeightedBatchByChecked(comptime T: type, comptime Weight: type, io:
 pub fn chooseWeightedValueArrayBy(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, comptime weightFn: fn (*const T) Weight) !?[N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     var nullable: [N]?T = undefined;
     try fillChooseWeightedBy(T, Weight, io, &nullable, items, weightFn);
     for (nullable, 0..) |value, i| out[i] = value orelse return null;
@@ -3456,6 +3457,7 @@ pub fn chooseWeightedValueArrayBy(comptime T: type, comptime Weight: type, io: s
 pub fn chooseWeightedValueArrayByChecked(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, comptime weightFn: fn (*const T) Weight) ![N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     try fillChooseWeightedByChecked(T, Weight, io, &out, items, weightFn);
     return out;
 }
@@ -8118,6 +8120,22 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), (try chooseWeightedValueArrayByChecked(RootItemWeights.Entry, f64, failing, 0, &weighted_by_items, RootItemWeights.invalid)).len);
     try std.testing.expectEqual(@as(?[3]RootItemWeights.Entry, null), try chooseWeightedValueArrayBy(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.zero));
     try std.testing.expectError(error.EmptyInput, chooseWeightedValueArrayByChecked(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.zero));
+    var choose_weighted_by_empty_array_failed = false;
+    if (chooseWeightedValueArrayBy(EmptyEnum, f64, failing, 1, weighted_empty_enum_items, EmptyEnumWeight.positive)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        choose_weighted_by_empty_array_failed = true;
+    }
+    try std.testing.expect(choose_weighted_by_empty_array_failed);
+    var choose_weighted_by_empty_array_checked_failed = false;
+    if (chooseWeightedValueArrayByChecked(EmptyEnum, f64, failing, 1, weighted_empty_enum_items, EmptyEnumWeight.positive)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        choose_weighted_by_empty_array_checked_failed = true;
+    }
+    try std.testing.expect(choose_weighted_by_empty_array_checked_failed);
     for ((try chooseWeightedValueArrayBy(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.single)).?) |value| try std.testing.expectEqual(@as(u8, 20), value.item);
     for (try chooseWeightedValueArrayByChecked(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.single)) |value| try std.testing.expectEqual(@as(u8, 20), value.item);
     try std.testing.expectError(error.InvalidWeight, chooseWeightedValueArrayBy(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.invalid));
