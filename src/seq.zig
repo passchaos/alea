@@ -8061,6 +8061,8 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
+            if (dest.len == 0) return;
+            if (comptime valueTypeHasEmptyEnum(T)) return;
             if (self.items.len == 1) {
                 @memset(dest, self.items[0]);
                 return;
@@ -8084,6 +8086,8 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn valuesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]T {
+            if (amount == 0) return allocator.alloc(T, 0);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
             const out = try allocator.alloc(T, amount);
             errdefer allocator.free(out);
             self.fillValuesFrom(source, out);
@@ -17429,6 +17433,25 @@ test "choice sampler repeatedly samples slice references" {
     defer std.testing.allocator.free(owned_values);
     try std.testing.expectEqual(@as(usize, 8), owned_values.len);
     for (owned_values) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
+
+    const Empty = enum {};
+    const empty_items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
+    const empty_choice = Choice(Empty).init(empty_items).?;
+    var empty_control = alea.ScalarPrng.init(0x5150_c0ef);
+    var empty_engine = alea.ScalarPrng.init(0x5150_c0ef);
+    var empty_out: [1]Empty = undefined;
+    empty_choice.fillValuesFrom(&empty_engine, &empty_out);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (empty_choice.valuesFrom(empty_alloc.allocator(), &empty_engine, 1)) |unexpected| {
+        empty_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
     var fill_engine = alea.ScalarPrng.init(0x5150_c0e0);
     var array_engine = alea.ScalarPrng.init(0x5150_c0e0);
     var index_fill: [6]usize = undefined;

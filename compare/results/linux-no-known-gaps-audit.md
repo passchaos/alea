@@ -3147,3 +3147,9 @@ S4-M703 adds `WeightedChoice` value-copy empty-type prevalidation
 reusable `WeightedChoice` value-copy helpers now handle non-empty empty
 enum-containing output types before allocation, random-stream use, and value
 copying. This improves failure determinism but does not resolve S4-M11.
+
+S4-M704 adds `Choice` value-copy empty-type prevalidation
+(`compare/results/s4-m704-choice-value-copy-empty-type-prevalidation.md`):
+reusable `Choice` value-copy helpers now handle non-empty empty
+enum-containing output types before allocation, random-stream use, and value
+copying. This improves failure determinism but does not resolve S4-M11.
