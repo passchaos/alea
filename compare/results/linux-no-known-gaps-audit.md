@@ -2369,3 +2369,11 @@ system-entropy callers now get invalid-weight and checked empty-input failures
 before random-output allocation and secure-engine construction for
 `chooseWeightedBatchBy` and `chooseWeightedBatchByChecked`, while deterministic
 empty/single paths remain allocation-only and S4-M11 remains blocked.
+
+S4-M601 adds root item-accessor weighted const-pointer batch prevalidation
+(`compare/results/s4-m601-root-weighted-by-const-ptr-batch-prevalidation.md`):
+root system-entropy callers now get invalid-weight and checked empty-input
+failures before random-output allocation and secure-engine construction for
+`chooseWeightedConstPtrBatchBy` and `chooseWeightedConstPtrBatchByChecked`,
+while deterministic empty/single paths remain allocation-only and S4-M11 remains
+blocked.
