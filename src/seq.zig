@@ -8507,6 +8507,8 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
+            if (dest.len == 0) return;
+            if (comptime valueTypeHasEmptyEnum(T)) return;
             if (self.table.constantIndex()) |index| {
                 @memset(dest, self.items[index]);
                 return;
@@ -8530,6 +8532,8 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn valuesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]T {
+            if (amount == 0) return allocator.alloc(T, 0);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
             const out = try allocator.alloc(T, amount);
             errdefer allocator.free(out);
             self.fillValuesFrom(source, out);
@@ -18085,6 +18089,26 @@ test "weighted choice sampler maps alias indexes to items" {
     defer std.testing.allocator.free(owned_values);
     try std.testing.expectEqual(@as(usize, 8), owned_values.len);
     for (owned_values) |value| try std.testing.expect(!std.mem.eql(u8, value, "never"));
+
+    const Empty = enum {};
+    const empty_items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
+    var empty_choice = try WeightedChoice(Empty, u32).init(std.testing.allocator, empty_items, &.{1});
+    defer empty_choice.deinit();
+    var empty_control = alea.ScalarPrng.init(0x5150_4476);
+    var empty_engine = alea.ScalarPrng.init(0x5150_4476);
+    var empty_out: [1]Empty = undefined;
+    empty_choice.fillValuesFrom(&empty_engine, &empty_out);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (empty_choice.valuesFrom(empty_alloc.allocator(), &empty_engine, 1)) |unexpected| {
+        empty_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
     var index_buf: [8]usize = undefined;
     choice.fillIndicesFrom(&engine, &index_buf);
     for (index_buf) |index| {

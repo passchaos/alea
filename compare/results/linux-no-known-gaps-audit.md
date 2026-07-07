@@ -3141,3 +3141,9 @@ S4-M702 adds `seq` weighted choice iterator empty-type prevalidation
 enum-containing value types before weight validation/evaluation, allocation,
 random-stream use, iterator construction, and value access. This improves
 failure determinism but does not resolve S4-M11.
+
+S4-M703 adds `WeightedChoice` value-copy empty-type prevalidation
+(`compare/results/s4-m703-weightedchoice-value-copy-empty-type-prevalidation.md`):
+reusable `WeightedChoice` value-copy helpers now handle non-empty empty
+enum-containing output types before allocation, random-stream use, and value
+copying. This improves failure determinism but does not resolve S4-M11.
