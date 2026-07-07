@@ -340,6 +340,7 @@ pub const IndexVec = union(enum) {
 
     pub fn valuesChecked(self: IndexVec, comptime T: type, items: []const T) Error!ValueIterator(T) {
         try self.validateItems(items.len);
+        if (self.len() != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
         return self.values(T, items);
     }
 
@@ -363,6 +364,7 @@ pub const IndexVec = union(enum) {
 
     pub fn valuesInto(self: IndexVec, comptime T: type, items: []const T, out: []T) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
+        if (out.len != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
         var position: usize = 0;
         while (position < self.len()) : (position += 1) out[position] = items[self.at(position)];
     }
@@ -373,6 +375,8 @@ pub const IndexVec = union(enum) {
     }
 
     pub fn valuesOwned(self: IndexVec, allocator: std.mem.Allocator, comptime T: type, items: []const T) ![]T {
+        if (self.len() == 0) return allocator.alloc(T, 0);
+        if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
         const out = try allocator.alloc(T, self.len());
         errdefer allocator.free(out);
         try self.valuesInto(T, items, out);
@@ -10039,6 +10043,34 @@ test "index vec maps sampled indexes to slice items" {
     var failing_values = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, index_vec.valuesOwnedChecked(failing_values.allocator(), []const u8, &labels));
     try std.testing.expect(failing_values.has_induced_failure);
+
+    const Empty = enum {};
+    const empty_items = @as([*]const Empty, @ptrFromInt(0x1000))[0..labels.len];
+    if (index_vec.valuesChecked(Empty, empty_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    var empty_value_out: [3]Empty = undefined;
+    try std.testing.expectError(error.EmptyInput, index_vec.valuesInto(Empty, empty_items, &empty_value_out));
+    try std.testing.expectError(error.EmptyInput, index_vec.valuesIntoChecked(Empty, empty_items, &empty_value_out));
+    var empty_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (index_vec.valuesOwned(empty_value_alloc.allocator(), Empty, empty_items)) |unexpected| {
+        empty_value_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_value_alloc.has_induced_failure);
+    var empty_value_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (index_vec.valuesOwnedChecked(empty_value_checked_alloc.allocator(), Empty, empty_items)) |unexpected| {
+        empty_value_checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_value_checked_alloc.has_induced_failure);
+
     var short_values: [2][]const u8 = undefined;
     try std.testing.expectError(error.LengthMismatch, index_vec.valuesInto([]const u8, &labels, &short_values));
 
