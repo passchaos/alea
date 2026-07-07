@@ -2923,6 +2923,7 @@ pub fn chooseValueArrayFrom(source: anytype, comptime T: type, comptime N: usize
     var out: [N]T = undefined;
     if (N == 0) return out;
     if (items.len == 0) return null;
+    if (comptime valueTypeHasEmptyEnum(T)) return null;
     fillChooseFrom(source, T, &out, items);
     return out;
 }
@@ -2935,6 +2936,7 @@ pub fn chooseValueArrayCheckedFrom(source: anytype, comptime T: type, comptime N
     var out: [N]T = undefined;
     if (N == 0) return out;
     if (items.len == 0) return error.EmptyRange;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     fillChooseFrom(source, T, &out, items);
     return out;
 }
@@ -2946,6 +2948,7 @@ pub fn chooseBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, co
 pub fn chooseBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
     if (items.len == 0) return error.EmptyRange;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     fillChooseFrom(source, T, out, items);
@@ -2972,6 +2975,7 @@ pub fn chooseCheckedFrom(source: anytype, comptime T: type, items: []const T) Er
 
 pub fn chooseFrom(source: anytype, comptime T: type, items: []const T) ?T {
     if (items.len == 0) return null;
+    if (comptime valueTypeHasEmptyEnum(T)) return null;
     if (items.len == 1) return items[0];
     return items[uintLessThanFrom(source, usize, items.len)];
 }
@@ -2989,6 +2993,7 @@ pub fn fillChooseFrom(source: anytype, comptime T: type, dest: []T, items: []con
 pub fn fillChooseCheckedFrom(source: anytype, comptime T: type, dest: []T, items: []const T) Error!void {
     if (dest.len == 0) return;
     if (items.len == 0) return error.EmptyRange;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     fillChooseFrom(source, T, dest, items);
 }
 
@@ -8480,6 +8485,61 @@ test "invalid facade choice helpers do not consume random stream" {
     var value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, rng.chooseBatchChecked(u8, value_alloc.allocator(), 8, &non_empty));
     try std.testing.expect(value_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "unweighted value choices validate empty value types before sampling" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+
+    var engine = alea.ScalarPrng.init(0x5150_ba49);
+    var control = alea.ScalarPrng.init(0x5150_ba49);
+    const rng = Rng.init(&engine);
+    var items: [1]Payload = undefined;
+
+    try std.testing.expect(chooseFrom(&engine, Payload, &items) == null);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (chooseCheckedFrom(&engine, Payload, &items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expect(chooseValueArrayFrom(&engine, Payload, 1, &items) == null);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (rng.chooseValueArrayChecked(Payload, 1, &items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [1]Payload = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseCheckedFrom(&engine, Payload, &out, &items));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseBatchFrom(&engine, Payload, unchecked_alloc.allocator(), 1, &items)) |unexpected| {
+        unchecked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (rng.chooseBatchChecked(Payload, checked_alloc.allocator(), 1, &items)) |unexpected| {
+        checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!checked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

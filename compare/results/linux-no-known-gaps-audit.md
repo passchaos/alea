@@ -3067,3 +3067,10 @@ S4-M691 adds `Rng` weighted value empty-type prevalidation
 output types before allocation, weighted-index sampling, random-stream use, and
 value copying in scalar, fill, array, and batch paths. This improves failure
 determinism but does not resolve S4-M11.
+
+S4-M692 adds `Rng` value choice empty-type prevalidation
+(`compare/results/s4-m692-rng-value-choice-empty-type-prevalidation.md`):
+`Rng` unweighted value-choice helpers now reject non-zero empty enum-containing
+output types before allocation, index sampling, random-stream use, and value
+copying in scalar, fill, array, and batch paths. This improves failure
+determinism but does not resolve S4-M11.
