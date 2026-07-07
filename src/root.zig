@@ -1201,7 +1201,7 @@ pub fn reservoirSampleMutPtrsIntoChecked(comptime T: type, io: std.Io, items: []
 }
 
 pub fn sampleIndexVec(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) !IndexVec {
-    std.debug.assert(amount <= length);
+    if (amount > length) return error.InvalidParameter;
     return try sampleIndexVecChecked(io, allocator, length, amount);
 }
 
@@ -1251,7 +1251,7 @@ pub fn sampleArrayU32Checked(io: std.Io, comptime N: usize, length: u32) ![N]u32
 }
 
 pub fn sampleIndices(io: std.Io, allocator: std.mem.Allocator, length: usize, amount: usize) ![]usize {
-    std.debug.assert(amount <= length);
+    if (amount > length) return error.InvalidParameter;
     return try sampleIndicesChecked(io, allocator, length, amount);
 }
 
@@ -1293,7 +1293,7 @@ pub fn sampleIndicesIntoChecked(io: std.Io, length: usize, out: []usize) !void {
 }
 
 pub fn sampleIndicesU32(io: std.Io, allocator: std.mem.Allocator, length: u32, amount: u32) ![]u32 {
-    std.debug.assert(amount <= length);
+    if (amount > length) return error.InvalidParameter;
     return try sampleIndicesU32Checked(io, allocator, length, amount);
 }
 
@@ -7096,6 +7096,7 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), all_index_vec_checked.at(0));
     try std.testing.expectEqual(@as(usize, 1), all_index_vec_checked.at(1));
     try std.testing.expectEqual(@as(usize, 2), all_index_vec_checked.at(2));
+    try std.testing.expectError(error.InvalidParameter, sampleIndexVec(failing, std.testing.allocator, 3, 4));
     try std.testing.expectError(error.InvalidParameter, sampleIndexVecChecked(failing, std.testing.allocator, 3, 4));
     try std.testing.expect((try sampleArray(failing, 0, 0)) != null);
     try std.testing.expectEqual(@as(usize, 0), (try sampleArrayChecked(failing, 0, 0)).len);
@@ -7121,6 +7122,7 @@ test "root random helpers validate deterministic cases before entropy" {
     const all_sample_indices_checked = try sampleIndicesChecked(failing, std.testing.allocator, 3, 3);
     defer std.testing.allocator.free(all_sample_indices_checked);
     try std.testing.expectEqualSlices(usize, &.{ 0, 1, 2 }, all_sample_indices_checked);
+    try std.testing.expectError(error.InvalidParameter, sampleIndices(failing, std.testing.allocator, 3, 4));
     var empty_indices_into: [0]usize = .{};
     try sampleIndicesInto(failing, 0, &empty_indices_into);
     try sampleIndicesIntoChecked(failing, 0, &empty_indices_into);
@@ -7145,6 +7147,7 @@ test "root random helpers validate deterministic cases before entropy" {
     const all_sample_indices_u32_checked = try sampleIndicesU32Checked(failing, std.testing.allocator, 3, 3);
     defer std.testing.allocator.free(all_sample_indices_u32_checked);
     try std.testing.expectEqualSlices(u32, &.{ 0, 1, 2 }, all_sample_indices_u32_checked);
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesU32(failing, std.testing.allocator, 3, 4));
     var empty_indices_u32_into: [0]u32 = .{};
     try sampleIndicesU32Into(failing, 0, &empty_indices_u32_into);
     try sampleIndicesU32IntoChecked(failing, 0, &empty_indices_u32_into);

@@ -2644,3 +2644,10 @@ system-entropy callers now get oversized output-buffer failures before
 secure-engine construction for `sampleIndicesInto` and `sampleIndicesU32Into`,
 while zero-output and full-range deterministic paths remain no-entropy and
 S4-M11 remains blocked.
+
+S4-M639 adds root unweighted index allocation invalid-count prevalidation
+(`compare/results/s4-m639-root-index-alloc-invalid-count-prevalidation.md`):
+root system-entropy callers now get oversized sample amount failures before
+allocation and secure-engine construction for `sampleIndexVec`, `sampleIndices`,
+and `sampleIndicesU32`, while zero-output and full-range deterministic paths
+remain allocation-only and S4-M11 remains blocked.
