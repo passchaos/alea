@@ -618,6 +618,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M620", .path = "compare/results/s4-m620-root-value-batch-empty-type-prevalidation.md" },
     .{ .milestone = "S4-M621", .path = "compare/results/s4-m621-root-no-replacement-empty-type-prevalidation.md" },
     .{ .milestone = "S4-M622", .path = "compare/results/s4-m622-root-unicode-range-prevalidation.md" },
+    .{ .milestone = "S4-M623", .path = "compare/results/s4-m623-root-sampler-batch-empty-type-prevalidation.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -625,7 +626,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M623",
+    "S4-M624",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -937,12 +938,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M623 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M623 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M624 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M624 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M623 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M623 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M624 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M624 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {

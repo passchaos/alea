@@ -319,6 +319,8 @@ pub fn fillSample(comptime T: type, io: std.Io, dest: []T, sampler: anytype) !vo
 }
 
 pub fn sampleBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, sampler: anytype, count: usize) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillSample(T, io, out, sampler);
@@ -6424,6 +6426,15 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_sample_batch = try sampleBatch(u8, failing, std.testing.allocator, die_sampler, 0);
     defer std.testing.allocator.free(empty_sample_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_sample_batch.len);
+    var bad_sample_batch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var bad_sample_batch_failed = false;
+    if (sampleBatch(EmptyEnum, failing, bad_sample_batch_alloc.allocator(), die_sampler, 3)) |values| {
+        bad_sample_batch_alloc.allocator().free(values);
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        bad_sample_batch_failed = true;
+    }
+    try std.testing.expect(bad_sample_batch_failed);
     try std.testing.expectEqual(@as(?usize, null), try chooseIndex(failing, 0));
     var empty_index_fill_nonempty: [1]usize = undefined;
     try std.testing.expectError(error.EmptyRange, fillChooseIndex(failing, &empty_index_fill_nonempty, 0));

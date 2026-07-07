@@ -2533,3 +2533,9 @@ system-entropy callers now get invalid Unicode range and code-point failures
 before secure-engine construction for unchecked Unicode scalar range scalar/fill
 helpers, while empty-output and deterministic collapsed paths remain no-entropy
 and S4-M11 remains blocked.
+
+S4-M623 adds root sampler batch empty-type prevalidation
+(`compare/results/s4-m623-root-sampler-batch-empty-type-prevalidation.md`): root
+system-entropy callers now get non-zero uninhabited output type failures before
+random-output allocation and secure-engine construction for `sampleBatch`, while
+zero-count behavior remains allocation-only and S4-M11 remains blocked.
