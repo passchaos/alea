@@ -80,10 +80,10 @@ Broader native test gate:
 ```text
 $ zig build test
 roadmapcheck ok
-readmecheck ok
 apicheck ok
 toolingcheck ok
 examplecheck ok
+readmecheck ok
 ```
 
 ## Result
