@@ -2623,3 +2623,10 @@ root system-entropy callers now get non-zero uninhabited value type failures
 before secure-engine construction for `chooseWeightedValueArray` and
 `chooseWeightedValueArrayChecked`, while zero-size and deterministic all-zero/
 single paths remain no-entropy and S4-M11 remains blocked.
+
+S4-M636 adds root by-index weighted value choice array empty-type prevalidation
+(`compare/results/s4-m636-root-weighted-by-index-value-choice-array-empty-type-prevalidation.md`):
+root system-entropy callers now get non-zero uninhabited value type failures
+before secure-engine construction for `chooseWeightedValueArrayByIndex` and
+`chooseWeightedValueArrayByIndexChecked`, while zero-size and deterministic
+all-zero/single paths remain no-entropy and S4-M11 remains blocked.

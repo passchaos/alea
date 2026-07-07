@@ -3465,6 +3465,7 @@ pub fn chooseWeightedValueArrayByChecked(comptime T: type, comptime Weight: type
 pub fn chooseWeightedValueArrayByIndex(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, comptime weightFn: fn (usize) Weight) !?[N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     var nullable: [N]?T = undefined;
     try fillChooseWeightedByIndex(T, Weight, io, &nullable, items, weightFn);
     for (nullable, 0..) |value, i| out[i] = value orelse return null;
@@ -3474,6 +3475,7 @@ pub fn chooseWeightedValueArrayByIndex(comptime T: type, comptime Weight: type, 
 pub fn chooseWeightedValueArrayByIndexChecked(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, comptime weightFn: fn (usize) Weight) ![N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     try fillChooseWeightedByIndexChecked(T, Weight, io, &out, items, weightFn);
     return out;
 }
@@ -8308,6 +8310,22 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), (try chooseWeightedValueArrayByIndexChecked(u8, f64, failing, 0, &weighted_by_index_items, RootByIndexWeights.invalid)).len);
     try std.testing.expectEqual(@as(?[3]u8, null), try chooseWeightedValueArrayByIndex(u8, f64, failing, 3, &weighted_by_index_items, RootByIndexWeights.zero));
     try std.testing.expectError(error.EmptyInput, chooseWeightedValueArrayByIndexChecked(u8, f64, failing, 3, &weighted_by_index_items, RootByIndexWeights.zero));
+    var choose_weighted_by_index_empty_array_failed = false;
+    if (chooseWeightedValueArrayByIndex(EmptyEnum, f64, failing, 1, weighted_empty_enum_items, RootByIndexWeights.single)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        choose_weighted_by_index_empty_array_failed = true;
+    }
+    try std.testing.expect(choose_weighted_by_index_empty_array_failed);
+    var choose_weighted_by_index_empty_array_checked_failed = false;
+    if (chooseWeightedValueArrayByIndexChecked(EmptyEnum, f64, failing, 1, weighted_empty_enum_items, RootByIndexWeights.single)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        choose_weighted_by_index_empty_array_checked_failed = true;
+    }
+    try std.testing.expect(choose_weighted_by_index_empty_array_checked_failed);
     try std.testing.expectEqualSlices(u8, &.{ 20, 20, 20 }, &(try chooseWeightedValueArrayByIndex(u8, f64, failing, 3, &weighted_by_index_items, RootByIndexWeights.single)).?);
     try std.testing.expectEqualSlices(u8, &.{ 20, 20, 20 }, &(try chooseWeightedValueArrayByIndexChecked(u8, f64, failing, 3, &weighted_by_index_items, RootByIndexWeights.single)));
     try std.testing.expectError(error.InvalidWeight, chooseWeightedValueArrayByIndex(u8, f64, failing, 3, &weighted_by_index_items, RootByIndexWeights.invalid));
