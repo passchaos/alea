@@ -653,7 +653,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M612 root checked Unicode scalar batch parameter prevalidation | `src/root.zig`, `compare/results/s4-m612-root-checked-unicode-batch-prevalidation.md` | Closed for the current bar: root checked Unicode scalar range batch helpers now prevalidate invalid ranges/code points before random-output allocation and secure-engine construction. |
 | S4-M613 root duration range batch parameter prevalidation | `src/root.zig`, `compare/results/s4-m613-root-duration-batch-prevalidation.md` | Closed for the current bar: root duration range batch helpers now prevalidate invalid parameters before random-output allocation and secure-engine construction. |
 | S4-M614 root Unicode scalar batch parameter prevalidation | `src/root.zig`, `compare/results/s4-m614-root-unicode-batch-prevalidation.md` | Closed for the current bar: root unchecked Unicode scalar range batch helpers now prevalidate invalid ranges/code points before random-output allocation and secure-engine construction. |
-| S4-M615 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M615 root checked value choose batch empty-input prevalidation | `src/root.zig`, `compare/results/s4-m615-root-checked-value-choose-batch-prevalidation.md` | Closed for the current bar: root checked value choose batch helper now prevalidates non-zero empty-input requests before output allocation and secure-engine construction. |
+| S4-M616 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1753,6 +1754,9 @@ S4-M613 additionally tightens root duration range batch parameter
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
 S4-M614 additionally tightens root unchecked Unicode scalar batch parameter
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
+S4-M615 additionally tightens root checked value choose batch empty-input
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
 

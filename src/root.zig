@@ -522,6 +522,7 @@ pub fn chooseBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, c
 
 pub fn chooseBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
+    if (items.len == 0) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillChooseChecked(T, io, out, items);
@@ -6502,6 +6503,8 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_choose_batch_checked = try chooseBatchChecked(u8, failing, std.testing.allocator, 0, &.{});
     defer std.testing.allocator.free(empty_choose_batch_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_choose_batch_checked.len);
+    var empty_choose_batch_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseBatchChecked(u8, failing, empty_choose_batch_checked_alloc.allocator(), 3, &.{}));
     const fixed_choose_batch = try chooseBatch(u8, failing, std.testing.allocator, 3, &singleton);
     defer std.testing.allocator.free(fixed_choose_batch);
     try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, fixed_choose_batch);

@@ -2478,3 +2478,10 @@ before random-output allocation and secure-engine construction for
 `unicodeScalarRangeLessThanBatch` and `unicodeScalarRangeAtMostBatch`, while
 zero-count and deterministic collapsed paths remain allocation-only and S4-M11
 remains blocked.
+
+S4-M615 adds root checked value choose batch empty-input prevalidation
+(`compare/results/s4-m615-root-checked-value-choose-batch-prevalidation.md`):
+root system-entropy callers now get non-zero empty-input failures before
+random-output allocation and secure-engine construction for `chooseBatchChecked`,
+while zero-count and singleton deterministic paths remain allocation-only and
+S4-M11 remains blocked.
