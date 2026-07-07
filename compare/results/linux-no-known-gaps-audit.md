@@ -3439,3 +3439,10 @@ indexes
 all-zero trees before allocation or random-stream use for non-zero requests.
 This improves reliability evidence for dynamic weighted-index workflows but does
 not resolve S4-M11.
+
+S4-M750 adds checked owned compact index aliases for static alias tables
+(`compare/results/s4-m750-aliastable-checked-owned-u32-indices.md`):
+`AliasTable.indicesU32Checked` / `indicesU32CheckedFrom` now mirror existing
+`indicesU32` stream shape and inherit compact width prevalidation. This improves
+API consistency for Alea's compact weighted-index extension but does not resolve
+S4-M11.

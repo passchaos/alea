@@ -2795,6 +2795,8 @@ Alias helpers:
 - `AliasTable.indicesCheckedFrom`
 - `AliasTable.indicesU32`
 - `AliasTable.indicesU32From`
+- `AliasTable.indicesU32Checked`
+- `AliasTable.indicesU32CheckedFrom`
 - `AliasTable.indexArray`
 - `AliasTable.indexArrayFrom`
 - `AliasTable.indexArrayChecked`

@@ -17133,6 +17133,14 @@ pub fn AliasTable(comptime Weight: type) type {
             return out;
         }
 
+        pub fn indicesU32Checked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
+            return self.indicesU32CheckedFrom(allocator, rng, amount);
+        }
+
+        pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            return self.indicesU32From(allocator, source, amount);
+        }
+
         pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
             return self.indexArrayFrom(rng, N);
         }
@@ -20099,6 +20107,15 @@ test "alias table iterators produce repeated indices" {
     try std.testing.expectEqual(unchecked_u32_iter.next().?, checked_u32_iter.next().?);
     try std.testing.expectEqual(unchecked_u32_iter_engine.next(), checked_u32_iter_engine.next());
 
+    var checked_indices_u32_engine = alea.ScalarPrng.init(0x5150_a13b);
+    var unchecked_indices_u32_engine = alea.ScalarPrng.init(0x5150_a13b);
+    const unchecked_indices_u32 = try table.indicesU32From(std.testing.allocator, &unchecked_indices_u32_engine, 8);
+    defer std.testing.allocator.free(unchecked_indices_u32);
+    const checked_indices_u32 = try table.indicesU32CheckedFrom(std.testing.allocator, &checked_indices_u32_engine, 8);
+    defer std.testing.allocator.free(checked_indices_u32);
+    try std.testing.expectEqualSlices(u32, unchecked_indices_u32, checked_indices_u32);
+    try std.testing.expectEqual(unchecked_indices_u32_engine.next(), checked_indices_u32_engine.next());
+
     const huge_len = @as(usize, std.math.maxInt(u32)) + 1;
     const huge_table = AliasTable(u32){
         .prob = @as([*]f64, @ptrFromInt(0x1000))[0..huge_len],
@@ -20117,6 +20134,10 @@ test "alias table iterators produce repeated indices" {
     var huge_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidParameter, huge_table.indicesU32From(huge_alloc.allocator(), &huge_engine, 1));
     try std.testing.expect(!huge_alloc.has_induced_failure);
+    try std.testing.expectEqual(huge_control.next(), huge_engine.next());
+    var huge_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, huge_table.indicesU32CheckedFrom(huge_checked_alloc.allocator(), &huge_engine, 1));
+    try std.testing.expect(!huge_checked_alloc.has_induced_failure);
     try std.testing.expectEqual(huge_control.next(), huge_engine.next());
 
     try table.update(&.{ 0, 0, 5, 0 });
