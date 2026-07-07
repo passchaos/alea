@@ -349,12 +349,30 @@ pub fn Choose(comptime T: type) type {
             return self.items.len;
         }
 
+        pub fn constantIndex(self: Self) ?usize {
+            return if (self.items.len == 1) 0 else null;
+        }
+
         pub fn isEmpty(self: Self) bool {
             return self.items.len == 0;
         }
 
         pub fn itemsValue(self: Self) []const T {
             return self.items;
+        }
+
+        pub fn itemAt(self: Self, index: usize) Error!*const T {
+            if (index >= self.items.len) return error.InvalidParameter;
+            return &self.items[index];
+        }
+
+        pub fn item(self: Self, index: usize) Error!*const T {
+            return self.itemAt(index);
+        }
+
+        pub fn get(self: Self, index: usize) ?*const T {
+            if (index >= self.items.len) return null;
+            return &self.items[index];
         }
 
         pub fn sample(self: Self, rng: Rng) *const T {
@@ -31984,7 +32002,13 @@ test "distribution Choose sampler mirrors slice choices" {
     try std.testing.expectEqual(@as(usize, items.len), choice.len());
     try std.testing.expectEqual(@as(usize, items.len), choice.numChoices());
     try std.testing.expect(!choice.isEmpty());
+    try std.testing.expectEqual(@as(?usize, null), choice.constantIndex());
     try std.testing.expectEqualSlices(u8, &items, choice.itemsValue());
+    try std.testing.expectEqual(&items[2], try choice.itemAt(2));
+    try std.testing.expectEqual(&items[2], try choice.item(2));
+    try std.testing.expectEqual(&items[2], choice.get(2).?);
+    try std.testing.expectEqual(@as(?*const u8, null), choice.get(items.len));
+    try std.testing.expectError(error.InvalidParameter, choice.itemAt(items.len));
 
     var choice_engine = root.DefaultPrng.init(0xc0_267);
     var index_engine = root.DefaultPrng.init(0xc0_267);
@@ -32102,6 +32126,7 @@ test "distribution Choose sampler mirrors slice choices" {
     try std.testing.expectEqual(helper_iter_engine.next(), iter_engine.next());
 
     const singleton = Choose(u8).new(items[2..3]).?;
+    try std.testing.expectEqual(@as(?usize, 0), singleton.constantIndex());
     var singleton_engine = root.DefaultPrng.init(0xc0_270);
     var singleton_control = root.DefaultPrng.init(0xc0_270);
     var singleton_values: [4]u8 = undefined;

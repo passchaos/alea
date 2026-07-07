@@ -3207,3 +3207,8 @@ S4-M713 adds distribution-layer `Choose` index iterators
 distribution-layer `Choose` now has reusable usize and u32 index iterators aligned
 with its fill helpers. This improves iterator ergonomics but does not resolve
 S4-M11.
+
+S4-M714 adds distribution-layer `Choose` introspection
+(`compare/results/s4-m714-distribution-choose-introspection.md`):
+distribution-layer `Choose` now exposes item metadata and lookup helpers on the
+sampler. This improves ergonomics but does not resolve S4-M11.

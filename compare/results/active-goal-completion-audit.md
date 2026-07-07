@@ -752,7 +752,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M711 distribution choose index outputs | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m711-distribution-choose-index-outputs.md` | Closed for the current bar: distribution-layer `Choose` now has scalar, caller-owned, owned, and fixed-size usize index output helpers. |
 | S4-M712 distribution choose u32 index outputs | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m712-distribution-choose-u32-index-outputs.md` | Closed for the current bar: distribution-layer `Choose` now has scalar, caller-owned, owned, and fixed-size u32 index output helpers. |
 | S4-M713 distribution choose index iterators | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m713-distribution-choose-index-iterators.md` | Closed for the current bar: distribution-layer `Choose` now has reusable usize and u32 index iterators. |
-| S4-M714 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M714 distribution choose introspection | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m714-distribution-choose-introspection.md` | Closed for the current bar: distribution-layer `Choose` now exposes item metadata and lookup helpers on the sampler. |
+| S4-M715 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2150,6 +2151,9 @@ is ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 S4-M713 additionally adds distribution-layer `Choose` index iterators; it is
 ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M714 additionally adds distribution-layer `Choose` introspection helpers;
+it is ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
