@@ -4143,6 +4143,8 @@ pub fn fillRangeChecked(comptime T: type, io: std.Io, dest: []T, min: T, max: T)
 }
 
 pub fn rangeBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    try rootValidateRangeParams(T, min, max);
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillRange(T, io, out, min, max);
@@ -4184,6 +4186,8 @@ pub fn fillRangeAtMostChecked(comptime T: type, io: std.Io, dest: []T, min: T, m
 }
 
 pub fn rangeAtMostBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    try rootValidateRangeAtMostParams(T, min, max);
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillRangeAtMost(T, io, out, min, max);
@@ -8541,6 +8545,16 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrChecked(u8, failing, &weighted_single_mut_items, &.{ 1, std.math.nan(f64), 2 }));
     try std.testing.expectError(error.InvalidParameter, chooseWeighted(u8, failing, &.{ 1, 2 }, &single_weight));
     try std.testing.expectError(error.InvalidWeight, chooseWeightedChecked(u8, failing, &weighted_single_items, &.{ 1, std.math.nan(f64), 2 }));
+    const empty_bad_range = try rangeBatch(u8, failing, std.testing.allocator, 0, 3, 3);
+    defer std.testing.allocator.free(empty_bad_range);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_range.len);
+    var bad_unchecked_range_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rangeBatch(u8, failing, bad_unchecked_range_alloc.allocator(), 3, 3, 3));
+    const empty_bad_at_most = try rangeAtMostBatch(u8, failing, std.testing.allocator, 0, 6, 5);
+    defer std.testing.allocator.free(empty_bad_at_most);
+    try std.testing.expectEqual(@as(usize, 0), empty_bad_at_most.len);
+    var bad_unchecked_at_most_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rangeAtMostBatch(u8, failing, bad_unchecked_at_most_alloc.allocator(), 3, 6, 5));
     try fillRange(u8, failing, &empty, 3, 4);
     try fillRangeChecked(u8, failing, &empty, 3, 3);
     try fillRangeAtMost(u8, failing, &empty, 6, 5);

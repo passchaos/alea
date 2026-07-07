@@ -2499,3 +2499,10 @@ root system-entropy callers now get non-zero empty-input failures before
 random-output allocation and secure-engine construction for `choosePtrBatchChecked`,
 while zero-count and singleton deterministic paths remain allocation-only and
 S4-M11 remains blocked.
+
+S4-M618 adds root scalar range batch parameter prevalidation
+(`compare/results/s4-m618-root-scalar-range-batch-prevalidation.md`): root
+system-entropy callers now get invalid exclusive and inclusive range failures
+before random-output allocation and secure-engine construction for `rangeBatch`
+and `rangeAtMostBatch`, while zero-count and deterministic collapsed paths remain
+allocation-only and S4-M11 remains blocked.
