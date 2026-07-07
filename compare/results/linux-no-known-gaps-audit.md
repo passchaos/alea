@@ -3506,3 +3506,10 @@ S4-M759 adds unweighted checked convenience iterator coverage
 `chooseIterChecked` and `chooseIterCheckedFrom` now have focused stream-shape
 evidence against reusable `Choice.iterFrom`. This improves iterator API
 reliability evidence but does not resolve S4-M11.
+
+S4-M760 tightens checked iterator sampling exact-remaining prevalidation
+(`compare/results/s4-m760-seq-checked-iterator-exact-remaining-prevalidation.md`):
+checked allocation-returning, caller-owned, fixed-array, and weighted iterator
+sampling helpers now reject exact-size short sources before allocation, iterator
+consumption, or random-stream use. This improves iterator sampling reliability
+evidence but does not resolve S4-M11.

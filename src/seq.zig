@@ -4843,6 +4843,9 @@ pub fn sampleIteratorChecked(allocator: std.mem.Allocator, rng: Rng, comptime T:
 pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining < amount) return error.InvalidParameter;
+    }
 
     const out = try allocator.alloc(T, amount);
     errdefer allocator.free(out);
@@ -4914,6 +4917,9 @@ pub fn sampleIteratorArrayChecked(rng: Rng, comptime T: type, comptime N: usize,
 
 pub fn sampleIteratorArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) Error![N]T {
     if (comptime N != 0 and valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining < N) return error.InvalidParameter;
+    }
     return sampleIteratorArrayFrom(source, T, N, iterator) orelse error.InvalidParameter;
 }
 
@@ -4963,6 +4969,9 @@ pub fn sampleIteratorFillCheckedFrom(source: anytype, comptime T: type, iterator
 pub fn sampleIteratorIntoCheckedFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) Error!void {
     if (out.len == 0) return;
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining < out.len) return error.InvalidParameter;
+    }
 
     var filled: usize = 0;
     while (filled < out.len) : (filled += 1) {
@@ -5039,6 +5048,9 @@ pub fn sampleIteratorWeightedChecked(allocator: std.mem.Allocator, rng: Rng, com
 pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining < amount) return error.InvalidParameter;
+    }
     const Pending = struct {
         item: T,
         weight: f64,
@@ -5179,6 +5191,9 @@ pub fn sampleIteratorWeightedIntoCheckedFrom(source: anytype, comptime T: type, 
     if (out.len == 0) return;
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining < out.len) return error.InvalidParameter;
+    }
     const count = try sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len]);
     if (count != out.len) return error.InvalidParameter;
 }
@@ -5251,6 +5266,9 @@ pub fn sampleIteratorWeightedArrayChecked(rng: Rng, comptime T: type, comptime N
 
 pub fn sampleIteratorWeightedArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) ![N]T {
     if (comptime N != 0 and valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining < N) return error.InvalidParameter;
+    }
     const candidates = (try sampleIteratorWeightedCandidateArrayFrom(source, T, N, iterator)) orelse return error.InvalidParameter;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = candidates[i].item;
@@ -11701,6 +11719,51 @@ test "short checked iterator samples do not consume past source" {
     try std.testing.expectEqual(@as(u64, 0x176d099d72bcd05c), engine.next());
 }
 
+test "checked iterator samples use exact remaining before allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7717);
+    var control = alea.ScalarPrng.init(0x5150_7717);
+
+    const ExactIter = struct {
+        next_value: u8 = 0,
+        end: u8 = 2,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.end - self.next_value;
+        }
+    };
+
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var alloc_iter = ExactIter{};
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorCheckedFrom(alloc.allocator(), &engine, u8, &alloc_iter, 3));
+    try std.testing.expect(!alloc.has_induced_failure);
+    try std.testing.expectEqual(@as(u8, 0), alloc_iter.next_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var into_iter = ExactIter{};
+    var into_out: [3]u8 = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorIntoCheckedFrom(&engine, u8, &into_iter, &into_out));
+    try std.testing.expectEqual(@as(u8, 0), into_iter.next_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var fill_iter = ExactIter{};
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorFillCheckedFrom(&engine, u8, &fill_iter, &into_out));
+    try std.testing.expectEqual(@as(u8, 0), fill_iter.next_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var array_iter = ExactIter{};
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorArrayCheckedFrom(&engine, u8, 3, &array_iter));
+    try std.testing.expectEqual(@as(u8, 0), array_iter.next_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "sampleIteratorFill aliases caller-owned iterator reservoirs" {
     const alea = @import("root.zig");
 
@@ -12213,6 +12276,53 @@ test "short checked weighted iterator samples do not consume past source" {
     const empty = try sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &empty_iter, 0);
     defer std.testing.allocator.free(empty);
     try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "checked weighted iterator samples use exact remaining before allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7718);
+    var control = alea.ScalarPrng.init(0x5150_7718);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const ExactWeightedIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 1, .weight = 1 },
+        .{ .item = 2, .weight = 3 },
+    };
+
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var alloc_iter = ExactWeightedIter{ .items = &entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(alloc.allocator(), &engine, u8, &alloc_iter, 3));
+    try std.testing.expect(!alloc.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 0), alloc_iter.index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var into_iter = ExactWeightedIter{ .items = &entries };
+    var into_out: [3]u8 = undefined;
+    var keys: [3]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedIntoCheckedFrom(&engine, u8, &into_iter, &into_out, &keys));
+    try std.testing.expectEqual(@as(usize, 0), into_iter.index);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var array_iter = ExactWeightedIter{ .items = &entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedArrayCheckedFrom(&engine, u8, 3, &array_iter));
+    try std.testing.expectEqual(@as(usize, 0), array_iter.index);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
