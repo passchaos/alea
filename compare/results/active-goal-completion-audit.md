@@ -663,7 +663,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M622 root Unicode scalar range prevalidation | `src/root.zig`, `compare/results/s4-m622-root-unicode-range-prevalidation.md` | Closed for the current bar: root unchecked Unicode scalar range scalar/fill helpers now prevalidate invalid ranges/code points before secure-engine construction. |
 | S4-M623 root sampler batch empty-type prevalidation | `src/root.zig`, `compare/results/s4-m623-root-sampler-batch-empty-type-prevalidation.md` | Closed for the current bar: root generic sampler batch helper now prevalidates non-zero uninhabited output types before output allocation and secure-engine construction. |
 | S4-M624 root generic value empty-type prevalidation | `src/root.zig`, `compare/results/s4-m624-root-generic-value-empty-type-prevalidation.md` | Closed for the current bar: root generic value scalar/fill/sample helpers now prevalidate uninhabited output types before secure-engine construction. |
-| S4-M625 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M625 root scalar range prevalidation | `src/root.zig`, `compare/results/s4-m625-root-scalar-range-prevalidation.md` | Closed for the current bar: root scalar range scalar/fill helpers now prevalidate invalid ranges before secure-engine construction. |
+| S4-M626 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1795,6 +1796,9 @@ or complete the long-term objective.
 S4-M624 additionally tightens root generic value scalar/fill/sample empty-type
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
+S4-M625 additionally tightens root scalar range prevalidation; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

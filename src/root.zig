@@ -218,16 +218,11 @@ pub fn randomIter(comptime T: type, io: std.Io) !RandomIterator(T) {
 }
 
 pub fn randomRange(comptime T: type, io: std.Io, min: T, max: T) !T {
+    try rootValidateRangeParams(T, min, max);
     switch (@typeInfo(T)) {
-        .int => {
-            std.debug.assert(min < max);
-            if (rootExclusiveIntRangeHasSingleValue(T, min, max)) return min;
-        },
-        .float => {
-            std.debug.assert(min <= max);
-            if (min == max) return min;
-        },
-        else => @compileError("alea.randomRange supports integer and floating-point values"),
+        .int => if (rootExclusiveIntRangeHasSingleValue(T, min, max)) return min,
+        .float => if (min == max) return min,
+        else => unreachable,
     }
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -248,7 +243,7 @@ pub fn randomRangeChecked(comptime T: type, io: std.Io, min: T, max: T) !T {
 
 pub fn randomRangeAtMost(comptime T: type, io: std.Io, min: T, max: T) !T {
     comptime if (@typeInfo(T) != .int) @compileError("alea.randomRangeAtMost supports integer values");
-    std.debug.assert(min <= max);
+    try rootValidateRangeAtMostParams(T, min, max);
     if (min == max) return min;
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -4106,22 +4101,21 @@ pub fn valueBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Alloca
 
 pub fn fillRange(comptime T: type, io: std.Io, dest: []T, min: T, max: T) !void {
     if (dest.len == 0) return;
+    try rootValidateRangeParams(T, min, max);
     switch (@typeInfo(T)) {
         .int => {
-            std.debug.assert(min < max);
             if (rootExclusiveIntRangeHasSingleValue(T, min, max)) {
                 @memset(dest, min);
                 return;
             }
         },
         .float => {
-            std.debug.assert(min <= max);
             if (min == max) {
                 @memset(dest, min);
                 return;
             }
         },
-        else => @compileError("alea.fillRange supports integer and floating-point slices"),
+        else => unreachable,
     }
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -4172,7 +4166,7 @@ pub fn rangeBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Alloca
 pub fn fillRangeAtMost(comptime T: type, io: std.Io, dest: []T, min: T, max: T) !void {
     comptime if (@typeInfo(T) != .int) @compileError("alea.fillRangeAtMost supports integer slices");
     if (dest.len == 0) return;
-    std.debug.assert(min <= max);
+    try rootValidateRangeAtMostParams(T, min, max);
     if (min == max) {
         @memset(dest, min);
         return;
@@ -6413,9 +6407,12 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(u8, 3), try randomRangeChecked(u8, failing, 3, 4));
     try std.testing.expectEqual(@as(f64, 2.5), try randomRange(f64, failing, 2.5, 2.5));
     try std.testing.expectEqual(@as(f64, 2.5), try randomRangeChecked(f64, failing, 2.5, 2.5));
+    try std.testing.expectError(error.EmptyRange, randomRange(u8, failing, 3, 3));
     try std.testing.expectError(error.EmptyRange, randomRangeChecked(u8, failing, 3, 3));
+    try std.testing.expectError(error.EmptyRange, randomRange(f64, failing, std.math.nan(f64), 3));
     try std.testing.expectEqual(@as(u8, 5), try randomRangeAtMost(u8, failing, 5, 5));
     try std.testing.expectEqual(@as(u8, 5), try randomRangeAtMostChecked(u8, failing, 5, 5));
+    try std.testing.expectError(error.EmptyRange, randomRangeAtMost(u8, failing, 6, 5));
     try std.testing.expectError(error.EmptyRange, randomRangeAtMostChecked(u8, failing, 6, 5));
     try std.testing.expectEqual(false, try randomBool(failing, 0));
     try std.testing.expectEqual(false, try randomBoolChecked(failing, 0));
@@ -8603,6 +8600,11 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), empty_bad_at_most.len);
     var bad_unchecked_at_most_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.EmptyRange, rangeAtMostBatch(u8, failing, bad_unchecked_at_most_alloc.allocator(), 3, 6, 5));
+    var invalid_range_fill: [1]u8 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillRange(u8, failing, &invalid_range_fill, 3, 3));
+    var invalid_float_fill: [1]f64 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillRange(f64, failing, &invalid_float_fill, std.math.nan(f64), 3));
+    try std.testing.expectError(error.EmptyRange, fillRangeAtMost(u8, failing, &invalid_range_fill, 6, 5));
     try fillRange(u8, failing, &empty, 3, 4);
     try fillRangeChecked(u8, failing, &empty, 3, 3);
     try fillRangeAtMost(u8, failing, &empty, 6, 5);

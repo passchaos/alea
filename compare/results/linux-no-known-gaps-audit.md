@@ -2546,3 +2546,10 @@ system-entropy callers now get uninhabited output type failures before
 secure-engine construction for `randomValue`, `fill`, `sample`, and
 `fillSample`, while empty-output behavior remains no-entropy and S4-M11 remains
 blocked.
+
+S4-M625 adds root scalar range prevalidation
+(`compare/results/s4-m625-root-scalar-range-prevalidation.md`): root
+system-entropy callers now get invalid exclusive and inclusive range failures
+before secure-engine construction for `randomRange`, `randomRangeAtMost`,
+`fillRange`, and `fillRangeAtMost`, while empty-output and deterministic
+collapsed paths remain no-entropy and S4-M11 remains blocked.
