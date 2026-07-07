@@ -489,6 +489,7 @@ pub fn chooseChecked(comptime T: type, io: std.Io, items: []const T) !T {
 
 pub fn fillChoose(comptime T: type, io: std.Io, dest: []T, items: []const T) !void {
     if (dest.len == 0) return;
+    if (items.len == 0) return error.EmptyRange;
     if (items.len == 1) {
         @memset(dest, items[0]);
         return;
@@ -511,6 +512,8 @@ pub fn fillChooseChecked(comptime T: type, io: std.Io, dest: []T, items: []const
 }
 
 pub fn chooseBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (items.len == 0) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillChoose(T, io, out, items);
@@ -6103,6 +6106,8 @@ test "root random helpers validate deterministic cases before entropy" {
     var empty_values: [0]u8 = .{};
     try fillChoose(u8, failing, &empty_values, &.{});
     try fillChooseChecked(u8, failing, &empty_values, &.{});
+    var empty_values_nonempty: [1]u8 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChoose(u8, failing, &empty_values_nonempty, &.{}));
     var fixed_values: [3]u8 = undefined;
     try fillChoose(u8, failing, &fixed_values, &singleton);
     try std.testing.expectEqualSlices(u8, &.{ 42, 42, 42 }, &fixed_values);
@@ -6111,6 +6116,7 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_choose_batch = try chooseBatch(u8, failing, std.testing.allocator, 0, &.{});
     defer std.testing.allocator.free(empty_choose_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_choose_batch.len);
+    try std.testing.expectError(error.EmptyRange, chooseBatch(u8, failing, std.testing.allocator, 1, &.{}));
     const empty_choose_batch_checked = try chooseBatchChecked(u8, failing, std.testing.allocator, 0, &.{});
     defer std.testing.allocator.free(empty_choose_batch_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_choose_batch_checked.len);

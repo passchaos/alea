@@ -2310,3 +2310,10 @@ root system-entropy callers now get deterministic non-empty zero-range failures
 before secure-engine construction for `fillChooseIndex`, `chooseIndexBatch`,
 `fillChooseIndexU32`, and `chooseIndexU32Batch`, while zero-count batches still
 return empty allocations and S4-M11 remains blocked.
+
+S4-M593 adds root value choose fill/batch empty-input prevalidation
+(`compare/results/s4-m593-root-value-choose-fill-batch-empty-input-prevalidation.md`):
+root system-entropy callers now get deterministic non-empty empty-input failures
+before secure-engine construction for `fillChoose` and `chooseBatch`, while
+empty destinations and zero-count batches still return deterministically and
+S4-M11 remains blocked.
