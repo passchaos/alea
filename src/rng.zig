@@ -298,6 +298,8 @@ pub fn valueBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, cou
 }
 
 pub fn valueBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     var iter = valueIterFrom(source, T);
@@ -310,8 +312,6 @@ pub fn valueBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocat
 }
 
 pub fn valueBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize) ![]T {
-    if (count == 0) return allocator.alloc(T, 0);
-    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return valueBatchFrom(source, T, allocator, count);
 }
 
@@ -8901,6 +8901,16 @@ test "owned checked values validate empty enums before consuming random stream" 
     try std.testing.expect(!zero_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (rng.valueBatch(Empty, unchecked_alloc.allocator(), 1)) |unexpected| {
+        defer unchecked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     if (rng.valueBatchChecked(Empty, std.testing.allocator, 1)) |unexpected| {
         defer std.testing.allocator.free(unexpected);
         return error.TestExpectedError;
@@ -8915,6 +8925,16 @@ test "owned checked values validate empty enums before consuming random stream" 
     } else |err| {
         try std.testing.expectEqual(error.EmptyRange, err);
     }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var tuple_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (valueBatchFrom(&engine, struct { u8, Empty }, tuple_alloc.allocator(), 1)) |unexpected| {
+        defer tuple_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!tuple_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

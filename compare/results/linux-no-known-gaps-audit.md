@@ -2840,3 +2840,10 @@ unchecked Unicode scalar range fill helpers now treat empty output buffers as
 deterministic no-ops before invalid scalar/range validation in
 `fillUnicodeScalarRangeLessThanFrom` and `fillUnicodeScalarRangeAtMostFrom`.
 This improves no-op determinism but does not resolve S4-M11.
+
+S4-M663 adds `Rng` value batch empty-type prevalidation
+(`compare/results/s4-m663-rng-value-batch-empty-type-prevalidation.md`):
+unchecked value allocation-returning batch helpers now reject non-zero empty
+enum-containing value types before allocation and random-stream use in
+`valueBatchFrom`, while zero-count requests remain deterministic empty
+allocations. This improves failure determinism but does not resolve S4-M11.

@@ -701,7 +701,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M660 Rng duration batch invalid-range prevalidation | `src/rng.zig`, `compare/results/s4-m660-rng-duration-batch-invalid-prevalidation.md` | Closed for the current bar: `Rng` unchecked duration range batch helpers now reject invalid ranges before allocation and random-stream use. |
 | S4-M661 Rng Unicode scalar range batch invalid-parameter prevalidation | `src/rng.zig`, `compare/results/s4-m661-rng-unicode-batch-invalid-prevalidation.md` | Closed for the current bar: `Rng` unchecked Unicode scalar range batch helpers now reject invalid scalar/range parameters before allocation and random-stream use. |
 | S4-M662 Rng Unicode scalar fill empty-output prevalidation | `src/rng.zig`, `compare/results/s4-m662-rng-unicode-fill-empty-output-prevalidation.md` | Closed for the current bar: `Rng` unchecked Unicode scalar range fill helpers now treat empty output buffers as no-op before invalid parameter assertions. |
-| S4-M663 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M663 Rng value batch empty-type prevalidation | `src/rng.zig`, `compare/results/s4-m663-rng-value-batch-empty-type-prevalidation.md` | Closed for the current bar: `Rng` unchecked value batch helpers now reject non-zero uninhabited value types before allocation and random-stream use. |
+| S4-M664 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1947,6 +1948,9 @@ complete the long-term objective.
 S4-M662 additionally tightens `Rng` Unicode scalar range fill empty-output
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M663 additionally tightens `Rng` value batch empty-type prevalidation; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
