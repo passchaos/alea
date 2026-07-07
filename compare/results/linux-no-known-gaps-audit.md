@@ -2470,3 +2470,11 @@ system-entropy callers now get invalid duration range failures before
 random-output allocation and secure-engine construction for duration batch
 helpers, while zero-count and deterministic collapsed paths remain allocation-
 only and S4-M11 remains blocked.
+
+S4-M614 adds root Unicode scalar batch parameter prevalidation
+(`compare/results/s4-m614-root-unicode-batch-prevalidation.md`): root
+system-entropy callers now get invalid Unicode range and code-point failures
+before random-output allocation and secure-engine construction for
+`unicodeScalarRangeLessThanBatch` and `unicodeScalarRangeAtMostBatch`, while
+zero-count and deterministic collapsed paths remain allocation-only and S4-M11
+remains blocked.

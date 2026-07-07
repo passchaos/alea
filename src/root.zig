@@ -4516,6 +4516,8 @@ pub fn unicodeScalarBatch(io: std.Io, allocator: std.mem.Allocator, count: usize
 }
 
 pub fn unicodeScalarRangeLessThanBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, min: u21, less_than: u21) ![]u21 {
+    if (count == 0) return allocator.alloc(u21, 0);
+    _ = try unicodeScalarLessThanFixed(min, less_than);
     const out = try allocator.alloc(u21, count);
     errdefer allocator.free(out);
     try fillUnicodeScalarRangeLessThan(io, out, min, less_than);
@@ -4532,6 +4534,8 @@ pub fn unicodeScalarRangeLessThanBatchChecked(io: std.Io, allocator: std.mem.All
 }
 
 pub fn unicodeScalarRangeAtMostBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, min: u21, at_most: u21) ![]u21 {
+    if (count == 0) return allocator.alloc(u21, 0);
+    _ = try unicodeScalarAtMostFixed(min, at_most);
     const out = try allocator.alloc(u21, count);
     errdefer allocator.free(out);
     try fillUnicodeScalarRangeAtMost(io, out, min, at_most);
@@ -8703,6 +8707,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EmptyRange, unicodeScalarRangeLessThanBatchChecked(failing, bad_scalar_less_alloc.allocator(), 3, 0x41, 0x41));
     var bad_scalar_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidParameter, unicodeScalarRangeLessThanBatchChecked(failing, bad_scalar_invalid_alloc.allocator(), 3, 0xD800, 0xE000));
+    var bad_scalar_less_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, unicodeScalarRangeLessThanBatch(failing, bad_scalar_less_unchecked_alloc.allocator(), 3, 0x41, 0x41));
+    var bad_scalar_invalid_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, unicodeScalarRangeLessThanBatch(failing, bad_scalar_invalid_unchecked_alloc.allocator(), 3, 0xD800, 0xE000));
     const empty_bad_scalar_at_most = try unicodeScalarRangeAtMostBatchChecked(failing, std.testing.allocator, 0, 0x42, 0x41);
     defer std.testing.allocator.free(empty_bad_scalar_at_most);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_scalar_at_most.len);
@@ -8710,6 +8718,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EmptyRange, unicodeScalarRangeAtMostBatchChecked(failing, bad_scalar_at_most_alloc.allocator(), 3, 0x42, 0x41));
     var bad_scalar_at_most_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidParameter, unicodeScalarRangeAtMostBatchChecked(failing, bad_scalar_at_most_invalid_alloc.allocator(), 3, 0xD800, 0xE000));
+    var bad_scalar_at_most_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, unicodeScalarRangeAtMostBatch(failing, bad_scalar_at_most_unchecked_alloc.allocator(), 3, 0x42, 0x41));
+    var bad_scalar_at_most_invalid_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, unicodeScalarRangeAtMostBatch(failing, bad_scalar_at_most_invalid_unchecked_alloc.allocator(), 3, 0xD800, 0xE000));
     const fixed_scalar_less_than_batch = try unicodeScalarRangeLessThanBatch(failing, std.testing.allocator, 3, 0x41, 0x42);
     defer std.testing.allocator.free(fixed_scalar_less_than_batch);
     try std.testing.expectEqualSlices(u21, &.{ 0x41, 0x41, 0x41 }, fixed_scalar_less_than_batch);
