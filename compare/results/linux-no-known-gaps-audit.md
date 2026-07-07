@@ -2651,3 +2651,12 @@ root system-entropy callers now get oversized sample amount failures before
 allocation and secure-engine construction for `sampleIndexVec`, `sampleIndices`,
 and `sampleIndicesU32`, while zero-output and full-range deterministic paths
 remain allocation-only and S4-M11 remains blocked.
+
+S4-M640 adds root unweighted no-replacement allocation/iterator invalid-count
+prevalidation
+(`compare/results/s4-m640-root-no-replacement-alloc-iter-invalid-count-prevalidation.md`):
+root system-entropy callers now get oversized sample amount failures before
+allocation and secure-engine construction for `sampleWithoutReplacement`,
+`samplePtrs`, `sampleMutPtrs`, `sampleItemsIter`, `samplePtrsIter`, and
+`sampleMutPtrsIter`, while zero-output and full-range deterministic paths remain
+allocation-only and S4-M11 remains blocked.

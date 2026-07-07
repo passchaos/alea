@@ -790,7 +790,7 @@ pub fn partialShuffleTailSplitChecked(comptime T: type, io: std.Io, items: []T, 
 }
 
 pub fn sampleWithoutReplacement(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
-    std.debug.assert(count <= items.len);
+    if (count > items.len) return error.InvalidParameter;
     return try sampleWithoutReplacementChecked(T, io, allocator, items, count);
 }
 
@@ -891,7 +891,7 @@ pub fn sampleMutPtrArrayChecked(comptime T: type, io: std.Io, comptime N: usize,
 }
 
 pub fn samplePtrs(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) ![]*const T {
-    std.debug.assert(amount <= items.len);
+    if (amount > items.len) return error.InvalidParameter;
     return try samplePtrsChecked(T, io, allocator, items, amount);
 }
 
@@ -905,7 +905,7 @@ pub fn samplePtrsChecked(comptime T: type, io: std.Io, allocator: std.mem.Alloca
 }
 
 pub fn sampleMutPtrs(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []T, amount: usize) ![]*T {
-    std.debug.assert(amount <= items.len);
+    if (amount > items.len) return error.InvalidParameter;
     return try sampleMutPtrsChecked(T, io, allocator, items, amount);
 }
 
@@ -1051,7 +1051,7 @@ pub fn chooseMultipleMutPtrsIntoChecked(comptime T: type, io: std.Io, items: []T
 }
 
 pub fn sampleItemsIter(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) !seq.SampledValueIterator(T) {
-    std.debug.assert(amount <= items.len);
+    if (amount > items.len) return error.InvalidParameter;
     return try sampleItemsIterChecked(T, io, allocator, items, amount);
 }
 
@@ -1071,7 +1071,7 @@ pub fn sampleItemsIterChecked(comptime T: type, io: std.Io, allocator: std.mem.A
 }
 
 pub fn samplePtrsIter(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) !seq.SampledPtrIterator(T) {
-    std.debug.assert(amount <= items.len);
+    if (amount > items.len) return error.InvalidParameter;
     return try samplePtrsIterChecked(T, io, allocator, items, amount);
 }
 
@@ -1091,7 +1091,7 @@ pub fn samplePtrsIterChecked(comptime T: type, io: std.Io, allocator: std.mem.Al
 }
 
 pub fn sampleMutPtrsIter(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []T, amount: usize) !seq.SampledMutPtrIterator(T) {
-    std.debug.assert(amount <= items.len);
+    if (amount > items.len) return error.InvalidParameter;
     return try sampleMutPtrsIterChecked(T, io, allocator, items, amount);
 }
 
@@ -6779,6 +6779,8 @@ test "root random helpers validate deterministic cases before entropy" {
     const all_without_replacement_checked = try sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
     defer std.testing.allocator.free(all_without_replacement_checked);
     try std.testing.expectEqualSlices(u8, &sample_items, all_without_replacement_checked);
+    var invalid_without_replacement_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacement(u8, failing, invalid_without_replacement_alloc.allocator(), &sample_items, sample_items.len + 1));
     try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
     const empty_choose_multiple = try chooseMultiple(u8, failing, std.testing.allocator, &sample_items, 0);
     defer std.testing.allocator.free(empty_choose_multiple);
@@ -6825,6 +6827,8 @@ test "root random helpers validate deterministic cases before entropy" {
     const all_ptrs_checked = try samplePtrsChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
     defer std.testing.allocator.free(all_ptrs_checked);
     for (all_ptrs_checked, 0..) |value, index| try std.testing.expectEqual(&sample_items[index], value);
+    var invalid_sample_ptrs_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, samplePtrs(u8, failing, invalid_sample_ptrs_alloc.allocator(), &sample_items, sample_items.len + 1));
     try std.testing.expectError(error.InvalidParameter, samplePtrsChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
     const empty_choose_multiple_ptrs = try chooseMultiplePtrs(u8, failing, std.testing.allocator, &sample_items, 0);
     defer std.testing.allocator.free(empty_choose_multiple_ptrs);
@@ -6860,6 +6864,8 @@ test "root random helpers validate deterministic cases before entropy" {
     const all_mut_ptrs_checked = try sampleMutPtrsChecked(u8, failing, std.testing.allocator, &mutable_sample_items, mutable_sample_items.len);
     defer std.testing.allocator.free(all_mut_ptrs_checked);
     for (all_mut_ptrs_checked, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
+    var invalid_sample_mut_ptrs_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleMutPtrs(u8, failing, invalid_sample_mut_ptrs_alloc.allocator(), &mutable_sample_items, mutable_sample_items.len + 1));
     try std.testing.expectError(error.InvalidParameter, sampleMutPtrsChecked(u8, failing, std.testing.allocator, &mutable_sample_items, mutable_sample_items.len + 1));
     const empty_choose_multiple_mut_ptrs = try chooseMultipleMutPtrs(u8, failing, std.testing.allocator, &mutable_sample_items, 0);
     defer std.testing.allocator.free(empty_choose_multiple_mut_ptrs);
@@ -6970,6 +6976,8 @@ test "root random helpers validate deterministic cases before entropy" {
     var all_values_iter_checked_out: [3]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 3), all_values_iter_checked.fill(&all_values_iter_checked_out));
     try std.testing.expectEqualSlices(u8, &sample_items, &all_values_iter_checked_out);
+    var invalid_values_iter_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleItemsIter(u8, failing, invalid_values_iter_alloc.allocator(), &sample_items, sample_items.len + 1));
     try std.testing.expectError(error.InvalidParameter, sampleItemsIterChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
     var empty_ptrs_iter = try samplePtrsIter(u8, failing, std.testing.allocator, &sample_items, 0);
     defer empty_ptrs_iter.deinit();
@@ -6989,6 +6997,8 @@ test "root random helpers validate deterministic cases before entropy" {
     var all_ptrs_iter_checked_out: [3]*const u8 = undefined;
     try std.testing.expectEqual(@as(usize, 3), all_ptrs_iter_checked.fill(&all_ptrs_iter_checked_out));
     for (all_ptrs_iter_checked_out, 0..) |value, index| try std.testing.expectEqual(&sample_items[index], value);
+    var invalid_ptrs_iter_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, samplePtrsIter(u8, failing, invalid_ptrs_iter_alloc.allocator(), &sample_items, sample_items.len + 1));
     try std.testing.expectError(error.InvalidParameter, samplePtrsIterChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
     var empty_mut_ptrs_iter = try sampleMutPtrsIter(u8, failing, std.testing.allocator, &mutable_sample_items, 0);
     defer empty_mut_ptrs_iter.deinit();
@@ -7008,6 +7018,8 @@ test "root random helpers validate deterministic cases before entropy" {
     var all_mut_ptrs_iter_checked_out: [3]*u8 = undefined;
     try std.testing.expectEqual(@as(usize, 3), all_mut_ptrs_iter_checked.fill(&all_mut_ptrs_iter_checked_out));
     for (all_mut_ptrs_iter_checked_out, 0..) |value, index| try std.testing.expectEqual(&mutable_sample_items[index], value);
+    var invalid_mut_ptrs_iter_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleMutPtrsIter(u8, failing, invalid_mut_ptrs_iter_alloc.allocator(), &mutable_sample_items, mutable_sample_items.len + 1));
     try std.testing.expectError(error.InvalidParameter, sampleMutPtrsIterChecked(u8, failing, std.testing.allocator, &mutable_sample_items, mutable_sample_items.len + 1));
     const empty_reservoir = try reservoirSample(u8, failing, std.testing.allocator, &sample_items, 0);
     defer std.testing.allocator.free(empty_reservoir);
