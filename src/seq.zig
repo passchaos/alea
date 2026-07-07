@@ -580,7 +580,7 @@ pub fn sampleIndexVecCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
 }
 
 pub fn sampleIndexVecFrom(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) !IndexVec {
-    std.debug.assert(amount <= length);
+    if (amount > length) return error.InvalidParameter;
     if (length <= std.math.maxInt(u32)) {
         return .{ .u32 = try sampleIndicesU32From(allocator, source, @intCast(length), @intCast(amount)) };
     }
@@ -597,7 +597,7 @@ pub fn sampleIndicesCheckedFrom(allocator: std.mem.Allocator, source: anytype, l
 }
 
 pub fn sampleIndicesFrom(allocator: std.mem.Allocator, source: anytype, length: usize, amount: usize) ![]usize {
-    std.debug.assert(amount <= length);
+    if (amount > length) return error.InvalidParameter;
     if (amount == 0) return allocator.alloc(usize, 0);
     if (length <= std.math.maxInt(u32)) {
         return sampleIndicesU32AsUsize(allocator, source, @intCast(length), @intCast(amount));
@@ -657,7 +657,7 @@ pub fn sampleIndicesU32CheckedFrom(allocator: std.mem.Allocator, source: anytype
 }
 
 pub fn sampleIndicesU32From(allocator: std.mem.Allocator, source: anytype, length: u32, amount: u32) ![]u32 {
-    std.debug.assert(amount <= length);
+    if (amount > length) return error.InvalidParameter;
     if (amount == 0) return allocator.alloc(u32, 0);
 
     if (amount < 163) {
@@ -10500,6 +10500,31 @@ test "invalid sequence helpers do not consume random stream" {
     defer std.testing.allocator.free(huge_sample);
     try std.testing.expectEqual(@as(usize, 2), huge_sample.len);
     try std.testing.expectEqual(@as(u64, 0xa06192b916815789), engine.next());
+}
+
+test "invalid unchecked index allocation helpers fail before allocation and stream use" {
+    const alea = @import("root.zig");
+
+    var indices_engine = alea.ScalarPrng.init(0x5150_6440);
+    var indices_control = alea.ScalarPrng.init(0x5150_6440);
+    var indices_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesFrom(indices_alloc.allocator(), &indices_engine, 3, 4));
+    try std.testing.expect(!indices_alloc.has_induced_failure);
+    try std.testing.expectEqual(indices_control.next(), indices_engine.next());
+
+    var indices_u32_engine = alea.ScalarPrng.init(0x5150_6441);
+    var indices_u32_control = alea.ScalarPrng.init(0x5150_6441);
+    var indices_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesU32From(indices_u32_alloc.allocator(), &indices_u32_engine, 3, 4));
+    try std.testing.expect(!indices_u32_alloc.has_induced_failure);
+    try std.testing.expectEqual(indices_u32_control.next(), indices_u32_engine.next());
+
+    var index_vec_engine = alea.ScalarPrng.init(0x5150_6442);
+    var index_vec_control = alea.ScalarPrng.init(0x5150_6442);
+    var index_vec_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleIndexVecFrom(index_vec_alloc.allocator(), &index_vec_engine, 3, 4));
+    try std.testing.expect(!index_vec_alloc.has_induced_failure);
+    try std.testing.expectEqual(index_vec_control.next(), index_vec_engine.next());
 }
 
 test "initial sequence allocation failures do not consume random stream" {

@@ -2685,3 +2685,11 @@ and u32 length limits before secure-engine construction for
 `sampleWeightedIndices`, `sampleWeightedIndicesChecked`,
 `sampleWeightedIndicesU32`, and `sampleWeightedIndicesU32Checked`. This improves
 failure/result determinism but does not resolve S4-M11.
+
+S4-M644 adds direct sequence index allocation invalid-count prevalidation
+(`compare/results/s4-m644-seq-index-alloc-invalid-count-prevalidation.md`):
+direct `seq` unchecked index allocation helpers now reject oversized sample
+amounts before allocation and random-stream use for `sampleIndexVecFrom`,
+`sampleIndicesFrom`, and `sampleIndicesU32From`, aligning the direct layer with
+the root prevalidation work. This improves failure determinism but does not
+resolve S4-M11.
