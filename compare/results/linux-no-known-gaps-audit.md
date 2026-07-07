@@ -2202,3 +2202,9 @@ S4-M576 adds root length-weighted no-replacement index into helpers
 system-entropy callers can now fill caller-owned no-replacement weighted `usize`
 index buffers directly from a length and comptime index-weight accessor from the
 root API while S4-M11 remains blocked.
+
+S4-M577 adds root length-weighted no-replacement compact u32 index into helpers
+(`compare/results/s4-m577-root-weighted-by-index-u32-into-helpers.md`):
+system-entropy callers can now fill caller-owned no-replacement weighted compact
+`u32` index buffers directly from a length and comptime index-weight accessor
+from the root API while S4-M11 remains blocked.

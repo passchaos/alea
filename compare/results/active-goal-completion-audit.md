@@ -615,7 +615,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M574 root length-weighted compact u32 index sample helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m574-root-weighted-by-index-u32-sample-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate no-replacement weighted compact `u32` index samples directly from a length and comptime index-weight accessor. |
 | S4-M575 root length-weighted IndexVec sample helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m575-root-weighted-by-index-vec-index-sample-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate no-replacement weighted `IndexVec` samples directly from a length and comptime index-weight accessor. |
 | S4-M576 root length-weighted index into helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m576-root-weighted-by-index-index-into-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned no-replacement weighted `usize` index buffers directly from a length and comptime index-weight accessor. |
-| S4-M577 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M577 root length-weighted compact u32 index into helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m577-root-weighted-by-index-u32-into-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned no-replacement weighted compact `u32` index buffers directly from a length and comptime index-weight accessor. |
+| S4-M578 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1603,6 +1604,9 @@ complete the long-term objective.
 S4-M576 additionally adds root length-weighted no-replacement index into
 helpers; it is API ergonomics work and does not resolve S4-M11 or complete
 the long-term objective.
+S4-M577 additionally adds root length-weighted no-replacement compact
+u32 index into helpers; it is API ergonomics work and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
