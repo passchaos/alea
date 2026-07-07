@@ -719,6 +719,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M721", .path = "compare/results/s4-m721-distribution-choose-value-iterators.md" },
     .{ .milestone = "S4-M722", .path = "compare/results/s4-m722-distribution-choose-checked-iterator-aliases.md" },
     .{ .milestone = "S4-M723", .path = "compare/results/s4-m723-choice-checked-values.md" },
+    .{ .milestone = "S4-M724", .path = "compare/results/s4-m724-weightedchoice-checked-values.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -726,7 +727,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M724",
+    "S4-M725",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -1038,12 +1039,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M724 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M724 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M725 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M725 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M724 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M724 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M725 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M725 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {

@@ -3272,6 +3272,8 @@ Dynamic weighted helpers:
   `WeightedChoice.sampleIndexFrom`, `WeightedChoice.sampleIndexU32`,
   `WeightedChoice.sampleIndexU32From`,
   `WeightedChoice.sampleValue`, `WeightedChoice.sampleValueFrom`,
+  `WeightedChoice.sampleValueChecked`, `WeightedChoice.sampleValueCheckedFrom`,
+  `WeightedChoice.valueChecked`, `WeightedChoice.valueCheckedFrom`,
   `WeightedChoice.fill`, `WeightedChoice.fillFrom`,
   `WeightedChoice.fillValues`, `WeightedChoice.fillValuesFrom`,
   `WeightedChoice.ptrs`, `WeightedChoice.ptrsFrom`,

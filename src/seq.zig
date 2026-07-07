@@ -8523,6 +8523,23 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return self.sampleFrom(source).*;
         }
 
+        pub fn sampleValueChecked(self: Self, rng: Rng) Error!T {
+            return self.sampleValueCheckedFrom(rng);
+        }
+
+        pub fn sampleValueCheckedFrom(self: Self, source: anytype) Error!T {
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            return self.sampleValueFrom(source);
+        }
+
+        pub fn valueChecked(self: Self, rng: Rng) Error!T {
+            return self.sampleValueChecked(rng);
+        }
+
+        pub fn valueCheckedFrom(self: Self, source: anytype) Error!T {
+            return self.sampleValueCheckedFrom(source);
+        }
+
         pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
             self.fillFrom(rng, dest);
         }
@@ -18167,6 +18184,12 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expect(direct_index_u32 == 1 or direct_index_u32 == 2);
     const direct_value = choice.sampleValueFrom(&engine);
     try std.testing.expect(!std.mem.eql(u8, direct_value, "never"));
+    var checked_value_engine = alea.DefaultPrng.init(0xc0_ef02);
+    var unchecked_value_engine = alea.DefaultPrng.init(0xc0_ef02);
+    const unchecked_value = choice.sampleValueFrom(&unchecked_value_engine);
+    const checked_value = try choice.sampleValueCheckedFrom(&checked_value_engine);
+    try std.testing.expectEqualSlices(u8, unchecked_value, checked_value);
+    try std.testing.expectEqual(unchecked_value_engine.next(), checked_value_engine.next());
     var pointer_buf: [8]*const []const u8 = undefined;
     choice.fillFrom(&engine, &pointer_buf);
     for (pointer_buf) |item| try std.testing.expect(!std.mem.eql(u8, item.*, "never"));
@@ -18190,6 +18213,18 @@ test "weighted choice sampler maps alias indexes to items" {
     var empty_engine = alea.ScalarPrng.init(0x5150_4476);
     var empty_out: [1]Empty = undefined;
     empty_choice.fillValuesFrom(&empty_engine, &empty_out);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    if (empty_choice.sampleValueCheckedFrom(&empty_engine)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    if (empty_choice.valueCheckedFrom(&empty_engine)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
     if (empty_choice.valueArrayCheckedFrom(&empty_engine, 1)) |_| {
         return error.TestExpectedError;

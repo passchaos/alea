@@ -3265,3 +3265,9 @@ S4-M723 adds reusable `Choice` checked scalar values
 checked scalar value-copy helpers with seq-style empty-type failures before
 random-stream use and value copying. This improves fallible value-copy ergonomics
 but does not resolve S4-M11.
+
+S4-M724 adds reusable `WeightedChoice` checked scalar values
+(`compare/results/s4-m724-weightedchoice-checked-values.md`): reusable
+`WeightedChoice` now has checked scalar value-copy helpers with seq-style
+empty-type failures before random-stream use and value copying. This improves
+weighted fallible value-copy ergonomics but does not resolve S4-M11.
