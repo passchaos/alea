@@ -3181,6 +3181,8 @@ Dynamic weighted helpers:
   `Choose(T).isEmpty`, `Choose(T).itemsValue`, `Choose(T).sample`,
   `Choose(T).sampleFrom`, `Choose(T).sampleValue`,
   `Choose(T).sampleValueFrom`, `Choose(T).fill`, `Choose(T).fillFrom`,
+  `Choose(T).ptrs`, `Choose(T).ptrsFrom`,
+  `Choose(T).ptrArray`, `Choose(T).ptrArrayFrom`,
   `Choose(T).fillValues`, `Choose(T).fillValuesFrom`,
   `Choose(T).valueArray`, `Choose(T).valueArrayFrom`,
   `Choose(T).valueArrayChecked`, `Choose(T).valueArrayCheckedFrom`,

@@ -3183,3 +3183,9 @@ S4-M709 adds distribution-layer `Choose` owned values
 distribution-layer `Choose` now has allocation-returning repeated value helpers
 with empty-type failures before allocation, random-stream use, and value copying.
 This improves owned-output ergonomics but does not resolve S4-M11.
+
+S4-M710 adds distribution-layer `Choose` pointer outputs
+(`compare/results/s4-m710-distribution-choose-pointer-outputs.md`):
+distribution-layer `Choose` now has fixed-size and owned pointer output helpers
+matching reference-oriented choice workflows. This improves ergonomics but does
+not resolve S4-M11.

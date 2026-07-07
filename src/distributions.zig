@@ -388,6 +388,27 @@ pub fn Choose(comptime T: type) type {
             for (dest) |*slot| slot.* = self.sampleFrom(source);
         }
 
+        pub fn ptrs(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
+            return self.ptrsFrom(allocator, rng, amount);
+        }
+
+        pub fn ptrsFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]*const T {
+            const out = try allocator.alloc(*const T, amount);
+            errdefer allocator.free(out);
+            self.fillFrom(source, out);
+            return out;
+        }
+
+        pub fn ptrArray(self: Self, rng: Rng, comptime N: usize) [N]*const T {
+            return self.ptrArrayFrom(rng, N);
+        }
+
+        pub fn ptrArrayFrom(self: Self, source: anytype, comptime N: usize) [N]*const T {
+            var out: [N]*const T = undefined;
+            self.fillFrom(source, &out);
+            return out;
+        }
+
         pub fn fillValues(self: Self, rng: Rng, dest: []T) void {
             self.fillValuesFrom(rng, dest);
         }
@@ -31834,6 +31855,21 @@ test "distribution Choose sampler mirrors slice choices" {
     for (&helper_values) |*value| value.* = Rng.chooseFrom(&helper_engine, u8, &items).?;
     try std.testing.expectEqualSlices(u8, &helper_values, &values);
     try std.testing.expectEqual(helper_engine.next(), fill_engine.next());
+    var ptrs_engine = root.DefaultPrng.init(0xc0_274);
+    var ptrs_control = root.DefaultPrng.init(0xc0_274);
+    const owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &ptrs_engine, 6);
+    defer std.testing.allocator.free(owned_ptrs);
+    var ptrs_fill: [6]*const u8 = undefined;
+    choice.fillFrom(&ptrs_control, &ptrs_fill);
+    try std.testing.expectEqualSlices(*const u8, &ptrs_fill, owned_ptrs);
+    try std.testing.expectEqual(ptrs_control.next(), ptrs_engine.next());
+    var ptr_array_engine = root.DefaultPrng.init(0xc0_275);
+    var ptr_array_control = root.DefaultPrng.init(0xc0_275);
+    const ptr_array = choice.ptrArrayFrom(&ptr_array_engine, 6);
+    var ptr_array_fill: [6]*const u8 = undefined;
+    choice.fillFrom(&ptr_array_control, &ptr_array_fill);
+    try std.testing.expectEqualSlices(*const u8, &ptr_array_fill, &ptr_array);
+    try std.testing.expectEqual(ptr_array_control.next(), ptr_array_engine.next());
     var values_engine = root.DefaultPrng.init(0xc0_273);
     var values_control = root.DefaultPrng.init(0xc0_273);
     const owned_values = try choice.valuesFrom(std.testing.allocator, &values_engine, 6);
