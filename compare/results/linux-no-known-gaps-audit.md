@@ -3218,3 +3218,9 @@ S4-M715 adds distribution-layer `Choose` probability introspection
 distribution-layer `Choose` now exposes probability lookup/output/iteration
 helpers and exact iterator size hints. This improves diagnostics/ergonomics but
 does not resolve S4-M11.
+
+S4-M716 adds distribution-layer `Choose` checked index aliases
+(`compare/results/s4-m716-distribution-choose-checked-index-aliases.md`):
+distribution-layer `Choose` now has checked aliases for scalar, caller-owned,
+owned, and fixed-size usize index outputs. This improves discoverability but does
+not resolve S4-M11.
