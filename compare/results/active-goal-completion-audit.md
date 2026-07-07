@@ -746,7 +746,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M705 choice checked value array | `src/seq.zig`, `compare/results/s4-m705-choice-checked-value-array.md` | Closed for the current bar: reusable `Choice` now has checked fixed-size value array helpers that reject non-zero uninhabited output types before random-stream use or value copying. |
 | S4-M706 weightedchoice checked value array | `src/seq.zig`, `docs/api-reference.md`, `compare/results/s4-m706-weightedchoice-checked-value-array.md` | Closed for the current bar: reusable `WeightedChoice` now has checked fixed-size value array helpers that reject non-zero uninhabited output types before random-stream use or value copying. |
 | S4-M707 distribution choose value-copy empty-type prevalidation | `src/distributions.zig`, `compare/results/s4-m707-distribution-choose-value-copy-empty-type-prevalidation.md` | Closed for the current bar: distribution-layer `Choose` value-copy fills now handle non-empty uninhabited output types before random-stream use or value copying. |
-| S4-M708 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M708 distribution choose value array | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m708-distribution-choose-value-array.md` | Closed for the current bar: distribution-layer `Choose` now has fixed-size value array helpers, including checked empty-type failures before random-stream use or value copying. |
+| S4-M709 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2127,6 +2128,9 @@ complete the long-term objective.
 S4-M707 additionally tightens distribution-layer `Choose` value-copy
 empty-type prevalidation; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M708 additionally adds distribution-layer `Choose` fixed-size value
+arrays; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

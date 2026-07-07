@@ -3171,3 +3171,9 @@ S4-M707 adds distribution-layer `Choose` value-copy empty-type prevalidation
 distribution-layer `Choose` value-copy fills now handle non-empty empty
 enum-containing output types before random-stream use and value copying. This
 improves failure determinism but does not resolve S4-M11.
+
+S4-M708 adds distribution-layer `Choose` value arrays
+(`compare/results/s4-m708-distribution-choose-value-array.md`):
+distribution-layer `Choose` now has fixed-size value array helpers, including
+checked empty-type failures before random-stream use and value copying. This
+improves stack-friendly ergonomics but does not resolve S4-M11.
