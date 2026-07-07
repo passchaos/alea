@@ -2265,3 +2265,11 @@ system-entropy callers now get deterministic zero-size/all-zero/single-positive
 and invalid-parameter failures before secure-engine construction for
 `sampleWeightedArray` and `sampleWeightedArrayChecked` while S4-M11 remains
 blocked.
+
+S4-M587 adds root parallel-weighted no-replacement const-pointer array
+prevalidation
+(`compare/results/s4-m587-root-weighted-const-ptr-array-prevalidation.md`):
+root system-entropy callers now get deterministic zero-size/all-zero/single-
+positive and invalid-parameter failures before secure-engine construction for
+`sampleWeightedPtrArray` and `sampleWeightedPtrArrayChecked` while S4-M11
+remains blocked.
