@@ -3153,3 +3153,9 @@ S4-M704 adds `Choice` value-copy empty-type prevalidation
 reusable `Choice` value-copy helpers now handle non-empty empty
 enum-containing output types before allocation, random-stream use, and value
 copying. This improves failure determinism but does not resolve S4-M11.
+
+S4-M705 adds reusable `Choice` checked value arrays
+(`compare/results/s4-m705-choice-checked-value-array.md`): reusable `Choice` now
+has checked fixed-size value array helpers that reject non-zero empty
+enum-containing output types before random-stream use and value copying. This
+improves failure determinism but does not resolve S4-M11.
