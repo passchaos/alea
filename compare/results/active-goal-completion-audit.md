@@ -797,7 +797,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M756 accessor weighted iterator checked-from coverage | `src/seq.zig`, `compare/results/s4-m756-accessor-weighted-iterator-checked-from.md` | Closed for the current bar: accessor- and index-weighted checked direct-source convenience iterators now have stream-shape coverage against reusable `WeightedChoice`. |
 | S4-M757 parallel weighted iterator checked-from coverage | `src/seq.zig`, `compare/results/s4-m757-parallel-weighted-iterator-checked-from.md` | Closed for the current bar: parallel-weight checked direct-source convenience iterator now has stream-shape coverage against reusable `WeightedChoice`. |
 | S4-M758 weighted checked u32 iterator facades | `src/distributions.zig`, `compare/results/s4-m758-weighted-checked-u32-iterator-facades.md` | Closed for the current bar: checked compact `u32` iterator facade constructors for `AliasTable`, `WeightedTree`, and `WeightedIntTree` now have direct-source stream-shape coverage. |
-| S4-M759 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M759 choice convenience checked iterator coverage | `src/seq.zig`, `compare/results/s4-m759-choice-convenience-checked-iterator.md` | Closed for the current bar: `chooseIterChecked` and `chooseIterCheckedFrom` now have reusable `Choice` stream-shape coverage. |
+| S4-M760 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2341,6 +2342,9 @@ S4-M758 additionally covers static/dynamic weighted checked compact `u32`
 iterator facade constructors against direct-source stream shape; it is
 reliability/validation work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M759 additionally covers unweighted checked convenience iterators against
+reusable `Choice` stream shape; it is reliability/validation work and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

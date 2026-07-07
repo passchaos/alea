@@ -3500,3 +3500,9 @@ S4-M758 adds checked compact weighted iterator facade coverage
 `WeightedIntTree.iterU32Checked` now have focused facade/direct stream-shape
 evidence. This improves compact weighted-index iterator reliability evidence but
 does not resolve S4-M11.
+
+S4-M759 adds unweighted checked convenience iterator coverage
+(`compare/results/s4-m759-choice-convenience-checked-iterator.md`):
+`chooseIterChecked` and `chooseIterCheckedFrom` now have focused stream-shape
+evidence against reusable `Choice.iterFrom`. This improves iterator API
+reliability evidence but does not resolve S4-M11.
