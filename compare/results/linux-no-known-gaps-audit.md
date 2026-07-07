@@ -2693,3 +2693,10 @@ amounts before allocation and random-stream use for `sampleIndexVecFrom`,
 `sampleIndicesFrom`, and `sampleIndicesU32From`, aligning the direct layer with
 the root prevalidation work. This improves failure determinism but does not
 resolve S4-M11.
+
+S4-M645 adds `Rng` no-replacement invalid-count prevalidation
+(`compare/results/s4-m645-rng-no-replacement-invalid-count-prevalidation.md`):
+`Rng.sampleWithoutReplacement` and direct `sampleWithoutReplacementFrom` now
+reject oversized sample counts before allocation and random-stream use, aligning
+the method/direct RNG layer with the root and direct `seq` prevalidation work.
+This improves failure determinism but does not resolve S4-M11.

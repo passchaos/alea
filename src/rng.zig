@@ -3883,13 +3883,13 @@ pub fn chooseWeightedPtrBatchCheckedFrom(source: anytype, comptime T: type, allo
 }
 
 pub fn sampleWithoutReplacement(self: Rng, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
-    std.debug.assert(count <= items.len);
+    if (count > items.len) return error.InvalidParameter;
     return sampleWithoutReplacementFrom(self, T, allocator, items, count);
 }
 
 pub fn sampleWithoutReplacementFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
-    std.debug.assert(count <= items.len);
-    return sampleWithoutReplacementCheckedFrom(source, T, allocator, items, count) catch unreachable;
+    if (count > items.len) return error.InvalidParameter;
+    return try sampleWithoutReplacementCheckedFrom(source, T, allocator, items, count);
 }
 
 pub fn sampleWithoutReplacementChecked(self: Rng, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
@@ -6604,6 +6604,26 @@ test "zero-count sample without replacement does not build pool or consume rando
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &items, items.len + 1));
+}
+
+test "invalid unchecked sample without replacement fails before allocation and stream use" {
+    const alea = @import("root.zig");
+    const items = [_]u8{ 1, 2, 3, 4 };
+
+    var method_engine = alea.ScalarPrng.init(0x5150_bb3);
+    var method_control = alea.ScalarPrng.init(0x5150_bb3);
+    const rng = Rng.init(&method_engine);
+    var method_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, rng.sampleWithoutReplacement(u8, method_alloc.allocator(), &items, items.len + 1));
+    try std.testing.expect(!method_alloc.has_induced_failure);
+    try std.testing.expectEqual(method_control.next(), method_engine.next());
+
+    var direct_engine = alea.ScalarPrng.init(0x5150_bb4);
+    var direct_control = alea.ScalarPrng.init(0x5150_bb4);
+    var direct_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementFrom(&direct_engine, u8, direct_alloc.allocator(), &items, items.len + 1));
+    try std.testing.expect(!direct_alloc.has_induced_failure);
+    try std.testing.expectEqual(direct_control.next(), direct_engine.next());
 }
 
 test "sample without replacement avoids post-sampling ownership allocation" {

@@ -683,7 +683,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M642 root unchecked iterator exact-short prevalidation | `src/root.zig`, `compare/results/s4-m642-root-unchecked-iterator-exact-short-prevalidation.md` | Closed for the current bar: root unchecked iterator allocation/array helpers now avoid oversized allocation and pre-return exact-short array cases before entropy or iterator consumption where possible. |
 | S4-M643 root weighted index allocation prevalidation | `src/root.zig`, `compare/results/s4-m643-root-weighted-index-alloc-prevalidation.md` | Closed for the current bar: root parallel-weighted index allocation helpers now resolve empty, all-zero, single-positive, and checked oversized requests before secure-engine construction. |
 | S4-M644 direct sequence index allocation invalid-count prevalidation | `src/seq.zig`, `compare/results/s4-m644-seq-index-alloc-invalid-count-prevalidation.md` | Closed for the current bar: direct `seq` unchecked index allocation helpers now reject oversized sample amounts before allocation and random-stream use. |
-| S4-M645 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M645 Rng no-replacement invalid-count prevalidation | `src/rng.zig`, `compare/results/s4-m645-rng-no-replacement-invalid-count-prevalidation.md` | Closed for the current bar: `Rng` unchecked no-replacement value sampling now rejects oversized sample counts before allocation and random-stream use. |
+| S4-M646 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1875,6 +1876,9 @@ or complete the long-term objective.
 S4-M644 additionally tightens direct sequence index allocation invalid-count
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
+S4-M645 additionally tightens `Rng` no-replacement invalid-count prevalidation;
+it is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
