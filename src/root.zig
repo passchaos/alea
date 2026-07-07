@@ -214,6 +214,7 @@ pub fn randomValueChecked(comptime T: type, io: std.Io) !T {
 }
 
 pub fn randomIter(comptime T: type, io: std.Io) !RandomIterator(T) {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return .{ .engine = try secure(io) };
 }
 
@@ -6399,6 +6400,11 @@ test "root random helpers validate deterministic cases before entropy" {
         try std.testing.expectEqual(error.EmptyRange, err);
     }
     if (randomValueChecked(EmptyEnum, failing)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    if (randomIter(EmptyEnum, failing)) |_| {
         return error.TestExpectedError;
     } else |err| {
         try std.testing.expectEqual(error.EmptyRange, err);

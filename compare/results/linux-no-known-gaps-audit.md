@@ -2553,3 +2553,9 @@ system-entropy callers now get invalid exclusive and inclusive range failures
 before secure-engine construction for `randomRange`, `randomRangeAtMost`,
 `fillRange`, and `fillRangeAtMost`, while empty-output and deterministic
 collapsed paths remain no-entropy and S4-M11 remains blocked.
+
+S4-M626 adds root random iterator empty-type prevalidation
+(`compare/results/s4-m626-root-random-iter-empty-type-prevalidation.md`): root
+system-entropy callers now get uninhabited element type failures before
+secure-engine construction for `randomIter`, while ordinary iterator creation
+remains entropy-backed and S4-M11 remains blocked.
