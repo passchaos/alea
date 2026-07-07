@@ -4928,6 +4928,7 @@ pub fn sampleIteratorFillFrom(source: anytype, comptime T: type, iterator: anyty
 
 pub fn sampleIteratorIntoFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) usize {
     if (out.len == 0) return 0;
+    if (comptime valueTypeHasEmptyEnum(T)) return 0;
 
     var filled: usize = 0;
     while (filled < out.len) : (filled += 1) {
@@ -11442,6 +11443,10 @@ test "iterator reservoir samples validate empty value types before allocation" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     var out: [1]Empty = undefined;
+    var into_iter = EmptyIter{};
+    try std.testing.expectEqual(@as(usize, 0), sampleIteratorIntoFrom(&engine, Empty, &into_iter, &out));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var checked_into_iter = EmptyIter{};
     try std.testing.expectError(error.EmptyInput, sampleIteratorIntoCheckedFrom(&engine, Empty, &checked_into_iter, &out));
     try std.testing.expectEqual(control.next(), engine.next());

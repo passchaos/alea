@@ -3127,3 +3127,10 @@ S4-M700 adds `seq` weighted iterator choice empty-type prevalidation
 enum-containing output types before iterator consumption, weight evaluation,
 random-stream use, and value copying. This improves failure determinism but does
 not resolve S4-M11.
+
+S4-M701 adds `seq` unchecked iterator into empty-type prevalidation
+(`compare/results/s4-m701-seq-unchecked-iterator-into-empty-type-prevalidation.md`):
+`seq` unchecked caller-owned iterator value fills now treat non-empty empty
+enum-containing output buffers as zero-fill no-ops before iterator consumption,
+random-stream use, and value copying. This improves failure determinism but does
+not resolve S4-M11.
