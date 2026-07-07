@@ -2177,6 +2177,13 @@ pub fn sampleWeightedMutPtrsIntoChecked(comptime T: type, comptime Weight: type,
 
 pub fn sampleWeightedArray(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, weights: []const Weight) !?[N]T {
     if (N == 0) return .{};
+    if (items.len != weights.len) return error.LengthMismatch;
+    if (items.len == 0) return null;
+    const state = try rootPositiveWeightState(Weight, weights);
+    if (state.count < N) return null;
+    if (comptime N == 1) {
+        if (state.count == 1) return .{items[state.single_index.?]};
+    }
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return try seq.sampleWeightedArray(random_source, T, Weight, N, items, weights);
@@ -2184,6 +2191,13 @@ pub fn sampleWeightedArray(comptime T: type, comptime Weight: type, io: std.Io, 
 
 pub fn sampleWeightedArrayChecked(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, weights: []const Weight) ![N]T {
     if (N == 0) return .{};
+    if (items.len != weights.len) return error.LengthMismatch;
+    if (N > items.len) return error.InvalidParameter;
+    const state = try rootPositiveWeightState(Weight, weights);
+    if (state.count < N) return error.InvalidParameter;
+    if (comptime N == 1) {
+        if (state.count == 1) return .{items[state.single_index.?]};
+    }
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return try seq.sampleWeightedArrayChecked(random_source, T, Weight, N, items, weights);
@@ -6450,6 +6464,15 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.LengthMismatch, sampleWeighted(u8, f64, failing, std.testing.allocator, &.{ 10, 20, 30 }, &.{ 1, 2 }, 2));
     try std.testing.expectError(error.LengthMismatch, sampleWeightedChecked(u8, f64, failing, std.testing.allocator, &.{ 10, 20, 30 }, &.{ 1, 2 }, 2));
     try std.testing.expect((try sampleWeightedArray(u8, f64, failing, 0, &.{ 1, 2, 3 }, &.{ 1, 2, 3 })) != null);
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedArray(u8, f64, failing, 2, &.{ 1, 2, 3 }, &.{ 1, 2 }));
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedArrayChecked(u8, f64, failing, 2, &.{ 1, 2, 3 }, &.{ 1, 2 }));
+    try std.testing.expectEqual(@as(?[2]u8, null), try sampleWeightedArray(u8, f64, failing, 2, &.{ 10, 20, 30 }, &.{ 0, 0, 0 }));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedArrayChecked(u8, f64, failing, 2, &.{ 10, 20, 30 }, &.{ 0, 0, 0 }));
+    try std.testing.expectEqualSlices(u8, &.{20}, &(try sampleWeightedArray(u8, f64, failing, 1, &.{ 10, 20, 30 }, &.{ 0, 5, 0 })).?);
+    try std.testing.expectEqualSlices(u8, &.{20}, &(try sampleWeightedArrayChecked(u8, f64, failing, 1, &.{ 10, 20, 30 }, &.{ 0, 5, 0 })));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedArrayChecked(u8, f64, failing, 2, &.{ 10, 20, 30 }, &.{ 0, 5, 0 }));
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedArray(u8, f64, failing, 2, &.{ 10, 20, 30 }, &.{ std.math.nan(f64), 1, 1 }));
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedArrayChecked(u8, f64, failing, 2, &.{ 10, 20, 30 }, &.{ std.math.nan(f64), 1, 1 }));
     const empty_weighted_ptrs_nr = try sampleWeightedPtrs(u8, f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, &.{ 1, 2, 3 }, 0);
     defer std.testing.allocator.free(empty_weighted_ptrs_nr);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_ptrs_nr.len);

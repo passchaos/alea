@@ -2258,3 +2258,10 @@ root system-entropy callers now get deterministic zero-count/all-zero/single-
 positive and invalid-parameter failures before secure-engine construction for
 `sampleWeightedMutPtrs` and `sampleWeightedMutPtrsChecked` while S4-M11 remains
 blocked.
+
+S4-M586 adds root parallel-weighted no-replacement value array prevalidation
+(`compare/results/s4-m586-root-weighted-value-array-prevalidation.md`): root
+system-entropy callers now get deterministic zero-size/all-zero/single-positive
+and invalid-parameter failures before secure-engine construction for
+`sampleWeightedArray` and `sampleWeightedArrayChecked` while S4-M11 remains
+blocked.

@@ -624,7 +624,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M583 root parallel-weighted value sample prevalidation | `src/root.zig`, `compare/results/s4-m583-root-weighted-value-sample-prevalidation.md` | Closed for the current bar: root parallel-weighted value sample helpers now validate deterministic no-entropy paths before secure-engine construction. |
 | S4-M584 root parallel-weighted const-pointer sample prevalidation | `src/root.zig`, `compare/results/s4-m584-root-weighted-const-ptr-sample-prevalidation.md` | Closed for the current bar: root parallel-weighted const-pointer sample helpers now validate deterministic no-entropy paths before secure-engine construction. |
 | S4-M585 root parallel-weighted mutable-pointer sample prevalidation | `src/root.zig`, `compare/results/s4-m585-root-weighted-mut-ptr-sample-prevalidation.md` | Closed for the current bar: root parallel-weighted mutable-pointer sample helpers now validate deterministic no-entropy paths before secure-engine construction. |
-| S4-M586 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M586 root parallel-weighted value array prevalidation | `src/root.zig`, `compare/results/s4-m586-root-weighted-value-array-prevalidation.md` | Closed for the current bar: root parallel-weighted value array helpers now validate deterministic no-entropy paths before secure-engine construction. |
+| S4-M587 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1639,6 +1640,9 @@ S4-M11 or complete the long-term objective.
 S4-M585 additionally adds root parallel-weighted no-replacement mutable-pointer
 sample prevalidation; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M586 additionally adds root parallel-weighted no-replacement value array
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
