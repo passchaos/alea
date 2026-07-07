@@ -2166,3 +2166,9 @@ S4-M570 adds root item-accessor weighted no-replacement index into helpers
 system-entropy callers can now fill caller-owned no-replacement weighted `usize`
 index buffers directly from an item slice and comptime item-weight accessor from
 the root API while S4-M11 remains blocked.
+
+S4-M571 adds root item-accessor weighted no-replacement index array helpers
+(`compare/results/s4-m571-root-weighted-by-index-array-helpers.md`):
+system-entropy callers can now produce fixed-size no-replacement weighted
+`usize` index arrays directly from an item slice and comptime item-weight
+accessor from the root API while S4-M11 remains blocked.
