@@ -2572,3 +2572,10 @@ S4-M628 adds root secure bytes empty-output prevalidation
 system-entropy callers now get deterministic empty-buffer returns before system
 entropy for `secureBytes`, while non-empty buffers still request entropy and
 S4-M11 remains blocked.
+
+S4-M629 adds root duration scalar range prevalidation
+(`compare/results/s4-m629-root-duration-scalar-prevalidation.md`): root
+system-entropy callers now get invalid duration range failures before
+secure-engine construction for `durationRangeLessThan` and
+`durationRangeAtMost`, while deterministic collapsed inclusive paths remain
+no-entropy and S4-M11 remains blocked.

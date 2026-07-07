@@ -4337,7 +4337,7 @@ pub fn openClosedBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocato
 }
 
 pub fn durationRangeLessThan(io: std.Io, min: std.Io.Duration, max: std.Io.Duration) !std.Io.Duration {
-    std.debug.assert(min.nanoseconds < max.nanoseconds);
+    if (min.nanoseconds >= max.nanoseconds) return error.EmptyRange;
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return random_source.durationRangeLessThan(min, max);
@@ -4368,7 +4368,7 @@ pub fn durationRangeLessThanBatchChecked(io: std.Io, allocator: std.mem.Allocato
 }
 
 pub fn durationRangeAtMost(io: std.Io, min: std.Io.Duration, max: std.Io.Duration) !std.Io.Duration {
-    std.debug.assert(min.nanoseconds <= max.nanoseconds);
+    if (min.nanoseconds > max.nanoseconds) return error.EmptyRange;
     if (min.nanoseconds == max.nanoseconds) return min;
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -8776,7 +8776,9 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_bad_duration_at_most = try durationRangeAtMostBatchChecked(failing, std.testing.allocator, 0, duration_max, duration_min);
     defer std.testing.allocator.free(empty_bad_duration_at_most);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_duration_at_most.len);
+    try std.testing.expectError(error.EmptyRange, durationRangeLessThan(failing, duration_same, duration_same));
     try std.testing.expectError(error.EmptyRange, durationRangeLessThanChecked(failing, duration_same, duration_same));
+    try std.testing.expectError(error.EmptyRange, durationRangeAtMost(failing, duration_max, duration_min));
     try std.testing.expectError(error.EmptyRange, durationRangeAtMostChecked(failing, duration_max, duration_min));
     const empty_string = try string(std.testing.allocator, failing, 0);
     defer std.testing.allocator.free(empty_string);
