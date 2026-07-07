@@ -2414,6 +2414,9 @@ pub fn chooseIteratorStableChecked(comptime T: type, io: std.Io, iterator: anyty
 
 pub fn chooseIteratorWeighted(comptime T: type, io: std.Io, iterator: anytype) !?T {
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
+    if (rootIteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return null;
+    }
     const Pending = struct {
         item: T,
         weight: f64,
@@ -9701,6 +9704,24 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(?u8, null), try chooseIteratorWeighted(u8, failing, &weighted_empty));
     var weighted_empty_checked = WeightedIter{ .items = &weighted_empty_entries };
     try std.testing.expectError(error.EmptyInput, chooseIteratorWeightedChecked(u8, failing, &weighted_empty_checked));
+    const EmptyExactWeightedChoiceIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?WeightedIter.Entry {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+    var weighted_exact_empty = EmptyExactWeightedChoiceIter{};
+    try std.testing.expectEqual(@as(?u8, null), try chooseIteratorWeighted(u8, failing, &weighted_exact_empty));
+    try std.testing.expectEqual(@as(usize, 0), weighted_exact_empty.calls);
+    var weighted_exact_empty_checked = EmptyExactWeightedChoiceIter{};
+    try std.testing.expectError(error.EmptyInput, chooseIteratorWeightedChecked(u8, failing, &weighted_exact_empty_checked));
+    try std.testing.expectEqual(@as(usize, 0), weighted_exact_empty_checked.calls);
     const weighted_zero_entries = [_]WeightedIter.Entry{
         .{ .item = 1, .weight = 0 },
         .{ .item = 2, .weight = 0 },

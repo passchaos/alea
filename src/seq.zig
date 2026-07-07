@@ -5010,6 +5010,9 @@ pub fn chooseIteratorWeightedCheckedFrom(source: anytype, comptime T: type, iter
 
 pub fn chooseIteratorWeightedFrom(source: anytype, comptime T: type, iterator: anytype) !?T {
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return null;
+    }
     const Pending = struct {
         item: T,
         weight: f64,
@@ -11628,6 +11631,36 @@ test "empty checked weighted iterator choice does not consume random stream" {
     var zero_iter = BadWeightedIter{ .items = &zero_entries };
     try std.testing.expectError(error.EmptyInput, chooseIteratorWeightedCheckedFrom(&engine, u8, &zero_iter));
     try std.testing.expectEqual(@as(u64, 0x9c8af023645fd559), engine.next());
+}
+
+test "empty exact weighted iterator choice does not read source" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_c07d);
+    var control = alea.ScalarPrng.init(0x5150_c07d);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const EmptyExactIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+
+    var iter = EmptyExactIter{};
+    try std.testing.expectEqual(@as(?u8, null), try chooseIteratorWeightedFrom(&engine, u8, &iter));
+    try std.testing.expectEqual(@as(usize, 0), iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_iter = EmptyExactIter{};
+    try std.testing.expectError(error.EmptyInput, chooseIteratorWeightedCheckedFrom(&engine, u8, &checked_iter));
+    try std.testing.expectEqual(@as(usize, 0), checked_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "single-positive weighted iterator helpers do not consume random stream" {

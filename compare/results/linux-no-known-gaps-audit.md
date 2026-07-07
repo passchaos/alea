@@ -3532,3 +3532,10 @@ S4-M763 tightens iterator exact-empty caller-owned prevalidation
 seq/root caller-owned iterator sampling helpers now return zero for exact-empty
 sources before iterator consumption, entropy, or random-stream use. This
 improves iterator sampling reliability evidence but does not resolve S4-M11.
+
+S4-M764 tightens weighted iterator one-shot exact-empty prevalidation
+(`compare/results/s4-m764-weighted-iterator-choice-exact-empty-prevalidation.md`):
+seq/root weighted iterator one-shot choice helpers now return null or EmptyInput
+for exact-empty sources before iterator consumption, entropy, or random-stream
+use. This improves weighted iterator choice reliability evidence but does not
+resolve S4-M11.
