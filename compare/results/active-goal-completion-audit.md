@@ -735,7 +735,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M694 seq repeated value fill/batch empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m694-seq-repeated-value-fill-batch-empty-type-prevalidation.md` | Closed for the current bar: `seq` repeated with-replacement value fill/batch aliases now reject non-empty uninhabited output types before allocation, random-stream use, or value copying. |
 | S4-M695 seq one-shot choice empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m695-seq-one-shot-choice-empty-type-prevalidation.md` | Closed for the current bar: `seq` one-shot value choice aliases now reject non-empty uninhabited output types before random-stream use or value copying. |
 | S4-M696 seq iterator choice empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m696-seq-iterator-choice-empty-type-prevalidation.md` | Closed for the current bar: `seq` one-shot iterator value choice helpers now reject uninhabited output types before iterator consumption, random-stream use, or value copying. |
-| S4-M697 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M697 root iterator choice empty-type prevalidation | `src/root.zig`, `compare/results/s4-m697-root-iterator-choice-empty-type-prevalidation.md` | Closed for the current bar: root one-shot iterator value choice helpers now reject uninhabited output types before iterator consumption, entropy, secure-engine construction, random-stream use, or value copying. |
+| S4-M698 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2081,6 +2082,9 @@ S4-M695 additionally tightens `seq` one-shot value choice empty-type
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
 S4-M696 additionally tightens `seq` iterator value choice empty-type
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
+S4-M697 additionally tightens root iterator value choice empty-type
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
 

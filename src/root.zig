@@ -2381,26 +2381,32 @@ pub fn sampleWeightedMutPtrArrayChecked(comptime T: type, comptime Weight: type,
 }
 
 pub fn chooseIterator(comptime T: type, io: std.Io, iterator: anytype) !?T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return try rootChooseIterator(T, io, iterator, .reservoir);
 }
 
 pub fn chooseIteratorChecked(comptime T: type, io: std.Io, iterator: anytype) !T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return (try chooseIterator(T, io, iterator)) orelse error.EmptyInput;
 }
 
 pub fn chooseIteratorHinted(comptime T: type, io: std.Io, iterator: anytype) !?T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return try rootChooseIterator(T, io, iterator, .hinted);
 }
 
 pub fn chooseIteratorHintedChecked(comptime T: type, io: std.Io, iterator: anytype) !T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return (try chooseIteratorHinted(T, io, iterator)) orelse error.EmptyInput;
 }
 
 pub fn chooseIteratorStable(comptime T: type, io: std.Io, iterator: anytype) !?T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return try chooseIterator(T, io, iterator);
 }
 
 pub fn chooseIteratorStableChecked(comptime T: type, io: std.Io, iterator: anytype) !T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return try chooseIteratorChecked(T, io, iterator);
 }
 
@@ -7707,6 +7713,47 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(?u8, 77), try chooseIteratorHinted(u8, failing, &hinted_singleton));
     var stable_singleton = SliceIter{ .items = &.{88} };
     try std.testing.expectEqual(@as(?u8, 88), try chooseIteratorStable(u8, failing, &stable_singleton));
+    const EmptyPayload = struct { empty: EmptyEnum };
+    const EmptyPayloadIter = struct {
+        consumed: usize = 0,
+
+        fn next(self: *@This()) ?EmptyPayload {
+            self.consumed += 1;
+            unreachable;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 1;
+        }
+    };
+    var empty_payload_iter = EmptyPayloadIter{};
+    if (chooseIterator(EmptyPayload, failing, &empty_payload_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(@as(usize, 0), empty_payload_iter.consumed);
+    var empty_payload_checked_iter = EmptyPayloadIter{};
+    if (chooseIteratorChecked(EmptyPayload, failing, &empty_payload_checked_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(@as(usize, 0), empty_payload_checked_iter.consumed);
+    var empty_payload_hinted_iter = EmptyPayloadIter{};
+    if (chooseIteratorHinted(EmptyPayload, failing, &empty_payload_hinted_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(@as(usize, 0), empty_payload_hinted_iter.consumed);
+    var empty_payload_stable_iter = EmptyPayloadIter{};
+    if (chooseIteratorStableChecked(EmptyPayload, failing, &empty_payload_stable_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(@as(usize, 0), empty_payload_stable_iter.consumed);
     const empty_weights = [_]f64{ 0, 0, 0 };
     try std.testing.expectEqual(@as(?usize, null), try weightedIndex(failing, &empty_weights));
     try std.testing.expectEqual(@as(?usize, null), try weightedIndexChecked(failing, &empty_weights));

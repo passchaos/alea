@@ -3099,3 +3099,10 @@ S4-M696 adds `seq` iterator choice empty-type prevalidation
 `seq` one-shot iterator value choice helpers now reject empty enum-containing
 output types before iterator consumption, random-stream use, and value copying.
 This improves failure determinism but does not resolve S4-M11.
+
+S4-M697 adds root iterator choice empty-type prevalidation
+(`compare/results/s4-m697-root-iterator-choice-empty-type-prevalidation.md`):
+root one-shot iterator value choice helpers now reject empty enum-containing
+output types before iterator consumption, entropy, secure-engine construction,
+random-stream use, and value copying. This improves failure determinism but does
+not resolve S4-M11.
