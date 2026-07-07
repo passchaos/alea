@@ -3414,3 +3414,11 @@ reusable `Choice.indicesU32From` / `indicesU32CheckedFrom` now reject population
 whose length exceeds `u32` before allocation or random-stream use. This improves
 reliability evidence for Alea's compact index extension beyond local Rust's
 `usize`-oriented index APIs but does not resolve S4-M11.
+
+S4-M747 tightens owned compact index prevalidation for static alias tables
+(`compare/results/s4-m747-aliastable-owned-u32-index-prevalidation.md`):
+`AliasTable.indicesU32From` now rejects populations whose length exceeds `u32`
+before allocation or random-stream use, matching the surrounding scalar, fill,
+fixed-array, and iterator compact width checks. This improves reliability
+evidence for Alea's compact weighted-index extension but does not resolve
+S4-M11.

@@ -17126,6 +17126,7 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillU32CheckedFrom(source, out);
@@ -20104,6 +20105,10 @@ test "alias table iterators produce repeated indices" {
     var huge_engine = alea.ScalarPrng.init(0x5150_a13a);
     var huge_control = alea.ScalarPrng.init(0x5150_a13a);
     try std.testing.expectError(error.InvalidParameter, huge_table.iterU32CheckedFrom(&huge_engine));
+    try std.testing.expectEqual(huge_control.next(), huge_engine.next());
+    var huge_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, huge_table.indicesU32From(huge_alloc.allocator(), &huge_engine, 1));
+    try std.testing.expect(!huge_alloc.has_induced_failure);
     try std.testing.expectEqual(huge_control.next(), huge_engine.next());
 
     try table.update(&.{ 0, 0, 5, 0 });
