@@ -634,7 +634,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M593 root value choose fill/batch empty-input prevalidation | `src/root.zig`, `compare/results/s4-m593-root-value-choose-fill-batch-empty-input-prevalidation.md` | Closed for the current bar: root value choose fill and batch helpers now reject non-empty empty-input requests before secure-engine construction. |
 | S4-M594 root const-pointer choose fill/batch empty-input prevalidation | `src/root.zig`, `compare/results/s4-m594-root-const-ptr-choose-fill-batch-empty-input-prevalidation.md` | Closed for the current bar: root const-pointer choose fill and batch helpers now reject non-empty empty-input requests before secure-engine construction. |
 | S4-M595 root mutable-pointer choose fill/batch empty-input prevalidation | `src/root.zig`, `compare/results/s4-m595-root-mut-ptr-choose-fill-batch-empty-input-prevalidation.md` | Closed for the current bar: root mutable-pointer choose fill and batch helpers now reject non-empty empty-input requests before secure-engine construction. |
-| S4-M596 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M596 root weighted-index invalid-weight prevalidation | `src/root.zig`, `compare/results/s4-m596-root-weighted-index-invalid-weight-prevalidation.md` | Closed for the current bar: root weighted-index helpers now validate invalid-weight paths before secure-engine construction and before random-output allocation. |
+| S4-M597 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1679,6 +1680,9 @@ or complete the long-term objective.
 S4-M595 additionally adds root mutable-pointer choose fill/batch empty-input
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
+S4-M596 additionally tightens root weighted-index invalid-weight prevalidation;
+it is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

@@ -2331,3 +2331,10 @@ root system-entropy callers now get deterministic non-empty empty-input failures
 before secure-engine construction for `fillChoosePtr` and `choosePtrBatch`,
 while empty destinations and zero-count batches still return deterministically
 and S4-M11 remains blocked.
+
+S4-M596 adds root weighted-index invalid-weight prevalidation
+(`compare/results/s4-m596-root-weighted-index-invalid-weight-prevalidation.md`):
+root system-entropy callers now get invalid-weight failures before secure-engine
+construction for unchecked weighted index helpers, and allocation-returning
+batches validate deterministic empty/single/invalid paths before allocating
+random-output buffers while S4-M11 remains blocked.
