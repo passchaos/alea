@@ -17820,12 +17820,31 @@ pub fn WeightedTree(comptime Weight: type) type {
             return Rng.sampleIterFrom(source, usize, self);
         }
 
+        pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, usize) {
+            return self.iterCheckedFrom(rng);
+        }
+
+        pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
+            if (!self.isValid()) return error.InvalidWeight;
+            return self.iterFrom(source);
+        }
+
         pub fn iterU32(self: Self, rng: Rng) U32IndexIterator(Rng) {
             return .{ .source = rng, .tree = self };
         }
 
         pub fn iterU32From(self: Self, source: anytype) U32IndexIterator(@TypeOf(source)) {
             return .{ .source = source, .tree = self };
+        }
+
+        pub fn iterU32Checked(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
+            return self.iterU32CheckedFrom(rng);
+        }
+
+        pub fn iterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (!self.isValid()) return error.InvalidWeight;
+            return self.iterU32From(source);
         }
 
         pub fn U32IndexIterator(comptime Source: type) type {
@@ -18562,12 +18581,31 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return Rng.sampleIterFrom(source, usize, self);
         }
 
+        pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, usize) {
+            return self.iterCheckedFrom(rng);
+        }
+
+        pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
+            if (!self.isValid()) return error.InvalidWeight;
+            return self.iterFrom(source);
+        }
+
         pub fn iterU32(self: Self, rng: Rng) U32IndexIterator(Rng) {
             return .{ .source = rng, .tree = self };
         }
 
         pub fn iterU32From(self: Self, source: anytype) U32IndexIterator(@TypeOf(source)) {
             return .{ .source = source, .tree = self };
+        }
+
+        pub fn iterU32Checked(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
+            return self.iterU32CheckedFrom(rng);
+        }
+
+        pub fn iterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (!self.isValid()) return error.InvalidWeight;
+            return self.iterU32From(source);
         }
 
         pub fn U32IndexIterator(comptime Source: type) type {
@@ -21419,6 +21457,13 @@ test "weighted tree iterators produce repeated indices" {
     try std.testing.expectEqualSlices(u32, &fill_u32, &iter_fill_u32);
     try std.testing.expectEqual(sample_engine.next(), iter_engine.next());
 
+    var checked_iter_engine = alea.ScalarPrng.init(0x5150_d523);
+    var unchecked_iter_engine = alea.ScalarPrng.init(0x5150_d523);
+    var checked_iter = try tree.iterCheckedFrom(&checked_iter_engine);
+    var unchecked_iter = tree.iterFrom(&unchecked_iter_engine);
+    try std.testing.expectEqual(unchecked_iter.next().?, checked_iter.next().?);
+    try std.testing.expectEqual(unchecked_iter_engine.next(), checked_iter_engine.next());
+
     var facade_engine = alea.ScalarPrng.init(0x5150_d51c);
     var direct_engine = alea.ScalarPrng.init(0x5150_d51c);
     const rng = Rng.init(&facade_engine);
@@ -21435,6 +21480,13 @@ test "weighted tree iterators produce repeated indices" {
     try std.testing.expectEqual(facade_u32_iter.next().?, direct_u32_iter.next().?);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    var checked_u32_iter_engine = alea.ScalarPrng.init(0x5150_d524);
+    var unchecked_u32_iter_engine = alea.ScalarPrng.init(0x5150_d524);
+    var checked_u32_iter = try tree.iterU32CheckedFrom(&checked_u32_iter_engine);
+    var unchecked_u32_iter = tree.iterU32From(&unchecked_u32_iter_engine);
+    try std.testing.expectEqual(unchecked_u32_iter.next().?, checked_u32_iter.next().?);
+    try std.testing.expectEqual(unchecked_u32_iter_engine.next(), checked_u32_iter_engine.next());
+
     var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 2, 0, 0, 6 });
     defer int_tree.deinit();
     sample_engine = alea.ScalarPrng.init(0x5150_d51e);
@@ -21445,6 +21497,13 @@ test "weighted tree iterators produce repeated indices" {
     try std.testing.expectEqualSlices(usize, &fill_out, &iter_fill_out);
     try std.testing.expectEqual(sample_engine.next(), iter_engine.next());
 
+    var checked_int_iter_engine = alea.ScalarPrng.init(0x5150_d525);
+    var unchecked_int_iter_engine = alea.ScalarPrng.init(0x5150_d525);
+    var checked_int_iter = try int_tree.iterCheckedFrom(&checked_int_iter_engine);
+    var unchecked_int_iter = int_tree.iterFrom(&unchecked_int_iter_engine);
+    try std.testing.expectEqual(unchecked_int_iter.next().?, checked_int_iter.next().?);
+    try std.testing.expectEqual(unchecked_int_iter_engine.next(), checked_int_iter_engine.next());
+
     sample_engine = alea.ScalarPrng.init(0x5150_d51f);
     iter_engine = alea.ScalarPrng.init(0x5150_d51f);
     int_tree.fillU32From(&sample_engine, &fill_u32);
@@ -21452,6 +21511,13 @@ test "weighted tree iterators produce repeated indices" {
     int_u32_iter.fill(&iter_fill_u32);
     try std.testing.expectEqualSlices(u32, &fill_u32, &iter_fill_u32);
     try std.testing.expectEqual(sample_engine.next(), iter_engine.next());
+
+    var checked_int_u32_iter_engine = alea.ScalarPrng.init(0x5150_d526);
+    var unchecked_int_u32_iter_engine = alea.ScalarPrng.init(0x5150_d526);
+    var checked_int_u32_iter = try int_tree.iterU32CheckedFrom(&checked_int_u32_iter_engine);
+    var unchecked_int_u32_iter = int_tree.iterU32From(&unchecked_int_u32_iter_engine);
+    try std.testing.expectEqual(unchecked_int_u32_iter.next().?, checked_int_u32_iter.next().?);
+    try std.testing.expectEqual(unchecked_int_u32_iter_engine.next(), checked_int_u32_iter_engine.next());
 
     var single_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0, 9 });
     defer single_tree.deinit();

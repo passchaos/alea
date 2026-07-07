@@ -3364,3 +3364,10 @@ S4-M739 adds static `AliasTable` checked iterators
 `AliasTable` now has checked aliases for `usize` and compact `u32` index
 iterators while preserving existing stream shape and compact width validation.
 This improves discoverability but does not resolve S4-M11.
+
+S4-M740 adds dynamic weighted-tree checked iterators
+(`compare/results/s4-m740-weighted-tree-checked-iterators.md`): dynamic
+`WeightedTree` and `WeightedIntTree` now have checked aliases for `usize` and
+compact `u32` index iterators while preserving stream shape, sampling-readiness
+validation, and compact width validation. This improves discoverability but does
+not resolve S4-M11.

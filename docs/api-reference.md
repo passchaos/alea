@@ -2893,8 +2893,12 @@ Dynamic weighted helpers:
 - `WeightedTree.indexArrayU32CheckedFrom`
 - `WeightedTree.iter`
 - `WeightedTree.iterFrom`
+- `WeightedTree.iterChecked`
+- `WeightedTree.iterCheckedFrom`
 - `WeightedTree.iterU32`
 - `WeightedTree.iterU32From`
+- `WeightedTree.iterU32Checked`
+- `WeightedTree.iterU32CheckedFrom`
 - `WeightedTree.U32IndexIterator`
 - `WeightedTree.U32IndexIterator.next`
 - `WeightedTree.U32IndexIterator.nextValue`
@@ -2994,8 +2998,12 @@ Dynamic weighted helpers:
 - `WeightedIntTree.indexArrayU32CheckedFrom`
 - `WeightedIntTree.iter`
 - `WeightedIntTree.iterFrom`
+- `WeightedIntTree.iterChecked`
+- `WeightedIntTree.iterCheckedFrom`
 - `WeightedIntTree.iterU32`
 - `WeightedIntTree.iterU32From`
+- `WeightedIntTree.iterU32Checked`
+- `WeightedIntTree.iterU32CheckedFrom`
 - `WeightedIntTree.U32IndexIterator`
 - `WeightedIntTree.U32IndexIterator.next`
 - `WeightedIntTree.U32IndexIterator.nextValue`
