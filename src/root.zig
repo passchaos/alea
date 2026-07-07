@@ -3790,6 +3790,21 @@ pub fn fillChooseWeightedPtrChecked(comptime T: type, io: std.Io, dest: []*T, it
 }
 
 pub fn chooseWeightedPtrBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []T, weights: []const f64) ![]?*T {
+    if (count == 0) return allocator.alloc(?*T, 0);
+    if (items.len != weights.len) return error.InvalidParameter;
+    switch (try rootWeightedIndexStateAllowEmpty(weights)) {
+        .empty => {
+            const out = try allocator.alloc(?*T, count);
+            @memset(out, @as(?*T, null));
+            return out;
+        },
+        .single => |index| {
+            const out = try allocator.alloc(?*T, count);
+            @memset(out, @as(?*T, &items[index]));
+            return out;
+        },
+        .random => {},
+    }
     const out = try allocator.alloc(?*T, count);
     errdefer allocator.free(out);
     try fillChooseWeightedPtr(T, io, out, items, weights);
@@ -3798,6 +3813,16 @@ pub fn chooseWeightedPtrBatch(comptime T: type, io: std.Io, allocator: std.mem.A
 
 pub fn chooseWeightedPtrBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []T, weights: []const f64) ![]*T {
     if (count == 0) return allocator.alloc(*T, 0);
+    if (items.len != weights.len) return error.InvalidParameter;
+    switch (try rootWeightedIndexState(weights)) {
+        .single => |index| {
+            const out = try allocator.alloc(*T, count);
+            @memset(out, &items[index]);
+            return out;
+        },
+        .random => {},
+        .empty => unreachable,
+    }
     const out = try allocator.alloc(*T, count);
     errdefer allocator.free(out);
     try fillChooseWeightedPtrChecked(T, io, out, items, weights);
@@ -8158,8 +8183,17 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_weighted_ptr_batch = try chooseWeightedPtrBatch(u8, failing, std.testing.allocator, 3, &weighted_single_mut_items, &empty_weights);
     defer std.testing.allocator.free(empty_weighted_ptr_batch);
     try std.testing.expectEqualSlices(?*u8, &.{ null, null, null }, empty_weighted_ptr_batch);
+    var weighted_ptr_mismatch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, chooseWeightedPtrBatch(u8, failing, weighted_ptr_mismatch_alloc.allocator(), 3, &weighted_single_mut_items, &.{1}));
+    var weighted_ptr_checked_mismatch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, chooseWeightedPtrBatchChecked(u8, failing, weighted_ptr_checked_mismatch_alloc.allocator(), 3, &weighted_single_mut_items, &.{1}));
+    var weighted_ptr_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrBatch(u8, failing, weighted_ptr_invalid_alloc.allocator(), 3, &weighted_single_mut_items, &.{ std.math.nan(f64), 1, 1 }));
+    var weighted_ptr_checked_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedPtrBatchChecked(u8, failing, weighted_ptr_checked_invalid_alloc.allocator(), 3, &weighted_single_mut_items, &.{ std.math.nan(f64), 1, 1 }));
     try std.testing.expectError(error.EmptyRange, chooseWeightedPtrChecked(u8, failing, &weighted_single_mut_items, &empty_weights));
-    try std.testing.expectError(error.EmptyRange, chooseWeightedPtrBatchChecked(u8, failing, std.testing.allocator, 3, &weighted_single_mut_items, &empty_weights));
+    var weighted_ptr_checked_empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseWeightedPtrBatchChecked(u8, failing, weighted_ptr_checked_empty_alloc.allocator(), 3, &weighted_single_mut_items, &empty_weights));
     try std.testing.expectError(error.EmptyRange, chooseWeightedPtrArrayChecked(u8, failing, 3, &weighted_single_mut_items, &empty_weights));
     try std.testing.expectEqual(&weighted_single_mut_items[1], (try chooseWeightedPtr(u8, failing, &weighted_single_mut_items, &single_weight)).?);
     try std.testing.expectEqual(&weighted_single_mut_items[1], try chooseWeightedPtrChecked(u8, failing, &weighted_single_mut_items, &single_weight));
