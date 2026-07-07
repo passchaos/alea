@@ -2539,3 +2539,10 @@ S4-M623 adds root sampler batch empty-type prevalidation
 system-entropy callers now get non-zero uninhabited output type failures before
 random-output allocation and secure-engine construction for `sampleBatch`, while
 zero-count behavior remains allocation-only and S4-M11 remains blocked.
+
+S4-M624 adds root generic value empty-type prevalidation
+(`compare/results/s4-m624-root-generic-value-empty-type-prevalidation.md`): root
+system-entropy callers now get uninhabited output type failures before
+secure-engine construction for `randomValue`, `fill`, `sample`, and
+`fillSample`, while empty-output behavior remains no-entropy and S4-M11 remains
+blocked.

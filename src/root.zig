@@ -200,6 +200,7 @@ pub fn random(comptime T: type, io: std.Io) !T {
 }
 
 pub fn randomValue(comptime T: type, io: std.Io) !T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return random_source.value(T);
@@ -300,12 +301,14 @@ pub fn randomRatioChecked(io: std.Io, numerator: u32, denominator: u32) !bool {
 
 pub fn fill(comptime T: type, io: std.Io, dest: []T) !void {
     if (dest.len == 0) return;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     random_source.fill(T, dest);
 }
 
 pub fn sample(comptime T: type, io: std.Io, sampler: anytype) !T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return random_source.sample(T, sampler);
@@ -313,6 +316,7 @@ pub fn sample(comptime T: type, io: std.Io, sampler: anytype) !T {
 
 pub fn fillSample(comptime T: type, io: std.Io, dest: []T, sampler: anytype) !void {
     if (dest.len == 0) return;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     random_source.fillSample(T, dest, sampler);
@@ -6395,6 +6399,11 @@ test "root random helpers validate deterministic cases before entropy" {
     const failing = std.Io.failing;
     const EmptyEnum = enum {};
 
+    if (randomValue(EmptyEnum, failing)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     if (randomValueChecked(EmptyEnum, failing)) |_| {
         return error.TestExpectedError;
     } else |err| {
@@ -6423,6 +6432,17 @@ test "root random helpers validate deterministic cases before entropy" {
     try fill(u8, failing, &empty);
     const die_sampler = try distributions.Uniform(u8).initInclusive(1, 6);
     try fillSample(u8, failing, &empty, die_sampler);
+    const fake_empty_enum_values = @as([*]EmptyEnum, @ptrFromInt(0x1000))[0..1];
+    try std.testing.expectError(error.EmptyRange, fill(EmptyEnum, failing, fake_empty_enum_values));
+    var bad_sample_failed = false;
+    if (sample(EmptyEnum, failing, die_sampler)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        bad_sample_failed = true;
+    }
+    try std.testing.expect(bad_sample_failed);
+    try std.testing.expectError(error.EmptyRange, fillSample(EmptyEnum, failing, fake_empty_enum_values, die_sampler));
     const empty_sample_batch = try sampleBatch(u8, failing, std.testing.allocator, die_sampler, 0);
     defer std.testing.allocator.free(empty_sample_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_sample_batch.len);
