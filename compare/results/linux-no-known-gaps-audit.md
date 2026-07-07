@@ -3564,3 +3564,9 @@ seq/root allocation-returning unweighted iterator samples now read exactly the
 known remaining items and return partial outputs without an extra null probe.
 This improves iterator sampling reliability evidence but does not resolve
 S4-M11.
+
+S4-M769 avoids exact-short caller-owned iterator end probes
+(`compare/results/s4-m769-iterator-exact-short-caller-owned-end-probe.md`):
+seq/root caller-owned unweighted iterator fills now read exactly the known
+remaining items and return partial counts without an extra null probe. This
+improves iterator fill reliability evidence but does not resolve S4-M11.

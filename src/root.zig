@@ -2526,13 +2526,18 @@ pub fn sampleIteratorChecked(comptime T: type, io: std.Io, allocator: std.mem.Al
 pub fn sampleIteratorInto(comptime T: type, io: std.Io, iterator: anytype, out: []T) !usize {
     if (out.len == 0) return 0;
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
-    if (rootIteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = rootIteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining == 0) return 0;
     }
 
     var filled: usize = 0;
-    while (filled < out.len) : (filled += 1) {
+    const fill_target = if (exact_remaining) |remaining| @min(out.len, remaining) else out.len;
+    while (filled < fill_target) : (filled += 1) {
         out[filled] = iterator.next() orelse return filled;
+    }
+    if (exact_remaining) |remaining| {
+        if (remaining <= out.len) return filled;
     }
 
     var seen = out.len;
@@ -9937,6 +9942,28 @@ test "root random helpers validate deterministic cases before entropy" {
     var sample_into_short: [4]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 2), try sampleIteratorInto(u8, failing, &sample_into_short_iter, &sample_into_short));
     try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample_into_short[0..2]);
+    const ExactShortIntoIter = struct {
+        next_value: u8 = 1,
+        end: u8 = 3,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.end - self.next_value;
+        }
+    };
+    var sample_into_exact_short_iter = ExactShortIntoIter{};
+    var sample_into_exact_short: [8]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), try sampleIteratorInto(u8, failing, &sample_into_exact_short_iter, &sample_into_exact_short));
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample_into_exact_short[0..2]);
+    try std.testing.expectEqual(@as(usize, 2), sample_into_exact_short_iter.calls);
     var sample_into_exact_iter = SliceIter{ .items = &.{ 1, 2 } };
     var sample_into_exact: [2]u8 = undefined;
     try sampleIteratorIntoChecked(u8, failing, &sample_into_exact_iter, &sample_into_exact);

@@ -4953,13 +4953,18 @@ pub fn sampleIteratorFillFrom(source: anytype, comptime T: type, iterator: anyty
 pub fn sampleIteratorIntoFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) usize {
     if (out.len == 0) return 0;
     if (comptime valueTypeHasEmptyEnum(T)) return 0;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining == 0) return 0;
     }
 
     var filled: usize = 0;
-    while (filled < out.len) : (filled += 1) {
+    const fill_target = if (exact_remaining) |remaining| @min(out.len, remaining) else out.len;
+    while (filled < fill_target) : (filled += 1) {
         out[filled] = iterator.next() orelse return filled;
+    }
+    if (exact_remaining) |remaining| {
+        if (remaining <= out.len) return filled;
     }
 
     var seen = out.len;
@@ -12432,6 +12437,37 @@ test "empty exact iterator fills avoid source consumption" {
     var fill_iter = EmptyExactIter{};
     try std.testing.expectEqual(@as(usize, 0), sampleIteratorFillFrom(&engine, u8, &fill_iter, &out));
     try std.testing.expectEqual(@as(usize, 0), fill_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "exact-short iterator fills avoid end probe" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7721);
+    var control = alea.ScalarPrng.init(0x5150_7721);
+
+    const ExactIter = struct {
+        next_value: u8 = 1,
+        end: u8 = 3,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.end - self.next_value;
+        }
+    };
+
+    var iter = ExactIter{};
+    var out: [8]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 2), sampleIteratorIntoFrom(&engine, u8, &iter, &out));
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, out[0..2]);
+    try std.testing.expectEqual(@as(usize, 2), iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
