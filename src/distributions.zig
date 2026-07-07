@@ -17767,6 +17767,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             self.fillU32From(source, out);
@@ -17778,6 +17779,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillU32CheckedFrom(source, out);
@@ -18528,6 +18530,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             self.fillU32From(source, out);
@@ -18539,6 +18542,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillU32CheckedFrom(source, out);
@@ -21596,6 +21600,14 @@ test "weighted tree iterators produce repeated indices" {
     invalid_control = alea.ScalarPrng.init(0x5150_d529);
     try std.testing.expectError(error.InvalidParameter, huge_tree.iterU32CheckedFrom(&invalid_engine));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var huge_tree_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, huge_tree.indicesU32From(huge_tree_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expect(!huge_tree_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var huge_tree_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, huge_tree.indicesU32CheckedFrom(huge_tree_checked_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expect(!huge_tree_checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
     const huge_int_tree = WeightedIntTree(u32){
         .subtotals = .{
@@ -21609,6 +21621,14 @@ test "weighted tree iterators produce repeated indices" {
     invalid_engine = alea.ScalarPrng.init(0x5150_d52a);
     invalid_control = alea.ScalarPrng.init(0x5150_d52a);
     try std.testing.expectError(error.InvalidParameter, huge_int_tree.iterU32CheckedFrom(&invalid_engine));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var huge_int_tree_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, huge_int_tree.indicesU32From(huge_int_tree_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expect(!huge_int_tree_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var huge_int_tree_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, huge_int_tree.indicesU32CheckedFrom(huge_int_tree_checked_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expect(!huge_int_tree_checked_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 

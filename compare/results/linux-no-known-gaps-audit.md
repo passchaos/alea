@@ -3422,3 +3422,11 @@ before allocation or random-stream use, matching the surrounding scalar, fill,
 fixed-array, and iterator compact width checks. This improves reliability
 evidence for Alea's compact weighted-index extension but does not resolve
 S4-M11.
+
+S4-M748 tightens owned compact index prevalidation for dynamic weighted trees
+(`compare/results/s4-m748-weighted-tree-owned-u32-index-prevalidation.md`):
+`WeightedTree.indicesU32From` / `indicesU32CheckedFrom` and
+`WeightedIntTree.indicesU32From` / `indicesU32CheckedFrom` now reject oversized
+populations before allocation or random-stream use. This improves reliability
+evidence for Alea's dynamic compact weighted-index extension but does not
+resolve S4-M11.

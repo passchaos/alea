@@ -786,7 +786,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M745 choice checked pointer iter aliases | `src/distributions.zig`, `src/seq.zig`, `docs/api-reference.md`, `compare/results/s4-m745-choice-checked-pointer-iter-aliases.md` | Closed for the current bar: distribution-layer `Choose`, reusable `Choice`, and reusable `WeightedChoice` now have checked aliases for canonical repeated pointer iterators. |
 | S4-M746 choice owned u32 index prevalidation | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m746-choice-owned-u32-index-prevalidation.md` | Closed for the current bar: distribution-layer `Choose` and reusable `Choice` allocation-returning compact `u32` index helpers now reject oversized populations before allocation or random-stream use. |
 | S4-M747 aliastable owned u32 index prevalidation | `src/distributions.zig`, `compare/results/s4-m747-aliastable-owned-u32-index-prevalidation.md` | Closed for the current bar: static `AliasTable` allocation-returning compact `u32` index helper now rejects oversized populations before allocation or random-stream use. |
-| S4-M748 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M748 weighted tree owned u32 index prevalidation | `src/distributions.zig`, `compare/results/s4-m748-weighted-tree-owned-u32-index-prevalidation.md` | Closed for the current bar: dynamic `WeightedTree` and `WeightedIntTree` allocation-returning compact `u32` index helpers now reject oversized populations before allocation or random-stream use. |
+| S4-M749 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2290,6 +2291,10 @@ S4-M747 additionally tightens static `AliasTable` allocation-returning compact
 `u32` index helper so oversized populations fail before allocation or
 random-stream use; it is reliability/validation work and does not resolve S4-M11
 or complete the long-term objective.
+S4-M748 additionally tightens dynamic `WeightedTree` and `WeightedIntTree`
+allocation-returning compact `u32` index helpers so oversized populations fail
+before allocation or random-stream use; it is reliability/validation work and
+does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
