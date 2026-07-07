@@ -717,7 +717,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M676 reservoir value sample empty-type prevalidation | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m676-reservoir-value-empty-type-prevalidation.md` | Closed for the current bar: `seq` and root reservoir value sampling now reject non-zero uninhabited value types before allocation, entropy, or value copying. |
 | S4-M677 seq iterator reservoir empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m677-seq-iterator-value-empty-type-prevalidation.md` | Closed for the current bar: `seq` iterator reservoir value helpers now reject non-zero uninhabited value types before allocation, iterator consumption, or random-stream use. |
 | S4-M678 root iterator reservoir empty-type prevalidation | `src/root.zig`, `compare/results/s4-m678-root-iterator-value-empty-type-prevalidation.md` | Closed for the current bar: root iterator reservoir value helpers now reject non-zero uninhabited value types before allocation, entropy, iterator consumption, or secure-engine construction. |
-| S4-M679 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M679 seq weighted iterator reservoir empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m679-seq-weighted-iterator-empty-type-prevalidation.md` | Closed for the current bar: `seq` weighted iterator reservoir value helpers now reject non-zero uninhabited value types before heap allocation, iterator consumption, or random-stream use. |
+| S4-M680 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2011,6 +2012,9 @@ complete the long-term objective.
 S4-M678 additionally tightens root iterator reservoir value sample empty-type
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M679 additionally tightens `seq` weighted iterator reservoir value sample
+empty-type prevalidation; it is reliability/ergonomics work and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

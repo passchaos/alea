@@ -5003,6 +5003,7 @@ pub fn sampleIteratorWeightedChecked(allocator: std.mem.Allocator, rng: Rng, com
 
 pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const Pending = struct {
         item: T,
         weight: f64,
@@ -5065,6 +5066,7 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
 
 pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const Pending = struct {
         item: T,
         weight: f64,
@@ -5129,6 +5131,7 @@ pub fn sampleIteratorWeightedInto(rng: Rng, comptime T: type, iterator: anytype,
 
 pub fn sampleIteratorWeightedIntoFrom(source: anytype, comptime T: type, iterator: anytype, out: []T, scratch_keys: []f64) !usize {
     if (out.len == 0) return 0;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (scratch_keys.len < out.len) return error.LengthMismatch;
     return sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len]);
 }
@@ -5139,6 +5142,7 @@ pub fn sampleIteratorWeightedIntoChecked(rng: Rng, comptime T: type, iterator: a
 
 pub fn sampleIteratorWeightedIntoCheckedFrom(source: anytype, comptime T: type, iterator: anytype, out: []T, scratch_keys: []f64) !void {
     if (out.len == 0) return;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (scratch_keys.len < out.len) return error.LengthMismatch;
     const count = try sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len]);
     if (count != out.len) return error.InvalidParameter;
@@ -5199,6 +5203,7 @@ pub fn sampleIteratorWeightedArray(rng: Rng, comptime T: type, comptime N: usize
 }
 
 pub fn sampleIteratorWeightedArrayFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) !?[N]T {
+    if (comptime N != 0 and valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const candidates = (try sampleIteratorWeightedCandidateArrayFrom(source, T, N, iterator)) orelse return null;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = candidates[i].item;
@@ -5210,6 +5215,7 @@ pub fn sampleIteratorWeightedArrayChecked(rng: Rng, comptime T: type, comptime N
 }
 
 pub fn sampleIteratorWeightedArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) ![N]T {
+    if (comptime N != 0 and valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const candidates = (try sampleIteratorWeightedCandidateArrayFrom(source, T, N, iterator)) orelse return error.InvalidParameter;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = candidates[i].item;
@@ -21046,6 +21052,68 @@ test "index-weighted choice iterator streams repeated const pointers" {
     try std.testing.expectError(error.OutOfMemory, chooseWeightedIterByIndexFrom(failing_alloc.allocator(), &invalid_engine, []const u8, u32, &records, IndexWeight.weightOf));
     try std.testing.expect(failing_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+}
+
+test "weighted iterator reservoir samples validate empty value types before allocation" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const Entry = struct { item: Empty, weight: f64 };
+    const EmptyWeightedIter = struct {
+        fn next(_: *@This()) ?Entry {
+            unreachable;
+        }
+    };
+
+    var engine = alea.ScalarPrng.init(0x5150_ba20);
+    var control = alea.ScalarPrng.init(0x5150_ba20);
+
+    var iter = EmptyWeightedIter{};
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleIteratorWeightedFrom(alloc.allocator(), &engine, Empty, &iter, 1)) |unexpected| {
+        alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_iter = EmptyWeightedIter{};
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleIteratorWeightedCheckedFrom(checked_alloc.allocator(), &engine, Empty, &checked_iter, 1)) |unexpected| {
+        checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var array_iter = EmptyWeightedIter{};
+    if (sampleIteratorWeightedArrayFrom(&engine, Empty, 1, &array_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_array_iter = EmptyWeightedIter{};
+    if (sampleIteratorWeightedArrayCheckedFrom(&engine, Empty, 1, &checked_array_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [1]Empty = undefined;
+    var keys: [1]f64 = undefined;
+    var into_iter = EmptyWeightedIter{};
+    try std.testing.expectError(error.EmptyInput, sampleIteratorWeightedIntoFrom(&engine, Empty, &into_iter, &out, &keys));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_into_iter = EmptyWeightedIter{};
+    try std.testing.expectError(error.EmptyInput, sampleIteratorWeightedIntoCheckedFrom(&engine, Empty, &checked_into_iter, &out, &keys));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "sampleIteratorWeightedArray returns fixed-size weighted iterator samples" {

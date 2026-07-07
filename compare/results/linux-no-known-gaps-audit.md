@@ -2965,3 +2965,13 @@ construction in `sampleIterator`, `sampleIteratorChecked`,
 `sampleIteratorInto`, `sampleIteratorIntoChecked`, `sampleIteratorArray`, and
 `sampleIteratorArrayChecked`. This improves failure determinism but does not
 resolve S4-M11.
+
+S4-M679 adds `seq` weighted iterator reservoir empty-type prevalidation
+(`compare/results/s4-m679-seq-weighted-iterator-empty-type-prevalidation.md`):
+`seq` weighted iterator reservoir value helpers now reject non-zero empty
+enum-containing value types before heap allocation, iterator consumption, and
+random-stream use in `sampleIteratorWeightedFrom`,
+`sampleIteratorWeightedCheckedFrom`, `sampleIteratorWeightedIntoFrom`,
+`sampleIteratorWeightedIntoCheckedFrom`, `sampleIteratorWeightedArrayFrom`, and
+`sampleIteratorWeightedArrayCheckedFrom`. This improves failure determinism but
+does not resolve S4-M11.
