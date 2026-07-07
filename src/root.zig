@@ -570,6 +570,7 @@ pub fn chooseConstPtrChecked(comptime T: type, io: std.Io, items: []const T) !*c
 
 pub fn fillChooseConstPtr(comptime T: type, io: std.Io, dest: []*const T, items: []const T) !void {
     if (dest.len == 0) return;
+    if (items.len == 0) return error.EmptyRange;
     if (items.len == 1) {
         @memset(dest, &items[0]);
         return;
@@ -592,6 +593,8 @@ pub fn fillChooseConstPtrChecked(comptime T: type, io: std.Io, dest: []*const T,
 }
 
 pub fn chooseConstPtrBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T) ![]*const T {
+    if (count == 0) return allocator.alloc(*const T, 0);
+    if (items.len == 0) return error.EmptyRange;
     const out = try allocator.alloc(*const T, count);
     errdefer allocator.free(out);
     try fillChooseConstPtr(T, io, out, items);
@@ -6143,6 +6146,8 @@ test "root random helpers validate deterministic cases before entropy" {
     var empty_const_ptrs: [0]*const u8 = .{};
     try fillChooseConstPtr(u8, failing, &empty_const_ptrs, &.{});
     try fillChooseConstPtrChecked(u8, failing, &empty_const_ptrs, &.{});
+    var empty_const_ptrs_nonempty: [1]*const u8 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseConstPtr(u8, failing, &empty_const_ptrs_nonempty, &.{}));
     var fixed_const_ptrs: [3]*const u8 = undefined;
     try fillChooseConstPtr(u8, failing, &fixed_const_ptrs, &singleton);
     for (fixed_const_ptrs) |value| try std.testing.expectEqual(&singleton[0], value);
@@ -6151,6 +6156,7 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_const_ptr_batch = try chooseConstPtrBatch(u8, failing, std.testing.allocator, 0, &.{});
     defer std.testing.allocator.free(empty_const_ptr_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_const_ptr_batch.len);
+    try std.testing.expectError(error.EmptyRange, chooseConstPtrBatch(u8, failing, std.testing.allocator, 1, &.{}));
     const empty_const_ptr_batch_checked = try chooseConstPtrBatchChecked(u8, failing, std.testing.allocator, 0, &.{});
     defer std.testing.allocator.free(empty_const_ptr_batch_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_const_ptr_batch_checked.len);

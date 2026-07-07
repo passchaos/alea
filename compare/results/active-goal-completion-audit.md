@@ -632,7 +632,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M591 root weighted-iterator into lazy entropy | `src/root.zig`, `compare/results/s4-m591-root-weighted-iterator-into-lazy-entropy.md` | Closed for the current bar: root weighted iterator into helpers now defer secure-engine construction until random competition is required. |
 | S4-M592 root index fill/batch empty-range prevalidation | `src/root.zig`, `compare/results/s4-m592-root-index-fill-batch-empty-range-prevalidation.md` | Closed for the current bar: root index fill and batch helpers now reject non-empty zero-length ranges before secure-engine construction. |
 | S4-M593 root value choose fill/batch empty-input prevalidation | `src/root.zig`, `compare/results/s4-m593-root-value-choose-fill-batch-empty-input-prevalidation.md` | Closed for the current bar: root value choose fill and batch helpers now reject non-empty empty-input requests before secure-engine construction. |
-| S4-M594 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M594 root const-pointer choose fill/batch empty-input prevalidation | `src/root.zig`, `compare/results/s4-m594-root-const-ptr-choose-fill-batch-empty-input-prevalidation.md` | Closed for the current bar: root const-pointer choose fill and batch helpers now reject non-empty empty-input requests before secure-engine construction. |
+| S4-M595 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1669,6 +1670,9 @@ S4-M592 additionally adds root index fill/batch empty-range prevalidation; it
 is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M593 additionally adds root value choose fill/batch empty-input
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
+S4-M594 additionally adds root const-pointer choose fill/batch empty-input
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
 
