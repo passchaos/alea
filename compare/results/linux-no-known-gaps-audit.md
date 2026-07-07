@@ -2485,3 +2485,10 @@ root system-entropy callers now get non-zero empty-input failures before
 random-output allocation and secure-engine construction for `chooseBatchChecked`,
 while zero-count and singleton deterministic paths remain allocation-only and
 S4-M11 remains blocked.
+
+S4-M616 adds root checked const-pointer choose batch empty-input prevalidation
+(`compare/results/s4-m616-root-checked-const-ptr-choose-batch-prevalidation.md`):
+root system-entropy callers now get non-zero empty-input failures before
+random-output allocation and secure-engine construction for
+`chooseConstPtrBatchChecked`, while zero-count and singleton deterministic paths
+remain allocation-only and S4-M11 remains blocked.

@@ -604,6 +604,7 @@ pub fn chooseConstPtrBatch(comptime T: type, io: std.Io, allocator: std.mem.Allo
 
 pub fn chooseConstPtrBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T) ![]*const T {
     if (count == 0) return allocator.alloc(*const T, 0);
+    if (items.len == 0) return error.EmptyRange;
     const out = try allocator.alloc(*const T, count);
     errdefer allocator.free(out);
     try fillChooseConstPtrChecked(T, io, out, items);
@@ -6542,6 +6543,8 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_const_ptr_batch_checked = try chooseConstPtrBatchChecked(u8, failing, std.testing.allocator, 0, &.{});
     defer std.testing.allocator.free(empty_const_ptr_batch_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_const_ptr_batch_checked.len);
+    var empty_const_ptr_batch_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseConstPtrBatchChecked(u8, failing, empty_const_ptr_batch_checked_alloc.allocator(), 3, &.{}));
     const fixed_const_ptr_batch = try chooseConstPtrBatch(u8, failing, std.testing.allocator, 3, &singleton);
     defer std.testing.allocator.free(fixed_const_ptr_batch);
     for (fixed_const_ptr_batch) |value| try std.testing.expectEqual(&singleton[0], value);
