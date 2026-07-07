@@ -3223,6 +3223,8 @@ Dynamic weighted helpers:
   `Choose(T).valueArray`, `Choose(T).valueArrayFrom`,
   `Choose(T).valueArrayChecked`, `Choose(T).valueArrayCheckedFrom`,
   `Choose(T).values`, `Choose(T).valuesFrom`,
+  `Choose(T).valueIter`, `Choose(T).valueIterFrom`,
+  `Choose(T).ValueIterator`, `Choose(T).ValueIterator.nextValue`,
   `Choose(T).iter`, `Choose(T).iterFrom`, `chooseIter`, `chooseIterFrom`,
   `chooseIterChecked`, `chooseIterCheckedFrom`,
   `WeightedChoice(T, Weight)`,

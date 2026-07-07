@@ -3247,3 +3247,9 @@ S4-M720 adds distribution-layer `Choose` checked pointer aliases
 distribution-layer `Choose` now has checked aliases for caller-owned, owned, and
 fixed-size pointer outputs. This improves discoverability but does not resolve
 S4-M11.
+
+S4-M721 adds distribution-layer `Choose` value iterators
+(`compare/results/s4-m721-distribution-choose-value-iterators.md`):
+distribution-layer `Choose` now has reusable value iterators aligned with its fill
+helpers, including empty-type no-consumption behavior. This improves iterator
+ergonomics but does not resolve S4-M11.

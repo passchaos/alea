@@ -759,7 +759,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M718 distribution choose checked values | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m718-distribution-choose-checked-values.md` | Closed for the current bar: distribution-layer `Choose` now has checked scalar value-copy helpers with empty-type failures before random-stream use or value copying. |
 | S4-M719 distribution choose pointer iterators | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m719-distribution-choose-pointer-iterators.md` | Closed for the current bar: distribution-layer `Choose` now has reusable pointer iterators. |
 | S4-M720 distribution choose checked pointer aliases | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m720-distribution-choose-checked-pointer-aliases.md` | Closed for the current bar: distribution-layer `Choose` now has checked aliases for caller-owned, owned, and fixed-size pointer outputs. |
-| S4-M721 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M721 distribution choose value iterators | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m721-distribution-choose-value-iterators.md` | Closed for the current bar: distribution-layer `Choose` now has reusable value iterators. |
+| S4-M722 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2179,6 +2180,8 @@ objective.
 S4-M720 additionally adds distribution-layer `Choose` checked pointer
 aliases; it is ergonomics/discoverability work and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M721 additionally adds distribution-layer `Choose` value iterators; it is
+ergonomics work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
