@@ -2088,3 +2088,9 @@ S4-M557 adds root item-accessor weighted mutable-pointer batch helpers
 system-entropy callers can now allocate repeated weighted mutable-pointer
 batches directly from a mutable item slice and comptime item-weight accessor
 from the root API while S4-M11 remains blocked.
+
+S4-M558 adds root item-accessor weighted fixed-size value array helpers
+(`compare/results/s4-m558-root-weighted-by-value-array-helpers.md`):
+system-entropy callers can now produce fixed-size weighted value arrays directly
+from an item slice and comptime item-weight accessor from the root API while
+S4-M11 remains blocked.
