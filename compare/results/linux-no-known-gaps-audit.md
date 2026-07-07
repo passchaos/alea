@@ -2238,3 +2238,9 @@ sample helpers (`compare/results/s4-m582-root-weighted-by-mut-ptr-array-sample-h
 system-entropy callers can now produce fixed-size no-replacement weighted
 mutable-pointer arrays directly from a mutable item slice and comptime
 item-weight accessor from the root API while S4-M11 remains blocked.
+
+S4-M583 adds root parallel-weighted no-replacement value sample prevalidation
+(`compare/results/s4-m583-root-weighted-value-sample-prevalidation.md`): root
+system-entropy callers now get deterministic zero-count/all-zero/single-positive
+and invalid-parameter failures before secure-engine construction for
+`sampleWeighted` and `sampleWeightedChecked` while S4-M11 remains blocked.
