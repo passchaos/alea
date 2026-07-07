@@ -375,6 +375,16 @@ pub fn Choose(comptime T: type) type {
             return self.sampleFrom(source).*;
         }
 
+        pub fn sampleIndex(self: Self, rng: Rng) usize {
+            return self.sampleIndexFrom(rng);
+        }
+
+        pub fn sampleIndexFrom(self: Self, source: anytype) usize {
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(source, usize, self.items.len);
+        }
+
         pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
             self.fillFrom(rng, dest);
         }
@@ -406,6 +416,40 @@ pub fn Choose(comptime T: type) type {
         pub fn ptrArrayFrom(self: Self, source: anytype, comptime N: usize) [N]*const T {
             var out: [N]*const T = undefined;
             self.fillFrom(source, &out);
+            return out;
+        }
+
+        pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
+            self.fillIndicesFrom(rng, dest);
+        }
+
+        pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) {
+                @memset(dest, 0);
+                return;
+            }
+            for (dest) |*index| index.* = self.sampleIndexFrom(source);
+        }
+
+        pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
+            return self.indicesFrom(allocator, rng, amount);
+        }
+
+        pub fn indicesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            self.fillIndicesFrom(source, out);
+            return out;
+        }
+
+        pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
+            return self.indexArrayFrom(rng, N);
+        }
+
+        pub fn indexArrayFrom(self: Self, source: anytype, comptime N: usize) [N]usize {
+            var out: [N]usize = undefined;
+            self.fillIndicesFrom(source, &out);
             return out;
         }
 
@@ -31846,6 +31890,13 @@ test "distribution Choose sampler mirrors slice choices" {
         choice.sampleValueFrom(&choice_engine),
     );
     try std.testing.expectEqual(index_engine.next(), choice_engine.next());
+    var sample_index_engine = root.DefaultPrng.init(0xc0_276);
+    var choose_index_engine = root.DefaultPrng.init(0xc0_276);
+    try std.testing.expectEqual(
+        Rng.chooseIndexFrom(&choose_index_engine, items.len).?,
+        choice.sampleIndexFrom(&sample_index_engine),
+    );
+    try std.testing.expectEqual(choose_index_engine.next(), sample_index_engine.next());
 
     var fill_engine = root.DefaultPrng.init(0xc0_268);
     var helper_engine = root.DefaultPrng.init(0xc0_268);
@@ -31855,6 +31906,21 @@ test "distribution Choose sampler mirrors slice choices" {
     for (&helper_values) |*value| value.* = Rng.chooseFrom(&helper_engine, u8, &items).?;
     try std.testing.expectEqualSlices(u8, &helper_values, &values);
     try std.testing.expectEqual(helper_engine.next(), fill_engine.next());
+    var index_fill_engine = root.DefaultPrng.init(0xc0_277);
+    var index_array_engine = root.DefaultPrng.init(0xc0_277);
+    var index_fill: [6]usize = undefined;
+    choice.fillIndicesFrom(&index_fill_engine, &index_fill);
+    const index_array = choice.indexArrayFrom(&index_array_engine, 6);
+    try std.testing.expectEqualSlices(usize, &index_fill, &index_array);
+    try std.testing.expectEqual(index_fill_engine.next(), index_array_engine.next());
+    var owned_index_engine = root.DefaultPrng.init(0xc0_278);
+    var owned_index_control = root.DefaultPrng.init(0xc0_278);
+    const owned_indices = try choice.indicesFrom(std.testing.allocator, &owned_index_engine, 6);
+    defer std.testing.allocator.free(owned_indices);
+    var owned_index_fill: [6]usize = undefined;
+    choice.fillIndicesFrom(&owned_index_control, &owned_index_fill);
+    try std.testing.expectEqualSlices(usize, &owned_index_fill, owned_indices);
+    try std.testing.expectEqual(owned_index_control.next(), owned_index_engine.next());
     var ptrs_engine = root.DefaultPrng.init(0xc0_274);
     var ptrs_control = root.DefaultPrng.init(0xc0_274);
     const owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &ptrs_engine, 6);
@@ -31898,6 +31964,9 @@ test "distribution Choose sampler mirrors slice choices" {
     var singleton_values: [4]u8 = undefined;
     singleton.fillValuesFrom(&singleton_engine, &singleton_values);
     for (singleton_values) |value| try std.testing.expectEqual(@as(u8, 30), value);
+    var singleton_indices: [4]usize = undefined;
+    singleton.fillIndicesFrom(&singleton_engine, &singleton_indices);
+    try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0, 0 }, &singleton_indices);
     try std.testing.expectEqual(singleton_control.next(), singleton_engine.next());
 
     const Empty = enum {};

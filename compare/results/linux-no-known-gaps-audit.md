@@ -3189,3 +3189,9 @@ S4-M710 adds distribution-layer `Choose` pointer outputs
 distribution-layer `Choose` now has fixed-size and owned pointer output helpers
 matching reference-oriented choice workflows. This improves ergonomics but does
 not resolve S4-M11.
+
+S4-M711 adds distribution-layer `Choose` index outputs
+(`compare/results/s4-m711-distribution-choose-index-outputs.md`):
+distribution-layer `Choose` now has scalar, caller-owned, owned, and fixed-size
+usize index output helpers aligned with item sampling stream shape. This
+improves ergonomics but does not resolve S4-M11.
