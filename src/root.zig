@@ -118,6 +118,7 @@ pub fn secure(io: std.Io) !SecurePrng {
 }
 
 pub fn secureBytes(io: std.Io, out: []u8) !void {
+    if (out.len == 0) return;
     try std.Io.randomSecure(io, out);
 }
 
@@ -6394,6 +6395,9 @@ test "root random helpers validate deterministic cases before entropy" {
     const failing = std.Io.failing;
     const EmptyEnum = enum {};
 
+    var empty_secure_bytes: [0]u8 = .{};
+    try secureBytes(failing, &empty_secure_bytes);
+
     if (randomValue(EmptyEnum, failing)) |_| {
         return error.TestExpectedError;
     } else |err| {
@@ -8870,6 +8874,7 @@ test "root random helpers validate deterministic cases before entropy" {
     var byte: [1]u8 = undefined;
     try std.testing.expectError(error.EntropyUnavailable, fill(u8, failing, &byte));
     try std.testing.expectError(error.EntropyUnavailable, sample(u8, failing, die_sampler));
+    try std.testing.expectError(error.EntropyUnavailable, secureBytes(failing, &byte));
     try std.testing.expectError(error.EntropyUnavailable, fillSample(u8, failing, &byte, die_sampler));
     try std.testing.expectError(error.EntropyUnavailable, sampleBatch(u8, failing, std.testing.allocator, die_sampler, 1));
     try std.testing.expectError(error.EntropyUnavailable, chooseIndex(failing, 2));

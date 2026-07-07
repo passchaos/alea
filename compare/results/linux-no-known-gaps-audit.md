@@ -2566,3 +2566,9 @@ system-entropy callers now get invalid probability and ratio failures before
 secure-engine construction for `randomBool`, `randomRatio`, `fillRandomBool`, and
 `fillRandomRatio`, while empty-output and endpoint deterministic paths remain
 no-entropy and S4-M11 remains blocked.
+
+S4-M628 adds root secure bytes empty-output prevalidation
+(`compare/results/s4-m628-root-secure-bytes-empty-prevalidation.md`): root
+system-entropy callers now get deterministic empty-buffer returns before system
+entropy for `secureBytes`, while non-empty buffers still request entropy and
+S4-M11 remains blocked.
