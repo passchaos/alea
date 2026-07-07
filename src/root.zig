@@ -2205,6 +2205,7 @@ pub fn sampleWeightedArray(comptime T: type, comptime Weight: type, io: std.Io, 
     if (N == 0) return .{};
     if (items.len != weights.len) return error.LengthMismatch;
     if (items.len == 0) return null;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const state = try rootPositiveWeightState(Weight, weights);
     if (state.count < N) return null;
     if (comptime N == 1) {
@@ -2219,6 +2220,7 @@ pub fn sampleWeightedArrayChecked(comptime T: type, comptime Weight: type, io: s
     if (N == 0) return .{};
     if (items.len != weights.len) return error.LengthMismatch;
     if (N > items.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const state = try rootPositiveWeightState(Weight, weights);
     if (state.count < N) return error.InvalidParameter;
     if (comptime N == 1) {
@@ -7296,6 +7298,22 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.LengthMismatch, sampleWeightedArrayChecked(u8, f64, failing, 2, &.{ 1, 2, 3 }, &.{ 1, 2 }));
     try std.testing.expectEqual(@as(?[2]u8, null), try sampleWeightedArray(u8, f64, failing, 2, &.{ 10, 20, 30 }, &.{ 0, 0, 0 }));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedArrayChecked(u8, f64, failing, 2, &.{ 10, 20, 30 }, &.{ 0, 0, 0 }));
+    var weighted_empty_enum_array_failed = false;
+    if (sampleWeightedArray(EmptyEnum, f64, failing, 1, weighted_empty_enum_items, &.{1})) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        weighted_empty_enum_array_failed = true;
+    }
+    try std.testing.expect(weighted_empty_enum_array_failed);
+    var weighted_empty_enum_array_checked_failed = false;
+    if (sampleWeightedArrayChecked(EmptyEnum, f64, failing, 1, weighted_empty_enum_items, &.{1})) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        weighted_empty_enum_array_checked_failed = true;
+    }
+    try std.testing.expect(weighted_empty_enum_array_checked_failed);
     try std.testing.expectEqualSlices(u8, &.{20}, &(try sampleWeightedArray(u8, f64, failing, 1, &.{ 10, 20, 30 }, &.{ 0, 5, 0 })).?);
     try std.testing.expectEqualSlices(u8, &.{20}, &(try sampleWeightedArrayChecked(u8, f64, failing, 1, &.{ 10, 20, 30 }, &.{ 0, 5, 0 })));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedArrayChecked(u8, f64, failing, 2, &.{ 10, 20, 30 }, &.{ 0, 5, 0 }));

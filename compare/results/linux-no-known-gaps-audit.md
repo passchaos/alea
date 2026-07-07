@@ -2594,3 +2594,10 @@ before random-output allocation and secure-engine construction for
 `sampleWeightedBy` and `sampleWeightedByChecked`, while zero-amount and
 deterministic all-zero/single paths remain allocation-only and S4-M11 remains
 blocked.
+
+S4-M632 adds root weighted value array empty-type prevalidation
+(`compare/results/s4-m632-root-weighted-value-array-empty-type-prevalidation.md`):
+root system-entropy callers now get non-zero uninhabited value type failures
+before secure-engine construction for `sampleWeightedArray` and
+`sampleWeightedArrayChecked`, while zero-size and deterministic all-zero/single
+paths remain no-entropy and S4-M11 remains blocked.
