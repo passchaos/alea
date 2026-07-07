@@ -4189,6 +4189,7 @@ pub fn rangeAtMostBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocat
 
 pub fn rangeAtMostBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
+    try rootValidateRangeAtMostParams(T, min, max);
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillRangeAtMostChecked(T, io, out, min, max);
@@ -8550,6 +8551,8 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_bad_inclusive_checked = try rangeAtMostBatchChecked(u8, failing, std.testing.allocator, 0, 6, 5);
     defer std.testing.allocator.free(empty_bad_inclusive_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_inclusive_checked.len);
+    var bad_inclusive_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rangeAtMostBatchChecked(u8, failing, bad_inclusive_alloc.allocator(), 3, 6, 5));
     const empty_bad_bool_checked = try randomBoolBatchChecked(failing, std.testing.allocator, 0, 1.1);
     defer std.testing.allocator.free(empty_bad_bool_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_bool_checked.len);

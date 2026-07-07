@@ -2448,3 +2448,10 @@ failures before random-output allocation and secure-engine construction for
 `rangeBatchChecked`, `randomBoolBatchChecked`, and `randomRatioBatchChecked`,
 while zero-count and deterministic collapsed paths remain allocation-only and
 S4-M11 remains blocked.
+
+S4-M611 adds root checked inclusive integer batch parameter prevalidation
+(`compare/results/s4-m611-root-checked-inclusive-batch-prevalidation.md`): root
+system-entropy callers now get invalid inclusive-range failures before
+random-output allocation and secure-engine construction for
+`rangeAtMostBatchChecked`, while zero-count and deterministic collapsed paths
+remain allocation-only and S4-M11 remains blocked.
