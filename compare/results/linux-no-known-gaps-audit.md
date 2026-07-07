@@ -2295,3 +2295,11 @@ root system-entropy callers now get deterministic zero-amount/all-zero/single-
 positive, insufficient-positive checked, early-invalid-weight, and checked-error
 outcomes before secure-engine construction for `sampleIteratorWeighted` and
 `sampleIteratorWeightedChecked` while S4-M11 remains blocked.
+
+S4-M591 adds root weighted-iterator into/fill lazy entropy
+(`compare/results/s4-m591-root-weighted-iterator-into-lazy-entropy.md`): root
+system-entropy callers now get deterministic zero-output/all-zero/single-
+positive, insufficient-positive checked, early-invalid-weight, scratch-mismatch,
+and checked-error outcomes before secure-engine construction for
+`sampleIteratorWeightedInto` and `sampleIteratorWeightedIntoChecked` while
+S4-M11 remains blocked.

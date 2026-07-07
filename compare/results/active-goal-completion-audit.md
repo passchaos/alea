@@ -629,7 +629,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M588 root parallel-weighted mutable-pointer array prevalidation | `src/root.zig`, `compare/results/s4-m588-root-weighted-mut-ptr-array-prevalidation.md` | Closed for the current bar: root parallel-weighted mutable-pointer array helpers now validate deterministic no-entropy paths before secure-engine construction. |
 | S4-M589 root weighted-iterator fixed-array lazy entropy | `src/root.zig`, `compare/results/s4-m589-root-weighted-iterator-array-lazy-entropy.md` | Closed for the current bar: root weighted iterator fixed-size array helpers now defer secure-engine construction until random competition is required. |
 | S4-M590 root weighted-iterator allocated sample lazy entropy | `src/root.zig`, `compare/results/s4-m590-root-weighted-iterator-allocated-lazy-entropy.md` | Closed for the current bar: root allocated weighted iterator sample helpers now defer secure-engine construction until random competition is required. |
-| S4-M591 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M591 root weighted-iterator into lazy entropy | `src/root.zig`, `compare/results/s4-m591-root-weighted-iterator-into-lazy-entropy.md` | Closed for the current bar: root weighted iterator into helpers now defer secure-engine construction until random competition is required. |
+| S4-M592 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1658,6 +1659,9 @@ it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M590 additionally adds root weighted-iterator allocated sample lazy entropy;
 it is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M591 additionally adds root weighted-iterator into/fill lazy entropy; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
