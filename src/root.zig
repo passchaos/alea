@@ -1336,13 +1336,22 @@ pub fn sampleIndicesU32IntoChecked(io: std.Io, length: u32, out: []u32) !void {
 
 pub fn sampleWeightedIndices(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, weights: []const Weight, amount: usize) ![]usize {
     if (amount == 0) return allocator.alloc(usize, 0);
+    if (weights.len == 0) return error.EmptyInput;
+    const state = try rootPositiveWeightState(Weight, weights);
+    const count = @min(amount, state.count);
+    if (count == 0) return allocator.alloc(usize, 0);
+    if (state.count == 1) return rootSingleIndexAlloc(allocator, state.single_index.?);
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
-    return try seq.sampleWeightedIndices(allocator, random_source, Weight, weights, amount);
+    return try seq.sampleWeightedIndices(allocator, random_source, Weight, weights, count);
 }
 
 pub fn sampleWeightedIndicesChecked(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, weights: []const Weight, amount: usize) ![]usize {
     if (amount == 0) return allocator.alloc(usize, 0);
+    if (amount > weights.len) return error.InvalidParameter;
+    const state = try rootPositiveWeightState(Weight, weights);
+    if (state.count < amount) return error.InvalidParameter;
+    if (state.count == 1 and amount == 1) return rootSingleIndexAlloc(allocator, state.single_index.?);
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return try seq.sampleWeightedIndicesChecked(allocator, random_source, Weight, weights, amount);
@@ -1350,13 +1359,23 @@ pub fn sampleWeightedIndicesChecked(comptime Weight: type, io: std.Io, allocator
 
 pub fn sampleWeightedIndicesU32(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, weights: []const Weight, amount: usize) ![]u32 {
     if (amount == 0) return allocator.alloc(u32, 0);
+    if (weights.len == 0) return error.EmptyInput;
+    if (weights.len > std.math.maxInt(u32)) return error.InvalidParameter;
+    const state = try rootPositiveWeightState(Weight, weights);
+    const count = @min(amount, state.count);
+    if (count == 0) return allocator.alloc(u32, 0);
+    if (state.count == 1) return rootSingleIndexU32Alloc(allocator, state.single_index.?);
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
-    return try seq.sampleWeightedIndicesU32(allocator, random_source, Weight, weights, amount);
+    return try seq.sampleWeightedIndicesU32(allocator, random_source, Weight, weights, count);
 }
 
 pub fn sampleWeightedIndicesU32Checked(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, weights: []const Weight, amount: usize) ![]u32 {
     if (amount == 0) return allocator.alloc(u32, 0);
+    if (amount > weights.len or weights.len > std.math.maxInt(u32)) return error.InvalidParameter;
+    const state = try rootPositiveWeightState(Weight, weights);
+    if (state.count < amount) return error.InvalidParameter;
+    if (state.count == 1 and amount == 1) return rootSingleIndexU32Alloc(allocator, state.single_index.?);
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return try seq.sampleWeightedIndicesU32Checked(allocator, random_source, Weight, weights, amount);
@@ -7211,6 +7230,38 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_weighted_nr_u32 = try sampleWeightedIndicesU32(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 0);
     defer std.testing.allocator.free(empty_weighted_nr_u32);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_nr_u32.len);
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndices(f64, failing, std.testing.allocator, &.{}, 1));
+    var empty_weighted_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesChecked(f64, failing, empty_weighted_checked_alloc.allocator(), &.{}, 1));
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesU32(f64, failing, std.testing.allocator, &.{}, 1));
+    var empty_weighted_u32_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32Checked(f64, failing, empty_weighted_u32_checked_alloc.allocator(), &.{}, 1));
+    const zero_weighted_indices = try sampleWeightedIndices(f64, failing, std.testing.allocator, &.{ 0, 0, 0 }, 2);
+    defer std.testing.allocator.free(zero_weighted_indices);
+    try std.testing.expectEqual(@as(usize, 0), zero_weighted_indices.len);
+    var zero_weighted_indices_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesChecked(f64, failing, zero_weighted_indices_checked_alloc.allocator(), &.{ 0, 0, 0 }, 2));
+    const zero_weighted_indices_u32 = try sampleWeightedIndicesU32(f64, failing, std.testing.allocator, &.{ 0, 0, 0 }, 2);
+    defer std.testing.allocator.free(zero_weighted_indices_u32);
+    try std.testing.expectEqual(@as(usize, 0), zero_weighted_indices_u32.len);
+    var zero_weighted_indices_u32_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32Checked(f64, failing, zero_weighted_indices_u32_checked_alloc.allocator(), &.{ 0, 0, 0 }, 2));
+    const single_weighted_indices = try sampleWeightedIndices(f64, failing, std.testing.allocator, &.{ 0, 5, 0 }, 3);
+    defer std.testing.allocator.free(single_weighted_indices);
+    try std.testing.expectEqualSlices(usize, &.{1}, single_weighted_indices);
+    const single_weighted_indices_checked = try sampleWeightedIndicesChecked(f64, failing, std.testing.allocator, &.{ 0, 5, 0 }, 1);
+    defer std.testing.allocator.free(single_weighted_indices_checked);
+    try std.testing.expectEqualSlices(usize, &.{1}, single_weighted_indices_checked);
+    var weighted_indices_checked_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesChecked(f64, failing, weighted_indices_checked_invalid_alloc.allocator(), &.{ 1, 2, 3 }, 4));
+    const single_weighted_indices_u32 = try sampleWeightedIndicesU32(f64, failing, std.testing.allocator, &.{ 0, 5, 0 }, 3);
+    defer std.testing.allocator.free(single_weighted_indices_u32);
+    try std.testing.expectEqualSlices(u32, &.{1}, single_weighted_indices_u32);
+    const single_weighted_indices_u32_checked = try sampleWeightedIndicesU32Checked(f64, failing, std.testing.allocator, &.{ 0, 5, 0 }, 1);
+    defer std.testing.allocator.free(single_weighted_indices_u32_checked);
+    try std.testing.expectEqualSlices(u32, &.{1}, single_weighted_indices_u32_checked);
+    var weighted_indices_u32_checked_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32Checked(f64, failing, weighted_indices_u32_checked_invalid_alloc.allocator(), &.{ 1, 2, 3 }, 4));
     const empty_weighted_index_vec = try sampleWeightedIndexVec(f64, failing, std.testing.allocator, &.{-1}, 0);
     defer empty_weighted_index_vec.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_index_vec.len());

@@ -2676,3 +2676,12 @@ avoid oversized allocation and return deterministic short/null results before
 secure-engine construction and iterator consumption for `sampleIterator`,
 `sampleIteratorArray`, and `sampleIteratorWeightedArray`. This improves
 allocation/entropy behavior but does not resolve S4-M11.
+
+S4-M643 adds root weighted index allocation prevalidation
+(`compare/results/s4-m643-root-weighted-index-alloc-prevalidation.md`):
+parallel-weighted index allocation helpers now resolve empty input, all-zero
+weights, single-positive weights, checked oversized requests, invalid weights,
+and u32 length limits before secure-engine construction for
+`sampleWeightedIndices`, `sampleWeightedIndicesChecked`,
+`sampleWeightedIndicesU32`, and `sampleWeightedIndicesU32Checked`. This improves
+failure/result determinism but does not resolve S4-M11.
