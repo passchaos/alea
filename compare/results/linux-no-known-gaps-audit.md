@@ -3557,3 +3557,10 @@ S4-M767 caps exact-short iterator allocation capacity
 seq/root allocation-returning iterator sampling helpers now cap reservoir/heap
 capacity by exact remaining counts when returning partial results. This improves
 iterator sampling allocation predictability but does not resolve S4-M11.
+
+S4-M768 avoids exact-short iterator end probes
+(`compare/results/s4-m768-iterator-exact-short-end-probe.md`):
+seq/root allocation-returning unweighted iterator samples now read exactly the
+known remaining items and return partial outputs without an extra null probe.
+This improves iterator sampling reliability evidence but does not resolve
+S4-M11.

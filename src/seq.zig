@@ -4871,17 +4871,22 @@ pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
 pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining == 0) return allocator.alloc(T, 0);
     }
 
-    const initial_capacity = if (iteratorExactRemaining(iterator)) |remaining| @min(amount, remaining) else amount;
+    const initial_capacity = if (exact_remaining) |remaining| @min(amount, remaining) else amount;
     var reservoir = try std.ArrayList(T).initCapacity(allocator, initial_capacity);
     errdefer reservoir.deinit(allocator);
 
-    while (reservoir.items.len < amount) {
+    const fill_target = if (exact_remaining) |remaining| @min(amount, remaining) else amount;
+    while (reservoir.items.len < fill_target) {
         const item = iterator.next() orelse return reservoir.toOwnedSlice(allocator);
         try reservoir.append(allocator, item);
+    }
+    if (exact_remaining) |remaining| {
+        if (remaining <= amount) return reservoir.toOwnedSliceAssert();
     }
 
     var seen = reservoir.items.len;
@@ -12376,8 +12381,10 @@ test "exact-short iterator samples cap reservoir allocation" {
     const ExactIter = struct {
         next_value: u8 = 1,
         end: u8 = 3,
+        calls: usize = 0,
 
         fn next(self: *@This()) ?u8 {
+            self.calls += 1;
             if (self.next_value >= self.end) return null;
             const value = self.next_value;
             self.next_value += 1;
@@ -12394,6 +12401,7 @@ test "exact-short iterator samples cap reservoir allocation" {
     var iter = ExactIter{};
     const sample = try sampleIteratorFrom(fixed.allocator(), &engine, u8, &iter, 8);
     try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample);
+    try std.testing.expectEqual(@as(usize, 2), iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
