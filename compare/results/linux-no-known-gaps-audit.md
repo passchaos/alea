@@ -2136,3 +2136,9 @@ helpers (`compare/results/s4-m565-root-weighted-by-const-ptr-into-helpers.md`):
 system-entropy callers can now fill caller-owned no-replacement weighted
 const-pointer buffers directly from an item slice and comptime item-weight
 accessor from the root API while S4-M11 remains blocked.
+
+S4-M566 adds root item-accessor weighted no-replacement mutable-pointer into
+helpers (`compare/results/s4-m566-root-weighted-by-mut-ptr-into-helpers.md`):
+system-entropy callers can now fill caller-owned no-replacement weighted
+mutable-pointer buffers directly from a mutable item slice and comptime
+item-weight accessor from the root API while S4-M11 remains blocked.
