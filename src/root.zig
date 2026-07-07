@@ -1958,6 +1958,7 @@ pub fn sampleWeightedByInto(comptime T: type, comptime Weight: type, io: std.Io,
     if (out.len == 0) return 0;
     if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
     if (items.len == 0) return error.EmptyInput;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const state = try rootPositiveItemStateBy(T, Weight, items, weightFn);
     const count = @min(out.len, state.count);
     if (count == 0) return 0;
@@ -1974,6 +1975,7 @@ pub fn sampleWeightedByIntoChecked(comptime T: type, comptime Weight: type, io: 
     if (out.len == 0) return;
     if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
     if (out.len > items.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const state = try rootPositiveItemStateBy(T, Weight, items, weightFn);
     if (state.count < out.len) return error.InvalidParameter;
     if (state.count == 1) {
@@ -2146,6 +2148,7 @@ pub fn sampleWeightedInto(comptime T: type, comptime Weight: type, io: std.Io, i
     if (items.len != weights.len) return error.LengthMismatch;
     if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
     if (weights.len == 0) return error.EmptyInput;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const state = try rootPositiveWeightState(Weight, weights);
     const count = @min(out.len, state.count);
     if (count == 0) return 0;
@@ -2163,6 +2166,7 @@ pub fn sampleWeightedIntoChecked(comptime T: type, comptime Weight: type, io: st
     if (items.len != weights.len) return error.LengthMismatch;
     if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
     if (out.len > items.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const state = try rootPositiveWeightState(Weight, weights);
     if (state.count < out.len) return error.InvalidParameter;
     if (state.count == 1) {
@@ -7460,6 +7464,13 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(u8, 20), weighted_values_single[0]);
     try sampleWeightedIntoChecked(u8, f64, failing, &.{ 10, 20, 30 }, &.{ 0, 5, 0 }, &weighted_values_single, &weighted_values_single_index, &weighted_indices_single_key);
     try std.testing.expectEqual(@as(u8, 20), weighted_values_single[0]);
+    const EmptyWeightedPayload = struct { empty: EmptyEnum };
+    var empty_weighted_payload_items: [1]EmptyWeightedPayload = undefined;
+    var empty_weighted_payload_out: [1]EmptyWeightedPayload = undefined;
+    var empty_weighted_payload_indices: [1]usize = undefined;
+    var empty_weighted_payload_keys: [1]f64 = undefined;
+    try std.testing.expectError(error.EmptyRange, sampleWeightedInto(EmptyWeightedPayload, f64, failing, &empty_weighted_payload_items, &.{1}, &empty_weighted_payload_out, &empty_weighted_payload_indices, &empty_weighted_payload_keys));
+    try std.testing.expectError(error.EmptyRange, sampleWeightedIntoChecked(EmptyWeightedPayload, f64, failing, &empty_weighted_payload_items, &.{1}, &empty_weighted_payload_out, &empty_weighted_payload_indices, &empty_weighted_payload_keys));
     var empty_weighted_ptrs_into: [0]*const u8 = .{};
     var empty_weighted_ptr_indices: [0]usize = .{};
     try std.testing.expectEqual(@as(usize, 0), try sampleWeightedPtrsInto(u8, f64, failing, &.{1}, &.{-1}, &empty_weighted_ptrs_into, &empty_weighted_ptr_indices, &empty_weighted_keys));
@@ -8126,6 +8137,19 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.InvalidParameter, sampleWeightedByIntoChecked(RootItemWeights.Entry, f64, failing, &weighted_by_items, &weighted_by_values_single, &weighted_by_values_two_indices, &weighted_by_values_two_keys, RootItemWeights.single));
     try sampleWeightedByIntoChecked(RootItemWeights.Entry, f64, failing, &weighted_by_items, &weighted_by_values_one, &weighted_by_values_one_index, &weighted_by_values_one_key, RootItemWeights.single);
     try std.testing.expectEqual(@as(u8, 20), weighted_by_values_one[0].item);
+    const EmptyWeightedByPayload = struct {
+        empty: EmptyEnum,
+
+        fn positive(_: *const @This()) f64 {
+            return 1;
+        }
+    };
+    var empty_weighted_by_payload_items: [1]EmptyWeightedByPayload = undefined;
+    var empty_weighted_by_payload_out: [1]EmptyWeightedByPayload = undefined;
+    var empty_weighted_by_payload_indices: [1]usize = undefined;
+    var empty_weighted_by_payload_keys: [1]f64 = undefined;
+    try std.testing.expectError(error.EmptyRange, sampleWeightedByInto(EmptyWeightedByPayload, f64, failing, &empty_weighted_by_payload_items, &empty_weighted_by_payload_out, &empty_weighted_by_payload_indices, &empty_weighted_by_payload_keys, EmptyWeightedByPayload.positive));
+    try std.testing.expectError(error.EmptyRange, sampleWeightedByIntoChecked(EmptyWeightedByPayload, f64, failing, &empty_weighted_by_payload_items, &empty_weighted_by_payload_out, &empty_weighted_by_payload_indices, &empty_weighted_by_payload_keys, EmptyWeightedByPayload.positive));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedByInto(RootItemWeights.Entry, f64, failing, &weighted_by_items, &weighted_by_values_zero, &weighted_by_values_two_indices, &weighted_by_values_two_keys, RootItemWeights.invalid));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedByIntoChecked(RootItemWeights.Entry, f64, failing, &weighted_by_items, &weighted_by_values_zero, &weighted_by_values_two_indices, &weighted_by_values_two_keys, RootItemWeights.invalid));
     var empty_weighted_by_ptrs_into: [0]*const RootItemWeights.Entry = .{};

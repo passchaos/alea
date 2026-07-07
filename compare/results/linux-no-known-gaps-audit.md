@@ -3052,3 +3052,11 @@ non-zero empty enum-containing value types before accessor weight evaluation,
 allocation, weighted-key sampling, random-stream use, and value copying in
 allocation-returning, caller-owned, and fixed-array paths. This improves failure
 determinism but does not resolve S4-M11.
+
+S4-M690 adds root weighted into empty-type prevalidation
+(`compare/results/s4-m690-root-weighted-into-empty-type-prevalidation.md`):
+root parallel-weight and item-accessor weighted no-replacement caller-owned value
+helpers now reject non-zero empty enum-containing output types before accessor
+weight evaluation, entropy, secure-engine construction, weighted-key sampling,
+random-stream use, and value copying. This improves failure determinism but does
+not resolve S4-M11.
