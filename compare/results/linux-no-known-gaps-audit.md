@@ -3526,3 +3526,9 @@ seq/root allocation-returning iterator sampling helpers now return empty outputs
 for exact-empty sources before reservoir/heap allocation, iterator consumption,
 entropy, or random-stream use. This improves iterator sampling reliability
 evidence but does not resolve S4-M11.
+
+S4-M763 tightens iterator exact-empty caller-owned prevalidation
+(`compare/results/s4-m763-iterator-exact-empty-caller-owned-prevalidation.md`):
+seq/root caller-owned iterator sampling helpers now return zero for exact-empty
+sources before iterator consumption, entropy, or random-stream use. This
+improves iterator sampling reliability evidence but does not resolve S4-M11.

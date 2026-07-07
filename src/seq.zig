@@ -4944,6 +4944,9 @@ pub fn sampleIteratorFillFrom(source: anytype, comptime T: type, iterator: anyty
 pub fn sampleIteratorIntoFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) usize {
     if (out.len == 0) return 0;
     if (comptime valueTypeHasEmptyEnum(T)) return 0;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return 0;
+    }
 
     var filled: usize = 0;
     while (filled < out.len) : (filled += 1) {
@@ -5189,6 +5192,9 @@ pub fn sampleIteratorWeightedIntoFrom(source: anytype, comptime T: type, iterato
     if (out.len == 0) return 0;
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return 0;
+    }
     return sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len]);
 }
 
@@ -12289,6 +12295,36 @@ test "empty exact iterator samples avoid reservoir allocation" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "empty exact iterator fills avoid source consumption" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_771d);
+    var control = alea.ScalarPrng.init(0x5150_771d);
+
+    const EmptyExactIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+
+    var iter = EmptyExactIter{};
+    var out: [3]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 0), sampleIteratorIntoFrom(&engine, u8, &iter, &out));
+    try std.testing.expectEqual(@as(usize, 0), iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var fill_iter = EmptyExactIter{};
+    try std.testing.expectEqual(@as(usize, 0), sampleIteratorFillFrom(&engine, u8, &fill_iter, &out));
+    try std.testing.expectEqual(@as(usize, 0), fill_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "zero-count weighted iterator samples do not read iterator or build heap" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_7716);
@@ -12340,6 +12376,33 @@ test "empty exact weighted iterator samples avoid heap allocation" {
     try std.testing.expectEqual(@as(usize, 0), sample.len);
     try std.testing.expectEqual(@as(usize, 0), iter.calls);
     try std.testing.expect(!failing.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "empty exact weighted iterator fills avoid source consumption" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_771e);
+    var control = alea.ScalarPrng.init(0x5150_771e);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const EmptyExactIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+
+    var iter = EmptyExactIter{};
+    var out: [3]u8 = undefined;
+    var keys: [3]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 0), try sampleIteratorWeightedIntoFrom(&engine, u8, &iter, &out, &keys));
+    try std.testing.expectEqual(@as(usize, 0), iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

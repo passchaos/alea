@@ -801,7 +801,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M760 seq checked iterator exact-remaining prevalidation | `src/seq.zig`, `compare/results/s4-m760-seq-checked-iterator-exact-remaining-prevalidation.md` | Closed for the current bar: checked iterator sampling helpers now reject exact-size short iterators before allocation, iterator consumption, or random-stream use. |
 | S4-M761 seq optional iterator array exact-remaining prevalidation | `src/seq.zig`, `compare/results/s4-m761-seq-optional-iterator-array-exact-remaining.md` | Closed for the current bar: optional fixed-size iterator array helpers now return null for exact-size short iterators before consuming the iterator or random stream. |
 | S4-M762 iterator exact-empty allocation prevalidation | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m762-iterator-exact-empty-allocation-prevalidation.md` | Closed for the current bar: iterator allocation-returning helpers now return empty outputs for exact-empty sources before allocation, consumption, entropy, or random-stream use. |
-| S4-M763 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M763 iterator exact-empty caller-owned prevalidation | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m763-iterator-exact-empty-caller-owned-prevalidation.md` | Closed for the current bar: caller-owned iterator helpers now return zero for exact-empty sources before iterator consumption, entropy, or random-stream use. |
+| S4-M764 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2357,6 +2358,9 @@ S4-M11 or complete the long-term objective.
 S4-M762 additionally tightens allocation-returning iterator helpers for
 exact-empty sources; it is reliability/validation work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M763 additionally tightens caller-owned iterator helpers for exact-empty
+sources; it is reliability/validation work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

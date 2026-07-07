@@ -2515,6 +2515,9 @@ pub fn sampleIteratorChecked(comptime T: type, io: std.Io, allocator: std.mem.Al
 pub fn sampleIteratorInto(comptime T: type, io: std.Io, iterator: anytype, out: []T) !usize {
     if (out.len == 0) return 0;
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
+    if (rootIteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return 0;
+    }
 
     var filled: usize = 0;
     while (filled < out.len) : (filled += 1) {
@@ -2598,6 +2601,9 @@ pub fn sampleIteratorWeightedInto(comptime T: type, io: std.Io, iterator: anytyp
     if (out.len == 0) return 0;
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (rootIteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return 0;
+    }
     return try rootSampleIteratorWeightedInto(T, io, iterator, out, scratch_keys[0..out.len], false);
 }
 
@@ -9804,6 +9810,22 @@ test "root random helpers validate deterministic cases before entropy" {
     var sample_into_empty_iter = SliceIter{ .items = &.{} };
     var sample_into_empty: [0]u8 = .{};
     try std.testing.expectEqual(@as(usize, 0), try sampleIteratorInto(u8, failing, &sample_into_empty_iter, &sample_into_empty));
+    const EmptyExactIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+    var sample_into_exact_empty_iter = EmptyExactIter{};
+    var sample_into_exact_empty: [3]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 0), try sampleIteratorInto(u8, failing, &sample_into_exact_empty_iter, &sample_into_exact_empty));
+    try std.testing.expectEqual(@as(usize, 0), sample_into_exact_empty_iter.calls);
     var empty_type_into_iter = EmptyValueIter{};
     var empty_type_into: [1]EmptyIteratorValue = undefined;
     if (sampleIteratorInto(EmptyIteratorValue, failing, &empty_type_into_iter, &empty_type_into)) |_| {
@@ -9978,6 +10000,23 @@ test "root random helpers validate deterministic cases before entropy" {
     var weighted_into_empty_out: [0]u8 = .{};
     var weighted_into_empty_keys: [0]f64 = .{};
     try std.testing.expectEqual(@as(usize, 0), try sampleIteratorWeightedInto(u8, failing, &weighted_into_empty, &weighted_into_empty_out, &weighted_into_empty_keys));
+    const EmptyExactWeightedIntoIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?WeightedIter.Entry {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+    var weighted_into_exact_empty = EmptyExactWeightedIntoIter{};
+    var weighted_into_exact_empty_out: [2]u8 = undefined;
+    var weighted_into_exact_empty_keys: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 0), try sampleIteratorWeightedInto(u8, failing, &weighted_into_exact_empty, &weighted_into_exact_empty_out, &weighted_into_exact_empty_keys));
+    try std.testing.expectEqual(@as(usize, 0), weighted_into_exact_empty.calls);
     var weighted_into_empty_checked = WeightedIter{ .items = &weighted_entropy_entries };
     try sampleIteratorWeightedIntoChecked(u8, failing, &weighted_into_empty_checked, &weighted_into_empty_out, &weighted_into_empty_keys);
     var weighted_into_short_scratch = WeightedIter{ .items = &weighted_entropy_entries };
