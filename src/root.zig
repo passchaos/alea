@@ -1270,7 +1270,7 @@ pub fn sampleIndicesChecked(io: std.Io, allocator: std.mem.Allocator, length: us
 
 pub fn sampleIndicesInto(io: std.Io, length: usize, out: []usize) !void {
     if (out.len == 0) return;
-    std.debug.assert(out.len <= length);
+    if (out.len > length) return error.InvalidParameter;
     if (out.len == length and length <= 1024) {
         for (out, 0..) |*item, index| item.* = index;
         return;
@@ -1312,7 +1312,7 @@ pub fn sampleIndicesU32Checked(io: std.Io, allocator: std.mem.Allocator, length:
 
 pub fn sampleIndicesU32Into(io: std.Io, length: u32, out: []u32) !void {
     if (out.len == 0) return;
-    std.debug.assert(out.len <= @as(usize, length));
+    if (out.len > @as(usize, length)) return error.InvalidParameter;
     if (out.len == @as(usize, length) and length <= 1024) {
         for (out, 0..) |*item, index| item.* = @intCast(index);
         return;
@@ -7131,6 +7131,7 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqualSlices(usize, &.{ 0, 1, 2 }, &all_indices_into);
     try std.testing.expectError(error.InvalidParameter, sampleIndicesChecked(failing, std.testing.allocator, 3, 4));
     var too_many_indices: [4]usize = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesInto(failing, 3, &too_many_indices));
     try std.testing.expectError(error.InvalidParameter, sampleIndicesIntoChecked(failing, 3, &too_many_indices));
     const empty_sample_indices_u32 = try sampleIndicesU32(failing, std.testing.allocator, 5, 0);
     defer std.testing.allocator.free(empty_sample_indices_u32);
@@ -7153,6 +7154,9 @@ test "root random helpers validate deterministic cases before entropy" {
     try sampleIndicesU32IntoChecked(failing, 3, &all_indices_u32_into);
     try std.testing.expectEqualSlices(u32, &.{ 0, 1, 2 }, &all_indices_u32_into);
     try std.testing.expectError(error.InvalidParameter, sampleIndicesU32Checked(failing, std.testing.allocator, 3, 4));
+    var too_many_indices_u32: [4]u32 = undefined;
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesU32Into(failing, 3, &too_many_indices_u32));
+    try std.testing.expectError(error.InvalidParameter, sampleIndicesU32IntoChecked(failing, 3, &too_many_indices_u32));
     const empty_weighted_nr = try sampleWeightedIndices(f64, failing, std.testing.allocator, &.{ 1, 2, 3 }, 0);
     defer std.testing.allocator.free(empty_weighted_nr);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_nr.len);

@@ -2637,3 +2637,10 @@ system-entropy callers now get non-empty uninhabited value type failures before
 output allocation and secure-engine construction for unweighted value choose
 helpers, while empty-output and singleton deterministic paths remain no-entropy
 and S4-M11 remains blocked.
+
+S4-M638 adds root unweighted index-into invalid-count prevalidation
+(`compare/results/s4-m638-root-index-into-invalid-count-prevalidation.md`): root
+system-entropy callers now get oversized output-buffer failures before
+secure-engine construction for `sampleIndicesInto` and `sampleIndicesU32Into`,
+while zero-output and full-range deterministic paths remain no-entropy and
+S4-M11 remains blocked.
