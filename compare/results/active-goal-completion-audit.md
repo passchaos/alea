@@ -595,7 +595,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M554 root item-accessor weighted mutable-pointer fill helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m554-root-weighted-by-mut-ptr-fill-helpers.md` | Closed for the current bar: root system-entropy helpers can now fill caller-owned weighted mutable-pointer buffers directly from a mutable item slice and comptime item-weight accessor. |
 | S4-M555 root item-accessor weighted value batch helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m555-root-weighted-by-value-batch-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate repeated weighted value batches directly from an item slice and comptime item-weight accessor. |
 | S4-M556 root item-accessor weighted const-pointer batch helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m556-root-weighted-by-const-ptr-batch-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate repeated weighted const-pointer batches directly from an item slice and comptime item-weight accessor. |
-| S4-M557 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M557 root item-accessor weighted mutable-pointer batch helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m557-root-weighted-by-mut-ptr-batch-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate repeated weighted mutable-pointer batches directly from a mutable item slice and comptime item-weight accessor. |
+| S4-M558 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1521,6 +1522,9 @@ S4-M555 additionally adds root item-accessor weighted value batch helpers; it is
 API ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 S4-M556 additionally adds root item-accessor weighted const-pointer batch
+helpers; it is API ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M557 additionally adds root item-accessor weighted mutable-pointer batch
 helpers; it is API ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 

@@ -2082,3 +2082,9 @@ S4-M556 adds root item-accessor weighted const-pointer batch helpers
 system-entropy callers can now allocate repeated weighted const-pointer batches
 directly from an item slice and comptime item-weight accessor from the root API
 while S4-M11 remains blocked.
+
+S4-M557 adds root item-accessor weighted mutable-pointer batch helpers
+(`compare/results/s4-m557-root-weighted-by-mut-ptr-batch-helpers.md`):
+system-entropy callers can now allocate repeated weighted mutable-pointer
+batches directly from a mutable item slice and comptime item-weight accessor
+from the root API while S4-M11 remains blocked.
