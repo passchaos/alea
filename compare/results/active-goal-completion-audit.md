@@ -665,7 +665,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M624 root generic value empty-type prevalidation | `src/root.zig`, `compare/results/s4-m624-root-generic-value-empty-type-prevalidation.md` | Closed for the current bar: root generic value scalar/fill/sample helpers now prevalidate uninhabited output types before secure-engine construction. |
 | S4-M625 root scalar range prevalidation | `src/root.zig`, `compare/results/s4-m625-root-scalar-range-prevalidation.md` | Closed for the current bar: root scalar range scalar/fill helpers now prevalidate invalid ranges before secure-engine construction. |
 | S4-M626 root random iterator empty-type prevalidation | `src/root.zig`, `compare/results/s4-m626-root-random-iter-empty-type-prevalidation.md` | Closed for the current bar: root random value iterator helper now prevalidates uninhabited element types before secure-engine construction. |
-| S4-M627 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M627 root probability scalar/fill prevalidation | `src/root.zig`, `compare/results/s4-m627-root-probability-scalar-fill-prevalidation.md` | Closed for the current bar: root unchecked boolean probability and ratio scalar/fill helpers now prevalidate invalid parameters before secure-engine construction. |
+| S4-M628 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1803,6 +1804,9 @@ long-term objective.
 S4-M626 additionally tightens root random iterator empty-type prevalidation;
 it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M627 additionally tightens root boolean probability/ratio scalar/fill
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

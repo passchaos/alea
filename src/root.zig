@@ -260,7 +260,7 @@ pub fn randomRangeAtMostChecked(comptime T: type, io: std.Io, min: T, max: T) !T
 }
 
 pub fn randomBool(io: std.Io, p: f64) !bool {
-    std.debug.assert(p >= 0 and p <= 1);
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
     if (p == 0) return false;
     if (p == 1) return true;
     var engine = try secure(io);
@@ -278,7 +278,7 @@ pub fn randomBoolChecked(io: std.Io, p: f64) !bool {
 }
 
 pub fn randomRatio(io: std.Io, numerator: u32, denominator: u32) !bool {
-    std.debug.assert(denominator > 0 and numerator <= denominator);
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     if (numerator == 0) return false;
     if (numerator == denominator) return true;
     var engine = try secure(io);
@@ -4209,7 +4209,7 @@ pub fn rangeAtMostBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.
 
 pub fn fillRandomBool(io: std.Io, dest: []bool, p: f64) !void {
     if (dest.len == 0) return;
-    std.debug.assert(p >= 0 and p <= 1);
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
     if (p == 0) {
         @memset(dest, false);
         return;
@@ -4259,7 +4259,7 @@ pub fn randomBoolBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: u
 
 pub fn fillRandomRatio(io: std.Io, dest: []bool, numerator: u32, denominator: u32) !void {
     if (dest.len == 0) return;
-    std.debug.assert(denominator > 0 and numerator <= denominator);
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     if (numerator == 0) {
         @memset(dest, false);
         return;
@@ -6424,11 +6424,13 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(false, try randomBoolChecked(failing, 0));
     try std.testing.expectEqual(true, try randomBool(failing, 1));
     try std.testing.expectEqual(true, try randomBoolChecked(failing, 1));
+    try std.testing.expectError(error.InvalidProbability, randomBool(failing, 1.1));
     try std.testing.expectError(error.InvalidProbability, randomBoolChecked(failing, 1.1));
     try std.testing.expectEqual(false, try randomRatio(failing, 0, 7));
     try std.testing.expectEqual(false, try randomRatioChecked(failing, 0, 7));
     try std.testing.expectEqual(true, try randomRatio(failing, 7, 7));
     try std.testing.expectEqual(true, try randomRatioChecked(failing, 7, 7));
+    try std.testing.expectError(error.InvalidProbability, randomRatio(failing, 2, 1));
     try std.testing.expectError(error.InvalidProbability, randomRatioChecked(failing, 2, 1));
 
     var empty: [0]u8 = .{};
@@ -8616,10 +8618,13 @@ test "root random helpers validate deterministic cases before entropy" {
     try fillRangeAtMost(u8, failing, &empty, 6, 5);
     try fillRangeAtMostChecked(u8, failing, &empty, 6, 5);
     var empty_bool: [0]bool = .{};
-    try fillRandomBool(failing, &empty_bool, 0);
+    try fillRandomBool(failing, &empty_bool, 1.1);
     try fillRandomBoolChecked(failing, &empty_bool, 1.1);
-    try fillRandomRatio(failing, &empty_bool, 0, 7);
+    try fillRandomRatio(failing, &empty_bool, 2, 1);
     try fillRandomRatioChecked(failing, &empty_bool, 2, 1);
+    var invalid_bool_fill: [1]bool = undefined;
+    try std.testing.expectError(error.InvalidProbability, fillRandomBool(failing, &invalid_bool_fill, 1.1));
+    try std.testing.expectError(error.InvalidProbability, fillRandomRatio(failing, &invalid_bool_fill, 2, 1));
     const empty_bad_bool = try randomBoolBatch(failing, std.testing.allocator, 0, 1.1);
     defer std.testing.allocator.free(empty_bad_bool);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_bool.len);
