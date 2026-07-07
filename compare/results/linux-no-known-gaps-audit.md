@@ -3576,3 +3576,10 @@ S4-M770 avoids exact-count checked iterator end probes
 seq/root checked unweighted iterator samples now read exactly the known remaining
 items when exact remaining equals the requested count. This improves iterator
 sampling reliability evidence but does not resolve S4-M11.
+
+S4-M771 avoids weighted iterator exact-single end probes
+(`compare/results/s4-m771-weighted-iterator-choice-exact-single.md`):
+seq/root weighted iterator one-shot choices now read exactly one entry for
+exact-single sources and return positive/null/error results without extra null
+probes or entropy. This improves weighted iterator choice reliability evidence
+but does not resolve S4-M11.
