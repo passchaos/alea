@@ -817,7 +817,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M776 weighted iterator sample exact-cover heap avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m776-weighted-iterator-sample-exact-cover.md` | Closed for the current bar: allocation-returning weighted iterator samples now resolve exact-cover sources without heap/key setup, extra probes, entropy, or random-stream use. |
 | S4-M777 weighted iterator fill exact-cover key avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m777-weighted-iterator-fill-exact-cover.md` | Closed for the current bar: caller-owned weighted iterator fills now resolve exact-cover sources without key sampling, extra probes, entropy, or random-stream use. |
 | S4-M778 weighted iterator choice exact-count end-probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m778-weighted-iterator-choice-exact-count.md` | Closed for the current bar: weighted iterator one-shot choices now read exact-count sources exactly without extra trailing probes while preserving stream shape. |
-| S4-M779 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M779 stable iterator choice exact-count end-probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m779-stable-iterator-choice-exact-count.md` | Closed for the current bar: stable unweighted iterator one-shot choices now read exact-count sources exactly without extra trailing probes while preserving reservoir stream shape. |
+| S4-M780 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2424,6 +2425,10 @@ work and does not resolve S4-M11 or complete the long-term objective.
 S4-M778 additionally avoids extra end-of-iterator probes for exact-count
 weighted iterator one-shot choices while preserving stream shape; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M779 additionally avoids extra end-of-iterator probes for exact-count stable
+unweighted iterator one-shot choices while preserving reservoir stream shape; it
+is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

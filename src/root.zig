@@ -4816,6 +4816,26 @@ fn rootUnicodeScalarFromCompressed(compressed: u21) u21 {
 
 const RootIteratorChoiceMode = enum { reservoir, hinted };
 
+fn rootChooseIteratorReservoirExact(comptime T: type, io: std.Io, iterator: anytype, remaining: usize) !?T {
+    if (remaining == 0) return null;
+    var first = iterator.next() orelse return null;
+    if (remaining == 1) return first;
+
+    const second = iterator.next() orelse return first;
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    if (random_source.uintLessThan(usize, 2) == 0) first = second;
+
+    var seen: usize = 2;
+    while (seen < remaining) {
+        const item = iterator.next() orelse return first;
+        seen += 1;
+        if (random_source.uintLessThan(usize, seen) == 0) first = item;
+    }
+
+    return first;
+}
+
 fn rootChooseIterator(comptime T: type, io: std.Io, iterator: anytype, mode: RootIteratorChoiceMode) !?T {
     if (rootIteratorExactRemaining(iterator)) |remaining| {
         if (remaining == 0) return null;
@@ -4836,6 +4856,9 @@ fn rootChooseIterator(comptime T: type, io: std.Io, iterator: anytype, mode: Roo
             }
             return null;
         }
+    }
+    if (rootIteratorExactRemaining(iterator)) |remaining| {
+        return rootChooseIteratorReservoirExact(T, io, iterator, remaining);
     }
 
     var first = iterator.next() orelse return null;
@@ -7908,6 +7931,32 @@ test "root random helpers validate deterministic cases before entropy" {
     var exact_empty_choice_stable = EmptyExactChoiceIter{};
     try std.testing.expectEqual(@as(?u8, null), try chooseIteratorStable(u8, failing, &exact_empty_choice_stable));
     try std.testing.expectEqual(@as(usize, 0), exact_empty_choice_stable.calls);
+    const ExactCountChoiceIter = struct {
+        items: []const u8,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+    var exact_single_choice = ExactCountChoiceIter{ .items = &.{77} };
+    try std.testing.expectEqual(@as(?u8, 77), try chooseIterator(u8, failing, &exact_single_choice));
+    try std.testing.expectEqual(@as(usize, 1), exact_single_choice.calls);
+    var exact_two_choice = ExactCountChoiceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectError(error.EntropyUnavailable, chooseIterator(u8, failing, &exact_two_choice));
+    try std.testing.expectEqual(@as(usize, 2), exact_two_choice.calls);
+    var exact_two_stable = ExactCountChoiceIter{ .items = &.{ 1, 2 } };
+    try std.testing.expectError(error.EntropyUnavailable, chooseIteratorStable(u8, failing, &exact_two_stable));
+    try std.testing.expectEqual(@as(usize, 2), exact_two_stable.calls);
     var hinted_singleton = SliceIter{ .items = &.{77} };
     try std.testing.expectEqual(@as(?u8, 77), try chooseIteratorHinted(u8, failing, &hinted_singleton));
     var stable_singleton = SliceIter{ .items = &.{88} };

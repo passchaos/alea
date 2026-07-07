@@ -3639,3 +3639,10 @@ for their reported remaining count, preserving exact-single and single-positive
 no-entropy behavior while keeping multi-positive stream shape aligned with the
 generic weighted choice path. This improves weighted iterator choice reliability
 evidence but does not resolve S4-M11.
+
+S4-M779 avoids stable iterator exact-count choice end probes
+(`compare/results/s4-m779-stable-iterator-choice-exact-count.md`):
+seq/root stable unweighted iterator one-shot choices now read exact-size sources
+exactly for their reported remaining count, preserving reservoir stream shape
+while avoiding an extra trailing null probe. This improves iterator choice
+reliability evidence but does not resolve S4-M11.

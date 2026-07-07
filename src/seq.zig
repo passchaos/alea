@@ -4780,10 +4780,25 @@ pub fn chooseIteratorStableFrom(source: anytype, comptime T: type, iterator: any
     return chooseIteratorFrom(source, T, iterator);
 }
 
+fn chooseIteratorReservoirExactFrom(source: anytype, comptime T: type, iterator: anytype, remaining: usize) ?T {
+    var seen: usize = 0;
+    var result: ?T = null;
+
+    while (seen < remaining) {
+        const item = iterator.next() orelse break;
+        seen += 1;
+        if (Rng.uintLessThanFrom(source, usize, seen) == 0) {
+            result = item;
+        }
+    }
+
+    return result;
+}
+
 pub fn chooseIteratorFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
     if (comptime valueTypeHasEmptyEnum(T)) return null;
     if (iteratorExactRemaining(iterator)) |remaining| {
-        if (remaining == 0) return null;
+        return chooseIteratorReservoirExactFrom(source, T, iterator, remaining);
     }
     var seen: usize = 0;
     var result: ?T = null;
@@ -11671,6 +11686,73 @@ test "empty exact iterator choice does not read source" {
     try std.testing.expectEqual(@as(?u8, null), chooseIteratorStableFrom(&engine, u8, &stable_iter));
     try std.testing.expectEqual(@as(usize, 0), stable_iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "exact-count stable iterator choice does not probe past source" {
+    const alea = @import("root.zig");
+
+    const ExactIter = struct {
+        items: []const u8,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+    const PlainIter = struct {
+        items: []const u8,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+    };
+
+    const items = [_]u8{ 11, 22, 33 };
+    var engine = alea.ScalarPrng.init(0x5150_772d);
+    var reference = alea.ScalarPrng.init(0x5150_772d);
+    var iter = ExactIter{ .items = &items };
+    var reference_iter = PlainIter{ .items = &items };
+    try std.testing.expectEqual(
+        chooseIteratorFrom(&reference, u8, &reference_iter),
+        chooseIteratorFrom(&engine, u8, &iter),
+    );
+    try std.testing.expectEqual(@as(usize, 3), iter.calls);
+    try std.testing.expectEqual(@as(usize, 4), reference_iter.calls);
+    try std.testing.expectEqual(reference.next(), engine.next());
+
+    var stable_engine = alea.ScalarPrng.init(0x5150_772e);
+    var stable_reference = alea.ScalarPrng.init(0x5150_772e);
+    var stable_iter = ExactIter{ .items = &items };
+    var stable_reference_iter = PlainIter{ .items = &items };
+    try std.testing.expectEqual(
+        chooseIteratorStableFrom(&stable_reference, u8, &stable_reference_iter),
+        chooseIteratorStableFrom(&stable_engine, u8, &stable_iter),
+    );
+    try std.testing.expectEqual(@as(usize, 3), stable_iter.calls);
+    try std.testing.expectEqual(@as(usize, 4), stable_reference_iter.calls);
+    try std.testing.expectEqual(stable_reference.next(), stable_engine.next());
+
+    var singleton_engine = alea.ScalarPrng.init(0x5150_772f);
+    var singleton_control = alea.ScalarPrng.init(0x5150_772f);
+    var singleton_iter = ExactIter{ .items = &.{77} };
+    try std.testing.expectEqual(@as(?u8, 77), chooseIteratorFrom(&singleton_engine, u8, &singleton_iter));
+    try std.testing.expectEqual(@as(usize, 1), singleton_iter.calls);
+    try std.testing.expectEqual(singleton_control.next(), singleton_engine.next());
 }
 
 test "iterator choices validate empty value types before consuming iterators" {
