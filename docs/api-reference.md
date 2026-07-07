@@ -110,6 +110,7 @@ command matrix evidence.
   `sampleWeightedPtrArray`, `sampleWeightedPtrArrayChecked`,
   `sampleWeightedMutPtrs`, `sampleWeightedMutPtrsChecked`,
   `sampleWeightedMutPtrArray`, `sampleWeightedMutPtrArrayChecked`,
+  `sampleWeightedArrayBy`, `sampleWeightedArrayByChecked`,
   `sampleWeightedBy`, `sampleWeightedByChecked`,
   `sampleWeightedPtrsBy`, `sampleWeightedPtrsByChecked`,
   `sampleWeightedMutPtrsBy`, `sampleWeightedMutPtrsByChecked`,

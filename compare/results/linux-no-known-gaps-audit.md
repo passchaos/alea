@@ -2220,3 +2220,9 @@ S4-M579 adds root length-weighted no-replacement compact u32 index array helpers
 system-entropy callers can now produce fixed-size no-replacement weighted
 compact `u32` index arrays directly from a length and comptime index-weight
 accessor from the root API while S4-M11 remains blocked.
+
+S4-M580 adds root item-accessor weighted no-replacement value array sample
+helpers (`compare/results/s4-m580-root-weighted-by-value-array-sample-helpers.md`):
+system-entropy callers can now produce fixed-size no-replacement weighted value
+arrays directly from an item slice and comptime item-weight accessor from the
+root API while S4-M11 remains blocked.
