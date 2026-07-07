@@ -2251,3 +2251,10 @@ root system-entropy callers now get deterministic zero-count/all-zero/single-
 positive and invalid-parameter failures before secure-engine construction for
 `sampleWeightedPtrs` and `sampleWeightedPtrsChecked` while S4-M11 remains
 blocked.
+
+S4-M585 adds root parallel-weighted no-replacement mutable-pointer sample
+prevalidation (`compare/results/s4-m585-root-weighted-mut-ptr-sample-prevalidation.md`):
+root system-entropy callers now get deterministic zero-count/all-zero/single-
+positive and invalid-parameter failures before secure-engine construction for
+`sampleWeightedMutPtrs` and `sampleWeightedMutPtrsChecked` while S4-M11 remains
+blocked.

@@ -2230,6 +2230,12 @@ pub fn sampleWeightedPtrArrayChecked(comptime T: type, comptime Weight: type, io
 
 pub fn sampleWeightedMutPtrs(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []T, weights: []const Weight, amount: usize) ![]*T {
     if (amount == 0) return allocator.alloc(*T, 0);
+    if (items.len != weights.len) return error.LengthMismatch;
+    if (items.len == 0) return error.EmptyInput;
+    const state = try rootPositiveWeightState(Weight, weights);
+    const count = @min(amount, state.count);
+    if (count == 0) return allocator.alloc(*T, 0);
+    if (state.count == 1) return rootSingleMutPtrByAlloc(T, allocator, &items[state.single_index.?]);
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return try seq.sampleWeightedMutPtrs(allocator, random_source, T, Weight, items, weights, amount);
@@ -2237,6 +2243,11 @@ pub fn sampleWeightedMutPtrs(comptime T: type, comptime Weight: type, io: std.Io
 
 pub fn sampleWeightedMutPtrsChecked(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []T, weights: []const Weight, amount: usize) ![]*T {
     if (amount == 0) return allocator.alloc(*T, 0);
+    if (items.len != weights.len) return error.LengthMismatch;
+    if (amount > items.len) return error.InvalidParameter;
+    const state = try rootPositiveWeightState(Weight, weights);
+    if (state.count < amount) return error.InvalidParameter;
+    if (state.count == 1 and amount == 1) return rootSingleMutPtrByAlloc(T, allocator, &items[state.single_index.?]);
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     return try seq.sampleWeightedMutPtrsChecked(allocator, random_source, T, Weight, items, weights, amount);
@@ -6467,6 +6478,26 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_weighted_mut_ptrs_nr_checked = try sampleWeightedMutPtrsChecked(u8, f64, failing, std.testing.allocator, &weighted_mut_nr_items, &.{ 1, 2, 3 }, 0);
     defer std.testing.allocator.free(empty_weighted_mut_ptrs_nr_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_mut_ptrs_nr_checked.len);
+    var weighted_mut_ptr_nr_items_extra = [_]u8{ 10, 20, 30 };
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedMutPtrs(u8, f64, failing, std.testing.allocator, &weighted_mut_ptr_nr_items_extra, &.{ 1, 2 }, 2));
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedMutPtrsChecked(u8, f64, failing, std.testing.allocator, &weighted_mut_ptr_nr_items_extra, &.{ 1, 2 }, 2));
+    const zero_weighted_mut_ptrs_nr = try sampleWeightedMutPtrs(u8, f64, failing, std.testing.allocator, &weighted_mut_ptr_nr_items_extra, &.{ 0, 0, 0 }, 2);
+    defer std.testing.allocator.free(zero_weighted_mut_ptrs_nr);
+    try std.testing.expectEqual(@as(usize, 0), zero_weighted_mut_ptrs_nr.len);
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedMutPtrsChecked(u8, f64, failing, std.testing.allocator, &weighted_mut_ptr_nr_items_extra, &.{ 0, 0, 0 }, 2));
+    const single_weighted_mut_ptrs_nr = try sampleWeightedMutPtrs(u8, f64, failing, std.testing.allocator, &weighted_mut_ptr_nr_items_extra, &.{ 0, 5, 0 }, 2);
+    defer std.testing.allocator.free(single_weighted_mut_ptrs_nr);
+    try std.testing.expectEqual(@as(usize, 1), single_weighted_mut_ptrs_nr.len);
+    try std.testing.expectEqual(&weighted_mut_ptr_nr_items_extra[1], single_weighted_mut_ptrs_nr[0]);
+    single_weighted_mut_ptrs_nr[0].* = 47;
+    try std.testing.expectEqual(@as(u8, 47), weighted_mut_ptr_nr_items_extra[1]);
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedMutPtrsChecked(u8, f64, failing, std.testing.allocator, &weighted_mut_ptr_nr_items_extra, &.{ 0, 5, 0 }, 2));
+    var weighted_mut_ptr_nr_items_checked_extra = [_]u8{ 10, 20, 30 };
+    const single_weighted_mut_ptrs_checked_nr = try sampleWeightedMutPtrsChecked(u8, f64, failing, std.testing.allocator, &weighted_mut_ptr_nr_items_checked_extra, &.{ 0, 5, 0 }, 1);
+    defer std.testing.allocator.free(single_weighted_mut_ptrs_checked_nr);
+    try std.testing.expectEqual(&weighted_mut_ptr_nr_items_checked_extra[1], single_weighted_mut_ptrs_checked_nr[0]);
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedMutPtrs(u8, f64, failing, std.testing.allocator, &weighted_mut_ptr_nr_items_extra, &.{ std.math.nan(f64), 1, 1 }, 2));
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedMutPtrsChecked(u8, f64, failing, std.testing.allocator, &weighted_mut_ptr_nr_items_extra, &.{ std.math.nan(f64), 1, 1 }, 2));
     try std.testing.expect((try sampleWeightedMutPtrArray(u8, f64, failing, 0, &weighted_mut_nr_items, &.{ 1, 2, 3 })) != null);
     try std.testing.expectEqual(@as(usize, 0), (try sampleWeightedMutPtrArrayChecked(u8, f64, failing, 0, &weighted_mut_nr_items, &.{ 1, 2, 3 })).len);
     const SliceIter = struct {
