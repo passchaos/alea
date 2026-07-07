@@ -2513,3 +2513,9 @@ system-entropy callers now get invalid probability and ratio failures before
 random-output allocation and secure-engine construction for `randomBoolBatch` and
 `randomRatioBatch`, while zero-count and endpoint deterministic paths remain
 allocation-only and S4-M11 remains blocked.
+
+S4-M620 adds root value batch empty-type prevalidation
+(`compare/results/s4-m620-root-value-batch-empty-type-prevalidation.md`): root
+system-entropy callers now get non-zero uninhabited value type failures before
+random-output allocation and secure-engine construction for `valueBatch`, while
+zero-count behavior remains allocation-only and S4-M11 remains blocked.

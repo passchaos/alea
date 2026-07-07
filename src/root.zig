@@ -4083,6 +4083,8 @@ pub fn chooseWeightedPtrArrayChecked(comptime T: type, io: std.Io, comptime N: u
 }
 
 pub fn valueBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fill(T, io, out);
@@ -8588,6 +8590,24 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_bad_value_checked = try valueBatchChecked(EmptyEnum, failing, std.testing.allocator, 0);
     defer std.testing.allocator.free(empty_bad_value_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_value_checked.len);
+    var bad_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var bad_value_failed = false;
+    if (valueBatch(EmptyEnum, failing, bad_value_alloc.allocator(), 3)) |values| {
+        bad_value_alloc.allocator().free(values);
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        bad_value_failed = true;
+    }
+    try std.testing.expect(bad_value_failed);
+    var bad_value_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var bad_value_checked_failed = false;
+    if (valueBatchChecked(EmptyEnum, failing, bad_value_checked_alloc.allocator(), 3)) |values| {
+        bad_value_checked_alloc.allocator().free(values);
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        bad_value_checked_failed = true;
+    }
+    try std.testing.expect(bad_value_checked_failed);
     const empty_bad_range_checked = try rangeBatchChecked(u8, failing, std.testing.allocator, 0, 3, 3);
     defer std.testing.allocator.free(empty_bad_range_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_range_checked.len);
