@@ -2184,3 +2184,9 @@ S4-M573 adds root length-weighted no-replacement index sample helpers
 system-entropy callers can now allocate no-replacement weighted `usize` index
 samples directly from a length and comptime index-weight accessor from the root
 API while S4-M11 remains blocked.
+
+S4-M574 adds root length-weighted no-replacement compact u32 index sample
+helpers (`compare/results/s4-m574-root-weighted-by-index-u32-sample-helpers.md`):
+system-entropy callers can now allocate no-replacement weighted compact `u32`
+index samples directly from a length and comptime index-weight accessor from the
+root API while S4-M11 remains blocked.
