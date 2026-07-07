@@ -3093,3 +3093,9 @@ S4-M695 adds `seq` one-shot choice empty-type prevalidation
 output types before random-stream use and value copying while preserving
 seq-style `error.EmptyInput`. This improves failure determinism but does not
 resolve S4-M11.
+
+S4-M696 adds `seq` iterator choice empty-type prevalidation
+(`compare/results/s4-m696-seq-iterator-choice-empty-type-prevalidation.md`):
+`seq` one-shot iterator value choice helpers now reject empty enum-containing
+output types before iterator consumption, random-stream use, and value copying.
+This improves failure determinism but does not resolve S4-M11.
