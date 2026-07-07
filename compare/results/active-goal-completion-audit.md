@@ -750,7 +750,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M709 distribution choose owned values | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m709-distribution-choose-owned-values.md` | Closed for the current bar: distribution-layer `Choose` now has owned repeated value helpers with empty-type failures before allocation, random-stream use, or value copying. |
 | S4-M710 distribution choose pointer outputs | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m710-distribution-choose-pointer-outputs.md` | Closed for the current bar: distribution-layer `Choose` now has fixed-size and owned pointer output helpers. |
 | S4-M711 distribution choose index outputs | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m711-distribution-choose-index-outputs.md` | Closed for the current bar: distribution-layer `Choose` now has scalar, caller-owned, owned, and fixed-size usize index output helpers. |
-| S4-M712 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M712 distribution choose u32 index outputs | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m712-distribution-choose-u32-index-outputs.md` | Closed for the current bar: distribution-layer `Choose` now has scalar, caller-owned, owned, and fixed-size u32 index output helpers. |
+| S4-M713 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2142,6 +2143,9 @@ pointer outputs; it is ergonomics work and does not resolve S4-M11 or complete
 the long-term objective.
 S4-M711 additionally adds distribution-layer `Choose` usize index outputs;
 it is ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M712 additionally adds distribution-layer `Choose` u32 index outputs; it
+is ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

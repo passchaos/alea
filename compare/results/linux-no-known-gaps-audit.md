@@ -3195,3 +3195,9 @@ S4-M711 adds distribution-layer `Choose` index outputs
 distribution-layer `Choose` now has scalar, caller-owned, owned, and fixed-size
 usize index output helpers aligned with item sampling stream shape. This
 improves ergonomics but does not resolve S4-M11.
+
+S4-M712 adds distribution-layer `Choose` u32 index outputs
+(`compare/results/s4-m712-distribution-choose-u32-index-outputs.md`):
+distribution-layer `Choose` now has scalar, caller-owned, owned, and fixed-size
+u32 index output helpers aligned with item sampling stream shape. This improves
+compact-output ergonomics but does not resolve S4-M11.

@@ -385,6 +385,16 @@ pub fn Choose(comptime T: type) type {
             return Rng.uintLessThanFrom(source, usize, self.items.len);
         }
 
+        pub fn sampleIndexU32(self: Self, rng: Rng) Error!u32 {
+            return self.sampleIndexU32From(rng);
+        }
+
+        pub fn sampleIndexU32From(self: Self, source: anytype) Error!u32 {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(source, u32, @intCast(self.items.len));
+        }
+
         pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
             self.fillFrom(rng, dest);
         }
@@ -450,6 +460,40 @@ pub fn Choose(comptime T: type) type {
         pub fn indexArrayFrom(self: Self, source: anytype, comptime N: usize) [N]usize {
             var out: [N]usize = undefined;
             self.fillIndicesFrom(source, &out);
+            return out;
+        }
+
+        pub fn fillIndicesU32(self: Self, rng: Rng, dest: []u32) Error!void {
+            return self.fillIndicesU32From(rng, dest);
+        }
+
+        pub fn fillIndicesU32From(self: Self, source: anytype, dest: []u32) Error!void {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.items.len == 1) {
+                @memset(dest, 0);
+                return;
+            }
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(source, u32, @intCast(self.items.len));
+        }
+
+        pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
+            return self.indicesU32From(allocator, rng, amount);
+        }
+
+        pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillIndicesU32From(source, out);
+            return out;
+        }
+
+        pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
+            return self.indexArrayU32From(rng, N);
+        }
+
+        pub fn indexArrayU32From(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
+            var out: [N]u32 = undefined;
+            try self.fillIndicesU32From(source, &out);
             return out;
         }
 
@@ -31897,6 +31941,13 @@ test "distribution Choose sampler mirrors slice choices" {
         choice.sampleIndexFrom(&sample_index_engine),
     );
     try std.testing.expectEqual(choose_index_engine.next(), sample_index_engine.next());
+    var sample_index_u32_engine = root.DefaultPrng.init(0xc0_279);
+    var choose_index_u32_engine = root.DefaultPrng.init(0xc0_279);
+    try std.testing.expectEqual(
+        Rng.chooseIndexU32From(&choose_index_u32_engine, @intCast(items.len)).?,
+        try choice.sampleIndexU32From(&sample_index_u32_engine),
+    );
+    try std.testing.expectEqual(choose_index_u32_engine.next(), sample_index_u32_engine.next());
 
     var fill_engine = root.DefaultPrng.init(0xc0_268);
     var helper_engine = root.DefaultPrng.init(0xc0_268);
@@ -31921,6 +31972,21 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillIndicesFrom(&owned_index_control, &owned_index_fill);
     try std.testing.expectEqualSlices(usize, &owned_index_fill, owned_indices);
     try std.testing.expectEqual(owned_index_control.next(), owned_index_engine.next());
+    var index_u32_fill_engine = root.DefaultPrng.init(0xc0_27a);
+    var index_u32_array_engine = root.DefaultPrng.init(0xc0_27a);
+    var index_u32_fill: [6]u32 = undefined;
+    try choice.fillIndicesU32From(&index_u32_fill_engine, &index_u32_fill);
+    const index_u32_array = try choice.indexArrayU32From(&index_u32_array_engine, 6);
+    try std.testing.expectEqualSlices(u32, &index_u32_fill, &index_u32_array);
+    try std.testing.expectEqual(index_u32_fill_engine.next(), index_u32_array_engine.next());
+    var owned_index_u32_engine = root.DefaultPrng.init(0xc0_27b);
+    var owned_index_u32_control = root.DefaultPrng.init(0xc0_27b);
+    const owned_indices_u32 = try choice.indicesU32From(std.testing.allocator, &owned_index_u32_engine, 6);
+    defer std.testing.allocator.free(owned_indices_u32);
+    var owned_index_u32_fill: [6]u32 = undefined;
+    try choice.fillIndicesU32From(&owned_index_u32_control, &owned_index_u32_fill);
+    try std.testing.expectEqualSlices(u32, &owned_index_u32_fill, owned_indices_u32);
+    try std.testing.expectEqual(owned_index_u32_control.next(), owned_index_u32_engine.next());
     var ptrs_engine = root.DefaultPrng.init(0xc0_274);
     var ptrs_control = root.DefaultPrng.init(0xc0_274);
     const owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &ptrs_engine, 6);
@@ -31967,6 +32033,9 @@ test "distribution Choose sampler mirrors slice choices" {
     var singleton_indices: [4]usize = undefined;
     singleton.fillIndicesFrom(&singleton_engine, &singleton_indices);
     try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0, 0 }, &singleton_indices);
+    var singleton_indices_u32: [4]u32 = undefined;
+    try singleton.fillIndicesU32From(&singleton_engine, &singleton_indices_u32);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0, 0 }, &singleton_indices_u32);
     try std.testing.expectEqual(singleton_control.next(), singleton_engine.next());
 
     const Empty = enum {};
