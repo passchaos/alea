@@ -4954,12 +4954,13 @@ fn rootSampleIteratorWeightedInto(comptime T: type, io: std.Io, iterator: anytyp
 
 fn rootSampleIteratorWeightedAlloc(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize, comptime checked: bool) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
+    const max_possible = if (rootIteratorExactRemaining(iterator)) |remaining| @min(amount, remaining) else amount;
     const Pending = struct {
         item: T,
         weight: f64,
     };
 
-    const pending = try allocator.alloc(Pending, amount);
+    const pending = try allocator.alloc(Pending, max_possible);
     defer allocator.free(pending);
 
     var heap = RootWeightedIteratorQueue(T).initContext({});
@@ -4981,7 +4982,7 @@ fn rootSampleIteratorWeightedAlloc(comptime T: type, io: std.Io, allocator: std.
 
         if (engine == null) {
             engine = try secure(io);
-            try heap.ensureTotalCapacityPrecise(allocator, amount);
+            try heap.ensureTotalCapacityPrecise(allocator, max_possible);
             const random_source = Rng.init(&engine.?);
             for (pending[0..pending_count]) |stored| {
                 try heap.push(allocator, .{
@@ -5018,7 +5019,7 @@ fn rootSampleIteratorWeightedAlloc(comptime T: type, io: std.Io, allocator: std.
         if (checked and pending_count < amount) return error.InvalidParameter;
 
         engine = try secure(io);
-        try heap.ensureTotalCapacityPrecise(allocator, amount);
+        try heap.ensureTotalCapacityPrecise(allocator, max_possible);
         const random_source = Rng.init(&engine.?);
         for (pending[0..pending_count]) |stored| {
             try heap.push(allocator, .{

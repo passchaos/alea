@@ -4875,7 +4875,8 @@ pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptim
         if (remaining == 0) return allocator.alloc(T, 0);
     }
 
-    var reservoir = try std.ArrayList(T).initCapacity(allocator, amount);
+    const initial_capacity = if (iteratorExactRemaining(iterator)) |remaining| @min(amount, remaining) else amount;
+    var reservoir = try std.ArrayList(T).initCapacity(allocator, initial_capacity);
     errdefer reservoir.deinit(allocator);
 
     while (reservoir.items.len < amount) {
@@ -5074,9 +5075,10 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
     const out = try allocator.alloc(T, amount);
     errdefer allocator.free(out);
 
+    const queue_capacity = if (iteratorExactRemaining(iterator)) |remaining| @min(amount, remaining) else amount;
     var heap = WeightedIteratorQueue(T).initContext({});
     defer heap.deinit(allocator);
-    try heap.ensureTotalCapacityPrecise(allocator, amount);
+    try heap.ensureTotalCapacityPrecise(allocator, queue_capacity);
     var pending: ?Pending = null;
 
     while (iterator.next()) |entry| {
@@ -5129,9 +5131,10 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
 pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const queue_capacity = if (iteratorExactRemaining(iterator)) |remaining| blk: {
         if (remaining == 0) return allocator.alloc(T, 0);
-    }
+        break :blk @min(amount, remaining);
+    } else amount;
     const Pending = struct {
         item: T,
         weight: f64,
@@ -5139,7 +5142,7 @@ pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype,
 
     var heap = WeightedIteratorQueue(T).initContext({});
     defer heap.deinit(allocator);
-    try heap.ensureTotalCapacityPrecise(allocator, amount);
+    try heap.ensureTotalCapacityPrecise(allocator, queue_capacity);
     var pending: ?Pending = null;
 
     while (iterator.next()) |entry| {
@@ -12365,6 +12368,35 @@ test "empty exact iterator samples avoid reservoir allocation" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "exact-short iterator samples cap reservoir allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_771f);
+    var control = alea.ScalarPrng.init(0x5150_771f);
+
+    const ExactIter = struct {
+        next_value: u8 = 1,
+        end: u8 = 3,
+
+        fn next(self: *@This()) ?u8 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.end - self.next_value;
+        }
+    };
+
+    var backing: [2]u8 = undefined;
+    var fixed = std.heap.FixedBufferAllocator.init(&backing);
+    var iter = ExactIter{};
+    const sample = try sampleIteratorFrom(fixed.allocator(), &engine, u8, &iter, 8);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "empty exact iterator fills avoid source consumption" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_771d);
@@ -12447,6 +12479,39 @@ test "empty exact weighted iterator samples avoid heap allocation" {
     try std.testing.expectEqual(@as(usize, 0), iter.calls);
     try std.testing.expect(!failing.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "exact-short weighted iterator samples cap heap allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7720);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const ExactWeightedIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 1, .weight = 1 },
+        .{ .item = 2, .weight = 3 },
+    };
+    var backing: [@sizeOf(WeightedIteratorCandidate(u8)) * 3]u8 = undefined;
+    var fixed = std.heap.FixedBufferAllocator.init(&backing);
+    var iter = ExactWeightedIter{ .items = &entries };
+    const sample = try sampleIteratorWeightedFrom(fixed.allocator(), &engine, u8, &iter, 8);
+    try std.testing.expectEqual(@as(usize, 2), sample.len);
+    for (sample) |item| try std.testing.expect(item == 1 or item == 2);
 }
 
 test "empty exact weighted iterator fills avoid source consumption" {
