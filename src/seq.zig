@@ -8026,6 +8026,14 @@ pub fn Choice(comptime T: type) type {
             return Rng.uintLessThanFrom(source, usize, self.items.len);
         }
 
+        pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
+            return self.sampleIndexCheckedFrom(rng);
+        }
+
+        pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
+            return self.sampleIndexFrom(source);
+        }
+
         pub fn sampleIndexU32(self: Self, rng: Rng) Error!u32 {
             return self.sampleIndexU32From(rng);
         }
@@ -8218,6 +8226,14 @@ pub fn Choice(comptime T: type) type {
             for (dest) |*index| index.* = Rng.uintLessThanFrom(source, usize, self.items.len);
         }
 
+        pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
+            try self.fillIndicesCheckedFrom(rng, dest);
+        }
+
+        pub fn fillIndicesCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
+            self.fillIndicesFrom(source, dest);
+        }
+
         pub fn fillIndicesU32(self: Self, rng: Rng, dest: []u32) Error!void {
             return self.fillIndicesU32From(rng, dest);
         }
@@ -8243,6 +8259,14 @@ pub fn Choice(comptime T: type) type {
             return out;
         }
 
+        pub fn indicesChecked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
+            return self.indicesCheckedFrom(allocator, rng, amount);
+        }
+
+        pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
+            return self.indicesFrom(allocator, source, amount);
+        }
+
         pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
             return self.indicesU32From(allocator, rng, amount);
         }
@@ -8262,6 +8286,14 @@ pub fn Choice(comptime T: type) type {
             var out: [N]usize = undefined;
             self.fillIndicesFrom(source, &out);
             return out;
+        }
+
+        pub fn indexArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]usize {
+            return self.indexArrayCheckedFrom(rng, N);
+        }
+
+        pub fn indexArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]usize {
+            return self.indexArrayFrom(source, N);
         }
 
         pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
@@ -8288,6 +8320,14 @@ pub fn Choice(comptime T: type) type {
 
         pub fn indexIterFrom(self: Self, source: anytype) IndexIterator(@TypeOf(source)) {
             return .{ .source = source, .choice = self };
+        }
+
+        pub fn indexIterChecked(self: Self, rng: Rng) Error!IndexIterator(Rng) {
+            return self.indexIterCheckedFrom(rng);
+        }
+
+        pub fn indexIterCheckedFrom(self: Self, source: anytype) Error!IndexIterator(@TypeOf(source)) {
+            return self.indexIterFrom(source);
         }
 
         pub fn indexIterU32(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
@@ -17759,6 +17799,42 @@ test "choice sampler repeatedly samples slice references" {
         try std.testing.expectEqual(error.EmptyInput, err);
     }
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var checked_index_engine = alea.DefaultPrng.init(0xc0_ef11);
+    var unchecked_index_engine = alea.DefaultPrng.init(0xc0_ef11);
+    try std.testing.expectEqual(
+        choice.sampleIndexFrom(&unchecked_index_engine),
+        try choice.sampleIndexCheckedFrom(&checked_index_engine),
+    );
+    try std.testing.expectEqual(unchecked_index_engine.next(), checked_index_engine.next());
+    var checked_index_fill_engine = alea.DefaultPrng.init(0xc0_ef12);
+    var unchecked_index_fill_engine = alea.DefaultPrng.init(0xc0_ef12);
+    var checked_index_fill: [8]usize = undefined;
+    var unchecked_index_fill: [8]usize = undefined;
+    choice.fillIndicesFrom(&unchecked_index_fill_engine, &unchecked_index_fill);
+    try choice.fillIndicesCheckedFrom(&checked_index_fill_engine, &checked_index_fill);
+    try std.testing.expectEqualSlices(usize, &unchecked_index_fill, &checked_index_fill);
+    try std.testing.expectEqual(unchecked_index_fill_engine.next(), checked_index_fill_engine.next());
+    var checked_indices_engine = alea.DefaultPrng.init(0xc0_ef13);
+    var unchecked_indices_engine = alea.DefaultPrng.init(0xc0_ef13);
+    const unchecked_indices = try choice.indicesFrom(std.testing.allocator, &unchecked_indices_engine, 8);
+    defer std.testing.allocator.free(unchecked_indices);
+    const checked_indices = try choice.indicesCheckedFrom(std.testing.allocator, &checked_indices_engine, 8);
+    defer std.testing.allocator.free(checked_indices);
+    try std.testing.expectEqualSlices(usize, unchecked_indices, checked_indices);
+    try std.testing.expectEqual(unchecked_indices_engine.next(), checked_indices_engine.next());
+    var checked_index_array_engine = alea.DefaultPrng.init(0xc0_ef14);
+    var unchecked_index_array_engine = alea.DefaultPrng.init(0xc0_ef14);
+    const unchecked_index_array = choice.indexArrayFrom(&unchecked_index_array_engine, 8);
+    const checked_index_array = try choice.indexArrayCheckedFrom(&checked_index_array_engine, 8);
+    try std.testing.expectEqualSlices(usize, &unchecked_index_array, &checked_index_array);
+    try std.testing.expectEqual(unchecked_index_array_engine.next(), checked_index_array_engine.next());
+    var checked_index_iter_engine = alea.DefaultPrng.init(0xc0_ef15);
+    var unchecked_index_iter_engine = alea.DefaultPrng.init(0xc0_ef15);
+    var checked_index_iter = try choice.indexIterCheckedFrom(&checked_index_iter_engine);
+    var unchecked_index_iter = choice.indexIterFrom(&unchecked_index_iter_engine);
+    try std.testing.expectEqual(unchecked_index_iter.next().?, checked_index_iter.next().?);
+    try std.testing.expectEqual(unchecked_index_iter_engine.next(), checked_index_iter_engine.next());
 
     var fill_engine = alea.ScalarPrng.init(0x5150_c0e0);
     var array_engine = alea.ScalarPrng.init(0x5150_c0e0);

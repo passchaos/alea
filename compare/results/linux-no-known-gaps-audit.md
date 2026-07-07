@@ -3306,3 +3306,9 @@ S4-M730 adds reusable `WeightedChoice` checked pointer aliases
 `WeightedChoice` now has checked aliases for caller-owned, owned, and fixed-size
 weighted pointer outputs while preserving existing weighted pointer stream shape.
 This improves discoverability but does not resolve S4-M11.
+
+S4-M731 adds reusable `Choice` checked `usize` index aliases
+(`compare/results/s4-m731-choice-checked-index-aliases.md`): reusable `Choice`
+now has checked aliases for scalar, caller-owned, owned, fixed-size, and iterator
+`usize` index outputs while preserving existing index stream shape. This improves
+discoverability but does not resolve S4-M11.

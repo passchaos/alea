@@ -769,7 +769,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M728 weightedchoice pointer iterator aliases | `src/seq.zig`, `docs/api-reference.md`, `compare/results/s4-m728-weightedchoice-pointer-iterator-aliases.md` | Closed for the current bar: reusable `WeightedChoice` now has explicit pointer iterator aliases and checked aliases. |
 | S4-M729 choice checked pointer aliases | `src/seq.zig`, `docs/api-reference.md`, `compare/results/s4-m729-choice-checked-pointer-aliases.md` | Closed for the current bar: reusable `Choice` now has checked aliases for caller-owned, owned, and fixed-size pointer outputs. |
 | S4-M730 weightedchoice checked pointer aliases | `src/seq.zig`, `docs/api-reference.md`, `compare/results/s4-m730-weightedchoice-checked-pointer-aliases.md` | Closed for the current bar: reusable `WeightedChoice` now has checked aliases for caller-owned, owned, and fixed-size weighted pointer outputs. |
-| S4-M731 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M731 choice checked index aliases | `src/seq.zig`, `docs/api-reference.md`, `compare/results/s4-m731-choice-checked-index-aliases.md` | Closed for the current bar: reusable `Choice` now has checked aliases for scalar, caller-owned, owned, fixed-size, and iterator `usize` index outputs. |
+| S4-M732 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2216,6 +2217,9 @@ S4-M729 additionally adds reusable `Choice` checked pointer aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M730 additionally adds reusable `WeightedChoice` checked pointer aliases; it
+is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M731 additionally adds reusable `Choice` checked `usize` index aliases; it
 is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
