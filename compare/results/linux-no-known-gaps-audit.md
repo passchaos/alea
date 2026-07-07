@@ -3325,3 +3325,10 @@ S4-M733 adds reusable `Choice` checked compact `u32` index aliases
 `Choice` now has checked aliases for scalar, caller-owned, owned, fixed-size, and
 iterator compact `u32` index outputs while preserving existing compact index
 stream shape. This improves discoverability but does not resolve S4-M11.
+
+S4-M734 adds reusable `WeightedChoice` checked compact `u32` index aliases
+(`compare/results/s4-m734-weightedchoice-checked-u32-index-aliases.md`):
+reusable `WeightedChoice` now has checked aliases for scalar, caller-owned,
+owned, fixed-size, and iterator compact weighted `u32` index outputs while
+preserving existing compact weighted index stream shape. This improves
+discoverability but does not resolve S4-M11.
