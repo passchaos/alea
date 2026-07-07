@@ -20196,6 +20196,13 @@ test "alias table iterators produce repeated indices" {
     try std.testing.expectEqual(unchecked_u32_iter.next().?, checked_u32_iter.next().?);
     try std.testing.expectEqual(unchecked_u32_iter_engine.next(), checked_u32_iter_engine.next());
 
+    var checked_u32_facade_iter_engine = alea.ScalarPrng.init(0x5150_a142);
+    var checked_u32_direct_iter_engine = alea.ScalarPrng.init(0x5150_a142);
+    var checked_u32_facade_iter = try table.iterU32Checked(Rng.init(&checked_u32_facade_iter_engine));
+    var checked_u32_direct_iter = try table.iterU32CheckedFrom(&checked_u32_direct_iter_engine);
+    try std.testing.expectEqual(checked_u32_direct_iter.next().?, checked_u32_facade_iter.next().?);
+    try std.testing.expectEqual(checked_u32_direct_iter_engine.next(), checked_u32_facade_iter_engine.next());
+
     var checked_indices_u32_engine = alea.ScalarPrng.init(0x5150_a13b);
     var unchecked_indices_u32_engine = alea.ScalarPrng.init(0x5150_a13b);
     const unchecked_indices_u32 = try table.indicesU32From(std.testing.allocator, &unchecked_indices_u32_engine, 8);
@@ -21675,6 +21682,13 @@ test "weighted tree iterators produce repeated indices" {
     try std.testing.expectEqual(unchecked_u32_iter.next().?, checked_u32_iter.next().?);
     try std.testing.expectEqual(unchecked_u32_iter_engine.next(), checked_u32_iter_engine.next());
 
+    var checked_u32_facade_iter_engine = alea.ScalarPrng.init(0x5150_d52d);
+    var checked_u32_direct_iter_engine = alea.ScalarPrng.init(0x5150_d52d);
+    var checked_u32_facade_iter = try tree.iterU32Checked(Rng.init(&checked_u32_facade_iter_engine));
+    var checked_u32_direct_iter = try tree.iterU32CheckedFrom(&checked_u32_direct_iter_engine);
+    try std.testing.expectEqual(checked_u32_direct_iter.next().?, checked_u32_facade_iter.next().?);
+    try std.testing.expectEqual(checked_u32_direct_iter_engine.next(), checked_u32_facade_iter_engine.next());
+
     var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 2, 0, 0, 6 });
     defer int_tree.deinit();
     sample_engine = alea.ScalarPrng.init(0x5150_d51e);
@@ -21713,6 +21727,13 @@ test "weighted tree iterators produce repeated indices" {
     var unchecked_int_u32_iter = int_tree.iterU32From(&unchecked_int_u32_iter_engine);
     try std.testing.expectEqual(unchecked_int_u32_iter.next().?, checked_int_u32_iter.next().?);
     try std.testing.expectEqual(unchecked_int_u32_iter_engine.next(), checked_int_u32_iter_engine.next());
+
+    var checked_int_u32_facade_iter_engine = alea.ScalarPrng.init(0x5150_d52e);
+    var checked_int_u32_direct_iter_engine = alea.ScalarPrng.init(0x5150_d52e);
+    var checked_int_u32_facade_iter = try int_tree.iterU32Checked(Rng.init(&checked_int_u32_facade_iter_engine));
+    var checked_int_u32_direct_iter = try int_tree.iterU32CheckedFrom(&checked_int_u32_direct_iter_engine);
+    try std.testing.expectEqual(checked_int_u32_direct_iter.next().?, checked_int_u32_facade_iter.next().?);
+    try std.testing.expectEqual(checked_int_u32_direct_iter_engine.next(), checked_int_u32_facade_iter_engine.next());
 
     var single_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0, 9 });
     defer single_tree.deinit();

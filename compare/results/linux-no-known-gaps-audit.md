@@ -3493,3 +3493,10 @@ weighted streams (`compare/results/s4-m757-parallel-weighted-iterator-checked-fr
 `WeightedChoice` iterators. This completes the matching direct-source coverage
 for parallel/accessor/index weighted iterator convenience helpers but does not
 resolve S4-M11.
+
+S4-M758 adds checked compact weighted iterator facade coverage
+(`compare/results/s4-m758-weighted-checked-u32-iterator-facades.md`):
+`AliasTable.iterU32Checked`, `WeightedTree.iterU32Checked`, and
+`WeightedIntTree.iterU32Checked` now have focused facade/direct stream-shape
+evidence. This improves compact weighted-index iterator reliability evidence but
+does not resolve S4-M11.

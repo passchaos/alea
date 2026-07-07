@@ -796,7 +796,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M755 choice checked iterator facades | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m755-choice-checked-iterator-facades.md` | Closed for the current bar: checked value/index iterator facade constructors for `Choose`, `Choice`, and `WeightedChoice` now have direct-source stream-shape coverage. |
 | S4-M756 accessor weighted iterator checked-from coverage | `src/seq.zig`, `compare/results/s4-m756-accessor-weighted-iterator-checked-from.md` | Closed for the current bar: accessor- and index-weighted checked direct-source convenience iterators now have stream-shape coverage against reusable `WeightedChoice`. |
 | S4-M757 parallel weighted iterator checked-from coverage | `src/seq.zig`, `compare/results/s4-m757-parallel-weighted-iterator-checked-from.md` | Closed for the current bar: parallel-weight checked direct-source convenience iterator now has stream-shape coverage against reusable `WeightedChoice`. |
-| S4-M758 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M758 weighted checked u32 iterator facades | `src/distributions.zig`, `compare/results/s4-m758-weighted-checked-u32-iterator-facades.md` | Closed for the current bar: checked compact `u32` iterator facade constructors for `AliasTable`, `WeightedTree`, and `WeightedIntTree` now have direct-source stream-shape coverage. |
+| S4-M759 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2334,6 +2335,10 @@ reliability/validation work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M757 additionally covers the parallel-weight checked direct-source
 convenience iterator against reusable `WeightedChoice` stream shape; it is
+reliability/validation work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M758 additionally covers static/dynamic weighted checked compact `u32`
+iterator facade constructors against direct-source stream shape; it is
 reliability/validation work and does not resolve S4-M11 or complete the
 long-term objective.
 
