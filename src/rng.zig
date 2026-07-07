@@ -1369,6 +1369,7 @@ pub fn normalBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.
 }
 
 pub fn fillNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
+    if (dest.len == 0) return;
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
     if (stddev == 0) {
@@ -1422,6 +1423,7 @@ pub fn exponentialBatchCheckedFrom(source: anytype, comptime T: type, allocator:
 }
 
 pub fn fillExponentialFrom(source: anytype, comptime T: type, dest: []T, rate: T) void {
+    if (dest.len == 0) return;
     comptime requireFloat(T);
     std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(T)));
     if (rate == std.math.inf(T)) {
@@ -6780,6 +6782,10 @@ test "invalid facade range helpers do not consume random stream" {
 
     var empty_floats: [0]f64 = .{};
     rng.fillRange(f64, &empty_floats, std.math.nan(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    rng.fillNormal(f64, &empty_floats, std.math.inf(f64), -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    rng.fillExponential(f64, &empty_floats, 0);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var empty_bools: [0]bool = .{};

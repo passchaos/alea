@@ -2768,3 +2768,10 @@ deterministic no-ops before invalid range/probability assertions in
 `fillVectorRangeFrom`, `fillVectorRangeAtMostFrom`, `fillVectorChanceFrom`, and
 `fillVectorRatioFrom`. This improves no-op determinism but does not resolve
 S4-M11.
+
+S4-M654 adds `Rng` scalar normal/exponential fill empty-output prevalidation
+(`compare/results/s4-m654-rng-normal-exponential-fill-empty-output-prevalidation.md`):
+unchecked scalar normal and exponential fill helpers now treat empty output
+buffers as deterministic no-ops before invalid parameter assertions in
+`fillNormalFrom` and `fillExponentialFrom`. This improves no-op determinism but
+does not resolve S4-M11.
