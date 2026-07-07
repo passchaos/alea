@@ -3371,3 +3371,9 @@ S4-M740 adds dynamic weighted-tree checked iterators
 compact `u32` index iterators while preserving stream shape, sampling-readiness
 validation, and compact width validation. This improves discoverability but does
 not resolve S4-M11.
+
+S4-M741 documents static `AliasTable` checked `usize` index APIs
+(`compare/results/s4-m741-aliastable-checked-index-docs.md`):
+`docs/api-reference.md` now lists the existing checked scalar, fill, owned, and
+fixed-array `usize` index APIs for static `AliasTable`. This improves
+discoverability but does not resolve S4-M11.
