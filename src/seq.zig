@@ -4810,6 +4810,7 @@ pub fn sampleIteratorChecked(allocator: std.mem.Allocator, rng: Rng, comptime T:
 
 pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     const out = try allocator.alloc(T, amount);
     errdefer allocator.free(out);
@@ -4831,6 +4832,7 @@ pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
 
 pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     var reservoir = try std.ArrayList(T).initCapacity(allocator, amount);
     errdefer reservoir.deinit(allocator);
@@ -4857,6 +4859,7 @@ pub fn sampleIteratorArray(rng: Rng, comptime T: type, comptime N: usize, iterat
 pub fn sampleIteratorArrayFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) ?[N]T {
     var out: [N]T = undefined;
     if (comptime N == 0) return out;
+    if (comptime valueTypeHasEmptyEnum(T)) return null;
 
     var filled: usize = 0;
     while (filled < N) : (filled += 1) {
@@ -4878,6 +4881,7 @@ pub fn sampleIteratorArrayChecked(rng: Rng, comptime T: type, comptime N: usize,
 }
 
 pub fn sampleIteratorArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) Error![N]T {
+    if (comptime N != 0 and valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     return sampleIteratorArrayFrom(source, T, N, iterator) orelse error.InvalidParameter;
 }
 
@@ -4925,6 +4929,7 @@ pub fn sampleIteratorFillCheckedFrom(source: anytype, comptime T: type, iterator
 
 pub fn sampleIteratorIntoCheckedFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) Error!void {
     if (out.len == 0) return;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     var filled: usize = 0;
     while (filled < out.len) : (filled += 1) {
@@ -11190,6 +11195,58 @@ test "sampleIteratorInto checked short streams do not consume randomness" {
     var iter = RangeIter{ .end = 2 };
     var out: [5]u8 = undefined;
     try std.testing.expectError(error.InvalidParameter, sampleIteratorIntoCheckedFrom(&engine, u8, &iter, &out));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "iterator reservoir samples validate empty value types before allocation" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const EmptyIter = struct {
+        fn next(_: *@This()) ?Empty {
+            unreachable;
+        }
+    };
+
+    var engine = alea.ScalarPrng.init(0x5150_7825);
+    var control = alea.ScalarPrng.init(0x5150_7825);
+
+    var iter = EmptyIter{};
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleIteratorFrom(alloc.allocator(), &engine, Empty, &iter, 1)) |unexpected| {
+        alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_iter = EmptyIter{};
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleIteratorCheckedFrom(checked_alloc.allocator(), &engine, Empty, &checked_iter, 1)) |unexpected| {
+        checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var array_iter = EmptyIter{};
+    if (sampleIteratorArrayFrom(&engine, Empty, 1, &array_iter)) |_| return error.TestExpectedError;
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_array_iter = EmptyIter{};
+    if (sampleIteratorArrayCheckedFrom(&engine, Empty, 1, &checked_array_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [1]Empty = undefined;
+    var checked_into_iter = EmptyIter{};
+    try std.testing.expectError(error.EmptyInput, sampleIteratorIntoCheckedFrom(&engine, Empty, &checked_into_iter, &out));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

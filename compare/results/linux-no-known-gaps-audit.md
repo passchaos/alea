@@ -2947,3 +2947,12 @@ S4-M676 adds reservoir value sample empty-type prevalidation
 enum-containing value types before allocation, entropy, random-stream use, and
 value copying in `reservoirSample*` and `reservoirSampleInto*` value helpers.
 This improves failure determinism but does not resolve S4-M11.
+
+S4-M677 adds `seq` iterator reservoir empty-type prevalidation
+(`compare/results/s4-m677-seq-iterator-value-empty-type-prevalidation.md`):
+`seq` iterator reservoir value helpers now reject non-zero empty
+enum-containing value types before allocation, iterator consumption, and
+random-stream use in `sampleIteratorFrom`, `sampleIteratorCheckedFrom`,
+`sampleIteratorArrayFrom`, `sampleIteratorArrayCheckedFrom`, and
+`sampleIteratorIntoCheckedFrom`. This improves failure determinism but does not
+resolve S4-M11.
