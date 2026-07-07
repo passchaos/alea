@@ -3391,3 +3391,10 @@ S4-M743 adds static `AliasTable` checked compact iterator width coverage
 proving `error.InvalidParameter` is returned before random-stream use when the
 table length exceeds `u32`. This improves reliability evidence but does not
 resolve S4-M11.
+
+S4-M744 adds dynamic weighted-tree checked compact iterator width coverage
+(`compare/results/s4-m744-weighted-tree-checked-u32-iterator-width.md`):
+`WeightedTree.iterU32CheckedFrom` and `WeightedIntTree.iterU32CheckedFrom` now
+have explicit oversized-population evidence proving `error.InvalidParameter` is
+returned before random-stream use when tree length exceeds `u32`. This improves
+reliability evidence but does not resolve S4-M11.

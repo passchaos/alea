@@ -21567,6 +21567,35 @@ test "weighted tree iterators produce repeated indices" {
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectError(error.InvalidWeight, invalid_int_tree.iterU32CheckedFrom(&invalid_engine));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    const huge_len = @as(usize, std.math.maxInt(u32)) + 1;
+    const huge_tree = WeightedTree(u32){
+        .subtotals = .{
+            .items = @as([*]f64, @ptrFromInt(0x1000))[0..huge_len],
+            .capacity = huge_len,
+        },
+        .positive_count = 1,
+        .positive_index = 0,
+        .allocator = std.testing.allocator,
+    };
+    invalid_engine = alea.ScalarPrng.init(0x5150_d529);
+    invalid_control = alea.ScalarPrng.init(0x5150_d529);
+    try std.testing.expectError(error.InvalidParameter, huge_tree.iterU32CheckedFrom(&invalid_engine));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    const huge_int_tree = WeightedIntTree(u32){
+        .subtotals = .{
+            .items = @as([*]u64, @ptrFromInt(0x2000))[0..huge_len],
+            .capacity = huge_len,
+        },
+        .positive_count = 1,
+        .positive_index = 0,
+        .allocator = std.testing.allocator,
+    };
+    invalid_engine = alea.ScalarPrng.init(0x5150_d52a);
+    invalid_control = alea.ScalarPrng.init(0x5150_d52a);
+    try std.testing.expectError(error.InvalidParameter, huge_int_tree.iterU32CheckedFrom(&invalid_engine));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "weighted tree fixed index arrays mirror fills" {
