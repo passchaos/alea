@@ -3452,3 +3452,9 @@ tables (`compare/results/s4-m751-aliastable-checked-fixed-index-arrays.md`):
 `AliasTable.indexArrayChecked` / `indexArrayCheckedFrom` now exist and preserve
 existing fixed-array stream shape. This closes an API-surface correctness gap but
 does not resolve S4-M11.
+
+S4-M752 implements documented checked `usize` index aliases for static alias
+tables (`compare/results/s4-m752-aliastable-checked-usize-index-aliases.md`):
+`AliasTable.sampleChecked`, `fillChecked`, `indicesChecked`, and their index/from
+aliases now exist and preserve existing stream shape. This closes an API-surface
+correctness gap but does not resolve S4-M11.

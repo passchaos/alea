@@ -17004,6 +17004,14 @@ pub fn AliasTable(comptime Weight: type) type {
             return self.sample(rng);
         }
 
+        pub fn sampleChecked(self: Self, rng: Rng) Error!usize {
+            return self.sampleCheckedFrom(rng);
+        }
+
+        pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
+            return self.sampleChecked(rng);
+        }
+
         pub fn sampleU32(self: Self, rng: Rng) u32 {
             return self.sampleU32Checked(rng) catch unreachable;
         }
@@ -17035,6 +17043,14 @@ pub fn AliasTable(comptime Weight: type) type {
             return self.sampleFrom(source);
         }
 
+        pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
+            return self.sampleFrom(source);
+        }
+
+        pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
+            return self.sampleCheckedFrom(source);
+        }
+
         pub fn sampleU32From(self: Self, source: anytype) u32 {
             return self.sampleU32CheckedFrom(source) catch unreachable;
         }
@@ -17058,6 +17074,14 @@ pub fn AliasTable(comptime Weight: type) type {
 
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
             self.fill(rng, dest);
+        }
+
+        pub fn fillChecked(self: Self, rng: Rng, dest: []usize) Error!void {
+            try self.fillCheckedFrom(rng, dest);
+        }
+
+        pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
+            try self.fillChecked(rng, dest);
         }
 
         pub fn fillU32(self: Self, rng: Rng, dest: []u32) void {
@@ -17086,6 +17110,14 @@ pub fn AliasTable(comptime Weight: type) type {
 
         pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
             self.fillFrom(source, dest);
+        }
+
+        pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
+            self.fillFrom(source, dest);
+        }
+
+        pub fn fillIndicesCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
+            try self.fillCheckedFrom(source, dest);
         }
 
         pub fn fillU32From(self: Self, source: anytype, dest: []u32) void {
@@ -17119,6 +17151,14 @@ pub fn AliasTable(comptime Weight: type) type {
             errdefer allocator.free(out);
             self.fillFrom(source, out);
             return out;
+        }
+
+        pub fn indicesChecked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
+            return self.indicesCheckedFrom(allocator, rng, amount);
+        }
+
+        pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
+            return self.indicesFrom(allocator, source, amount);
         }
 
         pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
@@ -19968,9 +20008,22 @@ test "alias table owned index batches mirror fills" {
     try std.testing.expectEqualSlices(usize, direct_batch, facade_batch);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    facade_engine = alea.ScalarPrng.init(0x5150_a140);
+    direct_engine = alea.ScalarPrng.init(0x5150_a140);
+    const checked_rng = Rng.init(&facade_engine);
+    const checked_facade_batch = try table.indicesChecked(std.testing.allocator, checked_rng, 4);
+    defer std.testing.allocator.free(checked_facade_batch);
+    const checked_direct_batch = try table.indicesCheckedFrom(std.testing.allocator, &direct_engine, 4);
+    defer std.testing.allocator.free(checked_direct_batch);
+    try std.testing.expectEqualSlices(usize, checked_direct_batch, checked_facade_batch);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const zero_batch = try table.indicesFrom(std.testing.allocator, &batch_engine, 0);
     defer std.testing.allocator.free(zero_batch);
     try std.testing.expectEqual(@as(usize, 0), zero_batch.len);
+    const zero_checked_batch = try table.indicesCheckedFrom(std.testing.allocator, &batch_engine, 0);
+    defer std.testing.allocator.free(zero_checked_batch);
+    try std.testing.expectEqual(@as(usize, 0), zero_checked_batch.len);
     const zero_u32_batch = try table.indicesU32From(std.testing.allocator, &batch_engine, 0);
     defer std.testing.allocator.free(zero_u32_batch);
     try std.testing.expectEqual(@as(usize, 0), zero_u32_batch.len);
@@ -20007,11 +20060,23 @@ test "alias table index aliases mirror sample helpers" {
     try std.testing.expectEqual(table.sampleU32From(&sample_engine), table.sampleIndexU32From(&alias_engine));
     try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
 
+    sample_engine = alea.ScalarPrng.init(0x5150_a13d);
+    alias_engine = alea.ScalarPrng.init(0x5150_a13d);
+    try std.testing.expectEqual(try table.sampleCheckedFrom(&sample_engine), try table.sampleIndexCheckedFrom(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
     var facade_engine = alea.ScalarPrng.init(0x5150_a127);
     var direct_engine = alea.ScalarPrng.init(0x5150_a127);
     const rng = Rng.init(&facade_engine);
     const direct_rng = Rng.init(&direct_engine);
     try std.testing.expectEqual(table.sampleIndex(rng), table.sample(direct_rng));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    facade_engine = alea.ScalarPrng.init(0x5150_a13e);
+    direct_engine = alea.ScalarPrng.init(0x5150_a13e);
+    const checked_rng = Rng.init(&facade_engine);
+    const checked_direct_rng = Rng.init(&direct_engine);
+    try std.testing.expectEqual(try table.sampleIndexChecked(checked_rng), try table.sampleChecked(checked_direct_rng));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     facade_engine = alea.ScalarPrng.init(0x5150_a128);
@@ -20026,6 +20091,13 @@ test "alias table index aliases mirror sample helpers" {
     var alias_fill_out: [8]usize = undefined;
     table.fillFrom(&sample_engine, &fill_out);
     table.fillIndicesFrom(&alias_engine, &alias_fill_out);
+    try std.testing.expectEqualSlices(usize, &fill_out, &alias_fill_out);
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_a13f);
+    alias_engine = alea.ScalarPrng.init(0x5150_a13f);
+    try table.fillCheckedFrom(&sample_engine, &fill_out);
+    try table.fillIndicesCheckedFrom(&alias_engine, &alias_fill_out);
     try std.testing.expectEqualSlices(usize, &fill_out, &alias_fill_out);
     try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
 
