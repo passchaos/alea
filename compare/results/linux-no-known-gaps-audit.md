@@ -3384,3 +3384,10 @@ checked iterator constructors for `WeightedTree` and `WeightedIntTree` now have
 explicit tests proving invalid all-zero trees return `error.InvalidWeight` before
 random-stream use. This improves reliability evidence but does not resolve
 S4-M11.
+
+S4-M743 adds static `AliasTable` checked compact iterator width coverage
+(`compare/results/s4-m743-aliastable-checked-u32-iterator-width.md`):
+`AliasTable.iterU32CheckedFrom` now has explicit oversized-population evidence
+proving `error.InvalidParameter` is returned before random-stream use when the
+table length exceeds `u32`. This improves reliability evidence but does not
+resolve S4-M11.

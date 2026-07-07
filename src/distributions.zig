@@ -20081,6 +20081,22 @@ test "alias table iterators produce repeated indices" {
     try std.testing.expectEqual(unchecked_u32_iter.next().?, checked_u32_iter.next().?);
     try std.testing.expectEqual(unchecked_u32_iter_engine.next(), checked_u32_iter_engine.next());
 
+    const huge_len = @as(usize, std.math.maxInt(u32)) + 1;
+    const huge_table = AliasTable(u32){
+        .prob = @as([*]f64, @ptrFromInt(0x1000))[0..huge_len],
+        .prob_threshold = @as([*]u64, @ptrFromInt(0x2000))[0..huge_len],
+        .alias = @as([*]usize, @ptrFromInt(0x3000))[0..huge_len],
+        .weight_values = @as([*]f64, @ptrFromInt(0x4000))[0..huge_len],
+        .total = 1,
+        .positive_count = 1,
+        .constant_index = 0,
+        .allocator = std.testing.allocator,
+    };
+    var huge_engine = alea.ScalarPrng.init(0x5150_a13a);
+    var huge_control = alea.ScalarPrng.init(0x5150_a13a);
+    try std.testing.expectError(error.InvalidParameter, huge_table.iterU32CheckedFrom(&huge_engine));
+    try std.testing.expectEqual(huge_control.next(), huge_engine.next());
+
     try table.update(&.{ 0, 0, 5, 0 });
     var single_engine = alea.ScalarPrng.init(0x5150_a131);
     var single_control = alea.ScalarPrng.init(0x5150_a131);
