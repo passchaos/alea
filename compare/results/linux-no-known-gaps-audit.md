@@ -2760,3 +2760,11 @@ deterministic no-ops before invalid range/probability assertions in
 `fillRangeFrom`, `fillRangeAtMostFrom`, `fillUintLessThanFrom`,
 `fillChanceFrom`, and `fillRatioFrom`. This improves no-op determinism but does
 not resolve S4-M11.
+
+S4-M653 adds `Rng` vector fill empty-output prevalidation
+(`compare/results/s4-m653-rng-vector-fill-empty-output-prevalidation.md`):
+unchecked vector range/probability fill helpers now treat empty output buffers as
+deterministic no-ops before invalid range/probability assertions in
+`fillVectorRangeFrom`, `fillVectorRangeAtMostFrom`, `fillVectorChanceFrom`, and
+`fillVectorRatioFrom`. This improves no-op determinism but does not resolve
+S4-M11.

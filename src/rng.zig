@@ -949,6 +949,7 @@ pub fn fillVectorOpenClosedFrom(source: anytype, comptime VectorType: type, dest
 }
 
 pub fn fillVectorRangeFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    if (dest.len == 0) return;
     const info = vectorInfo(VectorType);
     if (@typeInfo(info.child) == .int and exclusiveIntRangeHasSingleValue(info.child, min, max)) {
         @memset(dest, @as(VectorType, @splat(min)));
@@ -962,6 +963,7 @@ pub fn fillVectorRangeFrom(source: anytype, comptime VectorType: type, dest: []V
 }
 
 pub fn fillVectorRangeAtMostFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
+    if (dest.len == 0) return;
     const info = vectorInfo(VectorType);
     if (@typeInfo(info.child) != .int) @compileError("Rng.fillVectorRangeAtMostFrom supports integer vectors");
     std.debug.assert(min <= max);
@@ -1050,6 +1052,7 @@ pub fn vectorChanceBatchFrom(source: anytype, comptime VectorType: type, allocat
 }
 
 pub fn fillVectorChanceFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) void {
+    if (dest.len == 0) return;
     const info = vectorInfo(VectorType);
     if (info.child != bool) @compileError("Rng.fillVectorChance expects a bool vector");
     std.debug.assert(p >= 0 and p <= 1);
@@ -1104,6 +1107,7 @@ pub fn vectorRatioBatchFrom(source: anytype, comptime VectorType: type, allocato
 }
 
 pub fn fillVectorRatioFrom(source: anytype, comptime VectorType: type, dest: []VectorType, numerator: u32, denominator: u32) void {
+    if (dest.len == 0) return;
     const info = vectorInfo(VectorType);
     if (info.child != bool) @compileError("Rng.fillVectorRatio expects a bool vector");
     std.debug.assert(denominator > 0 and numerator <= denominator);
@@ -7214,6 +7218,22 @@ test "invalid facade checked fills do not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_ba7);
     var control = alea.ScalarPrng.init(0x5150_ba7);
     const rng = Rng.init(&engine);
+
+    var empty_vec_ints: [0]@Vector(4, u32) = .{};
+    rng.fillVectorRange(@Vector(4, u32), &empty_vec_ints, 3, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+    rng.fillVectorRangeAtMost(@Vector(4, u32), &empty_vec_ints, 4, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty_vec_floats: [0]@Vector(8, f32) = .{};
+    rng.fillVectorRange(@Vector(8, f32), &empty_vec_floats, std.math.nan(f32), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty_vec_bools: [0]@Vector(8, bool) = .{};
+    rng.fillVectorChance(@Vector(8, bool), &empty_vec_bools, -0.1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    rng.fillVectorRatio(@Vector(8, bool), &empty_vec_bools, 2, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
 
     var floats: [4]f64 = undefined;
     try std.testing.expectError(error.NonFinite, rng.fillRangeChecked(f64, &floats, std.math.inf(f64), 1));
