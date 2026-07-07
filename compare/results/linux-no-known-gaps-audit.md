@@ -2775,3 +2775,10 @@ unchecked scalar normal and exponential fill helpers now treat empty output
 buffers as deterministic no-ops before invalid parameter assertions in
 `fillNormalFrom` and `fillExponentialFrom`. This improves no-op determinism but
 does not resolve S4-M11.
+
+S4-M655 adds `Rng` vector normal/exponential fill empty-output prevalidation
+(`compare/results/s4-m655-rng-vector-normal-exponential-fill-empty-output-prevalidation.md`):
+unchecked vector normal and exponential fill helpers now treat empty output
+buffers as deterministic no-ops before invalid parameter assertions in
+`fillVectorNormalFrom` and `fillVectorExponentialFrom`. This improves no-op
+determinism but does not resolve S4-M11.

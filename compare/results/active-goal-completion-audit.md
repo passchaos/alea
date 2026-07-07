@@ -693,7 +693,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M652 Rng scalar fill empty-output prevalidation | `src/rng.zig`, `compare/results/s4-m652-rng-scalar-fill-empty-output-prevalidation.md` | Closed for the current bar: `Rng` unchecked scalar range/probability fill helpers now treat empty output buffers as no-op before invalid parameter assertions. |
 | S4-M653 Rng vector fill empty-output prevalidation | `src/rng.zig`, `compare/results/s4-m653-rng-vector-fill-empty-output-prevalidation.md` | Closed for the current bar: `Rng` unchecked vector range/probability fill helpers now treat empty output buffers as no-op before invalid parameter assertions. |
 | S4-M654 Rng scalar normal/exponential fill empty-output prevalidation | `src/rng.zig`, `compare/results/s4-m654-rng-normal-exponential-fill-empty-output-prevalidation.md` | Closed for the current bar: `Rng` unchecked scalar normal/exponential fill helpers now treat empty output buffers as no-op before invalid parameter assertions. |
-| S4-M655 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M655 Rng vector normal/exponential fill empty-output prevalidation | `src/rng.zig`, `compare/results/s4-m655-rng-vector-normal-exponential-fill-empty-output-prevalidation.md` | Closed for the current bar: `Rng` unchecked vector normal/exponential fill helpers now treat empty output buffers as no-op before invalid parameter assertions. |
+| S4-M656 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1913,6 +1914,9 @@ S4-M653 additionally tightens `Rng` vector fill empty-output prevalidation; it
 is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M654 additionally tightens `Rng` scalar normal/exponential fill empty-output
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
+S4-M655 additionally tightens `Rng` vector normal/exponential fill empty-output
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
 

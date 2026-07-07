@@ -1203,6 +1203,7 @@ pub fn vectorNormalBatchFrom(source: anytype, comptime VectorType: type, allocat
 }
 
 pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    if (dest.len == 0) return;
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(stddev >= 0);
@@ -1263,6 +1264,7 @@ pub fn vectorExponentialBatchFrom(source: anytype, comptime VectorType: type, al
 }
 
 pub fn fillVectorExponentialFrom(source: anytype, comptime VectorType: type, dest: []VectorType, rate: vectorChild(VectorType)) void {
+    if (dest.len == 0) return;
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(info.child)));
@@ -7233,6 +7235,10 @@ test "invalid facade checked fills do not consume random stream" {
 
     var empty_vec_floats: [0]@Vector(8, f32) = .{};
     rng.fillVectorRange(@Vector(8, f32), &empty_vec_floats, std.math.nan(f32), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    rng.fillVectorNormal(@Vector(8, f32), &empty_vec_floats, std.math.inf(f32), -1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    rng.fillVectorExponential(@Vector(8, f32), &empty_vec_floats, 0);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var empty_vec_bools: [0]@Vector(8, bool) = .{};
