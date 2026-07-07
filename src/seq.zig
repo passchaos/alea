@@ -2842,6 +2842,7 @@ pub fn chooseWeightedIterFrom(
     weights: []const Weight,
 ) !?WeightedChoice(T, Weight).Iterator(@TypeOf(source)) {
     if (items.len != weights.len) return error.LengthMismatch;
+    if (items.len != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexWeightsAllowEmpty(Weight, weights);
     if (validation.total == 0) return null;
     const choice = try WeightedChoice(T, Weight).init(allocator, items, weights);
@@ -2889,6 +2890,7 @@ pub fn chooseWeightedIterByFrom(
     items: []const T,
     comptime weightFn: fn (*const T) Weight,
 ) !?WeightedChoice(T, Weight).Iterator(@TypeOf(source)) {
+    if (items.len != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByAllowEmpty(T, Weight, items, weightFn);
     if (validation.total == 0) return null;
     const choice = try WeightedChoice(T, Weight).initBy(allocator, items, weightFn);
@@ -2936,6 +2938,7 @@ pub fn chooseWeightedIterByIndexFrom(
     items: []const T,
     comptime weightFn: fn (usize) Weight,
 ) !?WeightedChoice(T, Weight).Iterator(@TypeOf(source)) {
+    if (items.len != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByIndexAllowEmpty(Weight, items.len, weightFn);
     if (validation.total == 0) return null;
     const choice = try WeightedChoice(T, Weight).initByIndex(allocator, items, weightFn);
@@ -21369,6 +21372,33 @@ test "weighted choice iterator streams repeated const pointers" {
     try std.testing.expectError(error.EmptyInput, chooseWeightedIterCheckedFrom(std.testing.allocator, &empty_engine, []const u8, u32, &items, &.{ 0, 0, 0, 0 }));
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+    const empty_value_items = @as([*]const Payload, @ptrFromInt(0x1000))[0..1];
+    var empty_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedIterFrom(empty_value_alloc.allocator(), &empty_engine, Payload, u32, empty_value_items, &.{1})) |unexpected| {
+        if (unexpected) |iter_value| {
+            var iter = iter_value;
+            iter.deinit();
+        }
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var empty_value_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedIterCheckedFrom(empty_value_checked_alloc.allocator(), &empty_engine, Payload, u32, empty_value_items, &.{1})) |unexpected| {
+        var iter = unexpected;
+        iter.deinit();
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_value_checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
     var invalid_engine = alea.ScalarPrng.init(0x5150_1785);
     var invalid_control = alea.ScalarPrng.init(0x5150_1785);
     try std.testing.expectError(error.LengthMismatch, chooseWeightedIterFrom(std.testing.allocator, &invalid_engine, []const u8, u32, &items, &.{ 1, 2 }));
@@ -21464,6 +21494,28 @@ test "accessor weighted choice iterator streams repeated const pointers" {
     try std.testing.expectError(error.EmptyInput, chooseWeightedIterByCheckedFrom(std.testing.allocator, &empty_engine, Record, f64, &zero_records, Record.weightOf));
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
+    const Empty = enum {};
+    const Payload = struct {
+        empty: Empty,
+
+        fn weightOf(_: *const @This()) f64 {
+            unreachable;
+        }
+    };
+    const empty_value_items = @as([*]const Payload, @ptrFromInt(0x1000))[0..1];
+    var empty_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedIterByFrom(empty_value_alloc.allocator(), &empty_engine, Payload, f64, empty_value_items, Payload.weightOf)) |unexpected| {
+        if (unexpected) |iter_value| {
+            var iter = iter_value;
+            iter.deinit();
+        }
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
     var invalid_engine = alea.ScalarPrng.init(0x5150_1795);
     var invalid_control = alea.ScalarPrng.init(0x5150_1795);
     try std.testing.expectError(error.InvalidWeight, chooseWeightedIterByFrom(std.testing.allocator, &invalid_engine, Record, f64, &records, Record.invalidWeightOf));
@@ -21555,6 +21607,27 @@ test "index-weighted choice iterator streams repeated const pointers" {
     try std.testing.expect((try chooseWeightedIterByIndexFrom(std.testing.allocator, &empty_engine, []const u8, u32, &records, IndexWeight.zero)) == null);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
     try std.testing.expectError(error.EmptyInput, chooseWeightedIterByIndexCheckedFrom(std.testing.allocator, &empty_engine, []const u8, u32, &records, IndexWeight.zero));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+    const empty_value_items = @as([*]const Payload, @ptrFromInt(0x1000))[0..1];
+    const EmptyIndexWeight = struct {
+        fn weightOf(_: usize) u32 {
+            unreachable;
+        }
+    };
+    var empty_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedIterByIndexFrom(empty_value_alloc.allocator(), &empty_engine, Payload, u32, empty_value_items, EmptyIndexWeight.weightOf)) |unexpected| {
+        if (unexpected) |iter_value| {
+            var iter = iter_value;
+            iter.deinit();
+        }
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_value_alloc.has_induced_failure);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
     var invalid_engine = alea.ScalarPrng.init(0x5150_1805);

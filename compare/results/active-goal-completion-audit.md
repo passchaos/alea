@@ -740,7 +740,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M699 root sampled value iterator empty-type prevalidation | `src/root.zig`, `compare/results/s4-m699-root-sampled-value-iter-empty-type-prevalidation.md` | Closed for the current bar: root sampled value iterator aliases now reject non-zero uninhabited output types before index allocation, entropy, secure-engine construction, random-stream use, iterator construction, or value copying. |
 | S4-M700 seq weighted iterator choice empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m700-seq-weighted-iterator-choice-empty-type-prevalidation.md` | Closed for the current bar: `seq` weighted iterator one-shot value choice helpers now reject uninhabited output types before iterator consumption, weight evaluation, random-stream use, or value copying. |
 | S4-M701 seq unchecked iterator into empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m701-seq-unchecked-iterator-into-empty-type-prevalidation.md` | Closed for the current bar: `seq` unchecked caller-owned iterator value fills now treat non-empty uninhabited output buffers as zero-fill no-ops before iterator consumption, random-stream use, or value copying. |
-| S4-M702 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M702 seq weighted choice iterator empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m702-seq-weighted-choice-iter-empty-type-prevalidation.md` | Closed for the current bar: `seq` reusable weighted choice iterator constructors now reject non-empty uninhabited value types before weight validation/evaluation, allocation, random-stream use, iterator construction, or value access. |
+| S4-M703 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2103,6 +2104,9 @@ complete the long-term objective.
 S4-M701 additionally tightens `seq` unchecked caller-owned iterator value
 fill empty-type prevalidation; it is reliability/ergonomics work and does not
 resolve S4-M11 or complete the long-term objective.
+S4-M702 additionally tightens `seq` reusable weighted choice iterator
+empty-type prevalidation; it is reliability/ergonomics work and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
