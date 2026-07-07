@@ -2338,3 +2338,11 @@ root system-entropy callers now get invalid-weight failures before secure-engine
 construction for unchecked weighted index helpers, and allocation-returning
 batches validate deterministic empty/single/invalid paths before allocating
 random-output buffers while S4-M11 remains blocked.
+
+S4-M597 adds root weighted value batch prevalidation
+(`compare/results/s4-m597-root-weighted-value-batch-prevalidation.md`): root
+system-entropy callers now get length-mismatch, invalid-weight, and checked
+empty-range failures before random-output allocation and secure-engine
+construction for `chooseWeightedBatch` and `chooseWeightedBatchChecked`, while
+deterministic empty/single paths remain allocation-only and S4-M11 remains
+blocked.

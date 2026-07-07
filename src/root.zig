@@ -3602,6 +3602,21 @@ pub fn fillChooseWeightedChecked(comptime T: type, io: std.Io, dest: []T, items:
 }
 
 pub fn chooseWeightedBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]?T {
+    if (count == 0) return allocator.alloc(?T, 0);
+    if (items.len != weights.len) return error.InvalidParameter;
+    switch (try rootWeightedIndexStateAllowEmpty(weights)) {
+        .empty => {
+            const out = try allocator.alloc(?T, count);
+            @memset(out, @as(?T, null));
+            return out;
+        },
+        .single => |index| {
+            const out = try allocator.alloc(?T, count);
+            @memset(out, @as(?T, items[index]));
+            return out;
+        },
+        .random => {},
+    }
     const out = try allocator.alloc(?T, count);
     errdefer allocator.free(out);
     try fillChooseWeighted(T, io, out, items, weights);
@@ -3610,6 +3625,16 @@ pub fn chooseWeightedBatch(comptime T: type, io: std.Io, allocator: std.mem.Allo
 
 pub fn chooseWeightedBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
+    if (items.len != weights.len) return error.InvalidParameter;
+    switch (try rootWeightedIndexState(weights)) {
+        .single => |index| {
+            const out = try allocator.alloc(T, count);
+            @memset(out, items[index]);
+            return out;
+        },
+        .random => {},
+        .empty => unreachable,
+    }
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillChooseWeightedChecked(T, io, out, items, weights);
@@ -8032,8 +8057,17 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_weighted_choice_batch = try chooseWeightedBatch(u8, failing, std.testing.allocator, 3, &weighted_single_items, &empty_weights);
     defer std.testing.allocator.free(empty_weighted_choice_batch);
     try std.testing.expectEqualSlices(?u8, &.{ null, null, null }, empty_weighted_choice_batch);
+    var weighted_choice_mismatch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, chooseWeightedBatch(u8, failing, weighted_choice_mismatch_alloc.allocator(), 3, &.{ 1, 2 }, &.{1}));
+    var weighted_choice_checked_mismatch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, chooseWeightedBatchChecked(u8, failing, weighted_choice_checked_mismatch_alloc.allocator(), 3, &.{ 1, 2 }, &.{1}));
+    var weighted_choice_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedBatch(u8, failing, weighted_choice_invalid_alloc.allocator(), 3, &weighted_single_items, &.{ std.math.nan(f64), 1, 1 }));
+    var weighted_choice_checked_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedBatchChecked(u8, failing, weighted_choice_checked_invalid_alloc.allocator(), 3, &weighted_single_items, &.{ std.math.nan(f64), 1, 1 }));
     try std.testing.expectError(error.EmptyRange, chooseWeightedChecked(u8, failing, &weighted_single_items, &empty_weights));
-    try std.testing.expectError(error.EmptyRange, chooseWeightedBatchChecked(u8, failing, std.testing.allocator, 3, &weighted_single_items, &empty_weights));
+    var weighted_choice_checked_empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseWeightedBatchChecked(u8, failing, weighted_choice_checked_empty_alloc.allocator(), 3, &weighted_single_items, &empty_weights));
     try std.testing.expectError(error.EmptyRange, chooseWeightedValueArrayChecked(u8, failing, 3, &weighted_single_items, &empty_weights));
     try std.testing.expectEqual(@as(?u8, 20), try chooseWeighted(u8, failing, &weighted_single_items, &single_weight));
     try std.testing.expectEqual(@as(u8, 20), try chooseWeightedChecked(u8, failing, &weighted_single_items, &single_weight));
