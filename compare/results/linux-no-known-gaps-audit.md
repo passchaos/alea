@@ -2178,3 +2178,9 @@ helpers (`compare/results/s4-m572-root-weighted-by-u32-index-array-helpers.md`):
 system-entropy callers can now produce fixed-size no-replacement weighted
 compact `u32` index arrays directly from an item slice and comptime item-weight
 accessor from the root API while S4-M11 remains blocked.
+
+S4-M573 adds root length-weighted no-replacement index sample helpers
+(`compare/results/s4-m573-root-weighted-by-index-index-sample-helpers.md`):
+system-entropy callers can now allocate no-replacement weighted `usize` index
+samples directly from a length and comptime index-weight accessor from the root
+API while S4-M11 remains blocked.
