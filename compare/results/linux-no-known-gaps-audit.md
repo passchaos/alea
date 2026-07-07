@@ -2106,3 +2106,9 @@ S4-M560 adds root item-accessor weighted fixed-size mutable-pointer array helper
 system-entropy callers can now produce fixed-size weighted mutable-pointer
 arrays directly from a mutable item slice and comptime item-weight accessor from
 the root API while S4-M11 remains blocked.
+
+S4-M561 adds root item-accessor weighted no-replacement value sample helpers
+(`compare/results/s4-m561-root-weighted-by-sample-helpers.md`): system-entropy
+callers can now allocate no-replacement weighted value samples directly from an
+item slice and comptime item-weight accessor from the root API while S4-M11
+remains blocked.
