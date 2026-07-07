@@ -3159,3 +3159,9 @@ S4-M705 adds reusable `Choice` checked value arrays
 has checked fixed-size value array helpers that reject non-zero empty
 enum-containing output types before random-stream use and value copying. This
 improves failure determinism but does not resolve S4-M11.
+
+S4-M706 adds reusable `WeightedChoice` checked value arrays
+(`compare/results/s4-m706-weightedchoice-checked-value-array.md`): reusable
+`WeightedChoice` now has checked fixed-size value array helpers that reject
+non-zero empty enum-containing output types before random-stream use and value
+copying. This improves failure determinism but does not resolve S4-M11.

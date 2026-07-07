@@ -8566,6 +8566,18 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return out;
         }
 
+        pub fn valueArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]T {
+            return self.valueArrayCheckedFrom(rng, N);
+        }
+
+        pub fn valueArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]T {
+            var out: [N]T = undefined;
+            if (N == 0) return out;
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            self.fillValuesFrom(source, &out);
+            return out;
+        }
+
         pub fn ptrArray(self: Self, rng: Rng, comptime N: usize) [N]*const T {
             return self.ptrArrayFrom(rng, N);
         }
@@ -18142,6 +18154,15 @@ test "weighted choice sampler maps alias indexes to items" {
     var empty_engine = alea.ScalarPrng.init(0x5150_4476);
     var empty_out: [1]Empty = undefined;
     empty_choice.fillValuesFrom(&empty_engine, &empty_out);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    if (empty_choice.valueArrayCheckedFrom(&empty_engine, 1)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    const zero_empty_array = try empty_choice.valueArrayCheckedFrom(&empty_engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), zero_empty_array.len);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
     var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     if (empty_choice.valuesFrom(empty_alloc.allocator(), &empty_engine, 1)) |unexpected| {
