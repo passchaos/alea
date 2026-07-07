@@ -1228,6 +1228,7 @@ pub fn sampleItemsIter(allocator: std.mem.Allocator, rng: Rng, comptime T: type,
 
 pub fn sampleItemsIterFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) !SampledValueIterator(T) {
     const count = @min(amount, items.len);
+    if (count != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const index_vec = try sampleIndexVecFrom(allocator, source, items.len, count);
     return .{ .items = items, .index_iter = index_vec.intoIter(allocator) };
 }
@@ -1250,6 +1251,7 @@ pub fn sampleItemsIterChecked(allocator: std.mem.Allocator, rng: Rng, comptime T
 
 pub fn sampleItemsIterCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) !SampledValueIterator(T) {
     if (amount > items.len) return error.InvalidParameter;
+    if (amount != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     return sampleItemsIterFrom(allocator, source, T, items, amount);
 }
 
@@ -12599,6 +12601,28 @@ test "sampleItemsIter owns sampled indices and streams values" {
     var invalid_engine = alea.ScalarPrng.init(0x5150_c310);
     var invalid_control = alea.ScalarPrng.init(0x5150_c310);
     try std.testing.expectError(error.InvalidParameter, sampleItemsIterCheckedFrom(std.testing.allocator, &invalid_engine, u8, &items, 6));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    const Empty = enum {};
+    const empty_items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
+    var empty_type_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleItemsIterFrom(empty_type_alloc.allocator(), &invalid_engine, Empty, empty_items, 1)) |unexpected| {
+        unexpected.deinit();
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_type_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var checked_empty_type_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleItemsIterCheckedFrom(checked_empty_type_alloc.allocator(), &invalid_engine, Empty, empty_items, 1)) |unexpected| {
+        unexpected.deinit();
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!checked_empty_type_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
     var failing_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });

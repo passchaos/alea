@@ -2926,3 +2926,10 @@ empty enum-containing value types before output/index allocation and
 random-stream use in `chooseMultipleFrom` and `chooseMultipleCheckedFrom`;
 `sampleItems` aliases inherit the same behavior. This improves failure
 determinism but does not resolve S4-M11.
+
+S4-M674 adds `seq` sampled value iterator empty-type prevalidation
+(`compare/results/s4-m674-seq-value-iter-empty-type-prevalidation.md`): `seq`
+sampled value iterator helpers now reject non-zero empty enum-containing value
+types before index allocation and random-stream use in `sampleItemsIterFrom` and
+`sampleItemsIterCheckedFrom`. This improves failure determinism but does not
+resolve S4-M11.
