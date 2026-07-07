@@ -2412,16 +2412,53 @@ pub fn chooseIteratorStableChecked(comptime T: type, io: std.Io, iterator: anyty
     return try chooseIteratorChecked(T, io, iterator);
 }
 
+fn rootChooseIteratorWeightedExactCount(comptime T: type, io: std.Io, iterator: anytype, remaining: usize) !?T {
+    const Pending = struct {
+        item: T,
+        weight: f64,
+    };
+
+    var pending: ?Pending = null;
+    var result: ?T = null;
+    var total: f64 = 0;
+    var engine: ?SecurePrng = null;
+
+    var index: usize = 0;
+    while (index < remaining) : (index += 1) {
+        const entry = iterator.next() orelse break;
+        const weight = rootWeightAsF64(@TypeOf(entry.weight), entry.weight);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        if (weight == 0) continue;
+
+        if (pending == null and result == null) {
+            pending = .{ .item = entry.item, .weight = weight };
+            total = weight;
+            continue;
+        }
+
+        if (engine == null) engine = try secure(io);
+        const random_source = Rng.init(&engine.?);
+
+        if (pending) |first| {
+            _ = random_source.float(f64);
+            result = first.item;
+            pending = null;
+        }
+
+        total += weight;
+        if (!std.math.isFinite(total)) return error.InvalidWeight;
+        if (random_source.float(f64) * total < weight) result = entry.item;
+    }
+
+    if (pending) |only| return only.item;
+    return result;
+}
+
 pub fn chooseIteratorWeighted(comptime T: type, io: std.Io, iterator: anytype) !?T {
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (rootIteratorExactRemaining(iterator)) |remaining| {
         if (remaining == 0) return null;
-        if (remaining == 1) {
-            const entry = iterator.next() orelse return null;
-            const weight = rootWeightAsF64(@TypeOf(entry.weight), entry.weight);
-            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
-            return if (weight > 0) entry.item else null;
-        }
+        return rootChooseIteratorWeightedExactCount(T, io, iterator, remaining);
     }
     const Pending = struct {
         item: T,
@@ -9873,6 +9910,48 @@ test "root random helpers validate deterministic cases before entropy" {
     var weighted_exact_zero_checked = SingleExactWeightedChoiceIter{ .entry = .{ .item = 42, .weight = 0 } };
     try std.testing.expectError(error.EmptyInput, chooseIteratorWeightedChecked(u8, failing, &weighted_exact_zero_checked));
     try std.testing.expectEqual(@as(usize, 1), weighted_exact_zero_checked.calls);
+    const ExactCountWeightedChoiceIter = struct {
+        entries: []const WeightedIter.Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?WeightedIter.Entry {
+            self.calls += 1;
+            if (self.index >= self.entries.len) return null;
+            const entry = self.entries[self.index];
+            self.index += 1;
+            return entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.entries.len - self.index;
+        }
+    };
+    const weighted_exact_single_positive_entries = [_]WeightedIter.Entry{
+        .{ .item = 1, .weight = 0 },
+        .{ .item = 2, .weight = 5 },
+        .{ .item = 3, .weight = 0 },
+    };
+    var weighted_exact_single_positive = ExactCountWeightedChoiceIter{ .entries = &weighted_exact_single_positive_entries };
+    try std.testing.expectEqual(@as(?u8, 2), try chooseIteratorWeighted(u8, failing, &weighted_exact_single_positive));
+    try std.testing.expectEqual(@as(usize, 3), weighted_exact_single_positive.calls);
+    var weighted_exact_single_positive_checked = ExactCountWeightedChoiceIter{ .entries = &weighted_exact_single_positive_entries };
+    try std.testing.expectEqual(@as(u8, 2), try chooseIteratorWeightedChecked(u8, failing, &weighted_exact_single_positive_checked));
+    try std.testing.expectEqual(@as(usize, 3), weighted_exact_single_positive_checked.calls);
+    const weighted_exact_two_positive_entries = [_]WeightedIter.Entry{
+        .{ .item = 1, .weight = 1 },
+        .{ .item = 2, .weight = 1 },
+    };
+    var weighted_exact_two_positive = ExactCountWeightedChoiceIter{ .entries = &weighted_exact_two_positive_entries };
+    try std.testing.expectError(error.EntropyUnavailable, chooseIteratorWeighted(u8, failing, &weighted_exact_two_positive));
+    try std.testing.expectEqual(@as(usize, 2), weighted_exact_two_positive.calls);
+    const weighted_exact_invalid_entries = [_]WeightedIter.Entry{
+        .{ .item = 1, .weight = 0 },
+        .{ .item = 2, .weight = std.math.nan(f64) },
+    };
+    var weighted_exact_invalid = ExactCountWeightedChoiceIter{ .entries = &weighted_exact_invalid_entries };
+    try std.testing.expectError(error.InvalidWeight, chooseIteratorWeighted(u8, failing, &weighted_exact_invalid));
+    try std.testing.expectEqual(@as(usize, 2), weighted_exact_invalid.calls);
     const weighted_zero_entries = [_]WeightedIter.Entry{
         .{ .item = 1, .weight = 0 },
         .{ .item = 2, .weight = 0 },

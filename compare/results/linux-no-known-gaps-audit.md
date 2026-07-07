@@ -3631,3 +3631,11 @@ returning the positive-weight subset without key sampling, extra probes, entropy
 or random-stream use. Checked variants still report insufficient positive
 entries. This improves weighted iterator fill reliability evidence but does not
 resolve S4-M11.
+
+S4-M778 avoids weighted iterator exact-count choice end probes
+(`compare/results/s4-m778-weighted-iterator-choice-exact-count.md`):
+seq/root weighted iterator one-shot choices now read exact-size sources exactly
+for their reported remaining count, preserving exact-single and single-positive
+no-entropy behavior while keeping multi-positive stream shape aligned with the
+generic weighted choice path. This improves weighted iterator choice reliability
+evidence but does not resolve S4-M11.

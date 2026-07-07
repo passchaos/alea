@@ -5034,16 +5034,50 @@ pub fn chooseIteratorWeightedCheckedFrom(source: anytype, comptime T: type, iter
     return (try chooseIteratorWeightedFrom(source, T, iterator)) orelse error.EmptyInput;
 }
 
+fn chooseIteratorWeightedExactCountFrom(source: anytype, comptime T: type, iterator: anytype, remaining: usize) !?T {
+    const Pending = struct {
+        item: T,
+        weight: f64,
+    };
+    var total: f64 = 0;
+    var result: ?T = null;
+    var pending: ?Pending = null;
+
+    var index: usize = 0;
+    while (index < remaining) : (index += 1) {
+        const entry = iterator.next() orelse break;
+        const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        if (weight == 0) continue;
+
+        if (pending == null and result == null) {
+            pending = .{ .item = entry.item, .weight = weight };
+            total = weight;
+            continue;
+        }
+
+        if (pending) |first| {
+            _ = Rng.floatFrom(source, f64);
+            result = first.item;
+            pending = null;
+        }
+
+        total += weight;
+        if (!std.math.isFinite(total)) return error.InvalidWeight;
+        if (Rng.floatFrom(source, f64) * total < weight) {
+            result = entry.item;
+        }
+    }
+
+    if (pending) |only| return only.item;
+    return result;
+}
+
 pub fn chooseIteratorWeightedFrom(source: anytype, comptime T: type, iterator: anytype) !?T {
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (iteratorExactRemaining(iterator)) |remaining| {
         if (remaining == 0) return null;
-        if (remaining == 1) {
-            const entry = iterator.next() orelse return null;
-            const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
-            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
-            return if (weight > 0) entry.item else null;
-        }
+        return chooseIteratorWeightedExactCountFrom(source, T, iterator, remaining);
     }
     const Pending = struct {
         item: T,
@@ -11850,6 +11884,97 @@ test "single exact weighted iterator choice does not probe past source" {
     try std.testing.expectError(error.InvalidWeight, chooseIteratorWeightedFrom(&engine, u8, &invalid_iter));
     try std.testing.expectEqual(@as(usize, 1), invalid_iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "exact-count weighted iterator choice does not probe past source" {
+    const alea = @import("root.zig");
+
+    const Entry = struct { item: u8, weight: f64 };
+    const ExactIter = struct {
+        entries: []const Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index >= self.entries.len) return null;
+            const entry = self.entries[self.index];
+            self.index += 1;
+            return entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.entries.len - self.index;
+        }
+    };
+    const PlainIter = struct {
+        entries: []const Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index >= self.entries.len) return null;
+            const entry = self.entries[self.index];
+            self.index += 1;
+            return entry;
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 11, .weight = 1 },
+        .{ .item = 22, .weight = 5 },
+    };
+    var engine = alea.ScalarPrng.init(0x5150_7729);
+    var reference = alea.ScalarPrng.init(0x5150_7729);
+    var iter = ExactIter{ .entries = &entries };
+    var reference_iter = PlainIter{ .entries = &entries };
+    try std.testing.expectEqual(
+        try chooseIteratorWeightedFrom(&reference, u8, &reference_iter),
+        try chooseIteratorWeightedFrom(&engine, u8, &iter),
+    );
+    try std.testing.expectEqual(@as(usize, 2), iter.calls);
+    try std.testing.expectEqual(@as(usize, 3), reference_iter.calls);
+    try std.testing.expectEqual(reference.next(), engine.next());
+
+    const single_positive_entries = [_]Entry{
+        .{ .item = 11, .weight = 0 },
+        .{ .item = 22, .weight = 5 },
+        .{ .item = 33, .weight = 0 },
+    };
+    var single_engine = alea.ScalarPrng.init(0x5150_772a);
+    var single_control = alea.ScalarPrng.init(0x5150_772a);
+    var single_iter = ExactIter{ .entries = &single_positive_entries };
+    try std.testing.expectEqual(@as(?u8, 22), try chooseIteratorWeightedFrom(&single_engine, u8, &single_iter));
+    try std.testing.expectEqual(@as(usize, 3), single_iter.calls);
+    try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    const zero_entries = [_]Entry{
+        .{ .item = 11, .weight = 0 },
+        .{ .item = 22, .weight = 0 },
+    };
+    var zero_engine = alea.ScalarPrng.init(0x5150_772b);
+    var zero_control = alea.ScalarPrng.init(0x5150_772b);
+    var zero_iter = ExactIter{ .entries = &zero_entries };
+    try std.testing.expectEqual(@as(?u8, null), try chooseIteratorWeightedFrom(&zero_engine, u8, &zero_iter));
+    try std.testing.expectEqual(@as(usize, 2), zero_iter.calls);
+    try std.testing.expectEqual(zero_control.next(), zero_engine.next());
+
+    var checked_zero_iter = ExactIter{ .entries = &zero_entries };
+    try std.testing.expectError(error.EmptyInput, chooseIteratorWeightedCheckedFrom(&zero_engine, u8, &checked_zero_iter));
+    try std.testing.expectEqual(@as(usize, 2), checked_zero_iter.calls);
+    try std.testing.expectEqual(zero_control.next(), zero_engine.next());
+
+    const invalid_entries = [_]Entry{
+        .{ .item = 11, .weight = 0 },
+        .{ .item = 22, .weight = std.math.nan(f64) },
+    };
+    var invalid_engine = alea.ScalarPrng.init(0x5150_772c);
+    var invalid_control = alea.ScalarPrng.init(0x5150_772c);
+    var invalid_iter = ExactIter{ .entries = &invalid_entries };
+    try std.testing.expectError(error.InvalidWeight, chooseIteratorWeightedFrom(&invalid_engine, u8, &invalid_iter));
+    try std.testing.expectEqual(@as(usize, 2), invalid_iter.calls);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "single-positive weighted iterator helpers do not consume random stream" {
