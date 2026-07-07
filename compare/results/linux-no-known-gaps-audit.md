@@ -2124,3 +2124,9 @@ helpers (`compare/results/s4-m563-root-weighted-by-mut-ptr-sample-helpers.md`):
 system-entropy callers can now allocate no-replacement weighted mutable-pointer
 samples directly from a mutable item slice and comptime item-weight accessor
 from the root API while S4-M11 remains blocked.
+
+S4-M564 adds root item-accessor weighted no-replacement value into helpers
+(`compare/results/s4-m564-root-weighted-by-value-into-helpers.md`):
+system-entropy callers can now fill caller-owned no-replacement weighted value
+buffers directly from an item slice and comptime item-weight accessor from the
+root API while S4-M11 remains blocked.
