@@ -2196,3 +2196,9 @@ S4-M575 adds root length-weighted no-replacement IndexVec sample helpers
 system-entropy callers can now allocate no-replacement weighted `IndexVec`
 samples directly from a length and comptime index-weight accessor from the root
 API while S4-M11 remains blocked.
+
+S4-M576 adds root length-weighted no-replacement index into helpers
+(`compare/results/s4-m576-root-weighted-by-index-index-into-helpers.md`):
+system-entropy callers can now fill caller-owned no-replacement weighted `usize`
+index buffers directly from a length and comptime index-weight accessor from the
+root API while S4-M11 remains blocked.

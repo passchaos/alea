@@ -1871,6 +1871,37 @@ pub fn sampleWeightedIndicesByIntoChecked(comptime T: type, comptime Weight: typ
     try seq.sampleWeightedIndicesByIntoChecked(random_source, T, Weight, items, out, scratch_keys, weightFn);
 }
 
+pub fn sampleWeightedIndicesByIndexInto(comptime Weight: type, io: std.Io, length: usize, out: []usize, scratch_keys: []f64, comptime weightFn: fn (usize) Weight) !usize {
+    if (out.len == 0) return 0;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (length == 0) return error.EmptyInput;
+    const state = try rootPositiveIndexStateByIndex(Weight, length, weightFn);
+    const count = @min(out.len, state.count);
+    if (count == 0) return 0;
+    if (state.count == 1) {
+        out[0] = state.single_index.?;
+        return 1;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedIndicesByIndexInto(random_source, Weight, length, out, scratch_keys, weightFn);
+}
+
+pub fn sampleWeightedIndicesByIndexIntoChecked(comptime Weight: type, io: std.Io, length: usize, out: []usize, scratch_keys: []f64, comptime weightFn: fn (usize) Weight) !void {
+    if (out.len == 0) return;
+    if (scratch_keys.len < out.len) return error.LengthMismatch;
+    if (out.len > length) return error.InvalidParameter;
+    const state = try rootPositiveIndexStateByIndex(Weight, length, weightFn);
+    if (state.count < out.len) return error.InvalidParameter;
+    if (state.count == 1) {
+        out[0] = state.single_index.?;
+        return;
+    }
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    try seq.sampleWeightedIndicesByIndexIntoChecked(random_source, Weight, length, out, scratch_keys, weightFn);
+}
+
 pub fn sampleWeightedInto(comptime T: type, comptime Weight: type, io: std.Io, items: []const T, weights: []const Weight, out: []T, scratch_indices: []usize, scratch_keys: []f64) !usize {
     if (out.len == 0) return 0;
     if (items.len != weights.len) return error.LengthMismatch;
@@ -6365,6 +6396,30 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 1), single_weighted_index_vec_by_index_checked.at(0));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexVecByIndex(f64, failing, std.testing.allocator, 3, 2, RootByIndexWeights.invalid));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexVecByIndexChecked(f64, failing, std.testing.allocator, 3, 2, RootByIndexWeights.invalid));
+    var empty_weighted_indices_by_index_into: [0]usize = .{};
+    var empty_weighted_by_index_keys_into: [0]f64 = .{};
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesByIndexInto(f64, failing, 3, &empty_weighted_indices_by_index_into, &empty_weighted_by_index_keys_into, RootByIndexWeights.invalid));
+    try sampleWeightedIndicesByIndexIntoChecked(f64, failing, 3, &empty_weighted_indices_by_index_into, &empty_weighted_by_index_keys_into, RootByIndexWeights.invalid);
+    var weighted_indices_by_index_bad_scratch: [2]usize = undefined;
+    var weighted_indices_by_index_short_keys: [1]f64 = undefined;
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedIndicesByIndexInto(f64, failing, 3, &weighted_indices_by_index_bad_scratch, &weighted_indices_by_index_short_keys, RootByIndexWeights.weight));
+    try std.testing.expectError(error.LengthMismatch, sampleWeightedIndicesByIndexIntoChecked(f64, failing, 3, &weighted_indices_by_index_bad_scratch, &weighted_indices_by_index_short_keys, RootByIndexWeights.weight));
+    var weighted_indices_by_index_one: [1]usize = undefined;
+    var weighted_indices_by_index_one_key: [1]f64 = undefined;
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesByIndexInto(f64, failing, 0, &weighted_indices_by_index_one, &weighted_indices_by_index_one_key, RootByIndexWeights.single));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexIntoChecked(f64, failing, 0, &weighted_indices_by_index_one, &weighted_indices_by_index_one_key, RootByIndexWeights.single));
+    var weighted_indices_by_index_zero: [2]usize = undefined;
+    var weighted_indices_by_index_two_keys: [2]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 0), try sampleWeightedIndicesByIndexInto(f64, failing, 3, &weighted_indices_by_index_zero, &weighted_indices_by_index_two_keys, RootByIndexWeights.zero));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexIntoChecked(f64, failing, 3, &weighted_indices_by_index_zero, &weighted_indices_by_index_two_keys, RootByIndexWeights.zero));
+    var weighted_indices_by_index_single: [2]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 1), try sampleWeightedIndicesByIndexInto(f64, failing, 3, &weighted_indices_by_index_single, &weighted_indices_by_index_two_keys, RootByIndexWeights.single));
+    try std.testing.expectEqual(@as(usize, 1), weighted_indices_by_index_single[0]);
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexIntoChecked(f64, failing, 3, &weighted_indices_by_index_single, &weighted_indices_by_index_two_keys, RootByIndexWeights.single));
+    try sampleWeightedIndicesByIndexIntoChecked(f64, failing, 3, &weighted_indices_by_index_one, &weighted_indices_by_index_one_key, RootByIndexWeights.single);
+    try std.testing.expectEqual(@as(usize, 1), weighted_indices_by_index_one[0]);
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesByIndexInto(f64, failing, 3, &weighted_indices_by_index_zero, &weighted_indices_by_index_two_keys, RootByIndexWeights.invalid));
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesByIndexIntoChecked(f64, failing, 3, &weighted_indices_by_index_zero, &weighted_indices_by_index_two_keys, RootByIndexWeights.invalid));
     const RootItemWeights = struct {
         const Entry = struct {
             item: u8,
@@ -7779,6 +7834,9 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesU32ByIndexChecked(f64, failing, std.testing.allocator, 2, 2, RootByIndexWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndexVecByIndex(f64, failing, std.testing.allocator, 2, 2, RootByIndexWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndexVecByIndexChecked(f64, failing, std.testing.allocator, 2, 2, RootByIndexWeights.weight));
+    var weighted_indices_by_index_entropy: [2]usize = undefined;
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesByIndexInto(f64, failing, 2, &weighted_indices_by_index_entropy, &weighted_indices_entropy_keys, RootByIndexWeights.weight));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesByIndexIntoChecked(f64, failing, 2, &weighted_indices_by_index_entropy, &weighted_indices_entropy_keys, RootByIndexWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexBy(RootItemWeights.Entry, f64, failing, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexByChecked(RootItemWeights.Entry, f64, failing, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexU32By(RootItemWeights.Entry, f64, failing, weighted_by_items[0..2], RootItemWeights.weight));
