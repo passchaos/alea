@@ -17756,6 +17756,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
+            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
             const out = try allocator.alloc(usize, amount);
             errdefer allocator.free(out);
             try self.fillCheckedFrom(source, out);
@@ -17780,6 +17781,7 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillU32CheckedFrom(source, out);
@@ -18519,6 +18521,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
+            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
             const out = try allocator.alloc(usize, amount);
             errdefer allocator.free(out);
             try self.fillCheckedFrom(source, out);
@@ -18543,6 +18546,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillU32CheckedFrom(source, out);
@@ -21340,6 +21344,16 @@ test "weighted tree owned index batches mirror fills" {
     defer invalid_tree.deinit();
     try std.testing.expectError(error.InvalidWeight, invalid_tree.indicesCheckedFrom(std.testing.allocator, &batch_engine, 1));
     try std.testing.expectError(error.InvalidWeight, invalid_tree.indicesU32CheckedFrom(std.testing.allocator, &batch_engine, 1));
+    var invalid_engine = alea.ScalarPrng.init(0x5150_d5a0);
+    var invalid_control = alea.ScalarPrng.init(0x5150_d5a0);
+    var invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, invalid_tree.indicesCheckedFrom(invalid_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expect(!invalid_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var invalid_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, invalid_tree.indicesU32CheckedFrom(invalid_u32_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expect(!invalid_u32_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
     fill_engine = alea.ScalarPrng.init(0x5150_d50c);
     batch_engine = alea.ScalarPrng.init(0x5150_d50c);
@@ -21371,6 +21385,19 @@ test "weighted tree owned index batches mirror fills" {
     defer std.testing.allocator.free(single_batch_u32);
     try std.testing.expectEqualSlices(u32, &.{ 2, 2, 2, 2 }, single_batch_u32);
     try std.testing.expectEqual(single_control.next(), single_engine.next());
+
+    var invalid_int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0 });
+    defer invalid_int_tree.deinit();
+    invalid_engine = alea.ScalarPrng.init(0x5150_d5a1);
+    invalid_control = alea.ScalarPrng.init(0x5150_d5a1);
+    var invalid_int_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, invalid_int_tree.indicesCheckedFrom(invalid_int_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expect(!invalid_int_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    var invalid_int_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, invalid_int_tree.indicesU32CheckedFrom(invalid_int_u32_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expect(!invalid_int_u32_alloc.has_induced_failure);
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "weighted tree index aliases mirror sample helpers" {

@@ -3430,3 +3430,12 @@ S4-M748 tightens owned compact index prevalidation for dynamic weighted trees
 populations before allocation or random-stream use. This improves reliability
 evidence for Alea's dynamic compact weighted-index extension but does not
 resolve S4-M11.
+
+S4-M749 tightens invalid-state prevalidation for dynamic weighted-tree owned
+indexes
+(`compare/results/s4-m749-weighted-tree-invalid-owned-indices-prevalidation.md`):
+`WeightedTree.indicesCheckedFrom` / `indicesU32CheckedFrom` and
+`WeightedIntTree.indicesCheckedFrom` / `indicesU32CheckedFrom` now reject invalid
+all-zero trees before allocation or random-stream use for non-zero requests.
+This improves reliability evidence for dynamic weighted-index workflows but does
+not resolve S4-M11.
