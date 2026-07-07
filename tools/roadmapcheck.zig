@@ -590,6 +590,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M592", .path = "compare/results/s4-m592-root-index-fill-batch-empty-range-prevalidation.md" },
     .{ .milestone = "S4-M593", .path = "compare/results/s4-m593-root-value-choose-fill-batch-empty-input-prevalidation.md" },
     .{ .milestone = "S4-M594", .path = "compare/results/s4-m594-root-const-ptr-choose-fill-batch-empty-input-prevalidation.md" },
+    .{ .milestone = "S4-M595", .path = "compare/results/s4-m595-root-mut-ptr-choose-fill-batch-empty-input-prevalidation.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -597,7 +598,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M595",
+    "S4-M596",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -909,12 +910,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M595 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M595 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M596 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M596 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M595 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M595 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M596 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M596 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {

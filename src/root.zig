@@ -651,6 +651,7 @@ pub fn choosePtrChecked(comptime T: type, io: std.Io, items: []T) !*T {
 
 pub fn fillChoosePtr(comptime T: type, io: std.Io, dest: []*T, items: []T) !void {
     if (dest.len == 0) return;
+    if (items.len == 0) return error.EmptyRange;
     if (items.len == 1) {
         @memset(dest, &items[0]);
         return;
@@ -673,6 +674,8 @@ pub fn fillChoosePtrChecked(comptime T: type, io: std.Io, dest: []*T, items: []T
 }
 
 pub fn choosePtrBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []T) ![]*T {
+    if (count == 0) return allocator.alloc(*T, 0);
+    if (items.len == 0) return error.EmptyRange;
     const out = try allocator.alloc(*T, count);
     errdefer allocator.free(out);
     try fillChoosePtr(T, io, out, items);
@@ -6189,6 +6192,8 @@ test "root random helpers validate deterministic cases before entropy" {
     var empty_ptrs: [0]*u8 = .{};
     try fillChoosePtr(u8, failing, &empty_ptrs, &.{});
     try fillChoosePtrChecked(u8, failing, &empty_ptrs, &.{});
+    var empty_ptrs_nonempty: [1]*u8 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChoosePtr(u8, failing, &empty_ptrs_nonempty, &.{}));
     var fixed_ptrs: [3]*u8 = undefined;
     try fillChoosePtr(u8, failing, &fixed_ptrs, &mutable_singleton);
     for (fixed_ptrs) |value| try std.testing.expectEqual(&mutable_singleton[0], value);
@@ -6197,6 +6202,7 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_ptr_batch = try choosePtrBatch(u8, failing, std.testing.allocator, 0, &.{});
     defer std.testing.allocator.free(empty_ptr_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_ptr_batch.len);
+    try std.testing.expectError(error.EmptyRange, choosePtrBatch(u8, failing, std.testing.allocator, 1, &.{}));
     const empty_ptr_batch_checked = try choosePtrBatchChecked(u8, failing, std.testing.allocator, 0, &.{});
     defer std.testing.allocator.free(empty_ptr_batch_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_ptr_batch_checked.len);

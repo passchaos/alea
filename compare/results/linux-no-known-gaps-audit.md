@@ -2324,3 +2324,10 @@ root system-entropy callers now get deterministic non-empty empty-input failures
 before secure-engine construction for `fillChooseConstPtr` and
 `chooseConstPtrBatch`, while empty destinations and zero-count batches still
 return deterministically and S4-M11 remains blocked.
+
+S4-M595 adds root mutable-pointer choose fill/batch empty-input prevalidation
+(`compare/results/s4-m595-root-mut-ptr-choose-fill-batch-empty-input-prevalidation.md`):
+root system-entropy callers now get deterministic non-empty empty-input failures
+before secure-engine construction for `fillChoosePtr` and `choosePtrBatch`,
+while empty destinations and zero-count batches still return deterministically
+and S4-M11 remains blocked.
