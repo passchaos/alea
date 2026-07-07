@@ -804,7 +804,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M763 iterator exact-empty caller-owned prevalidation | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m763-iterator-exact-empty-caller-owned-prevalidation.md` | Closed for the current bar: caller-owned iterator helpers now return zero for exact-empty sources before iterator consumption, entropy, or random-stream use. |
 | S4-M764 weighted iterator choice exact-empty prevalidation | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m764-weighted-iterator-choice-exact-empty-prevalidation.md` | Closed for the current bar: weighted iterator one-shot choice helpers now handle exact-empty sources before iterator consumption, entropy, or random-stream use. |
 | S4-M765 iterator choice exact-empty prevalidation | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m765-iterator-choice-exact-empty-prevalidation.md` | Closed for the current bar: unweighted iterator one-shot choice helpers now handle exact-empty sources before iterator consumption, entropy, or random-stream use. |
-| S4-M766 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M766 root iterator sample exact-empty allocation prevalidation | `src/root.zig`, `compare/results/s4-m766-root-iterator-sample-exact-empty-prevalidation.md` | Closed for the current bar: root allocation-returning unweighted iterator samples now return empty outputs for exact-empty sources before allocation, consumption, entropy, or random-stream use. |
+| S4-M767 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2369,6 +2370,9 @@ S4-M11 or complete the long-term objective.
 S4-M765 additionally tightens unweighted iterator one-shot choice helpers for
 exact-empty sources; it is reliability/validation work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M766 additionally tightens root allocation-returning unweighted iterator
+samples for exact-empty sources; it is reliability/validation work and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

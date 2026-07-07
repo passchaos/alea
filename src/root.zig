@@ -2464,6 +2464,9 @@ pub fn chooseIteratorWeightedChecked(comptime T: type, io: std.Io, iterator: any
 pub fn sampleIterator(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
+    if (rootIteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return allocator.alloc(T, 0);
+    }
 
     const initial_capacity = if (rootIteratorExactRemaining(iterator)) |remaining| @min(amount, remaining) else amount;
     var reservoir = try std.ArrayList(T).initCapacity(allocator, initial_capacity);
@@ -9837,6 +9840,25 @@ test "root random helpers validate deterministic cases before entropy" {
     const sample_iter_short_out = try sampleIterator(u8, failing, std.testing.allocator, &sample_iter_short, 4);
     defer std.testing.allocator.free(sample_iter_short_out);
     try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample_iter_short_out);
+    const EmptyExactSampleIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+    var sample_iter_exact_empty = EmptyExactSampleIter{};
+    var sample_iter_exact_empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const sample_iter_exact_empty_out = try sampleIterator(u8, failing, sample_iter_exact_empty_alloc.allocator(), &sample_iter_exact_empty, 8);
+    defer sample_iter_exact_empty_alloc.allocator().free(sample_iter_exact_empty_out);
+    try std.testing.expectEqual(@as(usize, 0), sample_iter_exact_empty_out.len);
+    try std.testing.expectEqual(@as(usize, 0), sample_iter_exact_empty.calls);
+    try std.testing.expect(!sample_iter_exact_empty_alloc.has_induced_failure);
     var sample_iter_exact = SliceIter{ .items = &.{ 1, 2 } };
     const sample_iter_exact_out = try sampleIteratorChecked(u8, failing, std.testing.allocator, &sample_iter_exact, 2);
     defer std.testing.allocator.free(sample_iter_exact_out);

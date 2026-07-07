@@ -3545,3 +3545,9 @@ S4-M765 tightens unweighted iterator one-shot exact-empty prevalidation
 seq/root unweighted iterator choice helpers now return null or EmptyInput for
 exact-empty sources before iterator consumption, entropy, or random-stream use.
 This improves iterator choice reliability evidence but does not resolve S4-M11.
+
+S4-M766 tightens root iterator sample exact-empty allocation prevalidation
+(`compare/results/s4-m766-root-iterator-sample-exact-empty-prevalidation.md`):
+root `sampleIterator` now returns an empty output for exact-empty sources before
+reservoir allocation, iterator consumption, entropy, or random-stream use. This
+improves iterator sampling reliability evidence but does not resolve S4-M11.
