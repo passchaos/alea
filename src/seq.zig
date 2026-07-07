@@ -825,6 +825,7 @@ pub fn chooseRepeatedValueArrayFrom(source: anytype, comptime T: type, comptime 
     var out: [N]T = undefined;
     if (N == 0) return out;
     if (items.len == 0) return null;
+    if (comptime valueTypeHasEmptyEnum(T)) return null;
     fillChooseFrom(source, T, &out, items);
     return out;
 }
@@ -12020,6 +12021,18 @@ test "seq repeated choice arrays mirror Rng fixed choice arrays" {
     try std.testing.expectError(error.EmptyInput, chooseRepeatedValueArrayCheckedFrom(&empty_engine, u8, 3, &.{}));
     try std.testing.expectError(error.EmptyInput, chooseRepeatedConstPtrArrayCheckedFrom(&empty_engine, u8, 3, &.{}));
     try std.testing.expectError(error.EmptyInput, chooseRepeatedPtrArrayCheckedFrom(&empty_engine, u8, 3, &empty_mutable));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+    var empty_value_items: [1]Payload = undefined;
+    try std.testing.expect(chooseRepeatedValueArrayFrom(&empty_engine, Payload, 1, &empty_value_items) == null);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    if (chooseRepeatedValueArrayCheckedFrom(&empty_engine, Payload, 1, &empty_value_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
     var single_engine = alea.ScalarPrng.init(0x5150_0c34);
