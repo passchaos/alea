@@ -2160,3 +2160,9 @@ S4-M569 adds root item-accessor weighted no-replacement IndexVec sample helpers
 system-entropy callers can now allocate no-replacement weighted `IndexVec`
 samples directly from an item slice and comptime item-weight accessor from the
 root API while S4-M11 remains blocked.
+
+S4-M570 adds root item-accessor weighted no-replacement index into helpers
+(`compare/results/s4-m570-root-weighted-by-index-into-helpers.md`):
+system-entropy callers can now fill caller-owned no-replacement weighted `usize`
+index buffers directly from an item slice and comptime item-weight accessor from
+the root API while S4-M11 remains blocked.
