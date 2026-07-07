@@ -1059,6 +1059,7 @@ pub fn chooseMultipleMutPtrsIntoChecked(comptime T: type, io: std.Io, items: []T
 
 pub fn sampleItemsIter(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) !seq.SampledValueIterator(T) {
     if (amount > items.len) return error.InvalidParameter;
+    if (amount != 0 and comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return try sampleItemsIterChecked(T, io, allocator, items, amount);
 }
 
@@ -1068,6 +1069,7 @@ pub fn sampleItemsIterChecked(comptime T: type, io: std.Io, allocator: std.mem.A
         const index_vec: IndexVec = .{ .u32 = try allocator.alloc(u32, 0) };
         return .{ .items = items, .index_iter = index_vec.intoIter(allocator) };
     }
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (amount == items.len) {
         const index_vec = try rootIndexVecAll(allocator, items.len);
         return .{ .items = items, .index_iter = index_vec.intoIter(allocator) };
@@ -7128,6 +7130,24 @@ test "root random helpers validate deterministic cases before entropy" {
     var all_values_iter_checked_out: [3]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 3), all_values_iter_checked.fill(&all_values_iter_checked_out));
     try std.testing.expectEqualSlices(u8, &sample_items, &all_values_iter_checked_out);
+    var empty_enum_iter_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleItemsIter(EmptyEnum, failing, empty_enum_iter_alloc.allocator(), fake_empty_enum_items, 1)) |unexpected| {
+        var iter = unexpected;
+        iter.deinit();
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_enum_iter_alloc.has_induced_failure);
+    var empty_enum_iter_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleItemsIterChecked(EmptyEnum, failing, empty_enum_iter_checked_alloc.allocator(), fake_empty_enum_items, 1)) |unexpected| {
+        var iter = unexpected;
+        iter.deinit();
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_enum_iter_checked_alloc.has_induced_failure);
     var invalid_values_iter_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidParameter, sampleItemsIter(u8, failing, invalid_values_iter_alloc.allocator(), &sample_items, sample_items.len + 1));
     try std.testing.expectError(error.InvalidParameter, sampleItemsIterChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));

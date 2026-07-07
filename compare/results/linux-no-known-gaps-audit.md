@@ -3113,3 +3113,10 @@ root weighted iterator one-shot value choice helpers now reject empty
 enum-containing output types before iterator consumption, weight evaluation,
 entropy, secure-engine construction, random-stream use, and value copying. This
 improves failure determinism but does not resolve S4-M11.
+
+S4-M699 adds root sampled value iterator empty-type prevalidation
+(`compare/results/s4-m699-root-sampled-value-iter-empty-type-prevalidation.md`):
+root sampled value iterator aliases now reject non-zero empty enum-containing
+output types before index allocation, entropy, secure-engine construction,
+random-stream use, iterator construction, and value copying. This improves
+failure determinism but does not resolve S4-M11.
