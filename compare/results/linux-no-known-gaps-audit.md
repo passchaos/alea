@@ -2040,3 +2040,9 @@ S4-M549 adds root item-accessor weighted value choice helpers
 (`compare/results/s4-m549-root-weighted-by-value-helpers.md`): system-entropy
 callers can now choose weighted values directly from an item slice and comptime
 item-weight accessor from the root API while S4-M11 remains blocked.
+
+S4-M550 adds root item-accessor weighted const-pointer choice helpers
+(`compare/results/s4-m550-root-weighted-by-const-ptr-helpers.md`):
+system-entropy callers can now choose weighted const pointers directly from an
+item slice and comptime item-weight accessor from the root API while S4-M11
+remains blocked.
