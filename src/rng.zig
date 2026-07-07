@@ -343,7 +343,6 @@ fn valueTypeHasEmptyEnum(comptime T: type) bool {
         .@"enum" => std.enums.values(T).len == 0,
         .array => |array_info| array_info.len != 0 and valueTypeHasEmptyEnum(array_info.child),
         .@"struct" => |struct_info| blk: {
-            if (!struct_info.is_tuple) break :blk false;
             inline for (struct_info.fields) |field| {
                 if (valueTypeHasEmptyEnum(field.type)) break :blk true;
             }
@@ -6783,6 +6782,17 @@ test "sample without replacement validates empty value types before allocation" 
     try std.testing.expect(!direct_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const Named = struct { value: u8, empty: Empty };
+    var named_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleWithoutReplacementCheckedFrom(&engine, Named, named_alloc.allocator(), @as([*]const Named, @ptrFromInt(0x1000))[0..1], 1)) |unexpected| {
+        named_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!named_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     if (sampleWithoutReplacementCheckedFrom(&engine, struct { u8, Empty }, checked_alloc.allocator(), @as([*]const struct { u8, Empty }, @ptrFromInt(0x1000))[0..1], 1)) |unexpected| {
         checked_alloc.allocator().free(unexpected);
@@ -8974,6 +8984,17 @@ test "owned checked values validate empty enums before consuming random stream" 
     }
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const Named = struct { value: u8, empty: Empty };
+    var named_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (valueBatchFrom(&engine, Named, named_alloc.allocator(), 1)) |unexpected| {
+        defer named_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!named_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var tuple_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     if (valueBatchFrom(&engine, struct { u8, Empty }, tuple_alloc.allocator(), 1)) |unexpected| {
         defer tuple_alloc.allocator().free(unexpected);
@@ -9014,6 +9035,17 @@ test "owned sampler batches validate empty output types before consuming random 
         try std.testing.expectEqual(error.EmptyRange, err);
     }
     try std.testing.expect(!unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const Named = struct { value: u8, empty: Empty };
+    var named_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleBatchFrom(&engine, Named, named_alloc.allocator(), EmptySampler{}, 1)) |unexpected| {
+        defer named_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!named_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var direct_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });

@@ -3029,3 +3029,10 @@ root parallel-weight value choice helpers now reject non-zero empty
 enum-containing value types before weighted-index sampling, allocation, entropy,
 and value copying in scalar, fill, array, and batch value-choice paths. This
 improves failure determinism but does not resolve S4-M11.
+
+S4-M687 adds `Rng` regular-struct empty-type prevalidation
+(`compare/results/s4-m687-rng-regular-struct-empty-type-prevalidation.md`):
+`Rng` empty-type detection now rejects regular structs containing empty enum
+fields before allocation and random-stream use in value batches, sampler
+batches, and no-replacement value samples. This improves failure determinism but
+does not resolve S4-M11.

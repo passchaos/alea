@@ -725,7 +725,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M684 root accessor-weighted value choice empty-type prevalidation | `src/root.zig`, `compare/results/s4-m684-root-weighted-by-value-empty-type-prevalidation.md` | Closed for the current bar: root item-accessor weighted value choice helpers now reject non-zero uninhabited value types before accessor weight evaluation, allocation, entropy, or value copying. |
 | S4-M685 root index-weighted value choice empty-type prevalidation | `src/root.zig`, `compare/results/s4-m685-root-weighted-by-index-value-empty-type-prevalidation.md` | Closed for the current bar: root index-weighted value choice helpers now reject non-zero uninhabited value types before index-weight validation, allocation, entropy, or value copying. |
 | S4-M686 root weighted value choice empty-type prevalidation | `src/root.zig`, `compare/results/s4-m686-root-weighted-value-empty-type-prevalidation.md` | Closed for the current bar: root parallel-weight value choice helpers now reject non-zero uninhabited value types before weighted-index sampling, allocation, entropy, or value copying. |
-| S4-M687 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M687 Rng regular-struct empty-type prevalidation | `src/rng.zig`, `compare/results/s4-m687-rng-regular-struct-empty-type-prevalidation.md` | Closed for the current bar: `Rng` empty-type detection now rejects regular structs containing empty enum fields before allocation or random-stream use. |
+| S4-M688 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2043,6 +2044,9 @@ complete the long-term objective.
 S4-M686 additionally tightens root parallel-weight value choice empty-type
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M687 additionally tightens `Rng` regular-struct empty-type prevalidation; it
+is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
