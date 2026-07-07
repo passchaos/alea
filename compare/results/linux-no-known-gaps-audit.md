@@ -2660,3 +2660,11 @@ allocation and secure-engine construction for `sampleWithoutReplacement`,
 `samplePtrs`, `sampleMutPtrs`, `sampleItemsIter`, `samplePtrsIter`, and
 `sampleMutPtrsIter`, while zero-output and full-range deterministic paths remain
 allocation-only and S4-M11 remains blocked.
+
+S4-M641 adds root checked iterator exact-short prevalidation
+(`compare/results/s4-m641-root-iterator-exact-short-prevalidation.md`): checked
+iterator sample helpers now use exact remaining metadata (`sizeHint`, `len`, or
+`remaining`) to reject impossible requests before allocation, secure-engine
+construction, and iterator consumption for scalar, into/fill, array, weighted
+allocation, weighted into, and weighted array checked paths. This improves
+failure determinism but does not resolve S4-M11.
