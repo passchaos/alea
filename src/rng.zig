@@ -3642,6 +3642,7 @@ pub fn chooseWeighted(self: Rng, comptime T: type, items: []const T, weights: []
 
 pub fn chooseWeightedFrom(source: anytype, comptime T: type, items: []const T, weights: []const f64) Error!?T {
     if (items.len != weights.len) return error.InvalidParameter;
+    if (items.len != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const index = try weightedIndexCheckedFrom(source, weights) orelse return null;
     return items[index];
 }
@@ -3654,6 +3655,7 @@ pub fn chooseWeightedValueArrayFrom(source: anytype, comptime T: type, comptime 
     var out: [N]T = undefined;
     if (N == 0) return out;
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const validation = try validateWeightedIndexWeightsAllowEmpty(weights);
     if (validation.total == 0) return null;
     if (validation.single_positive) |index| {
@@ -3671,6 +3673,7 @@ pub fn fillChooseWeighted(self: Rng, comptime T: type, dest: []?T, items: []cons
 pub fn fillChooseWeightedFrom(source: anytype, comptime T: type, dest: []?T, items: []const T, weights: []const f64) Error!void {
     if (dest.len == 0) return;
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const validation = try validateWeightedIndexWeightsAllowEmpty(weights);
     if (validation.total == 0) {
         @memset(dest, @as(?T, null));
@@ -3690,6 +3693,7 @@ pub fn chooseWeightedBatch(self: Rng, comptime T: type, allocator: std.mem.Alloc
 pub fn chooseWeightedBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]?T {
     if (count == 0) return allocator.alloc(?T, 0);
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const validation = try validateWeightedIndexWeightsAllowEmpty(weights);
     const out = try allocator.alloc(?T, count);
     errdefer allocator.free(out);
@@ -3717,6 +3721,7 @@ pub fn chooseWeightedValueArrayCheckedFrom(source: anytype, comptime T: type, co
     var out: [N]T = undefined;
     if (N == 0) return out;
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const validation = try validateWeightedIndexWeights(weights);
     if (validation.single_positive) |index| {
         @memset(out[0..], items[index]);
@@ -3729,6 +3734,7 @@ pub fn chooseWeightedValueArrayCheckedFrom(source: anytype, comptime T: type, co
 pub fn fillChooseWeightedCheckedFrom(source: anytype, comptime T: type, dest: []T, items: []const T, weights: []const f64) Error!void {
     if (dest.len == 0) return;
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const validation = try validateWeightedIndexWeights(weights);
     if (validation.single_positive) |index| {
         @memset(dest, items[index]);
@@ -3744,6 +3750,7 @@ pub fn chooseWeightedBatchChecked(self: Rng, comptime T: type, allocator: std.me
 pub fn chooseWeightedBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const validation = try validateWeightedIndexWeights(weights);
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
@@ -7929,6 +7936,67 @@ test "single-positive weighted index does not consume random stream" {
 
     const direct_weighted_u32_index_array = (try weightedIndexU32ArrayFrom(&engine, 5, &.{ 0.0, 0.0, 7.0 })).?;
     for (direct_weighted_u32_index_array) |draw| try std.testing.expectEqual(@as(u32, 2), draw);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "weighted value choices validate empty value types before sampling" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+
+    var engine = alea.ScalarPrng.init(0x5150_b9d);
+    var control = alea.ScalarPrng.init(0x5150_b9d);
+    const rng = Rng.init(&engine);
+    var items: [1]Payload = undefined;
+    const weights = [_]f64{1};
+
+    if (rng.chooseWeighted(Payload, &items, &weights)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (chooseWeightedValueArrayFrom(&engine, Payload, 1, &items, &weights)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var optional_out: [1]?Payload = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseWeightedFrom(&engine, Payload, &optional_out, &items, &weights));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchFrom(&engine, Payload, unchecked_alloc.allocator(), 1, &items, &weights)) |unexpected| {
+        unchecked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (chooseWeightedValueArrayCheckedFrom(&engine, Payload, 1, &items, &weights)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_out: [1]Payload = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseWeightedCheckedFrom(&engine, Payload, &checked_out, &items, &weights));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchCheckedFrom(&engine, Payload, checked_alloc.allocator(), 1, &items, &weights)) |unexpected| {
+        checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!checked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

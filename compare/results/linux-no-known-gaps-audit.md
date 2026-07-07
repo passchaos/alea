@@ -3060,3 +3060,10 @@ helpers now reject non-zero empty enum-containing output types before accessor
 weight evaluation, entropy, secure-engine construction, weighted-key sampling,
 random-stream use, and value copying. This improves failure determinism but does
 not resolve S4-M11.
+
+S4-M691 adds `Rng` weighted value empty-type prevalidation
+(`compare/results/s4-m691-rng-weighted-value-empty-type-prevalidation.md`):
+`Rng` weighted value-choice helpers now reject non-zero empty enum-containing
+output types before allocation, weighted-index sampling, random-stream use, and
+value copying in scalar, fill, array, and batch paths. This improves failure
+determinism but does not resolve S4-M11.

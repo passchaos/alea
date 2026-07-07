@@ -729,7 +729,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M688 seq weighted sample empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m688-seq-weighted-sample-empty-type-prevalidation.md` | Closed for the current bar: `seq` parallel-weighted no-replacement value sample helpers now reject non-zero uninhabited value types before allocation, weighted-key sampling, random-stream use, or value copying. |
 | S4-M689 seq accessor-weighted sample empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m689-seq-weighted-by-sample-empty-type-prevalidation.md` | Closed for the current bar: `seq` item-accessor weighted no-replacement value sample helpers now reject non-zero uninhabited value types before accessor weight evaluation, allocation, weighted-key sampling, random-stream use, or value copying. |
 | S4-M690 root weighted into empty-type prevalidation | `src/root.zig`, `compare/results/s4-m690-root-weighted-into-empty-type-prevalidation.md` | Closed for the current bar: root weighted no-replacement caller-owned value helpers now reject non-zero uninhabited output types before accessor weight evaluation, entropy, secure-engine construction, weighted-key sampling, random-stream use, or value copying. |
-| S4-M691 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M691 rng weighted value empty-type prevalidation | `src/rng.zig`, `compare/results/s4-m691-rng-weighted-value-empty-type-prevalidation.md` | Closed for the current bar: `Rng` weighted value-choice helpers now reject non-zero uninhabited output types before allocation, weighted-index sampling, random-stream use, or value copying. |
+| S4-M692 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2059,6 +2060,9 @@ does not resolve S4-M11 or complete the long-term objective.
 S4-M690 additionally tightens root weighted no-replacement caller-owned
 value output empty-type prevalidation; it is reliability/ergonomics work and
 does not resolve S4-M11 or complete the long-term objective.
+S4-M691 additionally tightens `Rng` weighted value-choice empty-type
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
