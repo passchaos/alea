@@ -504,6 +504,8 @@ pub fn rangeAtMostBatch(self: Rng, comptime T: type, allocator: std.mem.Allocato
 }
 
 pub fn rangeAtMostBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    try validateRangeAtMostParams(T, min, max);
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     fillRangeAtMostFrom(source, T, out, min, max);
@@ -515,8 +517,6 @@ pub fn rangeAtMostBatchChecked(self: Rng, comptime T: type, allocator: std.mem.A
 }
 
 pub fn rangeAtMostBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
-    if (count == 0) return allocator.alloc(T, 0);
-    try validateRangeAtMostParams(T, min, max);
     return rangeAtMostBatchFrom(source, T, allocator, count, min, max);
 }
 
@@ -554,6 +554,9 @@ pub fn uintLessThanBatch(self: Rng, comptime T: type, allocator: std.mem.Allocat
 }
 
 pub fn uintLessThanBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, less_than: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    comptime requireUnsigned(T);
+    if (less_than == 0) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     fillUintLessThanFrom(source, T, out, less_than);
@@ -565,9 +568,6 @@ pub fn uintLessThanBatchChecked(self: Rng, comptime T: type, allocator: std.mem.
 }
 
 pub fn uintLessThanBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, less_than: T) ![]T {
-    if (count == 0) return allocator.alloc(T, 0);
-    comptime requireUnsigned(T);
-    if (less_than == 0) return error.EmptyRange;
     return uintLessThanBatchFrom(source, T, allocator, count, less_than);
 }
 
@@ -626,6 +626,8 @@ pub fn rangeBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, cou
 }
 
 pub fn rangeBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    try validateRangeParams(T, min, max);
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     fillRangeFrom(source, T, out, min, max);
@@ -637,8 +639,6 @@ pub fn rangeBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Allocat
 }
 
 pub fn rangeBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
-    if (count == 0) return allocator.alloc(T, 0);
-    try validateRangeParams(T, min, max);
     return rangeBatchFrom(source, T, allocator, count, min, max);
 }
 
@@ -762,6 +762,8 @@ pub fn chanceBatch(self: Rng, allocator: std.mem.Allocator, count: usize, p: f64
 }
 
 pub fn chanceBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, p: f64) ![]bool {
+    if (count == 0) return allocator.alloc(bool, 0);
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
     const out = try allocator.alloc(bool, count);
     errdefer allocator.free(out);
     fillChanceFrom(source, out, p);
@@ -773,8 +775,6 @@ pub fn chanceBatchChecked(self: Rng, allocator: std.mem.Allocator, count: usize,
 }
 
 pub fn chanceBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, p: f64) ![]bool {
-    if (count == 0) return allocator.alloc(bool, 0);
-    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
     return chanceBatchFrom(source, allocator, count, p);
 }
 
@@ -821,6 +821,8 @@ pub fn ratioBatch(self: Rng, allocator: std.mem.Allocator, count: usize, numerat
 }
 
 pub fn ratioBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]bool {
+    if (count == 0) return allocator.alloc(bool, 0);
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     const out = try allocator.alloc(bool, count);
     errdefer allocator.free(out);
     fillRatioFrom(source, out, numerator, denominator);
@@ -832,8 +834,6 @@ pub fn ratioBatchChecked(self: Rng, allocator: std.mem.Allocator, count: usize, 
 }
 
 pub fn ratioBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]bool {
-    if (count == 0) return allocator.alloc(bool, 0);
-    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     return ratioBatchFrom(source, allocator, count, numerator, denominator);
 }
 
@@ -6844,6 +6844,11 @@ test "owned range batches allocate and validate before consuming random stream" 
     try std.testing.expect(!invalid_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var invalid_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.rangeBatch(u32, invalid_unchecked_alloc.allocator(), 4, 3, 3));
+    try std.testing.expect(!invalid_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var empty_inclusive_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     const empty_inclusive = try rng.rangeAtMostBatchChecked(u32, empty_inclusive_alloc.allocator(), 0, 4, 3);
     defer empty_inclusive_alloc.allocator().free(empty_inclusive);
@@ -6856,7 +6861,17 @@ test "owned range batches allocate and validate before consuming random stream" 
     try std.testing.expect(!invalid_inclusive_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var invalid_inclusive_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rangeAtMostBatchFrom(&engine, u32, invalid_inclusive_unchecked_alloc.allocator(), 4, 4, 3));
+    try std.testing.expect(!invalid_inclusive_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectError(error.NonFinite, rangeBatchCheckedFrom(&engine, f64, std.testing.allocator, 4, std.math.inf(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_float_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.NonFinite, rangeBatchFrom(&engine, f64, invalid_float_unchecked_alloc.allocator(), 4, std.math.inf(f64), 1));
+    try std.testing.expect(!invalid_float_unchecked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
@@ -7352,6 +7367,11 @@ test "owned bounded uint batches allocate and validate before consuming random s
     try std.testing.expect(!invalid_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var invalid_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.uintLessThanBatch(u32, invalid_unchecked_alloc.allocator(), 8, 0));
+    try std.testing.expect(!invalid_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var less_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, uintLessThanBatchCheckedFrom(&engine, u32, less_alloc.allocator(), 8, 1000));
     try std.testing.expect(less_alloc.has_induced_failure);
@@ -7492,9 +7512,19 @@ test "owned probability batches allocate and validate before consuming random st
     try std.testing.expect(!invalid_chance_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var invalid_chance_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, rng.chanceBatch(invalid_chance_unchecked_alloc.allocator(), 8, -0.1));
+    try std.testing.expect(!invalid_chance_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var invalid_ratio_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidProbability, ratioBatchCheckedFrom(&engine, invalid_ratio_alloc.allocator(), 8, 2, 1));
     try std.testing.expect(!invalid_ratio_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_ratio_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, ratioBatchFrom(&engine, invalid_ratio_unchecked_alloc.allocator(), 8, 2, 1));
+    try std.testing.expect(!invalid_ratio_unchecked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var chance_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });

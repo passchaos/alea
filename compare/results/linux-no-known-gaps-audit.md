@@ -2799,3 +2799,12 @@ reject invalid parameters before allocation and random-stream use in
 `vectorNormalBatchFrom` and `vectorExponentialBatchFrom`, while valid allocation
 failures remain no-stream. This improves failure determinism but does not
 resolve S4-M11.
+
+S4-M658 adds `Rng` scalar range/probability batch invalid-parameter
+prevalidation
+(`compare/results/s4-m658-rng-scalar-batch-invalid-prevalidation.md`):
+unchecked scalar range and probability allocation-returning batch helpers now
+reject invalid parameters before allocation and random-stream use in
+`rangeBatchFrom`, `rangeAtMostBatchFrom`, `uintLessThanBatchFrom`,
+`chanceBatchFrom`, and `ratioBatchFrom`, while valid allocation failures remain
+no-stream. This improves failure determinism but does not resolve S4-M11.
