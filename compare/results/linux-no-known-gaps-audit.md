@@ -2910,3 +2910,11 @@ enum-containing value types before index sampling and value copying in
 `chooseArrayFrom` and `chooseArrayCheckedFrom`; `sampleItemsArray` aliases
 inherit the same behavior. This improves failure determinism but does not
 resolve S4-M11.
+
+S4-M672 adds `seq` caller-owned value sample empty-type prevalidation
+(`compare/results/s4-m672-seq-value-into-empty-type-prevalidation.md`): `seq`
+caller-owned no-replacement value buffer helpers now reject non-zero empty
+enum-containing value types before index sampling and value copying in
+`chooseMultipleIntoFrom` and `chooseMultipleIntoCheckedFrom`; `sampleItemsInto`
+aliases inherit the same behavior. This improves failure determinism but does
+not resolve S4-M11.

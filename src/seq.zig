@@ -1405,6 +1405,7 @@ pub fn sampleItemsIntoFrom(source: anytype, comptime T: type, items: []const T, 
 pub fn chooseMultipleIntoFrom(source: anytype, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!usize {
     const count = @min(out.len, items.len);
     if (count == 0) return 0;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (scratch_indices.len < count) return error.LengthMismatch;
     try sampleIndicesIntoCheckedFrom(source, items.len, scratch_indices[0..count]);
     for (scratch_indices[0..count], out[0..count]) |index, *slot| slot.* = items[index];
@@ -1426,6 +1427,7 @@ pub fn sampleItemsIntoCheckedFrom(source: anytype, comptime T: type, items: []co
 pub fn chooseMultipleIntoCheckedFrom(source: anytype, comptime T: type, items: []const T, out: []T, scratch_indices: []usize) Error!void {
     if (out.len > items.len) return error.InvalidParameter;
     if (out.len == 0) return;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (scratch_indices.len < out.len) return error.LengthMismatch;
     try sampleIndicesIntoCheckedFrom(source, items.len, scratch_indices[0..out.len]);
     for (scratch_indices[0..out.len], out) |index, *slot| slot.* = items[index];
@@ -12918,6 +12920,29 @@ test "chooseMultipleInto fills caller-owned item buffers" {
     try std.testing.expectEqual(@as(usize, 0), try chooseMultipleIntoFrom(&empty_engine, u8, &items, &empty_out, &empty_indices));
     try chooseMultipleIntoCheckedFrom(&empty_engine, u8, &items, &empty_out, &empty_indices);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "chooseMultipleInto validates empty value types before sampling" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
+
+    var engine = alea.ScalarPrng.init(0x5150_c10f);
+    var control = alea.ScalarPrng.init(0x5150_c10f);
+    var out: [1]Empty = undefined;
+    var indices: [1]usize = undefined;
+
+    try std.testing.expectError(error.EmptyInput, chooseMultipleIntoFrom(&engine, Empty, items, &out, &indices));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyInput, sampleItemsIntoFrom(&engine, Empty, items, &out, &indices));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyInput, chooseMultipleIntoCheckedFrom(&engine, Empty, items, &out, &indices));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.EmptyInput, sampleItemsIntoCheckedFrom(&engine, Empty, items, &out, &indices));
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "chooseMultipleInto preserves facade/direct stream shape and invalid paths do not consume" {
