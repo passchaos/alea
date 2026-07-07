@@ -379,6 +379,7 @@ pub fn chooseIndexBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, 
 
 pub fn chooseIndexBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, length: usize) ![]usize {
     if (count == 0) return allocator.alloc(usize, 0);
+    if (length == 0) return error.EmptyRange;
     const out = try allocator.alloc(usize, count);
     errdefer allocator.free(out);
     try fillChooseIndexChecked(io, out, length);
@@ -452,6 +453,7 @@ pub fn chooseIndexU32Batch(io: std.Io, allocator: std.mem.Allocator, count: usiz
 
 pub fn chooseIndexU32BatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, length: u32) ![]u32 {
     if (count == 0) return allocator.alloc(u32, 0);
+    if (length == 0) return error.EmptyRange;
     const out = try allocator.alloc(u32, count);
     errdefer allocator.free(out);
     try fillChooseIndexU32Checked(io, out, length);
@@ -6565,7 +6567,9 @@ test "root random helpers validate deterministic cases before entropy" {
     const fixed_index_batch_checked = try chooseIndexBatchChecked(failing, std.testing.allocator, 3, 1);
     defer std.testing.allocator.free(fixed_index_batch_checked);
     try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0 }, fixed_index_batch_checked);
-    try std.testing.expectError(error.EmptyRange, chooseIndexBatchChecked(failing, std.testing.allocator, 3, 0));
+    var empty_index_batch_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseIndexBatchChecked(failing, empty_index_batch_checked_alloc.allocator(), 3, 0));
+    try std.testing.expect(!empty_index_batch_checked_alloc.has_induced_failure);
     try std.testing.expect((try chooseIndexArray(failing, 0, 0)) != null);
     try std.testing.expectEqual(@as(?[3]usize, null), try chooseIndexArray(failing, 3, 0));
     try std.testing.expectError(error.EmptyRange, chooseIndexArrayChecked(failing, 3, 0));
@@ -6600,7 +6604,9 @@ test "root random helpers validate deterministic cases before entropy" {
     const fixed_index_u32_batch_checked = try chooseIndexU32BatchChecked(failing, std.testing.allocator, 3, 1);
     defer std.testing.allocator.free(fixed_index_u32_batch_checked);
     try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0 }, fixed_index_u32_batch_checked);
-    try std.testing.expectError(error.EmptyRange, chooseIndexU32BatchChecked(failing, std.testing.allocator, 3, 0));
+    var empty_index_u32_batch_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseIndexU32BatchChecked(failing, empty_index_u32_batch_checked_alloc.allocator(), 3, 0));
+    try std.testing.expect(!empty_index_u32_batch_checked_alloc.has_induced_failure);
     try std.testing.expect((try chooseIndexArrayU32(failing, 0, 0)) != null);
     try std.testing.expectEqual(@as(?[3]u32, null), try chooseIndexArrayU32(failing, 3, 0));
     try std.testing.expectError(error.EmptyRange, chooseIndexArrayU32Checked(failing, 3, 0));

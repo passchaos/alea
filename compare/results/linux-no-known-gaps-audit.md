@@ -2861,3 +2861,11 @@ generic sampler fill helpers now treat empty output buffers as deterministic
 no-ops before invoking sampler-provided fill hooks in `fillSample` and
 `fillSampleFrom`, including iterator fill routes. This improves no-op
 determinism but does not resolve S4-M11.
+
+S4-M666 adds root checked index batch empty-range prevalidation
+(`compare/results/s4-m666-root-checked-index-batch-empty-range-prevalidation.md`):
+root checked index allocation-returning batch helpers now reject non-zero
+zero-length usize/u32 ranges before allocation and secure-engine construction in
+`chooseIndexBatchChecked` and `chooseIndexU32BatchChecked`, while zero-count
+requests remain deterministic empty allocations. This improves failure
+determinism but does not resolve S4-M11.
