@@ -5089,20 +5089,46 @@ pub fn sampleIteratorWeightedChecked(allocator: std.mem.Allocator, rng: Rng, com
     return sampleIteratorWeightedCheckedFrom(allocator, rng, T, iterator, amount);
 }
 
+fn sampleIteratorWeightedExactCoverFrom(allocator: std.mem.Allocator, comptime T: type, iterator: anytype, remaining: usize, comptime checked: bool) ![]T {
+    var out: ?[]T = null;
+    errdefer if (out) |allocated| allocator.free(allocated);
+
+    var index: usize = 0;
+    var positive: usize = 0;
+    while (index < remaining) : (index += 1) {
+        const entry = iterator.next() orelse {
+            if (checked) return error.InvalidParameter;
+            break;
+        };
+        const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        if (weight == 0) continue;
+
+        if (out == null) out = try allocator.alloc(T, remaining);
+        out.?[positive] = entry.item;
+        positive += 1;
+    }
+
+    if (checked and positive != remaining) return error.InvalidParameter;
+    const allocated = out orelse return allocator.alloc(T, 0);
+    if (positive == remaining) {
+        out = null;
+        return allocated;
+    }
+
+    const trimmed = try allocator.alloc(T, positive);
+    @memcpy(trimmed, allocated[0..positive]);
+    allocator.free(allocated);
+    out = null;
+    return trimmed;
+}
+
 pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (iteratorExactRemaining(iterator)) |remaining| {
         if (remaining < amount) return error.InvalidParameter;
-        if (remaining == 1) {
-            const entry = iterator.next() orelse return error.InvalidParameter;
-            const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
-            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
-            if (weight == 0) return error.InvalidParameter;
-            const out = try allocator.alloc(T, 1);
-            out[0] = entry.item;
-            return out;
-        }
+        if (remaining == amount) return sampleIteratorWeightedExactCoverFrom(allocator, T, iterator, remaining, true);
     }
     const Pending = struct {
         item: T,
@@ -5170,15 +5196,7 @@ pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype,
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const queue_capacity = if (iteratorExactRemaining(iterator)) |remaining| blk: {
         if (remaining == 0) return allocator.alloc(T, 0);
-        if (remaining == 1) {
-            const entry = iterator.next() orelse return allocator.alloc(T, 0);
-            const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
-            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
-            if (weight == 0) return allocator.alloc(T, 0);
-            const out = try allocator.alloc(T, 1);
-            out[0] = entry.item;
-            return out;
-        }
+        if (remaining <= amount) return sampleIteratorWeightedExactCoverFrom(allocator, T, iterator, remaining, false);
         break :blk @min(amount, remaining);
     } else amount;
     const Pending = struct {
@@ -12731,6 +12749,70 @@ test "single exact weighted iterator samples avoid heap allocation" {
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(failing.allocator(), &engine, u8, &checked_zero_iter, 1));
     try std.testing.expectEqual(@as(usize, 1), checked_zero_iter.calls);
     try std.testing.expect(!failing.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "exact-cover weighted iterator samples avoid heap setup" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7727);
+    var control = alea.ScalarPrng.init(0x5150_7727);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const ExactIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const entry = self.items[self.index];
+            self.index += 1;
+            return entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 11, .weight = 1 },
+        .{ .item = 22, .weight = 5 },
+    };
+
+    var iter = ExactIter{ .items = &entries };
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    const sample = try sampleIteratorWeightedFrom(alloc.allocator(), &engine, u8, &iter, 8);
+    defer alloc.allocator().free(sample);
+    try std.testing.expectEqualSlices(u8, &.{ 11, 22 }, sample);
+    try std.testing.expectEqual(@as(usize, 2), iter.calls);
+    try std.testing.expect(!alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_iter = ExactIter{ .items = &entries };
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
+    const checked = try sampleIteratorWeightedCheckedFrom(checked_alloc.allocator(), &engine, u8, &checked_iter, 2);
+    defer checked_alloc.allocator().free(checked);
+    try std.testing.expectEqualSlices(u8, &.{ 11, 22 }, checked);
+    try std.testing.expectEqual(@as(usize, 2), checked_iter.calls);
+    try std.testing.expect(!checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sparse_entries = [_]Entry{
+        .{ .item = 11, .weight = 0 },
+        .{ .item = 22, .weight = 5 },
+    };
+    var sparse_iter = ExactIter{ .items = &sparse_entries };
+    const sparse = try sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &sparse_iter, 8);
+    defer std.testing.allocator.free(sparse);
+    try std.testing.expectEqualSlices(u8, &.{22}, sparse);
+    try std.testing.expectEqual(@as(usize, 2), sparse_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var sparse_checked_iter = ExactIter{ .items = &sparse_entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &sparse_checked_iter, 2));
+    try std.testing.expectEqual(@as(usize, 2), sparse_checked_iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

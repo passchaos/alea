@@ -814,7 +814,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M773 weighted iterator fill exact-single key avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m773-weighted-iterator-fill-exact-single.md` | Closed for the current bar: caller-owned weighted iterator fills now resolve exact-single sources without key sampling, extra probes, entropy, or random-stream use. |
 | S4-M774 weighted iterator array exact-single probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m774-weighted-iterator-array-exact-single.md` | Closed for the current bar: fixed-size weighted iterator arrays now resolve exact-single sources without extra probes, key sampling, entropy, or random-stream use. |
 | S4-M775 weighted iterator array exact-count key avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m775-weighted-iterator-array-exact-count.md` | Closed for the current bar: fixed-size weighted iterator arrays now resolve all-positive exact-count sources without extra probes, key sampling, entropy, or random-stream use. |
-| S4-M776 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M776 weighted iterator sample exact-cover heap avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m776-weighted-iterator-sample-exact-cover.md` | Closed for the current bar: allocation-returning weighted iterator samples now resolve exact-cover sources without heap/key setup, extra probes, entropy, or random-stream use. |
+| S4-M777 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2409,6 +2410,10 @@ it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M775 additionally avoids key sampling and extra end-of-iterator probes for
 all-positive exact-count fixed-size weighted iterator arrays; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M776 additionally avoids weighted heap/key setup and extra end-of-iterator
+probes for allocation-returning exact-cover weighted iterator samples; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 

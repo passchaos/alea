@@ -3613,3 +3613,12 @@ probes, entropy, or random-stream use. Zero-weight exact-count sources still
 report insufficient positive entries and invalid weights are still validated.
 This improves weighted iterator array reliability evidence but does not resolve
 S4-M11.
+
+S4-M776 avoids weighted iterator exact-cover sample heap/key setup
+(`compare/results/s4-m776-weighted-iterator-sample-exact-cover.md`):
+seq/root allocation-returning weighted iterator samples now resolve exact
+remaining sources that are fully covered by the request after reading exactly the
+known entries, returning the positive-weight subset without weighted heap setup,
+key sampling, extra probes, entropy, or random-stream use. Checked variants still
+report insufficient positive entries. This improves weighted iterator sampling
+reliability evidence but does not resolve S4-M11.
