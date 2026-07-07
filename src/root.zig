@@ -343,6 +343,7 @@ pub fn chooseIndexChecked(io: std.Io, length: usize) !usize {
 
 pub fn fillChooseIndex(io: std.Io, dest: []usize, length: usize) !void {
     if (dest.len == 0) return;
+    if (length == 0) return error.EmptyRange;
     if (length == 1) {
         @memset(dest, 0);
         return;
@@ -365,6 +366,8 @@ pub fn fillChooseIndexChecked(io: std.Io, dest: []usize, length: usize) !void {
 }
 
 pub fn chooseIndexBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, length: usize) ![]usize {
+    if (count == 0) return allocator.alloc(usize, 0);
+    if (length == 0) return error.EmptyRange;
     const out = try allocator.alloc(usize, count);
     errdefer allocator.free(out);
     try fillChooseIndex(io, out, length);
@@ -413,6 +416,7 @@ pub fn chooseIndexU32Checked(io: std.Io, length: u32) !u32 {
 
 pub fn fillChooseIndexU32(io: std.Io, dest: []u32, length: u32) !void {
     if (dest.len == 0) return;
+    if (length == 0) return error.EmptyRange;
     if (length == 1) {
         @memset(dest, 0);
         return;
@@ -435,6 +439,8 @@ pub fn fillChooseIndexU32Checked(io: std.Io, dest: []u32, length: u32) !void {
 }
 
 pub fn chooseIndexU32Batch(io: std.Io, allocator: std.mem.Allocator, count: usize, length: u32) ![]u32 {
+    if (count == 0) return allocator.alloc(u32, 0);
+    if (length == 0) return error.EmptyRange;
     const out = try allocator.alloc(u32, count);
     errdefer allocator.free(out);
     try fillChooseIndexU32(io, out, length);
@@ -6020,6 +6026,12 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(empty_sample_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_sample_batch.len);
     try std.testing.expectEqual(@as(?usize, null), try chooseIndex(failing, 0));
+    var empty_index_fill_nonempty: [1]usize = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseIndex(failing, &empty_index_fill_nonempty, 0));
+    const empty_index_batch_zero = try chooseIndexBatch(failing, std.testing.allocator, 0, 0);
+    defer std.testing.allocator.free(empty_index_batch_zero);
+    try std.testing.expectEqual(@as(usize, 0), empty_index_batch_zero.len);
+    try std.testing.expectError(error.EmptyRange, chooseIndexBatch(failing, std.testing.allocator, 1, 0));
     try std.testing.expectEqual(@as(?usize, 0), try chooseIndex(failing, 1));
     try std.testing.expectEqual(@as(usize, 0), try chooseIndexChecked(failing, 1));
     try std.testing.expectError(error.EmptyRange, chooseIndexChecked(failing, 0));
@@ -6049,6 +6061,12 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EmptyRange, chooseIndexArrayChecked(failing, 3, 0));
     try std.testing.expectEqualSlices(usize, &.{ 0, 0, 0 }, &(try chooseIndexArrayChecked(failing, 3, 1)));
     try std.testing.expectEqual(@as(?u32, null), try chooseIndexU32(failing, 0));
+    var empty_index_u32_fill_nonempty: [1]u32 = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseIndexU32(failing, &empty_index_u32_fill_nonempty, 0));
+    const empty_index_u32_batch_zero = try chooseIndexU32Batch(failing, std.testing.allocator, 0, 0);
+    defer std.testing.allocator.free(empty_index_u32_batch_zero);
+    try std.testing.expectEqual(@as(usize, 0), empty_index_u32_batch_zero.len);
+    try std.testing.expectError(error.EmptyRange, chooseIndexU32Batch(failing, std.testing.allocator, 1, 0));
     try std.testing.expectEqual(@as(?u32, 0), try chooseIndexU32(failing, 1));
     try std.testing.expectEqual(@as(u32, 0), try chooseIndexU32Checked(failing, 1));
     try std.testing.expectError(error.EmptyRange, chooseIndexU32Checked(failing, 0));

@@ -2303,3 +2303,10 @@ positive, insufficient-positive checked, early-invalid-weight, scratch-mismatch,
 and checked-error outcomes before secure-engine construction for
 `sampleIteratorWeightedInto` and `sampleIteratorWeightedIntoChecked` while
 S4-M11 remains blocked.
+
+S4-M592 adds root index fill/batch empty-range prevalidation
+(`compare/results/s4-m592-root-index-fill-batch-empty-range-prevalidation.md`):
+root system-entropy callers now get deterministic non-empty zero-range failures
+before secure-engine construction for `fillChooseIndex`, `chooseIndexBatch`,
+`fillChooseIndexU32`, and `chooseIndexU32Batch`, while zero-count batches still
+return empty allocations and S4-M11 remains blocked.
