@@ -2411,6 +2411,7 @@ pub fn chooseIteratorStableChecked(comptime T: type, io: std.Io, iterator: anyty
 }
 
 pub fn chooseIteratorWeighted(comptime T: type, io: std.Io, iterator: anytype) !?T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const Pending = struct {
         item: T,
         weight: f64,
@@ -2451,6 +2452,7 @@ pub fn chooseIteratorWeighted(comptime T: type, io: std.Io, iterator: anytype) !
 }
 
 pub fn chooseIteratorWeightedChecked(comptime T: type, io: std.Io, iterator: anytype) !T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return (try chooseIteratorWeighted(T, io, iterator)) orelse error.EmptyInput;
 }
 
@@ -9685,6 +9687,29 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(?u8, 2), try chooseIteratorWeighted(u8, failing, &weighted_single));
     var weighted_single_checked = WeightedIter{ .items = &weighted_single_entries };
     try std.testing.expectEqual(@as(u8, 2), try chooseIteratorWeightedChecked(u8, failing, &weighted_single_checked));
+    const EmptyWeightedIteratorPayload = struct { empty: EmptyEnum };
+    const EmptyWeightedIter = struct {
+        consumed: usize = 0,
+
+        pub fn next(self: *@This()) ?struct { item: EmptyWeightedIteratorPayload, weight: f64 } {
+            self.consumed += 1;
+            unreachable;
+        }
+    };
+    var empty_weighted_payload = EmptyWeightedIter{};
+    if (chooseIteratorWeighted(EmptyWeightedIteratorPayload, failing, &empty_weighted_payload)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_payload.consumed);
+    var empty_weighted_payload_checked = EmptyWeightedIter{};
+    if (chooseIteratorWeightedChecked(EmptyWeightedIteratorPayload, failing, &empty_weighted_payload_checked)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_payload_checked.consumed);
     const weighted_bad_entries = [_]WeightedIter.Entry{.{ .item = 1, .weight = std.math.nan(f64) }};
     var weighted_bad = WeightedIter{ .items = &weighted_bad_entries };
     try std.testing.expectError(error.InvalidWeight, chooseIteratorWeighted(u8, failing, &weighted_bad));

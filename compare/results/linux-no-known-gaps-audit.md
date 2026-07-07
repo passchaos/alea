@@ -3106,3 +3106,10 @@ root one-shot iterator value choice helpers now reject empty enum-containing
 output types before iterator consumption, entropy, secure-engine construction,
 random-stream use, and value copying. This improves failure determinism but does
 not resolve S4-M11.
+
+S4-M698 adds root weighted iterator choice empty-type prevalidation
+(`compare/results/s4-m698-root-weighted-iterator-choice-empty-type-prevalidation.md`):
+root weighted iterator one-shot value choice helpers now reject empty
+enum-containing output types before iterator consumption, weight evaluation,
+entropy, secure-engine construction, random-stream use, and value copying. This
+improves failure determinism but does not resolve S4-M11.
