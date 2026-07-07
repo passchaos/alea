@@ -3276,3 +3276,9 @@ S4-M725 adds reusable `Choice` value iterators
 (`compare/results/s4-m725-choice-value-iterators.md`): reusable `Choice` now has
 allocation-free value-copy iterators plus checked empty-type construction. This
 improves repeated value-copy ergonomics but does not resolve S4-M11.
+
+S4-M726 adds reusable `WeightedChoice` value iterators
+(`compare/results/s4-m726-weightedchoice-value-iterators.md`): reusable
+`WeightedChoice` now has allocation-free weighted value-copy iterators plus
+checked empty-type construction. This improves repeated weighted value-copy
+ergonomics but does not resolve S4-M11.
