@@ -2064,3 +2064,9 @@ S4-M553 adds root item-accessor weighted const-pointer fill helpers
 system-entropy callers can now fill caller-owned weighted const-pointer buffers
 directly from an item slice and comptime item-weight accessor from the root API
 while S4-M11 remains blocked.
+
+S4-M554 adds root item-accessor weighted mutable-pointer fill helpers
+(`compare/results/s4-m554-root-weighted-by-mut-ptr-fill-helpers.md`):
+system-entropy callers can now fill caller-owned weighted mutable-pointer
+buffers directly from a mutable item slice and comptime item-weight accessor
+from the root API while S4-M11 remains blocked.
