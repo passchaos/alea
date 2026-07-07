@@ -786,6 +786,7 @@ pub fn sampleWithoutReplacement(comptime T: type, io: std.Io, allocator: std.mem
 pub fn sampleWithoutReplacementChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
     if (count > items.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (count == items.len) return allocator.dupe(T, items);
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -6655,6 +6656,16 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_without_replacement_checked = try sampleWithoutReplacementChecked(u8, failing, std.testing.allocator, &sample_items, 0);
     defer std.testing.allocator.free(empty_without_replacement_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_without_replacement_checked.len);
+    const fake_empty_enum_items = @as([*]const EmptyEnum, @ptrFromInt(0x1000))[0..1];
+    var empty_enum_sample_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var empty_enum_sample_failed = false;
+    if (sampleWithoutReplacementChecked(EmptyEnum, failing, empty_enum_sample_alloc.allocator(), fake_empty_enum_items, 1)) |values| {
+        empty_enum_sample_alloc.allocator().free(values);
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        empty_enum_sample_failed = true;
+    }
+    try std.testing.expect(empty_enum_sample_failed);
     const all_without_replacement = try sampleWithoutReplacement(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
     defer std.testing.allocator.free(all_without_replacement);
     try std.testing.expectEqualSlices(u8, &sample_items, all_without_replacement);
