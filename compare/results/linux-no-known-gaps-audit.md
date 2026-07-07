@@ -2023,3 +2023,9 @@ S4-M546 adds root item-accessor weighted `u32` index batch helpers
 system-entropy callers can now allocate repeated compact `u32` weighted index
 batches directly from an item slice and comptime item-weight accessor from the
 root API while S4-M11 remains blocked.
+
+S4-M547 adds root item-accessor weighted `usize` index array helpers
+(`compare/results/s4-m547-root-weighted-by-array-helpers.md`): system-entropy
+callers can now produce fixed-size weighted index arrays directly from an item
+slice and comptime item-weight accessor from the root API while S4-M11 remains
+blocked.
