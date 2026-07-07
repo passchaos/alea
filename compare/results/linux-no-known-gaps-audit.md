@@ -2700,3 +2700,11 @@ S4-M645 adds `Rng` no-replacement invalid-count prevalidation
 reject oversized sample counts before allocation and random-stream use, aligning
 the method/direct RNG layer with the root and direct `seq` prevalidation work.
 This improves failure determinism but does not resolve S4-M11.
+
+S4-M646 adds ASCII charset unchecked empty prevalidation
+(`compare/results/s4-m646-ascii-charset-unchecked-empty-prevalidation.md`):
+ASCII `Charset` allocation/string helpers now reject non-zero empty charsets
+before allocation, random-stream use, and append-buffer mutation for
+`Charset.allocFrom`, `Charset.sampleStringFrom`, and `Charset.appendStringFrom`,
+while zero-length calls remain deterministic no-stream operations. This improves
+failure determinism but does not resolve S4-M11.

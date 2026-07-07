@@ -180,6 +180,8 @@ pub const Charset = struct {
     }
 
     pub fn allocFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {
+        if (length == 0) return allocator.alloc(u8, 0);
+        if (self.bytes.len == 0) return error.EmptyCharset;
         const out = try allocator.alloc(u8, length);
         self.fillFrom(source, out);
         return out;
@@ -206,6 +208,8 @@ pub const Charset = struct {
     }
 
     pub fn appendStringFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), length: usize) !void {
+        if (length == 0) return;
+        if (self.bytes.len == 0) return error.EmptyCharset;
         const old_len = string_buffer.items.len;
         try string_buffer.resize(allocator, old_len + length);
         self.fillFrom(source, string_buffer.items[old_len..]);
@@ -825,6 +829,39 @@ test "sampleString checked aliases handle empty charsets without consuming" {
 
     try empty.appendStringCheckedFrom(std.testing.allocator, &engine, &list, 0);
     try std.testing.expectEqual(@as(usize, 0), list.items.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "sampleString unchecked aliases handle empty charsets before allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_a552);
+    var control = alea.ScalarPrng.init(0x5150_a552);
+    const empty = Charset{ .bytes = "" };
+
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyCharset, empty.allocFrom(alloc.allocator(), &engine, 4));
+    try std.testing.expect(!alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var sample_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyCharset, empty.sampleStringFrom(sample_alloc.allocator(), &engine, 4));
+    try std.testing.expect(!sample_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 4);
+    defer list.deinit(std.testing.allocator);
+    try list.appendSlice(std.testing.allocator, "seed");
+    var append_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyCharset, empty.appendStringFrom(append_alloc.allocator(), &engine, &list, 4));
+    try std.testing.expect(!append_alloc.has_induced_failure);
+    try std.testing.expectEqualStrings("seed", list.items);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const zero = try empty.sampleStringFrom(std.testing.allocator, &engine, 0);
+    defer std.testing.allocator.free(zero);
+    try std.testing.expectEqual(@as(usize, 0), zero.len);
+    try empty.appendStringFrom(std.testing.allocator, &engine, &list, 0);
+    try std.testing.expectEqualStrings("seed", list.items);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
