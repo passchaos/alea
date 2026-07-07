@@ -8133,6 +8133,45 @@ pub fn Choice(comptime T: type) type {
             return out;
         }
 
+        pub fn valueIter(self: Self, rng: Rng) ValueIterator(Rng) {
+            return self.valueIterFrom(rng);
+        }
+
+        pub fn valueIterFrom(self: Self, source: anytype) ValueIterator(@TypeOf(source)) {
+            return .{ .source = source, .choice = self };
+        }
+
+        pub fn valueIterChecked(self: Self, rng: Rng) Error!ValueIterator(Rng) {
+            return self.valueIterCheckedFrom(rng);
+        }
+
+        pub fn valueIterCheckedFrom(self: Self, source: anytype) Error!ValueIterator(@TypeOf(source)) {
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            return self.valueIterFrom(source);
+        }
+
+        pub fn ValueIterator(comptime Source: type) type {
+            return struct {
+                const Iter = @This();
+
+                source: Source,
+                choice: Self,
+
+                pub fn next(self: *Iter) ?T {
+                    return self.nextValue();
+                }
+
+                pub fn nextValue(self: *Iter) ?T {
+                    if (comptime valueTypeHasEmptyEnum(T)) return null;
+                    return self.choice.sampleValueFrom(self.source);
+                }
+
+                pub fn fill(self: *Iter, dest: []T) void {
+                    self.choice.fillValuesFrom(self.source, dest);
+                }
+            };
+        }
+
         pub fn ptrArray(self: Self, rng: Rng, comptime N: usize) [N]*const T {
             return self.ptrArrayFrom(rng, N);
         }
@@ -17498,6 +17537,21 @@ test "choice sampler repeatedly samples slice references" {
     defer std.testing.allocator.free(owned_values);
     try std.testing.expectEqual(@as(usize, 8), owned_values.len);
     for (owned_values) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
+    var value_iter_engine = alea.DefaultPrng.init(0xc0_ef03);
+    var value_fill_engine = alea.DefaultPrng.init(0xc0_ef03);
+    var value_iter = choice.valueIterFrom(&value_iter_engine);
+    var value_iter_out: [8]u8 = undefined;
+    value_iter.fill(&value_iter_out);
+    var value_fill_out: [8]u8 = undefined;
+    choice.fillValuesFrom(&value_fill_engine, &value_fill_out);
+    try std.testing.expectEqualSlices(u8, &value_fill_out, &value_iter_out);
+    try std.testing.expectEqual(value_fill_engine.next(), value_iter_engine.next());
+    var checked_value_iter_engine = alea.DefaultPrng.init(0xc0_ef04);
+    var unchecked_value_iter_engine = alea.DefaultPrng.init(0xc0_ef04);
+    var checked_value_iter = try choice.valueIterCheckedFrom(&checked_value_iter_engine);
+    var unchecked_value_iter = choice.valueIterFrom(&unchecked_value_iter_engine);
+    try std.testing.expectEqual(unchecked_value_iter.next().?, checked_value_iter.next().?);
+    try std.testing.expectEqual(unchecked_value_iter_engine.next(), checked_value_iter_engine.next());
 
     const Empty = enum {};
     const empty_items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
@@ -17536,6 +17590,15 @@ test "choice sampler repeatedly samples slice references" {
         try std.testing.expectEqual(error.EmptyInput, err);
     }
     try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    var empty_iter = empty_choice.valueIterFrom(&empty_engine);
+    try std.testing.expect(empty_iter.next() == null);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    if (empty_choice.valueIterCheckedFrom(&empty_engine)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
     var fill_engine = alea.ScalarPrng.init(0x5150_c0e0);
