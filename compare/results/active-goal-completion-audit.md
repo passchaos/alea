@@ -708,7 +708,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M667 Rng no-replacement empty-type prevalidation | `src/rng.zig`, `compare/results/s4-m667-rng-no-replacement-empty-type-prevalidation.md` | Closed for the current bar: `Rng` no-replacement value sampling now rejects non-zero uninhabited value types before allocation and random-stream use. |
 | S4-M668 root chooseMultiple empty-type prevalidation | `src/root.zig`, `compare/results/s4-m668-root-choose-multiple-empty-type-prevalidation.md` | Closed for the current bar: root `chooseMultiple` value alias now rejects non-zero uninhabited value types before allocation and secure-engine construction. |
 | S4-M669 root fixed value array empty-type prevalidation | `src/root.zig`, `compare/results/s4-m669-root-value-array-empty-type-prevalidation.md` | Closed for the current bar: root fixed-size no-replacement value array helpers now reject non-zero uninhabited value types before secure-engine construction or deterministic value copying. |
-| S4-M670 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M670 root caller-owned value sample empty-type prevalidation | `src/root.zig`, `compare/results/s4-m670-root-value-into-empty-type-prevalidation.md` | Closed for the current bar: root caller-owned no-replacement value buffer helpers now reject non-zero uninhabited value types before secure-engine construction or deterministic value copying. |
+| S4-M671 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1975,6 +1976,9 @@ long-term objective.
 S4-M669 additionally tightens root fixed value array empty-type prevalidation; it
 is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M670 additionally tightens root caller-owned value sample empty-type
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

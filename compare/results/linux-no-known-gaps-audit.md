@@ -2894,3 +2894,11 @@ enum-containing value types before secure-engine construction and before
 deterministic full-count value copying in `sampleItemsArray` and
 `sampleItemsArrayChecked`; `chooseArray` aliases inherit the same behavior. This
 improves failure determinism but does not resolve S4-M11.
+
+S4-M670 adds root caller-owned value sample empty-type prevalidation
+(`compare/results/s4-m670-root-value-into-empty-type-prevalidation.md`):
+root caller-owned no-replacement value buffer helpers now reject non-zero empty
+enum-containing value types before secure-engine construction and before
+deterministic full-count value copying in `sampleItemsInto` and
+`sampleItemsIntoChecked`; `chooseMultipleInto` aliases inherit the same behavior.
+This improves failure determinism but does not resolve S4-M11.

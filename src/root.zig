@@ -925,6 +925,7 @@ pub fn sampleMutPtrsChecked(comptime T: type, io: std.Io, allocator: std.mem.All
 pub fn sampleItemsInto(comptime T: type, io: std.Io, items: []const T, out: []T, scratch_indices: []usize) !usize {
     const count = @min(out.len, items.len);
     if (count == 0) return 0;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (scratch_indices.len < count) return error.LengthMismatch;
     if (count == items.len) return rootItemsIntoPrefix(T, items, out, count);
     var engine = try secure(io);
@@ -935,6 +936,7 @@ pub fn sampleItemsInto(comptime T: type, io: std.Io, items: []const T, out: []T,
 pub fn sampleItemsIntoChecked(comptime T: type, io: std.Io, items: []const T, out: []T, scratch_indices: []usize) !void {
     if (out.len > items.len) return error.InvalidParameter;
     if (out.len == 0) return;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (scratch_indices.len < out.len) return error.LengthMismatch;
     if (out.len == items.len) {
         _ = rootItemsIntoPrefix(T, items, out, out.len);
@@ -6986,6 +6988,12 @@ test "root random helpers validate deterministic cases before entropy" {
     try sampleItemsIntoChecked(u8, failing, &sample_items, &empty_values_into, &empty_values_scratch);
     try std.testing.expectEqual(@as(usize, 0), try chooseMultipleInto(u8, failing, &sample_items, &empty_values_into, &empty_values_scratch));
     try chooseMultipleIntoChecked(u8, failing, &sample_items, &empty_values_into, &empty_values_scratch);
+    var empty_enum_values_into: [1]EmptyEnum = undefined;
+    var empty_enum_values_scratch: [1]usize = undefined;
+    try std.testing.expectError(error.EmptyRange, sampleItemsInto(EmptyEnum, failing, fake_empty_enum_items, &empty_enum_values_into, &empty_enum_values_scratch));
+    try std.testing.expectError(error.EmptyRange, sampleItemsIntoChecked(EmptyEnum, failing, fake_empty_enum_items, &empty_enum_values_into, &empty_enum_values_scratch));
+    try std.testing.expectError(error.EmptyRange, chooseMultipleInto(EmptyEnum, failing, fake_empty_enum_items, &empty_enum_values_into, &empty_enum_values_scratch));
+    try std.testing.expectError(error.EmptyRange, chooseMultipleIntoChecked(EmptyEnum, failing, fake_empty_enum_items, &empty_enum_values_into, &empty_enum_values_scratch));
     var all_values_into: [3]u8 = undefined;
     var all_values_scratch: [3]usize = undefined;
     try std.testing.expectEqual(@as(usize, 3), try sampleItemsInto(u8, failing, &sample_items, &all_values_into, &all_values_scratch));
