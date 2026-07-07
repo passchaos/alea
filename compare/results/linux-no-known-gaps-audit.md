@@ -2244,3 +2244,10 @@ S4-M583 adds root parallel-weighted no-replacement value sample prevalidation
 system-entropy callers now get deterministic zero-count/all-zero/single-positive
 and invalid-parameter failures before secure-engine construction for
 `sampleWeighted` and `sampleWeightedChecked` while S4-M11 remains blocked.
+
+S4-M584 adds root parallel-weighted no-replacement const-pointer sample
+prevalidation (`compare/results/s4-m584-root-weighted-const-ptr-sample-prevalidation.md`):
+root system-entropy callers now get deterministic zero-count/all-zero/single-
+positive and invalid-parameter failures before secure-engine construction for
+`sampleWeightedPtrs` and `sampleWeightedPtrsChecked` while S4-M11 remains
+blocked.

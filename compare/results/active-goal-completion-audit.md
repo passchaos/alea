@@ -622,7 +622,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M581 root item-accessor weighted const-pointer array sample helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m581-root-weighted-by-const-ptr-array-sample-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size no-replacement weighted const-pointer arrays directly from an item slice and comptime item-weight accessor. |
 | S4-M582 root item-accessor weighted mutable-pointer array sample helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m582-root-weighted-by-mut-ptr-array-sample-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size no-replacement weighted mutable-pointer arrays directly from a mutable item slice and comptime item-weight accessor. |
 | S4-M583 root parallel-weighted value sample prevalidation | `src/root.zig`, `compare/results/s4-m583-root-weighted-value-sample-prevalidation.md` | Closed for the current bar: root parallel-weighted value sample helpers now validate deterministic no-entropy paths before secure-engine construction. |
-| S4-M584 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M584 root parallel-weighted const-pointer sample prevalidation | `src/root.zig`, `compare/results/s4-m584-root-weighted-const-ptr-sample-prevalidation.md` | Closed for the current bar: root parallel-weighted const-pointer sample helpers now validate deterministic no-entropy paths before secure-engine construction. |
+| S4-M585 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1631,6 +1632,9 @@ or complete the long-term objective.
 S4-M583 additionally adds root parallel-weighted no-replacement value sample
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
+S4-M584 additionally adds root parallel-weighted no-replacement const-pointer
+sample prevalidation; it is reliability/ergonomics work and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
