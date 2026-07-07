@@ -4148,6 +4148,7 @@ pub fn rangeBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, co
 
 pub fn rangeBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, min: T, max: T) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
+    try rootValidateRangeParams(T, min, max);
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillRangeChecked(T, io, out, min, max);
@@ -4235,6 +4236,7 @@ pub fn randomBoolBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, p
 
 pub fn randomBoolBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, p: f64) ![]bool {
     if (count == 0) return allocator.alloc(bool, 0);
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
     const out = try allocator.alloc(bool, count);
     errdefer allocator.free(out);
     try fillRandomBoolChecked(io, out, p);
@@ -4282,6 +4284,7 @@ pub fn randomRatioBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, 
 
 pub fn randomRatioBatchChecked(io: std.Io, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]bool {
     if (count == 0) return allocator.alloc(bool, 0);
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     const out = try allocator.alloc(bool, count);
     errdefer allocator.free(out);
     try fillRandomRatioChecked(io, out, numerator, denominator);
@@ -8542,15 +8545,21 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_bad_range_checked = try rangeBatchChecked(u8, failing, std.testing.allocator, 0, 3, 3);
     defer std.testing.allocator.free(empty_bad_range_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_range_checked.len);
+    var bad_range_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rangeBatchChecked(u8, failing, bad_range_alloc.allocator(), 3, 3, 3));
     const empty_bad_inclusive_checked = try rangeAtMostBatchChecked(u8, failing, std.testing.allocator, 0, 6, 5);
     defer std.testing.allocator.free(empty_bad_inclusive_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_inclusive_checked.len);
     const empty_bad_bool_checked = try randomBoolBatchChecked(failing, std.testing.allocator, 0, 1.1);
     defer std.testing.allocator.free(empty_bad_bool_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_bool_checked.len);
+    var bad_bool_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, randomBoolBatchChecked(failing, bad_bool_alloc.allocator(), 3, 1.1));
     const empty_bad_ratio_checked = try randomRatioBatchChecked(failing, std.testing.allocator, 0, 2, 1);
     defer std.testing.allocator.free(empty_bad_ratio_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_ratio_checked.len);
+    var bad_ratio_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, randomRatioBatchChecked(failing, bad_ratio_alloc.allocator(), 3, 2, 1));
 
     var collapsed_exclusive: [3]u8 = undefined;
     try fillRange(u8, failing, &collapsed_exclusive, 3, 4);

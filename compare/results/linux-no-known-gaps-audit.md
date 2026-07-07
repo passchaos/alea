@@ -2440,3 +2440,11 @@ empty-input failures before random-output allocation and secure-engine
 construction for `weightedIndexU32BatchByIndex` and
 `weightedIndexU32BatchByIndexChecked`, while deterministic empty/single paths
 remain allocation-only and S4-M11 remains blocked.
+
+S4-M610 adds root checked scalar batch parameter prevalidation
+(`compare/results/s4-m610-root-checked-scalar-batch-prevalidation.md`): root
+system-entropy callers now get invalid exclusive-range, probability, and ratio
+failures before random-output allocation and secure-engine construction for
+`rangeBatchChecked`, `randomBoolBatchChecked`, and `randomRatioBatchChecked`,
+while zero-count and deterministic collapsed paths remain allocation-only and
+S4-M11 remains blocked.
