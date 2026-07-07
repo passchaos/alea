@@ -2945,6 +2945,7 @@ pub fn chooseFrom(source: anytype, comptime T: type, items: []const T) ?T {
 }
 
 pub fn fillChooseFrom(source: anytype, comptime T: type, dest: []T, items: []const T) void {
+    if (dest.len == 0) return;
     std.debug.assert(items.len > 0);
     if (items.len == 1) {
         @memset(dest, items[0]);
@@ -3029,6 +3030,7 @@ pub fn fillChooseIndex(self: Rng, dest: []usize, length: usize) void {
 }
 
 pub fn fillChooseIndexFrom(source: anytype, dest: []usize, length: usize) void {
+    if (dest.len == 0) return;
     std.debug.assert(length > 0);
     if (length == 1) {
         @memset(dest, 0);
@@ -3117,6 +3119,7 @@ pub fn fillChooseIndexU32(self: Rng, dest: []u32, length: u32) void {
 }
 
 pub fn fillChooseIndexU32From(source: anytype, dest: []u32, length: u32) void {
+    if (dest.len == 0) return;
     std.debug.assert(length > 0);
     if (length == 1) {
         @memset(dest, 0);
@@ -3209,6 +3212,7 @@ pub fn chooseConstPtrFrom(source: anytype, comptime T: type, items: []const T) ?
 }
 
 pub fn fillChooseConstPtrFrom(source: anytype, comptime T: type, dest: []*const T, items: []const T) void {
+    if (dest.len == 0) return;
     std.debug.assert(items.len > 0);
     if (items.len == 1) {
         @memset(dest, &items[0]);
@@ -3297,6 +3301,7 @@ pub fn choosePtrFrom(source: anytype, comptime T: type, items: []T) ?*T {
 }
 
 pub fn fillChoosePtrFrom(source: anytype, comptime T: type, dest: []*T, items: []T) void {
+    if (dest.len == 0) return;
     std.debug.assert(items.len > 0);
     if (items.len == 1) {
         @memset(dest, &items[0]);
@@ -7860,10 +7865,14 @@ test "invalid facade choice helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     var empty_const_ptrs: [0]*const u8 = .{};
+    rng.fillChooseConstPtr(u8, &empty_const_ptrs, &empty);
+    try std.testing.expectEqual(control.next(), engine.next());
     try rng.fillChooseConstPtrChecked(u8, &empty_const_ptrs, &empty);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var empty_mut_ptrs: [0]*u8 = .{};
+    rng.fillChoosePtr(u8, &empty_mut_ptrs, &empty);
+    try std.testing.expectEqual(control.next(), engine.next());
     try rng.fillChoosePtrChecked(u8, &empty_mut_ptrs, &empty);
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -7893,6 +7902,8 @@ test "invalid facade choice helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     var empty_values: [0]u8 = .{};
+    rng.fillChoose(u8, &empty_values, &empty);
+    try std.testing.expectEqual(control.next(), engine.next());
     try rng.fillChooseChecked(u8, &empty_values, &empty);
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -8109,6 +8120,12 @@ test "empty index choice helpers do not consume random stream" {
     try std.testing.expectEqual(@as(usize, 0), empty_array.len);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var empty_indexes: [0]usize = .{};
+    rng.fillChooseIndex(&empty_indexes, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try rng.fillChooseIndexChecked(&empty_indexes, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     const empty = try rng.chooseIndexBatchChecked(empty_alloc.allocator(), 0, 0);
     defer empty_alloc.allocator().free(empty);
@@ -8138,6 +8155,12 @@ test "empty index choice helpers do not consume random stream" {
 
     const empty_array_u32 = try rng.chooseIndexArrayU32Checked(0, 0);
     try std.testing.expectEqual(@as(usize, 0), empty_array_u32.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty_indexes_u32: [0]u32 = .{};
+    rng.fillChooseIndexU32(&empty_indexes_u32, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try rng.fillChooseIndexU32Checked(&empty_indexes_u32, 0);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var empty_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });

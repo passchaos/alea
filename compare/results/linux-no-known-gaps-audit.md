@@ -2734,3 +2734,12 @@ for `chooseBatchFrom`, `chooseConstPtrBatchFrom`, `choosePtrBatchFrom`,
 `chooseIndexBatchFrom`, and `chooseIndexU32BatchFrom`, preserving seq-style
 `error.EmptyInput` while zero-count calls remain deterministic allocation-only
 operations. This improves failure determinism but does not resolve S4-M11.
+
+S4-M650 adds `Rng` repeated choice fill empty-output prevalidation
+(`compare/results/s4-m650-rng-choice-fill-empty-output-prevalidation.md`):
+unchecked repeated value, const-pointer, mutable-pointer, usize-index, and
+u32-index fill helpers now treat empty output buffers as deterministic no-ops
+before validating empty choice sets or relying on assertions in
+`fillChooseFrom`, `fillChooseConstPtrFrom`, `fillChoosePtrFrom`,
+`fillChooseIndexFrom`, and `fillChooseIndexU32From`. This improves no-op
+determinism but does not resolve S4-M11.
