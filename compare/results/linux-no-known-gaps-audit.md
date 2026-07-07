@@ -2817,3 +2817,11 @@ reject invalid parameters before allocation and random-stream use in
 `vectorRangeBatchFrom`, `vectorRangeAtMostBatchFrom`, `vectorChanceBatchFrom`,
 and `vectorRatioBatchFrom`, while valid allocation failures remain no-stream.
 This improves failure determinism but does not resolve S4-M11.
+
+S4-M660 adds `Rng` duration batch invalid-range prevalidation
+(`compare/results/s4-m660-rng-duration-batch-invalid-prevalidation.md`):
+unchecked duration allocation-returning range batch helpers now reject invalid
+exclusive and inclusive duration ranges before allocation and random-stream use
+in `durationRangeLessThanBatchFrom` and `durationRangeAtMostBatchFrom`, while
+valid allocation failures remain no-stream. This improves failure determinism but
+does not resolve S4-M11.

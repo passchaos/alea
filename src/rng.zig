@@ -2513,6 +2513,8 @@ pub fn durationRangeLessThanBatch(self: Rng, allocator: std.mem.Allocator, count
 }
 
 pub fn durationRangeLessThanBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    if (count == 0) return allocator.alloc(std.Io.Duration, 0);
+    if (min.nanoseconds >= max.nanoseconds) return error.EmptyRange;
     const out = try allocator.alloc(std.Io.Duration, count);
     errdefer allocator.free(out);
     for (out) |*item| item.* = durationRangeLessThanFrom(source, min, max);
@@ -2533,6 +2535,8 @@ pub fn durationRangeAtMostBatch(self: Rng, allocator: std.mem.Allocator, count: 
 }
 
 pub fn durationRangeAtMostBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    if (count == 0) return allocator.alloc(std.Io.Duration, 0);
+    if (min.nanoseconds > max.nanoseconds) return error.EmptyRange;
     const out = try allocator.alloc(std.Io.Duration, count);
     errdefer allocator.free(out);
     for (out) |*item| item.* = durationRangeAtMostFrom(source, min, max);
@@ -2553,8 +2557,6 @@ pub fn durationRangeLessThanBatchChecked(self: Rng, allocator: std.mem.Allocator
 }
 
 pub fn durationRangeLessThanBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
-    if (count == 0) return allocator.alloc(std.Io.Duration, 0);
-    if (min.nanoseconds >= max.nanoseconds) return error.EmptyRange;
     return durationRangeLessThanBatchFrom(source, allocator, count, min, max);
 }
 
@@ -2572,8 +2574,6 @@ pub fn durationRangeAtMostBatchChecked(self: Rng, allocator: std.mem.Allocator, 
 }
 
 pub fn durationRangeAtMostBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
-    if (count == 0) return allocator.alloc(std.Io.Duration, 0);
-    if (min.nanoseconds > max.nanoseconds) return error.EmptyRange;
     return durationRangeAtMostBatchFrom(source, allocator, count, min, max);
 }
 
@@ -6696,9 +6696,19 @@ test "owned duration range batches allocate and validate before consuming random
     try std.testing.expect(!invalid_less_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var invalid_less_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, durationRangeLessThanBatchFrom(&engine, invalid_less_unchecked_alloc.allocator(), 8, min, max));
+    try std.testing.expect(!invalid_less_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var invalid_at_most_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.EmptyRange, durationRangeAtMostBatchCheckedFrom(&engine, invalid_at_most_alloc.allocator(), 8, min, max));
     try std.testing.expect(!invalid_at_most_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_at_most_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.durationRangeAtMostBatch(invalid_at_most_unchecked_alloc.allocator(), 8, min, max));
+    try std.testing.expect(!invalid_at_most_unchecked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
