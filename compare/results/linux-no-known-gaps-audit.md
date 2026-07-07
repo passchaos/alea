@@ -2226,3 +2226,9 @@ helpers (`compare/results/s4-m580-root-weighted-by-value-array-sample-helpers.md
 system-entropy callers can now produce fixed-size no-replacement weighted value
 arrays directly from an item slice and comptime item-weight accessor from the
 root API while S4-M11 remains blocked.
+
+S4-M581 adds root item-accessor weighted no-replacement const-pointer array
+sample helpers (`compare/results/s4-m581-root-weighted-by-const-ptr-array-sample-helpers.md`):
+system-entropy callers can now produce fixed-size no-replacement weighted
+const-pointer arrays directly from an item slice and comptime item-weight
+accessor from the root API while S4-M11 remains blocked.
