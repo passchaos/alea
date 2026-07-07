@@ -133,6 +133,7 @@ command matrix evidence.
   `chooseWeightedByIndex`, `chooseWeightedByIndexChecked`,
   `chooseWeightedConstPtrBy`, `chooseWeightedConstPtrByChecked`,
   `chooseWeightedConstPtrByIndex`, `chooseWeightedConstPtrByIndexChecked`,
+  `chooseWeightedPtrBy`, `chooseWeightedPtrByChecked`,
   `chooseWeightedPtrByIndex`, `chooseWeightedPtrByIndexChecked`,
   `fillChooseWeightedByIndex`, `fillChooseWeightedByIndexChecked`,
   `chooseWeightedBatchByIndex`, `chooseWeightedBatchByIndexChecked`,
