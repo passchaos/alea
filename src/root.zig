@@ -1847,6 +1847,7 @@ pub fn sampleWeightedChecked(comptime T: type, comptime Weight: type, io: std.Io
 pub fn sampleWeightedBy(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize, comptime weightFn: fn (*const T) Weight) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (items.len == 0) return error.EmptyInput;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const state = try rootPositiveItemStateBy(T, Weight, items, weightFn);
     const count = @min(amount, state.count);
     if (count == 0) return allocator.alloc(T, 0);
@@ -1859,6 +1860,7 @@ pub fn sampleWeightedBy(comptime T: type, comptime Weight: type, io: std.Io, all
 pub fn sampleWeightedByChecked(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize, comptime weightFn: fn (*const T) Weight) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (amount > items.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const state = try rootPositiveItemStateBy(T, Weight, items, weightFn);
     if (state.count < amount) return error.InvalidParameter;
     if (state.count == 1 and amount == 1) return rootSingleItemByAlloc(T, allocator, items[state.single_index.?]);
@@ -7251,6 +7253,29 @@ test "root random helpers validate deterministic cases before entropy" {
         weighted_empty_enum_checked_failed = true;
     }
     try std.testing.expect(weighted_empty_enum_checked_failed);
+    const EmptyEnumWeight = struct {
+        fn positive(_: *const EmptyEnum) f64 {
+            return 1;
+        }
+    };
+    var weighted_by_empty_enum_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var weighted_by_empty_enum_failed = false;
+    if (sampleWeightedBy(EmptyEnum, f64, failing, weighted_by_empty_enum_alloc.allocator(), weighted_empty_enum_items, 1, EmptyEnumWeight.positive)) |values| {
+        weighted_by_empty_enum_alloc.allocator().free(values);
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        weighted_by_empty_enum_failed = true;
+    }
+    try std.testing.expect(weighted_by_empty_enum_failed);
+    var weighted_by_empty_enum_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var weighted_by_empty_enum_checked_failed = false;
+    if (sampleWeightedByChecked(EmptyEnum, f64, failing, weighted_by_empty_enum_checked_alloc.allocator(), weighted_empty_enum_items, 1, EmptyEnumWeight.positive)) |values| {
+        weighted_by_empty_enum_checked_alloc.allocator().free(values);
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        weighted_by_empty_enum_checked_failed = true;
+    }
+    try std.testing.expect(weighted_by_empty_enum_checked_failed);
     const zero_weighted_values_nr = try sampleWeighted(u8, f64, failing, std.testing.allocator, &.{ 10, 20, 30 }, &.{ 0, 0, 0 }, 2);
     defer std.testing.allocator.free(zero_weighted_values_nr);
     try std.testing.expectEqual(@as(usize, 0), zero_weighted_values_nr.len);

@@ -2586,3 +2586,11 @@ root system-entropy callers now get non-zero uninhabited value type failures
 before random-output allocation and secure-engine construction for
 `sampleWeighted` and `sampleWeightedChecked`, while zero-amount and deterministic
 all-zero/single paths remain allocation-only and S4-M11 remains blocked.
+
+S4-M631 adds root item-accessor weighted value sample empty-type prevalidation
+(`compare/results/s4-m631-root-weighted-by-value-sample-empty-type-prevalidation.md`):
+root system-entropy callers now get non-zero uninhabited value type failures
+before random-output allocation and secure-engine construction for
+`sampleWeightedBy` and `sampleWeightedByChecked`, while zero-amount and
+deterministic all-zero/single paths remain allocation-only and S4-M11 remains
+blocked.
