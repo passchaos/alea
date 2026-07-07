@@ -2401,3 +2401,11 @@ failures before random-output allocation and secure-engine construction for
 `chooseWeightedConstPtrBatchByIndex` and
 `chooseWeightedConstPtrBatchByIndexChecked`, while deterministic empty/single
 paths remain allocation-only and S4-M11 remains blocked.
+
+S4-M605 adds root by-index weighted mutable-pointer batch prevalidation
+(`compare/results/s4-m605-root-weighted-by-index-mut-ptr-batch-prevalidation.md`):
+root system-entropy callers now get invalid-weight and checked empty-input
+failures before random-output allocation and secure-engine construction for
+`chooseWeightedPtrBatchByIndex` and `chooseWeightedPtrBatchByIndexChecked`,
+while deterministic empty/single paths remain allocation-only and S4-M11 remains
+blocked.

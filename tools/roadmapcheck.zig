@@ -600,6 +600,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M602", .path = "compare/results/s4-m602-root-weighted-by-mut-ptr-batch-prevalidation.md" },
     .{ .milestone = "S4-M603", .path = "compare/results/s4-m603-root-weighted-by-index-value-batch-prevalidation.md" },
     .{ .milestone = "S4-M604", .path = "compare/results/s4-m604-root-weighted-by-index-const-ptr-batch-prevalidation.md" },
+    .{ .milestone = "S4-M605", .path = "compare/results/s4-m605-root-weighted-by-index-mut-ptr-batch-prevalidation.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -607,7 +608,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M605",
+    "S4-M606",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -919,12 +920,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M605 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M605 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M606 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M606 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M605 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M605 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M606 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M606 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
