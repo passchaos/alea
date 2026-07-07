@@ -810,7 +810,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M769 iterator exact-short caller-owned end-probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m769-iterator-exact-short-caller-owned-end-probe.md` | Closed for the current bar: caller-owned unweighted iterator fills now avoid extra null probes for exact-short sources. |
 | S4-M770 checked iterator exact-count end-probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m770-checked-iterator-exact-count-end-probe.md` | Closed for the current bar: checked unweighted iterator samples now avoid extra null probes when exact remaining equals the requested count. |
 | S4-M771 weighted iterator choice exact-single end-probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m771-weighted-iterator-choice-exact-single.md` | Closed for the current bar: weighted iterator one-shot choice helpers now avoid extra null probes for exact-single sources while preserving weight validation. |
-| S4-M772 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M772 weighted iterator sample exact-single allocation avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m772-weighted-iterator-sample-exact-single.md` | Closed for the current bar: allocation-returning weighted iterator samples now resolve exact-single sources without heap setup, extra probes, entropy, or random-stream use. |
+| S4-M773 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2393,6 +2394,9 @@ resolve S4-M11 or complete the long-term objective.
 S4-M771 additionally avoids extra end-of-iterator probes for exact-single
 weighted iterator choices; it is reliability/ergonomics work and does not
 resolve S4-M11 or complete the long-term objective.
+S4-M772 additionally avoids heap setup and extra probes for exact-single
+allocation-returning weighted iterator samples; it is reliability/ergonomics
+work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

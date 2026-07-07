@@ -4974,7 +4974,22 @@ fn rootSampleIteratorWeightedInto(comptime T: type, io: std.Io, iterator: anytyp
 
 fn rootSampleIteratorWeightedAlloc(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize, comptime checked: bool) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
-    const max_possible = if (rootIteratorExactRemaining(iterator)) |remaining| @min(amount, remaining) else amount;
+    const max_possible = if (rootIteratorExactRemaining(iterator)) |remaining| blk: {
+        if (remaining == 1) {
+            const entry = iterator.next() orelse {
+                if (checked) return error.InvalidParameter;
+                return allocator.alloc(T, 0);
+            };
+            const weight = rootWeightAsF64(@TypeOf(entry.weight), entry.weight);
+            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+            if (weight == 0) {
+                if (checked) return error.InvalidParameter;
+                return allocator.alloc(T, 0);
+            }
+            return rootSingleItemByAlloc(T, allocator, entry.item);
+        }
+        break :blk @min(amount, remaining);
+    } else amount;
     const Pending = struct {
         item: T,
         weight: f64,
@@ -10140,6 +10155,32 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), weighted_sample_exact_empty_out.len);
     try std.testing.expectEqual(@as(usize, 0), weighted_sample_exact_empty.calls);
     try std.testing.expect(!weighted_sample_exact_empty_alloc.has_induced_failure);
+    const SingleExactWeightedIter = struct {
+        entry: WeightedIter.Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?WeightedIter.Entry {
+            self.calls += 1;
+            if (self.index != 0) return null;
+            self.index = 1;
+            return self.entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return 1 - self.index;
+        }
+    };
+    var weighted_sample_exact_single = SingleExactWeightedIter{ .entry = .{ .item = 42, .weight = 5 } };
+    const weighted_sample_exact_single_out = try sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_exact_single, 8);
+    defer std.testing.allocator.free(weighted_sample_exact_single_out);
+    try std.testing.expectEqualSlices(u8, &.{42}, weighted_sample_exact_single_out);
+    try std.testing.expectEqual(@as(usize, 1), weighted_sample_exact_single.calls);
+    var weighted_sample_exact_zero = SingleExactWeightedIter{ .entry = .{ .item = 42, .weight = 0 } };
+    const weighted_sample_exact_zero_out = try sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_exact_zero, 8);
+    defer std.testing.allocator.free(weighted_sample_exact_zero_out);
+    try std.testing.expectEqual(@as(usize, 0), weighted_sample_exact_zero_out.len);
+    try std.testing.expectEqual(@as(usize, 1), weighted_sample_exact_zero.calls);
     var weighted_sample_empty_checked = WeightedIter{ .items = &weighted_entropy_entries };
     const weighted_sample_empty_checked_out = try sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_empty_checked, 0);
     defer std.testing.allocator.free(weighted_sample_empty_checked_out);

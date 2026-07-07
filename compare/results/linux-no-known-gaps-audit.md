@@ -3583,3 +3583,10 @@ seq/root weighted iterator one-shot choices now read exactly one entry for
 exact-single sources and return positive/null/error results without extra null
 probes or entropy. This improves weighted iterator choice reliability evidence
 but does not resolve S4-M11.
+
+S4-M772 avoids weighted iterator exact-single sample heap setup
+(`compare/results/s4-m772-weighted-iterator-sample-exact-single.md`):
+seq/root allocation-returning weighted iterator samples now resolve exact-single
+sources after one validated entry without heap setup, extra probes, entropy, or
+random-stream use. This improves weighted iterator sampling reliability evidence
+but does not resolve S4-M11.

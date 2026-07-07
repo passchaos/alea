@@ -5094,6 +5094,15 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (iteratorExactRemaining(iterator)) |remaining| {
         if (remaining < amount) return error.InvalidParameter;
+        if (remaining == 1) {
+            const entry = iterator.next() orelse return error.InvalidParameter;
+            const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+            if (weight == 0) return error.InvalidParameter;
+            const out = try allocator.alloc(T, 1);
+            out[0] = entry.item;
+            return out;
+        }
     }
     const Pending = struct {
         item: T,
@@ -5161,6 +5170,15 @@ pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype,
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const queue_capacity = if (iteratorExactRemaining(iterator)) |remaining| blk: {
         if (remaining == 0) return allocator.alloc(T, 0);
+        if (remaining == 1) {
+            const entry = iterator.next() orelse return allocator.alloc(T, 0);
+            const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+            if (weight == 0) return allocator.alloc(T, 0);
+            const out = try allocator.alloc(T, 1);
+            out[0] = entry.item;
+            return out;
+        }
         break :blk @min(amount, remaining);
     } else amount;
     const Pending = struct {
@@ -12627,6 +12645,58 @@ test "empty exact weighted iterator samples avoid heap allocation" {
     defer failing.allocator().free(sample);
     try std.testing.expectEqual(@as(usize, 0), sample.len);
     try std.testing.expectEqual(@as(usize, 0), iter.calls);
+    try std.testing.expect(!failing.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "single exact weighted iterator samples avoid heap allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7723);
+    var control = alea.ScalarPrng.init(0x5150_7723);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const SingleExactIter = struct {
+        entry: Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index != 0) return null;
+            self.index = 1;
+            return self.entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return 1 - self.index;
+        }
+    };
+
+    var iter = SingleExactIter{ .entry = .{ .item = 42, .weight = 5 } };
+    const sample = try sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &iter, 8);
+    defer std.testing.allocator.free(sample);
+    try std.testing.expectEqualSlices(u8, &.{42}, sample);
+    try std.testing.expectEqual(@as(usize, 1), iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_iter = SingleExactIter{ .entry = .{ .item = 42, .weight = 5 } };
+    const checked = try sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &checked_iter, 1);
+    defer std.testing.allocator.free(checked);
+    try std.testing.expectEqualSlices(u8, &.{42}, checked);
+    try std.testing.expectEqual(@as(usize, 1), checked_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var zero_iter = SingleExactIter{ .entry = .{ .item = 42, .weight = 0 } };
+    const zero = try sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &zero_iter, 8);
+    defer std.testing.allocator.free(zero);
+    try std.testing.expectEqual(@as(usize, 0), zero.len);
+    try std.testing.expectEqual(@as(usize, 1), zero_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_zero_iter = SingleExactIter{ .entry = .{ .item = 42, .weight = 0 } };
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(failing.allocator(), &engine, u8, &checked_zero_iter, 1));
+    try std.testing.expectEqual(@as(usize, 1), checked_zero_iter.calls);
     try std.testing.expect(!failing.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
