@@ -4782,6 +4782,9 @@ pub fn chooseIteratorStableFrom(source: anytype, comptime T: type, iterator: any
 
 pub fn chooseIteratorFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
     if (comptime valueTypeHasEmptyEnum(T)) return null;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return null;
+    }
     var seen: usize = 0;
     var result: ?T = null;
 
@@ -11491,6 +11494,40 @@ test "empty facade iterator choices do not consume random stream" {
     };
     var weighted_iter = EmptyWeightedIter{};
     try std.testing.expectError(error.EmptyInput, chooseIteratorWeightedChecked(rng, u8, &weighted_iter));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "empty exact iterator choice does not read source" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_c07e);
+    var control = alea.ScalarPrng.init(0x5150_c07e);
+
+    const EmptyExactIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+
+    var iter = EmptyExactIter{};
+    try std.testing.expectEqual(@as(?u8, null), chooseIteratorFrom(&engine, u8, &iter));
+    try std.testing.expectEqual(@as(usize, 0), iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_iter = EmptyExactIter{};
+    try std.testing.expectError(error.EmptyInput, chooseIteratorCheckedFrom(&engine, u8, &checked_iter));
+    try std.testing.expectEqual(@as(usize, 0), checked_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var stable_iter = EmptyExactIter{};
+    try std.testing.expectEqual(@as(?u8, null), chooseIteratorStableFrom(&engine, u8, &stable_iter));
+    try std.testing.expectEqual(@as(usize, 0), stable_iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

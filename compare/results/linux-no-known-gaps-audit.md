@@ -3539,3 +3539,9 @@ seq/root weighted iterator one-shot choice helpers now return null or EmptyInput
 for exact-empty sources before iterator consumption, entropy, or random-stream
 use. This improves weighted iterator choice reliability evidence but does not
 resolve S4-M11.
+
+S4-M765 tightens unweighted iterator one-shot exact-empty prevalidation
+(`compare/results/s4-m765-iterator-choice-exact-empty-prevalidation.md`):
+seq/root unweighted iterator choice helpers now return null or EmptyInput for
+exact-empty sources before iterator consumption, entropy, or random-stream use.
+This improves iterator choice reliability evidence but does not resolve S4-M11.

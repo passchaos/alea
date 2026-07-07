@@ -4757,9 +4757,11 @@ fn rootUnicodeScalarFromCompressed(compressed: u21) u21 {
 const RootIteratorChoiceMode = enum { reservoir, hinted };
 
 fn rootChooseIterator(comptime T: type, io: std.Io, iterator: anytype, mode: RootIteratorChoiceMode) !?T {
+    if (rootIteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return null;
+    }
     if (mode == .hinted) {
         if (rootIteratorExactRemaining(iterator)) |remaining| {
-            if (remaining == 0) return null;
             const first = iterator.next() orelse return null;
             if (remaining == 1) return first;
 
@@ -7745,6 +7747,27 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(?u8, 42), try chooseIterator(u8, failing, &singleton_iter));
     var singleton_iter_checked = SliceIter{ .items = &.{42} };
     try std.testing.expectEqual(@as(u8, 42), try chooseIteratorChecked(u8, failing, &singleton_iter_checked));
+    const EmptyExactChoiceIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+    var exact_empty_choice = EmptyExactChoiceIter{};
+    try std.testing.expectEqual(@as(?u8, null), try chooseIterator(u8, failing, &exact_empty_choice));
+    try std.testing.expectEqual(@as(usize, 0), exact_empty_choice.calls);
+    var exact_empty_choice_checked = EmptyExactChoiceIter{};
+    try std.testing.expectError(error.EmptyInput, chooseIteratorChecked(u8, failing, &exact_empty_choice_checked));
+    try std.testing.expectEqual(@as(usize, 0), exact_empty_choice_checked.calls);
+    var exact_empty_choice_stable = EmptyExactChoiceIter{};
+    try std.testing.expectEqual(@as(?u8, null), try chooseIteratorStable(u8, failing, &exact_empty_choice_stable));
+    try std.testing.expectEqual(@as(usize, 0), exact_empty_choice_stable.calls);
     var hinted_singleton = SliceIter{ .items = &.{77} };
     try std.testing.expectEqual(@as(?u8, 77), try chooseIteratorHinted(u8, failing, &hinted_singleton));
     var stable_singleton = SliceIter{ .items = &.{88} };
