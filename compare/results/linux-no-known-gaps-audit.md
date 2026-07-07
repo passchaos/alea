@@ -2985,3 +2985,10 @@ heap allocation, and secure-engine construction in `sampleIteratorWeighted`,
 `sampleIteratorWeightedIntoChecked`, `sampleIteratorWeightedArray`, and
 `sampleIteratorWeightedArrayChecked`. This improves failure determinism but does
 not resolve S4-M11.
+
+S4-M681 adds `seq` weighted value choice empty-type prevalidation
+(`compare/results/s4-m681-seq-weighted-value-empty-type-prevalidation.md`):
+`seq` weighted value choice helpers now reject non-zero empty enum-containing
+value types before weighted-index sampling, allocation, random-stream use, and
+value copying in scalar, fill, array, and batch value-choice paths. This improves
+failure determinism but does not resolve S4-M11.
