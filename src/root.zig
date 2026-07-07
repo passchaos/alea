@@ -2642,22 +2642,20 @@ pub fn sampleIteratorArrayChecked(comptime T: type, io: std.Io, comptime N: usiz
 
 pub fn sampleIteratorWeighted(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
     if (amount != 0 and comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
-    if (amount != 0) {
-        if (rootIteratorExactRemaining(iterator)) |remaining| {
-            if (remaining == 0) return allocator.alloc(T, 0);
-        }
+    const exact_remaining = if (amount != 0) rootIteratorExactRemaining(iterator) else null;
+    if (exact_remaining) |remaining| {
+        if (remaining == 0) return allocator.alloc(T, 0);
     }
-    return try rootSampleIteratorWeightedAlloc(T, io, allocator, iterator, amount, false);
+    return try rootSampleIteratorWeightedAlloc(T, io, allocator, iterator, amount, false, exact_remaining);
 }
 
 pub fn sampleIteratorWeightedChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
     if (amount != 0 and comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
-    if (amount != 0) {
-        if (rootIteratorExactRemaining(iterator)) |remaining| {
-            if (remaining < amount) return error.InvalidParameter;
-        }
+    const exact_remaining = if (amount != 0) rootIteratorExactRemaining(iterator) else null;
+    if (exact_remaining) |remaining| {
+        if (remaining < amount) return error.InvalidParameter;
     }
-    return try rootSampleIteratorWeightedAlloc(T, io, allocator, iterator, amount, true);
+    return try rootSampleIteratorWeightedAlloc(T, io, allocator, iterator, amount, true, exact_remaining);
 }
 
 pub fn sampleIteratorWeightedInto(comptime T: type, io: std.Io, iterator: anytype, out: []T, scratch_keys: []f64) !usize {
@@ -5091,9 +5089,9 @@ fn rootSampleIteratorWeightedExactCover(comptime T: type, allocator: std.mem.All
     return trimmed;
 }
 
-fn rootSampleIteratorWeightedAlloc(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize, comptime checked: bool) ![]T {
+fn rootSampleIteratorWeightedAlloc(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize, comptime checked: bool, exact_remaining: ?usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
-    const max_possible = if (rootIteratorExactRemaining(iterator)) |remaining| blk: {
+    const max_possible = if (exact_remaining) |remaining| blk: {
         if ((checked and remaining == amount) or (!checked and remaining <= amount)) {
             return rootSampleIteratorWeightedExactCover(T, allocator, iterator, remaining, checked);
         }
@@ -10379,6 +10377,7 @@ test "root random helpers validate deterministic cases before entropy" {
         entries: []const WeightedIter.Entry,
         index: usize = 0,
         calls: usize = 0,
+        remaining_calls: usize = 0,
 
         fn next(self: *@This()) ?WeightedIter.Entry {
             self.calls += 1;
@@ -10388,7 +10387,8 @@ test "root random helpers validate deterministic cases before entropy" {
             return entry;
         }
 
-        fn remaining(self: @This()) usize {
+        fn remaining(self: *@This()) usize {
+            self.remaining_calls += 1;
             return self.entries.len - self.index;
         }
     };
@@ -10398,6 +10398,7 @@ test "root random helpers validate deterministic cases before entropy" {
     defer weighted_sample_exact_count_alloc.allocator().free(weighted_sample_exact_count_out);
     try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, weighted_sample_exact_count_out);
     try std.testing.expectEqual(@as(usize, 2), weighted_sample_exact_count.calls);
+    try std.testing.expectEqual(@as(usize, 1), weighted_sample_exact_count.remaining_calls);
     try std.testing.expect(!weighted_sample_exact_count_alloc.has_induced_failure);
     var weighted_sample_exact_count_checked = ExactCountWeightedSampleIter{ .entries = &weighted_entropy_entries };
     var weighted_sample_exact_count_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
@@ -10405,6 +10406,7 @@ test "root random helpers validate deterministic cases before entropy" {
     defer weighted_sample_exact_count_checked_alloc.allocator().free(weighted_sample_exact_count_checked_out);
     try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, weighted_sample_exact_count_checked_out);
     try std.testing.expectEqual(@as(usize, 2), weighted_sample_exact_count_checked.calls);
+    try std.testing.expectEqual(@as(usize, 1), weighted_sample_exact_count_checked.remaining_calls);
     try std.testing.expect(!weighted_sample_exact_count_checked_alloc.has_induced_failure);
     const weighted_sample_exact_sparse_entries = [_]WeightedIter.Entry{
         .{ .item = 1, .weight = 0 },
@@ -10415,9 +10417,11 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(weighted_sample_exact_sparse_out);
     try std.testing.expectEqualSlices(u8, &.{2}, weighted_sample_exact_sparse_out);
     try std.testing.expectEqual(@as(usize, 2), weighted_sample_exact_sparse.calls);
+    try std.testing.expectEqual(@as(usize, 1), weighted_sample_exact_sparse.remaining_calls);
     var weighted_sample_exact_sparse_checked = ExactCountWeightedSampleIter{ .entries = &weighted_sample_exact_sparse_entries };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_exact_sparse_checked, 2));
     try std.testing.expectEqual(@as(usize, 2), weighted_sample_exact_sparse_checked.calls);
+    try std.testing.expectEqual(@as(usize, 1), weighted_sample_exact_sparse_checked.remaining_calls);
     var weighted_sample_empty_checked = WeightedIter{ .items = &weighted_entropy_entries };
     const weighted_sample_empty_checked_out = try sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_empty_checked, 0);
     defer std.testing.allocator.free(weighted_sample_empty_checked_out);

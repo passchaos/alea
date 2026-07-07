@@ -5175,7 +5175,8 @@ fn sampleIteratorWeightedExactCoverFrom(allocator: std.mem.Allocator, comptime T
 pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < amount) return error.InvalidParameter;
         if (remaining == amount) return sampleIteratorWeightedExactCoverFrom(allocator, T, iterator, remaining, true);
     }
@@ -5187,7 +5188,7 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
     const out = try allocator.alloc(T, amount);
     errdefer allocator.free(out);
 
-    const queue_capacity = if (iteratorExactRemaining(iterator)) |remaining| @min(amount, remaining) else amount;
+    const queue_capacity = if (exact_remaining) |remaining| @min(amount, remaining) else amount;
     var heap = WeightedIteratorQueue(T).initContext({});
     defer heap.deinit(allocator);
     try heap.ensureTotalCapacityPrecise(allocator, queue_capacity);
@@ -12979,6 +12980,7 @@ test "exact-cover weighted iterator samples avoid heap setup" {
         items: []const Entry,
         index: usize = 0,
         calls: usize = 0,
+        remaining_calls: usize = 0,
 
         fn next(self: *@This()) ?Entry {
             self.calls += 1;
@@ -12988,7 +12990,8 @@ test "exact-cover weighted iterator samples avoid heap setup" {
             return entry;
         }
 
-        fn remaining(self: @This()) usize {
+        fn remaining(self: *@This()) usize {
+            self.remaining_calls += 1;
             return self.items.len - self.index;
         }
     };
@@ -13004,6 +13007,7 @@ test "exact-cover weighted iterator samples avoid heap setup" {
     defer alloc.allocator().free(sample);
     try std.testing.expectEqualSlices(u8, &.{ 11, 22 }, sample);
     try std.testing.expectEqual(@as(usize, 2), iter.calls);
+    try std.testing.expectEqual(@as(usize, 1), iter.remaining_calls);
     try std.testing.expect(!alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -13013,6 +13017,7 @@ test "exact-cover weighted iterator samples avoid heap setup" {
     defer checked_alloc.allocator().free(checked);
     try std.testing.expectEqualSlices(u8, &.{ 11, 22 }, checked);
     try std.testing.expectEqual(@as(usize, 2), checked_iter.calls);
+    try std.testing.expectEqual(@as(usize, 1), checked_iter.remaining_calls);
     try std.testing.expect(!checked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -13025,11 +13030,13 @@ test "exact-cover weighted iterator samples avoid heap setup" {
     defer std.testing.allocator.free(sparse);
     try std.testing.expectEqualSlices(u8, &.{22}, sparse);
     try std.testing.expectEqual(@as(usize, 2), sparse_iter.calls);
+    try std.testing.expectEqual(@as(usize, 1), sparse_iter.remaining_calls);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var sparse_checked_iter = ExactIter{ .items = &sparse_entries };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedCheckedFrom(std.testing.allocator, &engine, u8, &sparse_checked_iter, 2));
     try std.testing.expectEqual(@as(usize, 2), sparse_checked_iter.calls);
+    try std.testing.expectEqual(@as(usize, 1), sparse_checked_iter.remaining_calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

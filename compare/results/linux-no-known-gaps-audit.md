@@ -3653,3 +3653,11 @@ seq/root fixed-size weighted iterator arrays now reuse exact remaining metadata
 between the public wrapper and candidate core, so exact-count paths validate and
 sample after one size-hint/remaining query instead of two. This improves weighted
 iterator array reliability evidence but does not resolve S4-M11.
+
+S4-M781 avoids duplicate weighted iterator sample exact metadata probes
+(`compare/results/s4-m781-weighted-iterator-sample-exact-metadata.md`):
+seq/root allocation-returning weighted iterator samples now reuse exact remaining
+metadata between public wrappers and weighted sample cores, so exact-cover paths
+validate and sample after one size-hint/remaining query instead of two. This
+improves weighted iterator sampling reliability evidence but does not resolve
+S4-M11.
