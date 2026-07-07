@@ -17151,6 +17151,14 @@ pub fn AliasTable(comptime Weight: type) type {
             return out;
         }
 
+        pub fn indexArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]usize {
+            return self.indexArrayCheckedFrom(rng, N);
+        }
+
+        pub fn indexArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]usize {
+            return self.indexArrayFrom(source, N);
+        }
+
         pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) [N]u32 {
             return self.indexArrayU32Checked(rng, N) catch unreachable;
         }
@@ -20185,8 +20193,18 @@ test "alias table fixed index arrays mirror fills" {
     try std.testing.expectEqualSlices(usize, &direct_array, &facade_array);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    facade_engine = alea.ScalarPrng.init(0x5150_a13c);
+    direct_engine = alea.ScalarPrng.init(0x5150_a13c);
+    const checked_rng = Rng.init(&facade_engine);
+    const checked_facade_array = try table.indexArrayChecked(checked_rng, 4);
+    const checked_direct_array = try table.indexArrayCheckedFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(usize, &checked_direct_array, &checked_facade_array);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     const empty_array = table.indexArrayFrom(&direct_engine, 0);
     try std.testing.expectEqual(@as(usize, 0), empty_array.len);
+    const empty_checked_array = try table.indexArrayCheckedFrom(&direct_engine, 0);
+    try std.testing.expectEqual(@as(usize, 0), empty_checked_array.len);
     const empty_u32_array = try table.indexArrayU32CheckedFrom(&direct_engine, 0);
     try std.testing.expectEqual(@as(usize, 0), empty_u32_array.len);
 

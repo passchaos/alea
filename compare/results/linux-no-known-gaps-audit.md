@@ -3446,3 +3446,9 @@ S4-M750 adds checked owned compact index aliases for static alias tables
 `indicesU32` stream shape and inherit compact width prevalidation. This improves
 API consistency for Alea's compact weighted-index extension but does not resolve
 S4-M11.
+
+S4-M751 implements documented checked fixed-size index arrays for static alias
+tables (`compare/results/s4-m751-aliastable-checked-fixed-index-arrays.md`):
+`AliasTable.indexArrayChecked` / `indexArrayCheckedFrom` now exist and preserve
+existing fixed-array stream shape. This closes an API-surface correctness gap but
+does not resolve S4-M11.
