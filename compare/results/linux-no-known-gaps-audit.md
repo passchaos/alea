@@ -2172,3 +2172,9 @@ S4-M571 adds root item-accessor weighted no-replacement index array helpers
 system-entropy callers can now produce fixed-size no-replacement weighted
 `usize` index arrays directly from an item slice and comptime item-weight
 accessor from the root API while S4-M11 remains blocked.
+
+S4-M572 adds root item-accessor weighted no-replacement compact u32 index array
+helpers (`compare/results/s4-m572-root-weighted-by-u32-index-array-helpers.md`):
+system-entropy callers can now produce fixed-size no-replacement weighted
+compact `u32` index arrays directly from an item slice and comptime item-weight
+accessor from the root API while S4-M11 remains blocked.
