@@ -2992,3 +2992,11 @@ S4-M681 adds `seq` weighted value choice empty-type prevalidation
 value types before weighted-index sampling, allocation, random-stream use, and
 value copying in scalar, fill, array, and batch value-choice paths. This improves
 failure determinism but does not resolve S4-M11.
+
+S4-M682 adds `seq` accessor-weighted value choice empty-type prevalidation
+(`compare/results/s4-m682-seq-weighted-by-value-empty-type-prevalidation.md`):
+`seq` item-accessor weighted value choice helpers now reject non-zero
+uninhabited value types before accessor weight evaluation, weighted-index
+sampling, allocation, random-stream use, and value copying in scalar, fill,
+array, and batch value-choice paths. This improves failure determinism but does
+not resolve S4-M11.

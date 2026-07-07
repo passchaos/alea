@@ -463,7 +463,6 @@ fn valueTypeHasEmptyEnum(comptime T: type) bool {
         .@"enum" => std.enums.values(T).len == 0,
         .array => |array_info| array_info.len != 0 and valueTypeHasEmptyEnum(array_info.child),
         .@"struct" => |struct_info| blk: {
-            if (!struct_info.is_tuple) break :blk false;
             inline for (struct_info.fields) |field| {
                 if (valueTypeHasEmptyEnum(field.type)) break :blk true;
             }
@@ -2977,6 +2976,7 @@ pub fn chooseWeightedByCheckedFrom(
     items: []const T,
     comptime weightFn: fn (*const T) Weight,
 ) !T {
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     return (try chooseWeightedByFrom(source, T, Weight, items, weightFn)) orelse error.EmptyInput;
 }
 
@@ -2987,6 +2987,7 @@ pub fn chooseWeightedByFrom(
     items: []const T,
     comptime weightFn: fn (*const T) Weight,
 ) !?T {
+    if (items.len != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const index = (try weightedIndexFromItems(source, T, Weight, items, weightFn)) orelse return null;
     return items[index];
 }
@@ -3012,6 +3013,7 @@ pub fn chooseWeightedValueArrayByFrom(
 ) !?[N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByAllowEmpty(T, Weight, items, weightFn);
     if (validation.total == 0) return null;
     if (validation.single_positive) |index| {
@@ -3043,6 +3045,7 @@ pub fn chooseWeightedValueArrayByCheckedFrom(
 ) ![N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexBy(T, Weight, items, weightFn);
     if (validation.single_positive) |index| {
         @memset(out[0..], items[index]);
@@ -3304,6 +3307,7 @@ pub fn fillChooseWeightedByFrom(
     comptime weightFn: fn (*const T) Weight,
 ) !void {
     if (dest.len == 0) return;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByAllowEmpty(T, Weight, items, weightFn);
     if (validation.total == 0) {
         @memset(dest, null);
@@ -3336,6 +3340,7 @@ pub fn fillChooseWeightedByCheckedFrom(
     comptime weightFn: fn (*const T) Weight,
 ) !void {
     if (dest.len == 0) return;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexBy(T, Weight, items, weightFn);
     if (validation.single_positive) |index| {
         @memset(dest, items[index]);
@@ -3366,6 +3371,7 @@ pub fn chooseWeightedBatchByFrom(
     comptime weightFn: fn (*const T) Weight,
 ) ![]?T {
     if (count == 0) return allocator.alloc(?T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexByAllowEmpty(T, Weight, items, weightFn);
     const out = try allocator.alloc(?T, count);
     errdefer allocator.free(out);
@@ -3403,6 +3409,7 @@ pub fn chooseWeightedBatchByCheckedFrom(
     comptime weightFn: fn (*const T) Weight,
 ) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const validation = try validateWeightedIndexBy(T, Weight, items, weightFn);
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
@@ -16374,6 +16381,57 @@ test "chooseWeightedBy preserves facade/direct stream shape and invalid paths do
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     try std.testing.expectEqual(@as(?[3]*BadEntry, null), try chooseWeightedPtrArrayByFrom(&invalid_engine, BadEntry, f64, 3, &zero_mutable, BadEntry.weightOf));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    const EmptyAccessorValue = enum {};
+    const EmptyAccessorEntry = struct {
+        item: EmptyAccessorValue,
+        weight: u32,
+
+        fn weightOf(item: *const @This()) u32 {
+            return item.weight;
+        }
+    };
+    const empty_accessor_items = @as([*]const EmptyAccessorEntry, @ptrFromInt(0x1000))[0..1];
+    if (chooseWeightedByFrom(&invalid_engine, EmptyAccessorEntry, u32, empty_accessor_items, EmptyAccessorEntry.weightOf)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    if (chooseWeightedByCheckedFrom(&invalid_engine, EmptyAccessorEntry, u32, empty_accessor_items, EmptyAccessorEntry.weightOf)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    if (chooseWeightedValueArrayByFrom(&invalid_engine, EmptyAccessorEntry, u32, 1, empty_accessor_items, EmptyAccessorEntry.weightOf)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    if (chooseWeightedValueArrayByCheckedFrom(&invalid_engine, EmptyAccessorEntry, u32, 1, empty_accessor_items, EmptyAccessorEntry.weightOf)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    var empty_accessor_fill: [1]?EmptyAccessorEntry = undefined;
+    try std.testing.expectError(error.EmptyInput, fillChooseWeightedByFrom(&invalid_engine, EmptyAccessorEntry, u32, &empty_accessor_fill, empty_accessor_items, EmptyAccessorEntry.weightOf));
+    var empty_accessor_fill_checked: [1]EmptyAccessorEntry = undefined;
+    try std.testing.expectError(error.EmptyInput, fillChooseWeightedByCheckedFrom(&invalid_engine, EmptyAccessorEntry, u32, &empty_accessor_fill_checked, empty_accessor_items, EmptyAccessorEntry.weightOf));
+    var empty_accessor_batch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchByFrom(empty_accessor_batch_alloc.allocator(), &invalid_engine, EmptyAccessorEntry, u32, 1, empty_accessor_items, EmptyAccessorEntry.weightOf)) |values| {
+        empty_accessor_batch_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_accessor_batch_alloc.has_induced_failure);
+    var empty_accessor_batch_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchByCheckedFrom(empty_accessor_batch_checked_alloc.allocator(), &invalid_engine, EmptyAccessorEntry, u32, 1, empty_accessor_items, EmptyAccessorEntry.weightOf)) |values| {
+        empty_accessor_batch_checked_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_accessor_batch_checked_alloc.has_induced_failure);
+
     const empty_value_array = try chooseWeightedValueArrayByCheckedFrom(&invalid_engine, BadEntry, f64, 0, &bad_entries, BadEntry.weightOf);
     try std.testing.expectEqual(@as(usize, 0), empty_value_array.len);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
