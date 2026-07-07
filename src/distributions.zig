@@ -455,6 +455,23 @@ pub fn Choose(comptime T: type) type {
             return self.sampleFrom(source).*;
         }
 
+        pub fn sampleValueChecked(self: Self, rng: Rng) Error!T {
+            return self.sampleValueCheckedFrom(rng);
+        }
+
+        pub fn sampleValueCheckedFrom(self: Self, source: anytype) Error!T {
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+            return self.sampleValueFrom(source);
+        }
+
+        pub fn valueChecked(self: Self, rng: Rng) Error!T {
+            return self.sampleValueChecked(rng);
+        }
+
+        pub fn valueCheckedFrom(self: Self, source: anytype) Error!T {
+            return self.sampleValueCheckedFrom(source);
+        }
+
         pub fn sampleIndex(self: Self, rng: Rng) usize {
             return self.sampleIndexFrom(rng);
         }
@@ -32165,6 +32182,13 @@ test "distribution Choose sampler mirrors slice choices" {
         choice.sampleValueFrom(&choice_engine),
     );
     try std.testing.expectEqual(index_engine.next(), choice_engine.next());
+    var checked_value_engine = root.DefaultPrng.init(0xc0_286);
+    var unchecked_value_engine = root.DefaultPrng.init(0xc0_286);
+    try std.testing.expectEqual(
+        choice.sampleValueFrom(&unchecked_value_engine),
+        try choice.sampleValueCheckedFrom(&checked_value_engine),
+    );
+    try std.testing.expectEqual(unchecked_value_engine.next(), checked_value_engine.next());
     var sample_index_engine = root.DefaultPrng.init(0xc0_276);
     var choose_index_engine = root.DefaultPrng.init(0xc0_276);
     try std.testing.expectEqual(
@@ -32357,6 +32381,18 @@ test "distribution Choose sampler mirrors slice choices" {
     var empty_control = root.DefaultPrng.init(0xc0_271);
     var empty_values: [1]Empty = undefined;
     empty_choice.fillValuesFrom(&empty_engine, &empty_values);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    if (empty_choice.sampleValueCheckedFrom(&empty_engine)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    if (empty_choice.valueCheckedFrom(&empty_engine)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
     if (empty_choice.valueArrayCheckedFrom(&empty_engine, 1)) |_| {
         return error.TestExpectedError;

@@ -3230,3 +3230,9 @@ S4-M717 adds distribution-layer `Choose` checked u32 index aliases
 distribution-layer `Choose` now has checked aliases for scalar, caller-owned,
 owned, and fixed-size u32 index outputs. This improves discoverability but does
 not resolve S4-M11.
+
+S4-M718 adds distribution-layer `Choose` checked values
+(`compare/results/s4-m718-distribution-choose-checked-values.md`):
+distribution-layer `Choose` now has checked scalar value-copy helpers with
+empty-type failures before random-stream use and value copying. This improves
+fallible value-copy ergonomics but does not resolve S4-M11.

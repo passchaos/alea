@@ -713,6 +713,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M715", .path = "compare/results/s4-m715-distribution-choose-probability-introspection.md" },
     .{ .milestone = "S4-M716", .path = "compare/results/s4-m716-distribution-choose-checked-index-aliases.md" },
     .{ .milestone = "S4-M717", .path = "compare/results/s4-m717-distribution-choose-checked-u32-index-aliases.md" },
+    .{ .milestone = "S4-M718", .path = "compare/results/s4-m718-distribution-choose-checked-values.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -720,7 +721,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M718",
+    "S4-M719",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -1032,12 +1033,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M718 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M718 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M719 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M719 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M718 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M718 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M719 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M719 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
