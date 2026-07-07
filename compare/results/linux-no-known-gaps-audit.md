@@ -2432,3 +2432,11 @@ failures before random-output allocation and secure-engine construction for
 `weightedIndexBatchByIndex` and `weightedIndexBatchByIndexChecked`, while
 deterministic empty/single paths remain allocation-only and S4-M11 remains
 blocked.
+
+S4-M609 adds root by-index weighted compact u32 index batch prevalidation
+(`compare/results/s4-m609-root-weighted-by-index-u32-index-batch-prevalidation.md`):
+root system-entropy callers now get oversized-input, invalid-weight, and checked
+empty-input failures before random-output allocation and secure-engine
+construction for `weightedIndexU32BatchByIndex` and
+`weightedIndexU32BatchByIndexChecked`, while deterministic empty/single paths
+remain allocation-only and S4-M11 remains blocked.

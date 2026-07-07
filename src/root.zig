@@ -2956,6 +2956,20 @@ pub fn weightedIndexBatchByIndexChecked(comptime Weight: type, io: std.Io, alloc
 
 pub fn weightedIndexU32BatchByIndex(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, length: usize, comptime weightFn: fn (usize) Weight) ![]?u32 {
     if (count == 0) return allocator.alloc(?u32, 0);
+    if (length > std.math.maxInt(u32)) return error.InvalidParameter;
+    switch (try rootWeightedIndexStateByIndex(Weight, length, weightFn)) {
+        .empty => {
+            const out = try allocator.alloc(?u32, count);
+            @memset(out, @as(?u32, null));
+            return out;
+        },
+        .single => |index| {
+            const out = try allocator.alloc(?u32, count);
+            @memset(out, @as(?u32, @intCast(index)));
+            return out;
+        },
+        .random => {},
+    }
     const out = try allocator.alloc(?u32, count);
     errdefer allocator.free(out);
     try fillWeightedIndexU32ByIndex(Weight, io, out, length, weightFn);
@@ -2964,6 +2978,16 @@ pub fn weightedIndexU32BatchByIndex(comptime Weight: type, io: std.Io, allocator
 
 pub fn weightedIndexU32BatchByIndexChecked(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, length: usize, comptime weightFn: fn (usize) Weight) ![]u32 {
     if (count == 0) return allocator.alloc(u32, 0);
+    if (length > std.math.maxInt(u32)) return error.InvalidParameter;
+    switch (try rootWeightedIndexStateByIndex(Weight, length, weightFn)) {
+        .empty => return error.EmptyInput,
+        .single => |index| {
+            const out = try allocator.alloc(u32, count);
+            @memset(out, @intCast(index));
+            return out;
+        },
+        .random => {},
+    }
     const out = try allocator.alloc(u32, count);
     errdefer allocator.free(out);
     try fillWeightedIndexU32ByIndexChecked(Weight, io, out, length, weightFn);
@@ -8292,17 +8316,30 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_by_index_u32_batch_checked = try weightedIndexU32BatchByIndexChecked(f64, failing, std.testing.allocator, 0, 3, RootByIndexWeights.invalid);
     defer std.testing.allocator.free(empty_by_index_u32_batch_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_by_index_u32_batch_checked.len);
+    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndex(f64, failing, std.testing.allocator, 1, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
+    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexChecked(f64, failing, std.testing.allocator, 1, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
+    var by_index_u32_oversized_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndex(f64, failing, by_index_u32_oversized_alloc.allocator(), 1, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
+    var by_index_u32_checked_oversized_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexChecked(f64, failing, by_index_u32_checked_oversized_alloc.allocator(), 1, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
     const by_index_u32_zero_batch = try weightedIndexU32BatchByIndex(f64, failing, std.testing.allocator, 3, 3, RootByIndexWeights.zero);
     defer std.testing.allocator.free(by_index_u32_zero_batch);
     try std.testing.expectEqualSlices(?u32, &.{ null, null, null }, by_index_u32_zero_batch);
     try std.testing.expectError(error.EmptyInput, weightedIndexU32BatchByIndexChecked(f64, failing, std.testing.allocator, 3, 3, RootByIndexWeights.zero));
+    var by_index_u32_checked_empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyInput, weightedIndexU32BatchByIndexChecked(f64, failing, by_index_u32_checked_empty_alloc.allocator(), 3, 3, RootByIndexWeights.zero));
     const by_index_u32_single_batch = try weightedIndexU32BatchByIndex(f64, failing, std.testing.allocator, 3, 3, RootByIndexWeights.single);
     defer std.testing.allocator.free(by_index_u32_single_batch);
     try std.testing.expectEqualSlices(?u32, &.{ 1, 1, 1 }, by_index_u32_single_batch);
     const by_index_u32_single_batch_checked = try weightedIndexU32BatchByIndexChecked(f64, failing, std.testing.allocator, 3, 3, RootByIndexWeights.single);
     defer std.testing.allocator.free(by_index_u32_single_batch_checked);
     try std.testing.expectEqualSlices(u32, &.{ 1, 1, 1 }, by_index_u32_single_batch_checked);
+    try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchByIndex(f64, failing, std.testing.allocator, 3, 3, RootByIndexWeights.invalid));
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchByIndexChecked(f64, failing, std.testing.allocator, 3, 3, RootByIndexWeights.invalid));
+    var by_index_u32_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchByIndex(f64, failing, by_index_u32_invalid_alloc.allocator(), 3, 3, RootByIndexWeights.invalid));
+    var by_index_u32_checked_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchByIndexChecked(f64, failing, by_index_u32_checked_invalid_alloc.allocator(), 3, 3, RootByIndexWeights.invalid));
     try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndex(f64, failing, std.testing.allocator, 3, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
     try std.testing.expectEqual(@as(usize, 0), (try weightedIndexArrayByIndex(f64, failing, 0, 3, RootByIndexWeights.invalid)).?.len);
     try std.testing.expectEqual(@as(usize, 0), (try weightedIndexArrayByIndexChecked(f64, failing, 0, 3, RootByIndexWeights.invalid)).len);
