@@ -2708,3 +2708,11 @@ before allocation, random-stream use, and append-buffer mutation for
 `Charset.allocFrom`, `Charset.sampleStringFrom`, and `Charset.appendStringFrom`,
 while zero-length calls remain deterministic no-stream operations. This improves
 failure determinism but does not resolve S4-M11.
+
+S4-M647 adds Unicode charset unchecked invalid prevalidation
+(`compare/results/s4-m647-unicode-charset-unchecked-invalid-prevalidation.md`):
+`UnicodeCharset` UTF-8 string helpers now reject non-zero empty or invalid scalar
+sets before allocation, random-stream use, and append-buffer mutation for
+`UnicodeCharset.sampleStringFrom` and `UnicodeCharset.appendStringFrom`, while
+zero-length calls remain deterministic no-stream operations. This improves
+failure determinism but does not resolve S4-M11.

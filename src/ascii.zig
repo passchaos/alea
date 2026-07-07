@@ -405,6 +405,8 @@ pub const UnicodeCharset = struct {
     }
 
     pub fn sampleStringFrom(self: UnicodeCharset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {
+        if (length == 0) return allocator.alloc(u8, 0);
+        try self.validateNonEmpty();
         const capacity = try self.utf8Capacity(length);
         var out = try std.ArrayList(u8).initCapacity(allocator, capacity);
         errdefer out.deinit(allocator);
@@ -428,7 +430,7 @@ pub const UnicodeCharset = struct {
 
     pub fn appendStringFrom(self: UnicodeCharset, allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), length: usize) !void {
         if (length == 0) return;
-        std.debug.assert(self.scalars.len > 0);
+        try self.validateNonEmpty();
         try string_buffer.ensureUnusedCapacity(allocator, try self.utf8Capacity(length));
 
         var i: usize = 0;
@@ -1057,6 +1059,49 @@ test "unicode charset checked helpers validate without consuming" {
 
     var empty_scalar_buf: [0]u21 = .{};
     try invalid.fillCheckedFrom(&engine, &empty_scalar_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "unicode charset unchecked strings validate before allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_b007);
+    var control = alea.ScalarPrng.init(0x5150_b007);
+    const empty = UnicodeCharset{ .scalars = &.{} };
+    const invalid = UnicodeCharset{ .scalars = &.{0xD800} };
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyCharset, empty.sampleStringFrom(empty_alloc.allocator(), &engine, 3));
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, invalid.sampleStringFrom(invalid_alloc.allocator(), &engine, 3));
+    try std.testing.expect(!invalid_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 4);
+    defer list.deinit(std.testing.allocator);
+    try list.appendSlice(std.testing.allocator, "u:");
+    var empty_append_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyCharset, empty.appendStringFrom(empty_append_alloc.allocator(), &engine, &list, 3));
+    try std.testing.expect(!empty_append_alloc.has_induced_failure);
+    try std.testing.expectEqualStrings("u:", list.items);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_append_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, invalid.appendStringFrom(invalid_append_alloc.allocator(), &engine, &list, 3));
+    try std.testing.expect(!invalid_append_alloc.has_induced_failure);
+    try std.testing.expectEqualStrings("u:", list.items);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const zero_empty = try empty.sampleStringFrom(std.testing.allocator, &engine, 0);
+    defer std.testing.allocator.free(zero_empty);
+    try std.testing.expectEqual(@as(usize, 0), zero_empty.len);
+    const zero_invalid = try invalid.sampleStringFrom(std.testing.allocator, &engine, 0);
+    defer std.testing.allocator.free(zero_invalid);
+    try std.testing.expectEqual(@as(usize, 0), zero_invalid.len);
+    try invalid.appendStringFrom(std.testing.allocator, &engine, &list, 0);
+    try std.testing.expectEqualStrings("u:", list.items);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
