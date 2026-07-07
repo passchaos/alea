@@ -2455,3 +2455,11 @@ system-entropy callers now get invalid inclusive-range failures before
 random-output allocation and secure-engine construction for
 `rangeAtMostBatchChecked`, while zero-count and deterministic collapsed paths
 remain allocation-only and S4-M11 remains blocked.
+
+S4-M612 adds root checked Unicode scalar batch parameter prevalidation
+(`compare/results/s4-m612-root-checked-unicode-batch-prevalidation.md`): root
+system-entropy callers now get invalid Unicode range and code-point failures
+before random-output allocation and secure-engine construction for
+`unicodeScalarRangeLessThanBatchChecked` and
+`unicodeScalarRangeAtMostBatchChecked`, while zero-count and deterministic
+collapsed paths remain allocation-only and S4-M11 remains blocked.

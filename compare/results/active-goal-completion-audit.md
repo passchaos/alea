@@ -650,7 +650,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M609 root by-index weighted compact u32 index batch prevalidation | `src/root.zig`, `compare/results/s4-m609-root-weighted-by-index-u32-index-batch-prevalidation.md` | Closed for the current bar: root length/by-index weighted compact u32 index batch helpers now prevalidate deterministic and invalid paths before random-output allocation and secure-engine construction. |
 | S4-M610 root checked scalar batch parameter prevalidation | `src/root.zig`, `compare/results/s4-m610-root-checked-scalar-batch-prevalidation.md` | Closed for the current bar: root checked scalar batch helpers now prevalidate invalid parameters before random-output allocation and secure-engine construction. |
 | S4-M611 root checked inclusive integer batch parameter prevalidation | `src/root.zig`, `compare/results/s4-m611-root-checked-inclusive-batch-prevalidation.md` | Closed for the current bar: root checked inclusive integer range batch helpers now prevalidate invalid parameters before random-output allocation and secure-engine construction. |
-| S4-M612 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M612 root checked Unicode scalar batch parameter prevalidation | `src/root.zig`, `compare/results/s4-m612-root-checked-unicode-batch-prevalidation.md` | Closed for the current bar: root checked Unicode scalar range batch helpers now prevalidate invalid ranges/code points before random-output allocation and secure-engine construction. |
+| S4-M613 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1741,6 +1742,9 @@ S4-M610 additionally tightens root checked scalar batch parameter
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
 S4-M611 additionally tightens root checked inclusive integer batch parameter
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
+S4-M612 additionally tightens root checked Unicode scalar batch parameter
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
 
