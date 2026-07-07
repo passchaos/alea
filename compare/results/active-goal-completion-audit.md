@@ -780,7 +780,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M739 aliastable checked iterators | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m739-aliastable-checked-iterators.md` | Closed for the current bar: static `AliasTable` now has checked iterator aliases for `usize` and compact `u32` index iterators. |
 | S4-M740 weighted tree checked iterators | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m740-weighted-tree-checked-iterators.md` | Closed for the current bar: dynamic `WeightedTree` and `WeightedIntTree` now have checked iterator aliases for `usize` and compact `u32` index iterators. |
 | S4-M741 aliastable checked index docs | `docs/api-reference.md`, `compare/results/s4-m741-aliastable-checked-index-docs.md` | Closed for the current bar: static `AliasTable` checked `usize` index APIs are now documented alongside the rest of the checked weighted-index surface. |
-| S4-M742 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M742 weighted tree invalid checked iterators | `src/distributions.zig`, `compare/results/s4-m742-weighted-tree-invalid-checked-iterators.md` | Closed for the current bar: dynamic weighted-tree checked iterator constructors now have explicit invalid-state no-consumption evidence. |
+| S4-M743 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2262,6 +2263,9 @@ long-term objective.
 S4-M741 additionally documents the existing static `AliasTable` checked `usize`
 index API surface; it is documentation/discoverability work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M742 additionally adds invalid-state no-consumption evidence for dynamic
+weighted-tree checked iterators; it is reliability/validation work and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

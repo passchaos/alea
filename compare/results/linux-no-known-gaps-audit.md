@@ -3377,3 +3377,10 @@ S4-M741 documents static `AliasTable` checked `usize` index APIs
 `docs/api-reference.md` now lists the existing checked scalar, fill, owned, and
 fixed-array `usize` index APIs for static `AliasTable`. This improves
 discoverability but does not resolve S4-M11.
+
+S4-M742 adds dynamic weighted-tree invalid checked iterator coverage
+(`compare/results/s4-m742-weighted-tree-invalid-checked-iterators.md`):
+checked iterator constructors for `WeightedTree` and `WeightedIntTree` now have
+explicit tests proving invalid all-zero trees return `error.InvalidWeight` before
+random-stream use. This improves reliability evidence but does not resolve
+S4-M11.
