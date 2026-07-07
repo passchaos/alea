@@ -2902,3 +2902,11 @@ enum-containing value types before secure-engine construction and before
 deterministic full-count value copying in `sampleItemsInto` and
 `sampleItemsIntoChecked`; `chooseMultipleInto` aliases inherit the same behavior.
 This improves failure determinism but does not resolve S4-M11.
+
+S4-M671 adds `seq` fixed value array empty-type prevalidation
+(`compare/results/s4-m671-seq-value-array-empty-type-prevalidation.md`): `seq`
+fixed-size no-replacement value array helpers now reject non-zero empty
+enum-containing value types before index sampling and value copying in
+`chooseArrayFrom` and `chooseArrayCheckedFrom`; `sampleItemsArray` aliases
+inherit the same behavior. This improves failure determinism but does not
+resolve S4-M11.

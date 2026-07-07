@@ -454,6 +454,21 @@ pub const Error = error{
 };
 pub const WeightError = Error;
 
+fn valueTypeHasEmptyEnum(comptime T: type) bool {
+    return switch (@typeInfo(T)) {
+        .@"enum" => std.enums.values(T).len == 0,
+        .array => |array_info| array_info.len != 0 and valueTypeHasEmptyEnum(array_info.child),
+        .@"struct" => |struct_info| blk: {
+            if (!struct_info.is_tuple) break :blk false;
+            inline for (struct_info.fields) |field| {
+                if (valueTypeHasEmptyEnum(field.type)) break :blk true;
+            }
+            break :blk false;
+        },
+        else => false,
+    };
+}
+
 pub fn SampledPtrIterator(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -1524,10 +1539,12 @@ pub fn sampleItemsArrayCheckedFrom(source: anytype, comptime T: type, comptime N
 
 pub fn chooseArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) Error![N]T {
     if (N > items.len) return error.InvalidParameter;
+    if (N != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     return chooseArrayFrom(source, T, N, items).?;
 }
 
 pub fn chooseArrayFrom(source: anytype, comptime T: type, comptime N: usize, items: []const T) ?[N]T {
+    if (N != 0 and comptime valueTypeHasEmptyEnum(T)) return null;
     const indices = sampleArrayFrom(source, N, items.len) orelse return null;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = items[indices[i]];
@@ -13123,6 +13140,7 @@ test "chooseMultiple pointer buffers preserve stream shape and invalid paths do 
 
 test "invalid chooseArray helpers do not consume random stream" {
     const alea = @import("root.zig");
+    const Empty = enum {};
     var engine = alea.ScalarPrng.init(0x5150_a004);
     var control = alea.ScalarPrng.init(0x5150_a004);
     const rng = Rng.init(&engine);
@@ -13131,6 +13149,27 @@ test "invalid chooseArray helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, chooseArrayCheckedFrom(&engine, u8, 4, &.{ 1, 2, 3 }));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const empty_items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
+    if (chooseArray(rng, Empty, 1, empty_items)) |_| return error.TestExpectedError;
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (chooseArrayFrom(&engine, Empty, 1, empty_items)) |_| return error.TestExpectedError;
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (chooseArrayChecked(rng, Empty, 1, empty_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    if (chooseArrayCheckedFrom(&engine, Empty, 1, empty_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, choosePtrArrayChecked(rng, u8, 4, &.{ 1, 2, 3 }));
