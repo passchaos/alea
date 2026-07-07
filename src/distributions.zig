@@ -425,6 +425,19 @@ pub fn Choose(comptime T: type) type {
             return out;
         }
 
+        pub fn values(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]T {
+            return self.valuesFrom(allocator, rng, amount);
+        }
+
+        pub fn valuesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]T {
+            if (amount == 0) return allocator.alloc(T, 0);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+            const out = try allocator.alloc(T, amount);
+            errdefer allocator.free(out);
+            self.fillValuesFrom(source, out);
+            return out;
+        }
+
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
             return rng.sampleIter(*const T, self);
         }
@@ -31821,6 +31834,14 @@ test "distribution Choose sampler mirrors slice choices" {
     for (&helper_values) |*value| value.* = Rng.chooseFrom(&helper_engine, u8, &items).?;
     try std.testing.expectEqualSlices(u8, &helper_values, &values);
     try std.testing.expectEqual(helper_engine.next(), fill_engine.next());
+    var values_engine = root.DefaultPrng.init(0xc0_273);
+    var values_control = root.DefaultPrng.init(0xc0_273);
+    const owned_values = try choice.valuesFrom(std.testing.allocator, &values_engine, 6);
+    defer std.testing.allocator.free(owned_values);
+    var owned_values_fill: [6]u8 = undefined;
+    choice.fillValuesFrom(&values_control, &owned_values_fill);
+    try std.testing.expectEqualSlices(u8, &owned_values_fill, owned_values);
+    try std.testing.expectEqual(values_control.next(), values_engine.next());
     var value_array_engine = root.DefaultPrng.init(0xc0_272);
     var value_array_control = root.DefaultPrng.init(0xc0_272);
     const value_array = try choice.valueArrayCheckedFrom(&value_array_engine, 6);
@@ -31859,6 +31880,15 @@ test "distribution Choose sampler mirrors slice choices" {
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
     const empty_array = try empty_choice.valueArrayCheckedFrom(&empty_engine, 0);
     try std.testing.expectEqual(@as(usize, 0), empty_array.len);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (empty_choice.valuesFrom(empty_alloc.allocator(), &empty_engine, 1)) |unexpected| {
+        empty_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_alloc.has_induced_failure);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
     try std.testing.expect(Choose(u8).new(&.{}) == null);

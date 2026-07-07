@@ -3177,3 +3177,9 @@ S4-M708 adds distribution-layer `Choose` value arrays
 distribution-layer `Choose` now has fixed-size value array helpers, including
 checked empty-type failures before random-stream use and value copying. This
 improves stack-friendly ergonomics but does not resolve S4-M11.
+
+S4-M709 adds distribution-layer `Choose` owned values
+(`compare/results/s4-m709-distribution-choose-owned-values.md`):
+distribution-layer `Choose` now has allocation-returning repeated value helpers
+with empty-type failures before allocation, random-stream use, and value copying.
+This improves owned-output ergonomics but does not resolve S4-M11.
