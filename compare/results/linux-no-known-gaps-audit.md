@@ -2725,3 +2725,12 @@ now reject non-zero empty inputs before allocation and random-stream use for
 `chooseIndexBatchFrom`, and `chooseIndexU32BatchFrom`, while zero-count calls
 remain deterministic allocation-only operations. This improves failure
 determinism but does not resolve S4-M11.
+
+S4-M649 adds `seq` unchecked repeated choice empty prevalidation
+(`compare/results/s4-m649-seq-repeated-choice-empty-prevalidation.md`): seq
+repeated value, const-pointer, mutable-pointer, usize-index, and u32-index batch
+aliases now reject non-zero empty inputs before allocation and random-stream use
+for `chooseBatchFrom`, `chooseConstPtrBatchFrom`, `choosePtrBatchFrom`,
+`chooseIndexBatchFrom`, and `chooseIndexU32BatchFrom`, preserving seq-style
+`error.EmptyInput` while zero-count calls remain deterministic allocation-only
+operations. This improves failure determinism but does not resolve S4-M11.

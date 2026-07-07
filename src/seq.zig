@@ -918,6 +918,8 @@ pub fn chooseBatch(allocator: std.mem.Allocator, rng: Rng, comptime T: type, cou
 }
 
 pub fn chooseBatchFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, count: usize, items: []const T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (items.len == 0) return error.EmptyInput;
     return Rng.chooseBatchFrom(source, T, allocator, count, items);
 }
 
@@ -936,6 +938,8 @@ pub fn chooseConstPtrBatch(allocator: std.mem.Allocator, rng: Rng, comptime T: t
 }
 
 pub fn chooseConstPtrBatchFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, count: usize, items: []const T) ![]*const T {
+    if (count == 0) return allocator.alloc(*const T, 0);
+    if (items.len == 0) return error.EmptyInput;
     return Rng.chooseConstPtrBatchFrom(source, T, allocator, count, items);
 }
 
@@ -954,6 +958,8 @@ pub fn choosePtrBatch(allocator: std.mem.Allocator, rng: Rng, comptime T: type, 
 }
 
 pub fn choosePtrBatchFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, count: usize, items: []T) ![]*T {
+    if (count == 0) return allocator.alloc(*T, 0);
+    if (items.len == 0) return error.EmptyInput;
     return Rng.choosePtrBatchFrom(source, T, allocator, count, items);
 }
 
@@ -1024,6 +1030,8 @@ pub fn chooseIndexBatch(allocator: std.mem.Allocator, rng: Rng, count: usize, le
 }
 
 pub fn chooseIndexBatchFrom(allocator: std.mem.Allocator, source: anytype, count: usize, length: usize) ![]usize {
+    if (count == 0) return allocator.alloc(usize, 0);
+    if (length == 0) return error.EmptyInput;
     return Rng.chooseIndexBatchFrom(source, allocator, count, length);
 }
 
@@ -1094,6 +1102,8 @@ pub fn chooseIndexU32Batch(allocator: std.mem.Allocator, rng: Rng, count: usize,
 }
 
 pub fn chooseIndexU32BatchFrom(allocator: std.mem.Allocator, source: anytype, count: usize, length: u32) ![]u32 {
+    if (count == 0) return allocator.alloc(u32, 0);
+    if (length == 0) return error.EmptyInput;
     return Rng.chooseIndexU32BatchFrom(source, allocator, count, length);
 }
 
@@ -11846,6 +11856,21 @@ test "seq choice batch aliases mirror Rng batch helpers" {
     try std.testing.expectError(error.EmptyInput, choosePtrBatchCheckedFrom(std.testing.allocator, &empty_engine, u8, 4, &empty_mutable));
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
+    var invalid_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyInput, chooseBatchFrom(invalid_value_alloc.allocator(), &empty_engine, u8, 4, &.{}));
+    try std.testing.expect(!invalid_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var invalid_const_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyInput, chooseConstPtrBatchFrom(invalid_const_ptr_alloc.allocator(), &empty_engine, u8, 4, &.{}));
+    try std.testing.expect(!invalid_const_ptr_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var invalid_mut_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyInput, choosePtrBatchFrom(invalid_mut_ptr_alloc.allocator(), &empty_engine, u8, 4, &empty_mutable));
+    try std.testing.expect(!invalid_mut_ptr_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
     var single_engine = alea.ScalarPrng.init(0x5150_0c24);
     var single_control = alea.ScalarPrng.init(0x5150_0c24);
     const single_items = [_]u8{77};
@@ -12025,6 +12050,16 @@ test "seq index choice aliases mirror Rng index helpers" {
 
     try std.testing.expectError(error.EmptyInput, chooseIndexBatchCheckedFrom(std.testing.allocator, &empty_engine, 4, 0));
     try std.testing.expectError(error.EmptyInput, chooseIndexU32BatchCheckedFrom(std.testing.allocator, &empty_engine, 4, 0));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var invalid_index_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyInput, chooseIndexBatchFrom(invalid_index_alloc.allocator(), &empty_engine, 4, 0));
+    try std.testing.expect(!invalid_index_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var invalid_index_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyInput, chooseIndexU32BatchFrom(invalid_index_u32_alloc.allocator(), &empty_engine, 4, 0));
+    try std.testing.expect(!invalid_index_u32_alloc.has_induced_failure);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
     var single_engine = alea.ScalarPrng.init(0x5150_1c04);

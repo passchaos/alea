@@ -687,7 +687,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M646 ASCII charset unchecked empty prevalidation | `src/ascii.zig`, `compare/results/s4-m646-ascii-charset-unchecked-empty-prevalidation.md` | Closed for the current bar: ASCII `Charset` unchecked allocation/string helpers now reject non-zero empty charsets before allocation, random-stream use, or buffer mutation. |
 | S4-M647 Unicode charset unchecked invalid prevalidation | `src/ascii.zig`, `compare/results/s4-m647-unicode-charset-unchecked-invalid-prevalidation.md` | Closed for the current bar: `UnicodeCharset` unchecked UTF-8 string helpers now reject non-zero empty/invalid scalar sets before allocation, random-stream use, or buffer mutation. |
 | S4-M648 Rng unchecked repeated choice empty prevalidation | `src/rng.zig`, `compare/results/s4-m648-rng-repeated-choice-empty-prevalidation.md` | Closed for the current bar: `Rng` unchecked repeated choice/index batch helpers now reject non-zero empty inputs before allocation and random-stream use. |
-| S4-M649 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M649 seq unchecked repeated choice empty prevalidation | `src/seq.zig`, `compare/results/s4-m649-seq-repeated-choice-empty-prevalidation.md` | Closed for the current bar: `seq` unchecked repeated choice/index batch aliases now reject non-zero empty inputs before allocation and random-stream use with seq-style `error.EmptyInput`. |
+| S4-M650 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1889,6 +1890,9 @@ S4-M647 additionally tightens Unicode charset unchecked invalid prevalidation;
 it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M648 additionally tightens `Rng` unchecked repeated choice empty
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
+S4-M649 additionally tightens `seq` unchecked repeated choice empty
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
 or complete the long-term objective.
 
