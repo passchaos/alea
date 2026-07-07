@@ -893,6 +893,7 @@ pub fn fillChooseChecked(rng: Rng, comptime T: type, dest: []T, items: []const T
 pub fn fillChooseCheckedFrom(source: anytype, comptime T: type, dest: []T, items: []const T) Error!void {
     if (dest.len == 0) return;
     if (items.len == 0) return error.EmptyInput;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     fillChooseFrom(source, T, dest, items);
 }
 
@@ -939,6 +940,7 @@ pub fn chooseBatch(allocator: std.mem.Allocator, rng: Rng, comptime T: type, cou
 pub fn chooseBatchFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, count: usize, items: []const T) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
     if (items.len == 0) return error.EmptyInput;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     return Rng.chooseBatchFrom(source, T, allocator, count, items);
 }
 
@@ -11922,6 +11924,13 @@ test "seq choice fill aliases mirror Rng fill helpers" {
     try std.testing.expectError(error.EmptyInput, fillChoosePtrCheckedFrom(&empty_engine, u8, &empty_mut_ptrs, &empty_mutable));
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+    var empty_value_items: [1]Payload = undefined;
+    var empty_value_out: [1]Payload = undefined;
+    try std.testing.expectError(error.EmptyInput, fillChooseCheckedFrom(&empty_engine, Payload, &empty_value_out, &empty_value_items));
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
     var single_engine = alea.ScalarPrng.init(0x5150_0c14);
     var single_control = alea.ScalarPrng.init(0x5150_0c14);
     const single_items = [_]u8{77};
@@ -12114,6 +12123,29 @@ test "seq choice batch aliases mirror Rng batch helpers" {
     var invalid_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.EmptyInput, chooseBatchFrom(invalid_value_alloc.allocator(), &empty_engine, u8, 4, &.{}));
     try std.testing.expect(!invalid_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+    var empty_value_items: [1]Payload = undefined;
+    var invalid_empty_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseBatchFrom(invalid_empty_value_alloc.allocator(), &empty_engine, Payload, 4, &empty_value_items)) |unexpected| {
+        invalid_empty_value_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!invalid_empty_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    var invalid_empty_value_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseBatchCheckedFrom(invalid_empty_value_checked_alloc.allocator(), &empty_engine, Payload, 4, &empty_value_items)) |unexpected| {
+        invalid_empty_value_checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!invalid_empty_value_checked_alloc.has_induced_failure);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
     var invalid_const_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });

@@ -3080,3 +3080,9 @@ S4-M693 adds `seq` repeated value array empty-type prevalidation
 `seq` repeated with-replacement fixed value arrays now reject non-zero empty
 enum-containing output types before random-stream use and value copying. This
 improves failure determinism but does not resolve S4-M11.
+
+S4-M694 adds `seq` repeated value fill/batch empty-type prevalidation
+(`compare/results/s4-m694-seq-repeated-value-fill-batch-empty-type-prevalidation.md`):
+`seq` repeated with-replacement value fill/batch aliases now reject non-zero empty
+enum-containing output types before allocation, random-stream use, and value
+copying. This improves failure determinism but does not resolve S4-M11.
