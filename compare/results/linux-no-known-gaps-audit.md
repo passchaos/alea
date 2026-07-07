@@ -2886,3 +2886,11 @@ value types before allocation and secure-engine construction, including full
 count deterministic alias requests, while zero-count requests remain
 deterministic empty allocations. This improves failure determinism but does not
 resolve S4-M11.
+
+S4-M669 adds root fixed value array empty-type prevalidation
+(`compare/results/s4-m669-root-value-array-empty-type-prevalidation.md`):
+root fixed-size no-replacement value array helpers now reject non-zero empty
+enum-containing value types before secure-engine construction and before
+deterministic full-count value copying in `sampleItemsArray` and
+`sampleItemsArrayChecked`; `chooseArray` aliases inherit the same behavior. This
+improves failure determinism but does not resolve S4-M11.

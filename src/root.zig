@@ -810,6 +810,7 @@ pub fn sampleItemsArray(comptime T: type, io: std.Io, comptime N: usize, items: 
     var out: [N]T = undefined;
     if (N == 0) return out;
     if (N > items.len) return null;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (N == items.len) {
         for (&out, 0..) |*slot, index| slot.* = items[index];
         return out;
@@ -823,6 +824,7 @@ pub fn sampleItemsArrayChecked(comptime T: type, io: std.Io, comptime N: usize, 
     var out: [N]T = undefined;
     if (N == 0) return out;
     if (N > items.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (N == items.len) {
         for (&out, 0..) |*slot, index| slot.* = items[index];
         return out;
@@ -6839,6 +6841,38 @@ test "root random helpers validate deterministic cases before entropy" {
     }
     try std.testing.expect(empty_enum_choose_multiple_failed);
     try std.testing.expect(!empty_enum_choose_multiple_alloc.has_induced_failure);
+    var empty_enum_sample_array_failed = false;
+    if (sampleItemsArray(EmptyEnum, failing, 1, fake_empty_enum_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        empty_enum_sample_array_failed = true;
+    }
+    try std.testing.expect(empty_enum_sample_array_failed);
+    var empty_enum_sample_array_checked_failed = false;
+    if (sampleItemsArrayChecked(EmptyEnum, failing, 1, fake_empty_enum_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        empty_enum_sample_array_checked_failed = true;
+    }
+    try std.testing.expect(empty_enum_sample_array_checked_failed);
+    var empty_enum_choose_array_failed = false;
+    if (chooseArray(EmptyEnum, failing, 1, fake_empty_enum_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        empty_enum_choose_array_failed = true;
+    }
+    try std.testing.expect(empty_enum_choose_array_failed);
+    var empty_enum_choose_array_checked_failed = false;
+    if (chooseArrayChecked(EmptyEnum, failing, 1, fake_empty_enum_items)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+        empty_enum_choose_array_checked_failed = true;
+    }
+    try std.testing.expect(empty_enum_choose_array_checked_failed);
     const all_without_replacement = try sampleWithoutReplacement(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
     defer std.testing.allocator.free(all_without_replacement);
     try std.testing.expectEqualSlices(u8, &sample_items, all_without_replacement);
