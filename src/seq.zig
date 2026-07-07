@@ -8439,6 +8439,14 @@ pub fn Choice(comptime T: type) type {
             return Rng.sampleIterFrom(source, *const T, self);
         }
 
+        pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, *const T) {
+            return self.iter(rng);
+        }
+
+        pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
+            return self.iterFrom(source);
+        }
+
         pub fn ptrIter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
             return self.iter(rng);
         }
@@ -8894,6 +8902,14 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn iterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
             return Rng.sampleIterFrom(source, *const T, self);
+        }
+
+        pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, *const T) {
+            return self.iter(rng);
+        }
+
+        pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
+            return self.iterFrom(source);
         }
 
         pub fn ptrIter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
@@ -17836,6 +17852,24 @@ test "choice sampler repeatedly samples slice references" {
     var unchecked_ptr_iter = choice.ptrIterFrom(&unchecked_ptr_iter_engine);
     try std.testing.expectEqual(unchecked_ptr_iter.next().?, checked_ptr_iter.next().?);
     try std.testing.expectEqual(unchecked_ptr_iter_engine.next(), checked_ptr_iter_engine.next());
+    var checked_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef2a);
+    var checked_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef2a);
+    var checked_iter_facade = try choice.iterChecked(Rng.init(&checked_iter_facade_engine));
+    var checked_iter_direct = try choice.iterCheckedFrom(&checked_iter_direct_engine);
+    try std.testing.expectEqual(checked_iter_direct.next().?, checked_iter_facade.next().?);
+    try std.testing.expectEqual(checked_iter_direct_engine.next(), checked_iter_facade_engine.next());
+    var checked_iter_engine = alea.DefaultPrng.init(0xc0_ef2b);
+    var unchecked_iter_engine = alea.DefaultPrng.init(0xc0_ef2b);
+    var checked_iter_alias = try choice.iterCheckedFrom(&checked_iter_engine);
+    var unchecked_iter_alias = choice.iterFrom(&unchecked_iter_engine);
+    try std.testing.expectEqual(unchecked_iter_alias.next().?, checked_iter_alias.next().?);
+    try std.testing.expectEqual(unchecked_iter_engine.next(), checked_iter_engine.next());
+    var checked_iter_fill: [8]*const u8 = undefined;
+    var unchecked_iter_fill: [8]*const u8 = undefined;
+    checked_iter_alias.fill(&checked_iter_fill);
+    unchecked_iter_alias.fill(&unchecked_iter_fill);
+    try std.testing.expectEqualSlices(*const u8, &unchecked_iter_fill, &checked_iter_fill);
+    try std.testing.expectEqual(unchecked_iter_engine.next(), checked_iter_engine.next());
     var pointer_buf: [8]*const u8 = undefined;
     choice.fill(rng, &pointer_buf);
     for (pointer_buf) |item| try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
@@ -18771,6 +18805,24 @@ test "weighted choice sampler maps alias indexes to items" {
     var unchecked_ptr_iter = choice.ptrIterFrom(&unchecked_ptr_iter_engine);
     try std.testing.expectEqual(unchecked_ptr_iter.next().?, checked_ptr_iter.next().?);
     try std.testing.expectEqual(unchecked_ptr_iter_engine.next(), checked_ptr_iter_engine.next());
+    var checked_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef2d);
+    var checked_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef2d);
+    var checked_iter_facade = try choice.iterChecked(Rng.init(&checked_iter_facade_engine));
+    var checked_iter_direct = try choice.iterCheckedFrom(&checked_iter_direct_engine);
+    try std.testing.expectEqual(checked_iter_direct.next().?, checked_iter_facade.next().?);
+    try std.testing.expectEqual(checked_iter_direct_engine.next(), checked_iter_facade_engine.next());
+    var checked_iter_engine = alea.DefaultPrng.init(0xc0_ef2c);
+    var unchecked_iter_engine = alea.DefaultPrng.init(0xc0_ef2c);
+    var checked_iter_alias = try choice.iterCheckedFrom(&checked_iter_engine);
+    var unchecked_iter_alias = choice.iterFrom(&unchecked_iter_engine);
+    try std.testing.expectEqual(unchecked_iter_alias.next().?, checked_iter_alias.next().?);
+    try std.testing.expectEqual(unchecked_iter_engine.next(), checked_iter_engine.next());
+    var checked_iter_fill: [8]*const []const u8 = undefined;
+    var unchecked_iter_fill: [8]*const []const u8 = undefined;
+    checked_iter_alias.fill(&checked_iter_fill);
+    unchecked_iter_alias.fill(&unchecked_iter_fill);
+    try std.testing.expectEqualSlices(*const []const u8, &unchecked_iter_fill, &checked_iter_fill);
+    try std.testing.expectEqual(unchecked_iter_engine.next(), checked_iter_engine.next());
     var pointer_buf: [8]*const []const u8 = undefined;
     choice.fillFrom(&engine, &pointer_buf);
     for (pointer_buf) |item| try std.testing.expect(!std.mem.eql(u8, item.*, "never"));

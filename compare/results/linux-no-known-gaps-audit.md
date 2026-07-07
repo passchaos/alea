@@ -3398,3 +3398,11 @@ S4-M744 adds dynamic weighted-tree checked compact iterator width coverage
 have explicit oversized-population evidence proving `error.InvalidParameter` is
 returned before random-stream use when tree length exceeds `u32`. This improves
 reliability evidence but does not resolve S4-M11.
+
+S4-M745 adds checked canonical pointer iterator aliases
+(`compare/results/s4-m745-choice-checked-pointer-iter-aliases.md`):
+distribution-layer `Choose`, reusable `Choice`, and reusable `WeightedChoice`
+now expose checked `iter`/`iterFrom` aliases for repeated pointer sampling, with
+focused tests proving checked aliases preserve existing pointer iterator stream
+shape for scalar draws and fill helpers. This improves API consistency and
+adoption ergonomics but does not resolve S4-M11.

@@ -908,6 +908,14 @@ pub fn Choose(comptime T: type) type {
         pub fn iterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
             return Rng.sampleIterFrom(source, *const T, self);
         }
+
+        pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, *const T) {
+            return self.iter(rng);
+        }
+
+        pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
+            return self.iterFrom(source);
+        }
     };
 }
 
@@ -32676,6 +32684,24 @@ test "distribution Choose sampler mirrors slice choices" {
     var unchecked_ptr_iter = choice.ptrIterFrom(&unchecked_ptr_iter_engine);
     try std.testing.expectEqual(unchecked_ptr_iter.next().?, checked_ptr_iter.next().?);
     try std.testing.expectEqual(unchecked_ptr_iter_engine.next(), checked_ptr_iter_engine.next());
+    var checked_iter_facade_engine = root.DefaultPrng.init(0xc0_293);
+    var checked_iter_direct_engine = root.DefaultPrng.init(0xc0_293);
+    var checked_iter_facade = try choice.iterChecked(root.Rng.init(&checked_iter_facade_engine));
+    var checked_iter_direct = try choice.iterCheckedFrom(&checked_iter_direct_engine);
+    try std.testing.expectEqual(checked_iter_direct.next().?, checked_iter_facade.next().?);
+    try std.testing.expectEqual(checked_iter_direct_engine.next(), checked_iter_facade_engine.next());
+    var checked_iter_engine = root.DefaultPrng.init(0xc0_292);
+    var unchecked_iter_engine = root.DefaultPrng.init(0xc0_292);
+    var checked_iter_alias = try choice.iterCheckedFrom(&checked_iter_engine);
+    var unchecked_iter_alias = choice.iterFrom(&unchecked_iter_engine);
+    try std.testing.expectEqual(unchecked_iter_alias.next().?, checked_iter_alias.next().?);
+    try std.testing.expectEqual(unchecked_iter_engine.next(), checked_iter_engine.next());
+    var checked_iter_fill: [6]*const u8 = undefined;
+    var unchecked_iter_fill: [6]*const u8 = undefined;
+    checked_iter_alias.fill(&checked_iter_fill);
+    unchecked_iter_alias.fill(&unchecked_iter_fill);
+    try std.testing.expectEqualSlices(*const u8, &unchecked_iter_fill, &checked_iter_fill);
+    try std.testing.expectEqual(unchecked_iter_engine.next(), checked_iter_engine.next());
     var values_engine = root.DefaultPrng.init(0xc0_273);
     var values_control = root.DefaultPrng.init(0xc0_273);
     const owned_values = try choice.valuesFrom(std.testing.allocator, &values_engine, 6);
