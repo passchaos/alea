@@ -2684,10 +2684,11 @@ pub fn sampleIteratorWeightedIntoChecked(comptime T: type, io: std.Io, iterator:
 pub fn sampleIteratorWeightedArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]T {
     if (N == 0) return .{};
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
-    if (rootIteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = rootIteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < N) return null;
     }
-    const candidates = (try rootSampleIteratorWeightedCandidateArray(T, io, N, iterator)) orelse return null;
+    const candidates = (try rootSampleIteratorWeightedCandidateArray(T, io, N, iterator, exact_remaining)) orelse return null;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = candidates[i].item;
     return out;
@@ -2696,10 +2697,11 @@ pub fn sampleIteratorWeightedArray(comptime T: type, io: std.Io, comptime N: usi
 pub fn sampleIteratorWeightedArrayChecked(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) ![N]T {
     if (N == 0) return .{};
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
-    if (rootIteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = rootIteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < N) return error.InvalidParameter;
     }
-    const candidates = (try rootSampleIteratorWeightedCandidateArray(T, io, N, iterator)) orelse return error.InvalidParameter;
+    const candidates = (try rootSampleIteratorWeightedCandidateArray(T, io, N, iterator, exact_remaining)) orelse return error.InvalidParameter;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = candidates[i].item;
     return out;
@@ -5181,9 +5183,9 @@ fn rootSampleIteratorWeightedAlloc(comptime T: type, io: std.Io, allocator: std.
     return out;
 }
 
-fn rootSampleIteratorWeightedCandidateArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]RootWeightedIteratorCandidate(T) {
+fn rootSampleIteratorWeightedCandidateArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype, exact_remaining: ?usize) !?[N]RootWeightedIteratorCandidate(T) {
     if (N == 0) return .{};
-    if (rootIteratorExactRemaining(iterator)) |remaining| {
+    if (exact_remaining) |remaining| {
         if (remaining == N) {
             var candidates: [N]RootWeightedIteratorCandidate(T) = undefined;
             var index: usize = 0;
@@ -10591,6 +10593,7 @@ test "root random helpers validate deterministic cases before entropy" {
         entries: []const WeightedIter.Entry,
         index: usize = 0,
         calls: usize = 0,
+        remaining_calls: usize = 0,
 
         fn next(self: *@This()) ?WeightedIter.Entry {
             self.calls += 1;
@@ -10600,16 +10603,19 @@ test "root random helpers validate deterministic cases before entropy" {
             return entry;
         }
 
-        fn remaining(self: @This()) usize {
+        fn remaining(self: *@This()) usize {
+            self.remaining_calls += 1;
             return self.entries.len - self.index;
         }
     };
     var weighted_array_exact_count = ExactCountWeightedArrayIter{ .entries = &weighted_entropy_entries };
     try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, &(try sampleIteratorWeightedArray(u8, failing, 2, &weighted_array_exact_count)).?);
     try std.testing.expectEqual(@as(usize, 2), weighted_array_exact_count.calls);
+    try std.testing.expectEqual(@as(usize, 1), weighted_array_exact_count.remaining_calls);
     var weighted_array_exact_count_checked = ExactCountWeightedArrayIter{ .entries = &weighted_entropy_entries };
     try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, &(try sampleIteratorWeightedArrayChecked(u8, failing, 2, &weighted_array_exact_count_checked)));
     try std.testing.expectEqual(@as(usize, 2), weighted_array_exact_count_checked.calls);
+    try std.testing.expectEqual(@as(usize, 1), weighted_array_exact_count_checked.remaining_calls);
     const weighted_array_exact_count_zero_entries = [_]WeightedIter.Entry{
         .{ .item = 1, .weight = 1 },
         .{ .item = 2, .weight = 0 },
@@ -10617,9 +10623,11 @@ test "root random helpers validate deterministic cases before entropy" {
     var weighted_array_exact_count_zero = ExactCountWeightedArrayIter{ .entries = &weighted_array_exact_count_zero_entries };
     try std.testing.expectEqual(@as(?[2]u8, null), try sampleIteratorWeightedArray(u8, failing, 2, &weighted_array_exact_count_zero));
     try std.testing.expectEqual(@as(usize, 2), weighted_array_exact_count_zero.calls);
+    try std.testing.expectEqual(@as(usize, 1), weighted_array_exact_count_zero.remaining_calls);
     var weighted_array_exact_count_zero_checked = ExactCountWeightedArrayIter{ .entries = &weighted_array_exact_count_zero_entries };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedArrayChecked(u8, failing, 2, &weighted_array_exact_count_zero_checked));
     try std.testing.expectEqual(@as(usize, 2), weighted_array_exact_count_zero_checked.calls);
+    try std.testing.expectEqual(@as(usize, 1), weighted_array_exact_count_zero_checked.remaining_calls);
     var weighted_array_known_short = WeightedIter{ .items = &weighted_entropy_entries };
     try std.testing.expectEqual(@as(?[3]u8, null), try sampleIteratorWeightedArray(u8, failing, 3, &weighted_array_known_short));
     try std.testing.expectEqual(@as(usize, 0), weighted_array_known_short.index);

@@ -5415,10 +5415,11 @@ pub fn sampleIteratorWeightedArray(rng: Rng, comptime T: type, comptime N: usize
 
 pub fn sampleIteratorWeightedArrayFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) !?[N]T {
     if (comptime N != 0 and valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < N) return null;
     }
-    const candidates = (try sampleIteratorWeightedCandidateArrayFrom(source, T, N, iterator)) orelse return null;
+    const candidates = (try sampleIteratorWeightedCandidateArrayFrom(source, T, N, iterator, exact_remaining)) orelse return null;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = candidates[i].item;
     return out;
@@ -5430,18 +5431,19 @@ pub fn sampleIteratorWeightedArrayChecked(rng: Rng, comptime T: type, comptime N
 
 pub fn sampleIteratorWeightedArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) ![N]T {
     if (comptime N != 0 and valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < N) return error.InvalidParameter;
     }
-    const candidates = (try sampleIteratorWeightedCandidateArrayFrom(source, T, N, iterator)) orelse return error.InvalidParameter;
+    const candidates = (try sampleIteratorWeightedCandidateArrayFrom(source, T, N, iterator, exact_remaining)) orelse return error.InvalidParameter;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = candidates[i].item;
     return out;
 }
 
-fn sampleIteratorWeightedCandidateArrayFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) !?[N]WeightedIteratorCandidate(T) {
+fn sampleIteratorWeightedCandidateArrayFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype, exact_remaining: ?usize) !?[N]WeightedIteratorCandidate(T) {
     if (comptime N == 0) return .{};
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    if (exact_remaining) |remaining| {
         if (remaining == N) {
             var candidates: [N]WeightedIteratorCandidate(T) = undefined;
             var index: usize = 0;
@@ -13262,6 +13264,7 @@ test "exact-count weighted iterator arrays avoid key sampling" {
         items: []const Entry,
         index: usize = 0,
         calls: usize = 0,
+        remaining_calls: usize = 0,
 
         fn next(self: *@This()) ?Entry {
             self.calls += 1;
@@ -13271,7 +13274,8 @@ test "exact-count weighted iterator arrays avoid key sampling" {
             return entry;
         }
 
-        fn remaining(self: @This()) usize {
+        fn remaining(self: *@This()) usize {
+            self.remaining_calls += 1;
             return self.items.len - self.index;
         }
     };
@@ -13284,12 +13288,14 @@ test "exact-count weighted iterator arrays avoid key sampling" {
     const sample = (try sampleIteratorWeightedArrayFrom(&engine, u8, 2, &iter)).?;
     try std.testing.expectEqualSlices(u8, &.{ 11, 22 }, &sample);
     try std.testing.expectEqual(@as(usize, 2), iter.calls);
+    try std.testing.expectEqual(@as(usize, 1), iter.remaining_calls);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var checked_iter = ExactIter{ .items = &entries };
     const checked = try sampleIteratorWeightedArrayCheckedFrom(&engine, u8, 2, &checked_iter);
     try std.testing.expectEqualSlices(u8, &.{ 11, 22 }, &checked);
     try std.testing.expectEqual(@as(usize, 2), checked_iter.calls);
+    try std.testing.expectEqual(@as(usize, 1), checked_iter.remaining_calls);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const zero_entries = [_]Entry{
@@ -13299,11 +13305,13 @@ test "exact-count weighted iterator arrays avoid key sampling" {
     var zero_iter = ExactIter{ .items = &zero_entries };
     try std.testing.expect((try sampleIteratorWeightedArrayFrom(&engine, u8, 2, &zero_iter)) == null);
     try std.testing.expectEqual(@as(usize, 2), zero_iter.calls);
+    try std.testing.expectEqual(@as(usize, 1), zero_iter.remaining_calls);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var checked_zero_iter = ExactIter{ .items = &zero_entries };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedArrayCheckedFrom(&engine, u8, 2, &checked_zero_iter));
     try std.testing.expectEqual(@as(usize, 2), checked_zero_iter.calls);
+    try std.testing.expectEqual(@as(usize, 1), checked_zero_iter.remaining_calls);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const invalid_entries = [_]Entry{
@@ -13313,6 +13321,7 @@ test "exact-count weighted iterator arrays avoid key sampling" {
     var invalid_iter = ExactIter{ .items = &invalid_entries };
     try std.testing.expectError(error.InvalidWeight, sampleIteratorWeightedArrayFrom(&engine, u8, 2, &invalid_iter));
     try std.testing.expectEqual(@as(usize, 2), invalid_iter.calls);
+    try std.testing.expectEqual(@as(usize, 1), invalid_iter.remaining_calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
