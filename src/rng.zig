@@ -2650,6 +2650,8 @@ pub fn unicodeScalarBatchFrom(source: anytype, allocator: std.mem.Allocator, cou
 }
 
 pub fn unicodeScalarRangeLessThanBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: u21, less_than: u21) ![]u21 {
+    if (count == 0) return allocator.alloc(u21, 0);
+    _ = try unicodeScalarExclusiveRange(min, less_than);
     const out = try allocator.alloc(u21, count);
     errdefer allocator.free(out);
     fillUnicodeScalarRangeLessThanFrom(source, out, min, less_than);
@@ -2657,6 +2659,8 @@ pub fn unicodeScalarRangeLessThanBatchFrom(source: anytype, allocator: std.mem.A
 }
 
 pub fn unicodeScalarRangeAtMostBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: u21, at_most: u21) ![]u21 {
+    if (count == 0) return allocator.alloc(u21, 0);
+    _ = try unicodeScalarInclusiveRange(min, at_most);
     const out = try allocator.alloc(u21, count);
     errdefer allocator.free(out);
     fillUnicodeScalarRangeAtMostFrom(source, out, min, at_most);
@@ -2664,14 +2668,10 @@ pub fn unicodeScalarRangeAtMostBatchFrom(source: anytype, allocator: std.mem.All
 }
 
 pub fn unicodeScalarRangeLessThanBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: u21, less_than: u21) ![]u21 {
-    if (count == 0) return allocator.alloc(u21, 0);
-    _ = try unicodeScalarExclusiveRange(min, less_than);
     return unicodeScalarRangeLessThanBatchFrom(source, allocator, count, min, less_than);
 }
 
 pub fn unicodeScalarRangeAtMostBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, count: usize, min: u21, at_most: u21) ![]u21 {
-    if (count == 0) return allocator.alloc(u21, 0);
-    _ = try unicodeScalarInclusiveRange(min, at_most);
     return unicodeScalarRangeAtMostBatchFrom(source, allocator, count, min, at_most);
 }
 
@@ -7492,6 +7492,50 @@ test "owned unicode scalar batches allocate before consuming random stream" {
     var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, unicodeScalarBatchFrom(&engine, alloc.allocator(), 8));
     try std.testing.expect(alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "owned unicode scalar range batches allocate and validate before consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_98a5);
+    var control = alea.ScalarPrng.init(0x5150_98a5);
+    const rng = Rng.init(&engine);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.unicodeScalarRangeLessThanBatchChecked(empty_alloc.allocator(), 0, 0xD800, 0xE000);
+    defer empty_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_less_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, rng.unicodeScalarRangeLessThanBatchChecked(invalid_less_alloc.allocator(), 8, 0xD800, 0xE000));
+    try std.testing.expect(!invalid_less_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_less_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, unicodeScalarRangeLessThanBatchFrom(&engine, invalid_less_unchecked_alloc.allocator(), 8, 0x41, 0x41));
+    try std.testing.expect(!invalid_less_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_at_most_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.unicodeScalarRangeAtMostBatchChecked(invalid_at_most_alloc.allocator(), 8, 0x5A, 0x41));
+    try std.testing.expect(!invalid_at_most_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_at_most_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, unicodeScalarRangeAtMostBatchFrom(&engine, invalid_at_most_unchecked_alloc.allocator(), 8, 0x41, 0xD800));
+    try std.testing.expect(!invalid_at_most_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var less_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, rng.unicodeScalarRangeLessThanBatchChecked(less_alloc.allocator(), 8, 0x41, 0x5B));
+    try std.testing.expect(less_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var at_most_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, unicodeScalarRangeAtMostBatchFrom(&engine, at_most_alloc.allocator(), 8, 0x41, 0x5A));
+    try std.testing.expect(at_most_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

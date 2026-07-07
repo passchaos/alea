@@ -699,7 +699,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M658 Rng scalar range/probability batch invalid-parameter prevalidation | `src/rng.zig`, `compare/results/s4-m658-rng-scalar-batch-invalid-prevalidation.md` | Closed for the current bar: `Rng` unchecked scalar range/probability batch helpers now reject invalid parameters before allocation and random-stream use. |
 | S4-M659 Rng vector range/probability batch invalid-parameter prevalidation | `src/rng.zig`, `compare/results/s4-m659-rng-vector-batch-invalid-prevalidation.md` | Closed for the current bar: `Rng` unchecked vector range/probability batch helpers now reject invalid parameters before allocation and random-stream use. |
 | S4-M660 Rng duration batch invalid-range prevalidation | `src/rng.zig`, `compare/results/s4-m660-rng-duration-batch-invalid-prevalidation.md` | Closed for the current bar: `Rng` unchecked duration range batch helpers now reject invalid ranges before allocation and random-stream use. |
-| S4-M661 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M661 Rng Unicode scalar range batch invalid-parameter prevalidation | `src/rng.zig`, `compare/results/s4-m661-rng-unicode-batch-invalid-prevalidation.md` | Closed for the current bar: `Rng` unchecked Unicode scalar range batch helpers now reject invalid scalar/range parameters before allocation and random-stream use. |
+| S4-M662 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1937,6 +1938,9 @@ S4-M659 additionally tightens `Rng` vector range/probability batch invalid
 parameter prevalidation; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
 S4-M660 additionally tightens `Rng` duration range batch invalid-range
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
+S4-M661 additionally tightens `Rng` Unicode scalar range batch invalid-parameter
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
 

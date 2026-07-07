@@ -2825,3 +2825,11 @@ exclusive and inclusive duration ranges before allocation and random-stream use
 in `durationRangeLessThanBatchFrom` and `durationRangeAtMostBatchFrom`, while
 valid allocation failures remain no-stream. This improves failure determinism but
 does not resolve S4-M11.
+
+S4-M661 adds `Rng` Unicode scalar range batch invalid-parameter prevalidation
+(`compare/results/s4-m661-rng-unicode-batch-invalid-prevalidation.md`):
+unchecked Unicode scalar allocation-returning range batch helpers now reject
+invalid scalars and empty ranges before allocation and random-stream use in
+`unicodeScalarRangeLessThanBatchFrom` and
+`unicodeScalarRangeAtMostBatchFrom`, while valid allocation failures remain
+no-stream. This improves failure determinism but does not resolve S4-M11.
