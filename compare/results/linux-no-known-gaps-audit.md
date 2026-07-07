@@ -2956,3 +2956,12 @@ random-stream use in `sampleIteratorFrom`, `sampleIteratorCheckedFrom`,
 `sampleIteratorArrayFrom`, `sampleIteratorArrayCheckedFrom`, and
 `sampleIteratorIntoCheckedFrom`. This improves failure determinism but does not
 resolve S4-M11.
+
+S4-M678 adds root iterator reservoir empty-type prevalidation
+(`compare/results/s4-m678-root-iterator-value-empty-type-prevalidation.md`):
+root iterator reservoir value helpers now reject non-zero empty enum-containing
+value types before allocation, entropy, iterator consumption, and secure-engine
+construction in `sampleIterator`, `sampleIteratorChecked`,
+`sampleIteratorInto`, `sampleIteratorIntoChecked`, `sampleIteratorArray`, and
+`sampleIteratorArrayChecked`. This improves failure determinism but does not
+resolve S4-M11.

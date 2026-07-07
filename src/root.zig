@@ -2446,6 +2446,7 @@ pub fn chooseIteratorWeightedChecked(comptime T: type, io: std.Io, iterator: any
 
 pub fn sampleIterator(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
 
     const initial_capacity = if (rootIteratorExactRemaining(iterator)) |remaining| @min(amount, remaining) else amount;
     var reservoir = try std.ArrayList(T).initCapacity(allocator, initial_capacity);
@@ -2471,6 +2472,7 @@ pub fn sampleIterator(comptime T: type, io: std.Io, allocator: std.mem.Allocator
 
 pub fn sampleIteratorChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (rootIteratorExactRemaining(iterator)) |remaining| {
         if (remaining < amount) return error.InvalidParameter;
     }
@@ -2498,6 +2500,7 @@ pub fn sampleIteratorChecked(comptime T: type, io: std.Io, allocator: std.mem.Al
 
 pub fn sampleIteratorInto(comptime T: type, io: std.Io, iterator: anytype, out: []T) !usize {
     if (out.len == 0) return 0;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
 
     var filled: usize = 0;
     while (filled < out.len) : (filled += 1) {
@@ -2523,6 +2526,7 @@ pub fn sampleIteratorFill(comptime T: type, io: std.Io, iterator: anytype, out: 
 
 pub fn sampleIteratorIntoChecked(comptime T: type, io: std.Io, iterator: anytype, out: []T) !void {
     if (out.len == 0) return;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (rootIteratorExactRemaining(iterator)) |remaining| {
         if (remaining < out.len) return error.InvalidParameter;
     }
@@ -2537,6 +2541,7 @@ pub fn sampleIteratorFillChecked(comptime T: type, io: std.Io, iterator: anytype
 pub fn sampleIteratorArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (rootIteratorExactRemaining(iterator)) |remaining| {
         if (remaining < N) return null;
     }
@@ -2547,6 +2552,7 @@ pub fn sampleIteratorArray(comptime T: type, io: std.Io, comptime N: usize, iter
 pub fn sampleIteratorArrayChecked(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) ![N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (rootIteratorExactRemaining(iterator)) |remaining| {
         if (remaining < N) return error.InvalidParameter;
     }
@@ -9500,6 +9506,30 @@ test "root random helpers validate deterministic cases before entropy" {
     defer sample_iter_known_empty_alloc.allocator().free(sample_iter_known_empty_out);
     try std.testing.expectEqual(@as(usize, 0), sample_iter_known_empty_out.len);
     try std.testing.expectEqual(@as(usize, 0), sample_iter_known_empty.index);
+    const EmptyIteratorValue = enum {};
+    const EmptyValueIter = struct {
+        fn next(_: *@This()) ?EmptyIteratorValue {
+            unreachable;
+        }
+    };
+    var empty_type_iter = EmptyValueIter{};
+    var empty_type_iter_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleIterator(EmptyIteratorValue, failing, empty_type_iter_alloc.allocator(), &empty_type_iter, 1)) |values| {
+        empty_type_iter_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_type_iter_alloc.has_induced_failure);
+    var empty_type_checked_iter = EmptyValueIter{};
+    var empty_type_checked_iter_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleIteratorChecked(EmptyIteratorValue, failing, empty_type_checked_iter_alloc.allocator(), &empty_type_checked_iter, 1)) |values| {
+        empty_type_checked_iter_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_type_checked_iter_alloc.has_induced_failure);
     var sample_iter_short = SliceIter{ .items = &.{ 1, 2 } };
     const sample_iter_short_out = try sampleIterator(u8, failing, std.testing.allocator, &sample_iter_short, 4);
     defer std.testing.allocator.free(sample_iter_short_out);
@@ -9521,6 +9551,19 @@ test "root random helpers validate deterministic cases before entropy" {
     var sample_into_empty_iter = SliceIter{ .items = &.{} };
     var sample_into_empty: [0]u8 = .{};
     try std.testing.expectEqual(@as(usize, 0), try sampleIteratorInto(u8, failing, &sample_into_empty_iter, &sample_into_empty));
+    var empty_type_into_iter = EmptyValueIter{};
+    var empty_type_into: [1]EmptyIteratorValue = undefined;
+    if (sampleIteratorInto(EmptyIteratorValue, failing, &empty_type_into_iter, &empty_type_into)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    var empty_type_into_checked_iter = EmptyValueIter{};
+    if (sampleIteratorIntoChecked(EmptyIteratorValue, failing, &empty_type_into_checked_iter, &empty_type_into)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     var sample_into_short_iter = SliceIter{ .items = &.{ 1, 2 } };
     var sample_into_short: [4]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 2), try sampleIteratorInto(u8, failing, &sample_into_short_iter, &sample_into_short));
@@ -9556,6 +9599,18 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorFillChecked(u8, failing, &sample_fill_entropy_checked_iter, &sample_fill_entropy));
     var sample_array_empty_iter = SliceIter{ .items = &.{} };
     try std.testing.expectEqual(@as(usize, 0), (try sampleIteratorArray(u8, failing, 0, &sample_array_empty_iter)).?.len);
+    var empty_type_array_iter = EmptyValueIter{};
+    if (sampleIteratorArray(EmptyIteratorValue, failing, 1, &empty_type_array_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    var empty_type_array_checked_iter = EmptyValueIter{};
+    if (sampleIteratorArrayChecked(EmptyIteratorValue, failing, 1, &empty_type_array_checked_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     var sample_array_short_iter = SliceIter{ .items = &.{ 1, 2 } };
     try std.testing.expectEqual(@as(?[3]u8, null), try sampleIteratorArray(u8, failing, 3, &sample_array_short_iter));
     try std.testing.expectEqual(@as(usize, 0), sample_array_short_iter.index);

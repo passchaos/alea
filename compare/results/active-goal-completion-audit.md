@@ -716,7 +716,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M675 IndexVec value mapping empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m675-indexvec-value-empty-type-prevalidation.md` | Closed for the current bar: `IndexVec` value mapping helpers now reject non-empty uninhabited value types before owned allocation or value copying. |
 | S4-M676 reservoir value sample empty-type prevalidation | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m676-reservoir-value-empty-type-prevalidation.md` | Closed for the current bar: `seq` and root reservoir value sampling now reject non-zero uninhabited value types before allocation, entropy, or value copying. |
 | S4-M677 seq iterator reservoir empty-type prevalidation | `src/seq.zig`, `compare/results/s4-m677-seq-iterator-value-empty-type-prevalidation.md` | Closed for the current bar: `seq` iterator reservoir value helpers now reject non-zero uninhabited value types before allocation, iterator consumption, or random-stream use. |
-| S4-M678 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M678 root iterator reservoir empty-type prevalidation | `src/root.zig`, `compare/results/s4-m678-root-iterator-value-empty-type-prevalidation.md` | Closed for the current bar: root iterator reservoir value helpers now reject non-zero uninhabited value types before allocation, entropy, iterator consumption, or secure-engine construction. |
+| S4-M679 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2005,6 +2006,9 @@ S4-M676 additionally tightens reservoir value sample empty-type prevalidation; i
 is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M677 additionally tightens `seq` iterator reservoir value sample empty-type
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
+S4-M678 additionally tightens root iterator reservoir value sample empty-type
 prevalidation; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
 
