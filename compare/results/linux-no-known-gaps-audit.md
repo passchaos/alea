@@ -2281,3 +2281,10 @@ root system-entropy callers now get deterministic zero-size/all-zero/single-
 positive and invalid-parameter failures before secure-engine construction for
 `sampleWeightedMutPtrArray` and `sampleWeightedMutPtrArrayChecked` while S4-M11
 remains blocked.
+
+S4-M589 adds root weighted-iterator fixed-array lazy entropy
+(`compare/results/s4-m589-root-weighted-iterator-array-lazy-entropy.md`): root
+system-entropy callers now get deterministic zero-size/all-zero/single-positive,
+insufficient-positive, early-invalid-weight, and checked-error outcomes before
+secure-engine construction for `sampleIteratorWeightedArray` and
+`sampleIteratorWeightedArrayChecked` while S4-M11 remains blocked.
