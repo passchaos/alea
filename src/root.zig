@@ -3696,6 +3696,21 @@ pub fn fillChooseWeightedConstPtrChecked(comptime T: type, io: std.Io, dest: []*
 }
 
 pub fn chooseWeightedConstPtrBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]?*const T {
+    if (count == 0) return allocator.alloc(?*const T, 0);
+    if (items.len != weights.len) return error.InvalidParameter;
+    switch (try rootWeightedIndexStateAllowEmpty(weights)) {
+        .empty => {
+            const out = try allocator.alloc(?*const T, count);
+            @memset(out, @as(?*const T, null));
+            return out;
+        },
+        .single => |index| {
+            const out = try allocator.alloc(?*const T, count);
+            @memset(out, @as(?*const T, &items[index]));
+            return out;
+        },
+        .random => {},
+    }
     const out = try allocator.alloc(?*const T, count);
     errdefer allocator.free(out);
     try fillChooseWeightedConstPtr(T, io, out, items, weights);
@@ -3704,6 +3719,16 @@ pub fn chooseWeightedConstPtrBatch(comptime T: type, io: std.Io, allocator: std.
 
 pub fn chooseWeightedConstPtrBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]*const T {
     if (count == 0) return allocator.alloc(*const T, 0);
+    if (items.len != weights.len) return error.InvalidParameter;
+    switch (try rootWeightedIndexState(weights)) {
+        .single => |index| {
+            const out = try allocator.alloc(*const T, count);
+            @memset(out, &items[index]);
+            return out;
+        },
+        .random => {},
+        .empty => unreachable,
+    }
     const out = try allocator.alloc(*const T, count);
     errdefer allocator.free(out);
     try fillChooseWeightedConstPtrChecked(T, io, out, items, weights);
@@ -6081,6 +6106,7 @@ test "root random helpers use explicit system entropy" {
 }
 
 test "root random helpers validate deterministic cases before entropy" {
+    @setEvalBranchQuota(4000);
     const failing = std.Io.failing;
     const EmptyEnum = enum {};
 
@@ -8092,8 +8118,17 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_weighted_const_ptr_batch = try chooseWeightedConstPtrBatch(u8, failing, std.testing.allocator, 3, &weighted_single_items, &empty_weights);
     defer std.testing.allocator.free(empty_weighted_const_ptr_batch);
     try std.testing.expectEqualSlices(?*const u8, &.{ null, null, null }, empty_weighted_const_ptr_batch);
+    var weighted_const_ptr_mismatch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, chooseWeightedConstPtrBatch(u8, failing, weighted_const_ptr_mismatch_alloc.allocator(), 3, &.{ 1, 2 }, &.{1}));
+    var weighted_const_ptr_checked_mismatch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, chooseWeightedConstPtrBatchChecked(u8, failing, weighted_const_ptr_checked_mismatch_alloc.allocator(), 3, &.{ 1, 2 }, &.{1}));
+    var weighted_const_ptr_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedConstPtrBatch(u8, failing, weighted_const_ptr_invalid_alloc.allocator(), 3, &weighted_single_items, &.{ std.math.nan(f64), 1, 1 }));
+    var weighted_const_ptr_checked_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedConstPtrBatchChecked(u8, failing, weighted_const_ptr_checked_invalid_alloc.allocator(), 3, &weighted_single_items, &.{ std.math.nan(f64), 1, 1 }));
     try std.testing.expectError(error.EmptyRange, chooseWeightedConstPtrChecked(u8, failing, &weighted_single_items, &empty_weights));
-    try std.testing.expectError(error.EmptyRange, chooseWeightedConstPtrBatchChecked(u8, failing, std.testing.allocator, 3, &weighted_single_items, &empty_weights));
+    var weighted_const_ptr_checked_empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseWeightedConstPtrBatchChecked(u8, failing, weighted_const_ptr_checked_empty_alloc.allocator(), 3, &weighted_single_items, &empty_weights));
     try std.testing.expectError(error.EmptyRange, chooseWeightedConstPtrArrayChecked(u8, failing, 3, &weighted_single_items, &empty_weights));
     try std.testing.expectEqual(&weighted_single_items[1], (try chooseWeightedConstPtr(u8, failing, &weighted_single_items, &single_weight)).?);
     try std.testing.expectEqual(&weighted_single_items[1], try chooseWeightedConstPtrChecked(u8, failing, &weighted_single_items, &single_weight));

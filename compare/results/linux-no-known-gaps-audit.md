@@ -2346,3 +2346,11 @@ empty-range failures before random-output allocation and secure-engine
 construction for `chooseWeightedBatch` and `chooseWeightedBatchChecked`, while
 deterministic empty/single paths remain allocation-only and S4-M11 remains
 blocked.
+
+S4-M598 adds root weighted const-pointer batch prevalidation
+(`compare/results/s4-m598-root-weighted-const-ptr-batch-prevalidation.md`): root
+system-entropy callers now get length-mismatch, invalid-weight, and checked
+empty-range failures before random-output allocation and secure-engine
+construction for `chooseWeightedConstPtrBatch` and
+`chooseWeightedConstPtrBatchChecked`, while deterministic empty/single paths
+remain allocation-only and S4-M11 remains blocked.
