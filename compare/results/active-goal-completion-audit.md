@@ -597,7 +597,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M556 root item-accessor weighted const-pointer batch helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m556-root-weighted-by-const-ptr-batch-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate repeated weighted const-pointer batches directly from an item slice and comptime item-weight accessor. |
 | S4-M557 root item-accessor weighted mutable-pointer batch helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m557-root-weighted-by-mut-ptr-batch-helpers.md` | Closed for the current bar: root system-entropy helpers can now allocate repeated weighted mutable-pointer batches directly from a mutable item slice and comptime item-weight accessor. |
 | S4-M558 root item-accessor weighted value array helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m558-root-weighted-by-value-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size weighted value arrays directly from an item slice and comptime item-weight accessor. |
-| S4-M559 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M559 root item-accessor weighted const-pointer array helpers | `src/root.zig`, `examples/basic.zig`, `docs/api-reference.md`, `tools/examplecheck.zig`, `compare/results/s4-m559-root-weighted-by-const-ptr-array-helpers.md` | Closed for the current bar: root system-entropy helpers can now produce fixed-size weighted const-pointer arrays directly from an item slice and comptime item-weight accessor. |
+| S4-M560 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1531,6 +1532,9 @@ long-term objective.
 S4-M558 additionally adds root item-accessor weighted fixed-size value array
 helpers; it is API ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M559 additionally adds root item-accessor weighted fixed-size const-pointer
+array helpers; it is API ergonomics work and does not resolve S4-M11 or complete
+the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

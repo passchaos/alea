@@ -2733,6 +2733,22 @@ pub fn chooseWeightedConstPtrBatchByChecked(comptime T: type, comptime Weight: t
     return out;
 }
 
+pub fn chooseWeightedConstPtrArrayBy(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, comptime weightFn: fn (*const T) Weight) !?[N]*const T {
+    var out: [N]*const T = undefined;
+    if (N == 0) return out;
+    var nullable: [N]?*const T = undefined;
+    try fillChooseWeightedConstPtrBy(T, Weight, io, &nullable, items, weightFn);
+    for (nullable, 0..) |ptr, i| out[i] = ptr orelse return null;
+    return out;
+}
+
+pub fn chooseWeightedConstPtrArrayByChecked(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, comptime weightFn: fn (*const T) Weight) ![N]*const T {
+    var out: [N]*const T = undefined;
+    if (N == 0) return out;
+    try fillChooseWeightedConstPtrByChecked(T, Weight, io, &out, items, weightFn);
+    return out;
+}
+
 pub fn chooseWeightedConstPtrArrayByIndex(comptime T: type, comptime Weight: type, io: std.Io, comptime N: usize, items: []const T, comptime weightFn: fn (usize) Weight) !?[N]*const T {
     var out: [N]*const T = undefined;
     if (N == 0) return out;
@@ -4517,6 +4533,10 @@ test "root random helpers use explicit system entropy" {
     for (weighted_value_by_array) |value| try std.testing.expect(value.item >= 10 and value.item <= 40);
     const weighted_value_by_checked_array = try chooseWeightedValueArrayByChecked(RootItemWeight.Entry, f64, io, 4, &weighted_index_by_items, RootItemWeight.weight);
     for (weighted_value_by_checked_array) |value| try std.testing.expect(value.item >= 10 and value.item <= 40);
+    const weighted_const_ptr_by_array = (try chooseWeightedConstPtrArrayBy(RootItemWeight.Entry, f64, io, 4, &weighted_index_by_items, RootItemWeight.weight)).?;
+    for (weighted_const_ptr_by_array) |ptr| try std.testing.expect(ptr.item >= 10 and ptr.item <= 40);
+    const weighted_const_ptr_by_checked_array = try chooseWeightedConstPtrArrayByChecked(RootItemWeight.Entry, f64, io, 4, &weighted_index_by_items, RootItemWeight.weight);
+    for (weighted_const_ptr_by_checked_array) |ptr| try std.testing.expect(ptr.item >= 10 and ptr.item <= 40);
     const weighted_index_u32_by_index_value = (try weightedIndexU32ByIndex(f64, io, weights.len, RootIndexWeight.weight)).?;
     try std.testing.expect(weighted_index_u32_by_index_value < weights.len);
     const weighted_index_u32_by_index_checked_value = try weightedIndexU32ByIndexChecked(f64, io, weights.len, RootIndexWeight.weight);
@@ -6020,6 +6040,14 @@ test "root random helpers validate deterministic cases before entropy" {
     for (try chooseWeightedValueArrayByChecked(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.single)) |value| try std.testing.expectEqual(@as(u8, 20), value.item);
     try std.testing.expectError(error.InvalidWeight, chooseWeightedValueArrayBy(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.invalid));
     try std.testing.expectError(error.InvalidWeight, chooseWeightedValueArrayByChecked(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.invalid));
+    try std.testing.expectEqual(@as(usize, 0), (try chooseWeightedConstPtrArrayBy(RootItemWeights.Entry, f64, failing, 0, &weighted_by_items, RootItemWeights.invalid)).?.len);
+    try std.testing.expectEqual(@as(usize, 0), (try chooseWeightedConstPtrArrayByChecked(RootItemWeights.Entry, f64, failing, 0, &weighted_by_items, RootItemWeights.invalid)).len);
+    try std.testing.expectEqual(@as(?[3]*const RootItemWeights.Entry, null), try chooseWeightedConstPtrArrayBy(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.zero));
+    try std.testing.expectError(error.EmptyInput, chooseWeightedConstPtrArrayByChecked(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.zero));
+    for ((try chooseWeightedConstPtrArrayBy(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.single)).?) |ptr| try std.testing.expectEqual(&weighted_by_items[1], ptr);
+    for (try chooseWeightedConstPtrArrayByChecked(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.single)) |ptr| try std.testing.expectEqual(&weighted_by_items[1], ptr);
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedConstPtrArrayBy(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.invalid));
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedConstPtrArrayByChecked(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.invalid));
     var weighted_const_ptr_by_empty_fill: [0]?*const RootItemWeights.Entry = .{};
     try fillChooseWeightedConstPtrBy(RootItemWeights.Entry, f64, failing, &weighted_const_ptr_by_empty_fill, &weighted_by_items, RootItemWeights.invalid);
     var weighted_const_ptr_by_empty_checked_fill: [0]*const RootItemWeights.Entry = .{};
@@ -6979,6 +7007,8 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, chooseWeightedBatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, chooseWeightedValueArrayBy(RootItemWeights.Entry, f64, failing, 1, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, chooseWeightedValueArrayByChecked(RootItemWeights.Entry, f64, failing, 1, weighted_by_items[0..2], RootItemWeights.weight));
+    try std.testing.expectError(error.EntropyUnavailable, chooseWeightedConstPtrArrayBy(RootItemWeights.Entry, f64, failing, 1, weighted_by_items[0..2], RootItemWeights.weight));
+    try std.testing.expectError(error.EntropyUnavailable, chooseWeightedConstPtrArrayByChecked(RootItemWeights.Entry, f64, failing, 1, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, chooseWeightedConstPtrBatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, weighted_by_items[0..2], RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, chooseWeightedConstPtrBatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, weighted_by_items[0..2], RootItemWeights.weight));
     var weighted_mut_ptr_by_entropy_items = weighted_by_items;
