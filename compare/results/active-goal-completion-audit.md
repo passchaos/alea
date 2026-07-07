@@ -821,7 +821,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M780 weighted iterator array exact metadata reuse | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m780-weighted-iterator-array-exact-metadata.md` | Closed for the current bar: fixed-size weighted iterator arrays now reuse exact remaining metadata instead of probing size hints/remaining twice. |
 | S4-M781 weighted iterator sample exact metadata reuse | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m781-weighted-iterator-sample-exact-metadata.md` | Closed for the current bar: allocation-returning weighted iterator samples now reuse exact remaining metadata instead of probing size hints/remaining twice. |
 | S4-M782 weighted iterator fill exact metadata reuse | `src/root.zig`, `compare/results/s4-m782-weighted-iterator-fill-exact-metadata.md` | Closed for the current bar: root caller-owned weighted iterator fills now reuse exact remaining metadata instead of probing size hints/remaining twice. |
-| S4-M783 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M783 iterator array exact-long end-probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m783-iterator-array-exact-long-end-probe.md` | Closed for the current bar: fixed-size unweighted iterator arrays now avoid extra trailing probes for exact-long sources while preserving stream shape. |
+| S4-M784 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2444,6 +2445,10 @@ long-term objective.
 S4-M782 additionally reuses exact remaining metadata in root caller-owned
 weighted iterator fills, avoiding duplicate size-hint/remaining probes; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M783 additionally avoids extra end-of-iterator probes for exact-long
+fixed-size unweighted iterator arrays while preserving reservoir stream shape; it
+is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

@@ -2618,26 +2618,60 @@ pub fn sampleIteratorFillChecked(comptime T: type, io: std.Io, iterator: anytype
     try sampleIteratorIntoChecked(T, io, iterator, out);
 }
 
-pub fn sampleIteratorArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]T {
+fn rootSampleIteratorArrayFrom(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype, exact_remaining: ?usize) !?[N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+
+    var filled: usize = 0;
+    while (filled < N) : (filled += 1) {
+        out[filled] = iterator.next() orelse return null;
+    }
+    if (exact_remaining) |remaining| {
+        if (remaining == N) return out;
+    }
+
+    var seen = N;
+    var engine: ?SecurePrng = null;
+    if (exact_remaining) |remaining| {
+        while (seen < remaining) {
+            const item = iterator.next() orelse return out;
+            seen += 1;
+            if (engine == null) engine = try secure(io);
+            const random_source = Rng.init(&engine.?);
+            const index = random_source.uintLessThan(usize, seen);
+            if (index < N) out[index] = item;
+        }
+        return out;
+    }
+    while (iterator.next()) |item| {
+        seen += 1;
+        if (engine == null) engine = try secure(io);
+        const random_source = Rng.init(&engine.?);
+        const index = random_source.uintLessThan(usize, seen);
+        if (index < N) out[index] = item;
+    }
+
+    return out;
+}
+
+pub fn sampleIteratorArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]T {
+    if (N == 0) return .{};
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
-    if (rootIteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = rootIteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < N) return null;
     }
-    const filled = try sampleIteratorInto(T, io, iterator, &out);
-    return if (filled == N) out else null;
+    return try rootSampleIteratorArrayFrom(T, io, N, iterator, exact_remaining);
 }
 
 pub fn sampleIteratorArrayChecked(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) ![N]T {
-    var out: [N]T = undefined;
-    if (N == 0) return out;
+    if (N == 0) return .{};
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
-    if (rootIteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = rootIteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < N) return error.InvalidParameter;
     }
-    try sampleIteratorIntoChecked(T, io, iterator, &out);
-    return out;
+    return (try rootSampleIteratorArrayFrom(T, io, N, iterator, exact_remaining)) orelse error.InvalidParameter;
 }
 
 pub fn sampleIteratorWeighted(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
@@ -10283,6 +10317,29 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), sample_array_short_checked_iter.index);
     var sample_array_entropy_iter = SliceIter{ .items = &.{ 1, 2, 3 } };
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorArray(u8, failing, 2, &sample_array_entropy_iter));
+    const ExactLongArrayIter = struct {
+        items: []const u8,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+    var sample_array_exact_long = ExactLongArrayIter{ .items = &.{ 1, 2, 3 } };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorArray(u8, failing, 2, &sample_array_exact_long));
+    try std.testing.expectEqual(@as(usize, 3), sample_array_exact_long.calls);
+    var sample_array_exact_long_checked = ExactLongArrayIter{ .items = &.{ 1, 2, 3 } };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorArrayChecked(u8, failing, 2, &sample_array_exact_long_checked));
+    try std.testing.expectEqual(@as(usize, 3), sample_array_exact_long_checked.calls);
     const EmptyWeightedIteratorValue = enum {};
     const EmptyWeightedValueIter = struct {
         const Entry = struct { item: EmptyWeightedIteratorValue, weight: f64 };

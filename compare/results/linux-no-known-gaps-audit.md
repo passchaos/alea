@@ -3668,3 +3668,10 @@ root caller-owned weighted iterator fills now reuse exact remaining metadata
 between public wrappers and the weighted fill core, so exact-cover paths validate
 and fill after one size-hint/remaining query instead of two. This improves
 weighted iterator fill reliability evidence but does not resolve S4-M11.
+
+S4-M783 avoids fixed-size iterator array exact-long end probes
+(`compare/results/s4-m783-iterator-array-exact-long-end-probe.md`):
+seq/root fixed-size unweighted iterator arrays now bound exact-long reservoir
+continuation by the known remaining count, avoiding an extra trailing null probe
+while preserving stream shape. This improves iterator array reliability evidence
+but does not resolve S4-M11.

@@ -4940,6 +4940,15 @@ pub fn sampleIteratorArrayFrom(source: anytype, comptime T: type, comptime N: us
     }
 
     var seen = N;
+    if (exact_remaining) |remaining| {
+        while (seen < remaining) {
+            const item = iterator.next() orelse return out;
+            seen += 1;
+            const index = Rng.uintLessThanFrom(source, usize, seen);
+            if (index < N) out[index] = item;
+        }
+        return out;
+    }
     while (iterator.next()) |item| {
         seen += 1;
         const index = Rng.uintLessThanFrom(source, usize, seen);
@@ -4955,9 +4964,6 @@ pub fn sampleIteratorArrayChecked(rng: Rng, comptime T: type, comptime N: usize,
 
 pub fn sampleIteratorArrayCheckedFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) Error![N]T {
     if (comptime N != 0 and valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-    if (iteratorExactRemaining(iterator)) |remaining| {
-        if (remaining < N) return error.InvalidParameter;
-    }
     return sampleIteratorArrayFrom(source, T, N, iterator) orelse error.InvalidParameter;
 }
 
@@ -12284,6 +12290,64 @@ test "optional iterator arrays use exact remaining before consuming" {
     try std.testing.expect(sampleIteratorArrayFrom(&engine, u8, 3, &iter) == null);
     try std.testing.expectEqual(@as(u8, 0), iter.next_value);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "exact-long iterator arrays avoid trailing probe" {
+    const alea = @import("root.zig");
+
+    const ExactIter = struct {
+        items: []const u8,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+    const PlainIter = struct {
+        items: []const u8,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+    };
+
+    const items = [_]u8{ 1, 2, 3, 4, 5 };
+    var engine = alea.ScalarPrng.init(0x5150_7836);
+    var reference = alea.ScalarPrng.init(0x5150_7836);
+    var iter = ExactIter{ .items = &items };
+    var reference_iter = PlainIter{ .items = &items };
+    const sample = sampleIteratorArrayFrom(&engine, u8, 2, &iter).?;
+    const reference_sample = sampleIteratorArrayFrom(&reference, u8, 2, &reference_iter).?;
+    try std.testing.expectEqualSlices(u8, &reference_sample, &sample);
+    try std.testing.expectEqual(@as(usize, 5), iter.calls);
+    try std.testing.expectEqual(@as(usize, 6), reference_iter.calls);
+    try std.testing.expectEqual(reference.next(), engine.next());
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_7837);
+    var checked_ref_engine = alea.ScalarPrng.init(0x5150_7837);
+    var checked_iter = ExactIter{ .items = &items };
+    var checked_reference_iter = PlainIter{ .items = &items };
+    const checked = try sampleIteratorArrayCheckedFrom(&checked_engine, u8, 2, &checked_iter);
+    const checked_reference_sample = try sampleIteratorArrayCheckedFrom(&checked_ref_engine, u8, 2, &checked_reference_iter);
+    try std.testing.expectEqualSlices(u8, &checked_reference_sample, &checked);
+    try std.testing.expectEqual(@as(usize, 5), checked_iter.calls);
+    try std.testing.expectEqual(@as(usize, 6), checked_reference_iter.calls);
+    try std.testing.expectEqual(checked_ref_engine.next(), checked_engine.next());
 }
 
 test "sampleIteratorFill aliases caller-owned iterator reservoirs" {
