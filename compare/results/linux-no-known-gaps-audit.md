@@ -3044,3 +3044,11 @@ empty enum-containing value types before allocation, weighted-key sampling,
 random-stream use, and value copying in allocation-returning, caller-owned, and
 fixed-array paths. This improves failure determinism but does not resolve
 S4-M11.
+
+S4-M689 adds `seq` accessor-weighted sample empty-type prevalidation
+(`compare/results/s4-m689-seq-weighted-by-sample-empty-type-prevalidation.md`):
+`seq` item-accessor weighted no-replacement value sample helpers now reject
+non-zero empty enum-containing value types before accessor weight evaluation,
+allocation, weighted-key sampling, random-stream use, and value copying in
+allocation-returning, caller-owned, and fixed-array paths. This improves failure
+determinism but does not resolve S4-M11.

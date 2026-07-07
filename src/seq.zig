@@ -6774,6 +6774,7 @@ pub fn sampleWeightedByCheckedFrom(
 ) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (amount > items.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const positive = try countPositiveItemsBy(T, Weight, items, weightFn);
     if (positive < amount) return error.InvalidParameter;
     if (positive == 1 and amount == 1) return singlePositiveItemByAlloc(allocator, T, Weight, items, weightFn);
@@ -6798,6 +6799,7 @@ pub fn sampleWeightedByFrom(
 ) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (items.len == 0) return error.EmptyInput;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     const positive = try countPositiveItemsBy(T, Weight, items, weightFn);
     const count = @min(amount, positive);
@@ -7128,6 +7130,7 @@ pub fn sampleWeightedByIntoFrom(
 ) !usize {
     if (out.len == 0) return 0;
     if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     const count = try sampleWeightedIndicesByIntoFrom(source, T, Weight, items, scratch_indices[0..out.len], scratch_keys[0..out.len], weightFn);
     for (scratch_indices[0..count], out[0..count]) |index, *slot| slot.* = items[index];
@@ -7159,6 +7162,8 @@ pub fn sampleWeightedByIntoCheckedFrom(
 ) !void {
     if (out.len == 0) return;
     if (scratch_indices.len < out.len or scratch_keys.len < out.len) return error.LengthMismatch;
+    if (out.len > items.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     try sampleWeightedIndicesByIntoCheckedFrom(source, T, Weight, items, scratch_indices[0..out.len], scratch_keys[0..out.len], weightFn);
     for (scratch_indices[0..out.len], out) |index, *slot| slot.* = items[index];
@@ -7391,6 +7396,7 @@ pub fn sampleWeightedArrayByFrom(
     items: []const T,
     comptime weightFn: fn (*const T) Weight,
 ) !?[N]T {
+    if (comptime N != 0 and valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const indices = (try sampleWeightedIndexArrayByFrom(source, T, Weight, N, items, weightFn)) orelse return null;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = items[indices[i]];
@@ -7416,6 +7422,10 @@ pub fn sampleWeightedArrayByCheckedFrom(
     items: []const T,
     comptime weightFn: fn (*const T) Weight,
 ) ![N]T {
+    if (comptime N != 0) {
+        if (N > items.len) return error.InvalidParameter;
+        if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    }
     const indices = try sampleWeightedIndexArrayByCheckedFrom(source, T, Weight, N, items, weightFn);
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = items[indices[i]];
@@ -18926,6 +18936,39 @@ test "accessor weighted no-replacement samples allocate values and pointers" {
     try std.testing.expectEqual(@as(usize, 3), checked_values.len);
     for (checked_values) |item| try std.testing.expect(item.weight > 0);
 
+    const Empty = enum {};
+    const Payload = struct {
+        empty: Empty,
+        weight: u32,
+
+        fn weightOf(_: *const @This()) u32 {
+            return 1;
+        }
+    };
+    var empty_items: [1]Payload = undefined;
+    var empty_value_engine = alea.ScalarPrng.init(0x5150_c72a);
+    var empty_value_control = alea.ScalarPrng.init(0x5150_c72a);
+
+    var empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleWeightedByFrom(empty_alloc.allocator(), &empty_value_engine, Payload, u32, &empty_items, 1, Payload.weightOf)) |unexpected| {
+        empty_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_value_control.next(), empty_value_engine.next());
+
+    var empty_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleWeightedByCheckedFrom(empty_checked_alloc.allocator(), &empty_value_engine, Payload, u32, &empty_items, 1, Payload.weightOf)) |unexpected| {
+        empty_checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!empty_checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_value_control.next(), empty_value_engine.next());
+
     var ptr_engine = alea.ScalarPrng.init(0x5150_c723);
     const ptrs = try sampleWeightedPtrsByFrom(std.testing.allocator, &ptr_engine, Entry, u32, &entries, 5, Entry.weightOf);
     defer std.testing.allocator.free(ptrs);
@@ -19500,6 +19543,28 @@ test "accessor weighted caller-owned buffers fill values indexes and pointers" {
     try std.testing.expectEqual(@as(usize, 0), try sampleWeightedByIntoFrom(&empty_engine, EmptyEntry, f64, &.{.{ .value = 1, .weight = std.math.nan(f64) }}, &empty_values, &empty_indexes, &empty_keys, EmptyEntry.weightOf));
     try sampleWeightedByIntoCheckedFrom(&empty_engine, EmptyEntry, f64, &.{.{ .value = 1, .weight = std.math.nan(f64) }}, &empty_values, &empty_indexes, &empty_keys, EmptyEntry.weightOf);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+
+    const Empty = enum {};
+    const Payload = struct {
+        empty: Empty,
+        weight: u32,
+
+        fn weightOf(_: *const @This()) u32 {
+            return 1;
+        }
+    };
+    var empty_value_items: [1]Payload = undefined;
+    var empty_value_engine = alea.ScalarPrng.init(0x5150_c73c);
+    var empty_value_control = alea.ScalarPrng.init(0x5150_c73c);
+    var empty_value_out: [1]Payload = undefined;
+    var empty_value_indexes: [1]usize = undefined;
+    var empty_value_keys: [1]f64 = undefined;
+
+    try std.testing.expectError(error.EmptyInput, sampleWeightedByIntoFrom(&empty_value_engine, Payload, u32, &empty_value_items, &empty_value_out, &empty_value_indexes, &empty_value_keys, Payload.weightOf));
+    try std.testing.expectEqual(empty_value_control.next(), empty_value_engine.next());
+
+    try std.testing.expectError(error.EmptyInput, sampleWeightedByIntoCheckedFrom(&empty_value_engine, Payload, u32, &empty_value_items, &empty_value_out, &empty_value_indexes, &empty_value_keys, Payload.weightOf));
+    try std.testing.expectEqual(empty_value_control.next(), empty_value_engine.next());
 }
 
 test "accessor weighted caller-owned buffers preserve stream shape and invalid paths do not consume" {
@@ -19685,6 +19750,33 @@ test "accessor weighted item arrays return fixed-size values and pointers" {
     const checked_values = try sampleWeightedArrayByCheckedFrom(&checked_value_engine, Entry, u32, 3, &entries, Entry.weightOf);
     try std.testing.expectEqual(@as(usize, 3), checked_values.len);
     for (checked_values) |item| try std.testing.expect(item.weight > 0);
+
+    const Empty = enum {};
+    const Payload = struct {
+        empty: Empty,
+        weight: u32,
+
+        fn weightOf(_: *const @This()) u32 {
+            return 1;
+        }
+    };
+    var empty_value_items: [1]Payload = undefined;
+    var empty_value_engine = alea.ScalarPrng.init(0x5150_c76a);
+    var empty_value_control = alea.ScalarPrng.init(0x5150_c76a);
+
+    if (sampleWeightedArrayByFrom(&empty_value_engine, Payload, u32, 1, &empty_value_items, Payload.weightOf)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(empty_value_control.next(), empty_value_engine.next());
+
+    if (sampleWeightedArrayByCheckedFrom(&empty_value_engine, Payload, u32, 1, &empty_value_items, Payload.weightOf)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(empty_value_control.next(), empty_value_engine.next());
 
     var ptr_engine = alea.ScalarPrng.init(0x5150_c763);
     const ptrs = (try sampleWeightedPtrArrayByFrom(&ptr_engine, Entry, u32, 2, &entries, Entry.weightOf)).?;
