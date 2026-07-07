@@ -3622,3 +3622,12 @@ known entries, returning the positive-weight subset without weighted heap setup,
 key sampling, extra probes, entropy, or random-stream use. Checked variants still
 report insufficient positive entries. This improves weighted iterator sampling
 reliability evidence but does not resolve S4-M11.
+
+S4-M777 avoids weighted iterator exact-cover fill key sampling
+(`compare/results/s4-m777-weighted-iterator-fill-exact-cover.md`):
+seq/root caller-owned weighted iterator fills now resolve exact remaining sources
+that are fully covered by the output after reading exactly the known entries,
+returning the positive-weight subset without key sampling, extra probes, entropy,
+or random-stream use. Checked variants still report insufficient positive
+entries. This improves weighted iterator fill reliability evidence but does not
+resolve S4-M11.

@@ -4912,23 +4912,30 @@ fn rootSortWeightedItemKeyPairs(comptime T: type, items: []T, keys: []f64) void 
     }
 }
 
+fn rootSampleIteratorWeightedIntoExactCover(comptime T: type, iterator: anytype, out: []T, remaining: usize, comptime checked: bool) !usize {
+    var index: usize = 0;
+    var positive: usize = 0;
+    while (index < remaining) : (index += 1) {
+        const entry = iterator.next() orelse {
+            if (checked) return error.InvalidParameter;
+            return positive;
+        };
+        const weight = rootWeightAsF64(@TypeOf(entry.weight), entry.weight);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        if (weight == 0) continue;
+        out[positive] = entry.item;
+        positive += 1;
+    }
+    if (checked and positive != remaining) return error.InvalidParameter;
+    return positive;
+}
+
 fn rootSampleIteratorWeightedInto(comptime T: type, io: std.Io, iterator: anytype, out: []T, keys: []f64, comptime checked: bool) !usize {
     std.debug.assert(out.len > 0);
     std.debug.assert(keys.len == out.len);
     if (rootIteratorExactRemaining(iterator)) |remaining| {
-        if (remaining == 1) {
-            const entry = iterator.next() orelse {
-                if (checked) return error.InvalidParameter;
-                return 0;
-            };
-            const weight = rootWeightAsF64(@TypeOf(entry.weight), entry.weight);
-            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
-            if (weight == 0) {
-                if (checked) return error.InvalidParameter;
-                return 0;
-            }
-            out[0] = entry.item;
-            return 1;
+        if ((checked and remaining == out.len) or (!checked and remaining <= out.len)) {
+            return rootSampleIteratorWeightedIntoExactCover(T, iterator, out, remaining, checked);
         }
     }
 
@@ -10359,6 +10366,42 @@ test "root random helpers validate deterministic cases before entropy" {
     var weighted_into_exact_zero = SingleExactWeightedIntoIter{ .entry = .{ .item = 42, .weight = 0 } };
     try std.testing.expectEqual(@as(usize, 0), try sampleIteratorWeightedInto(u8, failing, &weighted_into_exact_zero, &weighted_into_exact_empty_out, &weighted_into_exact_empty_keys));
     try std.testing.expectEqual(@as(usize, 1), weighted_into_exact_zero.calls);
+    const ExactCountWeightedIntoIter = struct {
+        entries: []const WeightedIter.Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?WeightedIter.Entry {
+            self.calls += 1;
+            if (self.index >= self.entries.len) return null;
+            const entry = self.entries[self.index];
+            self.index += 1;
+            return entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.entries.len - self.index;
+        }
+    };
+    var weighted_into_exact_count = ExactCountWeightedIntoIter{ .entries = &weighted_entropy_entries };
+    try std.testing.expectEqual(@as(usize, 2), try sampleIteratorWeightedInto(u8, failing, &weighted_into_exact_count, &weighted_into_exact_empty_out, &weighted_into_exact_empty_keys));
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, weighted_into_exact_empty_out[0..2]);
+    try std.testing.expectEqual(@as(usize, 2), weighted_into_exact_count.calls);
+    var weighted_into_exact_count_checked = ExactCountWeightedIntoIter{ .entries = &weighted_entropy_entries };
+    try sampleIteratorWeightedIntoChecked(u8, failing, &weighted_into_exact_count_checked, &weighted_into_exact_empty_out, &weighted_into_exact_empty_keys);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, weighted_into_exact_empty_out[0..2]);
+    try std.testing.expectEqual(@as(usize, 2), weighted_into_exact_count_checked.calls);
+    const weighted_into_exact_sparse_entries = [_]WeightedIter.Entry{
+        .{ .item = 1, .weight = 0 },
+        .{ .item = 2, .weight = 5 },
+    };
+    var weighted_into_exact_sparse = ExactCountWeightedIntoIter{ .entries = &weighted_into_exact_sparse_entries };
+    try std.testing.expectEqual(@as(usize, 1), try sampleIteratorWeightedInto(u8, failing, &weighted_into_exact_sparse, &weighted_into_exact_empty_out, &weighted_into_exact_empty_keys));
+    try std.testing.expectEqualSlices(u8, &.{2}, weighted_into_exact_empty_out[0..1]);
+    try std.testing.expectEqual(@as(usize, 2), weighted_into_exact_sparse.calls);
+    var weighted_into_exact_sparse_checked = ExactCountWeightedIntoIter{ .entries = &weighted_into_exact_sparse_entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedIntoChecked(u8, failing, &weighted_into_exact_sparse_checked, &weighted_into_exact_empty_out, &weighted_into_exact_empty_keys));
+    try std.testing.expectEqual(@as(usize, 2), weighted_into_exact_sparse_checked.calls);
     var weighted_into_empty_checked = WeightedIter{ .items = &weighted_entropy_entries };
     try sampleIteratorWeightedIntoChecked(u8, failing, &weighted_into_empty_checked, &weighted_into_empty_out, &weighted_into_empty_keys);
     var weighted_into_short_scratch = WeightedIter{ .items = &weighted_entropy_entries };

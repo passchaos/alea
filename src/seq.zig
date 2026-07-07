@@ -5261,20 +5261,31 @@ pub fn sampleIteratorWeightedInto(rng: Rng, comptime T: type, iterator: anytype,
     return sampleIteratorWeightedIntoFrom(rng, T, iterator, out, scratch_keys);
 }
 
+fn sampleIteratorWeightedIntoExactCover(comptime T: type, iterator: anytype, out: []T, remaining: usize, comptime checked: bool) !usize {
+    var index: usize = 0;
+    var positive: usize = 0;
+    while (index < remaining) : (index += 1) {
+        const entry = iterator.next() orelse {
+            if (checked) return error.InvalidParameter;
+            return positive;
+        };
+        const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        if (weight == 0) continue;
+        out[positive] = entry.item;
+        positive += 1;
+    }
+    if (checked and positive != remaining) return error.InvalidParameter;
+    return positive;
+}
+
 pub fn sampleIteratorWeightedIntoFrom(source: anytype, comptime T: type, iterator: anytype, out: []T, scratch_keys: []f64) !usize {
     if (out.len == 0) return 0;
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (scratch_keys.len < out.len) return error.LengthMismatch;
     if (iteratorExactRemaining(iterator)) |remaining| {
         if (remaining == 0) return 0;
-        if (remaining == 1) {
-            const entry = iterator.next() orelse return 0;
-            const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
-            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
-            if (weight == 0) return 0;
-            out[0] = entry.item;
-            return 1;
-        }
+        if (remaining <= out.len) return sampleIteratorWeightedIntoExactCover(T, iterator, out, remaining, false);
     }
     return sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len]);
 }
@@ -5289,12 +5300,9 @@ pub fn sampleIteratorWeightedIntoCheckedFrom(source: anytype, comptime T: type, 
     if (scratch_keys.len < out.len) return error.LengthMismatch;
     if (iteratorExactRemaining(iterator)) |remaining| {
         if (remaining < out.len) return error.InvalidParameter;
-        if (remaining == 1) {
-            const entry = iterator.next() orelse return error.InvalidParameter;
-            const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
-            if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
-            if (weight == 0) return error.InvalidParameter;
-            out[0] = entry.item;
+        if (remaining == out.len) {
+            const count = try sampleIteratorWeightedIntoExactCover(T, iterator, out, remaining, true);
+            std.debug.assert(count == out.len);
             return;
         }
     }
@@ -12921,6 +12929,73 @@ test "single exact weighted iterator fills avoid key sampling" {
     var checked_zero_iter = SingleExactIter{ .entry = .{ .item = 42, .weight = 0 } };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedIntoCheckedFrom(&engine, u8, &checked_zero_iter, out[0..1], keys[0..1]));
     try std.testing.expectEqual(@as(usize, 1), checked_zero_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "exact-cover weighted iterator fills avoid key sampling" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7728);
+    var control = alea.ScalarPrng.init(0x5150_7728);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const ExactIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const entry = self.items[self.index];
+            self.index += 1;
+            return entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 11, .weight = 1 },
+        .{ .item = 22, .weight = 5 },
+    };
+    var out: [3]u8 = undefined;
+    var keys: [3]f64 = undefined;
+    var iter = ExactIter{ .items = &entries };
+    try std.testing.expectEqual(@as(usize, 2), try sampleIteratorWeightedIntoFrom(&engine, u8, &iter, &out, &keys));
+    try std.testing.expectEqualSlices(u8, &.{ 11, 22 }, out[0..2]);
+    try std.testing.expectEqual(@as(usize, 2), iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_iter = ExactIter{ .items = &entries };
+    try sampleIteratorWeightedIntoCheckedFrom(&engine, u8, &checked_iter, out[0..2], keys[0..2]);
+    try std.testing.expectEqualSlices(u8, &.{ 11, 22 }, out[0..2]);
+    try std.testing.expectEqual(@as(usize, 2), checked_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sparse_entries = [_]Entry{
+        .{ .item = 11, .weight = 0 },
+        .{ .item = 22, .weight = 5 },
+    };
+    var sparse_iter = ExactIter{ .items = &sparse_entries };
+    try std.testing.expectEqual(@as(usize, 1), try sampleIteratorWeightedIntoFrom(&engine, u8, &sparse_iter, &out, &keys));
+    try std.testing.expectEqualSlices(u8, &.{22}, out[0..1]);
+    try std.testing.expectEqual(@as(usize, 2), sparse_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var sparse_checked_iter = ExactIter{ .items = &sparse_entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedIntoCheckedFrom(&engine, u8, &sparse_checked_iter, out[0..2], keys[0..2]));
+    try std.testing.expectEqual(@as(usize, 2), sparse_checked_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const invalid_entries = [_]Entry{
+        .{ .item = 11, .weight = 0 },
+        .{ .item = 22, .weight = std.math.nan(f64) },
+    };
+    var invalid_iter = ExactIter{ .items = &invalid_entries };
+    try std.testing.expectError(error.InvalidWeight, sampleIteratorWeightedIntoFrom(&engine, u8, &invalid_iter, &out, &keys));
+    try std.testing.expectEqual(@as(usize, 2), invalid_iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
