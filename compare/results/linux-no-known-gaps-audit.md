@@ -2416,3 +2416,11 @@ system-entropy callers now get invalid-weight and checked empty-input failures
 before random-output allocation and secure-engine construction for
 `weightedIndexBatchBy` and `weightedIndexBatchByChecked`, while deterministic
 empty/single paths remain allocation-only and S4-M11 remains blocked.
+
+S4-M607 adds root item-accessor weighted compact u32 index batch prevalidation
+(`compare/results/s4-m607-root-weighted-by-u32-index-batch-prevalidation.md`):
+root system-entropy callers now get oversized-input, invalid-weight, and checked
+empty-input failures before random-output allocation and secure-engine
+construction for `weightedIndexU32BatchBy` and `weightedIndexU32BatchByChecked`,
+while deterministic empty/single paths remain allocation-only and S4-M11 remains
+blocked.
