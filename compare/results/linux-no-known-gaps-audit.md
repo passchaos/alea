@@ -3288,3 +3288,9 @@ S4-M727 adds reusable `Choice` pointer iterator aliases
 `Choice` now has explicit `ptrIter*` aliases and checked aliases that preserve
 existing pointer iterator stream shape. This improves discoverability but does
 not resolve S4-M11.
+
+S4-M728 adds reusable `WeightedChoice` pointer iterator aliases
+(`compare/results/s4-m728-weightedchoice-pointer-iterator-aliases.md`):
+reusable `WeightedChoice` now has explicit `ptrIter*` aliases and checked
+aliases that preserve existing weighted pointer iterator stream shape. This
+improves discoverability but does not resolve S4-M11.

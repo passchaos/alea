@@ -3307,7 +3307,9 @@ Dynamic weighted helpers:
   `WeightedChoice.U32IndexIterator.next`,
   `WeightedChoice.U32IndexIterator.nextValue`,
   `WeightedChoice.U32IndexIterator.fill`, `WeightedChoice.iter`,
-  `WeightedChoice.iterFrom`, `WeightedChoice.ownedIter`,
+  `WeightedChoice.iterFrom`, `WeightedChoice.ptrIter`,
+  `WeightedChoice.ptrIterFrom`, `WeightedChoice.ptrIterChecked`,
+  `WeightedChoice.ptrIterCheckedFrom`, `WeightedChoice.ownedIter`,
   `WeightedChoice.ownedIterFrom`, `WeightedChoice.Iterator`,
   `WeightedChoice.Iterator.next`, `WeightedChoice.Iterator.nextValue`,
   `WeightedChoice.Iterator.fill`, `WeightedChoice.Iterator.deinit`
