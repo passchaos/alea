@@ -755,7 +755,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M714 distribution choose introspection | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m714-distribution-choose-introspection.md` | Closed for the current bar: distribution-layer `Choose` now exposes item metadata and lookup helpers on the sampler. |
 | S4-M715 distribution choose probability introspection | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m715-distribution-choose-probability-introspection.md` | Closed for the current bar: distribution-layer `Choose` now exposes probability lookup/output/iteration helpers and exact iterator size hints. |
 | S4-M716 distribution choose checked index aliases | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m716-distribution-choose-checked-index-aliases.md` | Closed for the current bar: distribution-layer `Choose` now has checked aliases for scalar, caller-owned, owned, and fixed-size usize index outputs. |
-| S4-M717 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M717 distribution choose checked u32 index aliases | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m717-distribution-choose-checked-u32-index-aliases.md` | Closed for the current bar: distribution-layer `Choose` now has checked aliases for scalar, caller-owned, owned, and fixed-size u32 index outputs. |
+| S4-M718 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2161,6 +2162,9 @@ S4-M715 additionally adds distribution-layer `Choose` probability
 introspection helpers; it is ergonomics/diagnostics work and does not resolve
 S4-M11 or complete the long-term objective.
 S4-M716 additionally adds distribution-layer `Choose` checked usize index
+aliases; it is ergonomics/discoverability work and does not resolve S4-M11 or
+complete the long-term objective.
+S4-M717 additionally adds distribution-layer `Choose` checked u32 index
 aliases; it is ergonomics/discoverability work and does not resolve S4-M11 or
 complete the long-term objective.
 

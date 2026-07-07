@@ -483,6 +483,14 @@ pub fn Choose(comptime T: type) type {
             return Rng.uintLessThanFrom(source, u32, @intCast(self.items.len));
         }
 
+        pub fn sampleIndexU32Checked(self: Self, rng: Rng) Error!u32 {
+            return self.sampleIndexU32CheckedFrom(rng);
+        }
+
+        pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
+            return self.sampleIndexU32From(source);
+        }
+
         pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
             self.fillFrom(rng, dest);
         }
@@ -588,6 +596,14 @@ pub fn Choose(comptime T: type) type {
             for (dest) |*index| index.* = Rng.uintLessThanFrom(source, u32, @intCast(self.items.len));
         }
 
+        pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
+            try self.fillIndicesU32CheckedFrom(rng, dest);
+        }
+
+        pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
+            try self.fillIndicesU32From(source, dest);
+        }
+
         pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
             return self.indicesU32From(allocator, rng, amount);
         }
@@ -599,6 +615,14 @@ pub fn Choose(comptime T: type) type {
             return out;
         }
 
+        pub fn indicesU32Checked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
+            return self.indicesU32CheckedFrom(allocator, rng, amount);
+        }
+
+        pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
+            return self.indicesU32From(allocator, source, amount);
+        }
+
         pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
             return self.indexArrayU32From(rng, N);
         }
@@ -607,6 +631,14 @@ pub fn Choose(comptime T: type) type {
             var out: [N]u32 = undefined;
             try self.fillIndicesU32From(source, &out);
             return out;
+        }
+
+        pub fn indexArrayU32Checked(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
+            return self.indexArrayU32CheckedFrom(rng, N);
+        }
+
+        pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
+            return try self.indexArrayU32From(source, N);
         }
 
         pub fn indexIter(self: Self, rng: Rng) IndexIterator(Rng) {
@@ -32147,6 +32179,13 @@ test "distribution Choose sampler mirrors slice choices" {
         try choice.sampleIndexU32From(&sample_index_u32_engine),
     );
     try std.testing.expectEqual(choose_index_u32_engine.next(), sample_index_u32_engine.next());
+    var checked_index_u32_engine = root.DefaultPrng.init(0xc0_282);
+    var unchecked_index_u32_engine = root.DefaultPrng.init(0xc0_282);
+    try std.testing.expectEqual(
+        try choice.sampleIndexU32From(&unchecked_index_u32_engine),
+        try choice.sampleIndexU32CheckedFrom(&checked_index_u32_engine),
+    );
+    try std.testing.expectEqual(unchecked_index_u32_engine.next(), checked_index_u32_engine.next());
 
     var fill_engine = root.DefaultPrng.init(0xc0_268);
     var helper_engine = root.DefaultPrng.init(0xc0_268);
@@ -32207,6 +32246,20 @@ test "distribution Choose sampler mirrors slice choices" {
     const index_u32_array = try choice.indexArrayU32From(&index_u32_array_engine, 6);
     try std.testing.expectEqualSlices(u32, &index_u32_fill, &index_u32_array);
     try std.testing.expectEqual(index_u32_fill_engine.next(), index_u32_array_engine.next());
+    var checked_u32_fill_engine = root.DefaultPrng.init(0xc0_283);
+    var unchecked_u32_fill_engine = root.DefaultPrng.init(0xc0_283);
+    var checked_u32_fill: [6]u32 = undefined;
+    var unchecked_u32_fill: [6]u32 = undefined;
+    try choice.fillIndicesU32From(&unchecked_u32_fill_engine, &unchecked_u32_fill);
+    try choice.fillIndicesU32CheckedFrom(&checked_u32_fill_engine, &checked_u32_fill);
+    try std.testing.expectEqualSlices(u32, &unchecked_u32_fill, &checked_u32_fill);
+    try std.testing.expectEqual(unchecked_u32_fill_engine.next(), checked_u32_fill_engine.next());
+    var checked_u32_array_engine = root.DefaultPrng.init(0xc0_284);
+    var unchecked_u32_array_engine = root.DefaultPrng.init(0xc0_284);
+    const unchecked_u32_array = try choice.indexArrayU32From(&unchecked_u32_array_engine, 6);
+    const checked_u32_array = try choice.indexArrayU32CheckedFrom(&checked_u32_array_engine, 6);
+    try std.testing.expectEqualSlices(u32, &unchecked_u32_array, &checked_u32_array);
+    try std.testing.expectEqual(unchecked_u32_array_engine.next(), checked_u32_array_engine.next());
     var owned_index_u32_engine = root.DefaultPrng.init(0xc0_27b);
     var owned_index_u32_control = root.DefaultPrng.init(0xc0_27b);
     const owned_indices_u32 = try choice.indicesU32From(std.testing.allocator, &owned_index_u32_engine, 6);
@@ -32215,6 +32268,14 @@ test "distribution Choose sampler mirrors slice choices" {
     try choice.fillIndicesU32From(&owned_index_u32_control, &owned_index_u32_fill);
     try std.testing.expectEqualSlices(u32, &owned_index_u32_fill, owned_indices_u32);
     try std.testing.expectEqual(owned_index_u32_control.next(), owned_index_u32_engine.next());
+    var checked_owned_u32_engine = root.DefaultPrng.init(0xc0_285);
+    var unchecked_owned_u32_engine = root.DefaultPrng.init(0xc0_285);
+    const unchecked_owned_u32 = try choice.indicesU32From(std.testing.allocator, &unchecked_owned_u32_engine, 6);
+    defer std.testing.allocator.free(unchecked_owned_u32);
+    const checked_owned_u32 = try choice.indicesU32CheckedFrom(std.testing.allocator, &checked_owned_u32_engine, 6);
+    defer std.testing.allocator.free(checked_owned_u32);
+    try std.testing.expectEqualSlices(u32, unchecked_owned_u32, checked_owned_u32);
+    try std.testing.expectEqual(unchecked_owned_u32_engine.next(), checked_owned_u32_engine.next());
     var index_iter_engine = root.DefaultPrng.init(0xc0_27c);
     var index_iter_control = root.DefaultPrng.init(0xc0_27c);
     var index_iter = choice.indexIterFrom(&index_iter_engine);
