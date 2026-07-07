@@ -3282,3 +3282,9 @@ S4-M726 adds reusable `WeightedChoice` value iterators
 `WeightedChoice` now has allocation-free weighted value-copy iterators plus
 checked empty-type construction. This improves repeated weighted value-copy
 ergonomics but does not resolve S4-M11.
+
+S4-M727 adds reusable `Choice` pointer iterator aliases
+(`compare/results/s4-m727-choice-pointer-iterator-aliases.md`): reusable
+`Choice` now has explicit `ptrIter*` aliases and checked aliases that preserve
+existing pointer iterator stream shape. This improves discoverability but does
+not resolve S4-M11.

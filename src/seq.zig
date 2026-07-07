@@ -8324,6 +8324,22 @@ pub fn Choice(comptime T: type) type {
         pub fn iterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
             return Rng.sampleIterFrom(source, *const T, self);
         }
+
+        pub fn ptrIter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
+            return self.iter(rng);
+        }
+
+        pub fn ptrIterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
+            return self.iterFrom(source);
+        }
+
+        pub fn ptrIterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, *const T) {
+            return self.ptrIter(rng);
+        }
+
+        pub fn ptrIterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
+            return self.ptrIterFrom(source);
+        }
     };
 }
 
@@ -17558,6 +17574,24 @@ test "choice sampler repeatedly samples slice references" {
     var checked_direct_iter = try chooseIterCheckedFrom(&engine, u8, &values);
     const checked_direct_picked = checked_direct_iter.next().?.*;
     try std.testing.expect(checked_direct_picked == 2 or checked_direct_picked == 4 or checked_direct_picked == 6 or checked_direct_picked == 8);
+    var ptr_iter_engine = alea.DefaultPrng.init(0xc0_ef07);
+    var iter_engine = alea.DefaultPrng.init(0xc0_ef07);
+    var ptr_iter = choice.ptrIterFrom(&ptr_iter_engine);
+    var regular_iter = choice.iterFrom(&iter_engine);
+    try std.testing.expectEqual(regular_iter.next().?, ptr_iter.next().?);
+    try std.testing.expectEqual(iter_engine.next(), ptr_iter_engine.next());
+    var ptr_iter_fill: [8]*const u8 = undefined;
+    var regular_iter_fill: [8]*const u8 = undefined;
+    ptr_iter.fill(&ptr_iter_fill);
+    regular_iter.fill(&regular_iter_fill);
+    try std.testing.expectEqualSlices(*const u8, &regular_iter_fill, &ptr_iter_fill);
+    try std.testing.expectEqual(iter_engine.next(), ptr_iter_engine.next());
+    var checked_ptr_iter_engine = alea.DefaultPrng.init(0xc0_ef08);
+    var unchecked_ptr_iter_engine = alea.DefaultPrng.init(0xc0_ef08);
+    var checked_ptr_iter = try choice.ptrIterCheckedFrom(&checked_ptr_iter_engine);
+    var unchecked_ptr_iter = choice.ptrIterFrom(&unchecked_ptr_iter_engine);
+    try std.testing.expectEqual(unchecked_ptr_iter.next().?, checked_ptr_iter.next().?);
+    try std.testing.expectEqual(unchecked_ptr_iter_engine.next(), checked_ptr_iter_engine.next());
     var pointer_buf: [8]*const u8 = undefined;
     choice.fill(rng, &pointer_buf);
     for (pointer_buf) |item| try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
