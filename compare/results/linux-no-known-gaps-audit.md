@@ -2782,3 +2782,11 @@ unchecked vector normal and exponential fill helpers now treat empty output
 buffers as deterministic no-ops before invalid parameter assertions in
 `fillVectorNormalFrom` and `fillVectorExponentialFrom`. This improves no-op
 determinism but does not resolve S4-M11.
+
+S4-M656 adds `Rng` scalar normal/exponential batch invalid-parameter
+prevalidation
+(`compare/results/s4-m656-rng-normal-exponential-batch-invalid-prevalidation.md`):
+unchecked scalar normal and exponential allocation-returning batch helpers now
+reject invalid parameters before allocation and random-stream use in
+`normalBatchFrom` and `exponentialBatchFrom`, while valid allocation failures
+remain no-stream. This improves failure determinism but does not resolve S4-M11.
