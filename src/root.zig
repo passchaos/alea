@@ -5092,6 +5092,19 @@ fn rootSampleIteratorWeightedAlloc(comptime T: type, io: std.Io, allocator: std.
 
 fn rootSampleIteratorWeightedCandidateArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]RootWeightedIteratorCandidate(T) {
     if (N == 0) return .{};
+    if (comptime N == 1) {
+        if (rootIteratorExactRemaining(iterator)) |remaining| {
+            if (remaining == 1) {
+                const entry = iterator.next() orelse return null;
+                const weight = rootWeightAsF64(@TypeOf(entry.weight), entry.weight);
+                if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+                if (weight == 0) return null;
+                var candidates: [N]RootWeightedIteratorCandidate(T) = undefined;
+                candidates[0] = .{ .item = entry.item, .key = 0 };
+                return candidates;
+            }
+        }
+    }
     const Pending = struct {
         item: T,
         weight: f64,
@@ -10320,6 +10333,18 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), (try sampleIteratorWeightedArray(u8, failing, 0, &weighted_array_empty)).?.len);
     var weighted_array_empty_checked = WeightedIter{ .items = &weighted_entropy_entries };
     try std.testing.expectEqual(@as(usize, 0), (try sampleIteratorWeightedArrayChecked(u8, failing, 0, &weighted_array_empty_checked)).len);
+    var weighted_array_exact_single = SingleExactWeightedIntoIter{ .entry = .{ .item = 42, .weight = 5 } };
+    try std.testing.expectEqualSlices(u8, &.{42}, &(try sampleIteratorWeightedArray(u8, failing, 1, &weighted_array_exact_single)).?);
+    try std.testing.expectEqual(@as(usize, 1), weighted_array_exact_single.calls);
+    var weighted_array_exact_single_checked = SingleExactWeightedIntoIter{ .entry = .{ .item = 42, .weight = 5 } };
+    try std.testing.expectEqualSlices(u8, &.{42}, &(try sampleIteratorWeightedArrayChecked(u8, failing, 1, &weighted_array_exact_single_checked)));
+    try std.testing.expectEqual(@as(usize, 1), weighted_array_exact_single_checked.calls);
+    var weighted_array_exact_zero = SingleExactWeightedIntoIter{ .entry = .{ .item = 42, .weight = 0 } };
+    try std.testing.expectEqual(@as(?[1]u8, null), try sampleIteratorWeightedArray(u8, failing, 1, &weighted_array_exact_zero));
+    try std.testing.expectEqual(@as(usize, 1), weighted_array_exact_zero.calls);
+    var weighted_array_exact_zero_checked = SingleExactWeightedIntoIter{ .entry = .{ .item = 42, .weight = 0 } };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedArrayChecked(u8, failing, 1, &weighted_array_exact_zero_checked));
+    try std.testing.expectEqual(@as(usize, 1), weighted_array_exact_zero_checked.calls);
     var weighted_array_known_short = WeightedIter{ .items = &weighted_entropy_entries };
     try std.testing.expectEqual(@as(?[3]u8, null), try sampleIteratorWeightedArray(u8, failing, 3, &weighted_array_known_short));
     try std.testing.expectEqual(@as(usize, 0), weighted_array_known_short.index);

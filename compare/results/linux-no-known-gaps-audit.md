@@ -3597,3 +3597,10 @@ seq/root caller-owned weighted iterator fills now resolve exact-single sources
 after one validated entry without key sampling, extra probes, entropy, or
 random-stream use. This improves weighted iterator fill reliability evidence but
 does not resolve S4-M11.
+
+S4-M774 avoids weighted iterator exact-single fixed-array key sampling
+(`compare/results/s4-m774-weighted-iterator-array-exact-single.md`):
+seq/root fixed-size weighted iterator arrays now resolve exact-single `N == 1`
+sources after one validated entry without key sampling, extra probes, entropy,
+or random-stream use. This improves weighted iterator array reliability evidence
+but does not resolve S4-M11.
