@@ -2869,3 +2869,12 @@ zero-length usize/u32 ranges before allocation and secure-engine construction in
 `chooseIndexBatchChecked` and `chooseIndexU32BatchChecked`, while zero-count
 requests remain deterministic empty allocations. This improves failure
 determinism but does not resolve S4-M11.
+
+S4-M667 adds `Rng` no-replacement empty-type prevalidation
+(`compare/results/s4-m667-rng-no-replacement-empty-type-prevalidation.md`):
+`Rng` no-replacement value sampling now rejects non-zero empty enum-containing
+value types before allocation and random-stream use in
+`sampleWithoutReplacement`, `sampleWithoutReplacementFrom`, and
+`sampleWithoutReplacementCheckedFrom`, while zero-count requests remain
+deterministic empty allocations. This improves failure determinism but does not
+resolve S4-M11.

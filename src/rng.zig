@@ -4012,11 +4012,13 @@ pub fn chooseWeightedPtrBatchCheckedFrom(source: anytype, comptime T: type, allo
 
 pub fn sampleWithoutReplacement(self: Rng, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
     if (count > items.len) return error.InvalidParameter;
+    if (count != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return sampleWithoutReplacementFrom(self, T, allocator, items, count);
 }
 
 pub fn sampleWithoutReplacementFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
     if (count > items.len) return error.InvalidParameter;
+    if (count != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return try sampleWithoutReplacementCheckedFrom(source, T, allocator, items, count);
 }
 
@@ -4027,6 +4029,7 @@ pub fn sampleWithoutReplacementChecked(self: Rng, comptime T: type, allocator: s
 pub fn sampleWithoutReplacementCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, items: []const T, count: usize) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
     if (count > items.len) return error.InvalidParameter;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     var pool = try std.ArrayList(T).initCapacity(allocator, items.len);
     defer pool.deinit(allocator);
     try pool.appendSlice(allocator, items);
@@ -6749,6 +6752,46 @@ test "zero-count sample without replacement does not build pool or consume rando
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, sampleWithoutReplacementCheckedFrom(&engine, u8, std.testing.allocator, &items, items.len + 1));
+}
+
+test "sample without replacement validates empty value types before allocation" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
+
+    var engine = alea.ScalarPrng.init(0x5150_bb5);
+    var control = alea.ScalarPrng.init(0x5150_bb5);
+    const rng = Rng.init(&engine);
+
+    var method_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (rng.sampleWithoutReplacement(Empty, method_alloc.allocator(), items, 1)) |unexpected| {
+        method_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!method_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var direct_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleWithoutReplacementFrom(&engine, Empty, direct_alloc.allocator(), items, 1)) |unexpected| {
+        direct_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!direct_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleWithoutReplacementCheckedFrom(&engine, struct { u8, Empty }, checked_alloc.allocator(), @as([*]const struct { u8, Empty }, @ptrFromInt(0x1000))[0..1], 1)) |unexpected| {
+        checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "invalid unchecked sample without replacement fails before allocation and stream use" {
