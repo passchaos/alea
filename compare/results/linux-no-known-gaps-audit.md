@@ -2579,3 +2579,10 @@ system-entropy callers now get invalid duration range failures before
 secure-engine construction for `durationRangeLessThan` and
 `durationRangeAtMost`, while deterministic collapsed inclusive paths remain
 no-entropy and S4-M11 remains blocked.
+
+S4-M630 adds root weighted value sample empty-type prevalidation
+(`compare/results/s4-m630-root-weighted-value-sample-empty-type-prevalidation.md`):
+root system-entropy callers now get non-zero uninhabited value type failures
+before random-output allocation and secure-engine construction for
+`sampleWeighted` and `sampleWeightedChecked`, while zero-amount and deterministic
+all-zero/single paths remain allocation-only and S4-M11 remains blocked.
