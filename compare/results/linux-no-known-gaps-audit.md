@@ -2029,3 +2029,9 @@ S4-M547 adds root item-accessor weighted `usize` index array helpers
 callers can now produce fixed-size weighted index arrays directly from an item
 slice and comptime item-weight accessor from the root API while S4-M11 remains
 blocked.
+
+S4-M548 adds root item-accessor weighted `u32` index array helpers
+(`compare/results/s4-m548-root-weighted-u32-by-array-helpers.md`):
+system-entropy callers can now produce fixed-size compact `u32` weighted index
+arrays directly from an item slice and comptime item-weight accessor from the
+root API while S4-M11 remains blocked.
