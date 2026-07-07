@@ -22398,6 +22398,22 @@ test "accessor weighted choice iterator streams repeated const pointers" {
             try std.testing.expectEqualStrings(direct_item.label, facade_item.label);
         }
         try std.testing.expectEqual(checked_facade_engine.next(), checked_direct_engine.next());
+
+        var checked_from_engine = Engine.init(0x5150_1796);
+        var checked_from_direct_engine = Engine.init(0x5150_1796);
+        var checked_from_iter = try chooseWeightedIterByCheckedFrom(std.testing.allocator, &checked_from_engine, Record, f64, &records, Record.weightOf);
+        defer checked_from_iter.deinit();
+        var checked_from_direct_choice = try WeightedChoice(Record, f64).initBy(std.testing.allocator, &records, Record.weightOf);
+        defer checked_from_direct_choice.deinit();
+        var checked_from_direct_iter = checked_from_direct_choice.iterFrom(&checked_from_direct_engine);
+        var checked_from_out: [4]*const Record = undefined;
+        var checked_from_direct_out: [4]*const Record = undefined;
+        checked_from_iter.fill(&checked_from_out);
+        checked_from_direct_iter.fill(&checked_from_direct_out);
+        for (checked_from_direct_out, checked_from_out) |direct_item, item| {
+            try std.testing.expectEqualStrings(direct_item.label, item.label);
+        }
+        try std.testing.expectEqual(checked_from_direct_engine.next(), checked_from_engine.next());
     }
 
     var single_engine = alea.ScalarPrng.init(0x5150_1793);
@@ -22518,6 +22534,22 @@ test "index-weighted choice iterator streams repeated const pointers" {
             try std.testing.expectEqualStrings(direct_item.*, facade_item.*);
         }
         try std.testing.expectEqual(checked_facade_engine.next(), checked_direct_engine.next());
+
+        var checked_from_engine = Engine.init(0x5150_1806);
+        var checked_from_direct_engine = Engine.init(0x5150_1806);
+        var checked_from_iter = try chooseWeightedIterByIndexCheckedFrom(std.testing.allocator, &checked_from_engine, []const u8, u32, &records, IndexWeight.weightOf);
+        defer checked_from_iter.deinit();
+        var checked_from_direct_choice = try WeightedChoice([]const u8, u32).initByIndex(std.testing.allocator, &records, IndexWeight.weightOf);
+        defer checked_from_direct_choice.deinit();
+        var checked_from_direct_iter = checked_from_direct_choice.iterFrom(&checked_from_direct_engine);
+        var checked_from_out: [4]*const []const u8 = undefined;
+        var checked_from_direct_out: [4]*const []const u8 = undefined;
+        checked_from_iter.fill(&checked_from_out);
+        checked_from_direct_iter.fill(&checked_from_direct_out);
+        for (checked_from_direct_out, checked_from_out) |direct_item, item| {
+            try std.testing.expectEqualStrings(direct_item.*, item.*);
+        }
+        try std.testing.expectEqual(checked_from_direct_engine.next(), checked_from_engine.next());
     }
 
     var single_engine = alea.ScalarPrng.init(0x5150_1803);

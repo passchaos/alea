@@ -3479,3 +3479,10 @@ S4-M755 adds checked choice iterator facade coverage
 `Choose`, `Choice`, and `WeightedChoice` checked value/index iterator facade
 constructors now have focused direct-source stream-shape coverage. This improves
 iterator API reliability evidence but does not resolve S4-M11.
+
+S4-M756 adds checked direct-source convenience iterator coverage for weighted
+accessor streams
+(`compare/results/s4-m756-accessor-weighted-iterator-checked-from.md`):
+`chooseWeightedIterByCheckedFrom` and `chooseWeightedIterByIndexCheckedFrom` now
+have focused parity evidence against reusable `WeightedChoice` iterators. This
+improves iterator API reliability evidence but does not resolve S4-M11.
