@@ -2463,3 +2463,10 @@ before random-output allocation and secure-engine construction for
 `unicodeScalarRangeLessThanBatchChecked` and
 `unicodeScalarRangeAtMostBatchChecked`, while zero-count and deterministic
 collapsed paths remain allocation-only and S4-M11 remains blocked.
+
+S4-M613 adds root duration range batch parameter prevalidation
+(`compare/results/s4-m613-root-duration-batch-prevalidation.md`): root
+system-entropy callers now get invalid duration range failures before
+random-output allocation and secure-engine construction for duration batch
+helpers, while zero-count and deterministic collapsed paths remain allocation-
+only and S4-M11 remains blocked.

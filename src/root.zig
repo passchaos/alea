@@ -4335,9 +4335,10 @@ pub fn durationRangeLessThanChecked(io: std.Io, min: std.Io.Duration, max: std.I
 }
 
 pub fn durationRangeLessThanBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    if (count == 0) return allocator.alloc(std.Io.Duration, 0);
+    if (min.nanoseconds >= max.nanoseconds) return error.EmptyRange;
     const out = try allocator.alloc(std.Io.Duration, count);
     errdefer allocator.free(out);
-    if (count == 0) return out;
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
     for (out) |*item| item.* = random_source.durationRangeLessThan(min, max);
@@ -4367,9 +4368,10 @@ pub fn durationRangeAtMostChecked(io: std.Io, min: std.Io.Duration, max: std.Io.
 }
 
 pub fn durationRangeAtMostBatch(io: std.Io, allocator: std.mem.Allocator, count: usize, min: std.Io.Duration, max: std.Io.Duration) ![]std.Io.Duration {
+    if (count == 0) return allocator.alloc(std.Io.Duration, 0);
+    if (min.nanoseconds > max.nanoseconds) return error.EmptyRange;
     const out = try allocator.alloc(std.Io.Duration, count);
     errdefer allocator.free(out);
-    if (count == 0) return out;
     if (min.nanoseconds == max.nanoseconds) {
         @memset(out, min);
         return out;
@@ -8637,12 +8639,20 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_duration_less_than = try durationRangeLessThanBatch(failing, std.testing.allocator, 0, duration_min, duration_max);
     defer std.testing.allocator.free(empty_duration_less_than);
     try std.testing.expectEqual(@as(usize, 0), empty_duration_less_than.len);
+    var bad_duration_less_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, durationRangeLessThanBatch(failing, bad_duration_less_alloc.allocator(), 3, duration_same, duration_same));
+    var bad_duration_less_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, durationRangeLessThanBatchChecked(failing, bad_duration_less_checked_alloc.allocator(), 3, duration_same, duration_same));
     const empty_bad_duration_less_than = try durationRangeLessThanBatchChecked(failing, std.testing.allocator, 0, duration_same, duration_same);
     defer std.testing.allocator.free(empty_bad_duration_less_than);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_duration_less_than.len);
     const empty_duration_at_most = try durationRangeAtMostBatch(failing, std.testing.allocator, 0, duration_min, duration_max);
     defer std.testing.allocator.free(empty_duration_at_most);
     try std.testing.expectEqual(@as(usize, 0), empty_duration_at_most.len);
+    var bad_duration_at_most_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, durationRangeAtMostBatch(failing, bad_duration_at_most_alloc.allocator(), 3, duration_max, duration_min));
+    var bad_duration_at_most_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, durationRangeAtMostBatchChecked(failing, bad_duration_at_most_checked_alloc.allocator(), 3, duration_max, duration_min));
     const empty_bad_duration_at_most = try durationRangeAtMostBatchChecked(failing, std.testing.allocator, 0, duration_max, duration_min);
     defer std.testing.allocator.free(empty_bad_duration_at_most);
     try std.testing.expectEqual(@as(usize, 0), empty_bad_duration_at_most.len);
