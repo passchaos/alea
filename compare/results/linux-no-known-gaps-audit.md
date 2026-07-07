@@ -3358,3 +3358,9 @@ S4-M738 adds distribution-layer `Choose` checked compact `u32` iterators
 distribution-layer `Choose` now has checked aliases for compact `u32` index
 iterators while preserving existing stream shape and width validation. This
 improves discoverability but does not resolve S4-M11.
+
+S4-M739 adds static `AliasTable` checked iterators
+(`compare/results/s4-m739-aliastable-checked-iterators.md`): static
+`AliasTable` now has checked aliases for `usize` and compact `u32` index
+iterators while preserving existing stream shape and compact width validation.
+This improves discoverability but does not resolve S4-M11.

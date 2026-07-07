@@ -2793,8 +2793,12 @@ Alias helpers:
 - `AliasTable.indexArrayU32CheckedFrom`
 - `AliasTable.iter`
 - `AliasTable.iterFrom`
+- `AliasTable.iterChecked`
+- `AliasTable.iterCheckedFrom`
 - `AliasTable.iterU32`
 - `AliasTable.iterU32From`
+- `AliasTable.iterU32Checked`
+- `AliasTable.iterU32CheckedFrom`
 - `AliasTable.U32IndexIterator`
 - `AliasTable.U32IndexIterator.next`
 - `AliasTable.U32IndexIterator.nextValue`
