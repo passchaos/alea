@@ -791,7 +791,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M750 aliastable checked owned u32 indices | `src/distributions.zig`, `docs/api-reference.md`, `compare/results/s4-m750-aliastable-checked-owned-u32-indices.md` | Closed for the current bar: static `AliasTable` now has checked allocation-returning compact `u32` index aliases. |
 | S4-M751 aliastable checked fixed index arrays | `src/distributions.zig`, `compare/results/s4-m751-aliastable-checked-fixed-index-arrays.md` | Closed for the current bar: static `AliasTable` now implements the documented checked fixed-size `usize` index array aliases. |
 | S4-M752 aliastable checked usize index aliases | `src/distributions.zig`, `compare/results/s4-m752-aliastable-checked-usize-index-aliases.md` | Closed for the current bar: static `AliasTable` now implements the documented checked scalar, fill, and owned `usize` index aliases. |
-| S4-M753 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M753 rng fast helper namespace docs | `docs/api-reference.md`, `docs/core-guide.md`, `compare/results/s4-m753-rng-fast-helper-namespace-docs.md` | Closed for the current bar: scalar normal/exponential fast helper docs now use the correct `Rng.*FastFrom` namespace. |
+| S4-M754 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2313,6 +2314,10 @@ and does not resolve S4-M11 or complete the long-term objective.
 S4-M752 additionally implements the documented static `AliasTable` checked
 scalar, fill, and owned `usize` index aliases; it is API-correctness/ergonomics
 work and does not resolve S4-M11 or complete the long-term objective.
+S4-M753 additionally clarifies the `Rng.*FastFrom` namespace for scalar
+normal/exponential fast-path helpers in adoption docs; it is
+documentation/discoverability work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

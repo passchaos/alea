@@ -14,9 +14,9 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
 - `FastPrng = Alea4x64`: high-throughput non-cryptographic generator.
 - `ScalarPrng = Wyhash64`: scalar-heavy fast path for workloads dominated by
   repeated `next()` calls or scalar distributions such as normal, exponential,
-  and Poisson. Use it with direct helpers such as `standardNormalFastFrom`,
-  `normalFastFrom`, `fillNormalFrom`, `standardExponentialFastFrom`,
-  `exponentialFastFrom`, and `fillExponentialFrom` when the engine type is
+  and Poisson. Use it with direct helpers such as `Rng.standardNormalFastFrom`,
+  `Rng.normalFastFrom`, `fillNormalFrom`, `Rng.standardExponentialFastFrom`,
+  `Rng.exponentialFastFrom`, and `fillExponentialFrom` when the engine type is
   known.
 - `HashPrng = Wyhash64`: compact hash-style generator.
 - `ReproduciblePrng = Pcg64`: stream-selectable reproducible generator.
@@ -289,8 +289,8 @@ same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
 `VectorLogNormalApproxF32`, `VectorHalfNormal`, `VectorGamma`, `VectorChiSquared`, `VectorChi`, `VectorErlang`, `VectorBeta`,
 `VectorFisherF`, `VectorStudentT`, `VectorTriangular`, `VectorArcsine`, `VectorCauchy`, `VectorLaplace`, `VectorLogistic`, `VectorLogLogistic`, `VectorKumaraswamy`, `VectorPowerFunction`, `VectorRayleigh`, `VectorMaxwell`, `VectorPareto`, `VectorWeibull`, `VectorGumbel`, `VectorFrechet`, `VectorSkewNormal`, `VectorPert`, `VectorInverseGaussian`, `VectorNormalInverseGaussian`, `VectorZipf`, `VectorZeta`, `VectorUnitCircle`, `VectorUnitDisc`, `VectorUnitSphere`, `VectorUnitBall`, `VectorStandardExponential`, and `VectorExponential`; strict interval samplers
 `Open01` and `OpenClosed01` also sample/fill float vector slices.
-Use `standardNormalFastFrom`, `normalFastFrom`,
-`standardExponentialFastFrom`, and `exponentialFastFrom` when a comptime-known
+Use `Rng.standardNormalFastFrom`, `Rng.normalFastFrom`,
+`Rng.standardExponentialFastFrom`, and `Rng.exponentialFastFrom` when a comptime-known
 engine pointer is available and the workload is dominated by scalar
 distribution sampling.
 Use the `NativeF32` standard/parameterized normal and exponential profiles only

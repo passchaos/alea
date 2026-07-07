@@ -3458,3 +3458,11 @@ tables (`compare/results/s4-m752-aliastable-checked-usize-index-aliases.md`):
 `AliasTable.sampleChecked`, `fillChecked`, `indicesChecked`, and their index/from
 aliases now exist and preserve existing stream shape. This closes an API-surface
 correctness gap but does not resolve S4-M11.
+
+S4-M753 clarifies scalar fast-helper namespaces
+(`compare/results/s4-m753-rng-fast-helper-namespace-docs.md`):
+`docs/api-reference.md` and `docs/core-guide.md` now document the scalar
+normal/exponential fast paths as `Rng.standardNormalFastFrom`,
+`Rng.normalFastFrom`, `Rng.standardExponentialFastFrom`, and
+`Rng.exponentialFastFrom`, matching the actual public namespace. This improves
+adoption clarity but does not resolve S4-M11.

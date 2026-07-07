@@ -359,8 +359,8 @@ command matrix evidence.
 - Distributions: `standardNormal`, `standardNormalFrom`, `normal`,
   `normalChecked`, `normalCheckedFrom`, `standardExponential`,
   `standardExponentialFrom`, `exponential`, `exponentialChecked`,
-  `exponentialCheckedFrom`, `standardNormalFastFrom`,
-  `standardExponentialFastFrom`, `normalFastFrom`, `exponentialFastFrom`
+  `exponentialCheckedFrom`, `Rng.standardNormalFastFrom`,
+  `Rng.standardExponentialFastFrom`, `Rng.normalFastFrom`, `Rng.exponentialFastFrom`
 - Enums and collections: `enumValue`, `enumValueFrom`, `enumValueChecked`,
   `enumValueCheckedFrom`, `shuffle`, `shuffleFrom`, `choose`,
   `chooseFrom`, `chooseChecked`, `chooseCheckedFrom`, `fillChoose`,
