@@ -3661,3 +3661,10 @@ metadata between public wrappers and weighted sample cores, so exact-cover paths
 validate and sample after one size-hint/remaining query instead of two. This
 improves weighted iterator sampling reliability evidence but does not resolve
 S4-M11.
+
+S4-M782 avoids duplicate weighted iterator fill exact metadata probes
+(`compare/results/s4-m782-weighted-iterator-fill-exact-metadata.md`):
+root caller-owned weighted iterator fills now reuse exact remaining metadata
+between public wrappers and the weighted fill core, so exact-cover paths validate
+and fill after one size-hint/remaining query instead of two. This improves
+weighted iterator fill reliability evidence but does not resolve S4-M11.
