@@ -2668,3 +2668,11 @@ iterator sample helpers now use exact remaining metadata (`sizeHint`, `len`, or
 construction, and iterator consumption for scalar, into/fill, array, weighted
 allocation, weighted into, and weighted array checked paths. This improves
 failure determinism but does not resolve S4-M11.
+
+S4-M642 adds root unchecked iterator exact-short prevalidation
+(`compare/results/s4-m642-root-unchecked-iterator-exact-short-prevalidation.md`):
+unchecked iterator allocation/array helpers now use exact remaining metadata to
+avoid oversized allocation and return deterministic short/null results before
+secure-engine construction and iterator consumption for `sampleIterator`,
+`sampleIteratorArray`, and `sampleIteratorWeightedArray`. This improves
+allocation/entropy behavior but does not resolve S4-M11.

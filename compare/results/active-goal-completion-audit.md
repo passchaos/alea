@@ -680,7 +680,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M639 root unweighted index allocation invalid-count prevalidation | `src/root.zig`, `compare/results/s4-m639-root-index-alloc-invalid-count-prevalidation.md` | Closed for the current bar: root unweighted index allocation helpers now reject oversized sample amounts before allocation and secure-engine construction in unchecked variants. |
 | S4-M640 root unweighted no-replacement allocation/iterator invalid-count prevalidation | `src/root.zig`, `compare/results/s4-m640-root-no-replacement-alloc-iter-invalid-count-prevalidation.md` | Closed for the current bar: root unweighted no-replacement value/pointer allocation and iterator helpers now reject oversized sample amounts before allocation and secure-engine construction in unchecked variants. |
 | S4-M641 root checked iterator exact-short prevalidation | `src/root.zig`, `compare/results/s4-m641-root-iterator-exact-short-prevalidation.md` | Closed for the current bar: root checked iterator sample helpers now reject exact-known short iterators before allocation, entropy, and iterator consumption. |
-| S4-M642 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M642 root unchecked iterator exact-short prevalidation | `src/root.zig`, `compare/results/s4-m642-root-unchecked-iterator-exact-short-prevalidation.md` | Closed for the current bar: root unchecked iterator allocation/array helpers now avoid oversized allocation and pre-return exact-short array cases before entropy or iterator consumption where possible. |
+| S4-M643 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1863,6 +1864,9 @@ does not resolve S4-M11 or complete the long-term objective.
 S4-M641 additionally tightens root checked iterator exact-short prevalidation;
 it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M642 additionally tightens root unchecked iterator exact-short
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

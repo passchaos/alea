@@ -2418,7 +2418,8 @@ pub fn chooseIteratorWeightedChecked(comptime T: type, io: std.Io, iterator: any
 pub fn sampleIterator(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
 
-    var reservoir = try std.ArrayList(T).initCapacity(allocator, amount);
+    const initial_capacity = if (rootIteratorExactRemaining(iterator)) |remaining| @min(amount, remaining) else amount;
+    var reservoir = try std.ArrayList(T).initCapacity(allocator, initial_capacity);
     errdefer reservoir.deinit(allocator);
 
     while (reservoir.items.len < amount) {
@@ -2507,6 +2508,9 @@ pub fn sampleIteratorFillChecked(comptime T: type, io: std.Io, iterator: anytype
 pub fn sampleIteratorArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]T {
     var out: [N]T = undefined;
     if (N == 0) return out;
+    if (rootIteratorExactRemaining(iterator)) |remaining| {
+        if (remaining < N) return null;
+    }
     const filled = try sampleIteratorInto(T, io, iterator, &out);
     return if (filled == N) out else null;
 }
@@ -2551,6 +2555,10 @@ pub fn sampleIteratorWeightedIntoChecked(comptime T: type, io: std.Io, iterator:
 }
 
 pub fn sampleIteratorWeightedArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]T {
+    if (N == 0) return .{};
+    if (rootIteratorExactRemaining(iterator)) |remaining| {
+        if (remaining < N) return null;
+    }
     const candidates = (try rootSampleIteratorWeightedCandidateArray(T, io, N, iterator)) orelse return null;
     var out: [N]T = undefined;
     inline for (0..N) |i| out[i] = candidates[i].item;
@@ -9354,6 +9362,12 @@ test "root random helpers validate deterministic cases before entropy" {
     const sample_iter_empty_out = try sampleIterator(u8, failing, std.testing.allocator, &sample_iter_empty, 0);
     defer std.testing.allocator.free(sample_iter_empty_out);
     try std.testing.expectEqual(@as(usize, 0), sample_iter_empty_out.len);
+    var sample_iter_known_empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var sample_iter_known_empty = SliceIter{ .items = &.{} };
+    const sample_iter_known_empty_out = try sampleIterator(u8, failing, sample_iter_known_empty_alloc.allocator(), &sample_iter_known_empty, 4);
+    defer sample_iter_known_empty_alloc.allocator().free(sample_iter_known_empty_out);
+    try std.testing.expectEqual(@as(usize, 0), sample_iter_known_empty_out.len);
+    try std.testing.expectEqual(@as(usize, 0), sample_iter_known_empty.index);
     var sample_iter_short = SliceIter{ .items = &.{ 1, 2 } };
     const sample_iter_short_out = try sampleIterator(u8, failing, std.testing.allocator, &sample_iter_short, 4);
     defer std.testing.allocator.free(sample_iter_short_out);
@@ -9412,6 +9426,7 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), (try sampleIteratorArray(u8, failing, 0, &sample_array_empty_iter)).?.len);
     var sample_array_short_iter = SliceIter{ .items = &.{ 1, 2 } };
     try std.testing.expectEqual(@as(?[3]u8, null), try sampleIteratorArray(u8, failing, 3, &sample_array_short_iter));
+    try std.testing.expectEqual(@as(usize, 0), sample_array_short_iter.index);
     var sample_array_exact_iter = SliceIter{ .items = &.{ 1, 2 } };
     try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, &(try sampleIteratorArrayChecked(u8, failing, 2, &sample_array_exact_iter)));
     var sample_array_short_checked_iter = SliceIter{ .items = &.{ 1, 2 } };
@@ -9506,6 +9521,9 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(usize, 0), (try sampleIteratorWeightedArray(u8, failing, 0, &weighted_array_empty)).?.len);
     var weighted_array_empty_checked = WeightedIter{ .items = &weighted_entropy_entries };
     try std.testing.expectEqual(@as(usize, 0), (try sampleIteratorWeightedArrayChecked(u8, failing, 0, &weighted_array_empty_checked)).len);
+    var weighted_array_known_short = WeightedIter{ .items = &weighted_entropy_entries };
+    try std.testing.expectEqual(@as(?[3]u8, null), try sampleIteratorWeightedArray(u8, failing, 3, &weighted_array_known_short));
+    try std.testing.expectEqual(@as(usize, 0), weighted_array_known_short.index);
     var weighted_array_zero = WeightedIter{ .items = &weighted_zero_entries };
     try std.testing.expectEqual(@as(?[1]u8, null), try sampleIteratorWeightedArray(u8, failing, 1, &weighted_array_zero));
     var weighted_array_zero_checked = WeightedIter{ .items = &weighted_zero_entries };
