@@ -159,6 +159,11 @@ pub const Error = error{
     LibmUnavailable,
 };
 
+pub const SizeHint = struct {
+    lower: usize,
+    upper: ?usize,
+};
+
 pub const UniformError = Error;
 pub const WeightedError = Error;
 pub const WeightError = Error;
@@ -373,6 +378,63 @@ pub fn Choose(comptime T: type) type {
         pub fn get(self: Self, index: usize) ?*const T {
             if (index >= self.items.len) return null;
             return &self.items[index];
+        }
+
+        pub const ProbabilityIterator = struct {
+            const Iterator = @This();
+
+            choice: Self,
+            index: usize = 0,
+
+            pub fn next(self: *Iterator) ?f64 {
+                const value = self.choice.probability(self.index) orelse return null;
+                self.index += 1;
+                return value;
+            }
+
+            pub fn remaining(self: Iterator) usize {
+                return self.choice.len() - self.index;
+            }
+
+            pub fn len(self: Iterator) usize {
+                return self.remaining();
+            }
+
+            pub fn sizeHint(self: Iterator) SizeHint {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
+            }
+
+            pub fn fill(self: *Iterator, dest: []f64) usize {
+                const count = @min(dest.len, self.remaining());
+                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                return count;
+            }
+        };
+
+        pub fn probabilityAt(self: Self, index: usize) Error!f64 {
+            if (index >= self.items.len) return error.InvalidParameter;
+            return 1.0 / @as(f64, @floatFromInt(self.items.len));
+        }
+
+        pub fn probability(self: Self, index: usize) ?f64 {
+            return self.probabilityAt(index) catch null;
+        }
+
+        pub fn probabilityIter(self: Self) ProbabilityIterator {
+            return .{ .choice = self };
+        }
+
+        pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
+            const out = try allocator.alloc(f64, self.items.len);
+            errdefer allocator.free(out);
+            try self.probabilitiesInto(out);
+            return out;
+        }
+
+        pub fn probabilitiesInto(self: Self, out: []f64) Error!void {
+            if (out.len != self.items.len) return error.InvalidLength;
+            @memset(out, 1.0 / @as(f64, @floatFromInt(self.items.len)));
         }
 
         pub fn sample(self: Self, rng: Rng) *const T {
@@ -32009,6 +32071,28 @@ test "distribution Choose sampler mirrors slice choices" {
     try std.testing.expectEqual(&items[2], choice.get(2).?);
     try std.testing.expectEqual(@as(?*const u8, null), choice.get(items.len));
     try std.testing.expectError(error.InvalidParameter, choice.itemAt(items.len));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), try choice.probabilityAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), choice.probability(3).?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), choice.probability(items.len));
+    try std.testing.expectError(error.InvalidParameter, choice.probabilityAt(items.len));
+    var probabilities: [4]f64 = undefined;
+    try choice.probabilitiesInto(&probabilities);
+    for (probabilities) |probability| try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability, 1e-12);
+    var short_probabilities: [3]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, choice.probabilitiesInto(&short_probabilities));
+    const owned_probabilities = try choice.probabilities(std.testing.allocator);
+    defer std.testing.allocator.free(owned_probabilities);
+    try std.testing.expectEqualSlices(f64, &probabilities, owned_probabilities);
+    var probability_iter = choice.probabilityIter();
+    try std.testing.expectEqual(@as(usize, 4), probability_iter.len());
+    try std.testing.expectEqual(@as(usize, 4), probability_iter.remaining());
+    try std.testing.expectEqual(@as(usize, 4), probability_iter.sizeHint().lower);
+    try std.testing.expectEqual(@as(?usize, 4), probability_iter.sizeHint().upper);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability_iter.next().?, 1e-12);
+    var iter_probabilities: [3]f64 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), probability_iter.fill(&iter_probabilities));
+    for (iter_probabilities) |probability| try std.testing.expectApproxEqAbs(@as(f64, 0.25), probability, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), probability_iter.next());
 
     var choice_engine = root.DefaultPrng.init(0xc0_267);
     var index_engine = root.DefaultPrng.init(0xc0_267);

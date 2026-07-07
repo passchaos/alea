@@ -3212,3 +3212,9 @@ S4-M714 adds distribution-layer `Choose` introspection
 (`compare/results/s4-m714-distribution-choose-introspection.md`):
 distribution-layer `Choose` now exposes item metadata and lookup helpers on the
 sampler. This improves ergonomics but does not resolve S4-M11.
+
+S4-M715 adds distribution-layer `Choose` probability introspection
+(`compare/results/s4-m715-distribution-choose-probability-introspection.md`):
+distribution-layer `Choose` now exposes probability lookup/output/iteration
+helpers and exact iterator size hints. This improves diagnostics/ergonomics but
+does not resolve S4-M11.
