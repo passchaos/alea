@@ -4436,7 +4436,7 @@ pub fn unicodeScalar(io: std.Io) !u21 {
 }
 
 pub fn unicodeScalarRangeLessThan(io: std.Io, min: u21, less_than: u21) !u21 {
-    const fixed = unicodeScalarLessThanFixed(min, less_than) catch null;
+    const fixed = try unicodeScalarLessThanFixed(min, less_than);
     if (fixed) |value| return value;
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -4452,7 +4452,7 @@ pub fn unicodeScalarRangeLessThanChecked(io: std.Io, min: u21, less_than: u21) !
 }
 
 pub fn unicodeScalarRangeAtMost(io: std.Io, min: u21, at_most: u21) !u21 {
-    const fixed = unicodeScalarAtMostFixed(min, at_most) catch null;
+    const fixed = try unicodeScalarAtMostFixed(min, at_most);
     if (fixed) |value| return value;
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -4476,7 +4476,7 @@ pub fn fillUnicodeScalar(io: std.Io, dest: []u21) !void {
 
 pub fn fillUnicodeScalarRangeLessThan(io: std.Io, dest: []u21, min: u21, less_than: u21) !void {
     if (dest.len == 0) return;
-    const fixed = unicodeScalarLessThanFixed(min, less_than) catch null;
+    const fixed = try unicodeScalarLessThanFixed(min, less_than);
     if (fixed) |value| {
         @memset(dest, value);
         return;
@@ -4500,7 +4500,7 @@ pub fn fillUnicodeScalarRangeLessThanChecked(io: std.Io, dest: []u21, min: u21, 
 
 pub fn fillUnicodeScalarRangeAtMost(io: std.Io, dest: []u21, min: u21, at_most: u21) !void {
     if (dest.len == 0) return;
-    const fixed = unicodeScalarAtMostFixed(min, at_most) catch null;
+    const fixed = try unicodeScalarAtMostFixed(min, at_most);
     if (fixed) |value| {
         @memset(dest, value);
         return;
@@ -8802,11 +8802,19 @@ test "root random helpers validate deterministic cases before entropy" {
     const fixed_scalar_batch_checked = try unicodeScalarRangeAtMostBatchChecked(failing, std.testing.allocator, 3, 0x41, 0x41);
     defer std.testing.allocator.free(fixed_scalar_batch_checked);
     try std.testing.expectEqualSlices(u21, &.{ 0x41, 0x41, 0x41 }, fixed_scalar_batch_checked);
+    try std.testing.expectError(error.EmptyRange, unicodeScalarRangeLessThan(failing, 0x41, 0x41));
     try std.testing.expectError(error.EmptyRange, unicodeScalarRangeLessThanChecked(failing, 0x41, 0x41));
+    try std.testing.expectError(error.InvalidParameter, unicodeScalarRangeLessThan(failing, 0xD800, 0xE000));
+    try std.testing.expectError(error.EmptyRange, unicodeScalarRangeAtMost(failing, 0x42, 0x41));
     try std.testing.expectError(error.EmptyRange, unicodeScalarRangeAtMostChecked(failing, 0x42, 0x41));
+    try std.testing.expectError(error.InvalidParameter, unicodeScalarRangeAtMost(failing, 0xD800, 0xD800));
     try std.testing.expectError(error.InvalidParameter, unicodeScalarRangeAtMostChecked(failing, 0xD800, 0xD800));
+    try std.testing.expectError(error.EmptyRange, fillUnicodeScalarRangeLessThan(failing, &fixed_scalars, 0x41, 0x41));
     try std.testing.expectError(error.EmptyRange, fillUnicodeScalarRangeLessThanChecked(failing, &fixed_scalars, 0x41, 0x41));
+    try std.testing.expectError(error.InvalidParameter, fillUnicodeScalarRangeLessThan(failing, &fixed_scalars, 0xD800, 0xE000));
+    try std.testing.expectError(error.EmptyRange, fillUnicodeScalarRangeAtMost(failing, &fixed_scalars, 0x42, 0x41));
     try std.testing.expectError(error.EmptyRange, fillUnicodeScalarRangeAtMostChecked(failing, &fixed_scalars, 0x42, 0x41));
+    try std.testing.expectError(error.InvalidParameter, fillUnicodeScalarRangeAtMost(failing, &fixed_scalars, 0xD800, 0xD800));
     try std.testing.expectError(error.EmptyRange, fillRangeChecked(u8, failing, &collapsed_exclusive, 3, 3));
     try std.testing.expectError(error.EmptyRange, fillRangeAtMostChecked(u8, failing, &collapsed_inclusive, 6, 5));
     try std.testing.expectError(error.InvalidProbability, fillRandomBoolChecked(failing, &deterministic_bool, 1.1));

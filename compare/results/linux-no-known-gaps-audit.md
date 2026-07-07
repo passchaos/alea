@@ -2526,3 +2526,10 @@ root system-entropy callers now get non-zero uninhabited value type failures
 before random-output allocation and secure-engine construction for
 `sampleWithoutReplacementChecked`, while zero-count and all-item deterministic
 paths remain allocation-only and S4-M11 remains blocked.
+
+S4-M622 adds root Unicode scalar range prevalidation
+(`compare/results/s4-m622-root-unicode-range-prevalidation.md`): root
+system-entropy callers now get invalid Unicode range and code-point failures
+before secure-engine construction for unchecked Unicode scalar range scalar/fill
+helpers, while empty-output and deterministic collapsed paths remain no-entropy
+and S4-M11 remains blocked.
