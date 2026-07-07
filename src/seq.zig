@@ -4868,6 +4868,9 @@ pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
 pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return allocator.alloc(T, 0);
+    }
 
     var reservoir = try std.ArrayList(T).initCapacity(allocator, amount);
     errdefer reservoir.deinit(allocator);
@@ -5117,6 +5120,9 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
 pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return allocator.alloc(T, 0);
+    }
     const Pending = struct {
         item: T,
         weight: f64,
@@ -12255,6 +12261,34 @@ test "zero-count iterator samples do not read iterator or build reservoir" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
+test "empty exact iterator samples avoid reservoir allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_771b);
+    var control = alea.ScalarPrng.init(0x5150_771b);
+
+    const EmptyExactIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+
+    var iter = EmptyExactIter{};
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const sample = try sampleIteratorFrom(failing.allocator(), &engine, u8, &iter, 8);
+    defer failing.allocator().free(sample);
+    try std.testing.expectEqual(@as(usize, 0), sample.len);
+    try std.testing.expectEqual(@as(usize, 0), iter.calls);
+    try std.testing.expect(!failing.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
 test "zero-count weighted iterator samples do not read iterator or build heap" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_7716);
@@ -12273,6 +12307,35 @@ test "zero-count weighted iterator samples do not read iterator or build heap" {
     var iter = BadCountingIter{};
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     const sample = try sampleIteratorWeightedCheckedFrom(failing.allocator(), &engine, u8, &iter, 0);
+    defer failing.allocator().free(sample);
+    try std.testing.expectEqual(@as(usize, 0), sample.len);
+    try std.testing.expectEqual(@as(usize, 0), iter.calls);
+    try std.testing.expect(!failing.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "empty exact weighted iterator samples avoid heap allocation" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_771c);
+    var control = alea.ScalarPrng.init(0x5150_771c);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const EmptyExactIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+
+    var iter = EmptyExactIter{};
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const sample = try sampleIteratorWeightedFrom(failing.allocator(), &engine, u8, &iter, 8);
     defer failing.allocator().free(sample);
     try std.testing.expectEqual(@as(usize, 0), sample.len);
     try std.testing.expectEqual(@as(usize, 0), iter.calls);

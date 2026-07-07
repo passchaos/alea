@@ -3519,3 +3519,10 @@ S4-M761 tightens optional iterator-array exact-remaining prevalidation
 optional unweighted and weighted fixed-size iterator array helpers now return
 `null` before consuming exact-size short sources. This improves iterator sampling
 reliability evidence but does not resolve S4-M11.
+
+S4-M762 tightens iterator exact-empty allocation prevalidation
+(`compare/results/s4-m762-iterator-exact-empty-allocation-prevalidation.md`):
+seq/root allocation-returning iterator sampling helpers now return empty outputs
+for exact-empty sources before reservoir/heap allocation, iterator consumption,
+entropy, or random-stream use. This improves iterator sampling reliability
+evidence but does not resolve S4-M11.

@@ -2576,6 +2576,11 @@ pub fn sampleIteratorArrayChecked(comptime T: type, io: std.Io, comptime N: usiz
 
 pub fn sampleIteratorWeighted(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
     if (amount != 0 and comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
+    if (amount != 0) {
+        if (rootIteratorExactRemaining(iterator)) |remaining| {
+            if (remaining == 0) return allocator.alloc(T, 0);
+        }
+    }
     return try rootSampleIteratorWeightedAlloc(T, io, allocator, iterator, amount, false);
 }
 
@@ -9916,6 +9921,25 @@ test "root random helpers validate deterministic cases before entropy" {
     const weighted_sample_empty_out = try sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_empty, 0);
     defer std.testing.allocator.free(weighted_sample_empty_out);
     try std.testing.expectEqual(@as(usize, 0), weighted_sample_empty_out.len);
+    const EmptyExactWeightedIter = struct {
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?WeightedIter.Entry {
+            self.calls += 1;
+            return null;
+        }
+
+        fn remaining(_: @This()) usize {
+            return 0;
+        }
+    };
+    var weighted_sample_exact_empty = EmptyExactWeightedIter{};
+    var weighted_sample_exact_empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const weighted_sample_exact_empty_out = try sampleIteratorWeighted(u8, failing, weighted_sample_exact_empty_alloc.allocator(), &weighted_sample_exact_empty, 8);
+    defer weighted_sample_exact_empty_alloc.allocator().free(weighted_sample_exact_empty_out);
+    try std.testing.expectEqual(@as(usize, 0), weighted_sample_exact_empty_out.len);
+    try std.testing.expectEqual(@as(usize, 0), weighted_sample_exact_empty.calls);
+    try std.testing.expect(!weighted_sample_exact_empty_alloc.has_induced_failure);
     var weighted_sample_empty_checked = WeightedIter{ .items = &weighted_entropy_entries };
     const weighted_sample_empty_checked_out = try sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_empty_checked, 0);
     defer std.testing.allocator.free(weighted_sample_empty_checked_out);
