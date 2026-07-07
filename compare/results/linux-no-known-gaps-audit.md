@@ -2377,3 +2377,11 @@ failures before random-output allocation and secure-engine construction for
 `chooseWeightedConstPtrBatchBy` and `chooseWeightedConstPtrBatchByChecked`,
 while deterministic empty/single paths remain allocation-only and S4-M11 remains
 blocked.
+
+S4-M602 adds root item-accessor weighted mutable-pointer batch prevalidation
+(`compare/results/s4-m602-root-weighted-by-mut-ptr-batch-prevalidation.md`):
+root system-entropy callers now get invalid-weight and checked empty-input
+failures before random-output allocation and secure-engine construction for
+`chooseWeightedPtrBatchBy` and `chooseWeightedPtrBatchByChecked`, while
+deterministic empty/single paths remain allocation-only and S4-M11 remains
+blocked.
