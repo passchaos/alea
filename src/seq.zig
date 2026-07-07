@@ -4982,10 +4982,12 @@ pub fn chooseIteratorWeightedChecked(rng: Rng, comptime T: type, iterator: anyty
 }
 
 pub fn chooseIteratorWeightedCheckedFrom(source: anytype, comptime T: type, iterator: anytype) !T {
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     return (try chooseIteratorWeightedFrom(source, T, iterator)) orelse error.EmptyInput;
 }
 
 pub fn chooseIteratorWeightedFrom(source: anytype, comptime T: type, iterator: anytype) !?T {
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const Pending = struct {
         item: T,
         weight: f64,
@@ -11085,6 +11087,43 @@ test "iterator choices validate empty value types before consuming iterators" {
         try std.testing.expectEqual(error.EmptyInput, err);
     }
     try std.testing.expectEqual(@as(usize, 0), stable_iter.consumed);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "weighted iterator choices validate empty value types before consuming iterators" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const Payload = struct { empty: Empty };
+
+    const WeightedIter = struct {
+        consumed: usize = 0,
+
+        fn next(self: *@This()) ?struct { item: Payload, weight: f64 } {
+            self.consumed += 1;
+            unreachable;
+        }
+    };
+
+    var engine = alea.ScalarPrng.init(0x5150_771e);
+    var control = alea.ScalarPrng.init(0x5150_771e);
+    const rng = alea.Rng.init(&engine);
+
+    var optional_iter = WeightedIter{};
+    if (chooseIteratorWeighted(rng, Payload, &optional_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(@as(usize, 0), optional_iter.consumed);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_iter = WeightedIter{};
+    if (chooseIteratorWeightedCheckedFrom(&engine, Payload, &checked_iter)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expectEqual(@as(usize, 0), checked_iter.consumed);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
