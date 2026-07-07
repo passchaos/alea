@@ -2035,3 +2035,8 @@ S4-M548 adds root item-accessor weighted `u32` index array helpers
 system-entropy callers can now produce fixed-size compact `u32` weighted index
 arrays directly from an item slice and comptime item-weight accessor from the
 root API while S4-M11 remains blocked.
+
+S4-M549 adds root item-accessor weighted value choice helpers
+(`compare/results/s4-m549-root-weighted-by-value-helpers.md`): system-entropy
+callers can now choose weighted values directly from an item slice and comptime
+item-weight accessor from the root API while S4-M11 remains blocked.
