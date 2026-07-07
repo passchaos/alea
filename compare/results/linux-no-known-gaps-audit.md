@@ -3338,3 +3338,10 @@ S4-M735 adds reusable `Choice` checked value batches
 now has checked aliases for caller-owned and allocation-returning value-copy
 batches, including empty-type failures before random-stream use or allocation.
 This improves fallible value-copy ergonomics but does not resolve S4-M11.
+
+S4-M736 adds reusable `WeightedChoice` checked value batches
+(`compare/results/s4-m736-weightedchoice-checked-value-batches.md`): reusable
+`WeightedChoice` now has checked aliases for caller-owned and
+allocation-returning weighted value-copy batches, including empty-type failures
+before random-stream use or allocation. This improves fallible weighted
+value-copy ergonomics but does not resolve S4-M11.
