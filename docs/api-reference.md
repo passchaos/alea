@@ -99,6 +99,7 @@ command matrix evidence.
   `sampleWeightedMutPtrArray`, `sampleWeightedMutPtrArrayChecked`,
   `sampleWeightedBy`, `sampleWeightedByChecked`,
   `sampleWeightedPtrsBy`, `sampleWeightedPtrsByChecked`,
+  `sampleWeightedMutPtrsBy`, `sampleWeightedMutPtrsByChecked`,
   `chooseIterator`, `chooseIteratorChecked`,
   `chooseIteratorHinted`, `chooseIteratorHintedChecked`, `chooseIteratorStable`,
   `chooseIteratorStableChecked`, `chooseIteratorWeighted`,

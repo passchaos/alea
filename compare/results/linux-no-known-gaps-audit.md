@@ -2118,3 +2118,9 @@ helpers (`compare/results/s4-m562-root-weighted-by-const-ptr-sample-helpers.md`)
 system-entropy callers can now allocate no-replacement weighted const-pointer
 samples directly from an item slice and comptime item-weight accessor from the
 root API while S4-M11 remains blocked.
+
+S4-M563 adds root item-accessor weighted no-replacement mutable-pointer sample
+helpers (`compare/results/s4-m563-root-weighted-by-mut-ptr-sample-helpers.md`):
+system-entropy callers can now allocate no-replacement weighted mutable-pointer
+samples directly from a mutable item slice and comptime item-weight accessor
+from the root API while S4-M11 remains blocked.
