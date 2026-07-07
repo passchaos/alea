@@ -1463,6 +1463,7 @@ pub fn fillExponentialCheckedFrom(source: anytype, comptime T: type, dest: []T, 
 }
 
 pub fn fillSample(self: Rng, comptime T: type, dest: []T, sampler: anytype) void {
+    if (dest.len == 0) return;
     var local_sampler = sampler;
     if (comptime samplerCanFill(@TypeOf(sampler), T)) {
         if (comptime samplerFillTakesType(@TypeOf(local_sampler))) {
@@ -1481,6 +1482,7 @@ pub fn fillSample(self: Rng, comptime T: type, dest: []T, sampler: anytype) void
 }
 
 pub fn fillSampleFrom(source: anytype, comptime T: type, dest: []T, sampler: anytype) void {
+    if (dest.len == 0) return;
     var local_sampler = sampler;
     if (comptime samplerCanFillFrom(@TypeOf(sampler), @TypeOf(source), T)) {
         if (comptime samplerFillFromTakesType(@TypeOf(local_sampler))) {
@@ -8979,6 +8981,50 @@ test "owned sampler batches validate empty output types before consuming random 
         try std.testing.expectEqual(error.EmptyRange, err);
     }
     try std.testing.expect(!direct_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "empty sampler fills do not call sampler fill hooks" {
+    const alea = @import("root.zig");
+    const RejectingFillSampler = struct {
+        pub fn fill(_: @This(), _: Rng, dest: []u8) void {
+            _ = dest;
+            unreachable;
+        }
+
+        pub fn sample(_: @This(), rng: Rng) u8 {
+            return rng.uint(u8);
+        }
+    };
+    const RejectingFillFromSampler = struct {
+        pub fn fillFrom(_: @This(), source: anytype, dest: []u8) void {
+            _ = source;
+            _ = dest;
+            unreachable;
+        }
+
+        pub fn sampleFrom(_: @This(), source: anytype) u8 {
+            return uintFrom(source, u8);
+        }
+    };
+
+    var engine = alea.ScalarPrng.init(0x5150_0a88);
+    var control = alea.ScalarPrng.init(0x5150_0a88);
+    const rng = Rng.init(&engine);
+    var out: [0]u8 = .{};
+
+    rng.fillSample(u8, &out, RejectingFillSampler{});
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillSampleFrom(&engine, u8, &out, RejectingFillFromSampler{});
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var iter = rng.sampleIter(u8, RejectingFillSampler{});
+    iter.fill(&out);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var direct_iter = sampleIterFrom(&engine, u8, RejectingFillFromSampler{});
+    direct_iter.fill(&out);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

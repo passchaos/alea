@@ -2854,3 +2854,10 @@ unchecked sampler allocation-returning batch helpers now reject non-zero empty
 enum-containing output types before allocation and random-stream use in
 `sampleBatchFrom`, while zero-count requests remain deterministic empty
 allocations. This improves failure determinism but does not resolve S4-M11.
+
+S4-M665 adds `Rng` sampler fill empty-output prevalidation
+(`compare/results/s4-m665-rng-sampler-fill-empty-output-prevalidation.md`):
+generic sampler fill helpers now treat empty output buffers as deterministic
+no-ops before invoking sampler-provided fill hooks in `fillSample` and
+`fillSampleFrom`, including iterator fill routes. This improves no-op
+determinism but does not resolve S4-M11.
