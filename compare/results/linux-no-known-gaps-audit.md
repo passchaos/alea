@@ -2790,3 +2790,12 @@ unchecked scalar normal and exponential allocation-returning batch helpers now
 reject invalid parameters before allocation and random-stream use in
 `normalBatchFrom` and `exponentialBatchFrom`, while valid allocation failures
 remain no-stream. This improves failure determinism but does not resolve S4-M11.
+
+S4-M657 adds `Rng` vector normal/exponential batch invalid-parameter
+prevalidation
+(`compare/results/s4-m657-rng-vector-normal-exponential-batch-invalid-prevalidation.md`):
+unchecked vector normal and exponential allocation-returning batch helpers now
+reject invalid parameters before allocation and random-stream use in
+`vectorNormalBatchFrom` and `vectorExponentialBatchFrom`, while valid allocation
+failures remain no-stream. This improves failure determinism but does not
+resolve S4-M11.

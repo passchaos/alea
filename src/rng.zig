@@ -1196,6 +1196,10 @@ pub fn vectorNormalBatch(self: Rng, comptime VectorType: type, allocator: std.me
 }
 
 pub fn vectorNormalBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) ![]VectorType {
+    if (count == 0) return allocator.alloc(VectorType, 0);
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     const out = try allocator.alloc(VectorType, count);
     errdefer allocator.free(out);
     fillVectorNormalFrom(source, VectorType, out, mean, stddev);
@@ -1257,6 +1261,10 @@ pub fn vectorExponentialBatch(self: Rng, comptime VectorType: type, allocator: s
 }
 
 pub fn vectorExponentialBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, rate: vectorChild(VectorType)) ![]VectorType {
+    if (count == 0) return allocator.alloc(VectorType, 0);
+    const info = vectorInfo(VectorType);
+    comptime requireFloat(info.child);
+    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(info.child))) return error.InvalidParameter;
     const out = try allocator.alloc(VectorType, count);
     errdefer allocator.free(out);
     fillVectorExponentialFrom(source, VectorType, out, rate);
@@ -7373,9 +7381,19 @@ test "owned vector normal and exponential batches allocate and validate before c
     try std.testing.expect(!invalid_normal_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var invalid_normal_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, rng.vectorNormalBatch(@Vector(8, f32), invalid_normal_unchecked_alloc.allocator(), 4, std.math.inf(f32), -1));
+    try std.testing.expect(!invalid_normal_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var invalid_exponential_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidParameter, vectorExponentialBatchCheckedFrom(&engine, @Vector(4, f64), invalid_exponential_alloc.allocator(), 4, 0));
     try std.testing.expect(!invalid_exponential_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_exponential_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, vectorExponentialBatchFrom(&engine, @Vector(4, f64), invalid_exponential_unchecked_alloc.allocator(), 4, 0));
+    try std.testing.expect(!invalid_exponential_unchecked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var normal_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
