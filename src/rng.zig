@@ -521,6 +521,7 @@ pub fn rangeAtMostBatchCheckedFrom(source: anytype, comptime T: type, allocator:
 }
 
 pub fn fillRangeAtMostFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
+    if (dest.len == 0) return;
     switch (@typeInfo(T)) {
         .int => {
             std.debug.assert(min <= max);
@@ -571,6 +572,7 @@ pub fn uintLessThanBatchCheckedFrom(source: anytype, comptime T: type, allocator
 }
 
 pub fn fillUintLessThanFrom(source: anytype, comptime T: type, dest: []T, less_than: T) void {
+    if (dest.len == 0) return;
     comptime requireUnsigned(T);
     std.debug.assert(less_than > 0);
     if (less_than == 1) {
@@ -641,6 +643,7 @@ pub fn rangeBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.m
 }
 
 pub fn fillRangeFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
+    if (dest.len == 0) return;
     switch (@typeInfo(T)) {
         .int => {
             std.debug.assert(min < max);
@@ -776,6 +779,7 @@ pub fn chanceBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, cou
 }
 
 pub fn fillChanceFrom(source: anytype, dest: []bool, p: f64) void {
+    if (dest.len == 0) return;
     std.debug.assert(p >= 0 and p <= 1);
     if (p == 0) {
         @memset(dest, false);
@@ -834,6 +838,7 @@ pub fn ratioBatchCheckedFrom(source: anytype, allocator: std.mem.Allocator, coun
 }
 
 pub fn fillRatioFrom(source: anytype, dest: []bool, numerator: u32, denominator: u32) void {
+    if (dest.len == 0) return;
     std.debug.assert(denominator > 0 and numerator <= denominator);
     if (numerator == 0) {
         @memset(dest, false);
@@ -6760,6 +6765,24 @@ test "invalid facade range helpers do not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_ba5);
     var control = alea.ScalarPrng.init(0x5150_ba5);
     const rng = Rng.init(&engine);
+
+    var empty_ints: [0]u32 = .{};
+    rng.fillRange(u32, &empty_ints, 3, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+    rng.fillRangeAtMost(u32, &empty_ints, 4, 3);
+    try std.testing.expectEqual(control.next(), engine.next());
+    rng.fillUintLessThan(u32, &empty_ints, 0);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty_floats: [0]f64 = .{};
+    rng.fillRange(f64, &empty_floats, std.math.nan(f64), 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty_bools: [0]bool = .{};
+    rng.fillChance(&empty_bools, -0.1);
+    try std.testing.expectEqual(control.next(), engine.next());
+    rng.fillRatio(&empty_bools, 2, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.EmptyRange, rng.uintLessThanChecked(u32, 0));
     try std.testing.expectEqual(control.next(), engine.next());

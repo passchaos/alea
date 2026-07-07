@@ -2752,3 +2752,11 @@ before repeated one-shot sampling and avoid unnecessary random-stream use for
 weighted index, u32 weighted index, weighted value, const-pointer, and
 mutable-pointer nullable batch workflows. This improves failure/result
 determinism but does not resolve S4-M11.
+
+S4-M652 adds `Rng` scalar fill empty-output prevalidation
+(`compare/results/s4-m652-rng-scalar-fill-empty-output-prevalidation.md`):
+unchecked scalar range/probability fill helpers now treat empty output buffers as
+deterministic no-ops before invalid range/probability assertions in
+`fillRangeFrom`, `fillRangeAtMostFrom`, `fillUintLessThanFrom`,
+`fillChanceFrom`, and `fillRatioFrom`. This improves no-op determinism but does
+not resolve S4-M11.
