@@ -2570,14 +2570,7 @@ pub fn sampleIteratorChecked(comptime T: type, io: std.Io, allocator: std.mem.Al
     return out;
 }
 
-pub fn sampleIteratorInto(comptime T: type, io: std.Io, iterator: anytype, out: []T) !usize {
-    if (out.len == 0) return 0;
-    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
-    const exact_remaining = rootIteratorExactRemaining(iterator);
-    if (exact_remaining) |remaining| {
-        if (remaining == 0) return 0;
-    }
-
+fn rootSampleIteratorIntoFrom(comptime T: type, io: std.Io, iterator: anytype, out: []T, exact_remaining: ?usize) !usize {
     var filled: usize = 0;
     const fill_target = if (exact_remaining) |remaining| @min(out.len, remaining) else out.len;
     while (filled < fill_target) : (filled += 1) {
@@ -2589,6 +2582,17 @@ pub fn sampleIteratorInto(comptime T: type, io: std.Io, iterator: anytype, out: 
 
     var seen = out.len;
     var engine: ?SecurePrng = null;
+    if (exact_remaining) |remaining| {
+        while (seen < remaining) {
+            const item = iterator.next() orelse return out.len;
+            seen += 1;
+            if (engine == null) engine = try secure(io);
+            const random_source = Rng.init(&engine.?);
+            const index = random_source.uintLessThan(usize, seen);
+            if (index < out.len) out[index] = item;
+        }
+        return out.len;
+    }
     while (iterator.next()) |item| {
         seen += 1;
         if (engine == null) engine = try secure(io);
@@ -2600,6 +2604,16 @@ pub fn sampleIteratorInto(comptime T: type, io: std.Io, iterator: anytype, out: 
     return out.len;
 }
 
+pub fn sampleIteratorInto(comptime T: type, io: std.Io, iterator: anytype, out: []T) !usize {
+    if (out.len == 0) return 0;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
+    const exact_remaining = rootIteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
+        if (remaining == 0) return 0;
+    }
+    return try rootSampleIteratorIntoFrom(T, io, iterator, out, exact_remaining);
+}
+
 pub fn sampleIteratorFill(comptime T: type, io: std.Io, iterator: anytype, out: []T) !usize {
     return sampleIteratorInto(T, io, iterator, out);
 }
@@ -2607,10 +2621,11 @@ pub fn sampleIteratorFill(comptime T: type, io: std.Io, iterator: anytype, out: 
 pub fn sampleIteratorIntoChecked(comptime T: type, io: std.Io, iterator: anytype, out: []T) !void {
     if (out.len == 0) return;
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
-    if (rootIteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = rootIteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < out.len) return error.InvalidParameter;
     }
-    const filled = try sampleIteratorInto(T, io, iterator, out);
+    const filled = try rootSampleIteratorIntoFrom(T, io, iterator, out, exact_remaining);
     if (filled != out.len) return error.InvalidParameter;
 }
 
@@ -10293,6 +10308,29 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorFill(u8, failing, &sample_fill_entropy_iter, &sample_fill_entropy));
     var sample_fill_entropy_checked_iter = SliceIter{ .items = &.{ 1, 2, 3 } };
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorFillChecked(u8, failing, &sample_fill_entropy_checked_iter, &sample_fill_entropy));
+    const ExactLongIntoIter = struct {
+        items: []const u8,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+    var sample_into_exact_long = ExactLongIntoIter{ .items = &.{ 1, 2, 3 } };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorInto(u8, failing, &sample_into_exact_long, &sample_fill_entropy));
+    try std.testing.expectEqual(@as(usize, 3), sample_into_exact_long.calls);
+    var sample_into_exact_long_checked = ExactLongIntoIter{ .items = &.{ 1, 2, 3 } };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorIntoChecked(u8, failing, &sample_into_exact_long_checked, &sample_fill_entropy));
+    try std.testing.expectEqual(@as(usize, 3), sample_into_exact_long_checked.calls);
     var sample_array_empty_iter = SliceIter{ .items = &.{} };
     try std.testing.expectEqual(@as(usize, 0), (try sampleIteratorArray(u8, failing, 0, &sample_array_empty_iter)).?.len);
     var empty_type_array_iter = EmptyValueIter{};

@@ -3675,3 +3675,10 @@ seq/root fixed-size unweighted iterator arrays now bound exact-long reservoir
 continuation by the known remaining count, avoiding an extra trailing null probe
 while preserving stream shape. This improves iterator array reliability evidence
 but does not resolve S4-M11.
+
+S4-M784 avoids caller-owned iterator fill exact-long end probes
+(`compare/results/s4-m784-iterator-fill-exact-long-end-probe.md`):
+seq/root caller-owned unweighted iterator fills now bound exact-long reservoir
+continuation by the known remaining count, avoiding an extra trailing null probe
+while preserving stream shape. This improves iterator fill reliability evidence
+but does not resolve S4-M11.
