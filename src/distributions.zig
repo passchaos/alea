@@ -542,6 +542,35 @@ pub fn Choose(comptime T: type) type {
             return out;
         }
 
+        pub fn ptrIter(self: Self, rng: Rng) PtrIterator(Rng) {
+            return self.ptrIterFrom(rng);
+        }
+
+        pub fn ptrIterFrom(self: Self, source: anytype) PtrIterator(@TypeOf(source)) {
+            return .{ .source = source, .choice = self };
+        }
+
+        pub fn PtrIterator(comptime Source: type) type {
+            return struct {
+                const SelfIter = @This();
+
+                source: Source,
+                choice: Self,
+
+                pub fn next(self: *SelfIter) ?*const T {
+                    return self.nextValue();
+                }
+
+                pub fn nextValue(self: *SelfIter) *const T {
+                    return self.choice.sampleFrom(self.source);
+                }
+
+                pub fn fill(self: *SelfIter, dest: []*const T) void {
+                    self.choice.fillFrom(self.source, dest);
+                }
+            };
+        }
+
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
             self.fillIndicesFrom(rng, dest);
         }
@@ -32333,6 +32362,15 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillFrom(&ptr_array_control, &ptr_array_fill);
     try std.testing.expectEqualSlices(*const u8, &ptr_array_fill, &ptr_array);
     try std.testing.expectEqual(ptr_array_control.next(), ptr_array_engine.next());
+    var ptr_iter_engine = root.DefaultPrng.init(0xc0_287);
+    var ptr_iter_control = root.DefaultPrng.init(0xc0_287);
+    var ptr_iter = choice.ptrIterFrom(&ptr_iter_engine);
+    var ptr_iter_out: [6]*const u8 = undefined;
+    ptr_iter.fill(&ptr_iter_out);
+    var ptr_iter_fill: [6]*const u8 = undefined;
+    choice.fillFrom(&ptr_iter_control, &ptr_iter_fill);
+    try std.testing.expectEqualSlices(*const u8, &ptr_iter_fill, &ptr_iter_out);
+    try std.testing.expectEqual(ptr_iter_control.next(), ptr_iter_engine.next());
     var values_engine = root.DefaultPrng.init(0xc0_273);
     var values_control = root.DefaultPrng.init(0xc0_273);
     const owned_values = try choice.valuesFrom(std.testing.allocator, &values_engine, 6);

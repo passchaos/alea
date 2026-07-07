@@ -3214,6 +3214,8 @@ Dynamic weighted helpers:
   `Choose(T).IndexIterator`, `Choose(T).U32IndexIterator`,
   `Choose(T).ptrs`, `Choose(T).ptrsFrom`,
   `Choose(T).ptrArray`, `Choose(T).ptrArrayFrom`,
+  `Choose(T).ptrIter`, `Choose(T).ptrIterFrom`, `Choose(T).PtrIterator`,
+  `Choose(T).PtrIterator.nextValue`,
   `Choose(T).fillValues`, `Choose(T).fillValuesFrom`,
   `Choose(T).valueArray`, `Choose(T).valueArrayFrom`,
   `Choose(T).valueArrayChecked`, `Choose(T).valueArrayCheckedFrom`,

@@ -3236,3 +3236,8 @@ S4-M718 adds distribution-layer `Choose` checked values
 distribution-layer `Choose` now has checked scalar value-copy helpers with
 empty-type failures before random-stream use and value copying. This improves
 fallible value-copy ergonomics but does not resolve S4-M11.
+
+S4-M719 adds distribution-layer `Choose` pointer iterators
+(`compare/results/s4-m719-distribution-choose-pointer-iterators.md`):
+distribution-layer `Choose` now has reusable pointer iterators aligned with its
+fill helpers. This improves iterator ergonomics but does not resolve S4-M11.
