@@ -2940,3 +2940,10 @@ S4-M675 adds `IndexVec` value mapping empty-type prevalidation
 types before owned allocation and value copying in `valuesChecked`,
 `valuesInto`, and `valuesOwned`; checked/owned wrappers inherit the same
 behavior. This improves failure determinism but does not resolve S4-M11.
+
+S4-M676 adds reservoir value sample empty-type prevalidation
+(`compare/results/s4-m676-reservoir-value-empty-type-prevalidation.md`):
+`seq` and root reservoir value sampling now reject non-zero empty
+enum-containing value types before allocation, entropy, random-stream use, and
+value copying in `reservoirSample*` and `reservoirSampleInto*` value helpers.
+This improves failure determinism but does not resolve S4-M11.

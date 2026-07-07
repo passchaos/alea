@@ -8808,11 +8808,14 @@ pub fn reservoirSampleChecked(allocator: std.mem.Allocator, rng: Rng, comptime T
 
 pub fn reservoirSampleCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
     if (amount > items.len) return error.InvalidParameter;
+    if (amount != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     return reservoirSampleFrom(allocator, source, T, items, amount);
 }
 
 pub fn reservoirSampleFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
     const count = @min(amount, items.len);
+    if (count == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try reservoirSampleIntoFrom(source, T, items, out);
@@ -8868,6 +8871,7 @@ pub fn reservoirSampleInto(rng: Rng, comptime T: type, items: []const T, out: []
 pub fn reservoirSampleIntoFrom(source: anytype, comptime T: type, items: []const T, out: []T) Error!void {
     if (out.len > items.len) return error.InvalidParameter;
     if (out.len == 0) return;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
 
     @memcpy(out, items[0..out.len]);
     var i = out.len;
@@ -11384,6 +11388,39 @@ test "zero-count checked sequence helpers do not consume random stream" {
 
     var reservoir_out: [0]u8 = .{};
     try reservoirSampleIntoFrom(&engine, u8, &items, &reservoir_out);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "reservoir value samples validate empty value types before allocation" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const empty_items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
+
+    var engine = alea.ScalarPrng.init(0x5150_7719);
+    var control = alea.ScalarPrng.init(0x5150_7719);
+
+    var sample_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (reservoirSampleFrom(sample_alloc.allocator(), &engine, Empty, empty_items, 1)) |unexpected| {
+        sample_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!sample_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (reservoirSampleCheckedFrom(checked_alloc.allocator(), &engine, Empty, empty_items, 1)) |unexpected| {
+        checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var out: [1]Empty = undefined;
+    try std.testing.expectError(error.EmptyInput, reservoirSampleIntoFrom(&engine, Empty, empty_items, &out));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

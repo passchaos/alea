@@ -1120,6 +1120,7 @@ pub fn sampleMutPtrsIterChecked(comptime T: type, io: std.Io, allocator: std.mem
 pub fn reservoirSample(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) ![]T {
     const count = @min(amount, items.len);
     if (count == 0) return allocator.alloc(T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (count == items.len) return allocator.dupe(T, items);
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
@@ -1128,6 +1129,7 @@ pub fn reservoirSample(comptime T: type, io: std.Io, allocator: std.mem.Allocato
 
 pub fn reservoirSampleChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize) ![]T {
     if (amount > items.len) return error.InvalidParameter;
+    if (amount != 0 and comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return try reservoirSample(T, io, allocator, items, amount);
 }
 
@@ -1166,6 +1168,7 @@ pub fn reservoirSampleInto(comptime T: type, io: std.Io, items: []const T, out: 
 pub fn reservoirSampleIntoChecked(comptime T: type, io: std.Io, items: []const T, out: []T) !void {
     if (out.len > items.len) return error.InvalidParameter;
     if (out.len == 0) return;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     if (out.len == items.len) {
         _ = rootItemsIntoPrefix(T, items, out, out.len);
         return;
@@ -7141,6 +7144,22 @@ test "root random helpers validate deterministic cases before entropy" {
     const all_reservoir_checked = try reservoirSampleChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len);
     defer std.testing.allocator.free(all_reservoir_checked);
     try std.testing.expectEqualSlices(u8, &sample_items, all_reservoir_checked);
+    var empty_enum_reservoir_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (reservoirSample(EmptyEnum, failing, empty_enum_reservoir_alloc.allocator(), fake_empty_enum_items, 1)) |values| {
+        empty_enum_reservoir_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_enum_reservoir_alloc.has_induced_failure);
+    var empty_enum_reservoir_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (reservoirSampleChecked(EmptyEnum, failing, empty_enum_reservoir_checked_alloc.allocator(), fake_empty_enum_items, 1)) |values| {
+        empty_enum_reservoir_checked_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_enum_reservoir_checked_alloc.has_induced_failure);
     try std.testing.expectError(error.InvalidParameter, reservoirSampleChecked(u8, failing, std.testing.allocator, &sample_items, sample_items.len + 1));
     var empty_reservoir_into: [0]u8 = .{};
     try reservoirSampleInto(u8, failing, &sample_items, &empty_reservoir_into);
@@ -7150,6 +7169,9 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqualSlices(u8, &sample_items, &all_reservoir_into);
     try reservoirSampleIntoChecked(u8, failing, &sample_items, &all_reservoir_into);
     try std.testing.expectEqualSlices(u8, &sample_items, &all_reservoir_into);
+    var empty_enum_reservoir_into: [1]EmptyEnum = undefined;
+    try std.testing.expectError(error.EmptyRange, reservoirSampleInto(EmptyEnum, failing, fake_empty_enum_items, &empty_enum_reservoir_into));
+    try std.testing.expectError(error.EmptyRange, reservoirSampleIntoChecked(EmptyEnum, failing, fake_empty_enum_items, &empty_enum_reservoir_into));
     var too_many_reservoir_into: [4]u8 = undefined;
     try std.testing.expectError(error.InvalidParameter, reservoirSampleIntoChecked(u8, failing, &sample_items, &too_many_reservoir_into));
     const empty_reservoir_ptrs = try reservoirSamplePtrs(u8, failing, std.testing.allocator, &sample_items, 0);
