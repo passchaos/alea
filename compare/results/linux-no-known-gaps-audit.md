@@ -3466,3 +3466,10 @@ normal/exponential fast paths as `Rng.standardNormalFastFrom`,
 `Rng.normalFastFrom`, `Rng.standardExponentialFastFrom`, and
 `Rng.exponentialFastFrom`, matching the actual public namespace. This improves
 adoption clarity but does not resolve S4-M11.
+
+S4-M754 fixes checked weighted iterator facade constructors
+(`compare/results/s4-m754-weighted-checked-iterator-facades.md`):
+`AliasTable.iterChecked`, `WeightedTree.iterChecked`, and
+`WeightedIntTree.iterChecked` now return facade iterator types directly and have
+focused facade/direct stream-shape coverage. This improves weighted iterator API
+correctness but does not resolve S4-M11.

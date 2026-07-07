@@ -17226,7 +17226,7 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, usize) {
-            return self.iterCheckedFrom(rng);
+            return self.iter(rng);
         }
 
         pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
@@ -17891,7 +17891,8 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, usize) {
-            return self.iterCheckedFrom(rng);
+            if (!self.isValid()) return error.InvalidWeight;
+            return self.iter(rng);
         }
 
         pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
@@ -18656,7 +18657,8 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, usize) {
-            return self.iterCheckedFrom(rng);
+            if (!self.isValid()) return error.InvalidWeight;
+            return self.iter(rng);
         }
 
         pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
@@ -20164,6 +20166,13 @@ test "alias table iterators produce repeated indices" {
     try std.testing.expectEqual(unchecked_iter.next().?, checked_iter.next().?);
     try std.testing.expectEqual(unchecked_iter_engine.next(), checked_iter_engine.next());
 
+    var checked_facade_iter_engine = alea.ScalarPrng.init(0x5150_a141);
+    var checked_direct_iter_engine = alea.ScalarPrng.init(0x5150_a141);
+    var checked_facade_iter = try table.iterChecked(Rng.init(&checked_facade_iter_engine));
+    var checked_direct_iter = try table.iterCheckedFrom(&checked_direct_iter_engine);
+    try std.testing.expectEqual(checked_direct_iter.next().?, checked_facade_iter.next().?);
+    try std.testing.expectEqual(checked_direct_iter_engine.next(), checked_facade_iter_engine.next());
+
     var facade_engine = alea.ScalarPrng.init(0x5150_a12f);
     var direct_engine = alea.ScalarPrng.init(0x5150_a12f);
     const rng = Rng.init(&facade_engine);
@@ -21636,6 +21645,13 @@ test "weighted tree iterators produce repeated indices" {
     try std.testing.expectEqual(unchecked_iter.next().?, checked_iter.next().?);
     try std.testing.expectEqual(unchecked_iter_engine.next(), checked_iter_engine.next());
 
+    var checked_facade_iter_engine = alea.ScalarPrng.init(0x5150_d52b);
+    var checked_direct_iter_engine = alea.ScalarPrng.init(0x5150_d52b);
+    var checked_facade_iter = try tree.iterChecked(Rng.init(&checked_facade_iter_engine));
+    var checked_direct_iter = try tree.iterCheckedFrom(&checked_direct_iter_engine);
+    try std.testing.expectEqual(checked_direct_iter.next().?, checked_facade_iter.next().?);
+    try std.testing.expectEqual(checked_direct_iter_engine.next(), checked_facade_iter_engine.next());
+
     var facade_engine = alea.ScalarPrng.init(0x5150_d51c);
     var direct_engine = alea.ScalarPrng.init(0x5150_d51c);
     const rng = Rng.init(&facade_engine);
@@ -21675,6 +21691,13 @@ test "weighted tree iterators produce repeated indices" {
     var unchecked_int_iter = int_tree.iterFrom(&unchecked_int_iter_engine);
     try std.testing.expectEqual(unchecked_int_iter.next().?, checked_int_iter.next().?);
     try std.testing.expectEqual(unchecked_int_iter_engine.next(), checked_int_iter_engine.next());
+
+    var checked_int_facade_iter_engine = alea.ScalarPrng.init(0x5150_d52c);
+    var checked_int_direct_iter_engine = alea.ScalarPrng.init(0x5150_d52c);
+    var checked_int_facade_iter = try int_tree.iterChecked(Rng.init(&checked_int_facade_iter_engine));
+    var checked_int_direct_iter = try int_tree.iterCheckedFrom(&checked_int_direct_iter_engine);
+    try std.testing.expectEqual(checked_int_direct_iter.next().?, checked_int_facade_iter.next().?);
+    try std.testing.expectEqual(checked_int_direct_iter_engine.next(), checked_int_facade_iter_engine.next());
 
     sample_engine = alea.ScalarPrng.init(0x5150_d51f);
     iter_engine = alea.ScalarPrng.init(0x5150_d51f);
