@@ -497,6 +497,65 @@ pub fn Choose(comptime T: type) type {
             return out;
         }
 
+        pub fn indexIter(self: Self, rng: Rng) IndexIterator(Rng) {
+            return self.indexIterFrom(rng);
+        }
+
+        pub fn indexIterFrom(self: Self, source: anytype) IndexIterator(@TypeOf(source)) {
+            return .{ .source = source, .choice = self };
+        }
+
+        pub fn indexIterU32(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
+            return self.indexIterU32From(rng);
+        }
+
+        pub fn indexIterU32From(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            return .{ .source = source, .choice = self };
+        }
+
+        pub fn IndexIterator(comptime Source: type) type {
+            return struct {
+                const SelfIter = @This();
+
+                source: Source,
+                choice: Self,
+
+                pub fn next(self: *SelfIter) ?usize {
+                    return self.nextValue();
+                }
+
+                pub fn nextValue(self: *SelfIter) usize {
+                    return self.choice.sampleIndexFrom(self.source);
+                }
+
+                pub fn fill(self: *SelfIter, dest: []usize) void {
+                    self.choice.fillIndicesFrom(self.source, dest);
+                }
+            };
+        }
+
+        pub fn U32IndexIterator(comptime Source: type) type {
+            return struct {
+                const SelfIter = @This();
+
+                source: Source,
+                choice: Self,
+
+                pub fn next(self: *SelfIter) ?u32 {
+                    return self.nextValue();
+                }
+
+                pub fn nextValue(self: *SelfIter) u32 {
+                    return self.choice.sampleIndexU32From(self.source) catch unreachable;
+                }
+
+                pub fn fill(self: *SelfIter, dest: []u32) void {
+                    self.choice.fillIndicesU32From(self.source, dest) catch unreachable;
+                }
+            };
+        }
+
         pub fn fillValues(self: Self, rng: Rng, dest: []T) void {
             self.fillValuesFrom(rng, dest);
         }
@@ -31987,6 +32046,24 @@ test "distribution Choose sampler mirrors slice choices" {
     try choice.fillIndicesU32From(&owned_index_u32_control, &owned_index_u32_fill);
     try std.testing.expectEqualSlices(u32, &owned_index_u32_fill, owned_indices_u32);
     try std.testing.expectEqual(owned_index_u32_control.next(), owned_index_u32_engine.next());
+    var index_iter_engine = root.DefaultPrng.init(0xc0_27c);
+    var index_iter_control = root.DefaultPrng.init(0xc0_27c);
+    var index_iter = choice.indexIterFrom(&index_iter_engine);
+    var index_iter_out: [6]usize = undefined;
+    index_iter.fill(&index_iter_out);
+    var index_iter_fill: [6]usize = undefined;
+    choice.fillIndicesFrom(&index_iter_control, &index_iter_fill);
+    try std.testing.expectEqualSlices(usize, &index_iter_fill, &index_iter_out);
+    try std.testing.expectEqual(index_iter_control.next(), index_iter_engine.next());
+    var index_iter_u32_engine = root.DefaultPrng.init(0xc0_27d);
+    var index_iter_u32_control = root.DefaultPrng.init(0xc0_27d);
+    var index_iter_u32 = try choice.indexIterU32From(&index_iter_u32_engine);
+    var index_iter_u32_out: [6]u32 = undefined;
+    index_iter_u32.fill(&index_iter_u32_out);
+    var index_iter_u32_fill: [6]u32 = undefined;
+    try choice.fillIndicesU32From(&index_iter_u32_control, &index_iter_u32_fill);
+    try std.testing.expectEqualSlices(u32, &index_iter_u32_fill, &index_iter_u32_out);
+    try std.testing.expectEqual(index_iter_u32_control.next(), index_iter_u32_engine.next());
     var ptrs_engine = root.DefaultPrng.init(0xc0_274);
     var ptrs_control = root.DefaultPrng.init(0xc0_274);
     const owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &ptrs_engine, 6);
@@ -32036,6 +32113,10 @@ test "distribution Choose sampler mirrors slice choices" {
     var singleton_indices_u32: [4]u32 = undefined;
     try singleton.fillIndicesU32From(&singleton_engine, &singleton_indices_u32);
     try std.testing.expectEqualSlices(u32, &.{ 0, 0, 0, 0 }, &singleton_indices_u32);
+    var singleton_index_iter = singleton.indexIterFrom(&singleton_engine);
+    try std.testing.expectEqual(@as(usize, 0), singleton_index_iter.next().?);
+    var singleton_index_iter_u32 = try singleton.indexIterU32From(&singleton_engine);
+    try std.testing.expectEqual(@as(u32, 0), singleton_index_iter_u32.next().?);
     try std.testing.expectEqual(singleton_control.next(), singleton_engine.next());
 
     const Empty = enum {};
