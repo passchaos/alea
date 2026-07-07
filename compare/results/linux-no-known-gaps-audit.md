@@ -2847,3 +2847,10 @@ unchecked value allocation-returning batch helpers now reject non-zero empty
 enum-containing value types before allocation and random-stream use in
 `valueBatchFrom`, while zero-count requests remain deterministic empty
 allocations. This improves failure determinism but does not resolve S4-M11.
+
+S4-M664 adds `Rng` sample batch empty-type prevalidation
+(`compare/results/s4-m664-rng-sample-batch-empty-type-prevalidation.md`):
+unchecked sampler allocation-returning batch helpers now reject non-zero empty
+enum-containing output types before allocation and random-stream use in
+`sampleBatchFrom`, while zero-count requests remain deterministic empty
+allocations. This improves failure determinism but does not resolve S4-M11.

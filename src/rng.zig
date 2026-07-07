@@ -426,6 +426,8 @@ pub fn sampleBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, sa
 }
 
 pub fn sampleBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, sampler: anytype, count: usize) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     fillSampleFrom(source, T, out, sampler);
@@ -8935,6 +8937,48 @@ test "owned checked values validate empty enums before consuming random stream" 
         try std.testing.expectEqual(error.EmptyRange, err);
     }
     try std.testing.expect(!tuple_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "owned sampler batches validate empty output types before consuming random stream" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const EmptySampler = struct {
+        pub fn sampleFrom(_: @This(), source: anytype, comptime T: type) T {
+            _ = source;
+            unreachable;
+        }
+    };
+
+    var engine = alea.ScalarPrng.init(0x5150_0a87);
+    var control = alea.ScalarPrng.init(0x5150_0a87);
+    const rng = Rng.init(&engine);
+
+    var zero_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    const empty = try rng.sampleBatch(Empty, zero_alloc.allocator(), EmptySampler{}, 0);
+    defer zero_alloc.allocator().free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    try std.testing.expect(!zero_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (rng.sampleBatch(Empty, unchecked_alloc.allocator(), EmptySampler{}, 1)) |unexpected| {
+        defer unchecked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var direct_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleBatchFrom(&engine, struct { u8, Empty }, direct_alloc.allocator(), EmptySampler{}, 1)) |unexpected| {
+        defer direct_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!direct_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
