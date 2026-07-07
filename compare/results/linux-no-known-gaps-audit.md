@@ -3332,3 +3332,9 @@ reusable `WeightedChoice` now has checked aliases for scalar, caller-owned,
 owned, fixed-size, and iterator compact weighted `u32` index outputs while
 preserving existing compact weighted index stream shape. This improves
 discoverability but does not resolve S4-M11.
+
+S4-M735 adds reusable `Choice` checked value batches
+(`compare/results/s4-m735-choice-checked-value-batches.md`): reusable `Choice`
+now has checked aliases for caller-owned and allocation-returning value-copy
+batches, including empty-type failures before random-stream use or allocation.
+This improves fallible value-copy ergonomics but does not resolve S4-M11.

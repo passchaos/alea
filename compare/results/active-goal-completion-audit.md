@@ -773,7 +773,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M732 weightedchoice checked index aliases | `src/seq.zig`, `docs/api-reference.md`, `compare/results/s4-m732-weightedchoice-checked-index-aliases.md` | Closed for the current bar: reusable `WeightedChoice` now has checked aliases for scalar, caller-owned, owned, fixed-size, and iterator weighted `usize` index outputs. |
 | S4-M733 choice checked u32 index aliases | `src/seq.zig`, `docs/api-reference.md`, `compare/results/s4-m733-choice-checked-u32-index-aliases.md` | Closed for the current bar: reusable `Choice` now has checked aliases for scalar, caller-owned, owned, fixed-size, and iterator compact `u32` index outputs. |
 | S4-M734 weightedchoice checked u32 index aliases | `src/seq.zig`, `docs/api-reference.md`, `compare/results/s4-m734-weightedchoice-checked-u32-index-aliases.md` | Closed for the current bar: reusable `WeightedChoice` now has checked aliases for scalar, caller-owned, owned, fixed-size, and iterator compact weighted `u32` index outputs. |
-| S4-M735 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M735 choice checked value batches | `src/seq.zig`, `docs/api-reference.md`, `compare/results/s4-m735-choice-checked-value-batches.md` | Closed for the current bar: reusable `Choice` now has checked aliases for caller-owned and allocation-returning value-copy batches. |
+| S4-M736 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2234,6 +2235,9 @@ long-term objective.
 S4-M734 additionally adds reusable `WeightedChoice` checked compact `u32` index
 aliases; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M735 additionally adds reusable `Choice` checked value batch aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
