@@ -744,6 +744,14 @@ pub fn Choose(comptime T: type) type {
             return .{ .source = source, .choice = self };
         }
 
+        pub fn indexIterU32Checked(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
+            return self.indexIterU32CheckedFrom(rng);
+        }
+
+        pub fn indexIterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
+            return self.indexIterU32From(source);
+        }
+
         pub fn IndexIterator(comptime Source: type) type {
             return struct {
                 const SelfIter = @This();
@@ -32450,6 +32458,12 @@ test "distribution Choose sampler mirrors slice choices" {
     try choice.fillIndicesU32From(&index_iter_u32_control, &index_iter_u32_fill);
     try std.testing.expectEqualSlices(u32, &index_iter_u32_fill, &index_iter_u32_out);
     try std.testing.expectEqual(index_iter_u32_control.next(), index_iter_u32_engine.next());
+    var checked_index_iter_u32_engine = root.DefaultPrng.init(0xc0_291);
+    var unchecked_index_iter_u32_engine = root.DefaultPrng.init(0xc0_291);
+    var checked_index_iter_u32 = try choice.indexIterU32CheckedFrom(&checked_index_iter_u32_engine);
+    var unchecked_index_iter_u32 = try choice.indexIterU32From(&unchecked_index_iter_u32_engine);
+    try std.testing.expectEqual(unchecked_index_iter_u32.next().?, checked_index_iter_u32.next().?);
+    try std.testing.expectEqual(unchecked_index_iter_u32_engine.next(), checked_index_iter_u32_engine.next());
     var ptrs_engine = root.DefaultPrng.init(0xc0_274);
     var ptrs_control = root.DefaultPrng.init(0xc0_274);
     const owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &ptrs_engine, 6);

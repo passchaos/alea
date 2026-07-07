@@ -3213,6 +3213,7 @@ Dynamic weighted helpers:
   `Choose(T).indexIter`, `Choose(T).indexIterFrom`,
   `Choose(T).indexIterChecked`, `Choose(T).indexIterCheckedFrom`,
   `Choose(T).indexIterU32`, `Choose(T).indexIterU32From`,
+  `Choose(T).indexIterU32Checked`, `Choose(T).indexIterU32CheckedFrom`,
   `Choose(T).IndexIterator`, `Choose(T).U32IndexIterator`,
   `Choose(T).ptrs`, `Choose(T).ptrsFrom`,
   `Choose(T).ptrArray`, `Choose(T).ptrArrayFrom`,

@@ -3352,3 +3352,9 @@ distribution-layer `Choose` now has checked aliases for caller-owned and
 allocation-returning value-copy batches, including empty-type failures before
 random-stream use or allocation. This improves fallible value-copy ergonomics but
 does not resolve S4-M11.
+
+S4-M738 adds distribution-layer `Choose` checked compact `u32` iterators
+(`compare/results/s4-m738-distribution-choose-checked-u32-iterators.md`):
+distribution-layer `Choose` now has checked aliases for compact `u32` index
+iterators while preserving existing stream shape and width validation. This
+improves discoverability but does not resolve S4-M11.
