@@ -890,6 +890,17 @@ pub fn vectorRangeAtMostBatch(self: Rng, comptime VectorType: type, allocator: s
 }
 
 pub fn vectorRangeBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
+    if (count == 0) return allocator.alloc(VectorType, 0);
+    const info = vectorInfo(VectorType);
+    switch (@typeInfo(info.child)) {
+        .int => {
+            if (min >= max) return error.EmptyRange;
+        },
+        .float => {
+            try validateFloatRangeParams(info.child, min, max, true);
+        },
+        else => @compileError("Rng.vectorRangeBatchFrom supports integer and floating-point vectors"),
+    }
     const out = try allocator.alloc(VectorType, count);
     errdefer allocator.free(out);
     fillVectorRangeFrom(source, VectorType, out, min, max);
@@ -897,6 +908,10 @@ pub fn vectorRangeBatchFrom(source: anytype, comptime VectorType: type, allocato
 }
 
 pub fn vectorRangeAtMostBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
+    if (count == 0) return allocator.alloc(VectorType, 0);
+    const info = vectorInfo(VectorType);
+    if (@typeInfo(info.child) != .int) @compileError("Rng.vectorRangeAtMostBatchFrom supports integer vectors");
+    if (min > max) return error.EmptyRange;
     const out = try allocator.alloc(VectorType, count);
     errdefer allocator.free(out);
     fillVectorRangeAtMostFrom(source, VectorType, out, min, max);
@@ -991,25 +1006,10 @@ pub fn vectorRangeAtMostBatchChecked(self: Rng, comptime VectorType: type, alloc
 }
 
 pub fn vectorRangeBatchCheckedFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
-    if (count == 0) return allocator.alloc(VectorType, 0);
-    const info = vectorInfo(VectorType);
-    switch (@typeInfo(info.child)) {
-        .int => {
-            if (min >= max) return error.EmptyRange;
-        },
-        .float => {
-            try validateFloatRangeParams(info.child, min, max, true);
-        },
-        else => @compileError("Rng.vectorRangeBatchChecked supports integer and floating-point vectors"),
-    }
     return vectorRangeBatchFrom(source, VectorType, allocator, count, min, max);
 }
 
 pub fn vectorRangeAtMostBatchCheckedFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, min: vectorChild(VectorType), max: vectorChild(VectorType)) ![]VectorType {
-    if (count == 0) return allocator.alloc(VectorType, 0);
-    const info = vectorInfo(VectorType);
-    if (@typeInfo(info.child) != .int) @compileError("Rng.vectorRangeAtMostBatchChecked supports integer vectors");
-    if (min > max) return error.EmptyRange;
     return vectorRangeAtMostBatchFrom(source, VectorType, allocator, count, min, max);
 }
 
@@ -1045,6 +1045,10 @@ pub fn vectorChanceBatch(self: Rng, comptime VectorType: type, allocator: std.me
 }
 
 pub fn vectorChanceBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, p: f64) ![]VectorType {
+    if (count == 0) return allocator.alloc(VectorType, 0);
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("Rng.vectorChanceBatchFrom expects a bool vector");
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
     const out = try allocator.alloc(VectorType, count);
     errdefer allocator.free(out);
     fillVectorChanceFrom(source, VectorType, out, p);
@@ -1076,10 +1080,6 @@ pub fn vectorChanceBatchChecked(self: Rng, comptime VectorType: type, allocator:
 }
 
 pub fn vectorChanceBatchCheckedFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, p: f64) ![]VectorType {
-    if (count == 0) return allocator.alloc(VectorType, 0);
-    const info = vectorInfo(VectorType);
-    if (info.child != bool) @compileError("Rng.vectorChanceBatchChecked expects a bool vector");
-    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
     return vectorChanceBatchFrom(source, VectorType, allocator, count, p);
 }
 
@@ -1100,6 +1100,10 @@ pub fn vectorRatioBatch(self: Rng, comptime VectorType: type, allocator: std.mem
 }
 
 pub fn vectorRatioBatchFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]VectorType {
+    if (count == 0) return allocator.alloc(VectorType, 0);
+    const info = vectorInfo(VectorType);
+    if (info.child != bool) @compileError("Rng.vectorRatioBatchFrom expects a bool vector");
+    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     const out = try allocator.alloc(VectorType, count);
     errdefer allocator.free(out);
     fillVectorRatioFrom(source, VectorType, out, numerator, denominator);
@@ -1131,10 +1135,6 @@ pub fn vectorRatioBatchChecked(self: Rng, comptime VectorType: type, allocator: 
 }
 
 pub fn vectorRatioBatchCheckedFrom(source: anytype, comptime VectorType: type, allocator: std.mem.Allocator, count: usize, numerator: u32, denominator: u32) ![]VectorType {
-    if (count == 0) return allocator.alloc(VectorType, 0);
-    const info = vectorInfo(VectorType);
-    if (info.child != bool) @compileError("Rng.vectorRatioBatchChecked expects a bool vector");
-    if (denominator == 0 or numerator > denominator) return error.InvalidProbability;
     return vectorRatioBatchFrom(source, VectorType, allocator, count, numerator, denominator);
 }
 
@@ -6903,6 +6903,11 @@ test "owned vector range batches allocate and validate before consuming random s
     try std.testing.expect(!invalid_int_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var invalid_int_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, rng.vectorRangeBatch(@Vector(4, u32), invalid_int_unchecked_alloc.allocator(), 4, 3, 3));
+    try std.testing.expect(!invalid_int_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var empty_inclusive_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     const empty_inclusive = try rng.vectorRangeAtMostBatchChecked(@Vector(4, u32), empty_inclusive_alloc.allocator(), 0, 4, 3);
     defer empty_inclusive_alloc.allocator().free(empty_inclusive);
@@ -6915,9 +6920,19 @@ test "owned vector range batches allocate and validate before consuming random s
     try std.testing.expect(!invalid_inclusive_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var invalid_inclusive_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, vectorRangeAtMostBatchFrom(&engine, @Vector(4, u32), invalid_inclusive_unchecked_alloc.allocator(), 4, 4, 3));
+    try std.testing.expect(!invalid_inclusive_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var invalid_float_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.NonFinite, vectorRangeBatchCheckedFrom(&engine, @Vector(4, f64), invalid_float_alloc.allocator(), 4, std.math.inf(f64), 1));
     try std.testing.expect(!invalid_float_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_float_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.NonFinite, vectorRangeBatchFrom(&engine, @Vector(4, f64), invalid_float_unchecked_alloc.allocator(), 4, std.math.inf(f64), 1));
+    try std.testing.expect(!invalid_float_unchecked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
@@ -7556,9 +7571,19 @@ test "owned vector probability batches allocate and validate before consuming ra
     try std.testing.expect(!invalid_chance_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var invalid_chance_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, rng.vectorChanceBatch(@Vector(8, bool), invalid_chance_unchecked_alloc.allocator(), 4, -0.1));
+    try std.testing.expect(!invalid_chance_unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var invalid_ratio_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidProbability, vectorRatioBatchCheckedFrom(&engine, @Vector(8, bool), invalid_ratio_alloc.allocator(), 4, 2, 1));
     try std.testing.expect(!invalid_ratio_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_ratio_unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidProbability, vectorRatioBatchFrom(&engine, @Vector(8, bool), invalid_ratio_unchecked_alloc.allocator(), 4, 2, 1));
+    try std.testing.expect(!invalid_ratio_unchecked_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
     var chance_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });

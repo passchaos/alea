@@ -654,6 +654,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M656", .path = "compare/results/s4-m656-rng-normal-exponential-batch-invalid-prevalidation.md" },
     .{ .milestone = "S4-M657", .path = "compare/results/s4-m657-rng-vector-normal-exponential-batch-invalid-prevalidation.md" },
     .{ .milestone = "S4-M658", .path = "compare/results/s4-m658-rng-scalar-batch-invalid-prevalidation.md" },
+    .{ .milestone = "S4-M659", .path = "compare/results/s4-m659-rng-vector-batch-invalid-prevalidation.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -661,7 +662,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M659",
+    "S4-M660",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -973,12 +974,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M659 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M659 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M660 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M660 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M659 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M659 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M660 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M660 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
