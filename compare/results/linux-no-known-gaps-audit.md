@@ -2716,3 +2716,12 @@ sets before allocation, random-stream use, and append-buffer mutation for
 `UnicodeCharset.sampleStringFrom` and `UnicodeCharset.appendStringFrom`, while
 zero-length calls remain deterministic no-stream operations. This improves
 failure determinism but does not resolve S4-M11.
+
+S4-M648 adds `Rng` unchecked repeated choice empty prevalidation
+(`compare/results/s4-m648-rng-repeated-choice-empty-prevalidation.md`): repeated
+value, const-pointer, mutable-pointer, usize-index, and u32-index batch helpers
+now reject non-zero empty inputs before allocation and random-stream use for
+`chooseBatchFrom`, `chooseConstPtrBatchFrom`, `choosePtrBatchFrom`,
+`chooseIndexBatchFrom`, and `chooseIndexU32BatchFrom`, while zero-count calls
+remain deterministic allocation-only operations. This improves failure
+determinism but does not resolve S4-M11.

@@ -2912,6 +2912,8 @@ pub fn chooseBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, co
 }
 
 pub fn chooseBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]T {
+    if (count == 0) return allocator.alloc(T, 0);
+    if (items.len == 0) return error.EmptyRange;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     fillChooseFrom(source, T, out, items);
@@ -2990,6 +2992,8 @@ pub fn chooseIndexBatch(self: Rng, allocator: std.mem.Allocator, count: usize, l
 }
 
 pub fn chooseIndexBatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, length: usize) ![]usize {
+    if (count == 0) return allocator.alloc(usize, 0);
+    if (length == 0) return error.EmptyRange;
     const out = try allocator.alloc(usize, count);
     errdefer allocator.free(out);
     fillChooseIndexFrom(source, out, length);
@@ -3076,6 +3080,8 @@ pub fn chooseIndexU32Batch(self: Rng, allocator: std.mem.Allocator, count: usize
 }
 
 pub fn chooseIndexU32BatchFrom(source: anytype, allocator: std.mem.Allocator, count: usize, length: u32) ![]u32 {
+    if (count == 0) return allocator.alloc(u32, 0);
+    if (length == 0) return error.EmptyRange;
     const out = try allocator.alloc(u32, count);
     errdefer allocator.free(out);
     fillChooseIndexU32From(source, out, length);
@@ -3166,6 +3172,8 @@ pub fn chooseConstPtrBatch(self: Rng, comptime T: type, allocator: std.mem.Alloc
 }
 
 pub fn chooseConstPtrBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []const T) ![]*const T {
+    if (count == 0) return allocator.alloc(*const T, 0);
+    if (items.len == 0) return error.EmptyRange;
     const out = try allocator.alloc(*const T, count);
     errdefer allocator.free(out);
     fillChooseConstPtrFrom(source, T, out, items);
@@ -3252,6 +3260,8 @@ pub fn choosePtrBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator,
 }
 
 pub fn choosePtrBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, items: []T) ![]*T {
+    if (count == 0) return allocator.alloc(*T, 0);
+    if (items.len == 0) return error.EmptyRange;
     const out = try allocator.alloc(*T, count);
     errdefer allocator.free(out);
     fillChoosePtrFrom(source, T, out, items);
@@ -7930,6 +7940,31 @@ test "invalid facade choice helpers do not consume random stream" {
     var invalid_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.EmptyRange, chooseBatchCheckedFrom(&engine, u8, invalid_value_alloc.allocator(), 8, &empty));
     try std.testing.expect(!invalid_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_unchecked_value_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseBatchFrom(&engine, u8, invalid_unchecked_value_alloc.allocator(), 8, &empty));
+    try std.testing.expect(!invalid_unchecked_value_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_unchecked_const_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseConstPtrBatchFrom(&engine, u8, invalid_unchecked_const_ptr_alloc.allocator(), 8, &empty));
+    try std.testing.expect(!invalid_unchecked_const_ptr_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_unchecked_mut_ptr_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, choosePtrBatchFrom(&engine, u8, invalid_unchecked_mut_ptr_alloc.allocator(), 8, &empty));
+    try std.testing.expect(!invalid_unchecked_mut_ptr_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_unchecked_index_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseIndexBatchFrom(&engine, invalid_unchecked_index_alloc.allocator(), 8, 0));
+    try std.testing.expect(!invalid_unchecked_index_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_unchecked_index_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyRange, chooseIndexU32BatchFrom(&engine, invalid_unchecked_index_u32_alloc.allocator(), 8, 0));
+    try std.testing.expect(!invalid_unchecked_index_u32_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
     const non_empty = [_]u8{ 1, 2, 3 };
