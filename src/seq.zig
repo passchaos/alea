@@ -4846,7 +4846,8 @@ pub fn sampleIteratorChecked(allocator: std.mem.Allocator, rng: Rng, comptime T:
 pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < amount) return error.InvalidParameter;
     }
 
@@ -4856,6 +4857,9 @@ pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
     var filled: usize = 0;
     while (filled < amount) : (filled += 1) {
         out[filled] = iterator.next() orelse return error.InvalidParameter;
+    }
+    if (exact_remaining) |remaining| {
+        if (remaining == amount) return out;
     }
 
     var seen = amount;
@@ -4907,13 +4911,17 @@ pub fn sampleIteratorArrayFrom(source: anytype, comptime T: type, comptime N: us
     var out: [N]T = undefined;
     if (comptime N == 0) return out;
     if (comptime valueTypeHasEmptyEnum(T)) return null;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < N) return null;
     }
 
     var filled: usize = 0;
     while (filled < N) : (filled += 1) {
         out[filled] = iterator.next() orelse return null;
+    }
+    if (exact_remaining) |remaining| {
+        if (remaining == N) return out;
     }
 
     var seen = N;
@@ -4992,13 +5000,17 @@ pub fn sampleIteratorFillCheckedFrom(source: anytype, comptime T: type, iterator
 pub fn sampleIteratorIntoCheckedFrom(source: anytype, comptime T: type, iterator: anytype, out: []T) Error!void {
     if (out.len == 0) return;
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < out.len) return error.InvalidParameter;
     }
 
     var filled: usize = 0;
     while (filled < out.len) : (filled += 1) {
         out[filled] = iterator.next() orelse return error.InvalidParameter;
+    }
+    if (exact_remaining) |remaining| {
+        if (remaining == out.len) return;
     }
 
     var seen = out.len;
@@ -11862,6 +11874,50 @@ test "checked iterator samples use exact remaining before allocation" {
     var array_iter = ExactIter{};
     try std.testing.expectError(error.InvalidParameter, sampleIteratorArrayCheckedFrom(&engine, u8, 3, &array_iter));
     try std.testing.expectEqual(@as(u8, 0), array_iter.next_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "checked iterator samples avoid exact-count end probe" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7722);
+    var control = alea.ScalarPrng.init(0x5150_7722);
+
+    const ExactIter = struct {
+        next_value: u8 = 1,
+        end: u8 = 3,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.end - self.next_value;
+        }
+    };
+
+    var alloc_iter = ExactIter{};
+    const sample = try sampleIteratorCheckedFrom(std.testing.allocator, &engine, u8, &alloc_iter, 2);
+    defer std.testing.allocator.free(sample);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample);
+    try std.testing.expectEqual(@as(usize, 2), alloc_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var into_iter = ExactIter{};
+    var into_out: [2]u8 = undefined;
+    try sampleIteratorIntoCheckedFrom(&engine, u8, &into_iter, &into_out);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, &into_out);
+    try std.testing.expectEqual(@as(usize, 2), into_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var array_iter = ExactIter{};
+    const array = try sampleIteratorArrayCheckedFrom(&engine, u8, 2, &array_iter);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, &array);
+    try std.testing.expectEqual(@as(usize, 2), array_iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

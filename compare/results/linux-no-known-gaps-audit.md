@@ -3570,3 +3570,9 @@ S4-M769 avoids exact-short caller-owned iterator end probes
 seq/root caller-owned unweighted iterator fills now read exactly the known
 remaining items and return partial counts without an extra null probe. This
 improves iterator fill reliability evidence but does not resolve S4-M11.
+
+S4-M770 avoids exact-count checked iterator end probes
+(`compare/results/s4-m770-checked-iterator-exact-count-end-probe.md`):
+seq/root checked unweighted iterator samples now read exactly the known remaining
+items when exact remaining equals the requested count. This improves iterator
+sampling reliability evidence but does not resolve S4-M11.

@@ -2498,7 +2498,8 @@ pub fn sampleIterator(comptime T: type, io: std.Io, allocator: std.mem.Allocator
 pub fn sampleIteratorChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
-    if (rootIteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = rootIteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < amount) return error.InvalidParameter;
     }
 
@@ -2508,6 +2509,9 @@ pub fn sampleIteratorChecked(comptime T: type, io: std.Io, allocator: std.mem.Al
     var filled: usize = 0;
     while (filled < amount) : (filled += 1) {
         out[filled] = iterator.next() orelse return error.InvalidParameter;
+    }
+    if (exact_remaining) |remaining| {
+        if (remaining == amount) return out;
     }
 
     var seen = amount;
@@ -9896,6 +9900,28 @@ test "root random helpers validate deterministic cases before entropy" {
     const sample_iter_exact_out = try sampleIteratorChecked(u8, failing, std.testing.allocator, &sample_iter_exact, 2);
     defer std.testing.allocator.free(sample_iter_exact_out);
     try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample_iter_exact_out);
+    const ExactCountSampleIter = struct {
+        next_value: u8 = 1,
+        end: u8 = 3,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.end - self.next_value;
+        }
+    };
+    var sample_iter_exact_count = ExactCountSampleIter{};
+    const sample_iter_exact_count_out = try sampleIteratorChecked(u8, failing, std.testing.allocator, &sample_iter_exact_count, 2);
+    defer std.testing.allocator.free(sample_iter_exact_count_out);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2 }, sample_iter_exact_count_out);
+    try std.testing.expectEqual(@as(usize, 2), sample_iter_exact_count.calls);
     var sample_iter_short_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     var sample_iter_short_checked_pre = SliceIter{ .items = &.{ 1, 2 } };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorChecked(u8, failing, sample_iter_short_checked_alloc.allocator(), &sample_iter_short_checked_pre, 3));
