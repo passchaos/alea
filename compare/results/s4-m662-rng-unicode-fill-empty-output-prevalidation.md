@@ -71,11 +71,11 @@ Broader native test gate:
 
 ```text
 $ zig build test
-readmecheck ok
 toolingcheck ok
+examplecheck ok
 apicheck ok
 roadmapcheck ok
-examplecheck ok
+readmecheck ok
 ```
 
 ## Result
