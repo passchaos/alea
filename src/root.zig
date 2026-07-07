@@ -2474,17 +2474,11 @@ pub fn sampleIteratorArrayChecked(comptime T: type, io: std.Io, comptime N: usiz
 }
 
 pub fn sampleIteratorWeighted(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
-    if (amount == 0) return allocator.alloc(T, 0);
-    var engine = try secure(io);
-    const random_source = Rng.init(&engine);
-    return try seq.sampleIteratorWeighted(allocator, random_source, T, iterator, amount);
+    return try rootSampleIteratorWeightedAlloc(T, io, allocator, iterator, amount, false);
 }
 
 pub fn sampleIteratorWeightedChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize) ![]T {
-    if (amount == 0) return allocator.alloc(T, 0);
-    var engine = try secure(io);
-    const random_source = Rng.init(&engine);
-    return try seq.sampleIteratorWeightedChecked(allocator, random_source, T, iterator, amount);
+    return try rootSampleIteratorWeightedAlloc(T, io, allocator, iterator, amount, true);
 }
 
 pub fn sampleIteratorWeightedInto(comptime T: type, io: std.Io, iterator: anytype, out: []T, scratch_keys: []f64) !usize {
@@ -4299,6 +4293,18 @@ fn rootCompareWeightedIteratorCandidate(comptime T: type, a: RootWeightedIterato
     return std.math.order(a.key, b.key);
 }
 
+fn rootCompareWeightedIteratorCandidateContext(comptime T: type) fn (void, RootWeightedIteratorCandidate(T), RootWeightedIteratorCandidate(T)) std.math.Order {
+    return struct {
+        fn compare(_: void, a: RootWeightedIteratorCandidate(T), b: RootWeightedIteratorCandidate(T)) std.math.Order {
+            return rootCompareWeightedIteratorCandidate(T, a, b);
+        }
+    }.compare;
+}
+
+fn RootWeightedIteratorQueue(comptime T: type) type {
+    return std.PriorityQueue(RootWeightedIteratorCandidate(T), void, rootCompareWeightedIteratorCandidateContext(T));
+}
+
 fn rootMinWeightedIteratorCandidateIndex(comptime T: type, candidates: []const RootWeightedIteratorCandidate(T)) usize {
     std.debug.assert(candidates.len > 0);
     var min_index: usize = 0;
@@ -4316,6 +4322,92 @@ fn rootSortWeightedIteratorCandidates(comptime T: type, candidates: []RootWeight
             std.mem.swap(RootWeightedIteratorCandidate(T), &candidates[j], &candidates[j - 1]);
         }
     }
+}
+
+fn rootSampleIteratorWeightedAlloc(comptime T: type, io: std.Io, allocator: std.mem.Allocator, iterator: anytype, amount: usize, comptime checked: bool) ![]T {
+    if (amount == 0) return allocator.alloc(T, 0);
+    const Pending = struct {
+        item: T,
+        weight: f64,
+    };
+
+    const pending = try allocator.alloc(Pending, amount);
+    defer allocator.free(pending);
+
+    var heap = RootWeightedIteratorQueue(T).initContext({});
+    defer heap.deinit(allocator);
+
+    var pending_count: usize = 0;
+    var engine: ?SecurePrng = null;
+
+    while (iterator.next()) |entry| {
+        const weight = rootWeightAsF64(@TypeOf(entry.weight), entry.weight);
+        if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
+        if (weight == 0) continue;
+
+        if (engine == null and pending_count < amount) {
+            pending[pending_count] = .{ .item = entry.item, .weight = weight };
+            pending_count += 1;
+            continue;
+        }
+
+        if (engine == null) {
+            engine = try secure(io);
+            try heap.ensureTotalCapacityPrecise(allocator, amount);
+            const random_source = Rng.init(&engine.?);
+            for (pending[0..pending_count]) |stored| {
+                try heap.push(allocator, .{
+                    .item = stored.item,
+                    .key = rootWeightedIteratorKey(random_source, stored.weight),
+                });
+            }
+        }
+
+        const random_source = Rng.init(&engine.?);
+        const candidate = RootWeightedIteratorCandidate(T){
+            .item = entry.item,
+            .key = rootWeightedIteratorKey(random_source, weight),
+        };
+        if (heap.count() < amount) {
+            try heap.push(allocator, candidate);
+        } else if (heap.peek()) |min_candidate| {
+            if (candidate.key > min_candidate.key) {
+                _ = heap.pop();
+                try heap.push(allocator, candidate);
+            }
+        }
+    }
+
+    if (engine == null) {
+        if (pending_count == 0) {
+            if (checked) return error.InvalidParameter;
+            return allocator.alloc(T, 0);
+        }
+        if (pending_count == 1) {
+            if (checked and amount != 1) return error.InvalidParameter;
+            return rootSingleItemByAlloc(T, allocator, pending[0].item);
+        }
+        if (checked and pending_count < amount) return error.InvalidParameter;
+
+        engine = try secure(io);
+        try heap.ensureTotalCapacityPrecise(allocator, amount);
+        const random_source = Rng.init(&engine.?);
+        for (pending[0..pending_count]) |stored| {
+            try heap.push(allocator, .{
+                .item = stored.item,
+                .key = rootWeightedIteratorKey(random_source, stored.weight),
+            });
+        }
+    }
+
+    if (checked and heap.count() != amount) return error.InvalidParameter;
+    const out = try allocator.alloc(T, heap.count());
+    errdefer allocator.free(out);
+    var i: usize = 0;
+    while (heap.pop()) |candidate| : (i += 1) {
+        out[i] = candidate.item;
+    }
+    return out;
 }
 
 fn rootSampleIteratorWeightedCandidateArray(comptime T: type, io: std.Io, comptime N: usize, iterator: anytype) !?[N]RootWeightedIteratorCandidate(T) {
@@ -8324,8 +8416,36 @@ test "root random helpers validate deterministic cases before entropy" {
     const weighted_sample_empty_out = try sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_empty, 0);
     defer std.testing.allocator.free(weighted_sample_empty_out);
     try std.testing.expectEqual(@as(usize, 0), weighted_sample_empty_out.len);
+    var weighted_sample_empty_checked = WeightedIter{ .items = &weighted_entropy_entries };
+    const weighted_sample_empty_checked_out = try sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_empty_checked, 0);
+    defer std.testing.allocator.free(weighted_sample_empty_checked_out);
+    try std.testing.expectEqual(@as(usize, 0), weighted_sample_empty_checked_out.len);
+    var weighted_sample_zero = WeightedIter{ .items = &weighted_zero_entries };
+    const weighted_sample_zero_out = try sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_zero, 1);
+    defer std.testing.allocator.free(weighted_sample_zero_out);
+    try std.testing.expectEqual(@as(usize, 0), weighted_sample_zero_out.len);
+    var weighted_sample_zero_checked = WeightedIter{ .items = &weighted_zero_entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_zero_checked, 1));
+    var weighted_sample_single = WeightedIter{ .items = &weighted_single_entries };
+    const weighted_sample_single_out = try sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_single, 2);
+    defer std.testing.allocator.free(weighted_sample_single_out);
+    try std.testing.expectEqualSlices(u8, &.{2}, weighted_sample_single_out);
+    var weighted_sample_single_checked = WeightedIter{ .items = &weighted_single_entries };
+    const weighted_sample_single_checked_out = try sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_single_checked, 1);
+    defer std.testing.allocator.free(weighted_sample_single_checked_out);
+    try std.testing.expectEqualSlices(u8, &.{2}, weighted_sample_single_checked_out);
+    var weighted_sample_single_too_many_checked = WeightedIter{ .items = &weighted_single_entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_single_too_many_checked, 2));
+    var weighted_sample_two_positive_too_many_checked = WeightedIter{ .items = &weighted_two_positive_entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_two_positive_too_many_checked, 3));
+    var weighted_sample_bad = WeightedIter{ .items = &weighted_bad_entries };
+    try std.testing.expectError(error.InvalidWeight, sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_bad, 1));
+    var weighted_sample_bad_checked = WeightedIter{ .items = &weighted_bad_entries };
+    try std.testing.expectError(error.InvalidWeight, sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_bad_checked, 1));
     var weighted_sample_entropy = WeightedIter{ .items = &weighted_entropy_entries };
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_entropy, 1));
+    var weighted_sample_entropy_checked = WeightedIter{ .items = &weighted_entropy_entries };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_entropy_checked, 1));
     var weighted_into_empty = WeightedIter{ .items = &weighted_entropy_entries };
     var weighted_into_empty_out: [0]u8 = .{};
     var weighted_into_empty_keys: [0]f64 = .{};
