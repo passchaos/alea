@@ -2709,6 +2709,7 @@ pub fn fillUnicodeScalarFrom(source: anytype, dest: []u21) void {
 }
 
 pub fn fillUnicodeScalarRangeLessThanFrom(source: anytype, dest: []u21, min: u21, less_than: u21) void {
+    if (dest.len == 0) return;
     const range = unicodeScalarExclusiveRange(min, less_than) catch unreachable;
     if (exclusiveIntRangeHasSingleValue(u21, range.min, range.end)) {
         @memset(dest, unicodeScalarFromCompressed(range.min));
@@ -2718,6 +2719,7 @@ pub fn fillUnicodeScalarRangeLessThanFrom(source: anytype, dest: []u21, min: u21
 }
 
 pub fn fillUnicodeScalarRangeAtMostFrom(source: anytype, dest: []u21, min: u21, at_most: u21) void {
+    if (dest.len == 0) return;
     const range = unicodeScalarInclusiveRange(min, at_most) catch unreachable;
     if (range.min == range.max) {
         @memset(dest, unicodeScalarFromCompressed(range.min));
@@ -5782,6 +5784,13 @@ test "invalid unicode scalar ranges do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.EmptyRange, rng.fillUnicodeScalarRangeAtMostChecked(&out, 0x5A, 0x41));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var empty: [0]u21 = .{};
+    rng.fillUnicodeScalarRangeLessThan(&empty, 0xD800, 0xE000);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillUnicodeScalarRangeAtMostFrom(&engine, &empty, 0x5A, 0x41);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

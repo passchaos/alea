@@ -2833,3 +2833,10 @@ invalid scalars and empty ranges before allocation and random-stream use in
 `unicodeScalarRangeLessThanBatchFrom` and
 `unicodeScalarRangeAtMostBatchFrom`, while valid allocation failures remain
 no-stream. This improves failure determinism but does not resolve S4-M11.
+
+S4-M662 adds `Rng` Unicode scalar fill empty-output prevalidation
+(`compare/results/s4-m662-rng-unicode-fill-empty-output-prevalidation.md`):
+unchecked Unicode scalar range fill helpers now treat empty output buffers as
+deterministic no-ops before invalid scalar/range validation in
+`fillUnicodeScalarRangeLessThanFrom` and `fillUnicodeScalarRangeAtMostFrom`.
+This improves no-op determinism but does not resolve S4-M11.
