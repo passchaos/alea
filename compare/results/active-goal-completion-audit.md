@@ -824,7 +824,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M783 iterator array exact-long end-probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m783-iterator-array-exact-long-end-probe.md` | Closed for the current bar: fixed-size unweighted iterator arrays now avoid extra trailing probes for exact-long sources while preserving stream shape. |
 | S4-M784 iterator fill exact-long end-probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m784-iterator-fill-exact-long-end-probe.md` | Closed for the current bar: caller-owned unweighted iterator fills now avoid extra trailing probes for exact-long sources while preserving stream shape. |
 | S4-M785 iterator sample exact-long end-probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m785-iterator-sample-exact-long-end-probe.md` | Closed for the current bar: allocation-returning unweighted iterator samples now avoid extra trailing probes for exact-long sources while preserving stream shape. |
-| S4-M786 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M786 root iterator choice exact metadata reuse | `src/root.zig`, `compare/results/s4-m786-root-iterator-choice-exact-metadata.md` | Closed for the current bar: root unweighted iterator choices now reuse exact remaining metadata instead of probing size hints/remaining multiple times. |
+| S4-M787 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2460,6 +2461,10 @@ S4-M785 additionally avoids extra end-of-iterator probes for exact-long
 allocation-returning unweighted iterator samples while preserving reservoir
 stream shape; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M786 additionally reuses exact remaining metadata in root unweighted iterator
+choice helpers, avoiding duplicate size-hint/remaining probes; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

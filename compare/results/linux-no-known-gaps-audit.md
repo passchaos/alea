@@ -3689,3 +3689,10 @@ seq/root allocation-returning unweighted iterator samples now bound exact-long
 reservoir continuation by the known remaining count, avoiding an extra trailing
 null probe while preserving stream shape. This improves iterator sampling
 reliability evidence but does not resolve S4-M11.
+
+S4-M786 avoids duplicate root iterator choice exact metadata probes
+(`compare/results/s4-m786-root-iterator-choice-exact-metadata.md`):
+root unweighted iterator choice helpers now reuse exact remaining metadata across
+empty, hinted, and stable reservoir branches, so exact-size choices query
+size-hint/remaining once instead of multiple times. This improves iterator choice
+reliability evidence but does not resolve S4-M11.
