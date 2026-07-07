@@ -8631,6 +8631,14 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             for (dest) |*slot| slot.* = self.sampleFrom(source);
         }
 
+        pub fn fillChecked(self: Self, rng: Rng, dest: []*const T) Error!void {
+            try self.fillCheckedFrom(rng, dest);
+        }
+
+        pub fn fillCheckedFrom(self: Self, source: anytype, dest: []*const T) Error!void {
+            self.fillFrom(source, dest);
+        }
+
         pub fn fillValues(self: Self, rng: Rng, dest: []T) void {
             self.fillValuesFrom(rng, dest);
         }
@@ -8654,6 +8662,14 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             errdefer allocator.free(out);
             self.fillFrom(source, out);
             return out;
+        }
+
+        pub fn ptrsChecked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
+            return self.ptrsCheckedFrom(allocator, rng, amount);
+        }
+
+        pub fn ptrsCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]*const T {
+            return self.ptrsFrom(allocator, source, amount);
         }
 
         pub fn values(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]T {
@@ -8738,6 +8754,14 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             var out: [N]*const T = undefined;
             self.fillFrom(source, &out);
             return out;
+        }
+
+        pub fn ptrArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]*const T {
+            return self.ptrArrayCheckedFrom(rng, N);
+        }
+
+        pub fn ptrArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]*const T {
+            return self.ptrArrayFrom(source, N);
         }
 
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
@@ -18413,6 +18437,28 @@ test "weighted choice sampler maps alias indexes to items" {
     defer std.testing.allocator.free(owned_ptrs);
     try std.testing.expectEqual(@as(usize, 8), owned_ptrs.len);
     for (owned_ptrs) |item| try std.testing.expect(!std.mem.eql(u8, item.*, "never"));
+    var checked_ptr_fill_engine = alea.DefaultPrng.init(0xc0_ef0e);
+    var unchecked_ptr_fill_engine = alea.DefaultPrng.init(0xc0_ef0e);
+    var checked_ptr_fill: [8]*const []const u8 = undefined;
+    var unchecked_ptr_fill: [8]*const []const u8 = undefined;
+    choice.fillFrom(&unchecked_ptr_fill_engine, &unchecked_ptr_fill);
+    try choice.fillCheckedFrom(&checked_ptr_fill_engine, &checked_ptr_fill);
+    try std.testing.expectEqualSlices(*const []const u8, &unchecked_ptr_fill, &checked_ptr_fill);
+    try std.testing.expectEqual(unchecked_ptr_fill_engine.next(), checked_ptr_fill_engine.next());
+    var checked_ptrs_engine = alea.DefaultPrng.init(0xc0_ef0f);
+    var unchecked_ptrs_engine = alea.DefaultPrng.init(0xc0_ef0f);
+    const unchecked_ptrs = try choice.ptrsFrom(std.testing.allocator, &unchecked_ptrs_engine, 8);
+    defer std.testing.allocator.free(unchecked_ptrs);
+    const checked_ptrs = try choice.ptrsCheckedFrom(std.testing.allocator, &checked_ptrs_engine, 8);
+    defer std.testing.allocator.free(checked_ptrs);
+    try std.testing.expectEqualSlices(*const []const u8, unchecked_ptrs, checked_ptrs);
+    try std.testing.expectEqual(unchecked_ptrs_engine.next(), checked_ptrs_engine.next());
+    var checked_ptr_array_engine = alea.DefaultPrng.init(0xc0_ef10);
+    var unchecked_ptr_array_engine = alea.DefaultPrng.init(0xc0_ef10);
+    const unchecked_ptr_array = choice.ptrArrayFrom(&unchecked_ptr_array_engine, 8);
+    const checked_ptr_array = try choice.ptrArrayCheckedFrom(&checked_ptr_array_engine, 8);
+    try std.testing.expectEqualSlices(*const []const u8, &unchecked_ptr_array, &checked_ptr_array);
+    try std.testing.expectEqual(unchecked_ptr_array_engine.next(), checked_ptr_array_engine.next());
     var value_buf: [8][]const u8 = undefined;
     choice.fillValuesFrom(&engine, &value_buf);
     for (value_buf) |value| try std.testing.expect(!std.mem.eql(u8, value, "never"));

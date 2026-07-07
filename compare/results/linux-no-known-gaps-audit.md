@@ -3300,3 +3300,9 @@ S4-M729 adds reusable `Choice` checked pointer aliases
 `Choice` now has checked aliases for caller-owned, owned, and fixed-size pointer
 outputs while preserving existing pointer stream shape. This improves
 discoverability but does not resolve S4-M11.
+
+S4-M730 adds reusable `WeightedChoice` checked pointer aliases
+(`compare/results/s4-m730-weightedchoice-checked-pointer-aliases.md`): reusable
+`WeightedChoice` now has checked aliases for caller-owned, owned, and fixed-size
+weighted pointer outputs while preserving existing weighted pointer stream shape.
+This improves discoverability but does not resolve S4-M11.
