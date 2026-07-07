@@ -3604,3 +3604,12 @@ seq/root fixed-size weighted iterator arrays now resolve exact-single `N == 1`
 sources after one validated entry without key sampling, extra probes, entropy,
 or random-stream use. This improves weighted iterator array reliability evidence
 but does not resolve S4-M11.
+
+S4-M775 avoids weighted iterator exact-count fixed-array key sampling
+(`compare/results/s4-m775-weighted-iterator-array-exact-count.md`):
+seq/root fixed-size weighted iterator arrays now resolve all-positive exact-count
+sources after reading exactly the known entries without key sampling, extra
+probes, entropy, or random-stream use. Zero-weight exact-count sources still
+report insufficient positive entries and invalid weights are still validated.
+This improves weighted iterator array reliability evidence but does not resolve
+S4-M11.

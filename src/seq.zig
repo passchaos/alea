@@ -5366,17 +5366,21 @@ pub fn sampleIteratorWeightedArrayCheckedFrom(source: anytype, comptime T: type,
 
 fn sampleIteratorWeightedCandidateArrayFrom(source: anytype, comptime T: type, comptime N: usize, iterator: anytype) !?[N]WeightedIteratorCandidate(T) {
     if (comptime N == 0) return .{};
-    if (comptime N == 1) {
-        if (iteratorExactRemaining(iterator)) |remaining| {
-            if (remaining == 1) {
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == N) {
+            var candidates: [N]WeightedIteratorCandidate(T) = undefined;
+            var index: usize = 0;
+            var positive: usize = 0;
+            while (index < N) : (index += 1) {
                 const entry = iterator.next() orelse return null;
                 const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
                 if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
-                if (weight == 0) return null;
-                var candidates: [N]WeightedIteratorCandidate(T) = undefined;
-                candidates[0] = .{ .item = entry.item, .key = 0 };
-                return candidates;
+                if (weight == 0) continue;
+                candidates[positive] = .{ .item = entry.item, .key = 0 };
+                positive += 1;
             }
+            if (positive != N) return null;
+            return candidates;
         }
     }
     const Pending = struct {
@@ -12881,6 +12885,70 @@ test "single exact weighted iterator arrays avoid key sampling" {
     var checked_zero_iter = SingleExactIter{ .entry = .{ .item = 42, .weight = 0 } };
     try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedArrayCheckedFrom(&engine, u8, 1, &checked_zero_iter));
     try std.testing.expectEqual(@as(usize, 1), checked_zero_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "exact-count weighted iterator arrays avoid key sampling" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_7726);
+    var control = alea.ScalarPrng.init(0x5150_7726);
+
+    const Entry = struct { item: u8, weight: f64 };
+    const ExactIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const entry = self.items[self.index];
+            self.index += 1;
+            return entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 11, .weight = 1 },
+        .{ .item = 22, .weight = 5 },
+    };
+    var iter = ExactIter{ .items = &entries };
+    const sample = (try sampleIteratorWeightedArrayFrom(&engine, u8, 2, &iter)).?;
+    try std.testing.expectEqualSlices(u8, &.{ 11, 22 }, &sample);
+    try std.testing.expectEqual(@as(usize, 2), iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_iter = ExactIter{ .items = &entries };
+    const checked = try sampleIteratorWeightedArrayCheckedFrom(&engine, u8, 2, &checked_iter);
+    try std.testing.expectEqualSlices(u8, &.{ 11, 22 }, &checked);
+    try std.testing.expectEqual(@as(usize, 2), checked_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const zero_entries = [_]Entry{
+        .{ .item = 11, .weight = 1 },
+        .{ .item = 22, .weight = 0 },
+    };
+    var zero_iter = ExactIter{ .items = &zero_entries };
+    try std.testing.expect((try sampleIteratorWeightedArrayFrom(&engine, u8, 2, &zero_iter)) == null);
+    try std.testing.expectEqual(@as(usize, 2), zero_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_zero_iter = ExactIter{ .items = &zero_entries };
+    try std.testing.expectError(error.InvalidParameter, sampleIteratorWeightedArrayCheckedFrom(&engine, u8, 2, &checked_zero_iter));
+    try std.testing.expectEqual(@as(usize, 2), checked_zero_iter.calls);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const invalid_entries = [_]Entry{
+        .{ .item = 11, .weight = 0 },
+        .{ .item = 22, .weight = std.math.nan(f64) },
+    };
+    var invalid_iter = ExactIter{ .items = &invalid_entries };
+    try std.testing.expectError(error.InvalidWeight, sampleIteratorWeightedArrayFrom(&engine, u8, 2, &invalid_iter));
+    try std.testing.expectEqual(@as(usize, 2), invalid_iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
