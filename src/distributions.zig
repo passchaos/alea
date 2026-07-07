@@ -801,6 +801,16 @@ pub fn Choose(comptime T: type) type {
             for (dest) |*slot| slot.* = self.sampleValueFrom(source);
         }
 
+        pub fn fillValuesChecked(self: Self, rng: Rng, dest: []T) Error!void {
+            try self.fillValuesCheckedFrom(rng, dest);
+        }
+
+        pub fn fillValuesCheckedFrom(self: Self, source: anytype, dest: []T) Error!void {
+            if (dest.len == 0) return;
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+            self.fillValuesFrom(source, dest);
+        }
+
         pub fn valueArray(self: Self, rng: Rng, comptime N: usize) [N]T {
             return self.valueArrayFrom(rng, N);
         }
@@ -834,6 +844,14 @@ pub fn Choose(comptime T: type) type {
             errdefer allocator.free(out);
             self.fillValuesFrom(source, out);
             return out;
+        }
+
+        pub fn valuesChecked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]T {
+            return self.valuesCheckedFrom(allocator, rng, amount);
+        }
+
+        pub fn valuesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]T {
+            return self.valuesFrom(allocator, source, amount);
         }
 
         pub fn valueIter(self: Self, rng: Rng) ValueIterator(Rng) {
@@ -32492,6 +32510,22 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillValuesFrom(&values_control, &owned_values_fill);
     try std.testing.expectEqualSlices(u8, &owned_values_fill, owned_values);
     try std.testing.expectEqual(values_control.next(), values_engine.next());
+    var checked_value_fill_engine = root.DefaultPrng.init(0xc0_28f);
+    var unchecked_value_fill_engine = root.DefaultPrng.init(0xc0_28f);
+    var checked_value_fill: [6]u8 = undefined;
+    var unchecked_value_fill: [6]u8 = undefined;
+    choice.fillValuesFrom(&unchecked_value_fill_engine, &unchecked_value_fill);
+    try choice.fillValuesCheckedFrom(&checked_value_fill_engine, &checked_value_fill);
+    try std.testing.expectEqualSlices(u8, &unchecked_value_fill, &checked_value_fill);
+    try std.testing.expectEqual(unchecked_value_fill_engine.next(), checked_value_fill_engine.next());
+    var checked_values_engine = root.DefaultPrng.init(0xc0_290);
+    var unchecked_values_engine = root.DefaultPrng.init(0xc0_290);
+    const unchecked_values = try choice.valuesFrom(std.testing.allocator, &unchecked_values_engine, 6);
+    defer std.testing.allocator.free(unchecked_values);
+    const checked_values = try choice.valuesCheckedFrom(std.testing.allocator, &checked_values_engine, 6);
+    defer std.testing.allocator.free(checked_values);
+    try std.testing.expectEqualSlices(u8, unchecked_values, checked_values);
+    try std.testing.expectEqual(unchecked_values_engine.next(), checked_values_engine.next());
     var value_iter_engine = root.DefaultPrng.init(0xc0_28b);
     var value_iter_control = root.DefaultPrng.init(0xc0_28b);
     var value_iter = choice.valueIterFrom(&value_iter_engine);
@@ -32577,6 +32611,22 @@ test "distribution Choose sampler mirrors slice choices" {
         try std.testing.expectEqual(error.EmptyRange, err);
     }
     try std.testing.expect(!empty_alloc.has_induced_failure);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    var empty_checked_fill: [1]Empty = undefined;
+    if (empty_choice.fillValuesCheckedFrom(&empty_engine, &empty_checked_fill)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+    var empty_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (empty_choice.valuesCheckedFrom(empty_checked_alloc.allocator(), &empty_engine, 1)) |unexpected| {
+        empty_checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!empty_checked_alloc.has_induced_failure);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
     var empty_iter = empty_choice.valueIterFrom(&empty_engine);
     try std.testing.expect(empty_iter.next() == null);
