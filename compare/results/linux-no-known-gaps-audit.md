@@ -3015,3 +3015,10 @@ root item-accessor weighted value choice helpers now reject non-zero
 uninhabited value types before accessor weight evaluation, allocation, entropy,
 and value copying in scalar, fill, array, and batch value-choice paths. This
 improves failure determinism but does not resolve S4-M11.
+
+S4-M685 adds root index-weighted value choice empty-type prevalidation
+(`compare/results/s4-m685-root-weighted-by-index-value-empty-type-prevalidation.md`):
+root index-weighted value choice helpers now reject non-zero empty
+enum-containing value types before index-weight validation, allocation, entropy,
+and value copying in scalar, fill, array, and batch value-choice paths. This
+improves failure determinism but does not resolve S4-M11.

@@ -3357,11 +3357,13 @@ pub fn chooseWeightedPtrByChecked(comptime T: type, comptime Weight: type, io: s
 }
 
 pub fn chooseWeightedByIndex(comptime T: type, comptime Weight: type, io: std.Io, items: []const T, comptime weightFn: fn (usize) Weight) !?T {
+    if (items.len != 0 and comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const index = try weightedIndexByIndex(Weight, io, items.len, weightFn) orelse return null;
     return items[index];
 }
 
 pub fn chooseWeightedByIndexChecked(comptime T: type, comptime Weight: type, io: std.Io, items: []const T, comptime weightFn: fn (usize) Weight) !T {
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     return (try chooseWeightedByIndex(T, Weight, io, items, weightFn)) orelse error.EmptyInput;
 }
 
@@ -3420,6 +3422,7 @@ pub fn fillChooseWeightedByChecked(comptime T: type, comptime Weight: type, io: 
 
 pub fn fillChooseWeightedByIndex(comptime T: type, comptime Weight: type, io: std.Io, dest: []?T, items: []const T, comptime weightFn: fn (usize) Weight) !void {
     if (dest.len == 0) return;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     switch (try rootWeightedIndexStateByIndex(Weight, items.len, weightFn)) {
         .empty => {
             @memset(dest, @as(?T, null));
@@ -3438,6 +3441,7 @@ pub fn fillChooseWeightedByIndex(comptime T: type, comptime Weight: type, io: st
 
 pub fn fillChooseWeightedByIndexChecked(comptime T: type, comptime Weight: type, io: std.Io, dest: []T, items: []const T, comptime weightFn: fn (usize) Weight) !void {
     if (dest.len == 0) return;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     switch (try rootWeightedIndexStateByIndex(Weight, items.len, weightFn)) {
         .empty => return error.EmptyInput,
         .single => |index| {
@@ -3453,6 +3457,7 @@ pub fn fillChooseWeightedByIndexChecked(comptime T: type, comptime Weight: type,
 
 pub fn chooseWeightedBatchByIndex(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, comptime weightFn: fn (usize) Weight) ![]?T {
     if (count == 0) return allocator.alloc(?T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     switch (try rootWeightedIndexStateByIndex(Weight, items.len, weightFn)) {
         .empty => {
             const out = try allocator.alloc(?T, count);
@@ -3474,6 +3479,7 @@ pub fn chooseWeightedBatchByIndex(comptime T: type, comptime Weight: type, io: s
 
 pub fn chooseWeightedBatchByIndexChecked(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, comptime weightFn: fn (usize) Weight) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     switch (try rootWeightedIndexStateByIndex(Weight, items.len, weightFn)) {
         .empty => return error.EmptyInput,
         .single => |index| {
@@ -8566,11 +8572,25 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EmptyInput, chooseWeightedByIndexChecked(u8, f64, failing, &weighted_by_index_items, RootByIndexWeights.zero));
     try std.testing.expectEqual(@as(?u8, 20), try chooseWeightedByIndex(u8, f64, failing, &weighted_by_index_items, RootByIndexWeights.single));
     try std.testing.expectEqual(@as(u8, 20), try chooseWeightedByIndexChecked(u8, f64, failing, &weighted_by_index_items, RootByIndexWeights.single));
+    if (chooseWeightedByIndex(EmptyEnum, f64, failing, weighted_empty_enum_items, RootByIndexWeights.single)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    if (chooseWeightedByIndexChecked(EmptyEnum, f64, failing, weighted_empty_enum_items, RootByIndexWeights.single)) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
     try std.testing.expectError(error.InvalidWeight, chooseWeightedByIndex(u8, f64, failing, &weighted_by_index_items, RootByIndexWeights.invalid));
     var weighted_by_index_empty_fill: [0]?u8 = .{};
     try fillChooseWeightedByIndex(u8, f64, failing, &weighted_by_index_empty_fill, &weighted_by_index_items, RootByIndexWeights.invalid);
     var weighted_by_index_empty_checked_fill: [0]u8 = .{};
     try fillChooseWeightedByIndexChecked(u8, f64, failing, &weighted_by_index_empty_checked_fill, &weighted_by_index_items, RootByIndexWeights.invalid);
+    var weighted_by_index_empty_enum_fill: [1]?EmptyEnum = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseWeightedByIndex(EmptyEnum, f64, failing, &weighted_by_index_empty_enum_fill, weighted_empty_enum_items, RootByIndexWeights.single));
+    var weighted_by_index_empty_enum_checked_fill: [1]EmptyEnum = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseWeightedByIndexChecked(EmptyEnum, f64, failing, &weighted_by_index_empty_enum_checked_fill, weighted_empty_enum_items, RootByIndexWeights.single));
     var weighted_by_index_zero_fill: [3]?u8 = undefined;
     try fillChooseWeightedByIndex(u8, f64, failing, &weighted_by_index_zero_fill, &weighted_by_index_items, RootByIndexWeights.zero);
     try std.testing.expectEqualSlices(?u8, &.{ null, null, null }, &weighted_by_index_zero_fill);
@@ -8606,6 +8626,22 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.InvalidWeight, chooseWeightedBatchByIndex(u8, f64, failing, weighted_by_index_invalid_alloc.allocator(), 3, &weighted_by_index_items, RootByIndexWeights.invalid));
     var weighted_by_index_checked_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidWeight, chooseWeightedBatchByIndexChecked(u8, f64, failing, weighted_by_index_checked_invalid_alloc.allocator(), 3, &weighted_by_index_items, RootByIndexWeights.invalid));
+    var weighted_by_index_empty_enum_batch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchByIndex(EmptyEnum, f64, failing, weighted_by_index_empty_enum_batch_alloc.allocator(), 1, weighted_empty_enum_items, RootByIndexWeights.single)) |values| {
+        weighted_by_index_empty_enum_batch_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!weighted_by_index_empty_enum_batch_alloc.has_induced_failure);
+    var weighted_by_index_empty_enum_batch_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchByIndexChecked(EmptyEnum, f64, failing, weighted_by_index_empty_enum_batch_checked_alloc.allocator(), 1, weighted_empty_enum_items, RootByIndexWeights.single)) |values| {
+        weighted_by_index_empty_enum_batch_checked_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!weighted_by_index_empty_enum_batch_checked_alloc.has_induced_failure);
     try std.testing.expectEqual(@as(usize, 0), (try chooseWeightedValueArrayByIndex(u8, f64, failing, 0, &weighted_by_index_items, RootByIndexWeights.invalid)).?.len);
     try std.testing.expectEqual(@as(usize, 0), (try chooseWeightedValueArrayByIndexChecked(u8, f64, failing, 0, &weighted_by_index_items, RootByIndexWeights.invalid)).len);
     try std.testing.expectEqual(@as(?[3]u8, null), try chooseWeightedValueArrayByIndex(u8, f64, failing, 3, &weighted_by_index_items, RootByIndexWeights.zero));
