@@ -3275,6 +3275,20 @@ pub fn chooseWeightedBatchByIndexChecked(comptime T: type, comptime Weight: type
 }
 
 pub fn chooseWeightedBatchBy(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, comptime weightFn: fn (*const T) Weight) ![]?T {
+    if (count == 0) return allocator.alloc(?T, 0);
+    switch (try rootWeightedIndexStateBy(T, Weight, items, weightFn)) {
+        .empty => {
+            const out = try allocator.alloc(?T, count);
+            @memset(out, @as(?T, null));
+            return out;
+        },
+        .single => |index| {
+            const out = try allocator.alloc(?T, count);
+            @memset(out, @as(?T, items[index]));
+            return out;
+        },
+        .random => {},
+    }
     const out = try allocator.alloc(?T, count);
     errdefer allocator.free(out);
     try fillChooseWeightedBy(T, Weight, io, out, items, weightFn);
@@ -3283,6 +3297,15 @@ pub fn chooseWeightedBatchBy(comptime T: type, comptime Weight: type, io: std.Io
 
 pub fn chooseWeightedBatchByChecked(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, comptime weightFn: fn (*const T) Weight) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
+    switch (try rootWeightedIndexStateBy(T, Weight, items, weightFn)) {
+        .empty => return error.EmptyInput,
+        .single => |index| {
+            const out = try allocator.alloc(T, count);
+            @memset(out, items[index]);
+            return out;
+        },
+        .random => {},
+    }
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     try fillChooseWeightedByChecked(T, Weight, io, out, items, weightFn);
@@ -7688,6 +7711,8 @@ test "root random helpers validate deterministic cases before entropy" {
     defer std.testing.allocator.free(zero_weighted_value_by_batch);
     for (zero_weighted_value_by_batch) |value| try std.testing.expect(value == null);
     try std.testing.expectError(error.EmptyInput, chooseWeightedBatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.zero));
+    var weighted_value_by_checked_empty_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyInput, chooseWeightedBatchByChecked(RootItemWeights.Entry, f64, failing, weighted_value_by_checked_empty_alloc.allocator(), 3, &weighted_by_items, RootItemWeights.zero));
     const single_weighted_value_by_batch = try chooseWeightedBatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.single);
     defer std.testing.allocator.free(single_weighted_value_by_batch);
     for (single_weighted_value_by_batch) |value| try std.testing.expectEqual(@as(u8, 20), value.?.item);
@@ -7696,6 +7721,10 @@ test "root random helpers validate deterministic cases before entropy" {
     for (single_weighted_value_by_checked_batch) |value| try std.testing.expectEqual(@as(u8, 20), value.item);
     try std.testing.expectError(error.InvalidWeight, chooseWeightedBatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.invalid));
     try std.testing.expectError(error.InvalidWeight, chooseWeightedBatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.invalid));
+    var weighted_value_by_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedBatchBy(RootItemWeights.Entry, f64, failing, weighted_value_by_invalid_alloc.allocator(), 3, &weighted_by_items, RootItemWeights.invalid));
+    var weighted_value_by_checked_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidWeight, chooseWeightedBatchByChecked(RootItemWeights.Entry, f64, failing, weighted_value_by_checked_invalid_alloc.allocator(), 3, &weighted_by_items, RootItemWeights.invalid));
     try std.testing.expectEqual(@as(usize, 0), (try chooseWeightedValueArrayBy(RootItemWeights.Entry, f64, failing, 0, &weighted_by_items, RootItemWeights.invalid)).?.len);
     try std.testing.expectEqual(@as(usize, 0), (try chooseWeightedValueArrayByChecked(RootItemWeights.Entry, f64, failing, 0, &weighted_by_items, RootItemWeights.invalid)).len);
     try std.testing.expectEqual(@as(?[3]RootItemWeights.Entry, null), try chooseWeightedValueArrayBy(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.zero));

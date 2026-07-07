@@ -638,7 +638,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M597 root weighted value batch prevalidation | `src/root.zig`, `compare/results/s4-m597-root-weighted-value-batch-prevalidation.md` | Closed for the current bar: root weighted value batch helpers now prevalidate deterministic and invalid paths before random-output allocation and secure-engine construction. |
 | S4-M598 root weighted const-pointer batch prevalidation | `src/root.zig`, `compare/results/s4-m598-root-weighted-const-ptr-batch-prevalidation.md` | Closed for the current bar: root weighted const-pointer batch helpers now prevalidate deterministic and invalid paths before random-output allocation and secure-engine construction. |
 | S4-M599 root weighted mutable-pointer batch prevalidation | `src/root.zig`, `compare/results/s4-m599-root-weighted-mut-ptr-batch-prevalidation.md` | Closed for the current bar: root weighted mutable-pointer batch helpers now prevalidate deterministic and invalid paths before random-output allocation and secure-engine construction. |
-| S4-M600 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M600 root item-accessor weighted value batch prevalidation | `src/root.zig`, `compare/results/s4-m600-root-weighted-by-value-batch-prevalidation.md` | Closed for the current bar: root item-accessor weighted value batch helpers now prevalidate deterministic and invalid paths before random-output allocation and secure-engine construction. |
+| S4-M601 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1695,6 +1696,9 @@ long-term objective.
 S4-M599 additionally tightens root weighted mutable-pointer batch prevalidation;
 it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M600 additionally tightens root item-accessor weighted value batch
+prevalidation; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

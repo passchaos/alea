@@ -2362,3 +2362,10 @@ empty-range failures before random-output allocation and secure-engine
 construction for `chooseWeightedPtrBatch` and `chooseWeightedPtrBatchChecked`,
 while deterministic empty/single paths remain allocation-only and S4-M11 remains
 blocked.
+
+S4-M600 adds root item-accessor weighted value batch prevalidation
+(`compare/results/s4-m600-root-weighted-by-value-batch-prevalidation.md`): root
+system-entropy callers now get invalid-weight and checked empty-input failures
+before random-output allocation and secure-engine construction for
+`chooseWeightedBatchBy` and `chooseWeightedBatchByChecked`, while deterministic
+empty/single paths remain allocation-only and S4-M11 remains blocked.
