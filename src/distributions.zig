@@ -8,6 +8,20 @@ const distributions_module = @This();
 
 const native_f32_norm_r: f32 = @floatCast(std_ziggurat.norm_r);
 
+fn valueTypeHasEmptyEnum(comptime T: type) bool {
+    return switch (@typeInfo(T)) {
+        .@"enum" => std.enums.values(T).len == 0,
+        .array => |array_info| array_info.len != 0 and valueTypeHasEmptyEnum(array_info.child),
+        .@"struct" => |struct_info| blk: {
+            inline for (struct_info.fields) |field| {
+                if (valueTypeHasEmptyEnum(field.type)) break :blk true;
+            }
+            break :blk false;
+        },
+        else => false,
+    };
+}
+
 const native_f32_norm_ratio = blk: {
     var out: [256]f32 = undefined;
     for (&out, 0..) |*item, i| item.* = @floatCast(std_ziggurat.NormDist.x[i + 1] / std_ziggurat.NormDist.x[i]);
@@ -380,6 +394,8 @@ pub fn Choose(comptime T: type) type {
 
         pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
             std.debug.assert(self.items.len > 0);
+            if (dest.len == 0) return;
+            if (comptime valueTypeHasEmptyEnum(T)) return;
             if (self.items.len == 1) {
                 @memset(dest, self.items[0]);
                 return;
@@ -31797,6 +31813,15 @@ test "distribution Choose sampler mirrors slice choices" {
     singleton.fillValuesFrom(&singleton_engine, &singleton_values);
     for (singleton_values) |value| try std.testing.expectEqual(@as(u8, 30), value);
     try std.testing.expectEqual(singleton_control.next(), singleton_engine.next());
+
+    const Empty = enum {};
+    const empty_items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
+    const empty_choice = Choose(Empty).new(empty_items).?;
+    var empty_engine = root.DefaultPrng.init(0xc0_271);
+    var empty_control = root.DefaultPrng.init(0xc0_271);
+    var empty_values: [1]Empty = undefined;
+    empty_choice.fillValuesFrom(&empty_engine, &empty_values);
+    try std.testing.expectEqual(empty_control.next(), empty_engine.next());
 
     try std.testing.expect(Choose(u8).new(&.{}) == null);
     try std.testing.expectError(error.EmptyRange, Choose(u8).newChecked(&.{}));
