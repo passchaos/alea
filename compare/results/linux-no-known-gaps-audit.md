@@ -3259,3 +3259,9 @@ S4-M722 adds distribution-layer `Choose` checked iterator aliases
 distribution-layer `Choose` now has checked aliases for value, pointer, and usize
 index iterators, including empty-type failures for checked value iterators. This
 improves discoverability but does not resolve S4-M11.
+
+S4-M723 adds reusable `Choice` checked scalar values
+(`compare/results/s4-m723-choice-checked-values.md`): reusable `Choice` now has
+checked scalar value-copy helpers with seq-style empty-type failures before
+random-stream use and value copying. This improves fallible value-copy ergonomics
+but does not resolve S4-M11.
