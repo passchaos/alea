@@ -4878,6 +4878,15 @@ pub fn sampleIteratorCheckedFrom(allocator: std.mem.Allocator, source: anytype, 
     }
 
     var seen = amount;
+    if (exact_remaining) |remaining| {
+        while (seen < remaining) {
+            const item = iterator.next() orelse return out;
+            seen += 1;
+            const index = Rng.uintLessThanFrom(source, usize, seen);
+            if (index < amount) out[index] = item;
+        }
+        return out;
+    }
     while (iterator.next()) |item| {
         seen += 1;
         const index = Rng.uintLessThanFrom(source, usize, seen);
@@ -4909,6 +4918,15 @@ pub fn sampleIteratorFrom(allocator: std.mem.Allocator, source: anytype, comptim
     }
 
     var seen = reservoir.items.len;
+    if (exact_remaining) |remaining| {
+        while (seen < remaining) {
+            const item = iterator.next() orelse return reservoir.toOwnedSliceAssert();
+            seen += 1;
+            const index = Rng.uintLessThanFrom(source, usize, seen);
+            if (index < amount) reservoir.items[index] = item;
+        }
+        return reservoir.toOwnedSliceAssert();
+    }
     while (iterator.next()) |item| {
         seen += 1;
         const index = Rng.uintLessThanFrom(source, usize, seen);
@@ -12425,6 +12443,68 @@ test "exact-long iterator fills avoid trailing probe" {
     try sampleIteratorIntoCheckedFrom(&checked_engine, u8, &checked_iter, &checked_out);
     try sampleIteratorIntoCheckedFrom(&checked_ref_engine, u8, &checked_reference_iter, &checked_reference_out);
     try std.testing.expectEqualSlices(u8, &checked_reference_out, &checked_out);
+    try std.testing.expectEqual(@as(usize, 5), checked_iter.calls);
+    try std.testing.expectEqual(@as(usize, 6), checked_reference_iter.calls);
+    try std.testing.expectEqual(checked_ref_engine.next(), checked_engine.next());
+}
+
+test "exact-long iterator samples avoid trailing probe" {
+    const alea = @import("root.zig");
+
+    const ExactIter = struct {
+        items: []const u8,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+    const PlainIter = struct {
+        items: []const u8,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?u8 {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const item = self.items[self.index];
+            self.index += 1;
+            return item;
+        }
+    };
+
+    const items = [_]u8{ 1, 2, 3, 4, 5 };
+    var engine = alea.ScalarPrng.init(0x5150_7842);
+    var reference = alea.ScalarPrng.init(0x5150_7842);
+    var iter = ExactIter{ .items = &items };
+    var reference_iter = PlainIter{ .items = &items };
+    const sample = try sampleIteratorFrom(std.testing.allocator, &engine, u8, &iter, 2);
+    defer std.testing.allocator.free(sample);
+    const reference_sample = try sampleIteratorFrom(std.testing.allocator, &reference, u8, &reference_iter, 2);
+    defer std.testing.allocator.free(reference_sample);
+    try std.testing.expectEqualSlices(u8, reference_sample, sample);
+    try std.testing.expectEqual(@as(usize, 5), iter.calls);
+    try std.testing.expectEqual(@as(usize, 6), reference_iter.calls);
+    try std.testing.expectEqual(reference.next(), engine.next());
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_7843);
+    var checked_ref_engine = alea.ScalarPrng.init(0x5150_7843);
+    var checked_iter = ExactIter{ .items = &items };
+    var checked_reference_iter = PlainIter{ .items = &items };
+    const checked = try sampleIteratorCheckedFrom(std.testing.allocator, &checked_engine, u8, &checked_iter, 2);
+    defer std.testing.allocator.free(checked);
+    const checked_reference = try sampleIteratorCheckedFrom(std.testing.allocator, &checked_ref_engine, u8, &checked_reference_iter, 2);
+    defer std.testing.allocator.free(checked_reference);
+    try std.testing.expectEqualSlices(u8, checked_reference, checked);
     try std.testing.expectEqual(@as(usize, 5), checked_iter.calls);
     try std.testing.expectEqual(@as(usize, 6), checked_reference_iter.calls);
     try std.testing.expectEqual(checked_ref_engine.next(), checked_engine.next());

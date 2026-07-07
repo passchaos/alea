@@ -3682,3 +3682,10 @@ seq/root caller-owned unweighted iterator fills now bound exact-long reservoir
 continuation by the known remaining count, avoiding an extra trailing null probe
 while preserving stream shape. This improves iterator fill reliability evidence
 but does not resolve S4-M11.
+
+S4-M785 avoids allocation-returning iterator sample exact-long end probes
+(`compare/results/s4-m785-iterator-sample-exact-long-end-probe.md`):
+seq/root allocation-returning unweighted iterator samples now bound exact-long
+reservoir continuation by the known remaining count, avoiding an extra trailing
+null probe while preserving stream shape. This improves iterator sampling
+reliability evidence but does not resolve S4-M11.
