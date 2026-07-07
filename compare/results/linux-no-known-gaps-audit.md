@@ -2743,3 +2743,12 @@ before validating empty choice sets or relying on assertions in
 `fillChooseFrom`, `fillChooseConstPtrFrom`, `fillChoosePtrFrom`,
 `fillChooseIndexFrom`, and `fillChooseIndexU32From`. This improves no-op
 determinism but does not resolve S4-M11.
+
+S4-M651 adds `Rng` weighted nullable batch prevalidation
+(`compare/results/s4-m651-rng-weighted-nullable-batch-prevalidation.md`):
+unchecked weighted nullable fill/batch helpers now resolve invalid weights,
+all-zero weights, single-positive weights, u32 length limits, and empty outputs
+before repeated one-shot sampling and avoid unnecessary random-stream use for
+weighted index, u32 weighted index, weighted value, const-pointer, and
+mutable-pointer nullable batch workflows. This improves failure/result
+determinism but does not resolve S4-M11.
