@@ -2918,3 +2918,11 @@ enum-containing value types before index sampling and value copying in
 `chooseMultipleIntoFrom` and `chooseMultipleIntoCheckedFrom`; `sampleItemsInto`
 aliases inherit the same behavior. This improves failure determinism but does
 not resolve S4-M11.
+
+S4-M673 adds `seq` owned value sample empty-type prevalidation
+(`compare/results/s4-m673-seq-owned-value-empty-type-prevalidation.md`): `seq`
+allocation-returning no-replacement value sample helpers now reject non-zero
+empty enum-containing value types before output/index allocation and
+random-stream use in `chooseMultipleFrom` and `chooseMultipleCheckedFrom`;
+`sampleItems` aliases inherit the same behavior. This improves failure
+determinism but does not resolve S4-M11.

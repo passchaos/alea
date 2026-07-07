@@ -1255,11 +1255,14 @@ pub fn sampleItemsIterCheckedFrom(allocator: std.mem.Allocator, source: anytype,
 
 pub fn chooseMultipleCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
     if (amount > items.len) return error.InvalidParameter;
+    if (amount != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     return chooseMultipleFrom(allocator, source, T, items, amount);
 }
 
 pub fn chooseMultipleFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
     const count = @min(amount, items.len);
+    if (count == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
 
@@ -12920,6 +12923,55 @@ test "chooseMultipleInto fills caller-owned item buffers" {
     try std.testing.expectEqual(@as(usize, 0), try chooseMultipleIntoFrom(&empty_engine, u8, &items, &empty_out, &empty_indices));
     try chooseMultipleIntoCheckedFrom(&empty_engine, u8, &items, &empty_out, &empty_indices);
     try std.testing.expectEqual(empty_control.next(), empty_engine.next());
+}
+
+test "chooseMultiple owned samples validate empty value types before allocation" {
+    const alea = @import("root.zig");
+    const Empty = enum {};
+    const items = @as([*]const Empty, @ptrFromInt(0x1000))[0..1];
+
+    var engine = alea.ScalarPrng.init(0x5150_c10e);
+    var control = alea.ScalarPrng.init(0x5150_c10e);
+
+    var unchecked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseMultipleFrom(unchecked_alloc.allocator(), &engine, Empty, items, 1)) |unexpected| {
+        unchecked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!unchecked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseMultipleCheckedFrom(checked_alloc.allocator(), &engine, Empty, items, 1)) |unexpected| {
+        checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var sample_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleItemsFrom(sample_alloc.allocator(), &engine, Empty, items, 1)) |unexpected| {
+        sample_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!sample_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var sample_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (sampleItemsCheckedFrom(sample_checked_alloc.allocator(), &engine, Empty, items, 1)) |unexpected| {
+        sample_checked_alloc.allocator().free(unexpected);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyInput, err);
+    }
+    try std.testing.expect(!sample_checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "chooseMultipleInto validates empty value types before sampling" {
