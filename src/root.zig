@@ -3317,12 +3317,14 @@ pub fn weightedIndexU32ArrayChecked(io: std.Io, comptime N: usize, weights: []co
 
 pub fn chooseWeighted(comptime T: type, io: std.Io, items: []const T, weights: []const f64) !?T {
     if (items.len != weights.len) return error.InvalidParameter;
+    if (items.len != 0 and comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const index = try weightedIndexChecked(io, weights) orelse return null;
     return items[index];
 }
 
 pub fn chooseWeightedChecked(comptime T: type, io: std.Io, items: []const T, weights: []const f64) !T {
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     const index = try weightedIndexChecked(io, weights) orelse return error.EmptyRange;
     return items[index];
 }
@@ -3922,6 +3924,7 @@ pub fn chooseWeightedPtrArrayByIndexChecked(comptime T: type, comptime Weight: t
 pub fn fillChooseWeighted(comptime T: type, io: std.Io, dest: []?T, items: []const T, weights: []const f64) !void {
     if (dest.len == 0) return;
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     var indices: [64]?usize = undefined;
     if (dest.len <= indices.len) {
         try fillWeightedIndex(io, indices[0..dest.len], weights);
@@ -3934,6 +3937,7 @@ pub fn fillChooseWeighted(comptime T: type, io: std.Io, dest: []?T, items: []con
 pub fn fillChooseWeightedChecked(comptime T: type, io: std.Io, dest: []T, items: []const T, weights: []const f64) !void {
     if (dest.len == 0) return;
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     var indices: [64]usize = undefined;
     if (dest.len <= indices.len) {
         try fillWeightedIndexChecked(io, indices[0..dest.len], weights);
@@ -3946,6 +3950,7 @@ pub fn fillChooseWeightedChecked(comptime T: type, io: std.Io, dest: []T, items:
 pub fn chooseWeightedBatch(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]?T {
     if (count == 0) return allocator.alloc(?T, 0);
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     switch (try rootWeightedIndexStateAllowEmpty(weights)) {
         .empty => {
             const out = try allocator.alloc(?T, count);
@@ -3968,6 +3973,7 @@ pub fn chooseWeightedBatch(comptime T: type, io: std.Io, allocator: std.mem.Allo
 pub fn chooseWeightedBatchChecked(comptime T: type, io: std.Io, allocator: std.mem.Allocator, count: usize, items: []const T, weights: []const f64) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
     if (items.len != weights.len) return error.InvalidParameter;
+    if (comptime rootValueTypeHasEmptyEnum(T)) return error.EmptyRange;
     switch (try rootWeightedIndexState(weights)) {
         .single => |index| {
             const out = try allocator.alloc(T, count);
@@ -8943,6 +8949,36 @@ test "root random helpers validate deterministic cases before entropy" {
     const weighted_single_items = [_]u8{ 10, 20, 30 };
     try std.testing.expectEqual(@as(?u8, null), try chooseWeighted(u8, failing, &weighted_single_items, &empty_weights));
     try std.testing.expectEqual(@as(?[3]u8, null), try chooseWeightedValueArray(u8, failing, 3, &weighted_single_items, &empty_weights));
+    if (chooseWeighted(EmptyEnum, failing, weighted_empty_enum_items, &.{1})) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    if (chooseWeightedChecked(EmptyEnum, failing, weighted_empty_enum_items, &.{1})) |_| {
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    var weighted_empty_enum_fill: [1]?EmptyEnum = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseWeighted(EmptyEnum, failing, &weighted_empty_enum_fill, weighted_empty_enum_items, &.{1}));
+    var weighted_empty_enum_fill_checked: [1]EmptyEnum = undefined;
+    try std.testing.expectError(error.EmptyRange, fillChooseWeightedChecked(EmptyEnum, failing, &weighted_empty_enum_fill_checked, weighted_empty_enum_items, &.{1}));
+    var weighted_empty_enum_batch_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatch(EmptyEnum, failing, weighted_empty_enum_batch_alloc.allocator(), 1, weighted_empty_enum_items, &.{1})) |values| {
+        weighted_empty_enum_batch_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!weighted_empty_enum_batch_alloc.has_induced_failure);
+    var weighted_empty_enum_batch_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    if (chooseWeightedBatchChecked(EmptyEnum, failing, weighted_empty_enum_batch_checked_alloc.allocator(), 1, weighted_empty_enum_items, &.{1})) |values| {
+        weighted_empty_enum_batch_checked_alloc.allocator().free(values);
+        return error.TestExpectedError;
+    } else |err| {
+        try std.testing.expectEqual(error.EmptyRange, err);
+    }
+    try std.testing.expect(!weighted_empty_enum_batch_checked_alloc.has_induced_failure);
     var choose_weighted_empty_array_failed = false;
     if (chooseWeightedValueArray(EmptyEnum, failing, 1, weighted_empty_enum_items, &.{1})) |_| {
         return error.TestExpectedError;

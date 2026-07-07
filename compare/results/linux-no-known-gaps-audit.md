@@ -3022,3 +3022,10 @@ root index-weighted value choice helpers now reject non-zero empty
 enum-containing value types before index-weight validation, allocation, entropy,
 and value copying in scalar, fill, array, and batch value-choice paths. This
 improves failure determinism but does not resolve S4-M11.
+
+S4-M686 adds root weighted value choice empty-type prevalidation
+(`compare/results/s4-m686-root-weighted-value-empty-type-prevalidation.md`):
+root parallel-weight value choice helpers now reject non-zero empty
+enum-containing value types before weighted-index sampling, allocation, entropy,
+and value copying in scalar, fill, array, and batch value-choice paths. This
+improves failure determinism but does not resolve S4-M11.
