@@ -1379,6 +1379,29 @@ pub fn sampleWeightedIndicesU32ByChecked(comptime T: type, comptime Weight: type
     return try seq.sampleWeightedIndicesU32ByChecked(allocator, random_source, T, Weight, items, amount, weightFn);
 }
 
+pub fn sampleWeightedIndexVecBy(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize, comptime weightFn: fn (*const T) Weight) !IndexVec {
+    if (amount == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
+    if (items.len == 0) return error.EmptyInput;
+    const state = try rootPositiveItemStateBy(T, Weight, items, weightFn);
+    const count = @min(amount, state.count);
+    if (count == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
+    if (state.count == 1) return try rootIndexVecSingle(allocator, items.len, state.single_index.?);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedIndexVecBy(allocator, random_source, T, Weight, items, amount, weightFn);
+}
+
+pub fn sampleWeightedIndexVecByChecked(comptime T: type, comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, items: []const T, amount: usize, comptime weightFn: fn (*const T) Weight) !IndexVec {
+    if (amount == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
+    if (amount > items.len) return error.InvalidParameter;
+    const state = try rootPositiveItemStateBy(T, Weight, items, weightFn);
+    if (state.count < amount) return error.InvalidParameter;
+    if (state.count == 1 and amount == 1) return try rootIndexVecSingle(allocator, items.len, state.single_index.?);
+    var engine = try secure(io);
+    const random_source = Rng.init(&engine);
+    return try seq.sampleWeightedIndexVecByChecked(allocator, random_source, T, Weight, items, amount, weightFn);
+}
+
 pub fn sampleWeightedIndexVec(comptime Weight: type, io: std.Io, allocator: std.mem.Allocator, weights: []const Weight, amount: usize) !IndexVec {
     if (amount == 0) return .{ .u32 = try allocator.alloc(u32, 0) };
     if (weights.len == 0) return error.EmptyInput;
@@ -6182,6 +6205,25 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqualSlices(u32, &.{1}, single_weighted_by_checked_indices_u32_nr);
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesU32By(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 2, RootItemWeights.invalid));
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesU32ByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 2, RootItemWeights.invalid));
+    const empty_weighted_by_index_vec_nr = try sampleWeightedIndexVecBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 0, RootItemWeights.invalid);
+    defer empty_weighted_by_index_vec_nr.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 0), empty_weighted_by_index_vec_nr.len());
+    try std.testing.expectError(error.EmptyInput, sampleWeightedIndexVecBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, &.{}, 1, RootItemWeights.single));
+    const zero_weighted_by_index_vec_nr = try sampleWeightedIndexVecBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 2, RootItemWeights.zero);
+    defer zero_weighted_by_index_vec_nr.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 0), zero_weighted_by_index_vec_nr.len());
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexVecByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 2, RootItemWeights.zero));
+    const single_weighted_by_index_vec_nr = try sampleWeightedIndexVecBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 2, RootItemWeights.single);
+    defer single_weighted_by_index_vec_nr.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 1), single_weighted_by_index_vec_nr.len());
+    try std.testing.expectEqual(@as(usize, 1), single_weighted_by_index_vec_nr.at(0));
+    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexVecByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 2, RootItemWeights.single));
+    const single_weighted_by_checked_index_vec_nr = try sampleWeightedIndexVecByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 1, RootItemWeights.single);
+    defer single_weighted_by_checked_index_vec_nr.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 1), single_weighted_by_checked_index_vec_nr.len());
+    try std.testing.expectEqual(@as(usize, 1), single_weighted_by_checked_index_vec_nr.at(0));
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexVecBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 2, RootItemWeights.invalid));
+    try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexVecByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 2, RootItemWeights.invalid));
     const empty_weighted_by_values_nr = try sampleWeightedBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 0, RootItemWeights.invalid);
     defer std.testing.allocator.free(empty_weighted_by_values_nr);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_by_values_nr.len);
@@ -7293,6 +7335,8 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, weighted_by_items[0..2], 2, RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesU32By(RootItemWeights.Entry, f64, failing, std.testing.allocator, weighted_by_items[0..2], 2, RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndicesU32ByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, weighted_by_items[0..2], 2, RootItemWeights.weight));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndexVecBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, weighted_by_items[0..2], 2, RootItemWeights.weight));
+    try std.testing.expectError(error.EntropyUnavailable, sampleWeightedIndexVecByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, weighted_by_items[0..2], 2, RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, weighted_by_items[0..2], 2, RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, weighted_by_items[0..2], 2, RootItemWeights.weight));
     try std.testing.expectError(error.EntropyUnavailable, sampleWeightedPtrsBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, weighted_by_items[0..2], 2, RootItemWeights.weight));

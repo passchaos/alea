@@ -2154,3 +2154,9 @@ helpers (`compare/results/s4-m568-root-weighted-by-u32-index-sample-helpers.md`)
 system-entropy callers can now allocate no-replacement weighted compact `u32`
 index samples directly from an item slice and comptime item-weight accessor from
 the root API while S4-M11 remains blocked.
+
+S4-M569 adds root item-accessor weighted no-replacement IndexVec sample helpers
+(`compare/results/s4-m569-root-weighted-by-index-vec-sample-helpers.md`):
+system-entropy callers can now allocate no-replacement weighted `IndexVec`
+samples directly from an item slice and comptime item-weight accessor from the
+root API while S4-M11 remains blocked.
