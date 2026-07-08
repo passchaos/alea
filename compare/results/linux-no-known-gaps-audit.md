@@ -4781,3 +4781,9 @@ S4-M946 routes static AliasTable fixed-array helpers directly
 AliasTable checked and compact `u32` fixed-array helpers now construct stack
 arrays and fill directly instead of routing through other array wrappers. This
 improves weighted-index fixed-array ergonomics but does not resolve S4-M11.
+
+S4-M947 routes static AliasTable checked iterator constructors directly
+(`compare/results/s4-m947-aliastable-checked-iterator-direct.md`):
+AliasTable `iterChecked`, `iterCheckedFrom`, and `iterU32Checked` now construct
+iterator payloads directly instead of routing through iterator wrappers. This
+improves weighted-index checked iterator ergonomics but does not resolve S4-M11.

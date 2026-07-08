@@ -17800,11 +17800,11 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, usize) {
-            return self.iter(rng);
+            return rng.sampleIter(usize, self);
         }
 
         pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
-            return self.iterFrom(source);
+            return Rng.sampleIterFrom(source, usize, self);
         }
 
         pub fn iterU32(self: Self, rng: Rng) U32IndexIterator(Rng) {
@@ -17816,7 +17816,8 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn iterU32Checked(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
-            return self.iterU32CheckedFrom(rng);
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            return .{ .source = rng, .table = self };
         }
 
         pub fn iterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
