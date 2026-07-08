@@ -4309,3 +4309,10 @@ S4-M875 draws reusable Pert fills through cached beta-parameter bulk delegation
 Pert.fillFrom now fills beta variates with cached alpha/beta values and then
 affine-maps them in place instead of routing every output through Pert.sampleFrom.
 This improves Pert reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M876 draws reusable Kumaraswamy generic fills through direct inverse-CDF
+transforms (`compare/results/s4-m876-kumaraswamy-fill-direct-transform.md`):
+Kumaraswamy.fillFrom now draws open-uniform values and applies the generic
+Kumaraswamy transform directly instead of routing every output through
+Kumaraswamy.sampleFrom, while retaining edge fast paths. This improves
+Kumaraswamy reusable fill ergonomics but does not resolve S4-M11.

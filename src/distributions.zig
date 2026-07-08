@@ -12422,7 +12422,10 @@ pub fn Kumaraswamy(comptime T: type) type {
                 .generic => {},
             }
 
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const u = Rng.floatOpenFrom(source, T);
+                item.* = std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
+            }
         }
 
         fn isDegenerate(self: Self) bool {
@@ -32196,6 +32199,23 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), kumaraswamy_sampler.maxValue(), 0);
     kumaraswamy_sampler.fillFrom(&direct_engine, &direct_kumaraswamy_buf);
     for (direct_kumaraswamy_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    var kumaraswamy_fill_engine = alea.ScalarPrng.init(0x5876_0001);
+    var kumaraswamy_loop_engine = alea.ScalarPrng.init(0x5876_0001);
+    var kumaraswamy_fill: [10]f64 = undefined;
+    var kumaraswamy_loop: [10]f64 = undefined;
+    kumaraswamy_sampler.fillFrom(&kumaraswamy_fill_engine, &kumaraswamy_fill);
+    for (&kumaraswamy_loop) |*slot| slot.* = kumaraswamy_sampler.sampleFrom(&kumaraswamy_loop_engine);
+    try std.testing.expectEqualSlices(f64, &kumaraswamy_loop, &kumaraswamy_fill);
+    try std.testing.expectEqual(kumaraswamy_loop_engine.next(), kumaraswamy_fill_engine.next());
+    var kumaraswamy_f32_fill_engine = alea.ScalarPrng.init(0x5876_f32);
+    var kumaraswamy_f32_loop_engine = alea.ScalarPrng.init(0x5876_f32);
+    const kumaraswamy_f32_sampler = try Kumaraswamy(f32).init(2, 5);
+    var kumaraswamy_f32_fill: [11]f32 = undefined;
+    var kumaraswamy_f32_loop: [11]f32 = undefined;
+    kumaraswamy_f32_sampler.fillFrom(&kumaraswamy_f32_fill_engine, &kumaraswamy_f32_fill);
+    for (&kumaraswamy_f32_loop) |*slot| slot.* = kumaraswamy_f32_sampler.sampleFrom(&kumaraswamy_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &kumaraswamy_f32_loop, &kumaraswamy_f32_fill);
+    try std.testing.expectEqual(kumaraswamy_f32_loop_engine.next(), kumaraswamy_f32_fill_engine.next());
     const direct_checked_kumaraswamy = try kumaraswamyCheckedFrom(&direct_engine, f64, 2, 5);
     try std.testing.expect(direct_checked_kumaraswamy >= 0 and direct_checked_kumaraswamy <= 1);
     try std.testing.expectError(error.InvalidParameter, kumaraswamyCheckedFrom(&direct_engine, f64, 0, 5));
