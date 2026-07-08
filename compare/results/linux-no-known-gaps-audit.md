@@ -5384,3 +5384,10 @@ S4-M1034 routes reusable scalar Normal facade fills directly
 (`compare/results/s4-m1034-normal-fill-facade-direct.md`): `Normal(T).fill` now
 calls facade `Rng.fillNormal` directly instead of routing through `fillFrom`. This
 improves Normal fill facade ergonomics but does not resolve S4-M11.
+
+S4-M1035 routes reusable scalar/vector native-f32 Normal facade helpers directly
+(`compare/results/s4-m1035-native-f32-normal-facade-direct.md`):
+`NormalNativeF32.sample` / `fill` and `VectorNormalNativeF32.sample` / `fill` now
+call native-f32 facade helpers directly instead of routing through `sampleFrom` /
+`fillFrom` wrappers. This improves native-f32 Normal facade ergonomics but does
+not resolve S4-M11.
