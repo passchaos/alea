@@ -4652,3 +4652,10 @@ S4-M927 routes reusable WeightedChoice iterator facade constructors directly
 WeightedChoice pointer/value/index/u32 iterator facade helpers now construct
 iterators directly instead of routing through direct-source iterator wrappers.
 This improves reusable weighted iterator ergonomics but does not resolve S4-M11.
+
+S4-M928 routes distribution Choose checked direct-source iterator constructors
+directly (`compare/results/s4-m928-distribution-choose-checked-iterator-from-direct.md`):
+Choose pointer/value/index/u32 checked direct-source iterator helpers now construct
+iterators directly instead of routing through unchecked direct-source iterator
+wrappers. This improves checked direct-source iterator ergonomics but does not
+resolve S4-M11.
