@@ -405,7 +405,15 @@ pub const UnicodeCharset = struct {
             @memset(out, self.scalars[0]);
             return;
         }
-        for (out) |*scalar| scalar.* = self.sampleFrom(source);
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const scalar_count: u64 = @intCast(self.scalars.len);
+            for (out) |*scalar| {
+                const index = Rng.uintLessThanFrom(source, u64, scalar_count);
+                scalar.* = self.scalars[@intCast(index)];
+            }
+            return;
+        }
+        for (out) |*scalar| scalar.* = self.scalars[Rng.uintLessThanFrom(source, usize, self.scalars.len)];
     }
 
     pub fn sampleString(self: UnicodeCharset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
@@ -987,6 +995,14 @@ test "unicode charset helpers preserve direct stream shape" {
         symbols.fillFrom(&direct_engine, &direct_buf);
         try std.testing.expectEqualSlices(u21, &facade_buf, &direct_buf);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        var fill_engine = Engine.init(0x5150_b003);
+        var loop_engine = Engine.init(0x5150_b003);
+        var fill_values: [16]u21 = undefined;
+        var loop_values: [16]u21 = undefined;
+        symbols.fillFrom(&fill_engine, &fill_values);
+        for (&loop_values) |*scalar| scalar.* = symbols.sampleFrom(&loop_engine);
+        try std.testing.expectEqualSlices(u21, &loop_values, &fill_values);
+        try std.testing.expectEqual(loop_engine.next(), fill_engine.next());
 
         try symbols.fillChecked(rng, &facade_buf);
         try symbols.fillCheckedFrom(&direct_engine, &direct_buf);

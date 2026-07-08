@@ -4341,3 +4341,9 @@ S4-M880 draws reusable ASCII Charset fills through direct uniform index sampling
 Charset.fillFrom now draws uniform indexes and maps into the byte slice directly
 instead of routing every byte through Charset.sampleFrom. This improves ASCII
 Charset reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M881 draws reusable UnicodeCharset fills through direct uniform index sampling
+(`compare/results/s4-m881-unicode-charset-fill-direct-index.md`):
+UnicodeCharset.fillFrom now draws uniform indexes and maps into the scalar slice
+directly instead of routing every scalar through UnicodeCharset.sampleFrom. This
+improves UnicodeCharset reusable fill ergonomics but does not resolve S4-M11.
