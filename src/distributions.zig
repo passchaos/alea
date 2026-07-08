@@ -11608,7 +11608,10 @@ pub fn VectorStudentT(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.dofValue() == std.math.inf(Child)) return vectorStandardNormal(rng, VectorType);
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -11619,7 +11622,18 @@ pub fn VectorStudentT(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.dofValue() == std.math.inf(Child)) {
+                fillVectorStandardNormal(rng, VectorType, dest);
+                return;
+            }
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+                    const standard_normal_draw = Rng.normalFastFrom(rng, Child, 0, 1);
+                    out[lane] = standard_normal_draw * @sqrt(self.sampler.dof / self.sampler.chi_squared_sampler.sample(rng));
+                }
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -11688,7 +11702,8 @@ pub fn StudentT(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.dof == std.math.inf(T)) return Rng.standardNormalFastFrom(rng, T);
+            return Rng.normalFastFrom(rng, T, 0, 1) * @sqrt(self.dof / self.chi_squared_sampler.sample(rng));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -11697,7 +11712,14 @@ pub fn StudentT(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.dof == std.math.inf(T)) {
+                for (dest) |*item| item.* = Rng.standardNormalFastFrom(rng, T);
+                return;
+            }
+            for (dest) |*item| {
+                const standard_normal_draw = Rng.normalFastFrom(rng, T, 0, 1);
+                item.* = standard_normal_draw * @sqrt(self.dof / self.chi_squared_sampler.sample(rng));
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {

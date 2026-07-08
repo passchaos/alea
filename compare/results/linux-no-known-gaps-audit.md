@@ -5208,3 +5208,10 @@ FisherF checked/nonchecked sample/fill helpers now construct reusable FisherF
 samplers and call facade `sample` / `fill` directly instead of routing through
 `From` wrappers. This improves FisherF top-level facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1010 routes reusable scalar/vector StudentT facade helpers directly
+(`compare/results/s4-m1010-student-t-sampler-facade-direct.md`):
+`StudentT.sample` / `fill` and `VectorStudentT.sample` / `fill` now draw
+standard-normal and cached ChiSquared values directly through facade `Rng`
+instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
+StudentT sampler facade ergonomics but does not resolve S4-M11.
