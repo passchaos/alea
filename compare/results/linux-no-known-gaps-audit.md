@@ -4347,3 +4347,9 @@ S4-M881 draws reusable UnicodeCharset fills through direct uniform index samplin
 UnicodeCharset.fillFrom now draws uniform indexes and maps into the scalar slice
 directly instead of routing every scalar through UnicodeCharset.sampleFrom. This
 improves UnicodeCharset reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M882 draws UnicodeCharset UTF-8 appends through direct uniform index sampling
+(`compare/results/s4-m882-unicode-charset-append-direct-index.md`):
+UnicodeCharset.appendStringFrom now draws uniform indexes and encodes selected
+scalars directly instead of routing every scalar through UnicodeCharset.sampleFrom.
+This improves UnicodeCharset string append ergonomics but does not resolve S4-M11.

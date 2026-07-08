@@ -449,10 +449,31 @@ pub const UnicodeCharset = struct {
         try self.validateNonEmpty();
         try string_buffer.ensureUnusedCapacity(allocator, try self.utf8Capacity(length));
 
+        if (self.scalars.len == 1) {
+            var buf: [4]u8 = undefined;
+            const written = std.unicode.utf8Encode(self.scalars[0], &buf) catch unreachable;
+            var i: usize = 0;
+            while (i < length) : (i += 1) string_buffer.appendSliceAssumeCapacity(buf[0..written]);
+            return;
+        }
+
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const scalar_count: u64 = @intCast(self.scalars.len);
+            var i: usize = 0;
+            while (i < length) : (i += 1) {
+                const index = Rng.uintLessThanFrom(source, u64, scalar_count);
+                var buf: [4]u8 = undefined;
+                const written = std.unicode.utf8Encode(self.scalars[@intCast(index)], &buf) catch unreachable;
+                string_buffer.appendSliceAssumeCapacity(buf[0..written]);
+            }
+            return;
+        }
+
         var i: usize = 0;
         while (i < length) : (i += 1) {
+            const index = Rng.uintLessThanFrom(source, usize, self.scalars.len);
             var buf: [4]u8 = undefined;
-            const written = std.unicode.utf8Encode(self.sampleFrom(source), &buf) catch unreachable;
+            const written = std.unicode.utf8Encode(self.scalars[index], &buf) catch unreachable;
             string_buffer.appendSliceAssumeCapacity(buf[0..written]);
         }
     }
@@ -1033,6 +1054,23 @@ test "unicode charset helpers preserve direct stream shape" {
         try symbols.appendStringFrom(std.testing.allocator, &direct_engine, &direct_list, 7);
         try std.testing.expectEqualSlices(u8, facade_list.items, direct_list.items);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+        var append_fill_engine = Engine.init(0x5150_b004);
+        var append_loop_engine = Engine.init(0x5150_b004);
+        var append_direct = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+        defer append_direct.deinit(std.testing.allocator);
+        try append_direct.appendSlice(std.testing.allocator, "q=");
+        var append_loop = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+        defer append_loop.deinit(std.testing.allocator);
+        try append_loop.appendSlice(std.testing.allocator, "q=");
+        try symbols.appendStringFrom(std.testing.allocator, &append_fill_engine, &append_direct, 7);
+        var append_i: usize = 0;
+        while (append_i < 7) : (append_i += 1) {
+            var buf: [4]u8 = undefined;
+            const written = std.unicode.utf8Encode(symbols.sampleFrom(&append_loop_engine), &buf) catch unreachable;
+            try append_loop.appendSlice(std.testing.allocator, buf[0..written]);
+        }
+        try std.testing.expectEqualSlices(u8, append_loop.items, append_direct.items);
+        try std.testing.expectEqual(append_loop_engine.next(), append_fill_engine.next());
 
         try symbols.appendStringChecked(std.testing.allocator, rng, &facade_list, 7);
         try symbols.appendStringCheckedFrom(std.testing.allocator, &direct_engine, &direct_list, 7);
