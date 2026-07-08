@@ -2678,7 +2678,12 @@ pub const Hypergeometric = struct {
     }
 
     pub fn sample(self: *const Hypergeometric, rng: Rng) u64 {
-        return self.sampleFrom(rng);
+        return switch (self.method) {
+            .constant => self.constant,
+            .draw_loop => hypergeometricDrawLoopFrom(rng, self.population, self.successes, self.draws),
+            .inverse_transform => self.inverse_transform.sampleFrom(rng),
+            .rejection_acceptance => self.rejection_acceptance.sampleFrom(rng),
+        };
     }
 
     pub fn sampleFrom(self: *const Hypergeometric, source: anytype) u64 {
@@ -2691,7 +2696,18 @@ pub const Hypergeometric = struct {
     }
 
     pub fn fill(self: *const Hypergeometric, rng: Rng, dest: []u64) void {
-        self.fillFrom(rng, dest);
+        switch (self.method) {
+            .constant => @memset(dest, self.constant),
+            .draw_loop => {
+                for (dest) |*item| item.* = hypergeometricDrawLoopFrom(rng, self.population, self.successes, self.draws);
+            },
+            .inverse_transform => {
+                for (dest) |*item| item.* = self.inverse_transform.sampleFrom(rng);
+            },
+            .rejection_acceptance => {
+                for (dest) |*item| item.* = self.rejection_acceptance.sampleFrom(rng);
+            },
+        }
     }
 
     pub fn fillFrom(self: *const Hypergeometric, source: anytype, dest: []u64) void {

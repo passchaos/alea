@@ -4970,3 +4970,9 @@ S4-M975 routes top-level vector NegativeBinomial facade helpers directly
 and sample/fill through reusable vector facade samplers instead of routing through
 `From` wrappers. This improves vector NegativeBinomial top-level facade ergonomics
 but does not resolve S4-M11.
+
+S4-M976 routes reusable Hypergeometric facade sample/fill helpers directly
+(`compare/results/s4-m976-hypergeometric-sampler-facade-direct.md`):
+Hypergeometric `sample` and `fill` now dispatch directly to the selected method
+instead of routing through direct-source wrappers. This improves Hypergeometric
+sampler ergonomics but does not resolve S4-M11.
