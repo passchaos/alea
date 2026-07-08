@@ -5308,3 +5308,10 @@ S4-M1023 routes reusable scalar/vector Weibull facade helpers directly
 strict-open uniform values directly through facade `Rng` instead of routing
 through `sampleFrom` / `fillFrom` wrappers. This improves Weibull sampler facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1024 routes reusable scalar/vector Gumbel facade helpers directly
+(`compare/results/s4-m1024-gumbel-sampler-facade-direct.md`): `Gumbel.sample` /
+`fill` and `VectorGumbel.sample` / `fill` now draw open-closed uniform values and
+apply the Gumbel transform directly through facade `Rng` instead of routing
+through `sampleFrom` / `fillFrom` wrappers. This improves Gumbel sampler facade
+ergonomics but does not resolve S4-M11.

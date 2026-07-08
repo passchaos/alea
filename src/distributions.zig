@@ -15329,7 +15329,9 @@ pub fn VectorGumbel(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
+            const uniform_vec = rng.vectorOpenClosed(VectorType);
+            return gumbelFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -15339,7 +15341,14 @@ pub fn VectorGumbel(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.locationValue())));
+                return;
+            }
+            for (dest) |*item| {
+                const uniform_vec = rng.vectorOpenClosed(VectorType);
+                item.* = gumbelFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -15408,7 +15417,9 @@ pub fn Gumbel(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return self.location;
+            const u = rng.floatOpenClosed(T);
+            return self.location - self.scale * @log(-@log(u));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -15416,7 +15427,12 @@ pub fn Gumbel(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, self.location);
+                return;
+            }
+            rng.fillOpenClosed(T, dest);
+            gumbelFromOpenClosedUniforms(T, dest, self.location, self.scale);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
