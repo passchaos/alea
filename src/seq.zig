@@ -9151,11 +9151,13 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []*const T) void {
+            if (dest.len == 0) return;
+            const items = self.items;
             if (self.table.constantIndex()) |index| {
-                @memset(dest, &self.items[index]);
+                @memset(dest, &items[index]);
                 return;
             }
-            for (dest) |*slot| slot.* = self.sampleFrom(source);
+            for (dest) |*slot| slot.* = &items[self.table.sampleFrom(source)];
         }
 
         pub fn fillChecked(self: Self, rng: Rng, dest: []*const T) Error!void {
@@ -9173,11 +9175,12 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
             if (dest.len == 0) return;
             if (comptime valueTypeHasEmptyEnum(T)) return;
+            const items = self.items;
             if (self.table.constantIndex()) |index| {
-                @memset(dest, self.items[index]);
+                @memset(dest, items[index]);
                 return;
             }
-            for (dest) |*slot| slot.* = self.sampleValueFrom(source);
+            for (dest) |*slot| slot.* = items[self.table.sampleFrom(source)];
         }
 
         pub fn fillValuesChecked(self: Self, rng: Rng, dest: []T) Error!void {
@@ -20791,6 +20794,14 @@ test "weighted choice sampler maps alias indexes to items" {
     var pointer_buf: [8]*const []const u8 = undefined;
     choice.fillFrom(&engine, &pointer_buf);
     for (pointer_buf) |item| try std.testing.expect(!std.mem.eql(u8, item.*, "never"));
+    var pointer_direct_engine = alea.DefaultPrng.init(0xc0_ef38);
+    var pointer_index_engine = alea.DefaultPrng.init(0xc0_ef38);
+    var pointer_direct: [8]*const []const u8 = undefined;
+    var pointer_indices: [8]usize = undefined;
+    choice.fillFrom(&pointer_direct_engine, &pointer_direct);
+    choice.fillIndicesFrom(&pointer_index_engine, &pointer_indices);
+    for (pointer_direct, pointer_indices) |ptr, index| try std.testing.expectEqual(&labels[index], ptr);
+    try std.testing.expectEqual(pointer_index_engine.next(), pointer_direct_engine.next());
     const owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &engine, 8);
     defer std.testing.allocator.free(owned_ptrs);
     try std.testing.expectEqual(@as(usize, 8), owned_ptrs.len);
@@ -20820,6 +20831,14 @@ test "weighted choice sampler maps alias indexes to items" {
     var value_buf: [8][]const u8 = undefined;
     choice.fillValuesFrom(&engine, &value_buf);
     for (value_buf) |value| try std.testing.expect(!std.mem.eql(u8, value, "never"));
+    var value_direct_engine = alea.DefaultPrng.init(0xc0_ef39);
+    var value_index_engine = alea.DefaultPrng.init(0xc0_ef39);
+    var value_direct: [8][]const u8 = undefined;
+    var value_indices: [8]usize = undefined;
+    choice.fillValuesFrom(&value_direct_engine, &value_direct);
+    choice.fillIndicesFrom(&value_index_engine, &value_indices);
+    for (value_direct, value_indices) |value, index| try std.testing.expectEqualSlices(u8, labels[index], value);
+    try std.testing.expectEqual(value_index_engine.next(), value_direct_engine.next());
     const owned_values = try choice.valuesFrom(std.testing.allocator, &engine, 8);
     defer std.testing.allocator.free(owned_values);
     try std.testing.expectEqual(@as(usize, 8), owned_values.len);

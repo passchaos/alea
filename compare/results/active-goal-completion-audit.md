@@ -842,7 +842,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M801 IndexVec copyIntoU32 no-partial-write prevalidation | `src/seq.zig`, `compare/results/s4-m801-indexvec-copyintou32-prevalidation.md` | Closed for the current bar: IndexVec native-to-u32 caller-owned copying now rejects oversized indexes before modifying output. |
 | S4-M802 IndexVec next direct backing paths | `src/seq.zig`, `compare/results/s4-m802-indexvec-next-direct-backing.md` | Closed for the current bar: IndexVec borrowed and consuming iterator `next()` calls now read directly from backing storage. |
 | S4-M803 Choice fill direct index mapping | `src/seq.zig`, `src/distributions.zig`, `compare/results/s4-m803-choice-fill-direct-index-mapping.md` | Closed for the current bar: reusable and distribution-layer unweighted choice pointer/value fills now map generated indexes directly into item storage. |
-| S4-M804 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M804 WeightedChoice fill direct index mapping | `src/seq.zig`, `compare/results/s4-m804-weightedchoice-fill-direct-index-mapping.md` | Closed for the current bar: reusable weighted choice pointer/value fills now map sampled alias indexes directly into item storage. |
+| S4-M805 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2549,6 +2550,10 @@ S4-M803 additionally maps unweighted choice pointer/value fills directly from
 generated indexes to item storage for reusable and distribution-layer choices,
 reducing per-slot wrapper calls while preserving stream shape; it is reliability/
 ergonomics work and does not resolve S4-M11 or complete the long-term objective.
+S4-M804 additionally maps reusable WeightedChoice pointer/value fills directly
+from alias-table sampled indexes to item storage, reducing per-slot wrapper calls
+while preserving weighted stream shape; it is reliability/ergonomics work and
+does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

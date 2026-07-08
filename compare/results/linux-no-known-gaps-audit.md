@@ -3808,3 +3808,10 @@ seq reusable `Choice` and distribution-layer `Choose` pointer/value fills now
 generate indexes and map directly into item storage instead of routing each slot
 through sample wrappers. This improves unweighted choice fill ergonomics but does
 not resolve S4-M11.
+
+S4-M804 maps WeightedChoice fills directly from alias indexes
+(`compare/results/s4-m804-weightedchoice-fill-direct-index-mapping.md`):
+seq reusable `WeightedChoice` pointer/value fills now sample alias-table indexes
+and map directly into item storage instead of routing each slot through sample
+wrappers. This improves weighted choice fill ergonomics but does not resolve
+S4-M11.
