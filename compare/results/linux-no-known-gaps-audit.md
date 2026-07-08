@@ -4801,3 +4801,10 @@ WeightedTree and WeightedIntTree checked iterator constructors now build iterato
 payloads directly after validation instead of routing through unchecked iterator
 wrappers. This improves dynamic weighted-index checked iterator ergonomics but
 does not resolve S4-M11.
+
+S4-M950 routes dynamic weighted-tree checked compact iterator constructors directly
+(`compare/results/s4-m950-weighted-tree-checked-u32-iterator-direct.md`):
+WeightedTree and WeightedIntTree checked compact iterator constructors now build
+iterator payloads directly after width and validity checks instead of routing
+through iterator wrappers. This improves dynamic weighted-index compact iterator
+ergonomics but does not resolve S4-M11.

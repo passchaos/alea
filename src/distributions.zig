@@ -18525,13 +18525,15 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn iterU32Checked(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
-            return self.iterU32CheckedFrom(rng);
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (!self.isValid()) return error.InvalidWeight;
+            return .{ .source = rng, .tree = self };
         }
 
         pub fn iterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             if (!self.isValid()) return error.InvalidWeight;
-            return self.iterU32From(source);
+            return .{ .source = source, .tree = self };
         }
 
         pub fn U32IndexIterator(comptime Source: type) type {
@@ -19387,13 +19389,15 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn iterU32Checked(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
-            return self.iterU32CheckedFrom(rng);
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (!self.isValid()) return error.InvalidWeight;
+            return .{ .source = rng, .tree = self };
         }
 
         pub fn iterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             if (!self.isValid()) return error.InvalidWeight;
-            return self.iterU32From(source);
+            return .{ .source = source, .tree = self };
         }
 
         pub fn U32IndexIterator(comptime Source: type) type {
