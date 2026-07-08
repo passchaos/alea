@@ -5148,3 +5148,9 @@ scalar/vector ChiSquared checked/nonchecked sample/fill helpers now construct
 reusable ChiSquared samplers and call facade `sample` / `fill` directly instead
 of routing through `From` wrappers. This improves ChiSquared top-level facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1001 routes reusable scalar/vector Chi facade helpers directly
+(`compare/results/s4-m1001-chi-sampler-facade-direct.md`): `Chi.sample` / `fill`
+and `VectorChi.sample` / `fill` now dispatch through cached ChiSquared facade
+samplers directly instead of routing through `sampleFrom` / `fillFrom` wrappers.
+This improves Chi sampler facade ergonomics but does not resolve S4-M11.

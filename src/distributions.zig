@@ -10367,7 +10367,10 @@ pub fn VectorChi(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(0);
+            var out = (VectorChiSquared(VectorType){ .sampler = self.sampler.chi_squared_sampler }).sample(rng);
+            out = @sqrt(out);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -10378,7 +10381,12 @@ pub fn VectorChi(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            (VectorChiSquared(VectorType){ .sampler = self.sampler.chi_squared_sampler }).fill(rng, dest);
+            for (dest) |*item| item.* = @sqrt(item.*);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -10435,7 +10443,8 @@ pub fn Chi(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return 0;
+            return @sqrt(self.chi_squared_sampler.sample(rng));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -10444,7 +10453,12 @@ pub fn Chi(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
+            self.chi_squared_sampler.fill(rng, dest);
+            for (dest) |*item| item.* = @sqrt(item.*);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
