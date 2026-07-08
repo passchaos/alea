@@ -388,8 +388,14 @@ pub const IndexVec = union(enum) {
     pub fn valuesInto(self: IndexVec, comptime T: type, items: []const T, out: []T) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
         if (out.len != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-        var position: usize = 0;
-        while (position < self.len()) : (position += 1) out[position] = items[self.at(position)];
+        switch (self) {
+            .u32 => |indices| for (indices, out) |item_index, *slot| {
+                slot.* = items[item_index];
+            },
+            .usize => |indices| for (indices, out) |item_index, *slot| {
+                slot.* = items[item_index];
+            },
+        }
     }
 
     pub fn valuesIntoChecked(self: IndexVec, comptime T: type, items: []const T, out: []T) Error!void {
@@ -413,8 +419,14 @@ pub const IndexVec = union(enum) {
 
     pub fn ptrsInto(self: IndexVec, comptime T: type, items: []const T, out: []*const T) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
-        var position: usize = 0;
-        while (position < self.len()) : (position += 1) out[position] = &items[self.at(position)];
+        switch (self) {
+            .u32 => |indices| for (indices, out) |item_index, *slot| {
+                slot.* = &items[item_index];
+            },
+            .usize => |indices| for (indices, out) |item_index, *slot| {
+                slot.* = &items[item_index];
+            },
+        }
     }
 
     pub fn ptrsIntoChecked(self: IndexVec, comptime T: type, items: []const T, out: []*const T) Error!void {
@@ -436,8 +448,14 @@ pub const IndexVec = union(enum) {
 
     pub fn mutPtrsInto(self: IndexVec, comptime T: type, items: []T, out: []*T) Error!void {
         if (out.len != self.len()) return error.LengthMismatch;
-        var position: usize = 0;
-        while (position < self.len()) : (position += 1) out[position] = &items[self.at(position)];
+        switch (self) {
+            .u32 => |indices| for (indices, out) |item_index, *slot| {
+                slot.* = &items[item_index];
+            },
+            .usize => |indices| for (indices, out) |item_index, *slot| {
+                slot.* = &items[item_index];
+            },
+        }
     }
 
     pub fn mutPtrsIntoChecked(self: IndexVec, comptime T: type, items: []T, out: []*T) Error!void {

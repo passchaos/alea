@@ -3738,3 +3738,10 @@ seq non-owned IndexVec value/const-pointer/mutable-pointer iterator fills now
 bulk-fill sampled indices before mapping them to outputs, and base IndexVec
 iterator fills copy index ranges directly. This improves indexed-sample iterator
 fill reliability/ergonomics evidence but does not resolve S4-M11.
+
+S4-M793 uses switch-once IndexVec caller-owned mapping loops
+(`compare/results/s4-m793-indexvec-mapped-into-switch-once.md`):
+seq IndexVec value/const-pointer/mutable-pointer caller-owned mappings now switch
+once on compact/native backing and map outputs directly, avoiding per-slot union
+dispatch through `at()`. This improves indexed-sample mapping reliability and
+ergonomics evidence but does not resolve S4-M11.
