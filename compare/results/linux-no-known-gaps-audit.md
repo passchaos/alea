@@ -5366,3 +5366,10 @@ S4-M1031 routes reusable scalar/vector Zeta facade helpers directly
 through facade `Rng` instead of routing through `sampleFrom` / `fillFrom`
 wrappers. This improves Zeta sampler facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1032 routes reusable MappedSampler facade helpers directly
+(`compare/results/s4-m1032-mapped-sampler-facade-direct.md`): `MappedSampler.sample`
+and `MappedSampler.fill` now draw from the wrapped sampler through facade `Rng`
+and apply the mapper directly instead of routing through `sampleFrom` /
+`fillFrom` wrappers. This improves mapped-sampler facade ergonomics but does not
+resolve S4-M11.

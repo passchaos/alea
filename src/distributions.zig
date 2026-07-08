@@ -266,7 +266,7 @@ pub fn MappedSampler(comptime Sampler: type, comptime Mapper: type, comptime In:
         mapper: Mapper,
 
         pub fn sample(self: Self, rng: Rng) Out {
-            return self.sampleFrom(rng);
+            return applyMapper(Out, self.mapper, rng.sample(In, self.sampler));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) Out {
@@ -274,7 +274,7 @@ pub fn MappedSampler(comptime Sampler: type, comptime Mapper: type, comptime In:
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []Out) void {
-            self.fillFrom(rng, dest);
+            for (dest) |*item| item.* = applyMapper(Out, self.mapper, rng.sample(In, self.sampler));
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []Out) void {
