@@ -4428,3 +4428,9 @@ S4-M894 routes AliasTable checked sampling through direct alias-table branches
 AliasTable.sampleCheckedFrom now avoids the unchecked sampleFrom wrapper while
 preserving stream shape. This improves AliasTable checked sampling ergonomics but
 does not resolve S4-M11.
+
+S4-M895 routes AliasTable compact checked sampling through direct u32 branches
+(`compare/results/s4-m895-aliastable-u32-checked-direct.md`):
+AliasTable.sampleU32CheckedFrom now avoids sampleFrom plus cast and uses the same
+compact branch shape as u32 fills. This improves AliasTable compact checked
+sampling ergonomics but does not resolve S4-M11.
