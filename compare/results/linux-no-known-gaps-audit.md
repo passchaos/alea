@@ -4565,3 +4565,11 @@ S4-M914 routes reusable Choice checked array facades through direct filling
 Choice ptr/value/index/u32 checked fixed-array facade helpers now fill directly
 instead of routing through direct-source checked array wrappers. This improves
 reusable checked fixed-array ergonomics but does not resolve S4-M11.
+
+S4-M915 routes reusable WeightedChoice checked array facades through direct
+alias-table filling
+(`compare/results/s4-m915-weightedchoice-checked-array-facade-direct.md`):
+WeightedChoice ptr/value/index/u32 checked fixed-array facade helpers now fill
+directly instead of routing through direct-source checked array wrappers. This
+improves reusable weighted checked fixed-array ergonomics but does not resolve
+S4-M11.
