@@ -4614,3 +4614,9 @@ allocation and filling
 WeightedChoice ptr/value/index/u32 allocation-returning facade helpers now allocate
 and fill directly instead of routing through direct-source owned wrappers. This
 improves reusable weighted owned-batch ergonomics but does not resolve S4-M11.
+
+S4-M922 routes distribution Choose checked iterator facade constructors directly
+(`compare/results/s4-m922-distribution-choose-checked-iterator-facade-direct.md`):
+Choose pointer/value/index/u32 checked iterator facade helpers now construct
+iterators directly instead of routing through direct-source checked iterator
+wrappers. This improves checked iterator ergonomics but does not resolve S4-M11.

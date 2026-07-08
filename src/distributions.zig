@@ -614,7 +614,7 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn ptrIterChecked(self: Self, rng: Rng) Error!PtrIterator(Rng) {
-            return self.ptrIterCheckedFrom(rng);
+            return .{ .source = rng, .choice = self };
         }
 
         pub fn ptrIterCheckedFrom(self: Self, source: anytype) Error!PtrIterator(@TypeOf(source)) {
@@ -816,7 +816,7 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indexIterChecked(self: Self, rng: Rng) Error!IndexIterator(Rng) {
-            return self.indexIterCheckedFrom(rng);
+            return .{ .source = rng, .choice = self };
         }
 
         pub fn indexIterCheckedFrom(self: Self, source: anytype) Error!IndexIterator(@TypeOf(source)) {
@@ -833,7 +833,8 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indexIterU32Checked(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
-            return self.indexIterU32CheckedFrom(rng);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            return .{ .source = rng, .choice = self };
         }
 
         pub fn indexIterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
@@ -985,7 +986,8 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn valueIterChecked(self: Self, rng: Rng) Error!ValueIterator(Rng) {
-            return self.valueIterCheckedFrom(rng);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+            return .{ .source = rng, .choice = self };
         }
 
         pub fn valueIterCheckedFrom(self: Self, source: anytype) Error!ValueIterator(@TypeOf(source)) {
@@ -1026,7 +1028,7 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, *const T) {
-            return self.iter(rng);
+            return rng.sampleIter(*const T, self);
         }
 
         pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
