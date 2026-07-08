@@ -4053,3 +4053,11 @@ ChiSquared.fillFrom now delegates to the cached Gamma sampler's fill path,
 reusing Gamma's shape-specific bulk handling (including shape-one standard
 exponential staging) instead of routing every output through ChiSquared.sampleFrom.
 This improves ChiSquared reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M840 delegates reusable VectorChiSquared fills to cached VectorGamma fills
+(`compare/results/s4-m840-vector-chi-squared-fill-gamma-delegate.md`):
+VectorChiSquared.fillFrom now delegates to VectorGamma over the cached Gamma
+sampler, reusing vector Gamma's shape-specific bulk handling (including shape-one
+standard-vector-exponential staging) instead of routing every output through
+VectorChiSquared.sampleFrom. This improves VectorChiSquared reusable fill
+ergonomics but does not resolve S4-M11.
