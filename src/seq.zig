@@ -9353,7 +9353,10 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn ptrsCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]*const T {
-            return self.ptrsFrom(allocator, source, amount);
+            const out = try allocator.alloc(*const T, amount);
+            errdefer allocator.free(out);
+            try self.fillCheckedFrom(source, out);
+            return out;
         }
 
         pub fn values(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]T {
@@ -9384,7 +9387,12 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn valuesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]T {
-            return self.valuesFrom(allocator, source, amount);
+            if (amount == 0) return allocator.alloc(T, 0);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            const out = try allocator.alloc(T, amount);
+            errdefer allocator.free(out);
+            try self.fillValuesCheckedFrom(source, out);
+            return out;
         }
 
         pub fn valueArray(self: Self, rng: Rng, comptime N: usize) [N]T {
@@ -9595,7 +9603,10 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
-            return self.indicesFrom(allocator, source, amount);
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            try self.fillIndicesCheckedFrom(source, out);
+            return out;
         }
 
         pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
@@ -9623,7 +9634,11 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
-            return self.indicesU32From(allocator, source, amount);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillIndicesU32CheckedFrom(source, out);
+            return out;
         }
 
         pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
@@ -20660,6 +20675,30 @@ test "Choice owned u32 indices reject oversized population before allocation" {
 
     var engine = alea.ScalarPrng.init(0x5150_c0f0);
     var control = alea.ScalarPrng.init(0x5150_c0f0);
+
+    var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, choice.indicesU32From(alloc.allocator(), &engine, 1));
+    try std.testing.expect(!alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, choice.indicesU32CheckedFrom(checked_alloc.allocator(), &engine, 1));
+    try std.testing.expect(!checked_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "WeightedChoice owned u32 indices reject oversized population before allocation" {
+    const alea = @import("root.zig");
+    const oversized_len = @as(usize, std.math.maxInt(u32)) + 1;
+    const oversized_items = @as([*]const u8, @ptrFromInt(0x1000))[0..oversized_len];
+    var choice = WeightedChoice(u8, u32){
+        .items = oversized_items,
+        .table = try distributions.AliasTable(u32).init(std.testing.allocator, &.{1}),
+    };
+    defer choice.deinit();
+
+    var engine = alea.ScalarPrng.init(0x5150_c0f1);
+    var control = alea.ScalarPrng.init(0x5150_c0f1);
 
     var alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidParameter, choice.indicesU32From(alloc.allocator(), &engine, 1));

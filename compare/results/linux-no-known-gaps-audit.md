@@ -4687,3 +4687,10 @@ Choice pointer/value/index/u32 checked direct-source allocation-returning helper
 now allocate and fill directly instead of routing through unchecked direct-source
 owned wrappers. This improves reusable checked direct-source owned-batch ergonomics
 but does not resolve S4-M11.
+
+S4-M933 routes reusable WeightedChoice checked direct-source owned helpers directly
+(`compare/results/s4-m933-weightedchoice-checked-owned-from-direct.md`):
+WeightedChoice pointer/value/index/u32 checked direct-source allocation-returning
+helpers now allocate and fill directly instead of routing through unchecked
+direct-source owned wrappers. This improves reusable weighted checked
+direct-source owned-batch ergonomics but does not resolve S4-M11.

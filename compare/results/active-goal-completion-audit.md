@@ -971,7 +971,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M930 WeightedChoice checked iterator From direct constructors | `src/seq.zig`, `compare/results/s4-m930-weightedchoice-checked-iterator-from-direct.md` | Closed for the current bar: reusable WeightedChoice checked direct-source iterator constructors now build iterators directly. |
 | S4-M931 Distribution Choose checked owned From direct paths | `src/distributions.zig`, `compare/results/s4-m931-distribution-choose-checked-owned-from-direct.md` | Closed for the current bar: distribution Choose checked direct-source allocation-returning helpers now allocate and fill directly. |
 | S4-M932 Choice checked owned From direct paths | `src/seq.zig`, `compare/results/s4-m932-choice-checked-owned-from-direct.md` | Closed for the current bar: reusable Choice checked direct-source allocation-returning helpers now allocate and fill directly. |
-| S4-M933 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M933 WeightedChoice checked owned From direct paths | `src/seq.zig`, `compare/results/s4-m933-weightedchoice-checked-owned-from-direct.md` | Closed for the current bar: reusable WeightedChoice checked direct-source allocation-returning helpers now allocate and fill directly. |
+| S4-M934 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3238,6 +3239,11 @@ filling after prevalidation, preserving stream shape while avoiding unchecked
 direct-source owned wrapper aliases; it is reliability/ergonomics work and does
 not resolve S4-M11 or complete the long-term objective.
 S4-M932 additionally routes reusable Choice direct-source checked
+allocation-returning helpers through direct allocation and checked direct-source
+filling after prevalidation, preserving stream shape while avoiding unchecked
+direct-source owned wrapper aliases; it is reliability/ergonomics work and does
+not resolve S4-M11 or complete the long-term objective.
+S4-M933 additionally routes reusable WeightedChoice direct-source checked
 allocation-returning helpers through direct allocation and checked direct-source
 filling after prevalidation, preserving stream shape while avoiding unchecked
 direct-source owned wrapper aliases; it is reliability/ergonomics work and does
