@@ -929,7 +929,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M888 Choice sample direct index mapping | `src/seq.zig`, `compare/results/s4-m888-choice-sample-direct-index.md` | Closed for the current bar: reusable Choice scalar pointer samples now generate a uniform index and map into item storage directly. |
 | S4-M889 Charset probability iterator direct fill | `src/ascii.zig`, `compare/results/s4-m889-charset-probability-fill-direct.md` | Closed for the current bar: ASCII and Unicode charset probability iterator fills now write uniform probabilities directly. |
 | S4-M890 WeightedChoice compact index sample direct table path | `src/seq.zig`, `compare/results/s4-m890-weightedchoice-u32-sample-table-direct.md` | Closed for the current bar: reusable WeightedChoice compact index samples now call the underlying AliasTable compact sampler directly. |
-| S4-M891 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M891 AliasTable u32 index alias direct checked path | `src/distributions.zig`, `compare/results/s4-m891-aliastable-u32-index-alias-direct.md` | Closed for the current bar: AliasTable compact index alias now calls the checked u32 sampler directly. |
+| S4-M892 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3008,6 +3009,10 @@ S4-M890 additionally routes reusable WeightedChoice compact index sampling throu
 the underlying AliasTable u32 sampler directly, preserving stream shape while
 avoiding the usize sampleIndexFrom wrapper and cast; it is reliability/ergonomics
 work and does not resolve S4-M11 or complete the long-term objective.
+S4-M891 additionally routes AliasTable compact index aliases directly to the
+checked u32 sampler, preserving stream shape while avoiding an alias wrapper; it
+is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

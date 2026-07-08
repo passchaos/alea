@@ -4404,3 +4404,9 @@ AliasTable u32 path
 WeightedChoice.sampleIndexU32From now calls the underlying table's compact sampler
 instead of sampling a usize and casting. This improves WeightedChoice compact
 index sampling ergonomics but does not resolve S4-M11.
+
+S4-M891 routes AliasTable compact index aliases directly to the checked u32 sampler
+(`compare/results/s4-m891-aliastable-u32-index-alias-direct.md`):
+AliasTable.sampleIndexU32From now calls sampleU32CheckedFrom directly instead of
+routing through sampleU32From. This improves AliasTable compact index alias
+ergonomics but does not resolve S4-M11.

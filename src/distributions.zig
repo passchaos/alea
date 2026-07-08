@@ -17370,7 +17370,7 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sampleIndexU32From(self: Self, source: anytype) u32 {
-            return self.sampleU32From(source);
+            return self.sampleU32CheckedFrom(source) catch unreachable;
         }
 
         pub fn sampleU32CheckedFrom(self: Self, source: anytype) Error!u32 {
