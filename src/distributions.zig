@@ -12592,7 +12592,30 @@ pub fn VectorPowerFunction(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.minValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            switch (self.sampler.method) {
+                .point_max => {
+                    @memset(dest, @as(VectorType, @splat(self.maxValue())));
+                },
+                .uniform => {
+                    Rng.fillVectorRangeFrom(source, VectorType, dest, self.minValue(), self.maxValue());
+                },
+                .sqrt => {
+                    const min_vec: VectorType = @splat(self.minValue());
+                    const width_vec: VectorType = @splat(self.maxValue() - self.minValue());
+                    for (dest) |*item| {
+                        const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+                        item.* = min_vec + width_vec * @sqrt(uniform_vec);
+                    }
+                },
+                .generic => {
+                    const width = self.maxValue() - self.minValue();
+                    const inverse_shape = 1 / self.shapeValue();
+                    for (dest) |*item| {
+                        const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+                        item.* = powerFunctionFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), width, inverse_shape);
+                    }
+                },
+            }
         }
     };
 }
@@ -27372,6 +27395,23 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &power_function_buf_vec, &direct_power_function_buf_vec);
     for (power_function_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 2);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_power_function_fill_engine = alea.ScalarPrng.init(0x6856_0001);
+    var vector_power_function_loop_engine = alea.ScalarPrng.init(0x6856_0001);
+    var vector_power_function_fill: [3]@Vector(4, f64) = undefined;
+    var vector_power_function_loop: [3]@Vector(4, f64) = undefined;
+    vector_power_function_sampler.fillFrom(&vector_power_function_fill_engine, &vector_power_function_fill);
+    for (&vector_power_function_loop) |*slot| slot.* = vector_power_function_sampler.sampleFrom(&vector_power_function_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_power_function_loop, &vector_power_function_fill);
+    try std.testing.expectEqual(vector_power_function_loop_engine.next(), vector_power_function_fill_engine.next());
+    var vector_power_function_f32_fill_engine = alea.ScalarPrng.init(0x6856_f32);
+    var vector_power_function_f32_loop_engine = alea.ScalarPrng.init(0x6856_f32);
+    const vector_power_function_f32 = try VectorPowerFunction(@Vector(8, f32)).init(-1, 2, 3);
+    var vector_power_function_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_power_function_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_power_function_f32.fillFrom(&vector_power_function_f32_fill_engine, &vector_power_function_f32_fill);
+    for (&vector_power_function_f32_loop) |*slot| slot.* = vector_power_function_f32.sampleFrom(&vector_power_function_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_power_function_f32_loop, &vector_power_function_f32_fill);
+    try std.testing.expectEqual(vector_power_function_f32_loop_engine.next(), vector_power_function_f32_fill_engine.next());
 
     const vector_power_function_uniform = try VectorPowerFunction(@Vector(4, f64)).init(-1, 2, 1);
     const power_function_uniform_vec = vector_power_function_uniform.sample(rng);
@@ -27379,6 +27419,12 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(power_function_uniform_vec, direct_power_function_uniform_vec);
     inline for (0..4) |lane| try std.testing.expect(power_function_uniform_vec[lane] >= -1 and power_function_uniform_vec[lane] < 2);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_power_function_uniform_fill_engine = alea.ScalarPrng.init(0x6856_1001);
+    var vector_power_function_uniform_loop_engine = alea.ScalarPrng.init(0x6856_1001);
+    vector_power_function_uniform.fillFrom(&vector_power_function_uniform_fill_engine, &vector_power_function_fill);
+    for (&vector_power_function_loop) |*slot| slot.* = vector_power_function_uniform.sampleFrom(&vector_power_function_uniform_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_power_function_loop, &vector_power_function_fill);
+    try std.testing.expectEqual(vector_power_function_uniform_loop_engine.next(), vector_power_function_uniform_fill_engine.next());
 
     const vector_power_function_sqrt = try VectorPowerFunction(@Vector(4, f64)).init(-1, 2, 2);
     const power_function_sqrt_vec = vector_power_function_sqrt.sample(rng);
@@ -27386,6 +27432,24 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(power_function_sqrt_vec, direct_power_function_sqrt_vec);
     inline for (0..4) |lane| try std.testing.expect(power_function_sqrt_vec[lane] >= -1 and power_function_sqrt_vec[lane] <= 2);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_power_function_sqrt_fill_engine = alea.ScalarPrng.init(0x6856_2001);
+    var vector_power_function_sqrt_loop_engine = alea.ScalarPrng.init(0x6856_2001);
+    vector_power_function_sqrt.fillFrom(&vector_power_function_sqrt_fill_engine, &vector_power_function_fill);
+    for (&vector_power_function_loop) |*slot| slot.* = vector_power_function_sqrt.sampleFrom(&vector_power_function_sqrt_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_power_function_loop, &vector_power_function_fill);
+    try std.testing.expectEqual(vector_power_function_sqrt_loop_engine.next(), vector_power_function_sqrt_fill_engine.next());
+    var vector_power_function_degenerate_engine = alea.ScalarPrng.init(0x6856_d00);
+    var vector_power_function_degenerate_control = alea.ScalarPrng.init(0x6856_d00);
+    const vector_power_function_degenerate = try VectorPowerFunction(@Vector(4, f64)).init(1.5, 1.5, 3);
+    vector_power_function_degenerate.fillFrom(&vector_power_function_degenerate_engine, &vector_power_function_fill);
+    for (vector_power_function_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
+    try std.testing.expectEqual(vector_power_function_degenerate_control.next(), vector_power_function_degenerate_engine.next());
+    var vector_power_function_point_max_engine = alea.ScalarPrng.init(0x6856_1af);
+    var vector_power_function_point_max_control = alea.ScalarPrng.init(0x6856_1af);
+    const vector_power_function_point_max = try VectorPowerFunction(@Vector(4, f64)).init(-1, 2, std.math.inf(f64));
+    vector_power_function_point_max.fillFrom(&vector_power_function_point_max_engine, &vector_power_function_fill);
+    for (vector_power_function_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(2)), vec);
+    try std.testing.expectEqual(vector_power_function_point_max_control.next(), vector_power_function_point_max_engine.next());
 
     const rayleigh_vec = try vectorRayleighChecked(rng, @Vector(4, f64), 2);
     const direct_rayleigh_vec = try vectorRayleighCheckedFrom(&direct_engine, @Vector(4, f64), 2);

@@ -4167,3 +4167,10 @@ VectorKumaraswamy.fillFrom now draws vector open-uniform values and applies the
 Kumaraswamy transform directly, including beta-one and alpha-one paths, instead
 of routing every output through VectorKumaraswamy.sampleFrom. This improves
 VectorKumaraswamy reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M856 draws reusable VectorPowerFunction fills through direct range/open-uniform
+transforms (`compare/results/s4-m856-vector-power-function-fill-direct-transform.md`):
+VectorPowerFunction.fillFrom now dispatches directly to point-max, uniform range,
+square-root, or generic power-function transform paths instead of routing every
+output through VectorPowerFunction.sampleFrom. This improves VectorPowerFunction
+reusable fill ergonomics but does not resolve S4-M11.
