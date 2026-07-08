@@ -4360,3 +4360,9 @@ direct alias-table sampling
 WeightedChoice.Iterator.nextValue now samples the underlying table and maps into
 item storage directly instead of routing through WeightedChoice.sampleFrom. This
 improves WeightedChoice iterator ergonomics but does not resolve S4-M11.
+
+S4-M884 draws reusable WeightedChoice scalar pointer samples through direct
+alias-table sampling (`compare/results/s4-m884-weightedchoice-sample-direct-table.md`):
+WeightedChoice.sampleFrom now samples the underlying table and maps into item
+storage directly instead of routing through sampleIndexFrom. This improves
+WeightedChoice scalar sampling ergonomics but does not resolve S4-M11.

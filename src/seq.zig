@@ -9094,7 +9094,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) *const T {
-            return &self.items[self.sampleIndexFrom(source)];
+            return &self.items[self.table.sampleFrom(source)];
         }
 
         pub fn sampleIndex(self: Self, rng: Rng) usize {
@@ -20701,6 +20701,11 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expect(saw_often);
     const direct_item = choice.sampleFrom(&engine);
     try std.testing.expect(!std.mem.eql(u8, direct_item.*, "never"));
+    var table_sample_engine = alea.DefaultPrng.init(0xc0_ef43);
+    var weighted_sample_engine = alea.DefaultPrng.init(0xc0_ef43);
+    const table_sample_index = choice.table.sampleFrom(&table_sample_engine);
+    try std.testing.expectEqual(&labels[table_sample_index], choice.sampleFrom(&weighted_sample_engine));
+    try std.testing.expectEqual(table_sample_engine.next(), weighted_sample_engine.next());
     const direct_index = choice.sampleIndexFrom(&engine);
     try std.testing.expect(direct_index == 1 or direct_index == 2);
     const direct_index_u32 = try choice.sampleIndexU32From(&engine);
