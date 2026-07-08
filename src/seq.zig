@@ -9119,7 +9119,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
-            return self.sampleIndexFrom(source);
+            return self.table.sampleCheckedFrom(source) catch unreachable;
         }
 
         pub fn sampleIndexU32(self: Self, rng: Rng) Error!u32 {
@@ -9136,7 +9136,8 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
-            return self.sampleIndexU32From(source);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            return self.table.sampleU32CheckedFrom(source) catch unreachable;
         }
 
         pub fn sampleValue(self: Self, rng: Rng) T {
@@ -9153,7 +9154,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn sampleValueCheckedFrom(self: Self, source: anytype) Error!T {
             if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-            return self.sampleValueFrom(source);
+            return self.items[self.table.sampleCheckedFrom(source) catch unreachable];
         }
 
         pub fn valueChecked(self: Self, rng: Rng) Error!T {
@@ -20755,6 +20756,13 @@ test "weighted choice sampler maps alias indexes to items" {
         try choice.sampleIndexCheckedFrom(&checked_index_engine),
     );
     try std.testing.expectEqual(unchecked_index_engine.next(), checked_index_engine.next());
+    var table_checked_index_engine = alea.DefaultPrng.init(0xc0_ef47);
+    var direct_checked_index_engine = alea.DefaultPrng.init(0xc0_ef47);
+    try std.testing.expectEqual(
+        try choice.table.sampleCheckedFrom(&table_checked_index_engine),
+        try choice.sampleIndexCheckedFrom(&direct_checked_index_engine),
+    );
+    try std.testing.expectEqual(table_checked_index_engine.next(), direct_checked_index_engine.next());
     var checked_index_fill_engine = alea.DefaultPrng.init(0xc0_ef17);
     var unchecked_index_fill_engine = alea.DefaultPrng.init(0xc0_ef17);
     var checked_index_fill: [8]usize = undefined;
@@ -20809,6 +20817,13 @@ test "weighted choice sampler maps alias indexes to items" {
         try choice.sampleIndexU32CheckedFrom(&checked_index_u32_engine),
     );
     try std.testing.expectEqual(unchecked_index_u32_engine.next(), checked_index_u32_engine.next());
+    var table_checked_index_u32_engine = alea.DefaultPrng.init(0xc0_ef48);
+    var direct_checked_index_u32_engine = alea.DefaultPrng.init(0xc0_ef48);
+    try std.testing.expectEqual(
+        try choice.table.sampleU32CheckedFrom(&table_checked_index_u32_engine),
+        try choice.sampleIndexU32CheckedFrom(&direct_checked_index_u32_engine),
+    );
+    try std.testing.expectEqual(table_checked_index_u32_engine.next(), direct_checked_index_u32_engine.next());
     var checked_index_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef20);
     var unchecked_index_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef20);
     var checked_index_u32_fill: [8]u32 = undefined;
@@ -20867,6 +20882,11 @@ test "weighted choice sampler maps alias indexes to items" {
     const checked_value = try choice.sampleValueCheckedFrom(&checked_value_engine);
     try std.testing.expectEqualSlices(u8, unchecked_value, checked_value);
     try std.testing.expectEqual(unchecked_value_engine.next(), checked_value_engine.next());
+    var table_checked_value_engine = alea.DefaultPrng.init(0xc0_ef49);
+    var direct_checked_value_engine = alea.DefaultPrng.init(0xc0_ef49);
+    const table_checked_value_index = try choice.table.sampleCheckedFrom(&table_checked_value_engine);
+    try std.testing.expectEqualSlices(u8, labels[table_checked_value_index], try choice.sampleValueCheckedFrom(&direct_checked_value_engine));
+    try std.testing.expectEqual(table_checked_value_engine.next(), direct_checked_value_engine.next());
     var ptr_iter_engine = alea.DefaultPrng.init(0xc0_ef09);
     var iter_engine = alea.DefaultPrng.init(0xc0_ef09);
     var ptr_iter = choice.ptrIterFrom(&ptr_iter_engine);

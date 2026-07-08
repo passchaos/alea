@@ -4461,3 +4461,11 @@ Choice.sampleValueCheckedFrom, sampleIndexCheckedFrom, and
 sampleIndexU32CheckedFrom now validate and then sample uniform indexes directly
 instead of routing through unchecked sample wrappers. This improves reusable
 checked slice choice ergonomics but does not resolve S4-M11.
+
+S4-M900 routes reusable WeightedChoice checked scalar samples through direct
+AliasTable sampling
+(`compare/results/s4-m900-weightedchoice-checked-sample-direct.md`):
+WeightedChoice.sampleValueCheckedFrom, sampleIndexCheckedFrom, and
+sampleIndexU32CheckedFrom now validate and then sample the underlying table
+directly instead of routing through unchecked sample wrappers. This improves
+reusable weighted checked choice ergonomics but does not resolve S4-M11.
