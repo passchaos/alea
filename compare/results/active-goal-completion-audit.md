@@ -1044,7 +1044,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1003 Erlang sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1003-erlang-sampler-facade-direct.md` | Closed for the current bar: reusable scalar/vector Erlang facade sample/fill helpers now avoid From wrappers. |
 | S4-M1004 Erlang top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m1004-erlang-top-level-facade-direct.md` | Closed for the current bar: scalar/vector top-level Erlang facade helpers now avoid From wrappers. |
 | S4-M1005 Beta sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1005-beta-sampler-facade-direct.md` | Closed for the current bar: reusable scalar Beta facade sample/fill helpers now avoid From wrappers. |
-| S4-M1006 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1006 VectorBeta sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1006-vector-beta-sampler-facade-direct.md` | Closed for the current bar: reusable VectorBeta facade sample/fill helpers now avoid From wrappers. |
+| S4-M1007 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3674,6 +3675,12 @@ through direct point-mass, uniform, square-root edge, and cached-Gamma-ratio
 paths, preserving stream shape, point-mass no-consume behavior, and zero-length
 checked fill semantics while avoiding `sampleFrom` / `fillFrom` wrapper aliases;
 it is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M1006 additionally routes reusable VectorBeta facade sample/fill helpers
+through direct cached scalar Beta facade lane sampling, preserving vector stream
+shape, point-mass no-consume behavior, and zero-length checked fill semantics
+while avoiding `sampleFrom` / `fillFrom` wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

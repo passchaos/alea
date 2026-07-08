@@ -10907,7 +10907,10 @@ pub fn VectorBeta(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -10918,7 +10921,15 @@ pub fn VectorBeta(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
+                return;
+            }
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {

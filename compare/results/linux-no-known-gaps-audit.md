@@ -5181,3 +5181,10 @@ S4-M1005 routes reusable scalar Beta facade helpers directly
 Gamma-ratio paths directly through facade `Rng` instead of routing through
 `sampleFrom` / `fillFrom` wrappers. This improves Beta sampler facade ergonomics
 but does not resolve S4-M11.
+
+S4-M1006 routes reusable VectorBeta facade helpers directly
+(`compare/results/s4-m1006-vector-beta-sampler-facade-direct.md`):
+`VectorBeta.sample` and `VectorBeta.fill` now dispatch through cached scalar Beta
+facade lane sampling directly instead of routing through `sampleFrom` /
+`fillFrom` wrappers. This improves VectorBeta sampler facade ergonomics but does
+not resolve S4-M11.
