@@ -4748,3 +4748,9 @@ Choose pointer/value/index/u32 fixed-array facade helpers now construct stack
 arrays and fill directly instead of routing through direct-source array wrappers.
 This improves distribution-layer fixed-array ergonomics but does not resolve
 S4-M11.
+
+S4-M942 routes reusable Choice non-checked fixed-array facade helpers directly
+(`compare/results/s4-m942-choice-array-facade-direct.md`):
+Choice pointer/value/index/u32 fixed-array facade helpers now construct stack
+arrays and fill directly instead of routing through direct-source array wrappers.
+This improves reusable fixed-array ergonomics but does not resolve S4-M11.
