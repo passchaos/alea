@@ -17354,7 +17354,7 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sampleIndexFrom(self: Self, source: anytype) usize {
-            return self.sampleFrom(source);
+            return self.sampleCheckedFrom(source) catch unreachable;
         }
 
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {

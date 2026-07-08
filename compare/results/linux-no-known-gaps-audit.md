@@ -4410,3 +4410,9 @@ S4-M891 routes AliasTable compact index aliases directly to the checked u32 samp
 AliasTable.sampleIndexU32From now calls sampleU32CheckedFrom directly instead of
 routing through sampleU32From. This improves AliasTable compact index alias
 ergonomics but does not resolve S4-M11.
+
+S4-M892 routes AliasTable usize index aliases directly to the checked sampler path
+(`compare/results/s4-m892-aliastable-index-alias-direct.md`):
+AliasTable.sampleIndexFrom now calls sampleCheckedFrom directly instead of routing
+through sampleFrom. This improves AliasTable index alias ergonomics but does not
+resolve S4-M11.
