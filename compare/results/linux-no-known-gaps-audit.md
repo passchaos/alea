@@ -3939,3 +3939,10 @@ S4-M823 fills NegativeBinomial outputs with direct negativeBinomialFrom calls
 NegativeBinomial non-degenerate fills now call the underlying negativeBinomialFrom
 sampler directly instead of routing each slot through NegativeBinomial.sampleFrom.
 This improves NegativeBinomial fill ergonomics but does not resolve S4-M11.
+
+S4-M824 fills Hypergeometric outputs with direct method dispatch
+(`compare/results/s4-m824-hypergeometric-fill-direct-method.md`):
+Hypergeometric fills now switch once on the selected method and call draw-loop,
+inverse-transform, or rejection-acceptance samplers directly instead of routing
+each slot through Hypergeometric.sampleFrom. This improves Hypergeometric fill
+ergonomics but does not resolve S4-M11.

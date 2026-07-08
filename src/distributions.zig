@@ -2396,11 +2396,18 @@ pub const Hypergeometric = struct {
     }
 
     pub fn fillFrom(self: *const Hypergeometric, source: anytype, dest: []u64) void {
-        if (self.method == .constant) {
-            @memset(dest, self.constant);
-            return;
+        switch (self.method) {
+            .constant => @memset(dest, self.constant),
+            .draw_loop => {
+                for (dest) |*item| item.* = hypergeometricDrawLoopFrom(source, self.population, self.successes, self.draws);
+            },
+            .inverse_transform => {
+                for (dest) |*item| item.* = self.inverse_transform.sampleFrom(source);
+            },
+            .rejection_acceptance => {
+                for (dest) |*item| item.* = self.rejection_acceptance.sampleFrom(source);
+            },
         }
-        for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
 
@@ -31644,6 +31651,14 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     for (hg_buf) |value| try std.testing.expect(value <= 10);
     fillHypergeometricFrom(&direct_engine, &hg_buf, 100, 30, 10);
     for (hg_buf) |value| try std.testing.expect(value <= 10);
+    var hg_direct_fill_engine = alea.ScalarPrng.init(0x0bad_1001);
+    var hg_scalar_loop_engine = alea.ScalarPrng.init(0x0bad_1001);
+    var hg_direct_fill: [8]u64 = undefined;
+    var hg_scalar_fill: [8]u64 = undefined;
+    hg.fillFrom(&hg_direct_fill_engine, &hg_direct_fill);
+    for (&hg_scalar_fill) |*slot| slot.* = hg.sampleFrom(&hg_scalar_loop_engine);
+    try std.testing.expectEqualSlices(u64, &hg_scalar_fill, &hg_direct_fill);
+    try std.testing.expectEqual(hg_scalar_loop_engine.next(), hg_direct_fill_engine.next());
     try fillHypergeometricChecked(rng, &hg_buf, 100, 30, 10);
     for (hg_buf) |value| try std.testing.expect(value <= 10);
     try fillHypergeometricCheckedFrom(&direct_engine, &hg_buf, 100, 30, 10);
