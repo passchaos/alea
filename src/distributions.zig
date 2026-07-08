@@ -14494,7 +14494,11 @@ pub fn VectorMaxwell(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(0);
+            const x = vectorNormal(rng, VectorType, 0, self.scaleValue());
+            const y = vectorNormal(rng, VectorType, 0, self.scaleValue());
+            const z = vectorNormal(rng, VectorType, 0, self.scaleValue());
+            return maxwellFromNormalVectors(x, y, z);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -14506,7 +14510,16 @@ pub fn VectorMaxwell(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            for (dest) |*item| {
+                const x = vectorNormal(rng, VectorType, 0, self.scaleValue());
+                const y = vectorNormal(rng, VectorType, 0, self.scaleValue());
+                const z = vectorNormal(rng, VectorType, 0, self.scaleValue());
+                item.* = maxwellFromNormalVectors(x, y, z);
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -14563,7 +14576,11 @@ pub fn Maxwell(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return 0;
+            const x = rng.normal(T, 0, self.scale);
+            const y = rng.normal(T, 0, self.scale);
+            const z = rng.normal(T, 0, self.scale);
+            return @sqrt(x * x + y * y + z * z);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -14571,7 +14588,11 @@ pub fn Maxwell(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {

@@ -5287,3 +5287,10 @@ S4-M1020 routes reusable scalar/vector Rayleigh facade helpers directly
 and apply the Rayleigh transform directly through facade `Rng` instead of routing
 through `sampleFrom` / `fillFrom` wrappers. This improves Rayleigh sampler facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1021 routes reusable scalar/vector Maxwell facade helpers directly
+(`compare/results/s4-m1021-maxwell-sampler-facade-direct.md`): `Maxwell.sample` /
+`fill` and `VectorMaxwell.sample` / `fill` now draw normal components and apply
+the Maxwell radius transform directly through facade `Rng` instead of routing
+through `sampleFrom` / `fillFrom` wrappers. This improves Maxwell sampler facade
+ergonomics but does not resolve S4-M11.
