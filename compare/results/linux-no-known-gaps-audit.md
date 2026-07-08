@@ -4195,3 +4195,10 @@ VectorPareto.fillFrom now draws vector open-uniform values and applies the Paret
 transform directly, including the shape-one reciprocal path, instead of routing
 every output through VectorPareto.sampleFrom. This improves VectorPareto reusable
 fill ergonomics but does not resolve S4-M11.
+
+S4-M860 draws reusable VectorWeibull fills through direct vector open-uniform
+transforms (`compare/results/s4-m860-vector-weibull-fill-direct-transform.md`):
+VectorWeibull.fillFrom now draws vector open-uniform values and applies the
+Weibull transform directly, including the shape-one standard-exponential path,
+instead of routing every output through VectorWeibull.sampleFrom. This improves
+VectorWeibull reusable fill ergonomics but does not resolve S4-M11.

@@ -13599,7 +13599,16 @@ pub fn VectorWeibull(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            const scale_vec: VectorType = @splat(self.scaleValue());
+            if (self.shapeValue() == 1) {
+                for (dest) |*item| item.* = scale_vec * vectorStandardExponentialFrom(source, VectorType);
+                return;
+            }
+            const inverse_shape = 1 / self.shapeValue();
+            for (dest) |*item| {
+                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+                item.* = weibullFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), inverse_shape);
+            }
         }
     };
 }
@@ -27684,6 +27693,23 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &weibull_buf_vec, &direct_weibull_buf_vec);
     for (weibull_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_weibull_fill_engine = alea.ScalarPrng.init(0x6860_0001);
+    var vector_weibull_loop_engine = alea.ScalarPrng.init(0x6860_0001);
+    var vector_weibull_fill: [3]@Vector(4, f64) = undefined;
+    var vector_weibull_loop: [3]@Vector(4, f64) = undefined;
+    vector_weibull_sampler.fillFrom(&vector_weibull_fill_engine, &vector_weibull_fill);
+    for (&vector_weibull_loop) |*slot| slot.* = vector_weibull_sampler.sampleFrom(&vector_weibull_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_weibull_loop, &vector_weibull_fill);
+    try std.testing.expectEqual(vector_weibull_loop_engine.next(), vector_weibull_fill_engine.next());
+    var vector_weibull_f32_fill_engine = alea.ScalarPrng.init(0x6860_f32);
+    var vector_weibull_f32_loop_engine = alea.ScalarPrng.init(0x6860_f32);
+    const vector_weibull_f32 = try VectorWeibull(@Vector(8, f32)).init(2, 1.5);
+    var vector_weibull_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_weibull_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_weibull_f32.fillFrom(&vector_weibull_f32_fill_engine, &vector_weibull_f32_fill);
+    for (&vector_weibull_f32_loop) |*slot| slot.* = vector_weibull_f32.sampleFrom(&vector_weibull_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_weibull_f32_loop, &vector_weibull_f32_fill);
+    try std.testing.expectEqual(vector_weibull_f32_loop_engine.next(), vector_weibull_f32_fill_engine.next());
 
     const vector_weibull_shape_one = try VectorWeibull(@Vector(4, f64)).init(2, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 2), vector_weibull_shape_one.expectedValue(), 1e-12);
@@ -27693,6 +27719,18 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(weibull_shape_one_vec, direct_weibull_shape_one_vec);
     inline for (0..4) |lane| try std.testing.expect(weibull_shape_one_vec[lane] >= 0 and std.math.isFinite(weibull_shape_one_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_weibull_shape_one_fill_engine = alea.ScalarPrng.init(0x6860_1001);
+    var vector_weibull_shape_one_loop_engine = alea.ScalarPrng.init(0x6860_1001);
+    vector_weibull_shape_one.fillFrom(&vector_weibull_shape_one_fill_engine, &vector_weibull_fill);
+    for (&vector_weibull_loop) |*slot| slot.* = vector_weibull_shape_one.sampleFrom(&vector_weibull_shape_one_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_weibull_loop, &vector_weibull_fill);
+    try std.testing.expectEqual(vector_weibull_shape_one_loop_engine.next(), vector_weibull_shape_one_fill_engine.next());
+    var vector_weibull_degenerate_engine = alea.ScalarPrng.init(0x6860_d00);
+    var vector_weibull_degenerate_control = alea.ScalarPrng.init(0x6860_d00);
+    const vector_weibull_degenerate = try VectorWeibull(@Vector(4, f64)).init(2, std.math.inf(f64));
+    vector_weibull_degenerate.fillFrom(&vector_weibull_degenerate_engine, &vector_weibull_fill);
+    for (vector_weibull_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(2)), vec);
+    try std.testing.expectEqual(vector_weibull_degenerate_control.next(), vector_weibull_degenerate_engine.next());
 
     const gumbel_vec = try vectorGumbelChecked(rng, @Vector(4, f64), 0, 1);
     const direct_gumbel_vec = try vectorGumbelCheckedFrom(&direct_engine, @Vector(4, f64), 0, 1);
