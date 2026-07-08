@@ -5222,3 +5222,10 @@ StudentT checked/nonchecked sample/fill helpers now construct reusable StudentT
 samplers and call facade `sample` / `fill` directly instead of routing through
 `From` wrappers. This improves StudentT top-level facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1012 routes reusable scalar/vector Triangular facade helpers directly
+(`compare/results/s4-m1012-triangular-sampler-facade-direct.md`):
+`Triangular.sample` / `fill` and `VectorTriangular.sample` / `fill` now draw
+uniform values and apply the triangular transform directly through facade `Rng`
+instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
+Triangular sampler facade ergonomics but does not resolve S4-M11.
