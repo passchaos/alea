@@ -1795,7 +1795,8 @@ pub fn binomial(rng: Rng, trials: u64, p: f64) u64 {
 }
 
 pub fn binomialChecked(rng: Rng, trials: u64, p: f64) Error!u64 {
-    return binomialCheckedFrom(rng, trials, p);
+    const dist = try Binomial.init(trials, p);
+    return dist.sample(rng);
 }
 
 pub fn binomialCheckedFrom(source: anytype, trials: u64, p: f64) Error!u64 {
@@ -1804,7 +1805,8 @@ pub fn binomialCheckedFrom(source: anytype, trials: u64, p: f64) Error!u64 {
 }
 
 pub fn fillBinomial(rng: Rng, dest: []u64, trials: u64, p: f64) void {
-    fillBinomialFrom(rng, dest, trials, p);
+    const dist = Binomial.init(trials, p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillBinomialFrom(source: anytype, dest: []u64, trials: u64, p: f64) void {
@@ -1813,7 +1815,9 @@ pub fn fillBinomialFrom(source: anytype, dest: []u64, trials: u64, p: f64) void 
 }
 
 pub fn fillBinomialChecked(rng: Rng, dest: []u64, trials: u64, p: f64) Error!void {
-    return fillBinomialCheckedFrom(rng, dest, trials, p);
+    if (dest.len == 0) return;
+    const dist = try Binomial.init(trials, p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillBinomialCheckedFrom(source: anytype, dest: []u64, trials: u64, p: f64) Error!void {

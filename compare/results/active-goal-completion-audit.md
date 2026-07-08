@@ -1007,7 +1007,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M966 Bernoulli fill facade direct paths | `src/distributions.zig`, `compare/results/s4-m966-bernoulli-fill-facade-direct.md` | Closed for the current bar: scalar/vector Bernoulli facade fills now fill directly. |
 | S4-M967 Binomial sample facade direct paths | `src/distributions.zig`, `compare/results/s4-m967-binomial-sample-facade-direct.md` | Closed for the current bar: scalar/vector Binomial facade samples now sample directly. |
 | S4-M968 Binomial fill facade direct paths | `src/distributions.zig`, `compare/results/s4-m968-binomial-fill-facade-direct.md` | Closed for the current bar: scalar/vector Binomial facade fills now fill directly. |
-| S4-M969 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M969 Binomial top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m969-binomial-top-level-facade-direct.md` | Closed for the current bar: top-level scalar Binomial checked/fill facade helpers now avoid From wrappers. |
+| S4-M970 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3446,6 +3447,11 @@ S4-M968 additionally routes scalar and vector Binomial facade fills through
 direct binomial sampling loops and degenerate fast paths, preserving stream shape
 while avoiding direct-source fill wrapper aliases; it is reliability/ergonomics
 work and does not resolve S4-M11 or complete the long-term objective.
+S4-M969 additionally routes top-level scalar Binomial checked/fill facade helpers
+through direct reusable-sampler facade sampling/filling after validation,
+preserving stream shape while avoiding `From` wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
