@@ -10357,7 +10357,7 @@ pub fn FisherF(comptime T: type) type {
                 @memset(dest, self.degenerateValue());
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| item.* = self.numerator.sampleFrom(source) / self.denominator.sampleFrom(source);
         }
 
         fn isDegenerate(self: Self) bool {
@@ -31057,6 +31057,29 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect((try FisherF(f64).init(5, 4)).varianceValue() == null);
     fisher_sampler.fillFrom(&direct_engine, &direct_fisher_buf);
     for (direct_fisher_buf) |value| try std.testing.expect(value > 0);
+    var fisher_fill_engine = alea.ScalarPrng.init(0xf845_0001);
+    var fisher_loop_engine = alea.ScalarPrng.init(0xf845_0001);
+    var fisher_fill: [10]f64 = undefined;
+    var fisher_loop: [10]f64 = undefined;
+    fisher_sampler.fillFrom(&fisher_fill_engine, &fisher_fill);
+    for (&fisher_loop) |*slot| slot.* = fisher_sampler.sampleFrom(&fisher_loop_engine);
+    try std.testing.expectEqualSlices(f64, &fisher_loop, &fisher_fill);
+    try std.testing.expectEqual(fisher_loop_engine.next(), fisher_fill_engine.next());
+    var fisher_f32_fill_engine = alea.ScalarPrng.init(0xf845_f32);
+    var fisher_f32_loop_engine = alea.ScalarPrng.init(0xf845_f32);
+    const fisher_f32 = try FisherF(f32).init(5, 20);
+    var fisher_f32_fill: [11]f32 = undefined;
+    var fisher_f32_loop: [11]f32 = undefined;
+    fisher_f32.fillFrom(&fisher_f32_fill_engine, &fisher_f32_fill);
+    for (&fisher_f32_loop) |*slot| slot.* = fisher_f32.sampleFrom(&fisher_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &fisher_f32_loop, &fisher_f32_fill);
+    try std.testing.expectEqual(fisher_f32_loop_engine.next(), fisher_f32_fill_engine.next());
+    var fisher_degenerate_engine = alea.ScalarPrng.init(0xf845_1af);
+    var fisher_degenerate_control = alea.ScalarPrng.init(0xf845_1af);
+    const fisher_degenerate = try FisherF(f64).init(std.math.inf(f64), std.math.inf(f64));
+    fisher_degenerate.fillFrom(&fisher_degenerate_engine, &fisher_fill);
+    for (fisher_fill) |value| try std.testing.expectEqual(@as(f64, 1), value);
+    try std.testing.expectEqual(fisher_degenerate_control.next(), fisher_degenerate_engine.next());
     try std.testing.expect(try fisherFCheckedFrom(&direct_engine, f64, 5, 20) > 0);
     try std.testing.expectError(error.InvalidParameter, fisherFCheckedFrom(&direct_engine, f64, 0, 20));
 

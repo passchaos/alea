@@ -4090,3 +4090,10 @@ VectorErlang.fillFrom now delegates to VectorGamma over the cached Gamma sampler
 reusing vector Gamma's shape-specific bulk handling instead of routing every
 output through VectorErlang.sampleFrom. This improves VectorErlang reusable fill
 ergonomics but does not resolve S4-M11.
+
+S4-M845 draws reusable FisherF fills through cached Gamma ratio loops
+(`compare/results/s4-m845-fisher-f-fill-direct-gamma-ratio.md`):
+FisherF.fillFrom now draws numerator and denominator values from its cached Gamma
+samplers directly and divides them, instead of routing every output through
+FisherF.sampleFrom. This improves FisherF reusable fill ergonomics but does not
+resolve S4-M11.
