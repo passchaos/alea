@@ -4768,3 +4768,10 @@ AliasTable `indicesCheckedFrom` and `indicesU32CheckedFrom` now allocate and fil
 directly instead of routing through unchecked direct-source owned wrappers. This
 improves checked weighted-index owned-batch ergonomics but does not resolve
 S4-M11.
+
+S4-M945 routes static AliasTable owned facade helpers directly
+(`compare/results/s4-m945-aliastable-owned-facade-direct.md`):
+AliasTable `indices`, `indicesChecked`, `indicesU32`, and `indicesU32Checked`
+now allocate and fill directly instead of routing through direct-source owned
+wrappers. This improves weighted-index owned-batch ergonomics but does not
+resolve S4-M11.
