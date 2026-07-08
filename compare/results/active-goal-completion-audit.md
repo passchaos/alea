@@ -1022,7 +1022,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M981 VectorPoissonAhrensDieter facade direct paths | `src/distributions.zig`, `compare/results/s4-m981-vector-poisson-ad-facade-direct.md` | Closed for the current bar: reusable VectorPoissonAhrensDieter facade sample/fill helpers now sample directly. |
 | S4-M982 VectorPoissonAhrensDieter top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m982-vector-poisson-ad-top-level-facade-direct.md` | Closed for the current bar: top-level vector Poisson Ahrens-Dieter facade helpers now avoid From wrappers. |
 | S4-M983 Poisson facade direct paths | `src/distributions.zig`, `compare/results/s4-m983-poisson-facade-direct.md` | Closed for the current bar: scalar/vector Poisson facade helpers now avoid From wrappers. |
-| S4-M984 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M984 Poisson Ahrens-Dieter top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m984-poisson-ad-top-level-facade-direct.md` | Closed for the current bar: scalar top-level Poisson Ahrens-Dieter facade helpers now avoid From wrappers. |
+| S4-M985 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3531,6 +3532,11 @@ S4-M983 additionally routes scalar/vector Poisson top-level helpers and reusable
 Poisson facade sample/fill methods through direct zero/product/Ahrens-Dieter
 method dispatch, preserving stream shape, zero-lambda no-consume behavior, checked
 invalid-parameter behavior, and zero-length checked fill semantics while avoiding
+`From` wrapper aliases; it is reliability/ergonomics work and does not resolve
+S4-M11 or complete the long-term objective.
+S4-M984 additionally routes scalar top-level Poisson Ahrens-Dieter facade helpers
+through the cached Ahrens-Dieter facade sampler, preserving large-lambda
+validation and checked invalid-parameter no-consume behavior while avoiding
 `From` wrapper aliases; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
 

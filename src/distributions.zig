@@ -8503,7 +8503,8 @@ const PoissonAhrensDieter = struct {
 };
 
 pub fn poissonAhrensDieter(rng: Rng, lambda: f64) u64 {
-    return poissonAhrensDieterFrom(rng, lambda);
+    std.debug.assert(lambda >= 12 and std.math.isFinite(lambda));
+    return PoissonAhrensDieter.init(lambda).sample(rng);
 }
 
 pub fn poissonAhrensDieterFrom(source: anytype, lambda: f64) u64 {
@@ -8512,7 +8513,8 @@ pub fn poissonAhrensDieterFrom(source: anytype, lambda: f64) u64 {
 }
 
 pub fn poissonAhrensDieterChecked(rng: Rng, lambda: f64) Error!u64 {
-    return poissonAhrensDieterCheckedFrom(rng, lambda);
+    if (!(lambda >= 12) or !std.math.isFinite(lambda)) return error.InvalidParameter;
+    return PoissonAhrensDieter.init(lambda).sample(rng);
 }
 
 pub fn poissonAhrensDieterCheckedFrom(source: anytype, lambda: f64) Error!u64 {
