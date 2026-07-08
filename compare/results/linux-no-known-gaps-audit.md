@@ -5174,3 +5174,10 @@ Erlang checked/nonchecked sample/fill helpers now construct reusable Erlang
 samplers and call facade `sample` / `fill` directly instead of routing through
 `From` wrappers. This improves Erlang top-level facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1005 routes reusable scalar Beta facade helpers directly
+(`compare/results/s4-m1005-beta-sampler-facade-direct.md`): `Beta(T).sample` and
+`Beta(T).fill` now dispatch point-mass, uniform, square-root edge, and generic
+Gamma-ratio paths directly through facade `Rng` instead of routing through
+`sampleFrom` / `fillFrom` wrappers. This improves Beta sampler facade ergonomics
+but does not resolve S4-M11.

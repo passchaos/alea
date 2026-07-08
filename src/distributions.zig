@@ -11028,7 +11028,18 @@ pub fn Beta(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            switch (self.method) {
+                .point_zero => return 0,
+                .point_one => return 1,
+                .uniform => return rng.float(T),
+                .sqrt_alpha => return @sqrt(rng.floatOpen(T)),
+                .sqrt_beta => return 1 - @sqrt(rng.floatOpen(T)),
+                .generic => {},
+            }
+
+            const x = self.gamma_a.sample(rng);
+            const y = self.gamma_b.sample(rng);
+            return x / (x + y);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -11047,7 +11058,37 @@ pub fn Beta(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            switch (self.method) {
+                .point_zero => {
+                    @memset(dest, 0);
+                    return;
+                },
+                .point_one => {
+                    @memset(dest, 1);
+                    return;
+                },
+                .uniform => {
+                    rng.fill(T, dest);
+                    return;
+                },
+                .sqrt_alpha => {
+                    rng.fillOpen(T, dest);
+                    for (dest) |*item| item.* = @sqrt(item.*);
+                    return;
+                },
+                .sqrt_beta => {
+                    rng.fillOpen(T, dest);
+                    for (dest) |*item| item.* = 1 - @sqrt(item.*);
+                    return;
+                },
+                .generic => {},
+            }
+
+            for (dest) |*item| {
+                const x = self.gamma_a.sample(rng);
+                const y = self.gamma_b.sample(rng);
+                item.* = x / (x + y);
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
