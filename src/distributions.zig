@@ -9545,7 +9545,8 @@ pub fn Chi(comptime T: type) type {
                 @memset(dest, 0);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            self.chi_squared_sampler.fillFrom(source, dest);
+            for (dest) |*item| item.* = @sqrt(item.*);
         }
 
         fn isDegenerate(self: Self) bool {
@@ -30836,6 +30837,31 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(try chiCheckedFrom(&direct_engine, f64, 4) > 0);
     try std.testing.expectError(error.InvalidParameter, chiCheckedFrom(&direct_engine, f64, -1));
     for (direct_chi_buf) |value| try std.testing.expect(value > 0);
+    var chi_shape_one_fill_engine = alea.ScalarPrng.init(0xc841_0001);
+    var chi_shape_one_chi_squared_engine = alea.ScalarPrng.init(0xc841_0001);
+    const chi_shape_one = try Chi(f64).init(2);
+    var chi_shape_one_fill: [10]f64 = undefined;
+    var chi_shape_one_chi_squared: [10]f64 = undefined;
+    chi_shape_one.fillFrom(&chi_shape_one_fill_engine, &chi_shape_one_fill);
+    (try ChiSquared(f64).init(2)).fillFrom(&chi_shape_one_chi_squared_engine, &chi_shape_one_chi_squared);
+    for (&chi_shape_one_chi_squared) |*value| value.* = @sqrt(value.*);
+    try std.testing.expectEqualSlices(f64, &chi_shape_one_chi_squared, &chi_shape_one_fill);
+    try std.testing.expectEqual(chi_shape_one_chi_squared_engine.next(), chi_shape_one_fill_engine.next());
+    var chi_f32_fill_engine = alea.ScalarPrng.init(0xc841_f32);
+    var chi_f32_loop_engine = alea.ScalarPrng.init(0xc841_f32);
+    const chi_f32 = try Chi(f32).init(3);
+    var chi_f32_fill: [11]f32 = undefined;
+    var chi_f32_loop: [11]f32 = undefined;
+    chi_f32.fillFrom(&chi_f32_fill_engine, &chi_f32_fill);
+    for (&chi_f32_loop) |*slot| slot.* = chi_f32.sampleFrom(&chi_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &chi_f32_loop, &chi_f32_fill);
+    try std.testing.expectEqual(chi_f32_loop_engine.next(), chi_f32_fill_engine.next());
+    var chi_degenerate_engine = alea.ScalarPrng.init(0xc841_d00);
+    var chi_degenerate_control = alea.ScalarPrng.init(0xc841_d00);
+    const chi_degenerate = try Chi(f64).init(0);
+    chi_degenerate.fillFrom(&chi_degenerate_engine, &chi_shape_one_fill);
+    for (chi_shape_one_fill) |value| try std.testing.expectEqual(@as(f64, 0), value);
+    try std.testing.expectEqual(chi_degenerate_control.next(), chi_degenerate_engine.next());
 
     const erlang_vec = try vectorErlangChecked(rng, @Vector(4, f64), 3, 2);
     const direct_erlang_vec = try vectorErlangCheckedFrom(&direct_engine, @Vector(4, f64), 3, 2);
