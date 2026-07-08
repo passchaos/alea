@@ -4253,3 +4253,9 @@ sampling (`compare/results/s4-m867-vector-zipf-fill-direct-lanes.md`):
 VectorZipf.fillFrom now samples each vector lane directly from the cached scalar
 Zipf sampler instead of routing every output through VectorZipf.sampleFrom. This
 improves VectorZipf reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M868 draws reusable VectorZeta fills through direct cached scalar Zeta lane
+sampling (`compare/results/s4-m868-vector-zeta-fill-direct-lanes.md`):
+VectorZeta.fillFrom now samples each vector lane directly from the cached scalar
+Zeta sampler instead of routing every output through VectorZeta.sampleFrom. This
+improves VectorZeta reusable fill ergonomics but does not resolve S4-M11.

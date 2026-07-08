@@ -16559,7 +16559,11 @@ pub fn VectorZeta(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(1)));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+                item.* = out;
+            }
         }
 
         fn isDegenerate(self: Self) bool {
@@ -28275,6 +28279,29 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &zeta_buf_vec, &direct_zeta_buf_vec);
     for (zeta_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 1);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_zeta_fill_engine = alea.ScalarPrng.init(0x5868_0001);
+    var vector_zeta_loop_engine = alea.ScalarPrng.init(0x5868_0001);
+    var vector_zeta_fill: [3]@Vector(4, f64) = undefined;
+    var vector_zeta_loop: [3]@Vector(4, f64) = undefined;
+    vector_zeta_sampler.fillFrom(&vector_zeta_fill_engine, &vector_zeta_fill);
+    for (&vector_zeta_loop) |*slot| slot.* = vector_zeta_sampler.sampleFrom(&vector_zeta_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_zeta_loop, &vector_zeta_fill);
+    try std.testing.expectEqual(vector_zeta_loop_engine.next(), vector_zeta_fill_engine.next());
+    var vector_zeta_f32_fill_engine = alea.ScalarPrng.init(0x5868_f32);
+    var vector_zeta_f32_loop_engine = alea.ScalarPrng.init(0x5868_f32);
+    const vector_zeta_f32 = try VectorZeta(@Vector(8, f32)).init(3);
+    var vector_zeta_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_zeta_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_zeta_f32.fillFrom(&vector_zeta_f32_fill_engine, &vector_zeta_f32_fill);
+    for (&vector_zeta_f32_loop) |*slot| slot.* = vector_zeta_f32.sampleFrom(&vector_zeta_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_zeta_f32_loop, &vector_zeta_f32_fill);
+    try std.testing.expectEqual(vector_zeta_f32_loop_engine.next(), vector_zeta_f32_fill_engine.next());
+    var vector_zeta_degenerate_engine = alea.ScalarPrng.init(0x5868_d00);
+    var vector_zeta_degenerate_control = alea.ScalarPrng.init(0x5868_d00);
+    const vector_zeta_degenerate = try VectorZeta(@Vector(4, f64)).init(std.math.inf(f64));
+    vector_zeta_degenerate.fillFrom(&vector_zeta_degenerate_engine, &vector_zeta_fill);
+    for (vector_zeta_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), vec);
+    try std.testing.expectEqual(vector_zeta_degenerate_control.next(), vector_zeta_degenerate_engine.next());
 
     const unit_circle_vec = vectorUnitCircle(rng, @Vector(4, f64));
     const direct_unit_circle_vec = vectorUnitCircleFrom(&direct_engine, @Vector(4, f64));
