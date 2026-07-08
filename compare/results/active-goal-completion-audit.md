@@ -991,7 +991,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M950 Weighted tree checked u32 iterator direct constructors | `src/distributions.zig`, `compare/results/s4-m950-weighted-tree-checked-u32-iterator-direct.md` | Closed for the current bar: dynamic weighted-tree checked compact iterator constructors now build iterators directly. |
 | S4-M951 Weighted tree owned facade direct paths | `src/distributions.zig`, `compare/results/s4-m951-weighted-tree-owned-facade-direct.md` | Closed for the current bar: dynamic weighted-tree allocation-returning facade helpers now allocate and fill directly. |
 | S4-M952 Weighted tree array direct paths | `src/distributions.zig`, `compare/results/s4-m952-weighted-tree-array-direct.md` | Closed for the current bar: dynamic weighted-tree fixed-array helpers now fill directly. |
-| S4-M953 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M953 Weighted tree fill facade direct paths | `src/distributions.zig`, `compare/results/s4-m953-weighted-tree-fill-facade-direct.md` | Closed for the current bar: dynamic weighted-tree facade fill helpers now fill directly. |
+| S4-M954 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3357,6 +3358,11 @@ complete the long-term objective.
 S4-M952 additionally routes dynamic WeightedTree and WeightedIntTree fixed-array
 helpers through direct stack-array construction and facade/direct-source filling,
 preserving stream shape while avoiding array wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M953 additionally routes dynamic WeightedTree and WeightedIntTree facade fill
+helpers through direct total-aware fill loops after validation, preserving stream
+shape while avoiding checked/direct-source fill wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 

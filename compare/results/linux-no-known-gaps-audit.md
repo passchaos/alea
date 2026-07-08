@@ -4821,3 +4821,10 @@ S4-M952 routes dynamic weighted-tree fixed-array helpers directly
 WeightedTree and WeightedIntTree fixed-array helpers now construct stack arrays
 and fill directly instead of routing through other array wrappers. This improves
 dynamic weighted-index fixed-array ergonomics but does not resolve S4-M11.
+
+S4-M953 routes dynamic weighted-tree facade fill helpers directly
+(`compare/results/s4-m953-weighted-tree-fill-facade-direct.md`):
+WeightedTree and WeightedIntTree facade fill helpers now execute direct
+total-aware fill loops instead of routing through checked/direct-source fill
+wrappers. This improves dynamic weighted-index fill ergonomics but does not
+resolve S4-M11.

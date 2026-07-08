@@ -18365,35 +18365,95 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []usize) void {
-            self.fillChecked(rng, dest) catch unreachable;
+            if (dest.len == 0) return;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) unreachable;
+            if (self.positive_count == 1) {
+                @memset(dest, self.positive_index.?);
+                return;
+            }
+            self.fillWithTotalFrom(rng, dest, total);
         }
 
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
-            self.fill(rng, dest);
+            if (dest.len == 0) return;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) unreachable;
+            if (self.positive_count == 1) {
+                @memset(dest, self.positive_index.?);
+                return;
+            }
+            self.fillWithTotalFrom(rng, dest, total);
         }
 
         pub fn fillU32(self: Self, rng: Rng, dest: []u32) void {
-            self.fillU32Checked(rng, dest) catch unreachable;
+            if (dest.len == 0) return;
+            if (self.len() > std.math.maxInt(u32)) unreachable;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) unreachable;
+            if (self.positive_count == 1) {
+                @memset(dest, @intCast(self.positive_index.?));
+                return;
+            }
+            self.fillU32WithTotalFrom(rng, dest, total);
         }
 
         pub fn fillIndicesU32(self: Self, rng: Rng, dest: []u32) void {
-            self.fillU32(rng, dest);
+            if (dest.len == 0) return;
+            if (self.len() > std.math.maxInt(u32)) unreachable;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) unreachable;
+            if (self.positive_count == 1) {
+                @memset(dest, @intCast(self.positive_index.?));
+                return;
+            }
+            self.fillU32WithTotalFrom(rng, dest, total);
         }
 
         pub fn fillChecked(self: Self, rng: Rng, dest: []usize) Error!void {
-            try self.fillCheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            if (self.positive_count == 1) {
+                @memset(dest, self.positive_index.?);
+                return;
+            }
+            self.fillWithTotalFrom(rng, dest, total);
         }
 
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
-            try self.fillChecked(rng, dest);
+            if (dest.len == 0) return;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            if (self.positive_count == 1) {
+                @memset(dest, self.positive_index.?);
+                return;
+            }
+            self.fillWithTotalFrom(rng, dest, total);
         }
 
         pub fn fillU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
-            try self.fillU32CheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            if (self.positive_count == 1) {
+                @memset(dest, @intCast(self.positive_index.?));
+                return;
+            }
+            self.fillU32WithTotalFrom(rng, dest, total);
         }
 
         pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
-            try self.fillU32Checked(rng, dest);
+            if (dest.len == 0) return;
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            if (self.positive_count == 1) {
+                @memset(dest, @intCast(self.positive_index.?));
+                return;
+            }
+            self.fillU32WithTotalFrom(rng, dest, total);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
@@ -19255,35 +19315,95 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []usize) void {
-            self.fillChecked(rng, dest) catch unreachable;
+            if (dest.len == 0) return;
+            const total = self.totalWeight();
+            if (total == 0) unreachable;
+            if (self.positive_count == 1) {
+                @memset(dest, self.positive_index.?);
+                return;
+            }
+            self.fillWithTotalFrom(rng, dest, total);
         }
 
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
-            self.fill(rng, dest);
+            if (dest.len == 0) return;
+            const total = self.totalWeight();
+            if (total == 0) unreachable;
+            if (self.positive_count == 1) {
+                @memset(dest, self.positive_index.?);
+                return;
+            }
+            self.fillWithTotalFrom(rng, dest, total);
         }
 
         pub fn fillU32(self: Self, rng: Rng, dest: []u32) void {
-            self.fillU32Checked(rng, dest) catch unreachable;
+            if (dest.len == 0) return;
+            if (self.len() > std.math.maxInt(u32)) unreachable;
+            const total = self.totalWeight();
+            if (total == 0) unreachable;
+            if (self.positive_count == 1) {
+                @memset(dest, @intCast(self.positive_index.?));
+                return;
+            }
+            self.fillU32WithTotalFrom(rng, dest, total);
         }
 
         pub fn fillIndicesU32(self: Self, rng: Rng, dest: []u32) void {
-            self.fillU32(rng, dest);
+            if (dest.len == 0) return;
+            if (self.len() > std.math.maxInt(u32)) unreachable;
+            const total = self.totalWeight();
+            if (total == 0) unreachable;
+            if (self.positive_count == 1) {
+                @memset(dest, @intCast(self.positive_index.?));
+                return;
+            }
+            self.fillU32WithTotalFrom(rng, dest, total);
         }
 
         pub fn fillChecked(self: Self, rng: Rng, dest: []usize) Error!void {
-            try self.fillCheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            const total = self.totalWeight();
+            if (total == 0) return error.InvalidWeight;
+            if (self.positive_count == 1) {
+                @memset(dest, self.positive_index.?);
+                return;
+            }
+            self.fillWithTotalFrom(rng, dest, total);
         }
 
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
-            try self.fillChecked(rng, dest);
+            if (dest.len == 0) return;
+            const total = self.totalWeight();
+            if (total == 0) return error.InvalidWeight;
+            if (self.positive_count == 1) {
+                @memset(dest, self.positive_index.?);
+                return;
+            }
+            self.fillWithTotalFrom(rng, dest, total);
         }
 
         pub fn fillU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
-            try self.fillU32CheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            const total = self.totalWeight();
+            if (total == 0) return error.InvalidWeight;
+            if (self.positive_count == 1) {
+                @memset(dest, @intCast(self.positive_index.?));
+                return;
+            }
+            self.fillU32WithTotalFrom(rng, dest, total);
         }
 
         pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
-            try self.fillU32Checked(rng, dest);
+            if (dest.len == 0) return;
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            const total = self.totalWeight();
+            if (total == 0) return error.InvalidWeight;
+            if (self.positive_count == 1) {
+                @memset(dest, @intCast(self.positive_index.?));
+                return;
+            }
+            self.fillU32WithTotalFrom(rng, dest, total);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
