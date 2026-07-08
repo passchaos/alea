@@ -4083,3 +4083,10 @@ Erlang.fillFrom now delegates to the cached Gamma sampler's fill path, reusing
 Gamma's shape-specific bulk handling instead of routing every output through
 Erlang.sampleFrom. This improves Erlang reusable fill ergonomics but does not
 resolve S4-M11.
+
+S4-M844 delegates reusable VectorErlang fills to cached VectorGamma fills
+(`compare/results/s4-m844-vector-erlang-fill-gamma-delegate.md`):
+VectorErlang.fillFrom now delegates to VectorGamma over the cached Gamma sampler,
+reusing vector Gamma's shape-specific bulk handling instead of routing every
+output through VectorErlang.sampleFrom. This improves VectorErlang reusable fill
+ergonomics but does not resolve S4-M11.

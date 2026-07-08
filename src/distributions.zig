@@ -9699,7 +9699,7 @@ pub fn VectorErlang(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(0)));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            (VectorGamma(VectorType){ .sampler = self.sampler.gamma_sampler }).fillFrom(source, dest);
         }
     };
 }
@@ -26697,6 +26697,29 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &erlang_buf_vec, &direct_erlang_buf_vec);
     for (erlang_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_erlang_gamma_fill_engine = alea.ScalarPrng.init(0xe844_0001);
+    var vector_erlang_gamma_reference_engine = alea.ScalarPrng.init(0xe844_0001);
+    var vector_erlang_gamma_fill: [3]@Vector(4, f64) = undefined;
+    var vector_erlang_gamma_reference: [3]@Vector(4, f64) = undefined;
+    vector_erlang_sampler.fillFrom(&vector_erlang_gamma_fill_engine, &vector_erlang_gamma_fill);
+    (try VectorGamma(@Vector(4, f64)).init(3, 2)).fillFrom(&vector_erlang_gamma_reference_engine, &vector_erlang_gamma_reference);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_erlang_gamma_reference, &vector_erlang_gamma_fill);
+    try std.testing.expectEqual(vector_erlang_gamma_reference_engine.next(), vector_erlang_gamma_fill_engine.next());
+    var vector_erlang_f32_fill_engine = alea.ScalarPrng.init(0xe844_f32);
+    var vector_erlang_f32_loop_engine = alea.ScalarPrng.init(0xe844_f32);
+    const vector_erlang_f32 = try VectorErlang(@Vector(8, f32)).init(4, 1.5);
+    var vector_erlang_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_erlang_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_erlang_f32.fillFrom(&vector_erlang_f32_fill_engine, &vector_erlang_f32_fill);
+    for (&vector_erlang_f32_loop) |*slot| slot.* = vector_erlang_f32.sampleFrom(&vector_erlang_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_erlang_f32_loop, &vector_erlang_f32_fill);
+    try std.testing.expectEqual(vector_erlang_f32_loop_engine.next(), vector_erlang_f32_fill_engine.next());
+    var vector_erlang_degenerate_engine = alea.ScalarPrng.init(0xe844_d00);
+    var vector_erlang_degenerate_control = alea.ScalarPrng.init(0xe844_d00);
+    const vector_erlang_degenerate = try VectorErlang(@Vector(4, f64)).init(3, 0);
+    vector_erlang_degenerate.fillFrom(&vector_erlang_degenerate_engine, &vector_erlang_gamma_fill);
+    for (vector_erlang_gamma_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vec);
+    try std.testing.expectEqual(vector_erlang_degenerate_control.next(), vector_erlang_degenerate_engine.next());
 
     const beta_vec = try vectorBetaChecked(rng, @Vector(4, f64), 2, 5);
     const direct_beta_vec = try vectorBetaCheckedFrom(&direct_engine, @Vector(4, f64), 2, 5);
