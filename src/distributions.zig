@@ -561,7 +561,10 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn ptrs(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
-            return self.ptrsFrom(allocator, rng, amount);
+            const out = try allocator.alloc(*const T, amount);
+            errdefer allocator.free(out);
+            self.fill(rng, out);
+            return out;
         }
 
         pub fn ptrsFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]*const T {
@@ -672,7 +675,10 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
-            return self.indicesFrom(allocator, rng, amount);
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            self.fillIndices(rng, out);
+            return out;
         }
 
         pub fn indicesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
@@ -754,7 +760,11 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
-            return self.indicesU32From(allocator, rng, amount);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillIndicesU32(rng, out);
+            return out;
         }
 
         pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
@@ -936,7 +946,12 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn values(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]T {
-            return self.valuesFrom(allocator, rng, amount);
+            if (amount == 0) return allocator.alloc(T, 0);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+            const out = try allocator.alloc(T, amount);
+            errdefer allocator.free(out);
+            self.fillValues(rng, out);
+            return out;
         }
 
         pub fn valuesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]T {
@@ -34870,6 +34885,14 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillIndicesFrom(&owned_index_control, &owned_index_fill);
     try std.testing.expectEqualSlices(usize, &owned_index_fill, owned_indices);
     try std.testing.expectEqual(owned_index_control.next(), owned_index_engine.next());
+    var facade_owned_index_engine = root.DefaultPrng.init(0xc0_2b4);
+    var direct_owned_index_engine = root.DefaultPrng.init(0xc0_2b4);
+    const facade_owned_indices = try choice.indices(std.testing.allocator, root.Rng.init(&facade_owned_index_engine), 6);
+    defer std.testing.allocator.free(facade_owned_indices);
+    const direct_owned_indices = try choice.indicesFrom(std.testing.allocator, &direct_owned_index_engine, 6);
+    defer std.testing.allocator.free(direct_owned_indices);
+    try std.testing.expectEqualSlices(usize, direct_owned_indices, facade_owned_indices);
+    try std.testing.expectEqual(direct_owned_index_engine.next(), facade_owned_index_engine.next());
     var checked_owned_index_engine = root.DefaultPrng.init(0xc0_281);
     var unchecked_owned_index_engine = root.DefaultPrng.init(0xc0_281);
     const unchecked_owned_indices = try choice.indicesFrom(std.testing.allocator, &unchecked_owned_index_engine, 6);
@@ -34945,6 +34968,14 @@ test "distribution Choose sampler mirrors slice choices" {
     try choice.fillIndicesU32From(&owned_index_u32_control, &owned_index_u32_fill);
     try std.testing.expectEqualSlices(u32, &owned_index_u32_fill, owned_indices_u32);
     try std.testing.expectEqual(owned_index_u32_control.next(), owned_index_u32_engine.next());
+    var facade_owned_u32_engine = root.DefaultPrng.init(0xc0_2b5);
+    var direct_owned_u32_engine = root.DefaultPrng.init(0xc0_2b5);
+    const facade_owned_u32 = try choice.indicesU32(std.testing.allocator, root.Rng.init(&facade_owned_u32_engine), 6);
+    defer std.testing.allocator.free(facade_owned_u32);
+    const direct_owned_u32 = try choice.indicesU32From(std.testing.allocator, &direct_owned_u32_engine, 6);
+    defer std.testing.allocator.free(direct_owned_u32);
+    try std.testing.expectEqualSlices(u32, direct_owned_u32, facade_owned_u32);
+    try std.testing.expectEqual(direct_owned_u32_engine.next(), facade_owned_u32_engine.next());
     var checked_owned_u32_engine = root.DefaultPrng.init(0xc0_285);
     var unchecked_owned_u32_engine = root.DefaultPrng.init(0xc0_285);
     const unchecked_owned_u32 = try choice.indicesU32From(std.testing.allocator, &unchecked_owned_u32_engine, 6);
@@ -35021,6 +35052,14 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillFrom(&ptrs_control, &ptrs_fill);
     try std.testing.expectEqualSlices(*const u8, &ptrs_fill, owned_ptrs);
     try std.testing.expectEqual(ptrs_control.next(), ptrs_engine.next());
+    var facade_owned_ptrs_engine = root.DefaultPrng.init(0xc0_2b6);
+    var direct_owned_ptrs_engine = root.DefaultPrng.init(0xc0_2b6);
+    const facade_owned_ptrs = try choice.ptrs(std.testing.allocator, root.Rng.init(&facade_owned_ptrs_engine), 6);
+    defer std.testing.allocator.free(facade_owned_ptrs);
+    const direct_owned_ptrs = try choice.ptrsFrom(std.testing.allocator, &direct_owned_ptrs_engine, 6);
+    defer std.testing.allocator.free(direct_owned_ptrs);
+    try std.testing.expectEqualSlices(*const u8, direct_owned_ptrs, facade_owned_ptrs);
+    try std.testing.expectEqual(direct_owned_ptrs_engine.next(), facade_owned_ptrs_engine.next());
     var pointer_direct_engine = root.DefaultPrng.init(0xc0_298);
     var pointer_index_engine = root.DefaultPrng.init(0xc0_298);
     var pointer_direct: [6]*const u8 = undefined;
@@ -35126,6 +35165,14 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillValuesFrom(&values_control, &owned_values_fill);
     try std.testing.expectEqualSlices(u8, &owned_values_fill, owned_values);
     try std.testing.expectEqual(values_control.next(), values_engine.next());
+    var facade_owned_values_engine = root.DefaultPrng.init(0xc0_2b7);
+    var direct_owned_values_engine = root.DefaultPrng.init(0xc0_2b7);
+    const facade_owned_values = try choice.values(std.testing.allocator, root.Rng.init(&facade_owned_values_engine), 6);
+    defer std.testing.allocator.free(facade_owned_values);
+    const direct_owned_values = try choice.valuesFrom(std.testing.allocator, &direct_owned_values_engine, 6);
+    defer std.testing.allocator.free(direct_owned_values);
+    try std.testing.expectEqualSlices(u8, direct_owned_values, facade_owned_values);
+    try std.testing.expectEqual(direct_owned_values_engine.next(), facade_owned_values_engine.next());
     var checked_value_fill_engine = root.DefaultPrng.init(0xc0_28f);
     var unchecked_value_fill_engine = root.DefaultPrng.init(0xc0_28f);
     var checked_value_fill: [6]u8 = undefined;

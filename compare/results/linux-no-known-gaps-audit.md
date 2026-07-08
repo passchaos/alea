@@ -4595,3 +4595,9 @@ WeightedChoice ptr/value/index/u32 checked allocation-returning facade helpers n
 allocate and fill directly instead of routing through direct-source checked owned
 wrappers. This improves reusable weighted checked owned-batch ergonomics but does
 not resolve S4-M11.
+
+S4-M919 routes distribution Choose owned facades through direct allocation and
+filling (`compare/results/s4-m919-distribution-choose-owned-facade-direct.md`):
+Choose ptr/value/index/u32 allocation-returning facade helpers now allocate and
+fill directly instead of routing through direct-source owned wrappers. This
+improves owned-batch ergonomics but does not resolve S4-M11.
