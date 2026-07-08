@@ -2285,7 +2285,13 @@ pub fn VectorNegativeBinomial(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(0)));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            const successes = self.sampler.successes;
+            const p = self.sampler.p;
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = negativeBinomialFrom(source, successes, p);
+                item.* = out;
+            }
         }
     };
 }
@@ -25813,6 +25819,18 @@ test "distribution vector helpers preserve support and stream shape" {
     vector_negative_binomial_sampler.fillFrom(&direct_engine, &direct_negative_binomial_buf);
     try std.testing.expectEqualSlices(@Vector(4, u64), &negative_binomial_buf, &direct_negative_binomial_buf);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var direct_vector_negative_engine = alea.ScalarPrng.init(0x0bad_2001);
+    var scalar_vector_negative_engine = alea.ScalarPrng.init(0x0bad_2001);
+    var direct_vector_negative: [3]@Vector(4, u64) = undefined;
+    var scalar_vector_negative: [3]@Vector(4, u64) = undefined;
+    vector_negative_binomial_sampler.fillFrom(&direct_vector_negative_engine, &direct_vector_negative);
+    for (&scalar_vector_negative) |*vec| {
+        var out: @Vector(4, u64) = undefined;
+        inline for (0..4) |lane| out[lane] = negativeBinomialFrom(&scalar_vector_negative_engine, 5, 0.25);
+        vec.* = out;
+    }
+    try std.testing.expectEqualSlices(@Vector(4, u64), &scalar_vector_negative, &direct_vector_negative);
+    try std.testing.expectEqual(scalar_vector_negative_engine.next(), direct_vector_negative_engine.next());
 
     const always_success_negative_binomial = try VectorNegativeBinomial(@Vector(4, u64)).init(5, 1);
     const always_success_negative_vec = always_success_negative_binomial.sample(rng);

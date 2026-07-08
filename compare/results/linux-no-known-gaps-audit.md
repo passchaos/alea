@@ -3973,3 +3973,10 @@ VectorGeometricFailures non-degenerate fills now draw lanes with the underlying
 geometricFailuresFrom sampler directly instead of routing each vector through
 VectorGeometricFailures.sampleFrom. This improves VectorGeometricFailures fill
 ergonomics but does not resolve S4-M11.
+
+S4-M829 fills VectorNegativeBinomial outputs with direct negativeBinomialFrom lane draws
+(`compare/results/s4-m829-vector-negative-binomial-fill-direct-sampler.md`):
+VectorNegativeBinomial non-degenerate fills now draw lanes with the underlying
+negativeBinomialFrom sampler directly instead of routing each vector through
+VectorNegativeBinomial.sampleFrom. This improves VectorNegativeBinomial fill
+ergonomics but does not resolve S4-M11.
