@@ -4573,3 +4573,10 @@ WeightedChoice ptr/value/index/u32 checked fixed-array facade helpers now fill
 directly instead of routing through direct-source checked array wrappers. This
 improves reusable weighted checked fixed-array ergonomics but does not resolve
 S4-M11.
+
+S4-M916 routes distribution Choose checked owned facades through direct allocation
+and filling
+(`compare/results/s4-m916-distribution-choose-checked-owned-facade-direct.md`):
+Choose ptr/value/index/u32 checked allocation-returning facade helpers now allocate
+and fill directly instead of routing through direct-source checked owned wrappers.
+This improves checked owned-batch ergonomics but does not resolve S4-M11.

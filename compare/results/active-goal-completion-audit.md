@@ -954,7 +954,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M913 Distribution Choose checked array facade direct paths | `src/distributions.zig`, `compare/results/s4-m913-distribution-choose-checked-array-facade-direct.md` | Closed for the current bar: distribution Choose checked fixed-array facade helpers now fill directly. |
 | S4-M914 Choice checked array facade direct paths | `src/seq.zig`, `compare/results/s4-m914-choice-checked-array-facade-direct.md` | Closed for the current bar: reusable Choice checked fixed-array facade helpers now fill directly. |
 | S4-M915 WeightedChoice checked array facade direct paths | `src/seq.zig`, `compare/results/s4-m915-weightedchoice-checked-array-facade-direct.md` | Closed for the current bar: reusable WeightedChoice checked fixed-array facade helpers now fill directly. |
-| S4-M916 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M916 Distribution Choose checked owned facade direct paths | `src/distributions.zig`, `compare/results/s4-m916-distribution-choose-checked-owned-facade-direct.md` | Closed for the current bar: distribution Choose checked allocation-returning facade helpers now allocate and fill directly. |
+| S4-M917 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3145,6 +3146,11 @@ helpers through direct alias-table filling after prevalidation, preserving strea
 shape while avoiding direct-source checked array wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M916 additionally routes distribution-layer Choose checked allocation-returning
+facade helpers through direct allocation and filling after prevalidation,
+preserving stream shape while avoiding direct-source checked owned wrapper
+aliases; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
