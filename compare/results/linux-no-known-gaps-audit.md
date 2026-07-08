@@ -5201,3 +5201,10 @@ S4-M1008 routes reusable scalar/vector FisherF facade helpers directly
 denominator Gamma values directly through facade `Rng` instead of routing through
 `sampleFrom` / `fillFrom` wrappers. This improves FisherF sampler facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1009 routes top-level scalar/vector FisherF facade helpers directly
+(`compare/results/s4-m1009-fisher-f-top-level-facade-direct.md`): scalar/vector
+FisherF checked/nonchecked sample/fill helpers now construct reusable FisherF
+samplers and call facade `sample` / `fill` directly instead of routing through
+`From` wrappers. This improves FisherF top-level facade ergonomics but does not
+resolve S4-M11.

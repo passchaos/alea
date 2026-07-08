@@ -11196,11 +11196,16 @@ pub fn Beta(comptime T: type) type {
 }
 
 pub fn fisherF(rng: Rng, comptime T: type, d1: T, d2: T) T {
-    return fisherFFrom(rng, T, d1, d2);
+    comptime requireFloat(T);
+    std.debug.assert(fisherFParametersValid(T, d1, d2));
+    if (d1 == std.math.inf(T) and d2 == std.math.inf(T)) return 1;
+    const sampler = FisherF(T).init(d1, d2) catch unreachable;
+    return sampler.sample(rng);
 }
 
 pub fn fisherFChecked(rng: Rng, comptime T: type, d1: T, d2: T) Error!T {
-    return fisherFCheckedFrom(rng, T, d1, d2);
+    const dist = try FisherF(T).init(d1, d2);
+    return dist.sample(rng);
 }
 
 pub fn fisherFCheckedFrom(source: anytype, comptime T: type, d1: T, d2: T) Error!T {
@@ -11227,7 +11232,14 @@ fn fisherFParametersValid(comptime T: type, d1: T, d2: T) bool {
 }
 
 pub fn fillFisherF(rng: Rng, comptime T: type, dest: []T, d1: T, d2: T) void {
-    fillFisherFFrom(rng, T, dest, d1, d2);
+    comptime requireFloat(T);
+    std.debug.assert(fisherFParametersValid(T, d1, d2));
+    if (d1 == std.math.inf(T) and d2 == std.math.inf(T)) {
+        @memset(dest, 1);
+        return;
+    }
+    const sampler = FisherF(T).init(d1, d2) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillFisherFFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: T) void {
@@ -11242,7 +11254,9 @@ pub fn fillFisherFFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: 
 }
 
 pub fn fillFisherFChecked(rng: Rng, comptime T: type, dest: []T, d1: T, d2: T) Error!void {
-    return fillFisherFCheckedFrom(rng, T, dest, d1, d2);
+    if (dest.len == 0) return;
+    const sampler = try FisherF(T).init(d1, d2);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillFisherFCheckedFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: T) Error!void {
@@ -11252,7 +11266,8 @@ pub fn fillFisherFCheckedFrom(source: anytype, comptime T: type, dest: []T, d1: 
 }
 
 pub fn vectorFisherF(rng: Rng, comptime VectorType: type, d1: vectorChild(VectorType), d2: vectorChild(VectorType)) VectorType {
-    return vectorFisherFFrom(rng, VectorType, d1, d2);
+    const sampler = VectorFisherF(VectorType).init(d1, d2) catch unreachable;
+    return sampler.sample(rng);
 }
 
 pub fn vectorFisherFFrom(source: anytype, comptime VectorType: type, d1: vectorChild(VectorType), d2: vectorChild(VectorType)) VectorType {
@@ -11261,7 +11276,8 @@ pub fn vectorFisherFFrom(source: anytype, comptime VectorType: type, d1: vectorC
 }
 
 pub fn vectorFisherFChecked(rng: Rng, comptime VectorType: type, d1: vectorChild(VectorType), d2: vectorChild(VectorType)) Error!VectorType {
-    return vectorFisherFCheckedFrom(rng, VectorType, d1, d2);
+    const sampler = try VectorFisherF(VectorType).init(d1, d2);
+    return sampler.sample(rng);
 }
 
 pub fn vectorFisherFCheckedFrom(source: anytype, comptime VectorType: type, d1: vectorChild(VectorType), d2: vectorChild(VectorType)) Error!VectorType {
@@ -11270,7 +11286,8 @@ pub fn vectorFisherFCheckedFrom(source: anytype, comptime VectorType: type, d1: 
 }
 
 pub fn fillVectorFisherF(rng: Rng, comptime VectorType: type, dest: []VectorType, d1: vectorChild(VectorType), d2: vectorChild(VectorType)) void {
-    fillVectorFisherFFrom(rng, VectorType, dest, d1, d2);
+    const sampler = VectorFisherF(VectorType).init(d1, d2) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorFisherFFrom(source: anytype, comptime VectorType: type, dest: []VectorType, d1: vectorChild(VectorType), d2: vectorChild(VectorType)) void {
@@ -11279,7 +11296,9 @@ pub fn fillVectorFisherFFrom(source: anytype, comptime VectorType: type, dest: [
 }
 
 pub fn fillVectorFisherFChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, d1: vectorChild(VectorType), d2: vectorChild(VectorType)) Error!void {
-    return fillVectorFisherFCheckedFrom(rng, VectorType, dest, d1, d2);
+    if (dest.len == 0) return;
+    const sampler = try VectorFisherF(VectorType).init(d1, d2);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorFisherFCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, d1: vectorChild(VectorType), d2: vectorChild(VectorType)) Error!void {
