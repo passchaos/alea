@@ -4525,3 +4525,10 @@ sampling (`compare/results/s4-m908-aliastable-u32-facade-direct.md`):
 AliasTable.sampleU32 and sampleU32Checked now execute compact alias-table sampling
 directly instead of routing through checked direct-source wrappers. This improves
 static weighted-index compact facade ergonomics but does not resolve S4-M11.
+
+S4-M909 routes dynamic weighted-tree facade sample aliases through direct sampling
+(`compare/results/s4-m909-weighted-tree-facade-direct.md`):
+WeightedTree and WeightedIntTree facade sample/index/u32 aliases now validate once
+and call the tree sampler directly instead of routing through checked facade
+wrappers. This improves dynamic weighted tree facade ergonomics but does not
+resolve S4-M11.
