@@ -3745,3 +3745,9 @@ seq IndexVec value/const-pointer/mutable-pointer caller-owned mappings now switc
 once on compact/native backing and map outputs directly, avoiding per-slot union
 dispatch through `at()`. This improves indexed-sample mapping reliability and
 ergonomics evidence but does not resolve S4-M11.
+
+S4-M794 prevalidates IndexVec owned u32 narrowing
+(`compare/results/s4-m794-indexvec-owned-u32-prevalidation.md`):
+seq IndexVec native `usize` backing is now checked for oversized values before
+allocating a compact `u32` output slice. This improves indexed-sample conversion
+failure determinism but does not resolve S4-M11.

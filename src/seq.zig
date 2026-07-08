@@ -345,12 +345,12 @@ pub const IndexVec = union(enum) {
         switch (self) {
             .u32 => |items| return items,
             .usize => |items| {
+                for (items) |item| {
+                    if (item > std.math.maxInt(u32)) return error.InvalidParameter;
+                }
                 const out = try allocator.alloc(u32, items.len);
                 errdefer allocator.free(out);
-                for (items, out) |item, *slot| {
-                    if (item > std.math.maxInt(u32)) return error.InvalidParameter;
-                    slot.* = @intCast(item);
-                }
+                for (items, out) |item, *slot| slot.* = @intCast(item);
                 allocator.free(items);
                 return out;
             },
@@ -10785,7 +10785,9 @@ test "index vec consuming owned conversions transfer or narrow backing" {
         defer std.testing.allocator.free(too_large_backing);
         too_large_backing[0..2].* = .{ 1, @as(usize, std.math.maxInt(u32)) + 1 };
         const too_large_vec = IndexVec{ .usize = too_large_backing };
-        try std.testing.expectError(error.InvalidParameter, too_large_vec.intoOwnedU32Slice(std.testing.allocator));
+        var too_large_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, too_large_vec.intoOwnedU32Slice(too_large_alloc.allocator()));
+        try std.testing.expect(!too_large_alloc.has_induced_failure);
     }
 
     var failing_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
