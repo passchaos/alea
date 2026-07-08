@@ -2280,7 +2280,10 @@ pub const Multinomial = struct {
     }
 
     pub fn sample(self: Multinomial, allocator: std.mem.Allocator, rng: Rng) ![]u64 {
-        return self.sampleFrom(allocator, rng);
+        const out = try allocator.alloc(u64, self.probabilities.len);
+        errdefer allocator.free(out);
+        self.sampleInto(rng, out);
+        return out;
     }
 
     pub fn sampleFrom(self: Multinomial, allocator: std.mem.Allocator, source: anytype) ![]u64 {
@@ -2291,11 +2294,35 @@ pub const Multinomial = struct {
     }
 
     pub fn sampleInto(self: Multinomial, rng: Rng, out: []u64) void {
-        self.sampleIntoFrom(rng, out);
+        std.debug.assert(out.len == self.probabilities.len);
+        @memset(out, 0);
+        if (self.probabilities.len == 1) {
+            out[0] = self.trials;
+            return;
+        }
+        if (self.trials == 0) return;
+        if (self.constant_category) |index| {
+            out[index] = self.trials;
+            return;
+        }
+
+        var remaining_trials = self.trials;
+        var remaining_probability = self.total_probability;
+        for (self.probabilities[0 .. self.probabilities.len - 1], out[0 .. out.len - 1]) |p, *slot| {
+            if (remaining_trials == 0) return;
+            if (p == 0) continue;
+            const normalized = p / remaining_probability;
+            const count = binomialFrom(rng, remaining_trials, normalized);
+            slot.* = count;
+            remaining_trials -= count;
+            remaining_probability -= p;
+        }
+        out[out.len - 1] = remaining_trials;
     }
 
     pub fn sampleIntoChecked(self: Multinomial, rng: Rng, out: []u64) Error!void {
-        try self.sampleIntoCheckedFrom(rng, out);
+        if (out.len != self.probabilities.len) return error.InvalidLength;
+        self.sampleInto(rng, out);
     }
 
     pub fn sampleIntoCheckedFrom(self: Multinomial, source: anytype, out: []u64) Error!void {
@@ -2304,11 +2331,33 @@ pub const Multinomial = struct {
     }
 
     pub fn sampleManyInto(self: Multinomial, rng: Rng, out: []u64) void {
-        self.sampleManyIntoFrom(rng, out);
+        std.debug.assert(out.len % self.probabilities.len == 0);
+        if (self.probabilities.len == 1) {
+            @memset(out, self.trials);
+            return;
+        }
+        if (self.trials == 0) {
+            @memset(out, 0);
+            return;
+        }
+        if (self.constant_category) |index| {
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += self.probabilities.len) {
+                const sample_out = out[offset..][0..self.probabilities.len];
+                @memset(sample_out, 0);
+                sample_out[index] = self.trials;
+            }
+            return;
+        }
+        var offset: usize = 0;
+        while (offset < out.len) : (offset += self.probabilities.len) {
+            self.sampleInto(rng, out[offset..][0..self.probabilities.len]);
+        }
     }
 
     pub fn sampleManyIntoChecked(self: Multinomial, rng: Rng, out: []u64) Error!void {
-        try self.sampleManyIntoCheckedFrom(rng, out);
+        if (out.len % self.probabilities.len != 0) return error.InvalidLength;
+        self.sampleManyInto(rng, out);
     }
 
     pub fn sampleManyIntoCheckedFrom(self: Multinomial, source: anytype, out: []u64) Error!void {
