@@ -9537,7 +9537,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
                 }
 
                 pub fn nextValue(self: *Iter) usize {
-                    return self.choice.sampleIndexFrom(self.source);
+                    return self.choice.table.sampleFrom(self.source);
                 }
 
                 pub fn fill(self: *Iter, dest: []usize) void {
@@ -9558,7 +9558,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
                 }
 
                 pub fn nextValue(self: *Iter) u32 {
-                    return self.choice.sampleIndexU32From(self.source) catch unreachable;
+                    return self.choice.table.sampleU32CheckedFrom(self.source) catch unreachable;
                 }
 
                 pub fn fill(self: *Iter, dest: []u32) void {
@@ -20739,6 +20739,11 @@ test "weighted choice sampler maps alias indexes to items" {
     var unchecked_index_iter = choice.indexIterFrom(&unchecked_index_iter_engine);
     try std.testing.expectEqual(unchecked_index_iter.next().?, checked_index_iter.next().?);
     try std.testing.expectEqual(unchecked_index_iter_engine.next(), checked_index_iter_engine.next());
+    var table_index_iter_engine = alea.DefaultPrng.init(0xc0_ef40);
+    var choice_index_iter_engine = alea.DefaultPrng.init(0xc0_ef40);
+    var choice_index_iter = choice.indexIterFrom(&choice_index_iter_engine);
+    try std.testing.expectEqual(choice.table.sampleFrom(&table_index_iter_engine), choice_index_iter.next().?);
+    try std.testing.expectEqual(table_index_iter_engine.next(), choice_index_iter_engine.next());
     var checked_index_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef32);
     var checked_index_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef32);
     var checked_index_iter_facade = try choice.indexIterChecked(Rng.init(&checked_index_iter_facade_engine));
@@ -20782,6 +20787,11 @@ test "weighted choice sampler maps alias indexes to items" {
     var unchecked_index_u32_iter = try choice.indexIterU32From(&unchecked_index_u32_iter_engine);
     try std.testing.expectEqual(unchecked_index_u32_iter.next().?, checked_index_u32_iter.next().?);
     try std.testing.expectEqual(unchecked_index_u32_iter_engine.next(), checked_index_u32_iter_engine.next());
+    var table_u32_index_iter_engine = alea.DefaultPrng.init(0xc0_ef41);
+    var choice_u32_index_iter_engine = alea.DefaultPrng.init(0xc0_ef41);
+    var choice_u32_index_iter = try choice.indexIterU32From(&choice_u32_index_iter_engine);
+    try std.testing.expectEqual(try choice.table.sampleU32CheckedFrom(&table_u32_index_iter_engine), choice_u32_index_iter.next().?);
+    try std.testing.expectEqual(table_u32_index_iter_engine.next(), choice_u32_index_iter_engine.next());
     var checked_index_u32_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef33);
     var checked_index_u32_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef33);
     var checked_index_u32_iter_facade = try choice.indexIterU32Checked(Rng.init(&checked_index_u32_iter_facade_engine));

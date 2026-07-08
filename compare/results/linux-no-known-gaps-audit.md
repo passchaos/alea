@@ -3875,3 +3875,10 @@ distribution-layer Choose usize/u32 index iterator next calls now generate unifo
 indexes directly from cached choice length instead of routing through sample
 wrappers. This improves distribution choose index iterator ergonomics but does
 not resolve S4-M11.
+
+S4-M814 samples WeightedChoice index iterators directly from AliasTable
+(`compare/results/s4-m814-weightedchoice-index-iterator-direct-table.md`):
+reusable WeightedChoice usize/u32 index iterator next calls now sample the
+underlying AliasTable directly instead of routing through WeightedChoice sample
+wrappers. This improves reusable weighted-choice index iterator ergonomics but
+does not resolve S4-M11.
