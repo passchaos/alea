@@ -8517,7 +8517,9 @@ pub fn VectorPoissonAhrensDieter(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = self.method.sampleFrom(rng);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -8527,7 +8529,11 @@ pub fn VectorPoissonAhrensDieter(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = self.method.sampleFrom(rng);
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {

@@ -5001,3 +5001,9 @@ S4-M980 routes reusable Dirichlet facade helpers directly
 Dirichlet allocation-returning and caller-buffer facade helpers now run direct
 gamma-normalization sampling instead of routing through `From` wrappers. This
 improves Dirichlet facade ergonomics but does not resolve S4-M11.
+
+S4-M981 routes reusable VectorPoissonAhrensDieter facade sample/fill helpers
+directly (`compare/results/s4-m981-vector-poisson-ad-facade-direct.md`):
+VectorPoissonAhrensDieter facade helpers now draw lanes directly from the cached
+Ahrens-Dieter method instead of routing through direct-source wrappers. This
+improves vector Poisson facade ergonomics but does not resolve S4-M11.
