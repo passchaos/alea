@@ -4976,3 +4976,9 @@ S4-M976 routes reusable Hypergeometric facade sample/fill helpers directly
 Hypergeometric `sample` and `fill` now dispatch directly to the selected method
 instead of routing through direct-source wrappers. This improves Hypergeometric
 sampler ergonomics but does not resolve S4-M11.
+
+S4-M977 routes vector Hypergeometric facade helpers directly
+(`compare/results/s4-m977-vector-hypergeometric-facade-direct.md`):
+VectorHypergeometric top-level and reusable facade helpers now dispatch directly
+to the selected method instead of routing through `From` wrappers. This improves
+vector Hypergeometric facade ergonomics but does not resolve S4-M11.

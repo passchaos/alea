@@ -2759,7 +2759,8 @@ pub fn fillHypergeometricCheckedFrom(source: anytype, dest: []u64, population: u
 }
 
 pub fn vectorHypergeometric(rng: Rng, comptime VectorType: type, population: u64, successes: u64, draws: u64) VectorType {
-    return vectorHypergeometricFrom(rng, VectorType, population, successes, draws);
+    const dist = VectorHypergeometric(VectorType).init(population, successes, draws) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn vectorHypergeometricFrom(source: anytype, comptime VectorType: type, population: u64, successes: u64, draws: u64) VectorType {
@@ -2768,7 +2769,8 @@ pub fn vectorHypergeometricFrom(source: anytype, comptime VectorType: type, popu
 }
 
 pub fn vectorHypergeometricChecked(rng: Rng, comptime VectorType: type, population: u64, successes: u64, draws: u64) Error!VectorType {
-    return vectorHypergeometricCheckedFrom(rng, VectorType, population, successes, draws);
+    const dist = try VectorHypergeometric(VectorType).init(population, successes, draws);
+    return dist.sample(rng);
 }
 
 pub fn vectorHypergeometricCheckedFrom(source: anytype, comptime VectorType: type, population: u64, successes: u64, draws: u64) Error!VectorType {
@@ -2777,7 +2779,8 @@ pub fn vectorHypergeometricCheckedFrom(source: anytype, comptime VectorType: typ
 }
 
 pub fn fillVectorHypergeometric(rng: Rng, comptime VectorType: type, dest: []VectorType, population: u64, successes: u64, draws: u64) void {
-    fillVectorHypergeometricFrom(rng, VectorType, dest, population, successes, draws);
+    const dist = VectorHypergeometric(VectorType).init(population, successes, draws) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorHypergeometricFrom(source: anytype, comptime VectorType: type, dest: []VectorType, population: u64, successes: u64, draws: u64) void {
@@ -2786,7 +2789,9 @@ pub fn fillVectorHypergeometricFrom(source: anytype, comptime VectorType: type, 
 }
 
 pub fn fillVectorHypergeometricChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, population: u64, successes: u64, draws: u64) Error!void {
-    return fillVectorHypergeometricCheckedFrom(rng, VectorType, dest, population, successes, draws);
+    if (dest.len == 0) return;
+    const dist = try VectorHypergeometric(VectorType).init(population, successes, draws);
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorHypergeometricCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, population: u64, successes: u64, draws: u64) Error!void {
@@ -2837,7 +2842,21 @@ pub fn VectorHypergeometric(comptime VectorType: type) type {
         }
 
         pub fn sample(self: *const Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.method == .constant) return @splat(self.sampler.constant);
+            var out: VectorType = undefined;
+            switch (self.sampler.method) {
+                .constant => unreachable,
+                .draw_loop => inline for (0..info.len) |lane| {
+                    out[lane] = hypergeometricDrawLoopFrom(rng, self.sampler.population, self.sampler.successes, self.sampler.draws);
+                },
+                .inverse_transform => inline for (0..info.len) |lane| {
+                    out[lane] = self.sampler.inverse_transform.sampleFrom(rng);
+                },
+                .rejection_acceptance => inline for (0..info.len) |lane| {
+                    out[lane] = self.sampler.rejection_acceptance.sampleFrom(rng);
+                },
+            }
+            return out;
         }
 
         pub fn sampleFrom(self: *const Self, source: anytype) VectorType {
@@ -2848,7 +2867,30 @@ pub fn VectorHypergeometric(comptime VectorType: type) type {
         }
 
         pub fn fill(self: *const Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            switch (self.sampler.method) {
+                .constant => @memset(dest, @as(VectorType, @splat(self.sampler.constant))),
+                .draw_loop => {
+                    for (dest) |*item| {
+                        var out: VectorType = undefined;
+                        inline for (0..info.len) |lane| out[lane] = hypergeometricDrawLoopFrom(rng, self.sampler.population, self.sampler.successes, self.sampler.draws);
+                        item.* = out;
+                    }
+                },
+                .inverse_transform => {
+                    for (dest) |*item| {
+                        var out: VectorType = undefined;
+                        inline for (0..info.len) |lane| out[lane] = self.sampler.inverse_transform.sampleFrom(rng);
+                        item.* = out;
+                    }
+                },
+                .rejection_acceptance => {
+                    for (dest) |*item| {
+                        var out: VectorType = undefined;
+                        inline for (0..info.len) |lane| out[lane] = self.sampler.rejection_acceptance.sampleFrom(rng);
+                        item.* = out;
+                    }
+                },
+            }
         }
 
         pub fn fillFrom(self: *const Self, source: anytype, dest: []VectorType) void {
