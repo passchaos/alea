@@ -18508,12 +18508,12 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, usize) {
             if (!self.isValid()) return error.InvalidWeight;
-            return self.iter(rng);
+            return rng.sampleIter(usize, self);
         }
 
         pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
             if (!self.isValid()) return error.InvalidWeight;
-            return self.iterFrom(source);
+            return Rng.sampleIterFrom(source, usize, self);
         }
 
         pub fn iterU32(self: Self, rng: Rng) U32IndexIterator(Rng) {
@@ -19370,12 +19370,12 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, usize) {
             if (!self.isValid()) return error.InvalidWeight;
-            return self.iter(rng);
+            return rng.sampleIter(usize, self);
         }
 
         pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
             if (!self.isValid()) return error.InvalidWeight;
-            return self.iterFrom(source);
+            return Rng.sampleIterFrom(source, usize, self);
         }
 
         pub fn iterU32(self: Self, rng: Rng) U32IndexIterator(Rng) {

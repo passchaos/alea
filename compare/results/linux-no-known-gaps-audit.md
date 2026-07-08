@@ -4794,3 +4794,10 @@ AliasTable `iterU32CheckedFrom` now constructs its compact iterator payload
 directly after width prevalidation instead of routing through `iterU32From`. This
 improves weighted-index checked compact iterator ergonomics but does not resolve
 S4-M11.
+
+S4-M949 routes dynamic weighted-tree checked `usize` iterator constructors
+directly (`compare/results/s4-m949-weighted-tree-checked-iterator-direct.md`):
+WeightedTree and WeightedIntTree checked iterator constructors now build iterator
+payloads directly after validation instead of routing through unchecked iterator
+wrappers. This improves dynamic weighted-index checked iterator ergonomics but
+does not resolve S4-M11.
