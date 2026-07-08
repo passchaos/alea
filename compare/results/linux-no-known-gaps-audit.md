@@ -4884,3 +4884,9 @@ S4-M962 refreshes current AliasTable direct-source index alias sampling directly
 AliasTable `sampleIndexFrom` now executes direct alias-table sampling branches
 instead of routing through `sampleCheckedFrom`. This improves weighted-index
 alias ergonomics but does not resolve S4-M11.
+
+S4-M963 refreshes current AliasTable compact direct-source alias sampling directly
+(`compare/results/s4-m963-aliastable-u32-from-direct-refresh.md`):
+AliasTable `sampleU32From` and `sampleIndexU32From` now execute direct compact
+alias-table branches instead of routing through `sampleU32CheckedFrom`. This
+improves weighted-index compact alias ergonomics but does not resolve S4-M11.
