@@ -5322,3 +5322,10 @@ S4-M1025 routes reusable scalar/vector Frechet facade helpers directly
 and apply the Frechet transform directly through facade `Rng` instead of routing
 through `sampleFrom` / `fillFrom` wrappers. This improves Frechet sampler facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1026 routes reusable scalar/vector SkewNormal facade helpers directly
+(`compare/results/s4-m1026-skew-normal-sampler-facade-direct.md`):
+`SkewNormal.sample` / `fill` and `VectorSkewNormal.sample` / `fill` now draw
+standard-normal components and apply the skew-normal transform directly through
+facade `Rng` instead of routing through `sampleFrom` / `fillFrom` wrappers. This
+improves SkewNormal sampler facade ergonomics but does not resolve S4-M11.

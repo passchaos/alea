@@ -15956,7 +15956,15 @@ pub fn VectorSkewNormal(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
+            const z1 = vectorStandardNormal(rng, VectorType);
+            if (self.shapeValue() == 0) {
+                const location_vec: VectorType = @splat(self.locationValue());
+                const scale_vec: VectorType = @splat(self.scaleValue());
+                return location_vec + scale_vec * z1;
+            }
+            const z2 = vectorStandardNormal(rng, VectorType);
+            return skewNormalFromStandardNormalVectors(VectorType, z1, z2, self.locationValue(), self.scaleValue(), self.shapeValue());
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -15972,7 +15980,21 @@ pub fn VectorSkewNormal(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.locationValue())));
+                return;
+            }
+            const location_vec: VectorType = @splat(self.locationValue());
+            const scale_vec: VectorType = @splat(self.scaleValue());
+            if (self.shapeValue() == 0) {
+                for (dest) |*item| item.* = location_vec + scale_vec * vectorStandardNormal(rng, VectorType);
+                return;
+            }
+            for (dest) |*item| {
+                const z1 = vectorStandardNormal(rng, VectorType);
+                const z2 = vectorStandardNormal(rng, VectorType);
+                item.* = skewNormalFromStandardNormalVectors(VectorType, z1, z2, self.locationValue(), self.scaleValue(), self.shapeValue());
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -16059,7 +16081,21 @@ pub fn SkewNormal(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return self.location;
+
+            const z1 = rng.normal(T, 0, 1);
+            if (self.shape == 0) return self.location + self.scale * z1;
+
+            const z2 = rng.normal(T, 0, 1);
+            const normalized = if (self.shape == -1)
+                @min(z1, z2)
+            else if (self.shape == 1)
+                @max(z1, z2)
+            else blk: {
+                const delta = self.shape / @sqrt(1 + self.shape * self.shape);
+                break :blk delta * @abs(z1) + @sqrt(1 - delta * delta) * z2;
+            };
+            return self.location + self.scale * normalized;
         }
 
         pub inline fn sampleFrom(self: Self, source: anytype) T {
@@ -16068,7 +16104,38 @@ pub fn SkewNormal(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, self.location);
+                return;
+            }
+            if (self.shape == 0) {
+                for (dest) |*item| item.* = self.location + self.scale * rng.normal(T, 0, 1);
+                return;
+            }
+            if (self.shape == -1) {
+                for (dest) |*item| {
+                    const z1 = rng.normal(T, 0, 1);
+                    const z2 = rng.normal(T, 0, 1);
+                    item.* = self.location + self.scale * @min(z1, z2);
+                }
+                return;
+            }
+            if (self.shape == 1) {
+                for (dest) |*item| {
+                    const z1 = rng.normal(T, 0, 1);
+                    const z2 = rng.normal(T, 0, 1);
+                    item.* = self.location + self.scale * @max(z1, z2);
+                }
+                return;
+            }
+
+            const delta = self.shape / @sqrt(1 + self.shape * self.shape);
+            const orthogonal = @sqrt(1 - delta * delta);
+            for (dest) |*item| {
+                const z1 = rng.normal(T, 0, 1);
+                const z2 = rng.normal(T, 0, 1);
+                item.* = self.location + self.scale * (delta * @abs(z1) + orthogonal * z2);
+            }
         }
 
         pub inline fn fillFrom(self: Self, source: anytype, dest: []T) void {
