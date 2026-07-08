@@ -4240,3 +4240,10 @@ VectorInverseGaussian.fillFrom now draws vector standard-normal and uniform valu
 and applies the inverse-Gaussian transform directly instead of routing every
 output through VectorInverseGaussian.sampleFrom. This improves
 VectorInverseGaussian reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M866 draws reusable VectorNormalInverseGaussian fills through direct vector
+composition (`compare/results/s4-m866-vector-nig-fill-direct-composition.md`):
+VectorNormalInverseGaussian.fillFrom now draws the embedded inverse-Gaussian
+normal/uniform vector pair and final standard-normal vector directly instead of
+routing every output through VectorNormalInverseGaussian.sampleFrom. This improves
+VectorNormalInverseGaussian reusable fill ergonomics but does not resolve S4-M11.

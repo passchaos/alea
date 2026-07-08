@@ -16096,7 +16096,15 @@ pub fn VectorNormalInverseGaussian(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            const inverse_mean = 1 / self.gammaValue();
+            const beta_vec: VectorType = @splat(self.betaValue());
+            for (dest) |*item| {
+                const inverse_normal_vec = vectorStandardNormalFrom(source, VectorType);
+                const inverse_uniform_vec = Rng.vectorFrom(source, VectorType);
+                const inv_gauss = inverseGaussianFromNormalVector(VectorType, inverse_normal_vec, inverse_uniform_vec, inverse_mean, @as(Child, 1));
+                const normal_vec = vectorStandardNormalFrom(source, VectorType);
+                item.* = beta_vec * inv_gauss + @sqrt(inv_gauss) * normal_vec;
+            }
         }
     };
 }
@@ -28150,6 +28158,29 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &nig_buf_vec, &direct_nig_buf_vec);
     for (nig_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_nig_fill_engine = alea.ScalarPrng.init(0x5866_0001);
+    var vector_nig_loop_engine = alea.ScalarPrng.init(0x5866_0001);
+    var vector_nig_fill: [3]@Vector(4, f64) = undefined;
+    var vector_nig_loop: [3]@Vector(4, f64) = undefined;
+    vector_nig_sampler.fillFrom(&vector_nig_fill_engine, &vector_nig_fill);
+    for (&vector_nig_loop) |*slot| slot.* = vector_nig_sampler.sampleFrom(&vector_nig_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_nig_loop, &vector_nig_fill);
+    try std.testing.expectEqual(vector_nig_loop_engine.next(), vector_nig_fill_engine.next());
+    var vector_nig_f32_fill_engine = alea.ScalarPrng.init(0x5866_f32);
+    var vector_nig_f32_loop_engine = alea.ScalarPrng.init(0x5866_f32);
+    const vector_nig_f32 = try VectorNormalInverseGaussian(@Vector(8, f32)).init(2, 1);
+    var vector_nig_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_nig_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_nig_f32.fillFrom(&vector_nig_f32_fill_engine, &vector_nig_f32_fill);
+    for (&vector_nig_f32_loop) |*slot| slot.* = vector_nig_f32.sampleFrom(&vector_nig_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_nig_f32_loop, &vector_nig_f32_fill);
+    try std.testing.expectEqual(vector_nig_f32_loop_engine.next(), vector_nig_f32_fill_engine.next());
+    var vector_nig_degenerate_engine = alea.ScalarPrng.init(0x5866_d00);
+    var vector_nig_degenerate_control = alea.ScalarPrng.init(0x5866_d00);
+    const vector_nig_degenerate = try VectorNormalInverseGaussian(@Vector(4, f64)).init(std.math.inf(f64), 1);
+    vector_nig_degenerate.fillFrom(&vector_nig_degenerate_engine, &vector_nig_fill);
+    for (vector_nig_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vec);
+    try std.testing.expectEqual(vector_nig_degenerate_control.next(), vector_nig_degenerate_engine.next());
 
     const zipf_vec = try vectorZipfChecked(rng, @Vector(4, f64), 10, 1.5);
     const direct_zipf_vec = try vectorZipfCheckedFrom(&direct_engine, @Vector(4, f64), 10, 1.5);
