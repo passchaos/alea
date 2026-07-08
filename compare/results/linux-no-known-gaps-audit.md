@@ -5294,3 +5294,10 @@ S4-M1021 routes reusable scalar/vector Maxwell facade helpers directly
 the Maxwell radius transform directly through facade `Rng` instead of routing
 through `sampleFrom` / `fillFrom` wrappers. This improves Maxwell sampler facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1022 routes reusable scalar/vector Pareto facade helpers directly
+(`compare/results/s4-m1022-pareto-sampler-facade-direct.md`): `Pareto.sample` /
+`fill` and `VectorPareto.sample` / `fill` now draw strict-open uniform values and
+apply the Pareto inverse-power transform directly through facade `Rng` instead of
+routing through `sampleFrom` / `fillFrom` wrappers. This improves Pareto sampler
+facade ergonomics but does not resolve S4-M11.
