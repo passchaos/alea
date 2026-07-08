@@ -8983,7 +8983,11 @@ pub fn VectorGamma(comptime VectorType: type) type {
                 }
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+                item.* = out;
+            }
         }
     };
 }
@@ -26710,6 +26714,23 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &gamma_buf_vec, &direct_gamma_buf_vec);
     for (gamma_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_gamma_fill_engine = alea.ScalarPrng.init(0x5872_0001);
+    var vector_gamma_loop_engine = alea.ScalarPrng.init(0x5872_0001);
+    var vector_gamma_fill: [3]@Vector(4, f64) = undefined;
+    var vector_gamma_loop: [3]@Vector(4, f64) = undefined;
+    vector_gamma_sampler.fillFrom(&vector_gamma_fill_engine, &vector_gamma_fill);
+    for (&vector_gamma_loop) |*slot| slot.* = vector_gamma_sampler.sampleFrom(&vector_gamma_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_gamma_loop, &vector_gamma_fill);
+    try std.testing.expectEqual(vector_gamma_loop_engine.next(), vector_gamma_fill_engine.next());
+    var vector_gamma_f32_fill_engine = alea.ScalarPrng.init(0x5872_f32);
+    var vector_gamma_f32_loop_engine = alea.ScalarPrng.init(0x5872_f32);
+    const vector_gamma_f32 = try VectorGamma(@Vector(8, f32)).init(2, 3);
+    var vector_gamma_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_gamma_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_gamma_f32.fillFrom(&vector_gamma_f32_fill_engine, &vector_gamma_f32_fill);
+    for (&vector_gamma_f32_loop) |*slot| slot.* = vector_gamma_f32.sampleFrom(&vector_gamma_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_gamma_f32_loop, &vector_gamma_f32_fill);
+    try std.testing.expectEqual(vector_gamma_f32_loop_engine.next(), vector_gamma_f32_fill_engine.next());
     var vector_gamma_shape_one_fill_engine = alea.ScalarPrng.init(0x6838_0001);
     var vector_gamma_shape_one_standard_engine = alea.ScalarPrng.init(0x6838_0001);
     const vector_gamma_shape_one = try VectorGamma(@Vector(4, f64)).init(1, 3);

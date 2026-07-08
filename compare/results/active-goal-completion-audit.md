@@ -910,7 +910,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M869 VectorBeta reusable fill direct lane sampling | `src/distributions.zig`, `compare/results/s4-m869-vector-beta-fill-direct-lanes.md` | Closed for the current bar: reusable VectorBeta fills now sample lanes directly from the cached scalar Beta sampler. |
 | S4-M870 VectorPoissonAhrensDieter reusable fill direct lane sampling | `src/distributions.zig`, `compare/results/s4-m870-vector-poisson-ad-fill-direct-lanes.md` | Closed for the current bar: reusable VectorPoissonAhrensDieter fills now sample lanes directly from the cached Ahrens-Dieter method. |
 | S4-M871 VectorBernoulli reusable fill direct lane sampling | `src/distributions.zig`, `compare/results/s4-m871-vector-bernoulli-fill-direct-lanes.md` | Closed for the current bar: reusable VectorBernoulli generic-probability fills now draw lane raw words and compare directly against the cached threshold. |
-| S4-M872 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M872 VectorGamma reusable fill direct lane sampling | `src/distributions.zig`, `compare/results/s4-m872-vector-gamma-fill-direct-lanes.md` | Closed for the current bar: reusable VectorGamma generic-shape fills now sample lanes directly from the cached scalar Gamma sampler. |
+| S4-M873 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2907,6 +2908,11 @@ S4-M871 additionally routes reusable VectorBernoulli generic-probability fills
 through direct cached-threshold lane comparisons, preserving stream shape while
 avoiding per-output VectorBernoulli.sampleFrom wrapper calls; it is reliability/
 ergonomics work and does not resolve S4-M11 or complete the long-term objective.
+S4-M872 additionally routes reusable VectorGamma generic-shape fills through
+direct cached scalar Gamma lane sampling, preserving stream shape while avoiding
+per-output VectorGamma.sampleFrom wrapper calls and retaining the shape-one fast
+path; it is reliability/ergonomics work and does not resolve S4-M11 or complete
+the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

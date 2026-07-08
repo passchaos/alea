@@ -4281,3 +4281,11 @@ VectorBernoulli.fillFrom now draws one raw word per lane and compares against th
 cached threshold instead of routing generic-probability outputs through
 VectorBernoulli.sampleFrom. This improves VectorBernoulli reusable fill ergonomics
 but does not resolve S4-M11.
+
+S4-M872 draws reusable VectorGamma generic-shape fills through direct cached
+scalar Gamma lane sampling
+(`compare/results/s4-m872-vector-gamma-fill-direct-lanes.md`):
+VectorGamma.fillFrom now samples each generic-shape vector lane directly from the
+cached scalar Gamma sampler instead of routing every output through
+VectorGamma.sampleFrom, while retaining the degenerate and shape-one fast paths.
+This improves VectorGamma reusable fill ergonomics but does not resolve S4-M11.
