@@ -5236,3 +5236,10 @@ S4-M1013 routes reusable scalar/vector Arcsine facade helpers directly
 apply the arcsine transform directly through facade `Rng` instead of routing
 through `sampleFrom` / `fillFrom` wrappers. This improves Arcsine sampler facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1014 routes reusable scalar/vector Cauchy facade helpers directly
+(`compare/results/s4-m1014-cauchy-sampler-facade-direct.md`): `Cauchy.sample` /
+`fill` and `VectorCauchy.sample` / `fill` now draw open-uniform values and apply
+the Cauchy transform directly through facade `Rng` instead of routing through
+`sampleFrom` / `fillFrom` wrappers. This improves Cauchy sampler facade ergonomics
+but does not resolve S4-M11.
