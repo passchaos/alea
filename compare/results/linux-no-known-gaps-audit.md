@@ -4397,3 +4397,10 @@ S4-M889 fills ASCII and Unicode charset probability iterators directly
 Charset and UnicodeCharset probability iterator fills now write the known uniform
 probability directly instead of routing every output through next(). This improves
 charset diagnostic fill ergonomics but does not resolve S4-M11.
+
+S4-M890 draws reusable WeightedChoice compact index samples through the direct
+AliasTable u32 path
+(`compare/results/s4-m890-weightedchoice-u32-sample-table-direct.md`):
+WeightedChoice.sampleIndexU32From now calls the underlying table's compact sampler
+instead of sampling a usize and casting. This improves WeightedChoice compact
+index sampling ergonomics but does not resolve S4-M11.

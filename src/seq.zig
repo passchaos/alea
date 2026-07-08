@@ -9123,7 +9123,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn sampleIndexU32From(self: Self, source: anytype) Error!u32 {
             if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
-            return @intCast(self.sampleIndexFrom(source));
+            return self.table.sampleU32CheckedFrom(source) catch unreachable;
         }
 
         pub fn sampleIndexU32Checked(self: Self, rng: Rng) Error!u32 {
@@ -20820,6 +20820,10 @@ test "weighted choice sampler maps alias indexes to items" {
     var choice_u32_index_iter = try choice.indexIterU32From(&choice_u32_index_iter_engine);
     try std.testing.expectEqual(try choice.table.sampleU32CheckedFrom(&table_u32_index_iter_engine), choice_u32_index_iter.next().?);
     try std.testing.expectEqual(table_u32_index_iter_engine.next(), choice_u32_index_iter_engine.next());
+    var table_u32_sample_engine = alea.DefaultPrng.init(0xc0_ef46);
+    var choice_u32_sample_engine = alea.DefaultPrng.init(0xc0_ef46);
+    try std.testing.expectEqual(try choice.table.sampleU32CheckedFrom(&table_u32_sample_engine), try choice.sampleIndexU32From(&choice_u32_sample_engine));
+    try std.testing.expectEqual(table_u32_sample_engine.next(), choice_u32_sample_engine.next());
     var checked_index_u32_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef33);
     var checked_index_u32_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef33);
     var checked_index_u32_iter_facade = try choice.indexIterU32Checked(Rng.init(&checked_index_u32_iter_facade_engine));
