@@ -4030,3 +4030,11 @@ the shared bulk helper for f32/f64 vector lanes and scales the backing scalar
 lanes in place, while preserving infinite-rate no-consume behavior and
 scalar-loop stream shape. This improves VectorExponential reusable fill
 ergonomics but does not resolve S4-M11.
+
+S4-M837 stages shape-one reusable Gamma fills through the standard helper
+(`compare/results/s4-m837-gamma-shape-one-fill-standard-stage.md`):
+Gamma.fillFrom now uses the shared standard exponential bulk helper for
+shape-one non-degenerate fills and scales the output in place, matching local
+rand_distr's `GammaRepr::One(Exp)` decomposition while preserving stream shape.
+This improves Gamma shape-one reusable fill ergonomics but does not resolve
+S4-M11.

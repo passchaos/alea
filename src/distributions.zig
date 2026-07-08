@@ -9051,6 +9051,11 @@ pub fn Gamma(comptime T: type) type {
                 @memset(dest, 0);
                 return;
             }
+            if (self.shape == 1) {
+                fillStandardExponentialFrom(source, T, dest);
+                if (self.scale != 1) scaleInPlace(T, dest, self.scale);
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
 
@@ -30679,6 +30684,24 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (gamma_shape_one_buf) |value| try std.testing.expect(value > 0);
     const gamma_shape_one = try Gamma(f64).init(1, 3);
     try std.testing.expect(gamma_shape_one.sampleFrom(&direct_engine) > 0);
+    var gamma_shape_one_fill_engine = alea.ScalarPrng.init(0x6837_0001);
+    var gamma_shape_one_exponential_engine = alea.ScalarPrng.init(0x6837_0001);
+    var gamma_shape_one_fill: [10]f64 = undefined;
+    var gamma_shape_one_exponential: [10]f64 = undefined;
+    gamma_shape_one.fillFrom(&gamma_shape_one_fill_engine, &gamma_shape_one_fill);
+    fillStandardExponentialFrom(&gamma_shape_one_exponential_engine, f64, &gamma_shape_one_exponential);
+    scaleInPlace(f64, &gamma_shape_one_exponential, 3);
+    try std.testing.expectEqualSlices(f64, &gamma_shape_one_exponential, &gamma_shape_one_fill);
+    try std.testing.expectEqual(gamma_shape_one_exponential_engine.next(), gamma_shape_one_fill_engine.next());
+    var gamma_shape_one_f32_fill_engine = alea.ScalarPrng.init(0x6837_f32);
+    var gamma_shape_one_f32_loop_engine = alea.ScalarPrng.init(0x6837_f32);
+    const gamma_shape_one_f32 = try Gamma(f32).init(1, 2.75);
+    var gamma_shape_one_f32_fill: [11]f32 = undefined;
+    var gamma_shape_one_f32_loop: [11]f32 = undefined;
+    gamma_shape_one_f32.fillFrom(&gamma_shape_one_f32_fill_engine, &gamma_shape_one_f32_fill);
+    for (&gamma_shape_one_f32_loop) |*slot| slot.* = gamma_shape_one_f32.sampleFrom(&gamma_shape_one_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &gamma_shape_one_f32_loop, &gamma_shape_one_f32_fill);
+    try std.testing.expectEqual(gamma_shape_one_f32_loop_engine.next(), gamma_shape_one_f32_fill_engine.next());
     var gamma_shape_half_buf: [8]f64 = undefined;
     fillGammaFrom(&direct_engine, f64, &gamma_shape_half_buf, 0.5, 3);
     for (gamma_shape_half_buf) |value| try std.testing.expect(value >= 0);
