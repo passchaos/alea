@@ -16310,7 +16310,9 @@ pub fn VectorPert(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
+            const beta_vec = vectorBetaFrom(rng, VectorType, self.alphaValue(), self.betaValue());
+            return @as(VectorType, @splat(self.minValue())) + @as(VectorType, @splat(self.maxValue() - self.minValue())) * beta_vec;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -16320,7 +16322,15 @@ pub fn VectorPert(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.minValue())));
+                return;
+            }
+            const beta_sampler = VectorBeta(VectorType).init(self.alphaValue(), self.betaValue()) catch unreachable;
+            beta_sampler.fillFrom(rng, dest);
+            const min_vec: VectorType = @splat(self.minValue());
+            const range_vec: VectorType = @splat(self.maxValue() - self.minValue());
+            for (dest) |*item| item.* = min_vec + range_vec * item.*;
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -16435,7 +16445,8 @@ pub fn Pert(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return self.degenerateValue();
+            return self.min + self.range * betaFrom(rng, T, self.alpha, self.beta_param);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -16444,7 +16455,12 @@ pub fn Pert(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, self.degenerateValue());
+                return;
+            }
+            fillBetaFrom(rng, T, dest, self.alpha, self.beta_param);
+            for (dest) |*item| item.* = self.min + self.range * item.*;
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {

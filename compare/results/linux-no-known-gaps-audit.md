@@ -5329,3 +5329,10 @@ S4-M1026 routes reusable scalar/vector SkewNormal facade helpers directly
 standard-normal components and apply the skew-normal transform directly through
 facade `Rng` instead of routing through `sampleFrom` / `fillFrom` wrappers. This
 improves SkewNormal sampler facade ergonomics but does not resolve S4-M11.
+
+S4-M1027 routes reusable scalar/vector Pert facade helpers directly
+(`compare/results/s4-m1027-pert-sampler-facade-direct.md`): `Pert.sample` /
+`fill` and `VectorPert.sample` / `fill` now use cached Beta transforms directly
+through facade `Rng` and scale into the PERT range instead of routing through
+`sampleFrom` / `fillFrom` wrappers. This improves Pert sampler facade ergonomics
+but does not resolve S4-M11.

@@ -1065,7 +1065,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1024 Gumbel sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1024-gumbel-sampler-facade-direct.md` | Closed for the current bar: reusable scalar/vector Gumbel facade sample/fill helpers now avoid From wrappers. |
 | S4-M1025 Frechet sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1025-frechet-sampler-facade-direct.md` | Closed for the current bar: reusable scalar/vector Frechet facade sample/fill helpers now avoid From wrappers. |
 | S4-M1026 SkewNormal sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1026-skew-normal-sampler-facade-direct.md` | Closed for the current bar: reusable scalar/vector SkewNormal facade sample/fill helpers now avoid From wrappers. |
-| S4-M1027 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1027 Pert sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1027-pert-sampler-facade-direct.md` | Closed for the current bar: reusable scalar/vector Pert facade sample/fill helpers now avoid From wrappers. |
+| S4-M1028 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3817,6 +3818,12 @@ S4-M1026 additionally routes reusable scalar/vector SkewNormal facade sample/fil
 helpers through direct standard-normal component transform sampling, preserving
 stream shape, degenerate point-mass no-consume behavior, and zero-length checked
 fill semantics while avoiding `sampleFrom` / `fillFrom` wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M1027 additionally routes reusable scalar/vector Pert facade sample/fill
+helpers through direct cached-Beta transform sampling, preserving stream shape,
+degenerate point-mass no-consume behavior, and zero-length checked fill semantics
+while avoiding `sampleFrom` / `fillFrom` wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
