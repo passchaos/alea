@@ -13099,7 +13099,12 @@ pub fn VectorMaxwell(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(0)));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const x = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
+                const y = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
+                const z = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
+                item.* = maxwellFromNormalVectors(x, y, z);
+            }
         }
     };
 }
@@ -27541,6 +27546,29 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &maxwell_buf_vec, &direct_maxwell_buf_vec);
     for (maxwell_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_maxwell_fill_engine = alea.ScalarPrng.init(0x5858_0001);
+    var vector_maxwell_loop_engine = alea.ScalarPrng.init(0x5858_0001);
+    var vector_maxwell_fill: [3]@Vector(4, f64) = undefined;
+    var vector_maxwell_loop: [3]@Vector(4, f64) = undefined;
+    vector_maxwell_sampler.fillFrom(&vector_maxwell_fill_engine, &vector_maxwell_fill);
+    for (&vector_maxwell_loop) |*slot| slot.* = vector_maxwell_sampler.sampleFrom(&vector_maxwell_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_maxwell_loop, &vector_maxwell_fill);
+    try std.testing.expectEqual(vector_maxwell_loop_engine.next(), vector_maxwell_fill_engine.next());
+    var vector_maxwell_f32_fill_engine = alea.ScalarPrng.init(0x5858_f32);
+    var vector_maxwell_f32_loop_engine = alea.ScalarPrng.init(0x5858_f32);
+    const vector_maxwell_f32 = try VectorMaxwell(@Vector(8, f32)).init(2);
+    var vector_maxwell_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_maxwell_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_maxwell_f32.fillFrom(&vector_maxwell_f32_fill_engine, &vector_maxwell_f32_fill);
+    for (&vector_maxwell_f32_loop) |*slot| slot.* = vector_maxwell_f32.sampleFrom(&vector_maxwell_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_maxwell_f32_loop, &vector_maxwell_f32_fill);
+    try std.testing.expectEqual(vector_maxwell_f32_loop_engine.next(), vector_maxwell_f32_fill_engine.next());
+    var vector_maxwell_degenerate_engine = alea.ScalarPrng.init(0x5858_d00);
+    var vector_maxwell_degenerate_control = alea.ScalarPrng.init(0x5858_d00);
+    const vector_maxwell_degenerate = try VectorMaxwell(@Vector(4, f64)).init(0);
+    vector_maxwell_degenerate.fillFrom(&vector_maxwell_degenerate_engine, &vector_maxwell_fill);
+    for (vector_maxwell_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vec);
+    try std.testing.expectEqual(vector_maxwell_degenerate_control.next(), vector_maxwell_degenerate_engine.next());
 
     const pareto_vec = try vectorParetoChecked(rng, @Vector(4, f64), 2, 3);
     const direct_pareto_vec = try vectorParetoCheckedFrom(&direct_engine, @Vector(4, f64), 2, 3);

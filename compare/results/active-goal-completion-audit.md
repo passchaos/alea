@@ -896,7 +896,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M855 VectorKumaraswamy reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m855-vector-kumaraswamy-fill-direct-transform.md` | Closed for the current bar: reusable VectorKumaraswamy fills now draw vector open-uniform values and apply the Kumaraswamy transform directly, including beta-one/alpha-one paths. |
 | S4-M856 VectorPowerFunction reusable fill direct transform | `src/distributions.zig`, `compare/results/s4-m856-vector-power-function-fill-direct-transform.md` | Closed for the current bar: reusable VectorPowerFunction fills now dispatch directly to point-max, uniform, sqrt, or generic power-function transforms. |
 | S4-M857 VectorRayleigh reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m857-vector-rayleigh-fill-direct-transform.md` | Closed for the current bar: reusable VectorRayleigh fills now draw vector open-uniform values and apply the Rayleigh transform directly. |
-| S4-M858 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M858 VectorMaxwell reusable fill direct normal triple transform | `src/distributions.zig`, `compare/results/s4-m858-vector-maxwell-fill-direct-transform.md` | Closed for the current bar: reusable VectorMaxwell fills now draw three vector normal values and apply the Maxwell norm transform directly. |
+| S4-M859 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2831,6 +2832,10 @@ S4-M857 additionally routes reusable VectorRayleigh fills through direct vector
 open-uniform draws and Rayleigh transforms, preserving stream shape while avoiding
 per-output VectorRayleigh.sampleFrom wrapper calls; it is reliability/ergonomics
 work and does not resolve S4-M11 or complete the long-term objective.
+S4-M858 additionally routes reusable VectorMaxwell fills through direct vector
+normal triples and Maxwell norm transforms, preserving stream shape while
+avoiding per-output VectorMaxwell.sampleFrom wrapper calls; it is reliability/
+ergonomics work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

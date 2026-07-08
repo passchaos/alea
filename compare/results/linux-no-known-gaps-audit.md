@@ -4181,3 +4181,10 @@ VectorRayleigh.fillFrom now draws vector open-uniform values and applies the
 Rayleigh transform directly, instead of routing every output through
 VectorRayleigh.sampleFrom. This improves VectorRayleigh reusable fill ergonomics
 but does not resolve S4-M11.
+
+S4-M858 draws reusable VectorMaxwell fills through direct vector normal triples
+(`compare/results/s4-m858-vector-maxwell-fill-direct-transform.md`):
+VectorMaxwell.fillFrom now draws three vector normal values and applies the
+Maxwell norm transform directly, instead of routing every output through
+VectorMaxwell.sampleFrom. This improves VectorMaxwell reusable fill ergonomics
+but does not resolve S4-M11.
