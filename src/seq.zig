@@ -8464,7 +8464,9 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn sampleValueFrom(self: Self, source: anytype) T {
-            return self.sampleFrom(source).*;
+            const items = self.items;
+            if (items.len == 1) return items[0];
+            return items[Rng.uintLessThanFrom(source, usize, items.len)];
         }
 
         pub fn sampleValueChecked(self: Self, rng: Rng) Error!T {
@@ -19708,6 +19710,11 @@ test "choice sampler repeatedly samples slice references" {
         try choice.sampleValueCheckedFrom(&checked_value_engine),
     );
     try std.testing.expectEqual(unchecked_value_engine.next(), checked_value_engine.next());
+    var direct_value_engine = alea.DefaultPrng.init(0xc0_ef45);
+    var helper_value_engine = alea.DefaultPrng.init(0xc0_ef45);
+    const helper_value_index = Rng.chooseIndexFrom(&helper_value_engine, values.len).?;
+    try std.testing.expectEqual(values[helper_value_index], choice.sampleValueFrom(&direct_value_engine));
+    try std.testing.expectEqual(helper_value_engine.next(), direct_value_engine.next());
 
     var convenience_iter = chooseIter(rng, u8, &values).?;
     const picked = convenience_iter.next().?.*;

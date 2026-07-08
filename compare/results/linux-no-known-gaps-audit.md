@@ -4372,3 +4372,9 @@ alias-table sampling (`compare/results/s4-m885-weightedchoice-value-sample-direc
 WeightedChoice.sampleValueFrom now samples the underlying table and copies item
 storage directly instead of routing through sampleFrom. This improves
 WeightedChoice scalar value sampling ergonomics but does not resolve S4-M11.
+
+S4-M886 draws reusable Choice scalar value samples through direct uniform index
+generation (`compare/results/s4-m886-choice-value-sample-direct-index.md`):
+Choice.sampleValueFrom now generates a uniform index and copies item storage
+directly instead of routing through Choice.sampleFrom. This improves Choice scalar
+value sampling ergonomics but does not resolve S4-M11.
