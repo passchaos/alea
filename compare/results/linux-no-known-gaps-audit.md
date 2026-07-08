@@ -4469,3 +4469,10 @@ WeightedChoice.sampleValueCheckedFrom, sampleIndexCheckedFrom, and
 sampleIndexU32CheckedFrom now validate and then sample the underlying table
 directly instead of routing through unchecked sample wrappers. This improves
 reusable weighted checked choice ergonomics but does not resolve S4-M11.
+
+S4-M901 routes valueChecked aliases through direct sampling
+(`compare/results/s4-m901-valuechecked-direct.md`):
+Distribution Choose, reusable Choice, and reusable WeightedChoice valueChecked /
+valueCheckedFrom aliases now validate and then sample directly instead of routing
+through sampleValueChecked wrappers. This improves checked value alias ergonomics
+but does not resolve S4-M11.

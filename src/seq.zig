@@ -8486,11 +8486,14 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn valueChecked(self: Self, rng: Rng) Error!T {
-            return self.sampleValueChecked(rng);
+            return self.valueCheckedFrom(rng);
         }
 
         pub fn valueCheckedFrom(self: Self, source: anytype) Error!T {
-            return self.sampleValueCheckedFrom(source);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            const items = self.items;
+            if (items.len == 1) return items[0];
+            return items[Rng.uintLessThanFrom(source, usize, items.len)];
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
@@ -9158,11 +9161,12 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn valueChecked(self: Self, rng: Rng) Error!T {
-            return self.sampleValueChecked(rng);
+            return self.valueCheckedFrom(rng);
         }
 
         pub fn valueCheckedFrom(self: Self, source: anytype) Error!T {
-            return self.sampleValueCheckedFrom(source);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            return self.items[self.table.sampleCheckedFrom(source) catch unreachable];
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
@@ -19728,6 +19732,11 @@ test "choice sampler repeatedly samples slice references" {
     const helper_checked_value_index = Rng.chooseIndexFrom(&helper_checked_value_engine, values.len).?;
     try std.testing.expectEqual(values[helper_checked_value_index], try choice.sampleValueCheckedFrom(&direct_checked_value_engine));
     try std.testing.expectEqual(helper_checked_value_engine.next(), direct_checked_value_engine.next());
+    var direct_value_checked_engine = alea.DefaultPrng.init(0xc0_ef4a);
+    var helper_value_checked_engine = alea.DefaultPrng.init(0xc0_ef4a);
+    const helper_value_checked_index = Rng.chooseIndexFrom(&helper_value_checked_engine, values.len).?;
+    try std.testing.expectEqual(values[helper_value_checked_index], try choice.valueCheckedFrom(&direct_value_checked_engine));
+    try std.testing.expectEqual(helper_value_checked_engine.next(), direct_value_checked_engine.next());
     var direct_value_engine = alea.DefaultPrng.init(0xc0_ef45);
     var helper_value_engine = alea.DefaultPrng.init(0xc0_ef45);
     const helper_value_index = Rng.chooseIndexFrom(&helper_value_engine, values.len).?;
@@ -20887,6 +20896,11 @@ test "weighted choice sampler maps alias indexes to items" {
     const table_checked_value_index = try choice.table.sampleCheckedFrom(&table_checked_value_engine);
     try std.testing.expectEqualSlices(u8, labels[table_checked_value_index], try choice.sampleValueCheckedFrom(&direct_checked_value_engine));
     try std.testing.expectEqual(table_checked_value_engine.next(), direct_checked_value_engine.next());
+    var table_value_checked_engine = alea.DefaultPrng.init(0xc0_ef4a);
+    var direct_value_checked_engine = alea.DefaultPrng.init(0xc0_ef4a);
+    const table_value_checked_index = try choice.table.sampleCheckedFrom(&table_value_checked_engine);
+    try std.testing.expectEqualSlices(u8, labels[table_value_checked_index], try choice.valueCheckedFrom(&direct_value_checked_engine));
+    try std.testing.expectEqual(table_value_checked_engine.next(), direct_value_checked_engine.next());
     var ptr_iter_engine = alea.DefaultPrng.init(0xc0_ef09);
     var iter_engine = alea.DefaultPrng.init(0xc0_ef09);
     var ptr_iter = choice.ptrIterFrom(&ptr_iter_engine);
