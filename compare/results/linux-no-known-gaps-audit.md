@@ -4273,3 +4273,11 @@ VectorPoissonAhrensDieter.fillFrom now samples each vector lane directly from th
 cached Ahrens-Dieter method instead of routing every output through
 VectorPoissonAhrensDieter.sampleFrom. This improves VectorPoissonAhrensDieter
 reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M871 draws reusable VectorBernoulli generic-probability fills through direct
+cached-threshold lane comparisons
+(`compare/results/s4-m871-vector-bernoulli-fill-direct-lanes.md`):
+VectorBernoulli.fillFrom now draws one raw word per lane and compares against the
+cached threshold instead of routing generic-probability outputs through
+VectorBernoulli.sampleFrom. This improves VectorBernoulli reusable fill ergonomics
+but does not resolve S4-M11.

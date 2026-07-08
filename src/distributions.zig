@@ -1525,7 +1525,11 @@ pub fn VectorBernoulli(comptime VectorType: type) type {
                 Rng.fillVectorChanceFrom(source, VectorType, dest, 0.25);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = Rng.nextFrom(source) < self.p_int;
+                item.* = out;
+            }
         }
     };
 }
@@ -25906,6 +25910,21 @@ test "distribution vector helpers preserve support and stream shape" {
     vector_bernoulli_sampler.fillFrom(&direct_engine, &direct_bernoulli_buf);
     try std.testing.expectEqualSlices(@Vector(8, bool), &bernoulli_buf, &direct_bernoulli_buf);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_bernoulli_fill_engine = alea.ScalarPrng.init(0x5871_0001);
+    var vector_bernoulli_loop_engine = alea.ScalarPrng.init(0x5871_0001);
+    var vector_bernoulli_fill: [3]@Vector(8, bool) = undefined;
+    var vector_bernoulli_loop: [3]@Vector(8, bool) = undefined;
+    vector_bernoulli_sampler.fillFrom(&vector_bernoulli_fill_engine, &vector_bernoulli_fill);
+    for (&vector_bernoulli_loop) |*slot| slot.* = vector_bernoulli_sampler.sampleFrom(&vector_bernoulli_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, bool), &vector_bernoulli_loop, &vector_bernoulli_fill);
+    try std.testing.expectEqual(vector_bernoulli_loop_engine.next(), vector_bernoulli_fill_engine.next());
+    const vector_bernoulli_third = try VectorBernoulli(@Vector(8, bool)).initRatio(1, 3);
+    var vector_bernoulli_third_fill_engine = alea.ScalarPrng.init(0x5871_0003);
+    var vector_bernoulli_third_loop_engine = alea.ScalarPrng.init(0x5871_0003);
+    vector_bernoulli_third.fillFrom(&vector_bernoulli_third_fill_engine, &vector_bernoulli_fill);
+    for (&vector_bernoulli_loop) |*slot| slot.* = vector_bernoulli_third.sampleFrom(&vector_bernoulli_third_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, bool), &vector_bernoulli_loop, &vector_bernoulli_fill);
+    try std.testing.expectEqual(vector_bernoulli_third_loop_engine.next(), vector_bernoulli_third_fill_engine.next());
 
     const always_true_vec = (try VectorBernoulli(@Vector(8, bool)).init(1)).sample(rng);
     try std.testing.expectEqual(@as(@Vector(8, bool), @splat(true)), always_true_vec);
