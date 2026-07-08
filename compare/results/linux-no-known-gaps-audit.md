@@ -4416,3 +4416,9 @@ S4-M892 routes AliasTable usize index aliases directly to the checked sampler pa
 AliasTable.sampleIndexFrom now calls sampleCheckedFrom directly instead of routing
 through sampleFrom. This improves AliasTable index alias ergonomics but does not
 resolve S4-M11.
+
+S4-M893 routes dynamic weighted tree index aliases directly to checked sampling
+paths (`compare/results/s4-m893-weighted-tree-index-alias-direct.md`):
+WeightedTree and WeightedIntTree sampleIndexFrom/sampleIndexU32From now avoid
+extra unchecked alias wrappers. This improves dynamic weighted tree index alias
+ergonomics but does not resolve S4-M11.

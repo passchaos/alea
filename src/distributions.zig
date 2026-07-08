@@ -18081,7 +18081,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn sampleIndexFrom(self: Self, source: anytype) usize {
-            return self.sampleFrom(source);
+            return self.sampleCheckedFrom(source) catch unreachable;
         }
 
         pub fn sampleU32From(self: Self, source: anytype) u32 {
@@ -18089,7 +18089,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn sampleIndexU32From(self: Self, source: anytype) u32 {
-            return self.sampleU32From(source);
+            return self.sampleU32CheckedFrom(source) catch unreachable;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []usize) void {
@@ -18894,7 +18894,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn sampleIndexFrom(self: Self, source: anytype) usize {
-            return self.sampleFrom(source);
+            return self.sampleCheckedFrom(source) catch unreachable;
         }
 
         pub fn sampleU32From(self: Self, source: anytype) u32 {
@@ -18902,7 +18902,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn sampleIndexU32From(self: Self, source: anytype) u32 {
-            return self.sampleU32From(source);
+            return self.sampleU32CheckedFrom(source) catch unreachable;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []usize) void {

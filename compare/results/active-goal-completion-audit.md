@@ -931,7 +931,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M890 WeightedChoice compact index sample direct table path | `src/seq.zig`, `compare/results/s4-m890-weightedchoice-u32-sample-table-direct.md` | Closed for the current bar: reusable WeightedChoice compact index samples now call the underlying AliasTable compact sampler directly. |
 | S4-M891 AliasTable u32 index alias direct checked path | `src/distributions.zig`, `compare/results/s4-m891-aliastable-u32-index-alias-direct.md` | Closed for the current bar: AliasTable compact index alias now calls the checked u32 sampler directly. |
 | S4-M892 AliasTable index alias direct checked path | `src/distributions.zig`, `compare/results/s4-m892-aliastable-index-alias-direct.md` | Closed for the current bar: AliasTable index alias now calls the checked sampler path directly. |
-| S4-M893 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M893 Weighted tree index aliases direct checked paths | `src/distributions.zig`, `compare/results/s4-m893-weighted-tree-index-alias-direct.md` | Closed for the current bar: dynamic weighted tree index aliases now call checked sampling paths directly. |
+| S4-M894 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3018,6 +3019,10 @@ S4-M892 additionally routes AliasTable usize index aliases directly to the check
 sampler path, preserving stream shape while avoiding an alias wrapper; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
+S4-M893 additionally routes dynamic WeightedTree and WeightedIntTree index aliases
+directly to checked sampling paths, preserving stream shape while avoiding alias
+wrappers; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
