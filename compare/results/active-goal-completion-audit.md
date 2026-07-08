@@ -1013,7 +1013,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M972 Vector Binomial Poisson-approx facade direct paths | `src/distributions.zig`, `compare/results/s4-m972-vector-binomial-poisson-approx-facade-direct.md` | Closed for the current bar: vector binomial Poisson-approx facade helpers now sample/fill directly. |
 | S4-M973 NegativeBinomial sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m973-negative-binomial-sampler-facade-direct.md` | Closed for the current bar: scalar/vector NegativeBinomial reusable facade samplers now sample/fill directly. |
 | S4-M974 NegativeBinomial top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m974-negative-binomial-top-level-facade-direct.md` | Closed for the current bar: top-level scalar NegativeBinomial checked/fill facade helpers now avoid From wrappers. |
-| S4-M975 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M975 Vector NegativeBinomial top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m975-vector-negative-binomial-top-level-facade-direct.md` | Closed for the current bar: top-level vector NegativeBinomial facade helpers now avoid From wrappers. |
+| S4-M976 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3479,6 +3480,11 @@ long-term objective.
 S4-M974 additionally routes top-level scalar NegativeBinomial checked/fill facade
 helpers through direct reusable-sampler facade sampling/filling after validation,
 preserving stream shape while avoiding `From` wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
+S4-M975 additionally routes top-level vector NegativeBinomial sample/fill facade
+helpers through direct reusable vector-sampler facade sampling/filling after
+validation, preserving stream shape while avoiding `From` wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
 

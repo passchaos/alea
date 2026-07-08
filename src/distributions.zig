@@ -2467,7 +2467,8 @@ pub fn fillNegativeBinomialCheckedFrom(source: anytype, dest: []u64, successes: 
 }
 
 pub fn vectorNegativeBinomial(rng: Rng, comptime VectorType: type, successes: u64, p: f64) VectorType {
-    return vectorNegativeBinomialFrom(rng, VectorType, successes, p);
+    const dist = VectorNegativeBinomial(VectorType).init(successes, p) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn vectorNegativeBinomialFrom(source: anytype, comptime VectorType: type, successes: u64, p: f64) VectorType {
@@ -2476,7 +2477,8 @@ pub fn vectorNegativeBinomialFrom(source: anytype, comptime VectorType: type, su
 }
 
 pub fn vectorNegativeBinomialChecked(rng: Rng, comptime VectorType: type, successes: u64, p: f64) Error!VectorType {
-    return vectorNegativeBinomialCheckedFrom(rng, VectorType, successes, p);
+    const dist = try VectorNegativeBinomial(VectorType).init(successes, p);
+    return dist.sample(rng);
 }
 
 pub fn vectorNegativeBinomialCheckedFrom(source: anytype, comptime VectorType: type, successes: u64, p: f64) Error!VectorType {
@@ -2485,7 +2487,8 @@ pub fn vectorNegativeBinomialCheckedFrom(source: anytype, comptime VectorType: t
 }
 
 pub fn fillVectorNegativeBinomial(rng: Rng, comptime VectorType: type, dest: []VectorType, successes: u64, p: f64) void {
-    fillVectorNegativeBinomialFrom(rng, VectorType, dest, successes, p);
+    const dist = VectorNegativeBinomial(VectorType).init(successes, p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorNegativeBinomialFrom(source: anytype, comptime VectorType: type, dest: []VectorType, successes: u64, p: f64) void {
@@ -2494,7 +2497,9 @@ pub fn fillVectorNegativeBinomialFrom(source: anytype, comptime VectorType: type
 }
 
 pub fn fillVectorNegativeBinomialChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, successes: u64, p: f64) Error!void {
-    return fillVectorNegativeBinomialCheckedFrom(rng, VectorType, dest, successes, p);
+    if (dest.len == 0) return;
+    const dist = try VectorNegativeBinomial(VectorType).init(successes, p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorNegativeBinomialCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, successes: u64, p: f64) Error!void {

@@ -4962,3 +4962,11 @@ directly (`compare/results/s4-m974-negative-binomial-top-level-facade-direct.md`
 `fillNegativeBinomialChecked` now validate and sample/fill through facade samplers
 instead of routing through `From` wrappers. This improves NegativeBinomial
 top-level facade ergonomics but does not resolve S4-M11.
+
+S4-M975 routes top-level vector NegativeBinomial facade helpers directly
+(`compare/results/s4-m975-vector-negative-binomial-top-level-facade-direct.md`):
+`vectorNegativeBinomial`, `vectorNegativeBinomialChecked`,
+`fillVectorNegativeBinomial`, and `fillVectorNegativeBinomialChecked` now validate
+and sample/fill through reusable vector facade samplers instead of routing through
+`From` wrappers. This improves vector NegativeBinomial top-level facade ergonomics
+but does not resolve S4-M11.
