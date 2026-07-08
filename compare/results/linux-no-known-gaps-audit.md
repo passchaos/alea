@@ -4559,3 +4559,9 @@ S4-M913 routes distribution Choose checked array facades through direct filling
 Choose ptr/value/index/u32 checked fixed-array facade helpers now fill directly
 instead of routing through direct-source checked array wrappers. This improves
 checked fixed-array ergonomics but does not resolve S4-M11.
+
+S4-M914 routes reusable Choice checked array facades through direct filling
+(`compare/results/s4-m914-choice-checked-array-facade-direct.md`):
+Choice ptr/value/index/u32 checked fixed-array facade helpers now fill directly
+instead of routing through direct-source checked array wrappers. This improves
+reusable checked fixed-array ergonomics but does not resolve S4-M11.

@@ -8617,7 +8617,9 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn valueArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]T {
-            return self.valueArrayCheckedFrom(rng, N);
+            var out: [N]T = undefined;
+            try self.fillValuesChecked(rng, &out);
+            return out;
         }
 
         pub fn valueArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]T {
@@ -8680,7 +8682,9 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn ptrArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]*const T {
-            return self.ptrArrayCheckedFrom(rng, N);
+            var out: [N]*const T = undefined;
+            try self.fillChecked(rng, &out);
+            return out;
         }
 
         pub fn ptrArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]*const T {
@@ -8805,7 +8809,9 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn indexArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]usize {
-            return self.indexArrayCheckedFrom(rng, N);
+            var out: [N]usize = undefined;
+            try self.fillIndicesChecked(rng, &out);
+            return out;
         }
 
         pub fn indexArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]usize {
@@ -8817,7 +8823,9 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn indexArrayU32Checked(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
-            return self.indexArrayU32CheckedFrom(rng, N);
+            var out: [N]u32 = undefined;
+            try self.fillIndicesU32Checked(rng, &out);
+            return out;
         }
 
         pub fn indexArrayU32From(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
@@ -20279,6 +20287,14 @@ test "Choice index arrays mirror fills" {
     try std.testing.expectEqualSlices(u32, &direct_u32_array, &facade_u32_array);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    facade_engine = alea.ScalarPrng.init(0x5150_c0ef);
+    direct_engine = alea.ScalarPrng.init(0x5150_c0ef);
+    const checked_index_rng = Rng.init(&facade_engine);
+    const facade_checked_array = try choice.indexArrayChecked(checked_index_rng, 4);
+    const direct_checked_array = try choice.indexArrayCheckedFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(usize, &direct_checked_array, &facade_checked_array);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     var zero_engine = alea.ScalarPrng.init(0x5150_c0e8);
     var zero_control = alea.ScalarPrng.init(0x5150_c0e8);
     const zero_array = choice.indexArrayFrom(&zero_engine, 0);
@@ -20393,12 +20409,28 @@ test "Choice value and pointer arrays mirror fills" {
     try std.testing.expectEqualSlices(u8, &direct_values, &facade_values);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
+    facade_engine = alea.ScalarPrng.init(0x5150_c0f0);
+    direct_engine = alea.ScalarPrng.init(0x5150_c0f0);
+    const checked_value_rng = Rng.init(&facade_engine);
+    const facade_checked_values = try choice.valueArrayChecked(checked_value_rng, 4);
+    const direct_checked_values = try choice.valueArrayCheckedFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(u8, &direct_checked_values, &facade_checked_values);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
     facade_engine = alea.ScalarPrng.init(0x5150_c0ed);
     direct_engine = alea.ScalarPrng.init(0x5150_c0ed);
     const ptr_rng = Rng.init(&facade_engine);
     const facade_ptrs = choice.ptrArray(ptr_rng, 4);
     const direct_ptrs = choice.ptrArrayFrom(&direct_engine, 4);
     try std.testing.expectEqualSlices(*const u8, &direct_ptrs, &facade_ptrs);
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    facade_engine = alea.ScalarPrng.init(0x5150_c0f1);
+    direct_engine = alea.ScalarPrng.init(0x5150_c0f1);
+    const checked_ptr_rng = Rng.init(&facade_engine);
+    const facade_checked_ptrs = try choice.ptrArrayChecked(checked_ptr_rng, 4);
+    const direct_checked_ptrs = try choice.ptrArrayCheckedFrom(&direct_engine, 4);
+    try std.testing.expectEqualSlices(*const u8, &direct_checked_ptrs, &facade_checked_ptrs);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     var zero_engine = alea.ScalarPrng.init(0x5150_c0ee);

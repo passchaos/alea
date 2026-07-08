@@ -952,7 +952,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M911 Checked facade fills direct paths | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m911-checked-facade-fill-direct.md` | Closed for the current bar: Choose/Choice/WeightedChoice checked facade pointer/value/index fills now write directly. |
 | S4-M912 Checked u32 index facade fills direct paths | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m912-checked-u32-index-facade-fill-direct.md` | Closed for the current bar: Choose/Choice/WeightedChoice checked facade compact index fills now write directly. |
 | S4-M913 Distribution Choose checked array facade direct paths | `src/distributions.zig`, `compare/results/s4-m913-distribution-choose-checked-array-facade-direct.md` | Closed for the current bar: distribution Choose checked fixed-array facade helpers now fill directly. |
-| S4-M914 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M914 Choice checked array facade direct paths | `src/seq.zig`, `compare/results/s4-m914-choice-checked-array-facade-direct.md` | Closed for the current bar: reusable Choice checked fixed-array facade helpers now fill directly. |
+| S4-M915 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3134,6 +3135,10 @@ facade helpers through direct filling after prevalidation, preserving stream
 shape while avoiding direct-source checked array wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M914 additionally routes reusable Choice checked fixed-array facade helpers
+through direct filling after prevalidation, preserving stream shape while avoiding
+direct-source checked array wrapper aliases; it is reliability/ergonomics work
+and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
