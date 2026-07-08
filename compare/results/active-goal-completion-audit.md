@@ -1023,7 +1023,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M982 VectorPoissonAhrensDieter top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m982-vector-poisson-ad-top-level-facade-direct.md` | Closed for the current bar: top-level vector Poisson Ahrens-Dieter facade helpers now avoid From wrappers. |
 | S4-M983 Poisson facade direct paths | `src/distributions.zig`, `compare/results/s4-m983-poisson-facade-direct.md` | Closed for the current bar: scalar/vector Poisson facade helpers now avoid From wrappers. |
 | S4-M984 Poisson Ahrens-Dieter top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m984-poisson-ad-top-level-facade-direct.md` | Closed for the current bar: scalar top-level Poisson Ahrens-Dieter facade helpers now avoid From wrappers. |
-| S4-M985 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M985 Geometric facade direct paths | `src/distributions.zig`, `compare/results/s4-m985-geometric-facade-direct.md` | Closed for the current bar: scalar Geometric and GeometricFailures facade helpers now avoid From wrappers. |
+| S4-M986 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3539,6 +3540,12 @@ through the cached Ahrens-Dieter facade sampler, preserving large-lambda
 validation and checked invalid-parameter no-consume behavior while avoiding
 `From` wrapper aliases; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M985 additionally routes scalar Geometric and GeometricFailures top-level
+helpers and reusable facade sample/fill methods through direct degenerate and
+inverse-CDF method bodies, preserving stream shape, degenerate no-consume
+behavior, checked invalid-parameter behavior, and zero-length checked fill
+semantics while avoiding `From` wrapper aliases; it is reliability/ergonomics
+work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

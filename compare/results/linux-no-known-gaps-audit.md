@@ -5029,3 +5029,12 @@ S4-M984 routes scalar top-level Poisson Ahrens-Dieter facade helpers directly
 `poissonAhrensDieter` and `poissonAhrensDieterChecked` now sample through the
 cached Ahrens-Dieter facade sampler instead of routing through `From` wrappers.
 This improves scalar Ahrens-Dieter facade ergonomics but does not resolve S4-M11.
+
+S4-M985 routes scalar Geometric facade helpers directly
+(`compare/results/s4-m985-geometric-facade-direct.md`): scalar top-level
+`geometric`, `geometricChecked`, `fillGeometric`, `fillGeometricChecked`,
+`geometricFailures`, `geometricFailuresChecked`, `fillGeometricFailures`,
+`fillGeometricFailuresChecked`, and reusable `Geometric` / `GeometricFailures`
+facade sample/fill methods now dispatch directly through facade `Rng` instead of
+routing through `From` wrappers. This improves Geometric facade ergonomics but
+does not resolve S4-M11.

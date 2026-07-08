@@ -8741,7 +8741,8 @@ fn logFactorial(k: u64) f64 {
 }
 
 pub fn geometric(rng: Rng, p: f64) u64 {
-    return geometricFrom(rng, p);
+    const dist = Geometric.init(p) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn geometricFrom(source: anytype, p: f64) u64 {
@@ -8750,7 +8751,8 @@ pub fn geometricFrom(source: anytype, p: f64) u64 {
 }
 
 pub fn geometricChecked(rng: Rng, p: f64) Error!u64 {
-    return geometricCheckedFrom(rng, p);
+    const dist = try Geometric.init(p);
+    return dist.sample(rng);
 }
 
 pub fn geometricCheckedFrom(source: anytype, p: f64) Error!u64 {
@@ -8759,7 +8761,8 @@ pub fn geometricCheckedFrom(source: anytype, p: f64) Error!u64 {
 }
 
 pub fn geometricFailures(rng: Rng, p: f64) u64 {
-    return geometricFailuresFrom(rng, p);
+    const dist = GeometricFailures.init(p) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn geometricFailuresFrom(source: anytype, p: f64) u64 {
@@ -8769,7 +8772,8 @@ pub fn geometricFailuresFrom(source: anytype, p: f64) u64 {
 }
 
 pub fn geometricFailuresChecked(rng: Rng, p: f64) Error!u64 {
-    return geometricFailuresCheckedFrom(rng, p);
+    const dist = try GeometricFailures.init(p);
+    return dist.sample(rng);
 }
 
 pub fn geometricFailuresCheckedFrom(source: anytype, p: f64) Error!u64 {
@@ -8778,7 +8782,8 @@ pub fn geometricFailuresCheckedFrom(source: anytype, p: f64) Error!u64 {
 }
 
 pub fn fillGeometricFailures(rng: Rng, dest: []u64, p: f64) void {
-    fillGeometricFailuresFrom(rng, dest, p);
+    const dist = GeometricFailures.init(p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillGeometricFailuresFrom(source: anytype, dest: []u64, p: f64) void {
@@ -8787,7 +8792,9 @@ pub fn fillGeometricFailuresFrom(source: anytype, dest: []u64, p: f64) void {
 }
 
 pub fn fillGeometricFailuresChecked(rng: Rng, dest: []u64, p: f64) Error!void {
-    return fillGeometricFailuresCheckedFrom(rng, dest, p);
+    if (dest.len == 0) return;
+    const dist = try GeometricFailures.init(p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillGeometricFailuresCheckedFrom(source: anytype, dest: []u64, p: f64) Error!void {
@@ -8834,7 +8841,8 @@ pub fn fillVectorStandardGeometricFrom(source: anytype, comptime VectorType: typ
 }
 
 pub fn fillGeometric(rng: Rng, dest: []u64, p: f64) void {
-    fillGeometricFrom(rng, dest, p);
+    const dist = Geometric.init(p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillGeometricFrom(source: anytype, dest: []u64, p: f64) void {
@@ -8843,7 +8851,9 @@ pub fn fillGeometricFrom(source: anytype, dest: []u64, p: f64) void {
 }
 
 pub fn fillGeometricChecked(rng: Rng, dest: []u64, p: f64) Error!void {
-    return fillGeometricCheckedFrom(rng, dest, p);
+    if (dest.len == 0) return;
+    const dist = try Geometric.init(p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillGeometricCheckedFrom(source: anytype, dest: []u64, p: f64) Error!void {
@@ -8925,7 +8935,8 @@ pub const Geometric = struct {
     }
 
     pub fn sample(self: Geometric, rng: Rng) u64 {
-        return self.sampleFrom(rng);
+        if (self.p == 1) return 1;
+        return @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - self.p)))) + 1;
     }
 
     pub fn sampleFrom(self: Geometric, source: anytype) u64 {
@@ -8933,7 +8944,12 @@ pub const Geometric = struct {
     }
 
     pub fn fill(self: Geometric, rng: Rng, dest: []u64) void {
-        self.fillFrom(rng, dest);
+        if (self.p == 1) {
+            @memset(dest, 1);
+            return;
+        }
+        const p = self.p;
+        for (dest) |*item| item.* = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p)))) + 1;
     }
 
     pub fn fillFrom(self: Geometric, source: anytype, dest: []u64) void {
@@ -9052,7 +9068,8 @@ pub const GeometricFailures = struct {
     }
 
     pub fn sample(self: GeometricFailures, rng: Rng) u64 {
-        return self.sampleFrom(rng);
+        if (self.p == 1) return 0;
+        return @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - self.p)));
     }
 
     pub fn sampleFrom(self: GeometricFailures, source: anytype) u64 {
@@ -9060,7 +9077,12 @@ pub const GeometricFailures = struct {
     }
 
     pub fn fill(self: GeometricFailures, rng: Rng, dest: []u64) void {
-        self.fillFrom(rng, dest);
+        if (self.p == 1) {
+            @memset(dest, 0);
+            return;
+        }
+        const p = self.p;
+        for (dest) |*item| item.* = @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p)));
     }
 
     pub fn fillFrom(self: GeometricFailures, source: anytype, dest: []u64) void {
