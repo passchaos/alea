@@ -4734,3 +4734,10 @@ Choice `indexArrayU32From` now constructs its stack array and fills compact
 indexes directly instead of routing through `indexArrayU32CheckedFrom`. This
 improves reusable compact-index fixed-array ergonomics but does not resolve
 S4-M11.
+
+S4-M940 routes reusable WeightedChoice compact direct-source fixed-array helper
+directly (`compare/results/s4-m940-weightedchoice-u32-array-from-direct.md`):
+WeightedChoice `indexArrayU32From` now constructs its stack array and fills
+compact indexes directly instead of routing through `indexArrayU32CheckedFrom`.
+This improves reusable weighted compact-index fixed-array ergonomics but does not
+resolve S4-M11.

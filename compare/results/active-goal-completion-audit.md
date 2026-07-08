@@ -978,7 +978,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M937 Choice pointer iterator From direct constructor | `src/seq.zig`, `compare/results/s4-m937-choice-pointer-iter-from-direct.md` | Closed for the current bar: reusable Choice pointer direct-source iterator alias now constructs directly. |
 | S4-M938 WeightedChoice pointer iterator From direct constructor | `src/seq.zig`, `compare/results/s4-m938-weightedchoice-pointer-iter-from-direct.md` | Closed for the current bar: reusable WeightedChoice pointer direct-source iterator alias now constructs directly. |
 | S4-M939 Choice u32 array From direct path | `src/seq.zig`, `compare/results/s4-m939-choice-u32-array-from-direct.md` | Closed for the current bar: reusable Choice compact direct-source fixed-array helper now fills directly. |
-| S4-M940 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M940 WeightedChoice u32 array From direct path | `src/seq.zig`, `compare/results/s4-m940-weightedchoice-u32-array-from-direct.md` | Closed for the current bar: reusable WeightedChoice compact direct-source fixed-array helper now fills directly. |
+| S4-M941 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3282,6 +3283,11 @@ helper through direct stack-array construction and compact-index filling,
 preserving stream shape while avoiding a checked direct-source array helper hop;
 it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M940 additionally routes reusable WeightedChoice compact direct-source
+fixed-array helper through direct stack-array construction and compact-index
+filling, preserving stream shape while avoiding a checked direct-source array
+helper hop; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
