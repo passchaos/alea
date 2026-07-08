@@ -2435,7 +2435,8 @@ pub fn negativeBinomial(rng: Rng, successes: u64, p: f64) u64 {
 }
 
 pub fn negativeBinomialChecked(rng: Rng, successes: u64, p: f64) Error!u64 {
-    return negativeBinomialCheckedFrom(rng, successes, p);
+    const dist = try NegativeBinomial.init(successes, p);
+    return dist.sample(rng);
 }
 
 pub fn negativeBinomialCheckedFrom(source: anytype, successes: u64, p: f64) Error!u64 {
@@ -2444,7 +2445,8 @@ pub fn negativeBinomialCheckedFrom(source: anytype, successes: u64, p: f64) Erro
 }
 
 pub fn fillNegativeBinomial(rng: Rng, dest: []u64, successes: u64, p: f64) void {
-    fillNegativeBinomialFrom(rng, dest, successes, p);
+    const dist = NegativeBinomial.init(successes, p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillNegativeBinomialFrom(source: anytype, dest: []u64, successes: u64, p: f64) void {
@@ -2453,7 +2455,9 @@ pub fn fillNegativeBinomialFrom(source: anytype, dest: []u64, successes: u64, p:
 }
 
 pub fn fillNegativeBinomialChecked(rng: Rng, dest: []u64, successes: u64, p: f64) Error!void {
-    return fillNegativeBinomialCheckedFrom(rng, dest, successes, p);
+    if (dest.len == 0) return;
+    const dist = try NegativeBinomial.init(successes, p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillNegativeBinomialCheckedFrom(source: anytype, dest: []u64, successes: u64, p: f64) Error!void {

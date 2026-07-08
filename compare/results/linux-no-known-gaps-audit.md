@@ -4955,3 +4955,10 @@ NegativeBinomial and VectorNegativeBinomial sample/fill helpers now execute dire
 negative-binomial sampling loops and degenerate fast paths instead of routing
 through direct-source wrappers. This improves negative-binomial sampler ergonomics
 but does not resolve S4-M11.
+
+S4-M974 routes top-level scalar NegativeBinomial checked/fill facade helpers
+directly (`compare/results/s4-m974-negative-binomial-top-level-facade-direct.md`):
+`negativeBinomialChecked`, `fillNegativeBinomial`, and
+`fillNegativeBinomialChecked` now validate and sample/fill through facade samplers
+instead of routing through `From` wrappers. This improves NegativeBinomial
+top-level facade ergonomics but does not resolve S4-M11.
