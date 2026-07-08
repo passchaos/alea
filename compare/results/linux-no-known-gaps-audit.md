@@ -5101,3 +5101,10 @@ S4-M993 routes reusable UniformDuration facade helpers directly
 `Rng` duration range logic directly instead of routing through `sampleFrom` /
 `fillFrom` wrappers. This improves UniformDuration facade ergonomics but does not
 resolve S4-M11.
+
+S4-M994 routes reusable UniformUnicodeScalar facade helpers directly
+(`compare/results/s4-m994-uniform-unicode-scalar-facade-direct.md`):
+`UniformUnicodeScalar.sample` and `UniformUnicodeScalar.fill` now dispatch through
+facade `Rng` Unicode scalar range logic directly instead of routing through
+`sampleFrom` / `fillFrom` wrappers. This improves UniformChar/Unicode-scalar
+facade ergonomics but does not resolve S4-M11.

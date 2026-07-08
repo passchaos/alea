@@ -3805,7 +3805,10 @@ pub const UniformUnicodeScalar = struct {
     }
 
     pub fn sample(self: Self, rng: Rng) u21 {
-        return self.sampleFrom(rng);
+        if (self.inclusive) {
+            return rng.unicodeScalarRangeAtMost(self.low, self.high);
+        }
+        return rng.unicodeScalarRangeLessThan(self.low, self.high);
     }
 
     pub fn sampleFrom(self: Self, source: anytype) u21 {
@@ -3816,7 +3819,11 @@ pub const UniformUnicodeScalar = struct {
     }
 
     pub fn fill(self: Self, rng: Rng, dest: []u21) void {
-        self.fillFrom(rng, dest);
+        if (self.inclusive) {
+            rng.fillUnicodeScalarRangeAtMost(dest, self.low, self.high);
+        } else {
+            rng.fillUnicodeScalarRangeLessThan(dest, self.low, self.high);
+        }
     }
 
     pub fn fillFrom(self: Self, source: anytype, dest: []u21) void {
