@@ -17372,7 +17372,8 @@ pub fn WeightedTree(comptime Weight: type) type {
 
             pub fn fill(self: *Iterator, dest: []f64) usize {
                 const count = @min(dest.len, self.remaining());
-                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                for (dest[0..count], self.index..) |*slot, index| slot.* = self.tree.get(index) catch unreachable;
+                self.index += count;
                 return count;
             }
         };
@@ -17404,7 +17405,11 @@ pub fn WeightedTree(comptime Weight: type) type {
 
             pub fn fill(self: *Iterator, dest: []f64) usize {
                 const count = @min(dest.len, self.remaining());
-                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                if (count == 0) return 0;
+                const total = self.tree.totalWeight();
+                if (!(total > 0) or !std.math.isFinite(total)) return 0;
+                for (dest[0..count], self.index..) |*slot, index| slot.* = (self.tree.get(index) catch unreachable) / total;
+                self.index += count;
                 return count;
             }
         };
@@ -18126,7 +18131,8 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
             pub fn fill(self: *Iterator, dest: []u64) usize {
                 const count = @min(dest.len, self.remaining());
-                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                for (dest[0..count], self.index..) |*slot, index| slot.* = self.tree.get(index) catch unreachable;
+                self.index += count;
                 return count;
             }
         };
@@ -18158,7 +18164,12 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
             pub fn fill(self: *Iterator, dest: []f64) usize {
                 const count = @min(dest.len, self.remaining());
-                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                if (count == 0) return 0;
+                const total = self.tree.totalWeight();
+                if (total == 0) return 0;
+                const total_float = @as(f64, @floatFromInt(total));
+                for (dest[0..count], self.index..) |*slot, index| slot.* = @as(f64, @floatFromInt(self.tree.get(index) catch unreachable)) / total_float;
+                self.index += count;
                 return count;
             }
         };

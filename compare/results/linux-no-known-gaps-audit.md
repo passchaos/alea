@@ -3764,3 +3764,10 @@ S4-M796 uses direct storage fills for AliasTable iterators
 static AliasTable weight/probability iterators now fill caller-owned buffers from
 stored weights directly instead of per-slot `next()`/lookup calls. This improves
 static weighted iterator ergonomics but does not resolve S4-M11.
+
+S4-M797 uses direct storage fills for weighted tree iterators
+(`compare/results/s4-m797-weighted-tree-iterator-fill-direct-storage.md`):
+dynamic WeightedTree and WeightedIntTree weight/probability iterators now fill
+caller-owned buffers from tree storage directly and cache totals for probability
+fills. This improves dynamic weighted iterator ergonomics but does not resolve
+S4-M11.
