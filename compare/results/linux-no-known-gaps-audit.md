@@ -5108,3 +5108,10 @@ S4-M994 routes reusable UniformUnicodeScalar facade helpers directly
 facade `Rng` Unicode scalar range logic directly instead of routing through
 `sampleFrom` / `fillFrom` wrappers. This improves UniformChar/Unicode-scalar
 facade ergonomics but does not resolve S4-M11.
+
+S4-M995 routes reusable Open01/OpenClosed01 facade helpers directly
+(`compare/results/s4-m995-open01-facade-direct.md`): `Open01.sample`,
+`Open01.fill`, `OpenClosed01.sample`, and `OpenClosed01.fill` now dispatch through
+facade `Rng` strict-interval helpers directly instead of routing through
+direct-source wrappers. This improves strict-interval sampler facade ergonomics
+but does not resolve S4-M11.

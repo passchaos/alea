@@ -4030,7 +4030,12 @@ pub const Open01 = struct {
     }
 
     pub fn sample(_: Open01, rng: Rng, comptime T: type) T {
-        return open01From(rng, T);
+        requireFloatOrFloatVector(T);
+        return switch (@typeInfo(T)) {
+            .float => rng.floatOpen(T),
+            .vector => rng.vectorOpen(T),
+            else => unreachable,
+        };
     }
 
     pub fn sampleFrom(_: Open01, source: anytype, comptime T: type) T {
@@ -4038,7 +4043,12 @@ pub const Open01 = struct {
     }
 
     pub fn fill(_: Open01, rng: Rng, comptime T: type, dest: []T) void {
-        fillOpen01From(rng, T, dest);
+        requireFloatOrFloatVector(T);
+        switch (@typeInfo(T)) {
+            .float => rng.fillOpen(T, dest),
+            .vector => rng.fillVectorOpen(T, dest),
+            else => unreachable,
+        }
     }
 
     pub fn fillFrom(_: Open01, source: anytype, comptime T: type, dest: []T) void {
@@ -4078,7 +4088,12 @@ pub const OpenClosed01 = struct {
     }
 
     pub fn sample(_: OpenClosed01, rng: Rng, comptime T: type) T {
-        return openClosed01From(rng, T);
+        requireFloatOrFloatVector(T);
+        return switch (@typeInfo(T)) {
+            .float => rng.floatOpenClosed(T),
+            .vector => rng.vectorOpenClosed(T),
+            else => unreachable,
+        };
     }
 
     pub fn sampleFrom(_: OpenClosed01, source: anytype, comptime T: type) T {
@@ -4086,7 +4101,12 @@ pub const OpenClosed01 = struct {
     }
 
     pub fn fill(_: OpenClosed01, rng: Rng, comptime T: type, dest: []T) void {
-        fillOpenClosed01From(rng, T, dest);
+        requireFloatOrFloatVector(T);
+        switch (@typeInfo(T)) {
+            .float => rng.fillOpenClosed(T, dest),
+            .vector => rng.fillVectorOpenClosed(T, dest),
+            else => unreachable,
+        }
     }
 
     pub fn fillFrom(_: OpenClosed01, source: anytype, comptime T: type, dest: []T) void {
