@@ -3777,3 +3777,9 @@ S4-M798 prevalidates IndexVec copied u32 narrowing
 seq IndexVec native `usize` backing is now checked for oversized values before
 allocating a copied compact `u32` output slice. This improves indexed-sample
 conversion failure determinism but does not resolve S4-M11.
+
+S4-M799 uses direct backing fills for IndexVec iterators
+(`compare/results/s4-m799-indexvec-fill-direct-backing.md`):
+seq IndexVec borrowed and consuming iterator fills now switch once per fill and
+copy/map directly from active backing storage. This improves indexed-sample fill
+ergonomics but does not resolve S4-M11.

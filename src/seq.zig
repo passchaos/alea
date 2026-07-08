@@ -53,8 +53,15 @@ pub const IndexVec = union(enum) {
 
         pub fn fill(self: *IntoIterator, dest: []usize) usize {
             const count = @min(dest.len, self.remaining());
-            for (dest[0..count], self.index..) |*slot, position| slot.* = self.index_vec.at(position);
-            self.index += count;
+            const start = self.index;
+            const end = start + count;
+            switch (self.index_vec) {
+                .u32 => |items| {
+                    for (items[start..end], dest[0..count]) |item, *slot| slot.* = item;
+                },
+                .usize => |items| std.mem.copyForwards(usize, dest[0..count], items[start..end]),
+            }
+            self.index = end;
             return count;
         }
 
@@ -89,8 +96,15 @@ pub const IndexVec = union(enum) {
 
         pub fn fill(self: *Iterator, dest: []usize) usize {
             const count = @min(dest.len, self.remaining());
-            for (dest[0..count], self.index..) |*slot, position| slot.* = self.index_vec.at(position);
-            self.index += count;
+            const start = self.index;
+            const end = start + count;
+            switch (self.index_vec) {
+                .u32 => |items| {
+                    for (items[start..end], dest[0..count]) |item, *slot| slot.* = item;
+                },
+                .usize => |items| std.mem.copyForwards(usize, dest[0..count], items[start..end]),
+            }
+            self.index = end;
             return count;
         }
     };
@@ -10980,6 +10994,18 @@ test "index vec iterators fill caller-owned buffers" {
     try std.testing.expectEqual(@as(usize, 0), iter.remaining());
     try std.testing.expectEqual(@as(usize, 0), iter.fill(&tail_indices));
 
+    var compact_backing = [_]u32{ 6, 7, 8, 9 };
+    const compact_vec = IndexVec{ .u32 = &compact_backing };
+    var compact_iter = compact_vec.iter();
+    var compact_filled: [3]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 3), compact_iter.fill(&compact_filled));
+    try std.testing.expectEqualSlices(usize, &.{ 6, 7, 8 }, &compact_filled);
+    try std.testing.expectEqual(@as(usize, 1), compact_iter.remaining());
+    var compact_tail: [2]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 1), compact_iter.fill(&compact_tail));
+    try std.testing.expectEqual(@as(usize, 9), compact_tail[0]);
+    try std.testing.expectEqual(@as(usize, 0), compact_iter.remaining());
+
     const owned_backing = try std.testing.allocator.dupe(u32, &.{ 3, 5, 8 });
     var into_iter = IndexVec.fromOwnedU32Slice(owned_backing).intoIter(std.testing.allocator);
     defer into_iter.deinit();
@@ -10992,6 +11018,18 @@ test "index vec iterators fill caller-owned buffers" {
     try std.testing.expectEqual(@as(usize, 1), into_iter.fill(&consumed_tail));
     try std.testing.expectEqual(@as(usize, 8), consumed_tail[0]);
     try std.testing.expectEqual(@as(usize, 0), into_iter.len());
+
+    const owned_native_backing = try std.testing.allocator.dupe(usize, &.{ 11, 12, 13, 14 });
+    var native_into_iter = IndexVec.fromOwnedSlice(owned_native_backing).intoIter(std.testing.allocator);
+    defer native_into_iter.deinit();
+    var native_consumed: [3]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 3), native_into_iter.fill(&native_consumed));
+    try std.testing.expectEqualSlices(usize, &.{ 11, 12, 13 }, &native_consumed);
+    try std.testing.expectEqual(@as(usize, 1), native_into_iter.len());
+    var native_consumed_tail: [2]usize = undefined;
+    try std.testing.expectEqual(@as(usize, 1), native_into_iter.fill(&native_consumed_tail));
+    try std.testing.expectEqual(@as(usize, 14), native_consumed_tail[0]);
+    try std.testing.expectEqual(@as(usize, 0), native_into_iter.len());
 
     var values = index_vec.values([]const u8, &labels);
     var value_out: [3][]const u8 = undefined;

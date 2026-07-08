@@ -837,7 +837,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M796 AliasTable iterator fill direct storage paths | `src/distributions.zig`, `compare/results/s4-m796-aliastable-iterator-fill-direct-storage.md` | Closed for the current bar: AliasTable weight/probability iterators now fill directly from stored weights instead of per-slot lookup calls. |
 | S4-M797 weighted tree iterator fill direct storage paths | `src/distributions.zig`, `compare/results/s4-m797-weighted-tree-iterator-fill-direct-storage.md` | Closed for the current bar: dynamic weighted tree weight/probability iterators now fill directly from tree storage and cache totals instead of per-slot lookup calls. |
 | S4-M798 IndexVec copied u32 narrowing prevalidation | `src/seq.zig`, `compare/results/s4-m798-indexvec-copied-u32-prevalidation.md` | Closed for the current bar: IndexVec native-to-u32 copied narrowing now rejects oversized indexes before allocating output. |
-| S4-M799 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M799 IndexVec fill direct backing paths | `src/seq.zig`, `compare/results/s4-m799-indexvec-fill-direct-backing.md` | Closed for the current bar: IndexVec borrowed and consuming iterator fills now switch once per fill and copy/map directly from backing storage. |
+| S4-M800 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2524,6 +2525,10 @@ S4-M11 or complete the long-term objective.
 S4-M798 additionally prevalidates native IndexVec to u32 copied-slice narrowing,
 avoiding allocation before oversized-index failures; it is reliability/ergonomics
 work and does not resolve S4-M11 or complete the long-term objective.
+S4-M799 additionally fills borrowed and consuming IndexVec iterators from the
+active backing storage directly, reducing per-slot union dispatch in downstream
+index/value/pointer fill paths; it is reliability/ergonomics work and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
