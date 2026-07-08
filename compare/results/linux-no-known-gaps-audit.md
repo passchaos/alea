@@ -4659,3 +4659,10 @@ Choose pointer/value/index/u32 checked direct-source iterator helpers now constr
 iterators directly instead of routing through unchecked direct-source iterator
 wrappers. This improves checked direct-source iterator ergonomics but does not
 resolve S4-M11.
+
+S4-M929 routes reusable Choice checked direct-source iterator constructors
+directly (`compare/results/s4-m929-choice-checked-iterator-from-direct.md`):
+Choice pointer/value/index/u32 checked direct-source iterator helpers now
+construct iterators directly instead of routing through unchecked direct-source
+iterator wrappers. This improves reusable checked direct-source iterator
+ergonomics but does not resolve S4-M11.
