@@ -4076,3 +4076,10 @@ sampler and then applies vector square root in place, reusing vector
 ChiSquared/Gamma bulk handling instead of routing every output through
 VectorChi.sampleFrom. This improves VectorChi reusable fill ergonomics but does
 not resolve S4-M11.
+
+S4-M843 delegates reusable Erlang fills to cached Gamma fills
+(`compare/results/s4-m843-erlang-fill-gamma-delegate.md`):
+Erlang.fillFrom now delegates to the cached Gamma sampler's fill path, reusing
+Gamma's shape-specific bulk handling instead of routing every output through
+Erlang.sampleFrom. This improves Erlang reusable fill ergonomics but does not
+resolve S4-M11.

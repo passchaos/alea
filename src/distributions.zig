@@ -9768,7 +9768,7 @@ pub fn Erlang(comptime T: type) type {
                 @memset(dest, 0);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            self.gamma_sampler.fillFrom(source, dest);
         }
 
         fn isDegenerate(self: Self) bool {
@@ -30943,6 +30943,29 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(erlang_sampler.maxValue() == null);
     erlang_sampler.fillFrom(&direct_engine, &direct_erlang_buf);
     for (direct_erlang_buf) |value| try std.testing.expect(value > 0);
+    var erlang_gamma_fill_engine = alea.ScalarPrng.init(0xe843_0001);
+    var erlang_gamma_reference_engine = alea.ScalarPrng.init(0xe843_0001);
+    var erlang_gamma_fill: [10]f64 = undefined;
+    var erlang_gamma_reference: [10]f64 = undefined;
+    erlang_sampler.fillFrom(&erlang_gamma_fill_engine, &erlang_gamma_fill);
+    (try Gamma(f64).init(3, 2)).fillFrom(&erlang_gamma_reference_engine, &erlang_gamma_reference);
+    try std.testing.expectEqualSlices(f64, &erlang_gamma_reference, &erlang_gamma_fill);
+    try std.testing.expectEqual(erlang_gamma_reference_engine.next(), erlang_gamma_fill_engine.next());
+    var erlang_f32_fill_engine = alea.ScalarPrng.init(0xe843_f32);
+    var erlang_f32_loop_engine = alea.ScalarPrng.init(0xe843_f32);
+    const erlang_f32 = try Erlang(f32).init(4, 1.5);
+    var erlang_f32_fill: [11]f32 = undefined;
+    var erlang_f32_loop: [11]f32 = undefined;
+    erlang_f32.fillFrom(&erlang_f32_fill_engine, &erlang_f32_fill);
+    for (&erlang_f32_loop) |*slot| slot.* = erlang_f32.sampleFrom(&erlang_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &erlang_f32_loop, &erlang_f32_fill);
+    try std.testing.expectEqual(erlang_f32_loop_engine.next(), erlang_f32_fill_engine.next());
+    var erlang_degenerate_engine = alea.ScalarPrng.init(0xe843_d00);
+    var erlang_degenerate_control = alea.ScalarPrng.init(0xe843_d00);
+    const erlang_degenerate = try Erlang(f64).init(3, 0);
+    erlang_degenerate.fillFrom(&erlang_degenerate_engine, &erlang_gamma_fill);
+    for (erlang_gamma_fill) |value| try std.testing.expectEqual(@as(f64, 0), value);
+    try std.testing.expectEqual(erlang_degenerate_control.next(), erlang_degenerate_engine.next());
 
     var betas = rng.sampleIter(f64, try Beta(f64).init(2, 5));
     const beta_value = betas.next().?;
