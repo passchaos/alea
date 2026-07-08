@@ -926,7 +926,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M885 WeightedChoice value sample direct table mapping | `src/seq.zig`, `compare/results/s4-m885-weightedchoice-value-sample-direct-table.md` | Closed for the current bar: reusable WeightedChoice scalar value samples now sample the alias table directly and copy item storage. |
 | S4-M886 Choice value sample direct index mapping | `src/seq.zig`, `compare/results/s4-m886-choice-value-sample-direct-index.md` | Closed for the current bar: reusable Choice scalar value samples now generate a uniform index and copy item storage directly. |
 | S4-M887 Distribution Choose value sample direct index mapping | `src/distributions.zig`, `compare/results/s4-m887-distribution-choose-value-sample-direct-index.md` | Closed for the current bar: distribution-layer Choose scalar value samples now generate a uniform index and copy item storage directly. |
-| S4-M888 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M888 Choice sample direct index mapping | `src/seq.zig`, `compare/results/s4-m888-choice-sample-direct-index.md` | Closed for the current bar: reusable Choice scalar pointer samples now generate a uniform index and map into item storage directly. |
+| S4-M889 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2993,6 +2994,10 @@ S4-M887 additionally routes distribution-layer Choose scalar value sampling thro
 direct uniform index generation and item copying, preserving stream shape while
 avoiding the sampleFrom pointer wrapper call; it is reliability/ergonomics work
 and does not resolve S4-M11 or complete the long-term objective.
+S4-M888 additionally routes reusable Choice scalar pointer sampling through direct
+uniform index generation and item mapping, preserving stream shape while avoiding
+the sampleIndexFrom wrapper call; it is reliability/ergonomics work and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

@@ -8421,7 +8421,9 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) *const T {
-            return &self.items[self.sampleIndexFrom(source)];
+            const items = self.items;
+            if (items.len == 1) return &items[0];
+            return &items[Rng.uintLessThanFrom(source, usize, items.len)];
         }
 
         pub fn sampleIndex(self: Self, rng: Rng) usize {
@@ -19703,6 +19705,11 @@ test "choice sampler repeatedly samples slice references" {
     var direct_iter = choice.iterFrom(&engine);
     const direct_iter_item = direct_iter.next().?;
     try std.testing.expect(direct_iter_item == &values[0] or direct_iter_item == &values[1] or direct_iter_item == &values[2] or direct_iter_item == &values[3]);
+    var direct_pointer_engine = alea.DefaultPrng.init(0xc0_ef46);
+    var helper_pointer_engine = alea.DefaultPrng.init(0xc0_ef46);
+    const helper_pointer_index = Rng.chooseIndexFrom(&helper_pointer_engine, values.len).?;
+    try std.testing.expectEqual(&values[helper_pointer_index], choice.sampleFrom(&direct_pointer_engine));
+    try std.testing.expectEqual(helper_pointer_engine.next(), direct_pointer_engine.next());
     var checked_value_engine = alea.DefaultPrng.init(0xc0_ef01);
     var unchecked_value_engine = alea.DefaultPrng.init(0xc0_ef01);
     try std.testing.expectEqual(
