@@ -4378,3 +4378,10 @@ generation (`compare/results/s4-m886-choice-value-sample-direct-index.md`):
 Choice.sampleValueFrom now generates a uniform index and copies item storage
 directly instead of routing through Choice.sampleFrom. This improves Choice scalar
 value sampling ergonomics but does not resolve S4-M11.
+
+S4-M887 draws distribution-layer Choose scalar value samples through direct
+uniform index generation
+(`compare/results/s4-m887-distribution-choose-value-sample-direct-index.md`):
+Choose.sampleValueFrom now generates a uniform index and copies item storage
+directly instead of routing through Choose.sampleFrom. This improves distribution
+Choose scalar value sampling ergonomics but does not resolve S4-M11.

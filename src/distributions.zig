@@ -454,7 +454,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn sampleValueFrom(self: Self, source: anytype) T {
-            return self.sampleFrom(source).*;
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return self.items[0];
+            return self.items[Rng.uintLessThanFrom(source, usize, self.items.len)];
         }
 
         pub fn sampleValueChecked(self: Self, rng: Rng) Error!T {
@@ -34397,6 +34399,11 @@ test "distribution Choose sampler mirrors slice choices" {
         choice.sampleValueFrom(&choice_engine),
     );
     try std.testing.expectEqual(index_engine.next(), choice_engine.next());
+    var direct_value_engine = root.DefaultPrng.init(0xc0_287);
+    var helper_value_engine = root.DefaultPrng.init(0xc0_287);
+    const helper_value_index = Rng.chooseIndexFrom(&helper_value_engine, items.len).?;
+    try std.testing.expectEqual(items[helper_value_index], choice.sampleValueFrom(&direct_value_engine));
+    try std.testing.expectEqual(helper_value_engine.next(), direct_value_engine.next());
     var checked_value_engine = root.DefaultPrng.init(0xc0_286);
     var unchecked_value_engine = root.DefaultPrng.init(0xc0_286);
     try std.testing.expectEqual(
