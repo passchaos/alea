@@ -10987,7 +10987,10 @@ pub fn VectorArcsine(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.minValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+                item.* = arcsineFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), self.maxValue());
+            }
         }
     };
 }
@@ -26965,6 +26968,29 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &arcsine_buf_vec, &direct_arcsine_buf_vec);
     for (arcsine_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 3);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_arcsine_fill_engine = alea.ScalarPrng.init(0xa850_0001);
+    var vector_arcsine_loop_engine = alea.ScalarPrng.init(0xa850_0001);
+    var vector_arcsine_fill: [3]@Vector(4, f64) = undefined;
+    var vector_arcsine_loop: [3]@Vector(4, f64) = undefined;
+    vector_arcsine_sampler.fillFrom(&vector_arcsine_fill_engine, &vector_arcsine_fill);
+    for (&vector_arcsine_loop) |*slot| slot.* = vector_arcsine_sampler.sampleFrom(&vector_arcsine_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_arcsine_loop, &vector_arcsine_fill);
+    try std.testing.expectEqual(vector_arcsine_loop_engine.next(), vector_arcsine_fill_engine.next());
+    var vector_arcsine_f32_fill_engine = alea.ScalarPrng.init(0xa850_f32);
+    var vector_arcsine_f32_loop_engine = alea.ScalarPrng.init(0xa850_f32);
+    const vector_arcsine_f32 = try VectorArcsine(@Vector(8, f32)).init(-1, 3);
+    var vector_arcsine_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_arcsine_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_arcsine_f32.fillFrom(&vector_arcsine_f32_fill_engine, &vector_arcsine_f32_fill);
+    for (&vector_arcsine_f32_loop) |*slot| slot.* = vector_arcsine_f32.sampleFrom(&vector_arcsine_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_arcsine_f32_loop, &vector_arcsine_f32_fill);
+    try std.testing.expectEqual(vector_arcsine_f32_loop_engine.next(), vector_arcsine_f32_fill_engine.next());
+    var vector_arcsine_degenerate_engine = alea.ScalarPrng.init(0xa850_d00);
+    var vector_arcsine_degenerate_control = alea.ScalarPrng.init(0xa850_d00);
+    const vector_arcsine_degenerate = try VectorArcsine(@Vector(4, f64)).init(1.5, 1.5);
+    vector_arcsine_degenerate.fillFrom(&vector_arcsine_degenerate_engine, &vector_arcsine_fill);
+    for (vector_arcsine_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
+    try std.testing.expectEqual(vector_arcsine_degenerate_control.next(), vector_arcsine_degenerate_engine.next());
 
     const cauchy_vec = try vectorCauchyChecked(rng, @Vector(4, f64), 0, 1);
     const direct_cauchy_vec = try vectorCauchyCheckedFrom(&direct_engine, @Vector(4, f64), 0, 1);

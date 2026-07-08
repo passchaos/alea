@@ -4125,3 +4125,10 @@ VectorTriangular.fillFrom now draws vector uniform values and applies the
 triangular transform directly, instead of routing every output through
 VectorTriangular.sampleFrom. This improves VectorTriangular reusable fill
 ergonomics but does not resolve S4-M11.
+
+S4-M850 draws reusable VectorArcsine fills through direct vector open-uniform
+transforms (`compare/results/s4-m850-vector-arcsine-fill-direct-transform.md`):
+VectorArcsine.fillFrom now draws vector open-uniform values and applies the
+arcsine transform directly, instead of routing every output through
+VectorArcsine.sampleFrom. This improves VectorArcsine reusable fill ergonomics
+but does not resolve S4-M11.
