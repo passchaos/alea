@@ -3733,7 +3733,10 @@ pub const UniformDuration = struct {
     }
 
     pub fn sample(self: Self, rng: Rng) std.Io.Duration {
-        return self.sampleFrom(rng);
+        if (self.inclusive) {
+            return rng.durationRangeAtMost(self.low, self.high);
+        }
+        return rng.durationRangeLessThan(self.low, self.high);
     }
 
     pub fn sampleFrom(self: Self, source: anytype) std.Io.Duration {
@@ -3744,7 +3747,15 @@ pub const UniformDuration = struct {
     }
 
     pub fn fill(self: Self, rng: Rng, dest: []std.Io.Duration) void {
-        self.fillFrom(rng, dest);
+        if (self.inclusive) {
+            if (self.low.nanoseconds == self.high.nanoseconds) {
+                @memset(dest, self.low);
+                return;
+            }
+            for (dest) |*item| item.* = rng.durationRangeAtMost(self.low, self.high);
+            return;
+        }
+        for (dest) |*item| item.* = rng.durationRangeLessThan(self.low, self.high);
     }
 
     pub fn fillFrom(self: Self, source: anytype, dest: []std.Io.Duration) void {

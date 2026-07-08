@@ -5094,3 +5094,10 @@ S4-M992 routes top-level vector Uniform facade helpers directly
 `fillVectorUniformInclusiveChecked` now dispatch through facade `Rng` vector range
 logic directly instead of routing through `From` wrappers. This improves vector
 Uniform top-level facade ergonomics but does not resolve S4-M11.
+
+S4-M993 routes reusable UniformDuration facade helpers directly
+(`compare/results/s4-m993-uniform-duration-facade-direct.md`):
+`UniformDuration.sample` and `UniformDuration.fill` now dispatch through facade
+`Rng` duration range logic directly instead of routing through `sampleFrom` /
+`fillFrom` wrappers. This improves UniformDuration facade ergonomics but does not
+resolve S4-M11.
