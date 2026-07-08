@@ -13492,7 +13492,15 @@ pub fn VectorKumaraswamy(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
+            const uniform_vec = rng.vectorOpen(VectorType);
+            return switch (self.sampler.method) {
+                .beta_one_sqrt => @sqrt(uniform_vec),
+                .beta_one => kumaraswamyBetaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue()),
+                .alpha_one => kumaraswamyAlphaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.betaValue()),
+                .generic => kumaraswamyFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue(), 1 / self.betaValue()),
+                .point_zero, .point_one => unreachable,
+            };
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -13505,7 +13513,20 @@ pub fn VectorKumaraswamy(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
+                return;
+            }
+            for (dest) |*item| {
+                const uniform_vec = rng.vectorOpen(VectorType);
+                item.* = switch (self.sampler.method) {
+                    .beta_one_sqrt => @sqrt(uniform_vec),
+                    .beta_one => kumaraswamyBetaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue()),
+                    .alpha_one => kumaraswamyAlphaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.betaValue()),
+                    .generic => kumaraswamyFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue(), 1 / self.betaValue()),
+                    .point_zero, .point_one => unreachable,
+                };
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -13613,7 +13634,17 @@ pub fn Kumaraswamy(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            switch (self.method) {
+                .point_zero => return 0,
+                .point_one => return 1,
+                .beta_one_sqrt => return @sqrt(rng.floatOpen(T)),
+                .beta_one => return std.math.pow(T, rng.floatOpen(T), self.inverse_alpha),
+                .alpha_one => return 1 - std.math.pow(T, 1 - rng.floatOpen(T), self.inverse_beta),
+                .generic => {},
+            }
+
+            const u = rng.floatOpen(T);
+            return std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -13631,7 +13662,37 @@ pub fn Kumaraswamy(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            switch (self.method) {
+                .point_zero => {
+                    @memset(dest, 0);
+                    return;
+                },
+                .point_one => {
+                    @memset(dest, 1);
+                    return;
+                },
+                .beta_one_sqrt => {
+                    rng.fillOpen(T, dest);
+                    for (dest) |*item| item.* = @sqrt(item.*);
+                    return;
+                },
+                .beta_one => {
+                    rng.fillOpen(T, dest);
+                    for (dest) |*item| item.* = std.math.pow(T, item.*, self.inverse_alpha);
+                    return;
+                },
+                .alpha_one => {
+                    rng.fillOpen(T, dest);
+                    for (dest) |*item| item.* = 1 - std.math.pow(T, 1 - item.*, self.inverse_beta);
+                    return;
+                },
+                .generic => {},
+            }
+
+            for (dest) |*item| {
+                const u = rng.floatOpen(T);
+                item.* = std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {

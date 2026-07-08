@@ -5265,3 +5265,10 @@ strict-open uniform values and apply the ratio/generic LogLogistic transform
 directly through facade `Rng` instead of routing through `sampleFrom` /
 `fillFrom` wrappers. This improves LogLogistic sampler facade ergonomics but does
 not resolve S4-M11.
+
+S4-M1018 routes reusable scalar/vector Kumaraswamy facade helpers directly
+(`compare/results/s4-m1018-kumaraswamy-sampler-facade-direct.md`):
+`Kumaraswamy.sample` / `fill` and `VectorKumaraswamy.sample` / `fill` now draw
+strict-open uniform values and apply cached method transforms directly through
+facade `Rng` instead of routing through `sampleFrom` / `fillFrom` wrappers. This
+improves Kumaraswamy sampler facade ergonomics but does not resolve S4-M11.
