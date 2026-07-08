@@ -903,7 +903,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M862 VectorFrechet reusable fill direct open-closed-uniform transform | `src/distributions.zig`, `compare/results/s4-m862-vector-frechet-fill-direct-transform.md` | Closed for the current bar: reusable VectorFrechet fills now draw vector open-closed-uniform values and apply the Frechet transform directly, including shape-one handling. |
 | S4-M863 VectorSkewNormal reusable fill direct normal composition | `src/distributions.zig`, `compare/results/s4-m863-vector-skew-normal-fill-direct-composition.md` | Closed for the current bar: reusable VectorSkewNormal fills now draw standard-normal vectors and apply skew-normal composition directly. |
 | S4-M864 VectorPert reusable fill cached Beta delegate | `src/distributions.zig`, `compare/results/s4-m864-vector-pert-fill-beta-delegate.md` | Closed for the current bar: reusable VectorPert fills now reuse a cached VectorBeta sampler and affine-map beta vectors into the configured range. |
-| S4-M865 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M865 VectorInverseGaussian reusable fill direct normal/uniform composition | `src/distributions.zig`, `compare/results/s4-m865-vector-inverse-gaussian-fill-direct-composition.md` | Closed for the current bar: reusable VectorInverseGaussian fills now draw vector standard-normal/uniform pairs and apply inverse-Gaussian composition directly. |
+| S4-M866 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2870,6 +2871,11 @@ S4-M864 additionally routes reusable VectorPert fills through a cached VectorBet
 sampler followed by an affine range map, preserving stream shape while avoiding
 per-output VectorPert.sampleFrom wrapper calls; it is reliability/ergonomics work
 and does not resolve S4-M11 or complete the long-term objective.
+S4-M865 additionally routes reusable VectorInverseGaussian fills through direct
+vector standard-normal/uniform draws and the shared inverse-Gaussian composition,
+preserving stream shape while avoiding per-output VectorInverseGaussian.sampleFrom
+wrapper calls; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

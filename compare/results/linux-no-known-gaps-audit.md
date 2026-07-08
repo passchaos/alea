@@ -4232,3 +4232,11 @@ VectorPert.fillFrom now constructs a VectorBeta sampler from the cached PERT
 alpha/beta values, fills beta vectors, and affine-maps them into [min,max]
 instead of routing every output through VectorPert.sampleFrom. This improves
 VectorPert reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M865 draws reusable VectorInverseGaussian fills through direct vector
+normal/uniform composition
+(`compare/results/s4-m865-vector-inverse-gaussian-fill-direct-composition.md`):
+VectorInverseGaussian.fillFrom now draws vector standard-normal and uniform values
+and applies the inverse-Gaussian transform directly instead of routing every
+output through VectorInverseGaussian.sampleFrom. This improves
+VectorInverseGaussian reusable fill ergonomics but does not resolve S4-M11.

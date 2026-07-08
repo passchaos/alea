@@ -15845,7 +15845,13 @@ pub fn VectorInverseGaussian(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            const mean = self.meanValue();
+            const shape = self.shapeValue();
+            for (dest) |*item| {
+                const normal_vec = vectorStandardNormalFrom(source, VectorType);
+                const uniform_vec = Rng.vectorFrom(source, VectorType);
+                item.* = inverseGaussianFromNormalVector(VectorType, normal_vec, uniform_vec, mean, shape);
+            }
         }
     };
 }
@@ -28082,6 +28088,35 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &inverse_gaussian_buf_vec, &direct_inverse_gaussian_buf_vec);
     for (inverse_gaussian_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0 and std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_inverse_gaussian_fill_engine = alea.ScalarPrng.init(0x5865_0001);
+    var vector_inverse_gaussian_loop_engine = alea.ScalarPrng.init(0x5865_0001);
+    var vector_inverse_gaussian_fill: [3]@Vector(4, f64) = undefined;
+    var vector_inverse_gaussian_loop: [3]@Vector(4, f64) = undefined;
+    vector_inverse_gaussian_sampler.fillFrom(&vector_inverse_gaussian_fill_engine, &vector_inverse_gaussian_fill);
+    for (&vector_inverse_gaussian_loop) |*slot| slot.* = vector_inverse_gaussian_sampler.sampleFrom(&vector_inverse_gaussian_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_inverse_gaussian_loop, &vector_inverse_gaussian_fill);
+    try std.testing.expectEqual(vector_inverse_gaussian_loop_engine.next(), vector_inverse_gaussian_fill_engine.next());
+    var vector_inverse_gaussian_f32_fill_engine = alea.ScalarPrng.init(0x5865_f32);
+    var vector_inverse_gaussian_f32_loop_engine = alea.ScalarPrng.init(0x5865_f32);
+    const vector_inverse_gaussian_f32 = try VectorInverseGaussian(@Vector(8, f32)).init(1, 2);
+    var vector_inverse_gaussian_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_inverse_gaussian_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_inverse_gaussian_f32.fillFrom(&vector_inverse_gaussian_f32_fill_engine, &vector_inverse_gaussian_f32_fill);
+    for (&vector_inverse_gaussian_f32_loop) |*slot| slot.* = vector_inverse_gaussian_f32.sampleFrom(&vector_inverse_gaussian_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_inverse_gaussian_f32_loop, &vector_inverse_gaussian_f32_fill);
+    try std.testing.expectEqual(vector_inverse_gaussian_f32_loop_engine.next(), vector_inverse_gaussian_f32_fill_engine.next());
+    var vector_inverse_gaussian_zero_engine = alea.ScalarPrng.init(0x5865_d00);
+    var vector_inverse_gaussian_zero_control = alea.ScalarPrng.init(0x5865_d00);
+    const vector_inverse_gaussian_zero = try VectorInverseGaussian(@Vector(4, f64)).init(0, 2);
+    vector_inverse_gaussian_zero.fillFrom(&vector_inverse_gaussian_zero_engine, &vector_inverse_gaussian_fill);
+    for (vector_inverse_gaussian_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vec);
+    try std.testing.expectEqual(vector_inverse_gaussian_zero_control.next(), vector_inverse_gaussian_zero_engine.next());
+    var vector_inverse_gaussian_inf_shape_engine = alea.ScalarPrng.init(0x5865_1af);
+    var vector_inverse_gaussian_inf_shape_control = alea.ScalarPrng.init(0x5865_1af);
+    const vector_inverse_gaussian_inf_shape = try VectorInverseGaussian(@Vector(4, f64)).init(1.5, std.math.inf(f64));
+    vector_inverse_gaussian_inf_shape.fillFrom(&vector_inverse_gaussian_inf_shape_engine, &vector_inverse_gaussian_fill);
+    for (vector_inverse_gaussian_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
+    try std.testing.expectEqual(vector_inverse_gaussian_inf_shape_control.next(), vector_inverse_gaussian_inf_shape_engine.next());
 
     const nig_vec = try vectorNormalInverseGaussianChecked(rng, @Vector(4, f64), 2, 1);
     const direct_nig_vec = try vectorNormalInverseGaussianCheckedFrom(&direct_engine, @Vector(4, f64), 2, 1);
