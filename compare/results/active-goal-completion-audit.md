@@ -1076,7 +1076,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1035 Native f32 Normal facade direct paths | `src/distributions.zig`, `compare/results/s4-m1035-native-f32-normal-facade-direct.md` | Closed for the current bar: reusable scalar/vector native-f32 Normal facade helpers now avoid From wrappers. |
 | S4-M1036 Vector table Normal facade direct paths | `src/distributions.zig`, `compare/results/s4-m1036-vector-table-normal-facade-direct.md` | Closed for the current bar: reusable vector table Normal facade helpers now avoid From wrappers. |
 | S4-M1037 VectorNormal fill facade direct path | `src/distributions.zig`, `compare/results/s4-m1037-vector-normal-fill-facade-direct.md` | Closed for the current bar: reusable VectorNormal facade fill now avoids From wrappers. |
-| S4-M1038 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1038 Exponential sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1038-exponential-sampler-facade-direct.md` | Closed for the current bar: reusable scalar Exponential facade sample/fill helpers now avoid From wrappers. |
+| S4-M1039 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3888,6 +3889,11 @@ facade vector-normal fill helpers, preserving stream shape and degenerate
 no-consume behavior while avoiding `fillFrom` wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M1038 additionally routes reusable scalar Exponential facade sample/fill
+helpers through direct facade exponential helpers, preserving stream shape and
+degenerate no-consume behavior while avoiding `sampleFrom` / `fillFrom` wrapper
+aliases; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

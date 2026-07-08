@@ -6266,7 +6266,8 @@ pub fn Exponential(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return 0;
+            return rng.exponential(T, 1) * self.inverse_rate;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -6275,7 +6276,12 @@ pub fn Exponential(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
+            fillStandardExponential(rng, T, dest);
+            if (self.inverse_rate != 1) scaleInPlace(T, dest, self.inverse_rate);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {

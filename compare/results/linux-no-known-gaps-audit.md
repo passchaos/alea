@@ -5404,3 +5404,9 @@ S4-M1037 routes reusable VectorNormal facade fills directly
 `VectorNormal.fill` now calls facade `fillVectorNormal` directly instead of
 routing through `fillFrom`. This improves VectorNormal fill facade ergonomics but
 does not resolve S4-M11.
+
+S4-M1038 routes reusable scalar Exponential facade helpers directly
+(`compare/results/s4-m1038-exponential-sampler-facade-direct.md`):
+`Exponential.sample` / `fill` now draw through facade exponential helpers directly
+instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
+Exponential sampler facade ergonomics but does not resolve S4-M11.
