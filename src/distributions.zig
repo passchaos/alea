@@ -485,7 +485,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn sampleIndex(self: Self, rng: Rng) usize {
-            return self.sampleIndexFrom(rng);
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(rng, usize, self.items.len);
         }
 
         pub fn sampleIndexFrom(self: Self, source: anytype) usize {
@@ -507,7 +509,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn sampleIndexU32(self: Self, rng: Rng) Error!u32 {
-            return self.sampleIndexU32From(rng);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(rng, u32, @intCast(self.items.len));
         }
 
         pub fn sampleIndexU32From(self: Self, source: anytype) Error!u32 {

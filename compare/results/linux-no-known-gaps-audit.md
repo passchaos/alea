@@ -4858,3 +4858,10 @@ S4-M958 routes reusable Choice value facade sampling directly
 Choice `sampleValue` now generates a facade RNG index and copies the item directly
 instead of routing through pointer `sample`. This improves reusable choice value
 sample ergonomics but does not resolve S4-M11.
+
+S4-M959 routes non-checked choice and weighted-choice facade index helpers directly
+(`compare/results/s4-m959-index-facade-samples-direct.md`):
+Choose, Choice, and WeightedChoice `sampleIndex` / `sampleIndexU32` facade helpers
+now sample indexes directly instead of routing through direct-source wrappers.
+This improves choice and weighted-index facade sample ergonomics but does not
+resolve S4-M11.
