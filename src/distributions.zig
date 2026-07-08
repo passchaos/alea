@@ -17409,7 +17409,15 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
-            return self.sampleU32CheckedFrom(source);
+            if (self.prob.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.constant_index) |index| return @intCast(index);
+            if (aliasTableCanSampleWithOneWord(self.prob.len)) {
+                const raw = Rng.nextFrom(source);
+                const column = @as(usize, @intCast(raw & @as(u64, @intCast(self.prob.len - 1))));
+                return @intCast(if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column]);
+            }
+            const column = Rng.uintLessThanFrom(source, usize, self.prob.len);
+            return @intCast(if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column]);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []usize) void {
@@ -20527,6 +20535,11 @@ test "alias table index aliases mirror sample helpers" {
     sample_engine = alea.ScalarPrng.init(0x5150_a13d);
     alias_engine = alea.ScalarPrng.init(0x5150_a13d);
     try std.testing.expectEqual(try table.sampleCheckedFrom(&sample_engine), try table.sampleIndexCheckedFrom(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_a140);
+    alias_engine = alea.ScalarPrng.init(0x5150_a140);
+    try std.testing.expectEqual(try table.sampleU32CheckedFrom(&sample_engine), try table.sampleIndexU32CheckedFrom(&alias_engine));
     try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
 
     var facade_engine = alea.ScalarPrng.init(0x5150_a127);

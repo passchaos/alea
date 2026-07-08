@@ -4476,3 +4476,10 @@ Distribution Choose, reusable Choice, and reusable WeightedChoice valueChecked /
 valueCheckedFrom aliases now validate and then sample directly instead of routing
 through sampleValueChecked wrappers. This improves checked value alias ergonomics
 but does not resolve S4-M11.
+
+S4-M902 routes AliasTable checked compact index aliases through direct u32
+sampling (`compare/results/s4-m902-aliastable-u32-index-checked-direct.md`):
+AliasTable.sampleIndexU32CheckedFrom now validates compact output size and then
+executes the u32 alias-table sampling branches directly instead of routing
+through sampleU32CheckedFrom. This improves AliasTable checked compact index alias
+ergonomics but does not resolve S4-M11.
