@@ -830,7 +830,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M789 weighted iterator sample exact-long end-probe avoidance | `src/seq.zig`, `src/root.zig`, `compare/results/s4-m789-weighted-iterator-sample-exact-long-end-probe.md` | Closed for the current bar: allocation-returning weighted iterator samples now avoid extra trailing probes for exact-long sources while preserving weighted-key stream shape. |
 | S4-M790 hinted iterator choice inexact metadata reuse | `src/seq.zig`, `compare/results/s4-m790-hinted-iterator-choice-inexact-metadata.md` | Closed for the current bar: hinted iterator choices now avoid duplicate inexact size-hint/remaining probes on fallback paths while preserving reservoir stream shape. |
 | S4-M791 sampled iterator fill index-buffer reuse | `src/seq.zig`, `compare/results/s4-m791-sampled-iterator-fill-index-buffer.md` | Closed for the current bar: sampled value/pointer iterator fills now reuse the owned index iterator bulk fill path instead of per-slot next calls. |
-| S4-M792 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M792 IndexVec mapped iterator fill index-buffer reuse | `src/seq.zig`, `compare/results/s4-m792-indexvec-mapped-iterator-fill-index-buffer.md` | Closed for the current bar: non-owned IndexVec value/pointer iterator fills now reuse index-buffer fills instead of per-slot next calls. |
+| S4-M793 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2487,6 +2488,10 @@ iterator choice fallback paths while preserving reservoir stream shape; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M791 additionally reuses the owned index iterator bulk fill path for sampled
+value/pointer iterator fills, reducing per-slot iterator overhead; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M792 additionally reuses index-buffer fills for non-owned IndexVec mapped
 value/pointer iterator fills, reducing per-slot iterator overhead; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.

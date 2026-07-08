@@ -53,7 +53,8 @@ pub const IndexVec = union(enum) {
 
         pub fn fill(self: *IntoIterator, dest: []usize) usize {
             const count = @min(dest.len, self.remaining());
-            for (dest[0..count]) |*slot| slot.* = self.next().?;
+            for (dest[0..count], self.index..) |*slot, position| slot.* = self.index_vec.at(position);
+            self.index += count;
             return count;
         }
 
@@ -88,7 +89,8 @@ pub const IndexVec = union(enum) {
 
         pub fn fill(self: *Iterator, dest: []usize) usize {
             const count = @min(dest.len, self.remaining());
-            for (dest[0..count]) |*slot| slot.* = self.next().?;
+            for (dest[0..count], self.index..) |*slot, position| slot.* = self.index_vec.at(position);
+            self.index += count;
             return count;
         }
     };
@@ -116,9 +118,16 @@ pub const IndexVec = union(enum) {
             }
 
             pub fn fill(self: *@This(), dest: []T) usize {
-                const count = @min(dest.len, self.remaining());
-                for (dest[0..count]) |*slot| slot.* = self.next().?;
-                return count;
+                var indices_buf: [64]usize = undefined;
+                var filled: usize = 0;
+                while (filled < dest.len) {
+                    const chunk_len = @min(dest.len - filled, indices_buf.len);
+                    const count = self.index_iter.fill(indices_buf[0..chunk_len]);
+                    for (indices_buf[0..count], dest[filled..][0..count]) |item_index, *slot| slot.* = self.items[item_index];
+                    filled += count;
+                    if (count < chunk_len) break;
+                }
+                return filled;
             }
         };
     }
@@ -146,9 +155,16 @@ pub const IndexVec = union(enum) {
             }
 
             pub fn fill(self: *@This(), dest: []*const T) usize {
-                const count = @min(dest.len, self.remaining());
-                for (dest[0..count]) |*slot| slot.* = self.next().?;
-                return count;
+                var indices_buf: [64]usize = undefined;
+                var filled: usize = 0;
+                while (filled < dest.len) {
+                    const chunk_len = @min(dest.len - filled, indices_buf.len);
+                    const count = self.index_iter.fill(indices_buf[0..chunk_len]);
+                    for (indices_buf[0..count], dest[filled..][0..count]) |item_index, *slot| slot.* = &self.items[item_index];
+                    filled += count;
+                    if (count < chunk_len) break;
+                }
+                return filled;
             }
         };
     }
@@ -176,9 +192,16 @@ pub const IndexVec = union(enum) {
             }
 
             pub fn fill(self: *@This(), dest: []*T) usize {
-                const count = @min(dest.len, self.remaining());
-                for (dest[0..count]) |*slot| slot.* = self.next().?;
-                return count;
+                var indices_buf: [64]usize = undefined;
+                var filled: usize = 0;
+                while (filled < dest.len) {
+                    const chunk_len = @min(dest.len - filled, indices_buf.len);
+                    const count = self.index_iter.fill(indices_buf[0..chunk_len]);
+                    for (indices_buf[0..count], dest[filled..][0..count]) |item_index, *slot| slot.* = &self.items[item_index];
+                    filled += count;
+                    if (count < chunk_len) break;
+                }
+                return filled;
             }
         };
     }
@@ -502,7 +525,7 @@ pub fn SampledPtrIterator(comptime T: type) type {
             while (filled < dest.len) {
                 const chunk_len = @min(dest.len - filled, indices_buf.len);
                 const count = self.index_iter.fill(indices_buf[0..chunk_len]);
-                for (indices_buf[0..count], dest[filled..][0..count]) |index, *slot| slot.* = &self.items[index];
+                for (indices_buf[0..count], dest[filled..][0..count]) |item_index, *slot| slot.* = &self.items[item_index];
                 filled += count;
                 if (count < chunk_len) break;
             }
@@ -553,7 +576,7 @@ pub fn SampledMutPtrIterator(comptime T: type) type {
             while (filled < dest.len) {
                 const chunk_len = @min(dest.len - filled, indices_buf.len);
                 const count = self.index_iter.fill(indices_buf[0..chunk_len]);
-                for (indices_buf[0..count], dest[filled..][0..count]) |index, *slot| slot.* = &self.items[index];
+                for (indices_buf[0..count], dest[filled..][0..count]) |item_index, *slot| slot.* = &self.items[item_index];
                 filled += count;
                 if (count < chunk_len) break;
             }
@@ -596,7 +619,7 @@ pub fn SampledValueIterator(comptime T: type) type {
             while (filled < dest.len) {
                 const chunk_len = @min(dest.len - filled, indices_buf.len);
                 const count = self.index_iter.fill(indices_buf[0..chunk_len]);
-                for (indices_buf[0..count], dest[filled..][0..count]) |index, *slot| slot.* = self.items[index];
+                for (indices_buf[0..count], dest[filled..][0..count]) |item_index, *slot| slot.* = self.items[item_index];
                 filled += count;
                 if (count < chunk_len) break;
             }

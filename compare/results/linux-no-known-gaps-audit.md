@@ -3731,3 +3731,10 @@ seq sampled value/const-pointer/mutable-pointer iterator fills now bulk-fill
 owned sampled indices before mapping them to outputs, reducing per-slot iterator
 overhead while preserving fill results and stream shape. This improves sampled
 iterator fill reliability/ergonomics evidence but does not resolve S4-M11.
+
+S4-M792 reuses IndexVec mapped iterator index-buffer fills
+(`compare/results/s4-m792-indexvec-mapped-iterator-fill-index-buffer.md`):
+seq non-owned IndexVec value/const-pointer/mutable-pointer iterator fills now
+bulk-fill sampled indices before mapping them to outputs, and base IndexVec
+iterator fills copy index ranges directly. This improves indexed-sample iterator
+fill reliability/ergonomics evidence but does not resolve S4-M11.
