@@ -986,7 +986,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M945 AliasTable owned facade direct paths | `src/distributions.zig`, `compare/results/s4-m945-aliastable-owned-facade-direct.md` | Closed for the current bar: static AliasTable allocation-returning facade helpers now allocate and fill directly. |
 | S4-M946 AliasTable array direct paths | `src/distributions.zig`, `compare/results/s4-m946-aliastable-array-direct-paths.md` | Closed for the current bar: static AliasTable fixed-array helpers now fill directly. |
 | S4-M947 AliasTable checked iterator direct constructors | `src/distributions.zig`, `compare/results/s4-m947-aliastable-checked-iterator-direct.md` | Closed for the current bar: static AliasTable checked iterator constructors now build iterators directly. |
-| S4-M948 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M948 AliasTable checked u32 iterator From direct constructor | `src/distributions.zig`, `compare/results/s4-m948-aliastable-checked-u32-iterator-from-direct.md` | Closed for the current bar: static AliasTable checked compact direct-source iterator constructor now builds directly. |
+| S4-M949 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3329,6 +3330,11 @@ through direct iterator-payload construction after compact-width prevalidation,
 preserving stream shape while avoiding iterator wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
+S4-M948 additionally routes static AliasTable checked compact direct-source
+iterator construction through direct iterator-payload construction after width
+prevalidation, preserving stream shape while avoiding an unchecked iterator
+constructor wrapper; it is reliability/ergonomics work and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

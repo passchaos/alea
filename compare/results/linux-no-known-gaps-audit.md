@@ -4787,3 +4787,10 @@ S4-M947 routes static AliasTable checked iterator constructors directly
 AliasTable `iterChecked`, `iterCheckedFrom`, and `iterU32Checked` now construct
 iterator payloads directly instead of routing through iterator wrappers. This
 improves weighted-index checked iterator ergonomics but does not resolve S4-M11.
+
+S4-M948 routes static AliasTable checked compact direct-source iterator directly
+(`compare/results/s4-m948-aliastable-checked-u32-iterator-from-direct.md`):
+AliasTable `iterU32CheckedFrom` now constructs its compact iterator payload
+directly after width prevalidation instead of routing through `iterU32From`. This
+improves weighted-index checked compact iterator ergonomics but does not resolve
+S4-M11.

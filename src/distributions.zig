@@ -17822,7 +17822,7 @@ pub fn AliasTable(comptime Weight: type) type {
 
         pub fn iterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            return self.iterU32From(source);
+            return .{ .source = source, .table = self };
         }
 
         pub fn U32IndexIterator(comptime Source: type) type {
