@@ -606,7 +606,7 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn ptrIter(self: Self, rng: Rng) PtrIterator(Rng) {
-            return self.ptrIterFrom(rng);
+            return .{ .source = rng, .choice = self };
         }
 
         pub fn ptrIterFrom(self: Self, source: anytype) PtrIterator(@TypeOf(source)) {
@@ -808,7 +808,7 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indexIter(self: Self, rng: Rng) IndexIterator(Rng) {
-            return self.indexIterFrom(rng);
+            return .{ .source = rng, .choice = self };
         }
 
         pub fn indexIterFrom(self: Self, source: anytype) IndexIterator(@TypeOf(source)) {
@@ -824,7 +824,8 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indexIterU32(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
-            return self.indexIterU32From(rng);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            return .{ .source = rng, .choice = self };
         }
 
         pub fn indexIterU32From(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
@@ -978,7 +979,7 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn valueIter(self: Self, rng: Rng) ValueIterator(Rng) {
-            return self.valueIterFrom(rng);
+            return .{ .source = rng, .choice = self };
         }
 
         pub fn valueIterFrom(self: Self, source: anytype) ValueIterator(@TypeOf(source)) {
