@@ -10582,7 +10582,10 @@ pub fn StudentT(comptime T: type) type {
                 for (dest) |*item| item.* = Rng.standardNormalFastFrom(source, T);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const standard_normal_draw = Rng.normalFastFrom(source, T, 0, 1);
+                item.* = standard_normal_draw * @sqrt(self.dof / self.chi_squared_sampler.sampleFrom(source));
+            }
         }
     };
 }
@@ -31138,6 +31141,23 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect((try StudentT(f64).init(2)).varianceValue() == null);
     student_sampler.fillFrom(&direct_engine, &direct_student_buf);
     for (direct_student_buf) |value| try std.testing.expect(std.math.isFinite(value));
+    var student_fill_engine = alea.ScalarPrng.init(0x5847_0001);
+    var student_loop_engine = alea.ScalarPrng.init(0x5847_0001);
+    var student_fill: [10]f64 = undefined;
+    var student_loop: [10]f64 = undefined;
+    student_sampler.fillFrom(&student_fill_engine, &student_fill);
+    for (&student_loop) |*slot| slot.* = student_sampler.sampleFrom(&student_loop_engine);
+    try std.testing.expectEqualSlices(f64, &student_loop, &student_fill);
+    try std.testing.expectEqual(student_loop_engine.next(), student_fill_engine.next());
+    var student_f32_fill_engine = alea.ScalarPrng.init(0x5847_f32);
+    var student_f32_loop_engine = alea.ScalarPrng.init(0x5847_f32);
+    const student_f32 = try StudentT(f32).init(10);
+    var student_f32_fill: [11]f32 = undefined;
+    var student_f32_loop: [11]f32 = undefined;
+    student_f32.fillFrom(&student_f32_fill_engine, &student_f32_fill);
+    for (&student_f32_loop) |*slot| slot.* = student_f32.sampleFrom(&student_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &student_f32_loop, &student_f32_fill);
+    try std.testing.expectEqual(student_f32_loop_engine.next(), student_f32_fill_engine.next());
 
     var triangulars = rng.sampleIter(f64, try Triangular(f64).init(-1, 0, 2));
     const triangular_value = triangulars.next().?;

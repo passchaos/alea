@@ -4104,3 +4104,10 @@ VectorFisherF.fillFrom now draws numerator and denominator values from its cache
 Gamma samplers directly for each lane and divides them, instead of routing every
 output through VectorFisherF.sampleFrom. This improves VectorFisherF reusable
 fill ergonomics but does not resolve S4-M11.
+
+S4-M847 draws reusable StudentT fills through direct normal/ChiSquared composition
+(`compare/results/s4-m847-student-t-fill-direct-composition.md`):
+StudentT.fillFrom now draws standard normal and cached ChiSquared samples
+directly for finite degrees of freedom and combines them, instead of routing
+every output through StudentT.sampleFrom. This improves StudentT reusable fill
+ergonomics but does not resolve S4-M11.
