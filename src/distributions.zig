@@ -10502,11 +10502,16 @@ pub fn Chi(comptime T: type) type {
 }
 
 pub fn erlang(rng: Rng, comptime T: type, shape: u64, scale: T) T {
-    return erlangFrom(rng, T, shape, scale);
+    comptime requireFloat(T);
+    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) return 0;
+    const sampler = Erlang(T).init(shape, scale) catch unreachable;
+    return sampler.sample(rng);
 }
 
 pub fn erlangChecked(rng: Rng, comptime T: type, shape: u64, scale: T) Error!T {
-    return erlangCheckedFrom(rng, T, shape, scale);
+    const dist = try Erlang(T).init(shape, scale);
+    return dist.sample(rng);
 }
 
 pub fn erlangCheckedFrom(source: anytype, comptime T: type, shape: u64, scale: T) Error!T {
@@ -10522,7 +10527,14 @@ pub fn erlangFrom(source: anytype, comptime T: type, shape: u64, scale: T) T {
 }
 
 pub fn fillErlang(rng: Rng, comptime T: type, dest: []T, shape: u64, scale: T) void {
-    fillErlangFrom(rng, T, dest, shape, scale);
+    comptime requireFloat(T);
+    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, 0);
+        return;
+    }
+    const sampler = Erlang(T).init(shape, scale) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillErlangFrom(source: anytype, comptime T: type, dest: []T, shape: u64, scale: T) void {
@@ -10537,7 +10549,9 @@ pub fn fillErlangFrom(source: anytype, comptime T: type, dest: []T, shape: u64, 
 }
 
 pub fn fillErlangChecked(rng: Rng, comptime T: type, dest: []T, shape: u64, scale: T) Error!void {
-    return fillErlangCheckedFrom(rng, T, dest, shape, scale);
+    if (dest.len == 0) return;
+    const sampler = try Erlang(T).init(shape, scale);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillErlangCheckedFrom(source: anytype, comptime T: type, dest: []T, shape: u64, scale: T) Error!void {
@@ -10547,7 +10561,8 @@ pub fn fillErlangCheckedFrom(source: anytype, comptime T: type, dest: []T, shape
 }
 
 pub fn vectorErlang(rng: Rng, comptime VectorType: type, shape: u64, scale: vectorChild(VectorType)) VectorType {
-    return vectorErlangFrom(rng, VectorType, shape, scale);
+    const sampler = VectorErlang(VectorType).init(shape, scale) catch unreachable;
+    return sampler.sample(rng);
 }
 
 pub fn vectorErlangFrom(source: anytype, comptime VectorType: type, shape: u64, scale: vectorChild(VectorType)) VectorType {
@@ -10556,7 +10571,8 @@ pub fn vectorErlangFrom(source: anytype, comptime VectorType: type, shape: u64, 
 }
 
 pub fn vectorErlangChecked(rng: Rng, comptime VectorType: type, shape: u64, scale: vectorChild(VectorType)) Error!VectorType {
-    return vectorErlangCheckedFrom(rng, VectorType, shape, scale);
+    const sampler = try VectorErlang(VectorType).init(shape, scale);
+    return sampler.sample(rng);
 }
 
 pub fn vectorErlangCheckedFrom(source: anytype, comptime VectorType: type, shape: u64, scale: vectorChild(VectorType)) Error!VectorType {
@@ -10565,7 +10581,8 @@ pub fn vectorErlangCheckedFrom(source: anytype, comptime VectorType: type, shape
 }
 
 pub fn fillVectorErlang(rng: Rng, comptime VectorType: type, dest: []VectorType, shape: u64, scale: vectorChild(VectorType)) void {
-    fillVectorErlangFrom(rng, VectorType, dest, shape, scale);
+    const sampler = VectorErlang(VectorType).init(shape, scale) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorErlangFrom(source: anytype, comptime VectorType: type, dest: []VectorType, shape: u64, scale: vectorChild(VectorType)) void {
@@ -10574,7 +10591,9 @@ pub fn fillVectorErlangFrom(source: anytype, comptime VectorType: type, dest: []
 }
 
 pub fn fillVectorErlangChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, shape: u64, scale: vectorChild(VectorType)) Error!void {
-    return fillVectorErlangCheckedFrom(rng, VectorType, dest, shape, scale);
+    if (dest.len == 0) return;
+    const sampler = try VectorErlang(VectorType).init(shape, scale);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorErlangCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, shape: u64, scale: vectorChild(VectorType)) Error!void {

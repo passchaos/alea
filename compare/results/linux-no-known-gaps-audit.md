@@ -5167,3 +5167,10 @@ S4-M1003 routes reusable scalar/vector Erlang facade helpers directly
 facade samplers directly instead of routing through `sampleFrom` / `fillFrom`
 wrappers. This improves Erlang sampler facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1004 routes top-level scalar/vector Erlang facade helpers directly
+(`compare/results/s4-m1004-erlang-top-level-facade-direct.md`): scalar/vector
+Erlang checked/nonchecked sample/fill helpers now construct reusable Erlang
+samplers and call facade `sample` / `fill` directly instead of routing through
+`From` wrappers. This improves Erlang top-level facade ergonomics but does not
+resolve S4-M11.
