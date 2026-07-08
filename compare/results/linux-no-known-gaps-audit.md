@@ -5359,3 +5359,10 @@ S4-M1030 routes reusable scalar/vector Zipf facade helpers directly
 through facade `Rng` instead of routing through `sampleFrom` / `fillFrom`
 wrappers. This improves Zipf sampler facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1031 routes reusable scalar/vector Zeta facade helpers directly
+(`compare/results/s4-m1031-zeta-sampler-facade-direct.md`): `Zeta.sample` /
+`fill` and `VectorZeta.sample` / `fill` now run cached rejection sampling directly
+through facade `Rng` instead of routing through `sampleFrom` / `fillFrom`
+wrappers. This improves Zeta sampler facade ergonomics but does not resolve
+S4-M11.

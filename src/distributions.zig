@@ -18259,7 +18259,10 @@ pub fn VectorZeta(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return @splat(1);
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(rng);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -18270,7 +18273,15 @@ pub fn VectorZeta(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(1)));
+                return;
+            }
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(rng);
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -18325,7 +18336,16 @@ pub fn Zeta(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return 1;
+            while (true) {
+                const u = Rng.floatOpenClosedFrom(rng, T);
+                const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
+                if (std.math.isInf(x)) return x;
+
+                const t = std.math.pow(T, 1 + 1 / x, self.exponent_minus_one);
+                const v = Rng.floatFrom(rng, T);
+                if (v * x * (t - 1) * self.b <= t * (self.b - 1)) return x;
+            }
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -18342,7 +18362,27 @@ pub fn Zeta(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, 1);
+                return;
+            }
+            for (dest) |*item| {
+                while (true) {
+                    const u = Rng.floatOpenClosedFrom(rng, T);
+                    const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
+                    if (std.math.isInf(x)) {
+                        item.* = x;
+                        break;
+                    }
+
+                    const t = std.math.pow(T, 1 + 1 / x, self.exponent_minus_one);
+                    const v = Rng.floatFrom(rng, T);
+                    if (v * x * (t - 1) * self.b <= t * (self.b - 1)) {
+                        item.* = x;
+                        break;
+                    }
+                }
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
