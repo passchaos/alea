@@ -4328,3 +4328,10 @@ S4-M878 draws reusable Zeta fills through the direct cached rejection loop
 Zeta.fillFrom now runs the open-closed proposal and uniform rejection check
 directly instead of routing every output through Zeta.sampleFrom. This improves
 Zeta reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M879 draws reusable UniformDuration fills through direct duration range helper
+dispatch (`compare/results/s4-m879-uniform-duration-fill-direct-range.md`):
+UniformDuration.fillFrom now branches once between half-open and inclusive
+duration range helpers instead of routing every output through
+UniformDuration.sampleFrom. This improves UniformDuration reusable fill ergonomics
+but does not resolve S4-M11.

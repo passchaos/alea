@@ -3213,7 +3213,11 @@ pub const UniformDuration = struct {
     }
 
     pub fn fillFrom(self: Self, source: anytype, dest: []std.Io.Duration) void {
-        for (dest) |*item| item.* = self.sampleFrom(source);
+        if (self.inclusive) {
+            for (dest) |*item| item.* = Rng.durationRangeAtMostFrom(source, self.low, self.high);
+            return;
+        }
+        for (dest) |*item| item.* = Rng.durationRangeLessThanFrom(source, self.low, self.high);
     }
 };
 
@@ -34269,6 +34273,22 @@ test "UniformDuration sampler mirrors duration helpers" {
     for (&helper_values) |*item| item.* = Rng.durationRangeAtMostFrom(&fill_helper_engine, low, high);
     try std.testing.expectEqualSlices(std.Io.Duration, &helper_values, &sampler_values);
     try std.testing.expectEqual(fill_helper_engine.next(), fill_sampler_engine.next());
+    var half_open_fill_engine = root.DefaultPrng.init(0xd02a_7105);
+    var half_open_loop_engine = root.DefaultPrng.init(0xd02a_7105);
+    var half_open_fill_values: [5]std.Io.Duration = undefined;
+    var half_open_loop_values: [5]std.Io.Duration = undefined;
+    half_open.fillFrom(&half_open_fill_engine, &half_open_fill_values);
+    for (&half_open_loop_values) |*item| item.* = half_open.sampleFrom(&half_open_loop_engine);
+    try std.testing.expectEqualSlices(std.Io.Duration, &half_open_loop_values, &half_open_fill_values);
+    try std.testing.expectEqual(half_open_loop_engine.next(), half_open_fill_engine.next());
+    var inclusive_fill_engine = root.DefaultPrng.init(0xd02a_7106);
+    var inclusive_loop_engine = root.DefaultPrng.init(0xd02a_7106);
+    var inclusive_fill_values: [5]std.Io.Duration = undefined;
+    var inclusive_loop_values: [5]std.Io.Duration = undefined;
+    inclusive.fillFrom(&inclusive_fill_engine, &inclusive_fill_values);
+    for (&inclusive_loop_values) |*item| item.* = inclusive.sampleFrom(&inclusive_loop_engine);
+    try std.testing.expectEqualSlices(std.Io.Duration, &inclusive_loop_values, &inclusive_fill_values);
+    try std.testing.expectEqual(inclusive_loop_engine.next(), inclusive_fill_engine.next());
 
     const point = try UniformDuration.newInclusive(high, high);
     var point_engine = root.DefaultPrng.init(0xd02a_7104);
