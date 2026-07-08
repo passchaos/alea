@@ -599,7 +599,9 @@ pub fn Choose(comptime T: type) type {
                 }
 
                 pub fn nextValue(self: *SelfIter) *const T {
-                    return self.choice.sampleFrom(self.source);
+                    const items = self.choice.items;
+                    if (items.len == 1) return &items[0];
+                    return &items[Rng.uintLessThanFrom(self.source, usize, items.len)];
                 }
 
                 pub fn fill(self: *SelfIter, dest: []*const T) void {
@@ -33178,6 +33180,11 @@ test "distribution Choose sampler mirrors slice choices" {
     var unchecked_ptr_iter = choice.ptrIterFrom(&unchecked_ptr_iter_engine);
     try std.testing.expectEqual(unchecked_ptr_iter.next().?, checked_ptr_iter.next().?);
     try std.testing.expectEqual(unchecked_ptr_iter_engine.next(), checked_ptr_iter_engine.next());
+    var direct_ptr_iter_engine = root.DefaultPrng.init(0xc0_29e);
+    var helper_ptr_iter_engine = root.DefaultPrng.init(0xc0_29e);
+    var direct_ptr_iter = choice.ptrIterFrom(&direct_ptr_iter_engine);
+    try std.testing.expectEqual(&items[Rng.chooseIndexFrom(&helper_ptr_iter_engine, items.len).?], direct_ptr_iter.next().?);
+    try std.testing.expectEqual(helper_ptr_iter_engine.next(), direct_ptr_iter_engine.next());
     var checked_iter_facade_engine = root.DefaultPrng.init(0xc0_293);
     var checked_iter_direct_engine = root.DefaultPrng.init(0xc0_293);
     var checked_iter_facade = try choice.iterChecked(root.Rng.init(&checked_iter_facade_engine));

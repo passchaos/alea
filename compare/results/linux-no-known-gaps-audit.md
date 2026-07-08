@@ -3914,3 +3914,10 @@ reusable WeightedChoice value iterator next calls now sample alias-table indexes
 and map directly into item storage instead of routing through sampleValueFrom.
 This improves reusable weighted-choice value iterator ergonomics but does not
 resolve S4-M11.
+
+S4-M820 maps distribution Choose pointer iterators directly from generated indexes
+(`compare/results/s4-m820-distribution-choose-ptr-iterator-direct.md`):
+distribution-layer Choose pointer iterator next calls now generate uniform indexes
+and map directly into item storage instead of routing through sampleFrom. This
+improves distribution choose pointer iterator ergonomics but does not resolve
+S4-M11.

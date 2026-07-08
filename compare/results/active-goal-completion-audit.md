@@ -858,7 +858,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M817 Choice value iterator direct index mapping | `src/seq.zig`, `compare/results/s4-m817-choice-value-iterator-direct-index.md` | Closed for the current bar: reusable Choice value iterators now map generated indexes directly into item storage. |
 | S4-M818 Distribution Choose value iterator direct index mapping | `src/distributions.zig`, `compare/results/s4-m818-distribution-choose-value-iterator-direct.md` | Closed for the current bar: distribution-layer Choose value iterators now map generated indexes directly into item storage. |
 | S4-M819 WeightedChoice value iterator direct table mapping | `src/seq.zig`, `compare/results/s4-m819-weightedchoice-value-iterator-direct-table.md` | Closed for the current bar: reusable WeightedChoice value iterators now map alias-table indexes directly into item storage. |
-| S4-M820 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M820 Distribution Choose pointer iterator direct index mapping | `src/distributions.zig`, `compare/results/s4-m820-distribution-choose-ptr-iterator-direct.md` | Closed for the current bar: distribution-layer Choose pointer iterators now map generated indexes directly into item storage. |
+| S4-M821 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2629,6 +2630,10 @@ S4-M819 additionally samples reusable WeightedChoice value iterator scalar outpu
 by mapping alias-table indexes directly to item storage, reducing per-item
 wrapper calls while preserving weighted stream shape; it is reliability/ergonomics
 work and does not resolve S4-M11 or complete the long-term objective.
+S4-M820 additionally samples distribution-layer Choose pointer iterator scalar
+outputs by mapping generated indexes directly to item storage, reducing per-item
+wrapper calls while preserving stream shape; it is reliability/ergonomics work
+and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
