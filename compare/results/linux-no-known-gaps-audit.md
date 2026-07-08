@@ -5160,3 +5160,10 @@ S4-M1002 routes top-level scalar/vector Chi facade helpers directly
 checked/nonchecked sample/fill helpers now construct reusable Chi samplers and
 call facade `sample` / `fill` directly instead of routing through `From` wrappers.
 This improves Chi top-level facade ergonomics but does not resolve S4-M11.
+
+S4-M1003 routes reusable scalar/vector Erlang facade helpers directly
+(`compare/results/s4-m1003-erlang-sampler-facade-direct.md`): `Erlang.sample` /
+`fill` and `VectorErlang.sample` / `fill` now dispatch through cached Gamma
+facade samplers directly instead of routing through `sampleFrom` / `fillFrom`
+wrappers. This improves Erlang sampler facade ergonomics but does not resolve
+S4-M11.

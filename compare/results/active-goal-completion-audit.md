@@ -1041,7 +1041,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1000 ChiSquared top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m1000-chi-squared-top-level-facade-direct.md` | Closed for the current bar: scalar/vector top-level ChiSquared facade helpers now avoid From wrappers. |
 | S4-M1001 Chi sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1001-chi-sampler-facade-direct.md` | Closed for the current bar: reusable scalar/vector Chi facade sample/fill helpers now avoid From wrappers. |
 | S4-M1002 Chi top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m1002-chi-top-level-facade-direct.md` | Closed for the current bar: scalar/vector top-level Chi facade helpers now avoid From wrappers. |
-| S4-M1003 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1003 Erlang sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1003-erlang-sampler-facade-direct.md` | Closed for the current bar: reusable scalar/vector Erlang facade sample/fill helpers now avoid From wrappers. |
+| S4-M1004 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3656,6 +3657,11 @@ reusable facade samplers, preserving stream shape, scalar degree-one behavior,
 degenerate no-consume behavior, and zero-length checked fill semantics while
 avoiding `From` wrapper aliases; it is reliability/ergonomics work and does not
 resolve S4-M11 or complete the long-term objective.
+S4-M1003 additionally routes reusable scalar/vector Erlang facade sample/fill
+helpers through cached Gamma facade samplers, preserving stream shape,
+degenerate no-consume behavior, and zero-length checked fill semantics while
+avoiding `sampleFrom` / `fillFrom` wrapper aliases; it is reliability/ergonomics
+work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
