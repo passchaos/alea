@@ -4446,3 +4446,11 @@ mapping (`compare/results/s4-m897-charset-checked-sample-direct.md`):
 Charset.sampleCheckedFrom and UnicodeCharset.sampleCheckedFrom now validate and
 then sample indexes directly instead of routing through unchecked sampleFrom. This
 improves charset checked sampling ergonomics but does not resolve S4-M11.
+
+S4-M898 routes distribution-layer Choose checked scalar samples through direct
+index mapping
+(`compare/results/s4-m898-distribution-choose-checked-sample-direct.md`):
+Choose.sampleValueCheckedFrom, sampleIndexCheckedFrom, and
+sampleIndexU32CheckedFrom now validate and then sample uniform indexes directly
+instead of routing through unchecked sample wrappers. This improves checked slice
+choice ergonomics but does not resolve S4-M11.

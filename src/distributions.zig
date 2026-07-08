@@ -465,7 +465,9 @@ pub fn Choose(comptime T: type) type {
 
         pub fn sampleValueCheckedFrom(self: Self, source: anytype) Error!T {
             if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
-            return self.sampleValueFrom(source);
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return self.items[0];
+            return self.items[Rng.uintLessThanFrom(source, usize, self.items.len)];
         }
 
         pub fn valueChecked(self: Self, rng: Rng) Error!T {
@@ -491,7 +493,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
-            return self.sampleIndexFrom(source);
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(source, usize, self.items.len);
         }
 
         pub fn sampleIndexU32(self: Self, rng: Rng) Error!u32 {
@@ -509,7 +513,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
-            return self.sampleIndexU32From(source);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(source, u32, @intCast(self.items.len));
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
@@ -34432,6 +34438,11 @@ test "distribution Choose sampler mirrors slice choices" {
         try choice.sampleValueCheckedFrom(&checked_value_engine),
     );
     try std.testing.expectEqual(unchecked_value_engine.next(), checked_value_engine.next());
+    var direct_checked_value_engine = root.DefaultPrng.init(0xc0_2a0);
+    var helper_checked_value_engine = root.DefaultPrng.init(0xc0_2a0);
+    const helper_checked_value_index = Rng.chooseIndexFrom(&helper_checked_value_engine, items.len).?;
+    try std.testing.expectEqual(items[helper_checked_value_index], try choice.sampleValueCheckedFrom(&direct_checked_value_engine));
+    try std.testing.expectEqual(helper_checked_value_engine.next(), direct_checked_value_engine.next());
     var sample_index_engine = root.DefaultPrng.init(0xc0_276);
     var choose_index_engine = root.DefaultPrng.init(0xc0_276);
     try std.testing.expectEqual(
@@ -34453,6 +34464,13 @@ test "distribution Choose sampler mirrors slice choices" {
         try choice.sampleIndexU32CheckedFrom(&checked_index_u32_engine),
     );
     try std.testing.expectEqual(unchecked_index_u32_engine.next(), checked_index_u32_engine.next());
+    var direct_checked_index_u32_engine = root.DefaultPrng.init(0xc0_2a2);
+    var helper_checked_index_u32_engine = root.DefaultPrng.init(0xc0_2a2);
+    try std.testing.expectEqual(
+        Rng.chooseIndexU32From(&helper_checked_index_u32_engine, @intCast(items.len)).?,
+        try choice.sampleIndexU32CheckedFrom(&direct_checked_index_u32_engine),
+    );
+    try std.testing.expectEqual(helper_checked_index_u32_engine.next(), direct_checked_index_u32_engine.next());
 
     var fill_engine = root.DefaultPrng.init(0xc0_268);
     var helper_engine = root.DefaultPrng.init(0xc0_268);
@@ -34492,6 +34510,13 @@ test "distribution Choose sampler mirrors slice choices" {
         try choice.sampleIndexCheckedFrom(&checked_index_engine),
     );
     try std.testing.expectEqual(unchecked_index_engine.next(), checked_index_engine.next());
+    var direct_checked_index_engine = root.DefaultPrng.init(0xc0_2a1);
+    var helper_checked_index_engine = root.DefaultPrng.init(0xc0_2a1);
+    try std.testing.expectEqual(
+        Rng.chooseIndexFrom(&helper_checked_index_engine, items.len).?,
+        try choice.sampleIndexCheckedFrom(&direct_checked_index_engine),
+    );
+    try std.testing.expectEqual(helper_checked_index_engine.next(), direct_checked_index_engine.next());
     var checked_fill_engine = root.DefaultPrng.init(0xc0_27f);
     var unchecked_fill_engine = root.DefaultPrng.init(0xc0_27f);
     var checked_fill: [6]usize = undefined;
