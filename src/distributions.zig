@@ -14877,7 +14877,8 @@ pub fn Pert(comptime T: type) type {
                 @memset(dest, self.degenerateValue());
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillBetaFrom(source, T, dest, self.alpha, self.beta_param);
+            for (dest) |*item| item.* = self.min + self.range * item.*;
         }
 
         fn isDegenerate(self: Self) bool {
@@ -32473,6 +32474,23 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 9.0 / 28.0), pert_sampler.varianceValue(), 1e-12);
     pert_sampler.fillFrom(&direct_engine, &direct_pert_buf);
     for (direct_pert_buf) |value| try std.testing.expect(value >= -1 and value <= 2);
+    var pert_fill_engine = alea.ScalarPrng.init(0x5875_0001);
+    var pert_loop_engine = alea.ScalarPrng.init(0x5875_0001);
+    var pert_fill: [10]f64 = undefined;
+    var pert_loop: [10]f64 = undefined;
+    pert_sampler.fillFrom(&pert_fill_engine, &pert_fill);
+    for (&pert_loop) |*slot| slot.* = pert_sampler.sampleFrom(&pert_loop_engine);
+    try std.testing.expectEqualSlices(f64, &pert_loop, &pert_fill);
+    try std.testing.expectEqual(pert_loop_engine.next(), pert_fill_engine.next());
+    var pert_f32_fill_engine = alea.ScalarPrng.init(0x5875_f32);
+    var pert_f32_loop_engine = alea.ScalarPrng.init(0x5875_f32);
+    const pert_f32_sampler = try Pert(f32).init(-1, 0.5, 2, 4);
+    var pert_f32_fill: [11]f32 = undefined;
+    var pert_f32_loop: [11]f32 = undefined;
+    pert_f32_sampler.fillFrom(&pert_f32_fill_engine, &pert_f32_fill);
+    for (&pert_f32_loop) |*slot| slot.* = pert_f32_sampler.sampleFrom(&pert_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &pert_f32_loop, &pert_f32_fill);
+    try std.testing.expectEqual(pert_f32_loop_engine.next(), pert_f32_fill_engine.next());
     const pert_builder = Pert(f64).initRange(-1, 2).withShape(4);
     try std.testing.expectApproxEqAbs(@as(f64, -1), pert_builder.minValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 2), pert_builder.maxValue(), 1e-12);

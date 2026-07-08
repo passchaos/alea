@@ -4303,3 +4303,9 @@ Beta.fillFrom now draws gamma_a and gamma_b directly and writes x/(x+y) instead
 of routing every output through Beta.sampleFrom, while retaining point-mass,
 uniform, and square-root edge paths. This improves Beta reusable fill ergonomics
 but does not resolve S4-M11.
+
+S4-M875 draws reusable Pert fills through cached beta-parameter bulk delegation
+(`compare/results/s4-m875-pert-fill-beta-delegate.md`):
+Pert.fillFrom now fills beta variates with cached alpha/beta values and then
+affine-maps them in place instead of routing every output through Pert.sampleFrom.
+This improves Pert reusable fill ergonomics but does not resolve S4-M11.
