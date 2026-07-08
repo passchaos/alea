@@ -4111,3 +4111,10 @@ StudentT.fillFrom now draws standard normal and cached ChiSquared samples
 directly for finite degrees of freedom and combines them, instead of routing
 every output through StudentT.sampleFrom. This improves StudentT reusable fill
 ergonomics but does not resolve S4-M11.
+
+S4-M848 draws reusable VectorStudentT fills through direct normal/ChiSquared lanes
+(`compare/results/s4-m848-vector-student-t-fill-direct-composition.md`):
+VectorStudentT.fillFrom now draws standard normal and cached ChiSquared samples
+directly for each finite-degree vector lane and combines them, instead of routing
+every output through VectorStudentT.sampleFrom. This improves VectorStudentT
+reusable fill ergonomics but does not resolve S4-M11.

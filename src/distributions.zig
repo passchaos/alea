@@ -10511,7 +10511,18 @@ pub fn VectorStudentT(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            if (self.dofValue() == std.math.inf(Child)) {
+                fillVectorStandardNormalFrom(source, VectorType, dest);
+                return;
+            }
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+                    const standard_normal_draw = Rng.normalFastFrom(source, Child, 0, 1);
+                    out[lane] = standard_normal_draw * @sqrt(self.sampler.dof / self.sampler.chi_squared_sampler.sampleFrom(source));
+                }
+                item.* = out;
+            }
         }
     };
 }
@@ -26848,6 +26859,23 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &student_buf_vec, &direct_student_buf_vec);
     for (student_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_student_fill_engine = alea.ScalarPrng.init(0x5848_0001);
+    var vector_student_loop_engine = alea.ScalarPrng.init(0x5848_0001);
+    var vector_student_fill: [3]@Vector(4, f64) = undefined;
+    var vector_student_loop: [3]@Vector(4, f64) = undefined;
+    vector_student_sampler.fillFrom(&vector_student_fill_engine, &vector_student_fill);
+    for (&vector_student_loop) |*slot| slot.* = vector_student_sampler.sampleFrom(&vector_student_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_student_loop, &vector_student_fill);
+    try std.testing.expectEqual(vector_student_loop_engine.next(), vector_student_fill_engine.next());
+    var vector_student_f32_fill_engine = alea.ScalarPrng.init(0x5848_f32);
+    var vector_student_f32_loop_engine = alea.ScalarPrng.init(0x5848_f32);
+    const vector_student_f32 = try VectorStudentT(@Vector(8, f32)).init(10);
+    var vector_student_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_student_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_student_f32.fillFrom(&vector_student_f32_fill_engine, &vector_student_f32_fill);
+    for (&vector_student_f32_loop) |*slot| slot.* = vector_student_f32.sampleFrom(&vector_student_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_student_f32_loop, &vector_student_f32_fill);
+    try std.testing.expectEqual(vector_student_f32_loop_engine.next(), vector_student_f32_fill_engine.next());
 
     const triangular_vec = try vectorTriangularChecked(rng, @Vector(4, f64), -1, 0, 2);
     const direct_triangular_vec = try vectorTriangularCheckedFrom(&direct_engine, @Vector(4, f64), -1, 0, 2);
