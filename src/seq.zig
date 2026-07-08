@@ -5375,11 +5375,12 @@ pub fn sampleIteratorWeightedIntoFrom(source: anytype, comptime T: type, iterato
     if (out.len == 0) return 0;
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (scratch_keys.len < out.len) return error.LengthMismatch;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining == 0) return 0;
         if (remaining <= out.len) return sampleIteratorWeightedIntoExactCover(T, iterator, out, remaining, false);
     }
-    return sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len]);
+    return sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len], exact_remaining);
 }
 
 pub fn sampleIteratorWeightedIntoChecked(rng: Rng, comptime T: type, iterator: anytype, out: []T, scratch_keys: []f64) !void {
@@ -5390,7 +5391,8 @@ pub fn sampleIteratorWeightedIntoCheckedFrom(source: anytype, comptime T: type, 
     if (out.len == 0) return;
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
     if (scratch_keys.len < out.len) return error.LengthMismatch;
-    if (iteratorExactRemaining(iterator)) |remaining| {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    if (exact_remaining) |remaining| {
         if (remaining < out.len) return error.InvalidParameter;
         if (remaining == out.len) {
             const count = try sampleIteratorWeightedIntoExactCover(T, iterator, out, remaining, true);
@@ -5398,11 +5400,11 @@ pub fn sampleIteratorWeightedIntoCheckedFrom(source: anytype, comptime T: type, 
             return;
         }
     }
-    const count = try sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len]);
+    const count = try sampleIteratorWeightedIntoCore(source, T, iterator, out, scratch_keys[0..out.len], exact_remaining);
     if (count != out.len) return error.InvalidParameter;
 }
 
-fn sampleIteratorWeightedIntoCore(source: anytype, comptime T: type, iterator: anytype, out: []T, keys: []f64) !usize {
+fn sampleIteratorWeightedIntoCore(source: anytype, comptime T: type, iterator: anytype, out: []T, keys: []f64, exact_remaining: ?usize) !usize {
     std.debug.assert(out.len > 0);
     std.debug.assert(keys.len == out.len);
     const Pending = struct {
@@ -5413,7 +5415,11 @@ fn sampleIteratorWeightedIntoCore(source: anytype, comptime T: type, iterator: a
     var count: usize = 0;
     var pending: ?Pending = null;
 
-    while (iterator.next()) |entry| {
+    const scan_limit = exact_remaining;
+    var scanned: usize = 0;
+    while (scan_limit == null or scanned < scan_limit.?) {
+        const entry = iterator.next() orelse break;
+        scanned += 1;
         const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         if (weight == 0) continue;
@@ -13441,6 +13447,80 @@ test "exact-cover weighted iterator fills avoid key sampling" {
     try std.testing.expectError(error.InvalidWeight, sampleIteratorWeightedIntoFrom(&engine, u8, &invalid_iter, &out, &keys));
     try std.testing.expectEqual(@as(usize, 2), invalid_iter.calls);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "exact-long weighted iterator fills avoid trailing probe" {
+    const alea = @import("root.zig");
+
+    const Entry = struct { item: u8, weight: f64 };
+    const ExactIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const entry = self.items[self.index];
+            self.index += 1;
+            return entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+    const PlainIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const entry = self.items[self.index];
+            self.index += 1;
+            return entry;
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 10, .weight = 1 },
+        .{ .item = 20, .weight = 2 },
+        .{ .item = 30, .weight = 3 },
+        .{ .item = 40, .weight = 4 },
+    };
+    var engine = alea.ScalarPrng.init(0x5150_7846);
+    var reference = alea.ScalarPrng.init(0x5150_7846);
+    var iter = ExactIter{ .items = &entries };
+    var reference_iter = PlainIter{ .items = &entries };
+    var out: [2]u8 = undefined;
+    var reference_out: [2]u8 = undefined;
+    var keys: [2]f64 = undefined;
+    var reference_keys: [2]f64 = undefined;
+    try std.testing.expectEqual(
+        try sampleIteratorWeightedIntoFrom(&reference, u8, &reference_iter, &reference_out, &reference_keys),
+        try sampleIteratorWeightedIntoFrom(&engine, u8, &iter, &out, &keys),
+    );
+    try std.testing.expectEqualSlices(u8, &reference_out, &out);
+    try std.testing.expectEqual(@as(usize, 4), iter.calls);
+    try std.testing.expectEqual(@as(usize, 5), reference_iter.calls);
+    try std.testing.expectEqual(reference.next(), engine.next());
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_7847);
+    var checked_ref_engine = alea.ScalarPrng.init(0x5150_7847);
+    var checked_iter = ExactIter{ .items = &entries };
+    var checked_reference_iter = PlainIter{ .items = &entries };
+    var checked_out: [2]u8 = undefined;
+    var checked_reference_out: [2]u8 = undefined;
+    var checked_keys: [2]f64 = undefined;
+    var checked_reference_keys: [2]f64 = undefined;
+    try sampleIteratorWeightedIntoCheckedFrom(&checked_ref_engine, u8, &checked_reference_iter, &checked_reference_out, &checked_reference_keys);
+    try sampleIteratorWeightedIntoCheckedFrom(&checked_engine, u8, &checked_iter, &checked_out, &checked_keys);
+    try std.testing.expectEqualSlices(u8, &checked_reference_out, &checked_out);
+    try std.testing.expectEqual(@as(usize, 4), checked_iter.calls);
+    try std.testing.expectEqual(@as(usize, 5), checked_reference_iter.calls);
+    try std.testing.expectEqual(checked_ref_engine.next(), checked_engine.next());
 }
 
 test "single exact weighted iterator arrays avoid key sampling" {

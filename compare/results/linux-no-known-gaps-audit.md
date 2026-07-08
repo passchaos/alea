@@ -3703,3 +3703,10 @@ seq/root fixed-size weighted iterator arrays now bound exact-long candidate
 scanning by the known remaining count, avoiding an extra trailing null probe
 while preserving weighted-key stream shape. This improves weighted iterator array
 reliability evidence but does not resolve S4-M11.
+
+S4-M788 avoids weighted iterator fill exact-long end probes
+(`compare/results/s4-m788-weighted-iterator-fill-exact-long-end-probe.md`):
+seq/root caller-owned weighted iterator fills now bound exact-long candidate
+scanning by the known remaining count, avoiding an extra trailing null probe
+while preserving weighted-key stream shape. This improves weighted iterator fill
+reliability evidence but does not resolve S4-M11.
