@@ -5343,3 +5343,12 @@ S4-M1028 routes reusable scalar/vector InverseGaussian facade helpers directly
 draw standard-normal and uniform acceptance variates directly through facade
 `Rng` instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
 InverseGaussian sampler facade ergonomics but does not resolve S4-M11.
+
+S4-M1029 routes reusable scalar/vector NormalInverseGaussian facade helpers
+directly
+(`compare/results/s4-m1029-normal-inverse-gaussian-sampler-facade-direct.md`):
+`NormalInverseGaussian.sample` / `fill` and `VectorNormalInverseGaussian.sample` /
+`fill` now draw inverse-Gaussian and standard-normal components directly through
+facade `Rng` instead of routing through `sampleFrom` / `fillFrom` wrappers. This
+improves NormalInverseGaussian sampler facade ergonomics but does not resolve
+S4-M11.

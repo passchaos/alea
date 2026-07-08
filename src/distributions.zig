@@ -17717,7 +17717,14 @@ pub fn VectorNormalInverseGaussian(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
+            const inverse_mean = 1 / self.gammaValue();
+            const inverse_normal_vec = vectorStandardNormal(rng, VectorType);
+            const inverse_uniform_vec = Rng.vectorFrom(rng, VectorType);
+            const inv_gauss = inverseGaussianFromNormalVector(VectorType, inverse_normal_vec, inverse_uniform_vec, inverse_mean, @as(Child, 1));
+            const normal_vec = vectorStandardNormal(rng, VectorType);
+            const beta_vec: VectorType = @splat(self.betaValue());
+            return beta_vec * inv_gauss + @sqrt(inv_gauss) * normal_vec;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -17730,7 +17737,19 @@ pub fn VectorNormalInverseGaussian(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
+                return;
+            }
+            const inverse_mean = 1 / self.gammaValue();
+            const beta_vec: VectorType = @splat(self.betaValue());
+            for (dest) |*item| {
+                const inverse_normal_vec = vectorStandardNormal(rng, VectorType);
+                const inverse_uniform_vec = Rng.vectorFrom(rng, VectorType);
+                const inv_gauss = inverseGaussianFromNormalVector(VectorType, inverse_normal_vec, inverse_uniform_vec, inverse_mean, @as(Child, 1));
+                const normal_vec = vectorStandardNormal(rng, VectorType);
+                item.* = beta_vec * inv_gauss + @sqrt(inv_gauss) * normal_vec;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -17819,7 +17838,9 @@ pub fn NormalInverseGaussian(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return self.degenerateValue();
+            const inv_gauss = self.inverse_gaussian.sample(rng);
+            return self.beta_param * inv_gauss + @sqrt(inv_gauss) * rng.normal(T, 0, 1);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -17829,7 +17850,15 @@ pub fn NormalInverseGaussian(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, self.degenerateValue());
+                return;
+            }
+            self.inverse_gaussian.fill(rng, dest);
+            for (dest) |*item| {
+                const inv_gauss = item.*;
+                item.* = self.beta_param * inv_gauss + @sqrt(inv_gauss) * rng.normal(T, 0, 1);
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
