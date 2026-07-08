@@ -836,7 +836,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M795 uniform choice probability fill constant path | `src/seq.zig`, `src/distributions.zig`, `compare/results/s4-m795-choice-probability-fill-constant.md` | Closed for the current bar: uniform choice probability iterators now fill constant probabilities directly instead of per-slot `next()` calls. |
 | S4-M796 AliasTable iterator fill direct storage paths | `src/distributions.zig`, `compare/results/s4-m796-aliastable-iterator-fill-direct-storage.md` | Closed for the current bar: AliasTable weight/probability iterators now fill directly from stored weights instead of per-slot lookup calls. |
 | S4-M797 weighted tree iterator fill direct storage paths | `src/distributions.zig`, `compare/results/s4-m797-weighted-tree-iterator-fill-direct-storage.md` | Closed for the current bar: dynamic weighted tree weight/probability iterators now fill directly from tree storage and cache totals instead of per-slot lookup calls. |
-| S4-M798 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M798 IndexVec copied u32 narrowing prevalidation | `src/seq.zig`, `compare/results/s4-m798-indexvec-copied-u32-prevalidation.md` | Closed for the current bar: IndexVec native-to-u32 copied narrowing now rejects oversized indexes before allocating output. |
+| S4-M799 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2520,6 +2521,9 @@ S4-M797 additionally fills dynamic weighted tree weight/probability iterators
 from tree storage directly and caches totals for probability fills, reducing
 per-slot lookup overhead; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M798 additionally prevalidates native IndexVec to u32 copied-slice narrowing,
+avoiding allocation before oversized-index failures; it is reliability/ergonomics
+work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

@@ -3771,3 +3771,9 @@ dynamic WeightedTree and WeightedIntTree weight/probability iterators now fill
 caller-owned buffers from tree storage directly and cache totals for probability
 fills. This improves dynamic weighted iterator ergonomics but does not resolve
 S4-M11.
+
+S4-M798 prevalidates IndexVec copied u32 narrowing
+(`compare/results/s4-m798-indexvec-copied-u32-prevalidation.md`):
+seq IndexVec native `usize` backing is now checked for oversized values before
+allocating a copied compact `u32` output slice. This improves indexed-sample
+conversion failure determinism but does not resolve S4-M11.

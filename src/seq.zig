@@ -318,6 +318,11 @@ pub const IndexVec = union(enum) {
     }
 
     pub fn toOwnedU32Slice(self: IndexVec, allocator: std.mem.Allocator) ![]u32 {
+        if (self == .usize) {
+            for (self.usize) |item| {
+                if (item > std.math.maxInt(u32)) return error.InvalidParameter;
+            }
+        }
         const out = try allocator.alloc(u32, self.len());
         errdefer allocator.free(out);
         try self.copyIntoU32(out);
@@ -10619,7 +10624,9 @@ test "index vec conversion supports native backing" {
         const too_large = IndexVec{ .usize = &too_large_backing };
         var too_large_out: [2]u32 = undefined;
         try std.testing.expectError(error.InvalidParameter, too_large.copyIntoU32(&too_large_out));
-        try std.testing.expectError(error.InvalidParameter, too_large.toOwnedU32Slice(std.testing.allocator));
+        var too_large_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, too_large.toOwnedU32Slice(too_large_alloc.allocator()));
+        try std.testing.expect(!too_large_alloc.has_induced_failure);
     }
 }
 
