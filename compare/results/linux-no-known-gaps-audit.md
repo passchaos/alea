@@ -4640,3 +4640,9 @@ S4-M925 routes distribution Choose iterator facade constructors directly
 Choose pointer/value/index/u32 iterator facade helpers now construct iterators
 directly instead of routing through direct-source iterator wrappers. This improves
 iterator ergonomics but does not resolve S4-M11.
+
+S4-M926 routes reusable Choice iterator facade constructors directly
+(`compare/results/s4-m926-choice-iterator-facade-direct.md`):
+Choice pointer/value/index/u32 iterator facade helpers now construct iterators
+directly instead of routing through direct-source iterator wrappers. This improves
+reusable iterator ergonomics but does not resolve S4-M11.

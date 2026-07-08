@@ -964,7 +964,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M923 Choice checked iterator facade direct constructors | `src/seq.zig`, `compare/results/s4-m923-choice-checked-iterator-facade-direct.md` | Closed for the current bar: reusable Choice checked iterator facade constructors now build iterators directly. |
 | S4-M924 WeightedChoice checked iterator facade direct constructors | `src/seq.zig`, `compare/results/s4-m924-weightedchoice-checked-iterator-facade-direct.md` | Closed for the current bar: reusable WeightedChoice checked iterator facade constructors now build iterators directly. |
 | S4-M925 Distribution Choose iterator facade direct constructors | `src/distributions.zig`, `compare/results/s4-m925-distribution-choose-iterator-facade-direct.md` | Closed for the current bar: distribution Choose iterator facade constructors now build iterators directly. |
-| S4-M926 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M926 Choice iterator facade direct constructors | `src/seq.zig`, `compare/results/s4-m926-choice-iterator-facade-direct.md` | Closed for the current bar: reusable Choice iterator facade constructors now build iterators directly. |
+| S4-M927 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3202,6 +3203,10 @@ S4-M925 additionally routes distribution-layer Choose iterator facade
 constructors through direct iterator construction, preserving stream shape while
 avoiding direct-source iterator wrapper aliases; it is reliability/ergonomics work
 and does not resolve S4-M11 or complete the long-term objective.
+S4-M926 additionally routes reusable Choice iterator facade constructors through
+direct iterator construction, preserving stream shape while avoiding direct-source
+iterator wrapper aliases; it is reliability/ergonomics work and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
