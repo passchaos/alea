@@ -961,7 +961,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M920 Choice owned facade direct paths | `src/seq.zig`, `compare/results/s4-m920-choice-owned-facade-direct.md` | Closed for the current bar: reusable Choice allocation-returning facade helpers now allocate and fill directly. |
 | S4-M921 WeightedChoice owned facade direct paths | `src/seq.zig`, `compare/results/s4-m921-weightedchoice-owned-facade-direct.md` | Closed for the current bar: reusable WeightedChoice allocation-returning facade helpers now allocate and fill directly. |
 | S4-M922 Distribution Choose checked iterator facade direct constructors | `src/distributions.zig`, `compare/results/s4-m922-distribution-choose-checked-iterator-facade-direct.md` | Closed for the current bar: distribution Choose checked iterator facade constructors now build iterators directly. |
-| S4-M923 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M923 Choice checked iterator facade direct constructors | `src/seq.zig`, `compare/results/s4-m923-choice-checked-iterator-facade-direct.md` | Closed for the current bar: reusable Choice checked iterator facade constructors now build iterators directly. |
+| S4-M924 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3183,6 +3184,11 @@ long-term objective.
 S4-M922 additionally routes distribution-layer Choose checked iterator facade
 constructors through direct iterator construction after prevalidation, preserving
 stream shape while avoiding direct-source checked iterator wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M923 additionally routes reusable Choice checked iterator facade constructors
+through direct iterator construction after prevalidation, preserving stream shape
+while avoiding direct-source checked iterator wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
