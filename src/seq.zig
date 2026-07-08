@@ -8679,12 +8679,14 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn fillIndicesU32From(self: Self, source: anytype, dest: []u32) Error!void {
-            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
-            if (self.items.len == 1) {
+            if (dest.len == 0) return;
+            const item_len = self.items.len;
+            if (item_len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (item_len == 1) {
                 @memset(dest, 0);
                 return;
             }
-            const item_len_u32: u32 = @intCast(self.items.len);
+            const item_len_u32: u32 = @intCast(item_len);
             for (dest) |*index| index.* = Rng.uintLessThanFrom(source, u32, item_len_u32);
         }
 
@@ -19988,6 +19990,14 @@ test "choice sampler repeatedly samples slice references" {
     try choice.fillIndicesU32CheckedFrom(&checked_index_u32_fill_engine, &checked_index_u32_fill);
     try std.testing.expectEqualSlices(u32, &unchecked_index_u32_fill, &checked_index_u32_fill);
     try std.testing.expectEqual(unchecked_index_u32_fill_engine.next(), checked_index_u32_fill_engine.next());
+    var direct_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef3d);
+    var helper_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef3d);
+    var direct_u32_fill: [8]u32 = undefined;
+    var helper_u32_fill: [8]u32 = undefined;
+    try choice.fillIndicesU32From(&direct_u32_fill_engine, &direct_u32_fill);
+    for (&helper_u32_fill) |*slot| slot.* = Rng.chooseIndexU32From(&helper_u32_fill_engine, @intCast(values.len)).?;
+    try std.testing.expectEqualSlices(u32, &helper_u32_fill, &direct_u32_fill);
+    try std.testing.expectEqual(helper_u32_fill_engine.next(), direct_u32_fill_engine.next());
     var checked_indices_u32_engine = alea.DefaultPrng.init(0xc0_ef1d);
     var unchecked_indices_u32_engine = alea.DefaultPrng.init(0xc0_ef1d);
     const unchecked_indices_u32 = try choice.indicesU32From(std.testing.allocator, &unchecked_indices_u32_engine, 8);

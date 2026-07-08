@@ -849,7 +849,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M808 Distribution Choose index fill direct uniform loop | `src/distributions.zig`, `compare/results/s4-m808-distribution-choose-index-fill-direct.md` | Closed for the current bar: distribution-layer Choose usize index fills now generate uniform indexes directly. |
 | S4-M809 Choice index fill cached length direct loop | `src/seq.zig`, `compare/results/s4-m809-choice-index-fill-cached-length.md` | Closed for the current bar: reusable Choice usize index fills now cache item length and use a direct uniform loop. |
 | S4-M810 Distribution Choose u32 index fill cached length loop | `src/distributions.zig`, `compare/results/s4-m810-distribution-choose-u32-index-fill-cached-length.md` | Closed for the current bar: distribution-layer Choose compact u32 index fills now cache item length and use a direct uniform loop. |
-| S4-M811 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M811 Choice u32 index fill cached length loop | `src/seq.zig`, `compare/results/s4-m811-choice-u32-index-fill-cached-length.md` | Closed for the current bar: reusable Choice compact u32 index fills now cache item length and use a direct uniform loop. |
+| S4-M812 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2582,6 +2583,10 @@ stream shape; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
 S4-M810 additionally fills distribution-layer Choose compact u32 index buffers
 with a cached-length direct uniform loop, reducing per-slot metadata reloads and
+preserving checked width/no-consume behavior; it is reliability/ergonomics work
+and does not resolve S4-M11 or complete the long-term objective.
+S4-M811 additionally fills reusable Choice compact u32 index buffers with a
+cached-length direct uniform loop, reducing per-slot metadata reloads and
 preserving checked width/no-consume behavior; it is reliability/ergonomics work
 and does not resolve S4-M11 or complete the long-term objective.
 

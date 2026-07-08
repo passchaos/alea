@@ -3854,3 +3854,10 @@ distribution-layer Choose compact u32 index fills now return early for empty
 output, cache item length once, validate compact width, and generate uniform u32
 indexes directly. This improves distribution choose compact index fill ergonomics
 but does not resolve S4-M11.
+
+S4-M811 fills reusable Choice u32 indexes with cached-length direct loops
+(`compare/results/s4-m811-choice-u32-index-fill-cached-length.md`):
+reusable Choice compact u32 index fills now return early for empty output, cache
+item length once, validate compact width, and generate uniform u32 indexes
+directly. This improves reusable choice compact index fill ergonomics but does
+not resolve S4-M11.
