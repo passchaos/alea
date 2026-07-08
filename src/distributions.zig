@@ -14445,7 +14445,17 @@ pub fn VectorSkewNormal(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.locationValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            const location_vec: VectorType = @splat(self.locationValue());
+            const scale_vec: VectorType = @splat(self.scaleValue());
+            if (self.shapeValue() == 0) {
+                for (dest) |*item| item.* = location_vec + scale_vec * vectorStandardNormalFrom(source, VectorType);
+                return;
+            }
+            for (dest) |*item| {
+                const z1 = vectorStandardNormalFrom(source, VectorType);
+                const z2 = vectorStandardNormalFrom(source, VectorType);
+                item.* = skewNormalFromStandardNormalVectors(VectorType, z1, z2, self.locationValue(), self.scaleValue(), self.shapeValue());
+            }
         }
     };
 }
@@ -27913,6 +27923,23 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &skew_normal_buf_vec, &direct_skew_normal_buf_vec);
     for (skew_normal_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_skew_normal_fill_engine = alea.ScalarPrng.init(0x5863_0001);
+    var vector_skew_normal_loop_engine = alea.ScalarPrng.init(0x5863_0001);
+    var vector_skew_normal_fill: [3]@Vector(4, f64) = undefined;
+    var vector_skew_normal_loop: [3]@Vector(4, f64) = undefined;
+    vector_skew_normal_sampler.fillFrom(&vector_skew_normal_fill_engine, &vector_skew_normal_fill);
+    for (&vector_skew_normal_loop) |*slot| slot.* = vector_skew_normal_sampler.sampleFrom(&vector_skew_normal_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_skew_normal_loop, &vector_skew_normal_fill);
+    try std.testing.expectEqual(vector_skew_normal_loop_engine.next(), vector_skew_normal_fill_engine.next());
+    var vector_skew_normal_f32_fill_engine = alea.ScalarPrng.init(0x5863_f32);
+    var vector_skew_normal_f32_loop_engine = alea.ScalarPrng.init(0x5863_f32);
+    const vector_skew_normal_f32 = try VectorSkewNormal(@Vector(8, f32)).init(0, 1, 2);
+    var vector_skew_normal_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_skew_normal_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_skew_normal_f32.fillFrom(&vector_skew_normal_f32_fill_engine, &vector_skew_normal_f32_fill);
+    for (&vector_skew_normal_f32_loop) |*slot| slot.* = vector_skew_normal_f32.sampleFrom(&vector_skew_normal_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_skew_normal_f32_loop, &vector_skew_normal_f32_fill);
+    try std.testing.expectEqual(vector_skew_normal_f32_loop_engine.next(), vector_skew_normal_f32_fill_engine.next());
 
     const vector_skew_normal_symmetric = try VectorSkewNormal(@Vector(4, f64)).init(0, 1, 0);
     const skew_normal_symmetric_vec = vector_skew_normal_symmetric.sample(rng);
@@ -27920,6 +27947,25 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(skew_normal_symmetric_vec, direct_skew_normal_symmetric_vec);
     inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(skew_normal_symmetric_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_skew_normal_symmetric_fill_engine = alea.ScalarPrng.init(0x5863_0000);
+    var vector_skew_normal_symmetric_loop_engine = alea.ScalarPrng.init(0x5863_0000);
+    vector_skew_normal_symmetric.fillFrom(&vector_skew_normal_symmetric_fill_engine, &vector_skew_normal_fill);
+    for (&vector_skew_normal_loop) |*slot| slot.* = vector_skew_normal_symmetric.sampleFrom(&vector_skew_normal_symmetric_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_skew_normal_loop, &vector_skew_normal_fill);
+    try std.testing.expectEqual(vector_skew_normal_symmetric_loop_engine.next(), vector_skew_normal_symmetric_fill_engine.next());
+    var vector_skew_normal_neg_fill_engine = alea.ScalarPrng.init(0x5863_0e01);
+    var vector_skew_normal_neg_loop_engine = alea.ScalarPrng.init(0x5863_0e01);
+    const vector_skew_normal_neg = try VectorSkewNormal(@Vector(4, f64)).init(0, 1, -1);
+    vector_skew_normal_neg.fillFrom(&vector_skew_normal_neg_fill_engine, &vector_skew_normal_fill);
+    for (&vector_skew_normal_loop) |*slot| slot.* = vector_skew_normal_neg.sampleFrom(&vector_skew_normal_neg_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_skew_normal_loop, &vector_skew_normal_fill);
+    try std.testing.expectEqual(vector_skew_normal_neg_loop_engine.next(), vector_skew_normal_neg_fill_engine.next());
+    var vector_skew_normal_degenerate_engine = alea.ScalarPrng.init(0x5863_d00);
+    var vector_skew_normal_degenerate_control = alea.ScalarPrng.init(0x5863_d00);
+    const vector_skew_normal_degenerate = try VectorSkewNormal(@Vector(4, f64)).init(1.5, 0, 2);
+    vector_skew_normal_degenerate.fillFrom(&vector_skew_normal_degenerate_engine, &vector_skew_normal_fill);
+    for (vector_skew_normal_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
+    try std.testing.expectEqual(vector_skew_normal_degenerate_control.next(), vector_skew_normal_degenerate_engine.next());
 
     const pert_vec = try vectorPertChecked(rng, @Vector(4, f64), 0, 4, 10, 4);
     const direct_pert_vec = try vectorPertCheckedFrom(&direct_engine, @Vector(4, f64), 0, 4, 10, 4);

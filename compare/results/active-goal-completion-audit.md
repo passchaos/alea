@@ -901,7 +901,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M860 VectorWeibull reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m860-vector-weibull-fill-direct-transform.md` | Closed for the current bar: reusable VectorWeibull fills now draw vector open-uniform values and apply the Weibull transform directly, including shape-one standard-exponential handling. |
 | S4-M861 VectorGumbel reusable fill direct open-closed-uniform transform | `src/distributions.zig`, `compare/results/s4-m861-vector-gumbel-fill-direct-transform.md` | Closed for the current bar: reusable VectorGumbel fills now draw vector open-closed-uniform values and apply the Gumbel transform directly. |
 | S4-M862 VectorFrechet reusable fill direct open-closed-uniform transform | `src/distributions.zig`, `compare/results/s4-m862-vector-frechet-fill-direct-transform.md` | Closed for the current bar: reusable VectorFrechet fills now draw vector open-closed-uniform values and apply the Frechet transform directly, including shape-one handling. |
-| S4-M863 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M863 VectorSkewNormal reusable fill direct normal composition | `src/distributions.zig`, `compare/results/s4-m863-vector-skew-normal-fill-direct-composition.md` | Closed for the current bar: reusable VectorSkewNormal fills now draw standard-normal vectors and apply skew-normal composition directly. |
+| S4-M864 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2859,6 +2860,11 @@ open-closed-uniform draws and Frechet transforms, including shape-one handling,
 preserving stream shape while avoiding per-output VectorFrechet.sampleFrom wrapper
 calls; it is reliability/ergonomics work and does not resolve S4-M11 or complete
 the long-term objective.
+S4-M863 additionally routes reusable VectorSkewNormal fills through direct vector
+standard-normal draws and skew-normal composition, including symmetric and ±1
+shape paths, preserving stream shape while avoiding per-output
+VectorSkewNormal.sampleFrom wrapper calls; it is reliability/ergonomics work and
+does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

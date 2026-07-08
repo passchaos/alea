@@ -4217,3 +4217,11 @@ VectorFrechet.fillFrom now draws vector open-closed-uniform values and applies
 the Frechet transform directly, including the shape-one path, instead of routing
 every output through VectorFrechet.sampleFrom. This improves VectorFrechet
 reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M863 draws reusable VectorSkewNormal fills through direct vector normal
+composition
+(`compare/results/s4-m863-vector-skew-normal-fill-direct-composition.md`):
+VectorSkewNormal.fillFrom now draws standard-normal vectors and applies the
+skew-normal composition directly, including symmetric and +/-1 shape paths,
+instead of routing every output through VectorSkewNormal.sampleFrom. This improves
+VectorSkewNormal reusable fill ergonomics but does not resolve S4-M11.
