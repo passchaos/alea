@@ -440,7 +440,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) *const T {
-            return self.sampleFrom(rng);
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return &self.items[0];
+            return &self.items[Rng.uintLessThanFrom(rng, usize, self.items.len)];
         }
 
         pub fn sampleFrom(self: Self, source: anytype) *const T {
@@ -450,7 +452,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn sampleValue(self: Self, rng: Rng) T {
-            return self.sample(rng).*;
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return self.items[0];
+            return self.items[Rng.uintLessThanFrom(rng, usize, self.items.len)];
         }
 
         pub fn sampleValueFrom(self: Self, source: anytype) T {

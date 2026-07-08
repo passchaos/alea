@@ -998,7 +998,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M957 WeightedChoice sample facade direct paths | `src/seq.zig`, `compare/results/s4-m957-weightedchoice-sample-facade-direct.md` | Closed for the current bar: reusable WeightedChoice facade pointer/value sampling now maps direct alias-table facade samples. |
 | S4-M958 Choice value sample facade direct path | `src/seq.zig`, `compare/results/s4-m958-choice-value-sample-facade-direct.md` | Closed for the current bar: reusable Choice value facade sampling now maps a direct facade-generated index. |
 | S4-M959 Index facade samples direct paths | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m959-index-facade-samples-direct.md` | Closed for the current bar: non-checked choice and weighted-choice facade index helpers now sample directly. |
-| S4-M960 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M960 Distribution Choose sample facade direct paths | `src/distributions.zig`, `compare/results/s4-m960-distribution-choose-sample-facade-direct.md` | Closed for the current bar: distribution Choose pointer/value facade sampling now maps direct facade-generated indexes. |
+| S4-M961 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3397,6 +3398,11 @@ S4-M959 additionally routes non-checked choice and weighted-choice facade index
 helpers through direct facade-index sampling, preserving stream shape while
 avoiding direct-source index wrapper aliases; it is reliability/ergonomics work
 and does not resolve S4-M11 or complete the long-term objective.
+S4-M960 additionally routes distribution-layer Choose pointer/value facade
+sampling through direct facade-index generation and item mapping, preserving
+stream shape while avoiding direct-source and pointer sample wrapper aliases; it
+is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

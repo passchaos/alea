@@ -4865,3 +4865,10 @@ Choose, Choice, and WeightedChoice `sampleIndex` / `sampleIndexU32` facade helpe
 now sample indexes directly instead of routing through direct-source wrappers.
 This improves choice and weighted-index facade sample ergonomics but does not
 resolve S4-M11.
+
+S4-M960 routes distribution Choose pointer/value facade sampling directly
+(`compare/results/s4-m960-distribution-choose-sample-facade-direct.md`):
+Choose `sample` and `sampleValue` now generate facade RNG indexes and map directly
+to item storage instead of routing through direct-source or pointer sample
+wrappers. This improves distribution-layer choice sample ergonomics but does not
+resolve S4-M11.
