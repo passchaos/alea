@@ -4202,3 +4202,10 @@ VectorWeibull.fillFrom now draws vector open-uniform values and applies the
 Weibull transform directly, including the shape-one standard-exponential path,
 instead of routing every output through VectorWeibull.sampleFrom. This improves
 VectorWeibull reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M861 draws reusable VectorGumbel fills through direct vector open-closed-uniform
+transforms (`compare/results/s4-m861-vector-gumbel-fill-direct-transform.md`):
+VectorGumbel.fillFrom now draws vector open-closed-uniform values and applies the
+Gumbel transform directly, instead of routing every output through
+VectorGumbel.sampleFrom. This improves VectorGumbel reusable fill ergonomics but
+does not resolve S4-M11.
