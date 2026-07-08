@@ -4022,3 +4022,11 @@ Exponential.fillFrom now fills standard exponential samples through the shared
 bulk helper and scales them in place, while preserving infinite-rate no-consume
 behavior and scalar-loop stream shape. This improves Exponential reusable fill
 ergonomics but does not resolve S4-M11.
+
+S4-M836 stages reusable VectorExponential fills through the standard helper
+(`compare/results/s4-m836-vector-exponential-fill-standard-stage.md`):
+VectorExponential.fillFrom now fills standard vector exponential samples through
+the shared bulk helper for f32/f64 vector lanes and scales the backing scalar
+lanes in place, while preserving infinite-rate no-consume behavior and
+scalar-loop stream shape. This improves VectorExponential reusable fill
+ergonomics but does not resolve S4-M11.

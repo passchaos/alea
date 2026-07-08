@@ -6089,7 +6089,15 @@ pub fn VectorExponential(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(0)));
                 return;
             }
-            fillVectorExponentialFrom(source, VectorType, dest, 1 / self.inverse_rate);
+            if (comptime Child == f32 or Child == f64) {
+                fillVectorStandardExponentialFrom(source, VectorType, dest);
+                if (self.inverse_rate != 1) {
+                    const scalars = std.mem.bytesAsSlice(Child, std.mem.sliceAsBytes(dest));
+                    scaleInPlace(Child, scalars, self.inverse_rate);
+                }
+            } else {
+                fillVectorExponentialFrom(source, VectorType, dest, 1 / self.inverse_rate);
+            }
         }
 
         fn isDegenerate(self: Self) bool {
@@ -26339,6 +26347,29 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(sampled_exp_vec, direct_sampled_exp_vec);
     inline for (0..8) |lane| try std.testing.expect(sampled_exp_vec[lane] >= 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_exp_fill_engine = alea.ScalarPrng.init(0xe836_0001);
+    var vector_exp_loop_engine = alea.ScalarPrng.init(0xe836_0001);
+    var vector_exp_fill: [3]@Vector(8, f32) = undefined;
+    var vector_exp_loop: [3]@Vector(8, f32) = undefined;
+    vector_exp_sampler.fillFrom(&vector_exp_fill_engine, &vector_exp_fill);
+    for (&vector_exp_loop) |*slot| slot.* = vector_exp_sampler.sampleFrom(&vector_exp_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_exp_loop, &vector_exp_fill);
+    try std.testing.expectEqual(vector_exp_loop_engine.next(), vector_exp_fill_engine.next());
+    var vector_exp_identity_fill_engine = alea.ScalarPrng.init(0xe836_1001);
+    var vector_exp_identity_standard_engine = alea.ScalarPrng.init(0xe836_1001);
+    const vector_exp_identity_sampler = try VectorExponential(@Vector(4, f64)).init(1);
+    var vector_exp_identity_fill: [2]@Vector(4, f64) = undefined;
+    var vector_exp_identity_standard: [2]@Vector(4, f64) = undefined;
+    vector_exp_identity_sampler.fillFrom(&vector_exp_identity_fill_engine, &vector_exp_identity_fill);
+    fillVectorStandardExponentialFrom(&vector_exp_identity_standard_engine, @Vector(4, f64), &vector_exp_identity_standard);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_exp_identity_standard, &vector_exp_identity_fill);
+    try std.testing.expectEqual(vector_exp_identity_standard_engine.next(), vector_exp_identity_fill_engine.next());
+    var vector_exp_degenerate_engine = alea.ScalarPrng.init(0xe836_1af);
+    var vector_exp_degenerate_control = alea.ScalarPrng.init(0xe836_1af);
+    const vector_exp_degenerate_sampler = try VectorExponential(@Vector(4, f64)).init(std.math.inf(f64));
+    vector_exp_degenerate_sampler.fillFrom(&vector_exp_degenerate_engine, &vector_exp_identity_fill);
+    for (vector_exp_identity_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vec);
+    try std.testing.expectEqual(vector_exp_degenerate_control.next(), vector_exp_degenerate_engine.next());
 
     var uniform_buf: [3]@Vector(4, f32) = undefined;
     var direct_uniform_buf: [3]@Vector(4, f32) = undefined;
