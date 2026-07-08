@@ -17114,11 +17114,24 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []usize) void {
+            if (dest.len == 0) return;
             if (self.constant_index) |index| {
                 @memset(dest, index);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            const table_len = self.prob.len;
+            if (aliasTableCanSampleWithOneWord(table_len)) {
+                for (dest) |*item| {
+                    const raw = Rng.nextFrom(source);
+                    const column = @as(usize, @intCast(raw & @as(u64, @intCast(table_len - 1))));
+                    item.* = if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column];
+                }
+                return;
+            }
+            for (dest) |*item| {
+                const column = Rng.uintLessThanFrom(source, usize, table_len);
+                item.* = if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column];
+            }
         }
 
         pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
@@ -17148,7 +17161,19 @@ pub fn AliasTable(comptime Weight: type) type {
                 @memset(dest, @intCast(index));
                 return;
             }
-            for (dest) |*item| item.* = @intCast(self.sampleFrom(source));
+            const table_len = self.prob.len;
+            if (aliasTableCanSampleWithOneWord(table_len)) {
+                for (dest) |*item| {
+                    const raw = Rng.nextFrom(source);
+                    const column = @as(usize, @intCast(raw & @as(u64, @intCast(table_len - 1))));
+                    item.* = @intCast(if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column]);
+                }
+                return;
+            }
+            for (dest) |*item| {
+                const column = Rng.uintLessThanFrom(source, usize, table_len);
+                item.* = @intCast(if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column]);
+            }
         }
 
         pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
@@ -20465,6 +20490,8 @@ test "alias table item accessors initialize and update tables" {
 }
 
 test "alias table exposes totals and reconstructs weights" {
+    const root = @import("root.zig");
+
     var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
     defer table.deinit();
     var new_table = try AliasTable(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
@@ -20561,6 +20588,44 @@ test "alias table exposes totals and reconstructs weights" {
     const owned_probabilities = try table.probabilities(std.testing.allocator);
     defer std.testing.allocator.free(owned_probabilities);
     try std.testing.expectEqualSlices(f64, &stack_probabilities, owned_probabilities);
+
+    var direct_fill_engine = root.DefaultPrng.init(0xa11a_f110);
+    var scalar_engine = root.DefaultPrng.init(0xa11a_f110);
+    var direct_fill: [8]usize = undefined;
+    var scalar_fill: [8]usize = undefined;
+    table.fillFrom(&direct_fill_engine, &direct_fill);
+    for (&scalar_fill) |*slot| slot.* = table.sampleFrom(&scalar_engine);
+    try std.testing.expectEqualSlices(usize, &scalar_fill, &direct_fill);
+    try std.testing.expectEqual(direct_fill_engine.next(), scalar_engine.next());
+
+    var direct_u32_engine = root.DefaultPrng.init(0xa11a_f111);
+    var scalar_u32_engine = root.DefaultPrng.init(0xa11a_f111);
+    var direct_u32: [8]u32 = undefined;
+    var scalar_u32: [8]u32 = undefined;
+    try table.fillU32CheckedFrom(&direct_u32_engine, &direct_u32);
+    for (&scalar_u32) |*slot| slot.* = try table.sampleU32CheckedFrom(&scalar_u32_engine);
+    try std.testing.expectEqualSlices(u32, &scalar_u32, &direct_u32);
+    try std.testing.expectEqual(direct_u32_engine.next(), scalar_u32_engine.next());
+
+    var non_power_table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 2, 5 });
+    defer non_power_table.deinit();
+    var non_power_direct_engine = root.DefaultPrng.init(0xa11a_f112);
+    var non_power_scalar_engine = root.DefaultPrng.init(0xa11a_f112);
+    var non_power_direct: [8]usize = undefined;
+    var non_power_scalar: [8]usize = undefined;
+    non_power_table.fillFrom(&non_power_direct_engine, &non_power_direct);
+    for (&non_power_scalar) |*slot| slot.* = non_power_table.sampleFrom(&non_power_scalar_engine);
+    try std.testing.expectEqualSlices(usize, &non_power_scalar, &non_power_direct);
+    try std.testing.expectEqual(non_power_direct_engine.next(), non_power_scalar_engine.next());
+
+    var non_power_direct_u32_engine = root.DefaultPrng.init(0xa11a_f113);
+    var non_power_scalar_u32_engine = root.DefaultPrng.init(0xa11a_f113);
+    var non_power_direct_u32: [8]u32 = undefined;
+    var non_power_scalar_u32: [8]u32 = undefined;
+    try non_power_table.fillU32CheckedFrom(&non_power_direct_u32_engine, &non_power_direct_u32);
+    for (&non_power_scalar_u32) |*slot| slot.* = try non_power_table.sampleU32CheckedFrom(&non_power_scalar_u32_engine);
+    try std.testing.expectEqualSlices(u32, &non_power_scalar_u32, &non_power_direct_u32);
+    try std.testing.expectEqual(non_power_direct_u32_engine.next(), non_power_scalar_u32_engine.next());
 
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, table.weights(failing.allocator()));

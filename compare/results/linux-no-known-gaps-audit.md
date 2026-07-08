@@ -3815,3 +3815,9 @@ seq reusable `WeightedChoice` pointer/value fills now sample alias-table indexes
 and map directly into item storage instead of routing each slot through sample
 wrappers. This improves weighted choice fill ergonomics but does not resolve
 S4-M11.
+
+S4-M805 fills AliasTable indexes with direct alias sampling loops
+(`compare/results/s4-m805-aliastable-fill-direct-sampling.md`):
+static AliasTable usize/u32 index fills now inline both power-of-two one-word and
+general alias sampling loops instead of routing each slot through sample wrappers.
+This improves static weighted-index fill ergonomics but does not resolve S4-M11.

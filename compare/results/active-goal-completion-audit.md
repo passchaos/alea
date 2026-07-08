@@ -843,7 +843,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M802 IndexVec next direct backing paths | `src/seq.zig`, `compare/results/s4-m802-indexvec-next-direct-backing.md` | Closed for the current bar: IndexVec borrowed and consuming iterator `next()` calls now read directly from backing storage. |
 | S4-M803 Choice fill direct index mapping | `src/seq.zig`, `src/distributions.zig`, `compare/results/s4-m803-choice-fill-direct-index-mapping.md` | Closed for the current bar: reusable and distribution-layer unweighted choice pointer/value fills now map generated indexes directly into item storage. |
 | S4-M804 WeightedChoice fill direct index mapping | `src/seq.zig`, `compare/results/s4-m804-weightedchoice-fill-direct-index-mapping.md` | Closed for the current bar: reusable weighted choice pointer/value fills now map sampled alias indexes directly into item storage. |
-| S4-M805 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M805 AliasTable fill direct sampling paths | `src/distributions.zig`, `compare/results/s4-m805-aliastable-fill-direct-sampling.md` | Closed for the current bar: static AliasTable usize/u32 index fills now inline alias sampling loops instead of calling sampleFrom per slot. |
+| S4-M806 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2554,6 +2555,10 @@ S4-M804 additionally maps reusable WeightedChoice pointer/value fills directly
 from alias-table sampled indexes to item storage, reducing per-slot wrapper calls
 while preserving weighted stream shape; it is reliability/ergonomics work and
 does not resolve S4-M11 or complete the long-term objective.
+S4-M805 additionally fills static AliasTable usize/u32 index buffers with
+inline alias-sampling loops, reducing per-slot sample wrapper calls while
+preserving stream shape; it is reliability/ergonomics work and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
