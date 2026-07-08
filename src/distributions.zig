@@ -17699,7 +17699,10 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
-            return self.indicesFrom(allocator, source, amount);
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            try self.fillCheckedFrom(source, out);
+            return out;
         }
 
         pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
@@ -17719,7 +17722,11 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
-            return self.indicesU32From(allocator, source, amount);
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillU32CheckedFrom(source, out);
+            return out;
         }
 
         pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {

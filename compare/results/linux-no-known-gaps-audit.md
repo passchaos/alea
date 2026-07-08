@@ -4761,3 +4761,10 @@ WeightedChoice pointer/value/index/u32 fixed-array facade helpers now construct
 stack arrays and fill directly instead of routing through direct-source array
 wrappers. This improves reusable weighted fixed-array ergonomics but does not
 resolve S4-M11.
+
+S4-M944 routes static AliasTable checked direct-source owned helpers directly
+(`compare/results/s4-m944-aliastable-checked-owned-from-direct.md`):
+AliasTable `indicesCheckedFrom` and `indicesU32CheckedFrom` now allocate and fill
+directly instead of routing through unchecked direct-source owned wrappers. This
+improves checked weighted-index owned-batch ergonomics but does not resolve
+S4-M11.
