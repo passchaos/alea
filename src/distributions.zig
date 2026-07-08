@@ -7926,11 +7926,23 @@ pub fn VectorPoisson(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.method == .zero) {
-                @memset(dest, @as(VectorType, @splat(0)));
-                return;
+            switch (self.sampler.method) {
+                .zero => @memset(dest, @as(VectorType, @splat(0))),
+                .product => |threshold| {
+                    for (dest) |*item| {
+                        var out: VectorType = undefined;
+                        inline for (0..info.len) |lane| out[lane] = poissonProductFrom(source, threshold);
+                        item.* = out;
+                    }
+                },
+                .ahrens_dieter => |method| {
+                    for (dest) |*item| {
+                        var out: VectorType = undefined;
+                        inline for (0..info.len) |lane| out[lane] = method.sampleFrom(source);
+                        item.* = out;
+                    }
+                },
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -30484,6 +30496,20 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectEqual(@as(u64, 0), (try Poisson.init(0)).maxValue().?);
     poisson_sampler.fillFrom(&direct_engine, &direct_poisson_buf);
     for (direct_poisson_buf) |value| try std.testing.expect(value < 64);
+
+    var vector_poisson_direct_engine = alea.ScalarPrng.init(0x9015_0001);
+    var vector_poisson_scalar_engine = alea.ScalarPrng.init(0x9015_0001);
+    const vector_poisson_sampler = try VectorPoisson(@Vector(4, u64)).init(12);
+    var vector_poisson_direct: [3]@Vector(4, u64) = undefined;
+    var vector_poisson_scalar: [3]@Vector(4, u64) = undefined;
+    vector_poisson_sampler.fillFrom(&vector_poisson_direct_engine, &vector_poisson_direct);
+    for (&vector_poisson_scalar) |*vec| {
+        var out: @Vector(4, u64) = undefined;
+        inline for (0..4) |lane| out[lane] = poisson_sampler.sampleFrom(&vector_poisson_scalar_engine);
+        vec.* = out;
+    }
+    try std.testing.expectEqualSlices(@Vector(4, u64), &vector_poisson_scalar, &vector_poisson_direct);
+    try std.testing.expectEqual(vector_poisson_scalar_engine.next(), vector_poisson_direct_engine.next());
 
     var geometrics = rng.sampleIter(u64, try Geometric.init(0.25));
     try std.testing.expect(geometrics.next().? >= 1);

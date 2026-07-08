@@ -4001,3 +4001,10 @@ VectorHypergeometric fills now switch once on the selected method and call
 draw-loop, inverse-transform, or rejection-acceptance samplers directly for each
 lane instead of routing each vector through VectorHypergeometric.sampleFrom. This
 improves vector hypergeometric fill ergonomics but does not resolve S4-M11.
+
+S4-M833 fills VectorPoisson outputs with direct method dispatch
+(`compare/results/s4-m833-vector-poisson-fill-direct-method.md`):
+VectorPoisson fills now switch once on zero/product/Ahrens-Dieter methods and
+call selected method samplers directly for each lane instead of routing each
+vector through VectorPoisson.sampleFrom. This improves VectorPoisson fill
+ergonomics but does not resolve S4-M11.
