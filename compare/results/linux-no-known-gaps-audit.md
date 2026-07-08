@@ -5373,3 +5373,9 @@ and `MappedSampler.fill` now draw from the wrapped sampler through facade `Rng`
 and apply the mapper directly instead of routing through `sampleFrom` /
 `fillFrom` wrappers. This improves mapped-sampler facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1033 routes distribution-layer reusable Choose pointer fills directly
+(`compare/results/s4-m1033-choice-pointer-fill-facade-direct.md`): `Choose(T).fill`
+now maps direct facade-generated indexes into item storage instead of routing
+through `fillFrom`. This improves Choice pointer-fill facade ergonomics but does
+not resolve S4-M11.
