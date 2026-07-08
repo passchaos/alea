@@ -5391,3 +5391,10 @@ S4-M1035 routes reusable scalar/vector native-f32 Normal facade helpers directly
 call native-f32 facade helpers directly instead of routing through `sampleFrom` /
 `fillFrom` wrappers. This improves native-f32 Normal facade ergonomics but does
 not resolve S4-M11.
+
+S4-M1036 routes reusable vector table Normal facade helpers directly
+(`compare/results/s4-m1036-vector-table-normal-facade-direct.md`):
+`VectorNormalTableF32.sample` / `fill` and `VectorNormalTableF64.sample` / `fill`
+now call table-normal facade helpers directly instead of routing through
+`sampleFrom` / `fillFrom` wrappers. This improves vector table Normal facade
+ergonomics but does not resolve S4-M11.
