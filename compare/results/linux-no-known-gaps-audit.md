@@ -3789,3 +3789,9 @@ S4-M800 uses direct backing scans for IndexVec search and validation
 seq IndexVec search and validation helpers now switch once per call and scan the
 active compact/native backing storage directly. This improves indexed-sample
 diagnostic ergonomics but does not resolve S4-M11.
+
+S4-M801 prevalidates IndexVec copyIntoU32 narrowing
+(`compare/results/s4-m801-indexvec-copyintou32-prevalidation.md`):
+seq IndexVec native `usize` backing is now checked for oversized values before
+writing caller-owned compact `u32` output buffers. This improves indexed-sample
+conversion failure determinism but does not resolve S4-M11.

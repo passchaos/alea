@@ -352,10 +352,10 @@ pub const IndexVec = union(enum) {
         switch (self) {
             .u32 => |items| @memcpy(out, items),
             .usize => |items| {
-                for (items, out) |item, *slot| {
+                for (items) |item| {
                     if (item > std.math.maxInt(u32)) return error.InvalidParameter;
-                    slot.* = @intCast(item);
                 }
+                for (items, out) |item, *slot| slot.* = @intCast(item);
             },
         }
     }
@@ -10672,8 +10672,9 @@ test "index vec conversion supports native backing" {
     if (comptime @bitSizeOf(usize) > 32) {
         var too_large_backing = [_]usize{ 1, @as(usize, std.math.maxInt(u32)) + 1 };
         const too_large = IndexVec{ .usize = &too_large_backing };
-        var too_large_out: [2]u32 = undefined;
+        var too_large_out: [2]u32 = .{ 77, 88 };
         try std.testing.expectError(error.InvalidParameter, too_large.copyIntoU32(&too_large_out));
+        try std.testing.expectEqualSlices(u32, &.{ 77, 88 }, &too_large_out);
         var too_large_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
         try std.testing.expectError(error.InvalidParameter, too_large.toOwnedU32Slice(too_large_alloc.allocator()));
         try std.testing.expect(!too_large_alloc.has_induced_failure);
