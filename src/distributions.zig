@@ -8134,7 +8134,11 @@ pub fn VectorPoissonAhrensDieter(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = self.method.sampleFrom(source);
+                item.* = out;
+            }
         }
     };
 }
@@ -26330,6 +26334,14 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, u64), &poisson_buf, &direct_poisson_buf);
     for (poisson_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] < 128);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_poisson_ad_fill_engine = alea.ScalarPrng.init(0x5870_0001);
+    var vector_poisson_ad_loop_engine = alea.ScalarPrng.init(0x5870_0001);
+    var vector_poisson_ad_fill: [3]@Vector(4, u64) = undefined;
+    var vector_poisson_ad_loop: [3]@Vector(4, u64) = undefined;
+    vector_poisson_ad_sampler.fillFrom(&vector_poisson_ad_fill_engine, &vector_poisson_ad_fill);
+    for (&vector_poisson_ad_loop) |*slot| slot.* = vector_poisson_ad_sampler.sampleFrom(&vector_poisson_ad_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &vector_poisson_ad_loop, &vector_poisson_ad_fill);
+    try std.testing.expectEqual(vector_poisson_ad_loop_engine.next(), vector_poisson_ad_fill_engine.next());
 
     zero_poisson_sampler.fill(rng, &poisson_buf);
     for (poisson_buf) |vec| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(0)), vec);

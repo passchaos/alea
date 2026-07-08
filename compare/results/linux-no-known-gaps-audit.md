@@ -4265,3 +4265,11 @@ sampling (`compare/results/s4-m869-vector-beta-fill-direct-lanes.md`):
 VectorBeta.fillFrom now samples each vector lane directly from the cached scalar
 Beta sampler instead of routing every output through VectorBeta.sampleFrom. This
 improves VectorBeta reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M870 draws reusable VectorPoissonAhrensDieter fills through direct cached
+Ahrens-Dieter lane sampling
+(`compare/results/s4-m870-vector-poisson-ad-fill-direct-lanes.md`):
+VectorPoissonAhrensDieter.fillFrom now samples each vector lane directly from the
+cached Ahrens-Dieter method instead of routing every output through
+VectorPoissonAhrensDieter.sampleFrom. This improves VectorPoissonAhrensDieter
+reusable fill ergonomics but does not resolve S4-M11.
