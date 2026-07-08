@@ -17994,7 +17994,7 @@ pub fn WeightedTree(comptime Weight: type) type {
                 @memset(dest, self.positive_index.?);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
+            self.fillWithTotalFrom(source, dest, total);
         }
 
         pub fn fillU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
@@ -18006,7 +18006,7 @@ pub fn WeightedTree(comptime Weight: type) type {
                 @memset(dest, @intCast(self.positive_index.?));
                 return;
             }
-            for (dest) |*item| item.* = @intCast(self.sampleWithTotalFrom(source, total));
+            self.fillU32WithTotalFrom(source, dest, total);
         }
 
         pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
@@ -18035,27 +18035,68 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         fn sampleWithTotalFrom(self: Self, source: anytype, total: f64) usize {
-            var target = Rng.floatFrom(source, f64) * total;
-            var index: usize = 0;
-            while (true) {
-                const left_index = 2 * index + 1;
-                const left = self.subtotal(left_index);
-                if (target < left) {
-                    index = left_index;
-                    continue;
-                }
-                target -= left;
+            var out: [1]usize = undefined;
+            self.fillWithTotalFrom(source, &out, total);
+            return out[0];
+        }
 
-                const right_index = 2 * index + 2;
-                const right = self.subtotal(right_index);
-                if (target < right) {
-                    index = right_index;
-                    continue;
-                }
-                target -= right;
+        fn fillWithTotalFrom(self: Self, source: anytype, dest: []usize, total: f64) void {
+            for (dest) |*slot| {
+                var target = Rng.floatFrom(source, f64) * total;
+                var index: usize = 0;
+                while (true) {
+                    const left_index = 2 * index + 1;
+                    const left = self.subtotal(left_index);
+                    if (target < left) {
+                        index = left_index;
+                        continue;
+                    }
+                    target -= left;
 
-                const own = self.subtotals.items[index] - left - right;
-                if (target < own or own > 0) return index;
+                    const right_index = 2 * index + 2;
+                    const right = self.subtotal(right_index);
+                    if (target < right) {
+                        index = right_index;
+                        continue;
+                    }
+                    target -= right;
+
+                    const own = self.subtotals.items[index] - left - right;
+                    if (target < own or own > 0) {
+                        slot.* = index;
+                        break;
+                    }
+                }
+            }
+        }
+
+        fn fillU32WithTotalFrom(self: Self, source: anytype, dest: []u32, total: f64) void {
+            for (dest) |*slot| {
+                var target = Rng.floatFrom(source, f64) * total;
+                var index: usize = 0;
+                while (true) {
+                    const left_index = 2 * index + 1;
+                    const left = self.subtotal(left_index);
+                    if (target < left) {
+                        index = left_index;
+                        continue;
+                    }
+                    target -= left;
+
+                    const right_index = 2 * index + 2;
+                    const right = self.subtotal(right_index);
+                    if (target < right) {
+                        index = right_index;
+                        continue;
+                    }
+                    target -= right;
+
+                    const own = self.subtotals.items[index] - left - right;
+                    if (target < own or own > 0) {
+                        slot.* = @intCast(index);
+                        break;
+                    }
+                }
             }
         }
 
@@ -18766,7 +18807,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 @memset(dest, self.positive_index.?);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleWithTotalFrom(source, total);
+            self.fillWithTotalFrom(source, dest, total);
         }
 
         pub fn fillU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
@@ -18778,7 +18819,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 @memset(dest, @intCast(self.positive_index.?));
                 return;
             }
-            for (dest) |*item| item.* = @intCast(self.sampleWithTotalFrom(source, total));
+            self.fillU32WithTotalFrom(source, dest, total);
         }
 
         pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
@@ -18807,27 +18848,68 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         fn sampleWithTotalFrom(self: Self, source: anytype, total: u64) usize {
-            var target = Rng.uintLessThanFrom(source, u64, total);
-            var index: usize = 0;
-            while (true) {
-                const left_index = 2 * index + 1;
-                const left = self.subtotal(left_index);
-                if (target < left) {
-                    index = left_index;
-                    continue;
-                }
-                target -= left;
+            var out: [1]usize = undefined;
+            self.fillWithTotalFrom(source, &out, total);
+            return out[0];
+        }
 
-                const right_index = 2 * index + 2;
-                const right = self.subtotal(right_index);
-                if (target < right) {
-                    index = right_index;
-                    continue;
-                }
-                target -= right;
+        fn fillWithTotalFrom(self: Self, source: anytype, dest: []usize, total: u64) void {
+            for (dest) |*slot| {
+                var target = Rng.uintLessThanFrom(source, u64, total);
+                var index: usize = 0;
+                while (true) {
+                    const left_index = 2 * index + 1;
+                    const left = self.subtotal(left_index);
+                    if (target < left) {
+                        index = left_index;
+                        continue;
+                    }
+                    target -= left;
 
-                const own = self.subtotals.items[index] - left - right;
-                if (target < own or own > 0) return index;
+                    const right_index = 2 * index + 2;
+                    const right = self.subtotal(right_index);
+                    if (target < right) {
+                        index = right_index;
+                        continue;
+                    }
+                    target -= right;
+
+                    const own = self.subtotals.items[index] - left - right;
+                    if (target < own or own > 0) {
+                        slot.* = index;
+                        break;
+                    }
+                }
+            }
+        }
+
+        fn fillU32WithTotalFrom(self: Self, source: anytype, dest: []u32, total: u64) void {
+            for (dest) |*slot| {
+                var target = Rng.uintLessThanFrom(source, u64, total);
+                var index: usize = 0;
+                while (true) {
+                    const left_index = 2 * index + 1;
+                    const left = self.subtotal(left_index);
+                    if (target < left) {
+                        index = left_index;
+                        continue;
+                    }
+                    target -= left;
+
+                    const right_index = 2 * index + 2;
+                    const right = self.subtotal(right_index);
+                    if (target < right) {
+                        index = right_index;
+                        continue;
+                    }
+                    target -= right;
+
+                    const own = self.subtotals.items[index] - left - right;
+                    if (target < own or own > 0) {
+                        slot.* = @intCast(index);
+                        break;
+                    }
+                }
             }
         }
 
@@ -21462,6 +21544,24 @@ test "weighted tree u32 sampling helpers mirror usize helpers" {
     }
     try std.testing.expectEqual(usize_engine.next(), u32_engine.next());
 
+    var direct_fill_engine = alea.ScalarPrng.init(0x5150_d5f0);
+    var scalar_loop_engine = alea.ScalarPrng.init(0x5150_d5f0);
+    var direct_fill: [8]usize = undefined;
+    var scalar_fill: [8]usize = undefined;
+    try tree.fillCheckedFrom(&direct_fill_engine, &direct_fill);
+    for (&scalar_fill) |*slot| slot.* = try tree.sampleCheckedFrom(&scalar_loop_engine);
+    try std.testing.expectEqualSlices(usize, &scalar_fill, &direct_fill);
+    try std.testing.expectEqual(direct_fill_engine.next(), scalar_loop_engine.next());
+
+    var direct_u32_fill_engine = alea.ScalarPrng.init(0x5150_d5f1);
+    var scalar_u32_loop_engine = alea.ScalarPrng.init(0x5150_d5f1);
+    var direct_u32_fill: [8]u32 = undefined;
+    var scalar_u32_fill: [8]u32 = undefined;
+    try tree.fillU32CheckedFrom(&direct_u32_fill_engine, &direct_u32_fill);
+    for (&scalar_u32_fill) |*slot| slot.* = try tree.sampleU32CheckedFrom(&scalar_u32_loop_engine);
+    try std.testing.expectEqualSlices(u32, &scalar_u32_fill, &direct_u32_fill);
+    try std.testing.expectEqual(direct_u32_fill_engine.next(), scalar_u32_loop_engine.next());
+
     try tree.updateAll(&.{ 0, 0, 5, 0 });
     var single_engine = alea.ScalarPrng.init(0x5150_d505);
     var single_control = alea.ScalarPrng.init(0x5150_d505);
@@ -21498,6 +21598,24 @@ test "weighted tree u32 sampling helpers mirror usize helpers" {
         try std.testing.expect(usize_index == 0 or usize_index == 3);
     }
     try std.testing.expectEqual(usize_engine.next(), u32_engine.next());
+
+    var int_direct_fill_engine = alea.ScalarPrng.init(0x5150_d5f2);
+    var int_scalar_loop_engine = alea.ScalarPrng.init(0x5150_d5f2);
+    var int_direct_fill: [8]usize = undefined;
+    var int_scalar_fill: [8]usize = undefined;
+    try int_tree.fillCheckedFrom(&int_direct_fill_engine, &int_direct_fill);
+    for (&int_scalar_fill) |*slot| slot.* = try int_tree.sampleCheckedFrom(&int_scalar_loop_engine);
+    try std.testing.expectEqualSlices(usize, &int_scalar_fill, &int_direct_fill);
+    try std.testing.expectEqual(int_direct_fill_engine.next(), int_scalar_loop_engine.next());
+
+    var int_direct_u32_fill_engine = alea.ScalarPrng.init(0x5150_d5f3);
+    var int_scalar_u32_loop_engine = alea.ScalarPrng.init(0x5150_d5f3);
+    var int_direct_u32_fill: [8]u32 = undefined;
+    var int_scalar_u32_fill: [8]u32 = undefined;
+    try int_tree.fillU32CheckedFrom(&int_direct_u32_fill_engine, &int_direct_u32_fill);
+    for (&int_scalar_u32_fill) |*slot| slot.* = try int_tree.sampleU32CheckedFrom(&int_scalar_u32_loop_engine);
+    try std.testing.expectEqualSlices(u32, &int_scalar_u32_fill, &int_direct_u32_fill);
+    try std.testing.expectEqual(int_direct_u32_fill_engine.next(), int_scalar_u32_loop_engine.next());
 
     try int_tree.updateAll(&.{ 0, 0, 11, 0 });
     single_engine = alea.ScalarPrng.init(0x5150_d508);

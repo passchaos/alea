@@ -3828,3 +3828,10 @@ reusable WeightedChoice usize/u32 index fills now reuse the optimized AliasTable
 direct fill loops instead of duplicating per-slot table sampling wrappers. This
 improves reusable weighted-choice index fill ergonomics but does not resolve
 S4-M11.
+
+S4-M807 fills weighted tree indexes with direct tree-walk loops
+(`compare/results/s4-m807-weighted-tree-fill-direct-sampling.md`):
+dynamic WeightedTree and WeightedIntTree usize/u32 index fills now run direct
+tree-walk sampling loops instead of routing each slot through scalar sample
+wrappers. This improves dynamic weighted-tree index fill ergonomics but does not
+resolve S4-M11.
