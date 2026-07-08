@@ -918,7 +918,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M877 Zipf reusable fill direct rejection loop | `src/distributions.zig`, `compare/results/s4-m877-zipf-fill-direct-rejection.md` | Closed for the current bar: reusable Zipf fills now run the cached inverse-CDF proposal and rejection check directly. |
 | S4-M878 Zeta reusable fill direct rejection loop | `src/distributions.zig`, `compare/results/s4-m878-zeta-fill-direct-rejection.md` | Closed for the current bar: reusable Zeta fills now run the cached proposal and rejection check directly. |
 | S4-M879 UniformDuration reusable fill direct range dispatch | `src/distributions.zig`, `compare/results/s4-m879-uniform-duration-fill-direct-range.md` | Closed for the current bar: reusable UniformDuration fills now dispatch directly to half-open or inclusive duration range helpers. |
-| S4-M880 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M880 ASCII Charset reusable fill direct index sampling | `src/ascii.zig`, `compare/results/s4-m880-charset-fill-direct-index.md` | Closed for the current bar: reusable ASCII Charset fills now draw uniform indexes and map into the byte slice directly. |
+| S4-M881 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2952,6 +2953,10 @@ half-open or inclusive duration range helper dispatch, preserving stream shape
 while avoiding per-output UniformDuration.sampleFrom wrapper calls; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M880 additionally routes reusable ASCII Charset fills through direct uniform
+index sampling and byte-slice mapping, preserving stream shape while avoiding
+per-byte Charset.sampleFrom wrapper calls; it is reliability/ergonomics work and
+does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

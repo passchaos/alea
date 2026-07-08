@@ -162,7 +162,15 @@ pub const Charset = struct {
             @memset(out, self.bytes[0]);
             return;
         }
-        for (out) |*byte| byte.* = self.sampleFrom(source);
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const byte_count: u64 = @intCast(self.bytes.len);
+            for (out) |*byte| {
+                const index = Rng.uintLessThanFrom(source, u64, byte_count);
+                byte.* = self.bytes[@intCast(index)];
+            }
+            return;
+        }
+        for (out) |*byte| byte.* = self.bytes[Rng.uintLessThanFrom(source, usize, self.bytes.len)];
     }
 
     pub fn alloc(self: Charset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
@@ -624,6 +632,14 @@ test "ascii charset fills requested length" {
     var direct_buf: [32]u8 = undefined;
     Alphanumeric.fillFrom(&engine, &direct_buf);
     for (direct_buf) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
+    var charset_fill_engine = alea.ScalarPrng.init(0x5880_a5c1);
+    var charset_loop_engine = alea.ScalarPrng.init(0x5880_a5c1);
+    var charset_fill: [32]u8 = undefined;
+    var charset_loop: [32]u8 = undefined;
+    Alphanumeric.fillFrom(&charset_fill_engine, &charset_fill);
+    for (&charset_loop) |*byte| byte.* = Alphanumeric.sampleFrom(&charset_loop_engine);
+    try std.testing.expectEqualSlices(u8, &charset_loop, &charset_fill);
+    try std.testing.expectEqual(charset_loop_engine.next(), charset_fill_engine.next());
 
     const direct_password = try Alphanumeric.allocFrom(std.testing.allocator, &engine, 32);
     defer std.testing.allocator.free(direct_password);

@@ -4335,3 +4335,9 @@ UniformDuration.fillFrom now branches once between half-open and inclusive
 duration range helpers instead of routing every output through
 UniformDuration.sampleFrom. This improves UniformDuration reusable fill ergonomics
 but does not resolve S4-M11.
+
+S4-M880 draws reusable ASCII Charset fills through direct uniform index sampling
+(`compare/results/s4-m880-charset-fill-direct-index.md`):
+Charset.fillFrom now draws uniform indexes and maps into the byte slice directly
+instead of routing every byte through Charset.sampleFrom. This improves ASCII
+Charset reusable fill ergonomics but does not resolve S4-M11.
