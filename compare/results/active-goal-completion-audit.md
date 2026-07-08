@@ -891,7 +891,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M850 VectorArcsine reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m850-vector-arcsine-fill-direct-transform.md` | Closed for the current bar: reusable VectorArcsine fills now draw vector open-uniform values and apply the arcsine transform directly. |
 | S4-M851 VectorCauchy reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m851-vector-cauchy-fill-direct-transform.md` | Closed for the current bar: reusable VectorCauchy fills now draw vector open-uniform values and apply the Cauchy transform directly. |
 | S4-M852 VectorLaplace reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m852-vector-laplace-fill-direct-transform.md` | Closed for the current bar: reusable VectorLaplace fills now draw vector open-uniform values and apply the Laplace transform directly. |
-| S4-M853 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M853 VectorLogistic reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m853-vector-logistic-fill-direct-transform.md` | Closed for the current bar: reusable VectorLogistic fills now draw vector open-uniform values and apply the Logistic transform directly. |
+| S4-M854 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2803,6 +2804,10 @@ S4-M852 additionally routes reusable VectorLaplace fills through direct vector
 open-uniform draws and Laplace transforms, preserving stream shape while avoiding
 per-output VectorLaplace.sampleFrom wrapper calls; it is reliability/ergonomics
 work and does not resolve S4-M11 or complete the long-term objective.
+S4-M853 additionally routes reusable VectorLogistic fills through direct vector
+open-uniform draws and Logistic transforms, preserving stream shape while
+avoiding per-output VectorLogistic.sampleFrom wrapper calls; it is reliability/
+ergonomics work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

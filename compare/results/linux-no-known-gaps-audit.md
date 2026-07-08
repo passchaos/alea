@@ -4146,3 +4146,10 @@ VectorLaplace.fillFrom now draws vector open-uniform values and applies the
 Laplace transform directly, instead of routing every output through
 VectorLaplace.sampleFrom. This improves VectorLaplace reusable fill ergonomics
 but does not resolve S4-M11.
+
+S4-M853 draws reusable VectorLogistic fills through direct vector open-uniform
+transforms (`compare/results/s4-m853-vector-logistic-fill-direct-transform.md`):
+VectorLogistic.fillFrom now draws vector open-uniform values and applies the
+Logistic transform directly, instead of routing every output through
+VectorLogistic.sampleFrom. This improves VectorLogistic reusable fill ergonomics
+but does not resolve S4-M11.
