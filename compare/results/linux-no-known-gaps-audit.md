@@ -3882,3 +3882,9 @@ reusable WeightedChoice usize/u32 index iterator next calls now sample the
 underlying AliasTable directly instead of routing through WeightedChoice sample
 wrappers. This improves reusable weighted-choice index iterator ergonomics but
 does not resolve S4-M11.
+
+S4-M815 samples AliasTable u32 iterators through checked table sampling
+(`compare/results/s4-m815-aliastable-u32-iterator-direct.md`):
+static AliasTable compact u32 iterator next calls now call the checked table
+sampler directly instead of routing through sampleU32From. This improves static
+weighted-index iterator ergonomics but does not resolve S4-M11.

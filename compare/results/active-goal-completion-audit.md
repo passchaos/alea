@@ -853,7 +853,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M812 Choice index iterators direct scalar sampling | `src/seq.zig`, `compare/results/s4-m812-choice-index-iterator-direct-sampling.md` | Closed for the current bar: reusable Choice usize/u32 index iterators now generate scalar indexes directly. |
 | S4-M813 Distribution Choose index iterators direct scalar sampling | `src/distributions.zig`, `compare/results/s4-m813-distribution-choose-index-iterator-direct.md` | Closed for the current bar: distribution-layer Choose usize/u32 index iterators now generate scalar indexes directly. |
 | S4-M814 WeightedChoice index iterators direct table sampling | `src/seq.zig`, `compare/results/s4-m814-weightedchoice-index-iterator-direct-table.md` | Closed for the current bar: reusable WeightedChoice usize/u32 index iterators now sample the underlying AliasTable directly. |
-| S4-M815 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M815 AliasTable u32 iterator direct checked sampling | `src/distributions.zig`, `compare/results/s4-m815-aliastable-u32-iterator-direct.md` | Closed for the current bar: static AliasTable compact u32 iterator scalar next now calls the checked table sampler directly. |
+| S4-M816 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2602,6 +2603,10 @@ calls while preserving stream shape; it is reliability/ergonomics work and does
 not resolve S4-M11 or complete the long-term objective.
 S4-M814 additionally samples reusable WeightedChoice usize/u32 index iterator
 scalar outputs directly from the underlying AliasTable, reducing per-item wrapper
+calls while preserving stream shape; it is reliability/ergonomics work and does
+not resolve S4-M11 or complete the long-term objective.
+S4-M815 additionally samples static AliasTable compact u32 iterator scalar
+outputs through the checked table sampler directly, reducing per-item wrapper
 calls while preserving stream shape; it is reliability/ergonomics work and does
 not resolve S4-M11 or complete the long-term objective.
 

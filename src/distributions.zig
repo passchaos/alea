@@ -17308,7 +17308,7 @@ pub fn AliasTable(comptime Weight: type) type {
                 }
 
                 pub fn nextValue(self: *Iterator) u32 {
-                    return self.table.sampleU32From(self.source);
+                    return self.table.sampleU32CheckedFrom(self.source) catch unreachable;
                 }
 
                 pub fn fill(self: *Iterator, dest: []u32) void {
@@ -20696,6 +20696,11 @@ test "alias table exposes totals and reconstructs weights" {
     for (&scalar_u32) |*slot| slot.* = try table.sampleU32CheckedFrom(&scalar_u32_engine);
     try std.testing.expectEqualSlices(u32, &scalar_u32, &direct_u32);
     try std.testing.expectEqual(direct_u32_engine.next(), scalar_u32_engine.next());
+    var iter_u32_engine = root.DefaultPrng.init(0xa11a_f114);
+    var scalar_iter_u32_engine = root.DefaultPrng.init(0xa11a_f114);
+    var iter_u32 = table.iterU32From(&iter_u32_engine);
+    try std.testing.expectEqual(try table.sampleU32CheckedFrom(&scalar_iter_u32_engine), iter_u32.next().?);
+    try std.testing.expectEqual(iter_u32_engine.next(), scalar_iter_u32_engine.next());
 
     var non_power_table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 2, 5 });
     defer non_power_table.deinit();
