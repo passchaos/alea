@@ -16452,7 +16452,19 @@ pub fn Zipf(comptime T: type) type {
                 @memset(dest, 1);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                while (true) {
+                    const inv_b = self.invCdf(Rng.floatFrom(source, T));
+                    const x = @floor(inv_b + 1);
+                    var ratio = std.math.pow(T, x, -self.exponent);
+                    if (x > 1) ratio *= std.math.pow(T, inv_b, self.exponent);
+
+                    if (Rng.floatFrom(source, T) < ratio) {
+                        item.* = x;
+                        break;
+                    }
+                }
+            }
         }
 
         fn isDegenerate(self: Self) bool {
@@ -32580,6 +32592,21 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_zipf_buf: [8]f64 = undefined;
     zipf_sampler.fillFrom(&direct_engine, &direct_zipf_buf);
     for (direct_zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
+    var zipf_fill_engine = alea.ScalarPrng.init(0x5877_0001);
+    var zipf_loop_engine = alea.ScalarPrng.init(0x5877_0001);
+    var zipf_fill: [10]f64 = undefined;
+    var zipf_loop: [10]f64 = undefined;
+    zipf_sampler.fillFrom(&zipf_fill_engine, &zipf_fill);
+    for (&zipf_loop) |*slot| slot.* = zipf_sampler.sampleFrom(&zipf_loop_engine);
+    try std.testing.expectEqualSlices(f64, &zipf_loop, &zipf_fill);
+    try std.testing.expectEqual(zipf_loop_engine.next(), zipf_fill_engine.next());
+    var zipf_harmonic_fill_engine = alea.ScalarPrng.init(0x5877_0002);
+    var zipf_harmonic_loop_engine = alea.ScalarPrng.init(0x5877_0002);
+    const zipf_harmonic_sampler = try Zipf(f64).init(10, 1);
+    zipf_harmonic_sampler.fillFrom(&zipf_harmonic_fill_engine, &zipf_fill);
+    for (&zipf_loop) |*slot| slot.* = zipf_harmonic_sampler.sampleFrom(&zipf_harmonic_loop_engine);
+    try std.testing.expectEqualSlices(f64, &zipf_loop, &zipf_fill);
+    try std.testing.expectEqual(zipf_harmonic_loop_engine.next(), zipf_harmonic_fill_engine.next());
     fillZipf(rng, f64, &zipf_buf, 10, 1.5);
     for (zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
     fillZipfFrom(&direct_engine, f64, &direct_zipf_buf, 10, 1.5);

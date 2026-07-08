@@ -4316,3 +4316,9 @@ Kumaraswamy.fillFrom now draws open-uniform values and applies the generic
 Kumaraswamy transform directly instead of routing every output through
 Kumaraswamy.sampleFrom, while retaining edge fast paths. This improves
 Kumaraswamy reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M877 draws reusable Zipf fills through the direct cached rejection loop
+(`compare/results/s4-m877-zipf-fill-direct-rejection.md`):
+Zipf.fillFrom now runs the inverse-CDF proposal and uniform rejection check
+directly instead of routing every output through Zipf.sampleFrom. This improves
+Zipf reusable fill ergonomics but does not resolve S4-M11.
