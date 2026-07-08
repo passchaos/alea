@@ -4627,3 +4627,10 @@ Choice pointer/value/index/u32 checked iterator facade helpers now construct
 iterators directly instead of routing through direct-source checked iterator
 wrappers. This improves reusable checked iterator ergonomics but does not resolve
 S4-M11.
+
+S4-M924 routes reusable WeightedChoice checked iterator facade constructors
+directly (`compare/results/s4-m924-weightedchoice-checked-iterator-facade-direct.md`):
+WeightedChoice pointer/value/index/u32 checked iterator facade helpers now
+construct iterators directly instead of routing through direct-source checked
+iterator wrappers. This improves reusable weighted checked iterator ergonomics
+but does not resolve S4-M11.
