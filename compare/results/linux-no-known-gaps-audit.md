@@ -5250,3 +5250,10 @@ S4-M1015 routes reusable scalar/vector Laplace facade helpers directly
 apply the Laplace transform directly through facade `Rng` instead of routing
 through `sampleFrom` / `fillFrom` wrappers. This improves Laplace sampler facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1016 routes reusable scalar/vector Logistic facade helpers directly
+(`compare/results/s4-m1016-logistic-sampler-facade-direct.md`): `Logistic.sample` /
+`fill` and `VectorLogistic.sample` / `fill` now draw strict-open uniform values
+and apply the Logistic transform directly through facade `Rng` instead of routing
+through `sampleFrom` / `fillFrom` wrappers. This improves Logistic sampler facade
+ergonomics but does not resolve S4-M11.
