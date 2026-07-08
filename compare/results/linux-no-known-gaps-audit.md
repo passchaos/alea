@@ -5336,3 +5336,10 @@ S4-M1027 routes reusable scalar/vector Pert facade helpers directly
 through facade `Rng` and scale into the PERT range instead of routing through
 `sampleFrom` / `fillFrom` wrappers. This improves Pert sampler facade ergonomics
 but does not resolve S4-M11.
+
+S4-M1028 routes reusable scalar/vector InverseGaussian facade helpers directly
+(`compare/results/s4-m1028-inverse-gaussian-sampler-facade-direct.md`):
+`InverseGaussian.sample` / `fill` and `VectorInverseGaussian.sample` / `fill` now
+draw standard-normal and uniform acceptance variates directly through facade
+`Rng` instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
+InverseGaussian sampler facade ergonomics but does not resolve S4-M11.
