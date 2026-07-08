@@ -8444,7 +8444,8 @@ pub fn poissonAhrensDieterCheckedFrom(source: anytype, lambda: f64) Error!u64 {
 }
 
 pub fn vectorPoissonAhrensDieter(rng: Rng, comptime VectorType: type, lambda: f64) VectorType {
-    return vectorPoissonAhrensDieterFrom(rng, VectorType, lambda);
+    const dist = VectorPoissonAhrensDieter(VectorType).init(lambda) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn vectorPoissonAhrensDieterFrom(source: anytype, comptime VectorType: type, lambda: f64) VectorType {
@@ -8453,7 +8454,8 @@ pub fn vectorPoissonAhrensDieterFrom(source: anytype, comptime VectorType: type,
 }
 
 pub fn vectorPoissonAhrensDieterChecked(rng: Rng, comptime VectorType: type, lambda: f64) Error!VectorType {
-    return vectorPoissonAhrensDieterCheckedFrom(rng, VectorType, lambda);
+    const dist = try VectorPoissonAhrensDieter(VectorType).init(lambda);
+    return dist.sample(rng);
 }
 
 pub fn vectorPoissonAhrensDieterCheckedFrom(source: anytype, comptime VectorType: type, lambda: f64) Error!VectorType {
@@ -8462,7 +8464,8 @@ pub fn vectorPoissonAhrensDieterCheckedFrom(source: anytype, comptime VectorType
 }
 
 pub fn fillVectorPoissonAhrensDieter(rng: Rng, comptime VectorType: type, dest: []VectorType, lambda: f64) void {
-    fillVectorPoissonAhrensDieterFrom(rng, VectorType, dest, lambda);
+    const dist = VectorPoissonAhrensDieter(VectorType).init(lambda) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorPoissonAhrensDieterFrom(source: anytype, comptime VectorType: type, dest: []VectorType, lambda: f64) void {
@@ -8471,7 +8474,9 @@ pub fn fillVectorPoissonAhrensDieterFrom(source: anytype, comptime VectorType: t
 }
 
 pub fn fillVectorPoissonAhrensDieterChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, lambda: f64) Error!void {
-    return fillVectorPoissonAhrensDieterCheckedFrom(rng, VectorType, dest, lambda);
+    if (dest.len == 0) return;
+    const dist = try VectorPoissonAhrensDieter(VectorType).init(lambda);
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorPoissonAhrensDieterCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, lambda: f64) Error!void {

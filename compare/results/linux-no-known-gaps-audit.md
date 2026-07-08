@@ -5007,3 +5007,11 @@ directly (`compare/results/s4-m981-vector-poisson-ad-facade-direct.md`):
 VectorPoissonAhrensDieter facade helpers now draw lanes directly from the cached
 Ahrens-Dieter method instead of routing through direct-source wrappers. This
 improves vector Poisson facade ergonomics but does not resolve S4-M11.
+
+S4-M982 routes top-level vector Poisson Ahrens-Dieter facade helpers directly
+(`compare/results/s4-m982-vector-poisson-ad-top-level-facade-direct.md`):
+`vectorPoissonAhrensDieter`, `vectorPoissonAhrensDieterChecked`,
+`fillVectorPoissonAhrensDieter`, and `fillVectorPoissonAhrensDieterChecked` now
+construct the reusable vector sampler and call facade `sample` / `fill` directly
+instead of routing through `From` wrappers. This improves vector Poisson top-level
+facade ergonomics but does not resolve S4-M11.
