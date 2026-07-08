@@ -278,7 +278,7 @@ pub fn MappedSampler(comptime Sampler: type, comptime Mapper: type, comptime In:
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []Out) void {
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| item.* = applyMapper(Out, self.mapper, Rng.sampleFrom(source, In, self.sampler));
         }
 
         pub fn map(self: Self, comptime NextOut: type, mapper: anytype) MappedSampler(Self, @TypeOf(mapper), Out, NextOut) {
@@ -31330,8 +31330,10 @@ test "mapped samplers transform reusable sampler outputs" {
     var mapped_fill_engine = alea.ScalarPrng.init(0x6d61_7070_6566);
     var manual_fill_engine = alea.ScalarPrng.init(0x6d61_7070_6566);
     var mapped_values: [8]bool = undefined;
+    var manual_values: [8]bool = undefined;
     even_die.fillFrom(&mapped_fill_engine, &mapped_values);
-    for (&mapped_values) |*expected| expected.* = die.sampleFrom(&manual_fill_engine) % 2 == 0;
+    for (&manual_values) |*expected| expected.* = die.sampleFrom(&manual_fill_engine) % 2 == 0;
+    try std.testing.expectEqualSlices(bool, &manual_values, &mapped_values);
     try std.testing.expectEqual(manual_fill_engine.next(), mapped_fill_engine.next());
 
     var iter_engine = alea.ScalarPrng.init(0x6d61_7070_6567);

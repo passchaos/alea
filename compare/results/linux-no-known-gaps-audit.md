@@ -3921,3 +3921,9 @@ distribution-layer Choose pointer iterator next calls now generate uniform index
 and map directly into item storage instead of routing through sampleFrom. This
 improves distribution choose pointer iterator ergonomics but does not resolve
 S4-M11.
+
+S4-M821 fills mapped samplers with direct mapper application
+(`compare/results/s4-m821-mappedsampler-fill-direct-mapper.md`):
+distribution MappedSampler fills now apply the mapper directly to base sampler
+outputs instead of routing each slot through MappedSampler.sampleFrom. This
+improves mapped sampler fill ergonomics but does not resolve S4-M11.
