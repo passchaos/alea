@@ -17981,7 +17981,7 @@ pub fn WeightedTree(comptime Weight: type) type {
                 }
 
                 pub fn nextValue(self: *Iterator) u32 {
-                    return self.tree.sampleU32From(self.source);
+                    return self.tree.sampleU32CheckedFrom(self.source) catch unreachable;
                 }
 
                 pub fn fill(self: *Iterator, dest: []u32) void {
@@ -18794,7 +18794,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 }
 
                 pub fn nextValue(self: *Iterator) u32 {
-                    return self.tree.sampleU32From(self.source);
+                    return self.tree.sampleU32CheckedFrom(self.source) catch unreachable;
                 }
 
                 pub fn fill(self: *Iterator, dest: []u32) void {
@@ -21574,6 +21574,11 @@ test "weighted tree u32 sampling helpers mirror usize helpers" {
     for (&scalar_u32_fill) |*slot| slot.* = try tree.sampleU32CheckedFrom(&scalar_u32_loop_engine);
     try std.testing.expectEqualSlices(u32, &scalar_u32_fill, &direct_u32_fill);
     try std.testing.expectEqual(direct_u32_fill_engine.next(), scalar_u32_loop_engine.next());
+    var direct_u32_iter_engine = alea.ScalarPrng.init(0x5150_d5f4);
+    var scalar_u32_iter_engine = alea.ScalarPrng.init(0x5150_d5f4);
+    var direct_u32_iter = tree.iterU32From(&direct_u32_iter_engine);
+    try std.testing.expectEqual(try tree.sampleU32CheckedFrom(&scalar_u32_iter_engine), direct_u32_iter.next().?);
+    try std.testing.expectEqual(direct_u32_iter_engine.next(), scalar_u32_iter_engine.next());
 
     try tree.updateAll(&.{ 0, 0, 5, 0 });
     var single_engine = alea.ScalarPrng.init(0x5150_d505);
@@ -21629,6 +21634,11 @@ test "weighted tree u32 sampling helpers mirror usize helpers" {
     for (&int_scalar_u32_fill) |*slot| slot.* = try int_tree.sampleU32CheckedFrom(&int_scalar_u32_loop_engine);
     try std.testing.expectEqualSlices(u32, &int_scalar_u32_fill, &int_direct_u32_fill);
     try std.testing.expectEqual(int_direct_u32_fill_engine.next(), int_scalar_u32_loop_engine.next());
+    var int_direct_u32_iter_engine = alea.ScalarPrng.init(0x5150_d5f5);
+    var int_scalar_u32_iter_engine = alea.ScalarPrng.init(0x5150_d5f5);
+    var int_direct_u32_iter = int_tree.iterU32From(&int_direct_u32_iter_engine);
+    try std.testing.expectEqual(try int_tree.sampleU32CheckedFrom(&int_scalar_u32_iter_engine), int_direct_u32_iter.next().?);
+    try std.testing.expectEqual(int_direct_u32_iter_engine.next(), int_scalar_u32_iter_engine.next());
 
     try int_tree.updateAll(&.{ 0, 0, 11, 0 });
     single_engine = alea.ScalarPrng.init(0x5150_d508);

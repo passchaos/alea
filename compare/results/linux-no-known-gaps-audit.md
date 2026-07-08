@@ -3888,3 +3888,9 @@ S4-M815 samples AliasTable u32 iterators through checked table sampling
 static AliasTable compact u32 iterator next calls now call the checked table
 sampler directly instead of routing through sampleU32From. This improves static
 weighted-index iterator ergonomics but does not resolve S4-M11.
+
+S4-M816 samples weighted tree u32 iterators through checked tree sampling
+(`compare/results/s4-m816-weighted-tree-u32-iterator-direct.md`):
+dynamic WeightedTree and WeightedIntTree compact u32 iterator next calls now call
+the checked tree sampler directly instead of routing through sampleU32From. This
+improves dynamic weighted-tree iterator ergonomics but does not resolve S4-M11.

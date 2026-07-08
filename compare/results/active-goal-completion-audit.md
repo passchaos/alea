@@ -854,7 +854,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M813 Distribution Choose index iterators direct scalar sampling | `src/distributions.zig`, `compare/results/s4-m813-distribution-choose-index-iterator-direct.md` | Closed for the current bar: distribution-layer Choose usize/u32 index iterators now generate scalar indexes directly. |
 | S4-M814 WeightedChoice index iterators direct table sampling | `src/seq.zig`, `compare/results/s4-m814-weightedchoice-index-iterator-direct-table.md` | Closed for the current bar: reusable WeightedChoice usize/u32 index iterators now sample the underlying AliasTable directly. |
 | S4-M815 AliasTable u32 iterator direct checked sampling | `src/distributions.zig`, `compare/results/s4-m815-aliastable-u32-iterator-direct.md` | Closed for the current bar: static AliasTable compact u32 iterator scalar next now calls the checked table sampler directly. |
-| S4-M816 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M816 Weighted tree u32 iterators direct checked sampling | `src/distributions.zig`, `compare/results/s4-m816-weighted-tree-u32-iterator-direct.md` | Closed for the current bar: dynamic WeightedTree and WeightedIntTree compact u32 index iterators now call the checked sampler directly. |
+| S4-M817 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2609,6 +2610,10 @@ S4-M815 additionally samples static AliasTable compact u32 iterator scalar
 outputs through the checked table sampler directly, reducing per-item wrapper
 calls while preserving stream shape; it is reliability/ergonomics work and does
 not resolve S4-M11 or complete the long-term objective.
+S4-M816 additionally samples dynamic WeightedTree and WeightedIntTree compact u32
+iterator scalar outputs through the checked tree sampler directly, reducing
+per-item wrapper calls while preserving stream shape; it is reliability/
+ergonomics work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
