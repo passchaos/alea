@@ -17357,7 +17357,15 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sampleU32(self: Self, rng: Rng) u32 {
-            return self.sampleU32Checked(rng) catch unreachable;
+            if (self.prob.len > std.math.maxInt(u32)) unreachable;
+            if (self.constant_index) |index| return @intCast(index);
+            if (aliasTableCanSampleWithOneWord(self.prob.len)) {
+                const raw = Rng.nextFrom(rng);
+                const column = @as(usize, @intCast(raw & @as(u64, @intCast(self.prob.len - 1))));
+                return @intCast(if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column]);
+            }
+            const column = Rng.uintLessThanFrom(rng, usize, self.prob.len);
+            return @intCast(if (Rng.floatFrom(rng, f64) < self.prob[column]) column else self.alias[column]);
         }
 
         pub fn sampleIndexU32(self: Self, rng: Rng) u32 {
@@ -17373,7 +17381,15 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sampleU32Checked(self: Self, rng: Rng) Error!u32 {
-            return self.sampleU32CheckedFrom(rng);
+            if (self.prob.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.constant_index) |index| return @intCast(index);
+            if (aliasTableCanSampleWithOneWord(self.prob.len)) {
+                const raw = Rng.nextFrom(rng);
+                const column = @as(usize, @intCast(raw & @as(u64, @intCast(self.prob.len - 1))));
+                return @intCast(if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column]);
+            }
+            const column = Rng.uintLessThanFrom(rng, usize, self.prob.len);
+            return @intCast(if (Rng.floatFrom(rng, f64) < self.prob[column]) column else self.alias[column]);
         }
 
         pub fn sampleIndexU32Checked(self: Self, rng: Rng) Error!u32 {
@@ -20630,6 +20646,12 @@ test "alias table index aliases mirror sample helpers" {
     direct_engine = alea.ScalarPrng.init(0x5150_a128);
     const u32_rng = Rng.init(&facade_engine);
     try std.testing.expectEqual(try table.sampleIndexU32Checked(u32_rng), try table.sampleU32CheckedFrom(&direct_engine));
+    try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+    facade_engine = alea.ScalarPrng.init(0x5150_a142);
+    direct_engine = alea.ScalarPrng.init(0x5150_a142);
+    const checked_u32_rng = Rng.init(&facade_engine);
+    try std.testing.expectEqual(try table.sampleU32Checked(checked_u32_rng), try table.sampleU32CheckedFrom(&direct_engine));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     sample_engine = alea.ScalarPrng.init(0x5150_a129);
