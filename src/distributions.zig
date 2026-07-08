@@ -17339,7 +17339,14 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
-            return self.sampleChecked(rng);
+            if (self.constant_index) |index| return index;
+            if (aliasTableCanSampleWithOneWord(self.prob.len)) {
+                const raw = Rng.nextFrom(rng);
+                const column = @as(usize, @intCast(raw & @as(u64, @intCast(self.prob.len - 1))));
+                return if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column];
+            }
+            const column = Rng.uintLessThanFrom(rng, usize, self.prob.len);
+            return if (Rng.floatFrom(rng, f64) < self.prob[column]) column else self.alias[column];
         }
 
         pub fn sampleU32(self: Self, rng: Rng) u32 {
@@ -17355,7 +17362,15 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sampleIndexU32Checked(self: Self, rng: Rng) Error!u32 {
-            return self.sampleU32Checked(rng);
+            if (self.prob.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.constant_index) |index| return @intCast(index);
+            if (aliasTableCanSampleWithOneWord(self.prob.len)) {
+                const raw = Rng.nextFrom(rng);
+                const column = @as(usize, @intCast(raw & @as(u64, @intCast(self.prob.len - 1))));
+                return @intCast(if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column]);
+            }
+            const column = Rng.uintLessThanFrom(rng, usize, self.prob.len);
+            return @intCast(if (Rng.floatFrom(rng, f64) < self.prob[column]) column else self.alias[column]);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) usize {

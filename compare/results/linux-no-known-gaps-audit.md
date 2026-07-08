@@ -4504,3 +4504,11 @@ Distribution Choose, reusable Choice, and reusable WeightedChoice facade
 sampleIndexChecked/sampleIndexU32Checked helpers now validate and sample directly
 instead of routing through direct-source checked wrapper aliases. This improves
 checked facade index ergonomics but does not resolve S4-M11.
+
+S4-M906 routes AliasTable checked index facade aliases through direct alias-table
+sampling
+(`compare/results/s4-m906-aliastable-checked-index-facade-direct.md`):
+AliasTable.sampleIndexChecked and sampleIndexU32Checked now execute checked
+alias-table sampling directly instead of routing through sampleChecked /
+sampleU32Checked wrappers. This improves static weighted-index checked facade
+ergonomics but does not resolve S4-M11.
