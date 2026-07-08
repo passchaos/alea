@@ -3933,3 +3933,9 @@ S4-M822 fills Binomial outputs with direct binomialFrom calls
 Binomial non-degenerate fills now call the underlying binomialFrom sampler
 directly instead of routing each slot through Binomial.sampleFrom. This improves
 Binomial fill ergonomics but does not resolve S4-M11.
+
+S4-M823 fills NegativeBinomial outputs with direct negativeBinomialFrom calls
+(`compare/results/s4-m823-negative-binomial-fill-direct-sampler.md`):
+NegativeBinomial non-degenerate fills now call the underlying negativeBinomialFrom
+sampler directly instead of routing each slot through NegativeBinomial.sampleFrom.
+This improves NegativeBinomial fill ergonomics but does not resolve S4-M11.

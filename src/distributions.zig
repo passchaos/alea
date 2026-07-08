@@ -2155,7 +2155,7 @@ pub const NegativeBinomial = struct {
             @memset(dest, 0);
             return;
         }
-        for (dest) |*item| item.* = self.sampleFrom(source);
+        for (dest) |*item| item.* = negativeBinomialFrom(source, self.successes, self.p);
     }
 };
 
@@ -31623,6 +31623,14 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     for (nb_buf) |value| try std.testing.expect(value < 64);
     fillNegativeBinomialFrom(&direct_engine, &nb_buf, 5, 0.4);
     for (nb_buf) |value| try std.testing.expect(value < 64);
+    var nb_direct_fill_engine = alea.ScalarPrng.init(0x0b_ad_0001);
+    var nb_scalar_loop_engine = alea.ScalarPrng.init(0x0b_ad_0001);
+    var nb_direct_fill: [8]u64 = undefined;
+    var nb_scalar_fill: [8]u64 = undefined;
+    (try NegativeBinomial.init(5, 0.4)).fillFrom(&nb_direct_fill_engine, &nb_direct_fill);
+    for (&nb_scalar_fill) |*slot| slot.* = negativeBinomialFrom(&nb_scalar_loop_engine, 5, 0.4);
+    try std.testing.expectEqualSlices(u64, &nb_scalar_fill, &nb_direct_fill);
+    try std.testing.expectEqual(nb_scalar_loop_engine.next(), nb_direct_fill_engine.next());
     try fillNegativeBinomialChecked(rng, &nb_buf, 5, 1);
     for (nb_buf) |value| try std.testing.expectEqual(@as(u64, 0), value);
     try fillNegativeBinomialCheckedFrom(&direct_engine, &nb_buf, 5, 1);
