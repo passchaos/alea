@@ -4454,3 +4454,10 @@ Choose.sampleValueCheckedFrom, sampleIndexCheckedFrom, and
 sampleIndexU32CheckedFrom now validate and then sample uniform indexes directly
 instead of routing through unchecked sample wrappers. This improves checked slice
 choice ergonomics but does not resolve S4-M11.
+
+S4-M899 routes reusable Choice checked scalar samples through direct index
+mapping (`compare/results/s4-m899-choice-checked-sample-direct.md`):
+Choice.sampleValueCheckedFrom, sampleIndexCheckedFrom, and
+sampleIndexU32CheckedFrom now validate and then sample uniform indexes directly
+instead of routing through unchecked sample wrappers. This improves reusable
+checked slice choice ergonomics but does not resolve S4-M11.

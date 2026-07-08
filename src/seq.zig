@@ -8440,7 +8440,8 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
-            return self.sampleIndexFrom(source);
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(source, usize, self.items.len);
         }
 
         pub fn sampleIndexU32(self: Self, rng: Rng) Error!u32 {
@@ -8458,7 +8459,9 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
-            return self.sampleIndexU32From(source);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(source, u32, @intCast(self.items.len));
         }
 
         pub fn sampleValue(self: Self, rng: Rng) T {
@@ -8477,7 +8480,9 @@ pub fn Choice(comptime T: type) type {
 
         pub fn sampleValueCheckedFrom(self: Self, source: anytype) Error!T {
             if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-            return self.sampleValueFrom(source);
+            const items = self.items;
+            if (items.len == 1) return items[0];
+            return items[Rng.uintLessThanFrom(source, usize, items.len)];
         }
 
         pub fn valueChecked(self: Self, rng: Rng) Error!T {
@@ -19717,6 +19722,11 @@ test "choice sampler repeatedly samples slice references" {
         try choice.sampleValueCheckedFrom(&checked_value_engine),
     );
     try std.testing.expectEqual(unchecked_value_engine.next(), checked_value_engine.next());
+    var direct_checked_value_engine = alea.DefaultPrng.init(0xc0_ef47);
+    var helper_checked_value_engine = alea.DefaultPrng.init(0xc0_ef47);
+    const helper_checked_value_index = Rng.chooseIndexFrom(&helper_checked_value_engine, values.len).?;
+    try std.testing.expectEqual(values[helper_checked_value_index], try choice.sampleValueCheckedFrom(&direct_checked_value_engine));
+    try std.testing.expectEqual(helper_checked_value_engine.next(), direct_checked_value_engine.next());
     var direct_value_engine = alea.DefaultPrng.init(0xc0_ef45);
     var helper_value_engine = alea.DefaultPrng.init(0xc0_ef45);
     const helper_value_index = Rng.chooseIndexFrom(&helper_value_engine, values.len).?;
@@ -19959,6 +19969,13 @@ test "choice sampler repeatedly samples slice references" {
         try choice.sampleIndexCheckedFrom(&checked_index_engine),
     );
     try std.testing.expectEqual(unchecked_index_engine.next(), checked_index_engine.next());
+    var direct_checked_index_engine = alea.DefaultPrng.init(0xc0_ef48);
+    var helper_checked_index_engine = alea.DefaultPrng.init(0xc0_ef48);
+    try std.testing.expectEqual(
+        Rng.chooseIndexFrom(&helper_checked_index_engine, values.len).?,
+        try choice.sampleIndexCheckedFrom(&direct_checked_index_engine),
+    );
+    try std.testing.expectEqual(helper_checked_index_engine.next(), direct_checked_index_engine.next());
     var checked_index_fill_engine = alea.DefaultPrng.init(0xc0_ef12);
     var unchecked_index_fill_engine = alea.DefaultPrng.init(0xc0_ef12);
     var checked_index_fill: [8]usize = undefined;
@@ -20013,6 +20030,13 @@ test "choice sampler repeatedly samples slice references" {
         try choice.sampleIndexU32CheckedFrom(&checked_index_u32_engine),
     );
     try std.testing.expectEqual(unchecked_index_u32_engine.next(), checked_index_u32_engine.next());
+    var direct_checked_index_u32_engine = alea.DefaultPrng.init(0xc0_ef49);
+    var helper_checked_index_u32_engine = alea.DefaultPrng.init(0xc0_ef49);
+    try std.testing.expectEqual(
+        Rng.chooseIndexU32From(&helper_checked_index_u32_engine, @intCast(values.len)).?,
+        try choice.sampleIndexU32CheckedFrom(&direct_checked_index_u32_engine),
+    );
+    try std.testing.expectEqual(helper_checked_index_u32_engine.next(), direct_checked_index_u32_engine.next());
     var checked_index_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef1c);
     var unchecked_index_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef1c);
     var checked_index_u32_fill: [8]u32 = undefined;
