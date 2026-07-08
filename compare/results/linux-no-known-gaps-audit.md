@@ -3795,3 +3795,9 @@ S4-M801 prevalidates IndexVec copyIntoU32 narrowing
 seq IndexVec native `usize` backing is now checked for oversized values before
 writing caller-owned compact `u32` output buffers. This improves indexed-sample
 conversion failure determinism but does not resolve S4-M11.
+
+S4-M802 uses direct backing reads for IndexVec iterator next calls
+(`compare/results/s4-m802-indexvec-next-direct-backing.md`):
+seq IndexVec borrowed and consuming iterator `next()` calls now switch once and
+read directly from compact/native backing storage. This improves indexed-sample
+iterator ergonomics but does not resolve S4-M11.

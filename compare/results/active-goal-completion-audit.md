@@ -840,7 +840,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M799 IndexVec fill direct backing paths | `src/seq.zig`, `compare/results/s4-m799-indexvec-fill-direct-backing.md` | Closed for the current bar: IndexVec borrowed and consuming iterator fills now switch once per fill and copy/map directly from backing storage. |
 | S4-M800 IndexVec search and validation direct scans | `src/seq.zig`, `compare/results/s4-m800-indexvec-search-validation-direct-scans.md` | Closed for the current bar: IndexVec search and validation helpers now switch once per call and scan the active backing storage directly. |
 | S4-M801 IndexVec copyIntoU32 no-partial-write prevalidation | `src/seq.zig`, `compare/results/s4-m801-indexvec-copyintou32-prevalidation.md` | Closed for the current bar: IndexVec native-to-u32 caller-owned copying now rejects oversized indexes before modifying output. |
-| S4-M802 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M802 IndexVec next direct backing paths | `src/seq.zig`, `compare/results/s4-m802-indexvec-next-direct-backing.md` | Closed for the current bar: IndexVec borrowed and consuming iterator `next()` calls now read directly from backing storage. |
+| S4-M803 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2539,6 +2540,10 @@ S4-M801 additionally prevalidates native IndexVec to u32 caller-owned copying,
 avoiding partial output mutation before oversized-index failures; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M802 additionally reads borrowed and consuming IndexVec iterator next values
+from active backing storage directly, reducing per-step union dispatch in scalar
+iterator consumers; it is reliability/ergonomics work and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

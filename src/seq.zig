@@ -32,10 +32,20 @@ pub const IndexVec = union(enum) {
         index: usize = 0,
 
         pub fn next(self: *IntoIterator) ?usize {
-            if (self.index >= self.index_vec.len()) return null;
-            const value = self.index_vec.at(self.index);
-            self.index += 1;
-            return value;
+            return switch (self.index_vec) {
+                .u32 => |items| {
+                    if (self.index >= items.len) return null;
+                    const value: usize = items[self.index];
+                    self.index += 1;
+                    return value;
+                },
+                .usize => |items| {
+                    if (self.index >= items.len) return null;
+                    const value = items[self.index];
+                    self.index += 1;
+                    return value;
+                },
+            };
         }
 
         pub fn remaining(self: IntoIterator) usize {
@@ -75,10 +85,20 @@ pub const IndexVec = union(enum) {
         index: usize = 0,
 
         pub fn next(self: *Iterator) ?usize {
-            if (self.index >= self.index_vec.len()) return null;
-            const value = self.index_vec.at(self.index);
-            self.index += 1;
-            return value;
+            return switch (self.index_vec) {
+                .u32 => |items| {
+                    if (self.index >= items.len) return null;
+                    const value: usize = items[self.index];
+                    self.index += 1;
+                    return value;
+                },
+                .usize => |items| {
+                    if (self.index >= items.len) return null;
+                    const value = items[self.index];
+                    self.index += 1;
+                    return value;
+                },
+            };
         }
 
         pub fn remaining(self: Iterator) usize {
