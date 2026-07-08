@@ -9076,7 +9076,14 @@ pub fn Gamma(comptime T: type) type {
                 if (self.scale != 1) scaleInPlace(T, dest, self.scale);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            if (self.is_boosted) {
+                for (dest) |*item| {
+                    item.* = self.scale * self.sampleMarsaglia(source, self.boosted_d, self.boosted_c) *
+                        std.math.pow(T, Rng.floatFrom(source, T), self.boost_inverse_shape);
+                }
+                return;
+            }
+            for (dest) |*item| item.* = self.scale * self.sampleMarsaglia(source, self.d, self.c);
         }
 
         fn isDegenerate(self: Self) bool {
@@ -31591,6 +31598,30 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(gamma_sampler.maxValue() == null);
     gamma_sampler.fillFrom(&direct_engine, &direct_gamma_buf);
     for (direct_gamma_buf) |value| try std.testing.expect(value > 0);
+    var gamma_fill_engine = alea.ScalarPrng.init(0x5873_0001);
+    var gamma_loop_engine = alea.ScalarPrng.init(0x5873_0001);
+    var gamma_fill: [10]f64 = undefined;
+    var gamma_loop: [10]f64 = undefined;
+    gamma_sampler.fillFrom(&gamma_fill_engine, &gamma_fill);
+    for (&gamma_loop) |*slot| slot.* = gamma_sampler.sampleFrom(&gamma_loop_engine);
+    try std.testing.expectEqualSlices(f64, &gamma_loop, &gamma_fill);
+    try std.testing.expectEqual(gamma_loop_engine.next(), gamma_fill_engine.next());
+    var gamma_f32_fill_engine = alea.ScalarPrng.init(0x5873_f32);
+    var gamma_f32_loop_engine = alea.ScalarPrng.init(0x5873_f32);
+    const gamma_f32_sampler = try Gamma(f32).init(2, 3);
+    var gamma_f32_fill: [11]f32 = undefined;
+    var gamma_f32_loop: [11]f32 = undefined;
+    gamma_f32_sampler.fillFrom(&gamma_f32_fill_engine, &gamma_f32_fill);
+    for (&gamma_f32_loop) |*slot| slot.* = gamma_f32_sampler.sampleFrom(&gamma_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &gamma_f32_loop, &gamma_f32_fill);
+    try std.testing.expectEqual(gamma_f32_loop_engine.next(), gamma_f32_fill_engine.next());
+    var gamma_boosted_fill_engine = alea.ScalarPrng.init(0x5873_b005);
+    var gamma_boosted_loop_engine = alea.ScalarPrng.init(0x5873_b005);
+    const gamma_boosted_sampler = try Gamma(f64).init(0.5, 3);
+    gamma_boosted_sampler.fillFrom(&gamma_boosted_fill_engine, &gamma_fill);
+    for (&gamma_loop) |*slot| slot.* = gamma_boosted_sampler.sampleFrom(&gamma_boosted_loop_engine);
+    try std.testing.expectEqualSlices(f64, &gamma_loop, &gamma_fill);
+    try std.testing.expectEqual(gamma_boosted_loop_engine.next(), gamma_boosted_fill_engine.next());
     try std.testing.expect(try gammaCheckedFrom(&direct_engine, f64, 2, 3) > 0);
     try std.testing.expectError(error.InvalidParameter, gammaCheckedFrom(&direct_engine, f64, 0, 3));
     var gamma_shape_one_buf: [8]f64 = undefined;

@@ -4289,3 +4289,10 @@ VectorGamma.fillFrom now samples each generic-shape vector lane directly from th
 cached scalar Gamma sampler instead of routing every output through
 VectorGamma.sampleFrom, while retaining the degenerate and shape-one fast paths.
 This improves VectorGamma reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M873 draws reusable Gamma generic-shape fills through direct method dispatch
+(`compare/results/s4-m873-gamma-fill-direct-method.md`):
+Gamma.fillFrom now dispatches once to the boosted-small-shape or regular Marsaglia
+path instead of routing every output through Gamma.sampleFrom, while retaining the
+degenerate and shape-one fast paths. This improves Gamma reusable fill ergonomics
+but does not resolve S4-M11.
