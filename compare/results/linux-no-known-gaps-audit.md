@@ -5280,3 +5280,10 @@ ranges or strict-open uniform values and apply cached method transforms directly
 through facade `Rng` instead of routing through `sampleFrom` / `fillFrom`
 wrappers. This improves PowerFunction sampler facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1020 routes reusable scalar/vector Rayleigh facade helpers directly
+(`compare/results/s4-m1020-rayleigh-sampler-facade-direct.md`): `Rayleigh.sample`
+/ `fill` and `VectorRayleigh.sample` / `fill` now draw strict-open uniform values
+and apply the Rayleigh transform directly through facade `Rng` instead of routing
+through `sampleFrom` / `fillFrom` wrappers. This improves Rayleigh sampler facade
+ergonomics but does not resolve S4-M11.

@@ -14263,7 +14263,9 @@ pub fn VectorRayleigh(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(0);
+            const uniform_vec = rng.vectorOpen(VectorType);
+            return rayleighFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -14273,7 +14275,14 @@ pub fn VectorRayleigh(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            for (dest) |*item| {
+                const uniform_vec = rng.vectorOpen(VectorType);
+                item.* = rayleighFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -14331,7 +14340,8 @@ pub fn Rayleigh(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return 0;
+            return self.scale * @sqrt(-2 * @log(rng.floatOpen(T)));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -14339,7 +14349,12 @@ pub fn Rayleigh(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
+            rng.fillOpen(T, dest);
+            rayleighFromOpenUniforms(T, dest, self.scale);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
