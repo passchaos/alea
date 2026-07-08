@@ -3717,3 +3717,10 @@ seq/root allocation-returning weighted iterator samples now bound exact-long
 candidate scanning by the known remaining count, avoiding an extra trailing null
 probe while preserving weighted-key stream shape. This improves weighted iterator
 sampling reliability evidence but does not resolve S4-M11.
+
+S4-M790 avoids hinted iterator choice fallback metadata re-probes
+(`compare/results/s4-m790-hinted-iterator-choice-inexact-metadata.md`):
+seq hinted iterator choices now query inexact size-hint/remaining metadata once
+before falling back to reservoir choice, preserving fallback stream shape while
+avoiding duplicate metadata probes. This improves iterator choice reliability
+evidence but does not resolve S4-M11.

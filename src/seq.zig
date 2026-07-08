@@ -4758,10 +4758,11 @@ pub fn chooseIteratorHintedCheckedFrom(source: anytype, comptime T: type, iterat
 }
 
 pub fn chooseIteratorHintedFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
+    if (comptime valueTypeHasEmptyEnum(T)) return null;
     if (iteratorExactRemaining(iterator)) |remaining| {
         return chooseIteratorExactRemainingFrom(source, T, iterator, remaining);
     }
-    return chooseIteratorFrom(source, T, iterator);
+    return chooseIteratorReservoirFrom(source, T, iterator);
 }
 
 pub fn chooseIteratorStable(rng: Rng, comptime T: type, iterator: anytype) ?T {
@@ -4778,6 +4779,20 @@ pub fn chooseIteratorStableCheckedFrom(source: anytype, comptime T: type, iterat
 
 pub fn chooseIteratorStableFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
     return chooseIteratorFrom(source, T, iterator);
+}
+
+fn chooseIteratorReservoirFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
+    var seen: usize = 0;
+    var result: ?T = null;
+
+    while (iterator.next()) |item| {
+        seen += 1;
+        if (Rng.uintLessThanFrom(source, usize, seen) == 0) {
+            result = item;
+        }
+    }
+
+    return result;
 }
 
 fn chooseIteratorReservoirExactFrom(source: anytype, comptime T: type, iterator: anytype, remaining: usize) ?T {
@@ -4800,17 +4815,7 @@ pub fn chooseIteratorFrom(source: anytype, comptime T: type, iterator: anytype) 
     if (iteratorExactRemaining(iterator)) |remaining| {
         return chooseIteratorReservoirExactFrom(source, T, iterator, remaining);
     }
-    var seen: usize = 0;
-    var result: ?T = null;
-
-    while (iterator.next()) |item| {
-        seen += 1;
-        if (Rng.uintLessThanFrom(source, usize, seen) == 0) {
-            result = item;
-        }
-    }
-
-    return result;
+    return chooseIteratorReservoirFrom(source, T, iterator);
 }
 
 fn chooseIteratorExactRemainingFrom(source: anytype, comptime T: type, iterator: anytype, remaining: usize) ?T {
@@ -23813,6 +23818,50 @@ test "hinted iterator choice falls back for unhinted iterators" {
     var hinted_iter = RangeIter{ .next_value = 0, .end = 100 };
     var stable_iter = RangeIter{ .next_value = 0, .end = 100 };
     try std.testing.expectEqual(chooseIteratorFrom(&stable_engine, u32, &stable_iter), chooseIteratorHintedFrom(&hinted_engine, u32, &hinted_iter));
+    try std.testing.expectEqual(stable_engine.next(), hinted_engine.next());
+}
+
+test "hinted iterator choice fallback reuses inexact metadata probe" {
+    const alea = @import("root.zig");
+
+    const InexactHintIter = struct {
+        next_value: u32 = 0,
+        end: u32 = 5,
+        size_hint_calls: usize = 0,
+        next_calls: usize = 0,
+
+        fn next(self: *@This()) ?u32 {
+            self.next_calls += 1;
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+
+        fn sizeHint(self: *@This()) SizeHint {
+            self.size_hint_calls += 1;
+            return .{ .lower = self.end - self.next_value, .upper = null };
+        }
+    };
+
+    var hinted_engine = alea.ScalarPrng.init(0x5150_7850);
+    var stable_engine = alea.ScalarPrng.init(0x5150_7850);
+    var hinted_iter = InexactHintIter{};
+    const StableIter = struct {
+        next_value: u32 = 0,
+        end: u32 = 5,
+
+        fn next(self: *@This()) ?u32 {
+            if (self.next_value >= self.end) return null;
+            const value = self.next_value;
+            self.next_value += 1;
+            return value;
+        }
+    };
+    var stable_iter = StableIter{};
+    try std.testing.expectEqual(chooseIteratorFrom(&stable_engine, u32, &stable_iter), chooseIteratorHintedFrom(&hinted_engine, u32, &hinted_iter));
+    try std.testing.expectEqual(@as(usize, 1), hinted_iter.size_hint_calls);
+    try std.testing.expectEqual(@as(usize, 6), hinted_iter.next_calls);
     try std.testing.expectEqual(stable_engine.next(), hinted_engine.next());
 }
 
