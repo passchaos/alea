@@ -4815,3 +4815,9 @@ WeightedTree and WeightedIntTree allocation-returning facade helpers now allocat
 and fill directly instead of routing through direct-source owned wrappers. This
 improves dynamic weighted-index owned-batch ergonomics but does not resolve
 S4-M11.
+
+S4-M952 routes dynamic weighted-tree fixed-array helpers directly
+(`compare/results/s4-m952-weighted-tree-array-direct.md`):
+WeightedTree and WeightedIntTree fixed-array helpers now construct stack arrays
+and fill directly instead of routing through other array wrappers. This improves
+dynamic weighted-index fixed-array ergonomics but does not resolve S4-M11.

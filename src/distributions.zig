@@ -18477,7 +18477,9 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
-            return self.indexArrayFrom(rng, N);
+            var out: [N]usize = undefined;
+            self.fill(rng, &out);
+            return out;
         }
 
         pub fn indexArrayFrom(self: Self, source: anytype, comptime N: usize) [N]usize {
@@ -18487,7 +18489,9 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indexArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]usize {
-            return self.indexArrayCheckedFrom(rng, N);
+            var out: [N]usize = undefined;
+            try self.fillChecked(rng, &out);
+            return out;
         }
 
         pub fn indexArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]usize {
@@ -18497,15 +18501,21 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) [N]u32 {
-            return self.indexArrayU32Checked(rng, N) catch unreachable;
+            var out: [N]u32 = undefined;
+            self.fillU32(rng, &out);
+            return out;
         }
 
         pub fn indexArrayU32Checked(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
-            return self.indexArrayU32CheckedFrom(rng, N);
+            var out: [N]u32 = undefined;
+            try self.fillU32Checked(rng, &out);
+            return out;
         }
 
         pub fn indexArrayU32From(self: Self, source: anytype, comptime N: usize) [N]u32 {
-            return self.indexArrayU32CheckedFrom(source, N) catch unreachable;
+            var out: [N]u32 = undefined;
+            self.fillU32From(source, &out);
+            return out;
         }
 
         pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
@@ -19357,7 +19367,9 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
-            return self.indexArrayFrom(rng, N);
+            var out: [N]usize = undefined;
+            self.fill(rng, &out);
+            return out;
         }
 
         pub fn indexArrayFrom(self: Self, source: anytype, comptime N: usize) [N]usize {
@@ -19367,7 +19379,9 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indexArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]usize {
-            return self.indexArrayCheckedFrom(rng, N);
+            var out: [N]usize = undefined;
+            try self.fillChecked(rng, &out);
+            return out;
         }
 
         pub fn indexArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]usize {
@@ -19377,15 +19391,21 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) [N]u32 {
-            return self.indexArrayU32Checked(rng, N) catch unreachable;
+            var out: [N]u32 = undefined;
+            self.fillU32(rng, &out);
+            return out;
         }
 
         pub fn indexArrayU32Checked(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
-            return self.indexArrayU32CheckedFrom(rng, N);
+            var out: [N]u32 = undefined;
+            try self.fillU32Checked(rng, &out);
+            return out;
         }
 
         pub fn indexArrayU32From(self: Self, source: anytype, comptime N: usize) [N]u32 {
-            return self.indexArrayU32CheckedFrom(source, N) catch unreachable;
+            var out: [N]u32 = undefined;
+            self.fillU32From(source, &out);
+            return out;
         }
 
         pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
