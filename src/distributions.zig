@@ -8617,7 +8617,12 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(0)));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            const p = self.sampler.p;
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = geometricFailuresFrom(source, p);
+                item.* = out;
+            }
         }
     };
 }
@@ -25943,6 +25948,18 @@ test "distribution vector helpers preserve support and stream shape" {
     vector_geometric_failures_sampler.fillFrom(&direct_engine, &direct_geometric_failures_buf);
     try std.testing.expectEqualSlices(@Vector(4, u64), &geometric_failures_buf, &direct_geometric_failures_buf);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var direct_vector_failures_engine = alea.ScalarPrng.init(0x9e0_f101);
+    var scalar_vector_failures_engine = alea.ScalarPrng.init(0x9e0_f101);
+    var direct_vector_failures: [3]@Vector(4, u64) = undefined;
+    var scalar_vector_failures: [3]@Vector(4, u64) = undefined;
+    vector_geometric_failures_sampler.fillFrom(&direct_vector_failures_engine, &direct_vector_failures);
+    for (&scalar_vector_failures) |*vec| {
+        var out: @Vector(4, u64) = undefined;
+        inline for (0..4) |lane| out[lane] = geometricFailuresFrom(&scalar_vector_failures_engine, 0.25);
+        vec.* = out;
+    }
+    try std.testing.expectEqualSlices(@Vector(4, u64), &scalar_vector_failures, &direct_vector_failures);
+    try std.testing.expectEqual(scalar_vector_failures_engine.next(), direct_vector_failures_engine.next());
 
     const standard_geometric_vec = vectorStandardGeometric(rng, @Vector(4, u64));
     const direct_standard_geometric_vec = vectorStandardGeometricFrom(&direct_engine, @Vector(4, u64));

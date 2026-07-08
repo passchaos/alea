@@ -3966,3 +3966,10 @@ VectorGeometric non-degenerate fills now draw lanes with the underlying
 geometricFrom sampler directly instead of routing each vector through
 VectorGeometric.sampleFrom. This improves VectorGeometric fill ergonomics but
 does not resolve S4-M11.
+
+S4-M828 fills VectorGeometricFailures outputs with direct geometricFailuresFrom lane draws
+(`compare/results/s4-m828-vector-geometric-failures-fill-direct-sampler.md`):
+VectorGeometricFailures non-degenerate fills now draw lanes with the underlying
+geometricFailuresFrom sampler directly instead of routing each vector through
+VectorGeometricFailures.sampleFrom. This improves VectorGeometricFailures fill
+ergonomics but does not resolve S4-M11.
