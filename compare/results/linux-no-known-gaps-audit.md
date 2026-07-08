@@ -3861,3 +3861,10 @@ reusable Choice compact u32 index fills now return early for empty output, cache
 item length once, validate compact width, and generate uniform u32 indexes
 directly. This improves reusable choice compact index fill ergonomics but does
 not resolve S4-M11.
+
+S4-M812 samples reusable Choice index iterators directly
+(`compare/results/s4-m812-choice-index-iterator-direct-sampling.md`):
+reusable Choice usize/u32 index iterator next calls now generate uniform indexes
+directly from cached choice length instead of routing through sample wrappers.
+This improves reusable choice index iterator ergonomics but does not resolve
+S4-M11.

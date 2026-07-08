@@ -8818,7 +8818,8 @@ pub fn Choice(comptime T: type) type {
                 }
 
                 pub fn nextValue(self: *Iter) usize {
-                    return self.choice.sampleIndexFrom(self.source);
+                    const item_len = self.choice.items.len;
+                    return if (item_len == 1) 0 else Rng.uintLessThanFrom(self.source, usize, item_len);
                 }
 
                 pub fn fill(self: *Iter, dest: []usize) void {
@@ -8839,7 +8840,9 @@ pub fn Choice(comptime T: type) type {
                 }
 
                 pub fn nextValue(self: *Iter) u32 {
-                    return self.choice.sampleIndexU32From(self.source) catch unreachable;
+                    const item_len = self.choice.items.len;
+                    if (item_len == 1) return 0;
+                    return Rng.uintLessThanFrom(self.source, u32, @intCast(item_len));
                 }
 
                 pub fn fill(self: *Iter, dest: []u32) void {
@@ -19969,6 +19972,11 @@ test "choice sampler repeatedly samples slice references" {
     var unchecked_index_iter = choice.indexIterFrom(&unchecked_index_iter_engine);
     try std.testing.expectEqual(unchecked_index_iter.next().?, checked_index_iter.next().?);
     try std.testing.expectEqual(unchecked_index_iter_engine.next(), checked_index_iter_engine.next());
+    var direct_index_iter_engine = alea.DefaultPrng.init(0xc0_ef3e);
+    var helper_index_iter_engine = alea.DefaultPrng.init(0xc0_ef3e);
+    var direct_index_iter = choice.indexIterFrom(&direct_index_iter_engine);
+    try std.testing.expectEqual(Rng.chooseIndexFrom(&helper_index_iter_engine, values.len).?, direct_index_iter.next().?);
+    try std.testing.expectEqual(helper_index_iter_engine.next(), direct_index_iter_engine.next());
     var checked_index_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef2f);
     var checked_index_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef2f);
     var checked_index_iter_facade = try choice.indexIterChecked(Rng.init(&checked_index_iter_facade_engine));
@@ -20012,6 +20020,11 @@ test "choice sampler repeatedly samples slice references" {
     var unchecked_index_u32_iter = try choice.indexIterU32From(&unchecked_index_u32_iter_engine);
     try std.testing.expectEqual(unchecked_index_u32_iter.next().?, checked_index_u32_iter.next().?);
     try std.testing.expectEqual(unchecked_index_u32_iter_engine.next(), checked_index_u32_iter_engine.next());
+    var direct_u32_index_iter_engine = alea.DefaultPrng.init(0xc0_ef3f);
+    var helper_u32_index_iter_engine = alea.DefaultPrng.init(0xc0_ef3f);
+    var direct_u32_index_iter = try choice.indexIterU32From(&direct_u32_index_iter_engine);
+    try std.testing.expectEqual(Rng.chooseIndexU32From(&helper_u32_index_iter_engine, @intCast(values.len)).?, direct_u32_index_iter.next().?);
+    try std.testing.expectEqual(helper_u32_index_iter_engine.next(), direct_u32_index_iter_engine.next());
     var checked_index_u32_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef30);
     var checked_index_u32_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef30);
     var checked_index_u32_iter_facade = try choice.indexIterU32Checked(Rng.init(&checked_index_u32_iter_facade_engine));
