@@ -13893,7 +13893,21 @@ pub fn VectorPowerFunction(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.minValue());
+            switch (self.sampler.method) {
+                .point_max => return @splat(self.maxValue()),
+                .uniform => return rng.vectorRange(VectorType, self.minValue(), self.maxValue()),
+                .sqrt => {
+                    const uniform_vec = rng.vectorOpen(VectorType);
+                    const min_vec: VectorType = @splat(self.minValue());
+                    const width_vec: VectorType = @splat(self.maxValue() - self.minValue());
+                    return min_vec + width_vec * @sqrt(uniform_vec);
+                },
+                .generic => {
+                    const uniform_vec = rng.vectorOpen(VectorType);
+                    return powerFunctionFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), self.maxValue() - self.minValue(), 1 / self.shapeValue());
+                },
+            }
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -13915,7 +13929,34 @@ pub fn VectorPowerFunction(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.minValue())));
+                return;
+            }
+            switch (self.sampler.method) {
+                .point_max => {
+                    @memset(dest, @as(VectorType, @splat(self.maxValue())));
+                },
+                .uniform => {
+                    rng.fillVectorRange(VectorType, dest, self.minValue(), self.maxValue());
+                },
+                .sqrt => {
+                    const min_vec: VectorType = @splat(self.minValue());
+                    const width_vec: VectorType = @splat(self.maxValue() - self.minValue());
+                    for (dest) |*item| {
+                        const uniform_vec = rng.vectorOpen(VectorType);
+                        item.* = min_vec + width_vec * @sqrt(uniform_vec);
+                    }
+                },
+                .generic => {
+                    const width = self.maxValue() - self.minValue();
+                    const inverse_shape = 1 / self.shapeValue();
+                    for (dest) |*item| {
+                        const uniform_vec = rng.vectorOpen(VectorType);
+                        item.* = powerFunctionFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), width, inverse_shape);
+                    }
+                },
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -14009,7 +14050,13 @@ pub fn PowerFunction(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return self.degenerateValue();
+            return switch (self.method) {
+                .point_max => self.maxValue(),
+                .uniform => rng.floatRange(T, self.min, self.min + self.range),
+                .sqrt => self.min + self.range * @sqrt(rng.floatOpen(T)),
+                .generic => self.min + self.range * std.math.pow(T, rng.floatOpen(T), self.inverse_shape),
+            };
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -14023,7 +14070,29 @@ pub fn PowerFunction(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, self.degenerateValue());
+                return;
+            }
+            switch (self.method) {
+                .point_max => {
+                    @memset(dest, self.maxValue());
+                    return;
+                },
+                .uniform => {
+                    rng.fillRange(T, dest, self.min, self.min + self.range);
+                    return;
+                },
+                .sqrt => {
+                    rng.fillOpen(T, dest);
+                    for (dest) |*item| item.* = self.min + self.range * @sqrt(item.*);
+                    return;
+                },
+                .generic => {},
+            }
+
+            rng.fillOpen(T, dest);
+            powerFunctionFromOpenUniforms(T, dest, self.min, self.range, self.inverse_shape);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
