@@ -4209,3 +4209,11 @@ VectorGumbel.fillFrom now draws vector open-closed-uniform values and applies th
 Gumbel transform directly, instead of routing every output through
 VectorGumbel.sampleFrom. This improves VectorGumbel reusable fill ergonomics but
 does not resolve S4-M11.
+
+S4-M862 draws reusable VectorFrechet fills through direct vector
+open-closed-uniform transforms
+(`compare/results/s4-m862-vector-frechet-fill-direct-transform.md`):
+VectorFrechet.fillFrom now draws vector open-closed-uniform values and applies
+the Frechet transform directly, including the shape-one path, instead of routing
+every output through VectorFrechet.sampleFrom. This improves VectorFrechet
+reusable fill ergonomics but does not resolve S4-M11.

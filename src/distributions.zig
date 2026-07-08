@@ -14121,7 +14121,14 @@ pub fn VectorFrechet(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const uniform_vec = Rng.vectorOpenClosedFrom(source, VectorType);
+                if (self.shapeValue() == 1) {
+                    item.* = frechetShapeOneFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+                } else {
+                    item.* = frechetFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue(), -1 / self.shapeValue());
+                }
+            }
         }
     };
 }
@@ -27828,6 +27835,23 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &frechet_buf_vec, &direct_frechet_buf_vec);
     for (frechet_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_frechet_fill_engine = alea.ScalarPrng.init(0xf862_0001);
+    var vector_frechet_loop_engine = alea.ScalarPrng.init(0xf862_0001);
+    var vector_frechet_fill: [3]@Vector(4, f64) = undefined;
+    var vector_frechet_loop: [3]@Vector(4, f64) = undefined;
+    vector_frechet_sampler.fillFrom(&vector_frechet_fill_engine, &vector_frechet_fill);
+    for (&vector_frechet_loop) |*slot| slot.* = vector_frechet_sampler.sampleFrom(&vector_frechet_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_frechet_loop, &vector_frechet_fill);
+    try std.testing.expectEqual(vector_frechet_loop_engine.next(), vector_frechet_fill_engine.next());
+    var vector_frechet_f32_fill_engine = alea.ScalarPrng.init(0xf862_f32);
+    var vector_frechet_f32_loop_engine = alea.ScalarPrng.init(0xf862_f32);
+    const vector_frechet_f32 = try VectorFrechet(@Vector(8, f32)).init(0, 2, 3);
+    var vector_frechet_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_frechet_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_frechet_f32.fillFrom(&vector_frechet_f32_fill_engine, &vector_frechet_f32_fill);
+    for (&vector_frechet_f32_loop) |*slot| slot.* = vector_frechet_f32.sampleFrom(&vector_frechet_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_frechet_f32_loop, &vector_frechet_f32_fill);
+    try std.testing.expectEqual(vector_frechet_f32_loop_engine.next(), vector_frechet_f32_fill_engine.next());
 
     const vector_frechet_shape_one = try VectorFrechet(@Vector(4, f64)).init(0, 2, 1);
     try std.testing.expect(vector_frechet_shape_one.expectedValue() == null);
@@ -27837,6 +27861,24 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(frechet_shape_one_vec, direct_frechet_shape_one_vec);
     inline for (0..4) |lane| try std.testing.expect(frechet_shape_one_vec[lane] >= 0 and std.math.isFinite(frechet_shape_one_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_frechet_shape_one_fill_engine = alea.ScalarPrng.init(0xf862_1001);
+    var vector_frechet_shape_one_loop_engine = alea.ScalarPrng.init(0xf862_1001);
+    vector_frechet_shape_one.fillFrom(&vector_frechet_shape_one_fill_engine, &vector_frechet_fill);
+    for (&vector_frechet_loop) |*slot| slot.* = vector_frechet_shape_one.sampleFrom(&vector_frechet_shape_one_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_frechet_loop, &vector_frechet_fill);
+    try std.testing.expectEqual(vector_frechet_shape_one_loop_engine.next(), vector_frechet_shape_one_fill_engine.next());
+    var vector_frechet_degenerate_engine = alea.ScalarPrng.init(0xf862_d00);
+    var vector_frechet_degenerate_control = alea.ScalarPrng.init(0xf862_d00);
+    const vector_frechet_degenerate = try VectorFrechet(@Vector(4, f64)).init(1.5, 0, 3);
+    vector_frechet_degenerate.fillFrom(&vector_frechet_degenerate_engine, &vector_frechet_fill);
+    for (vector_frechet_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
+    try std.testing.expectEqual(vector_frechet_degenerate_control.next(), vector_frechet_degenerate_engine.next());
+    var vector_frechet_point_engine = alea.ScalarPrng.init(0xf862_1af);
+    var vector_frechet_point_control = alea.ScalarPrng.init(0xf862_1af);
+    const vector_frechet_point = try VectorFrechet(@Vector(4, f64)).init(1.5, 2, std.math.inf(f64));
+    vector_frechet_point.fillFrom(&vector_frechet_point_engine, &vector_frechet_fill);
+    for (vector_frechet_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(3.5)), vec);
+    try std.testing.expectEqual(vector_frechet_point_control.next(), vector_frechet_point_engine.next());
 
     const skew_normal_vec = try vectorSkewNormalChecked(rng, @Vector(4, f64), 0, 1, 2);
     const direct_skew_normal_vec = try vectorSkewNormalCheckedFrom(&direct_engine, @Vector(4, f64), 0, 1, 2);

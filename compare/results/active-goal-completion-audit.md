@@ -900,7 +900,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M859 VectorPareto reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m859-vector-pareto-fill-direct-transform.md` | Closed for the current bar: reusable VectorPareto fills now draw vector open-uniform values and apply the Pareto transform directly, including shape-one reciprocal handling. |
 | S4-M860 VectorWeibull reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m860-vector-weibull-fill-direct-transform.md` | Closed for the current bar: reusable VectorWeibull fills now draw vector open-uniform values and apply the Weibull transform directly, including shape-one standard-exponential handling. |
 | S4-M861 VectorGumbel reusable fill direct open-closed-uniform transform | `src/distributions.zig`, `compare/results/s4-m861-vector-gumbel-fill-direct-transform.md` | Closed for the current bar: reusable VectorGumbel fills now draw vector open-closed-uniform values and apply the Gumbel transform directly. |
-| S4-M862 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M862 VectorFrechet reusable fill direct open-closed-uniform transform | `src/distributions.zig`, `compare/results/s4-m862-vector-frechet-fill-direct-transform.md` | Closed for the current bar: reusable VectorFrechet fills now draw vector open-closed-uniform values and apply the Frechet transform directly, including shape-one handling. |
+| S4-M863 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2853,6 +2854,11 @@ S4-M861 additionally routes reusable VectorGumbel fills through direct vector
 open-closed-uniform draws and Gumbel transforms, preserving stream shape while
 avoiding per-output VectorGumbel.sampleFrom wrapper calls; it is reliability/
 ergonomics work and does not resolve S4-M11 or complete the long-term objective.
+S4-M862 additionally routes reusable VectorFrechet fills through direct vector
+open-closed-uniform draws and Frechet transforms, including shape-one handling,
+preserving stream shape while avoiding per-output VectorFrechet.sampleFrom wrapper
+calls; it is reliability/ergonomics work and does not resolve S4-M11 or complete
+the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
