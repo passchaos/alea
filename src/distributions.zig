@@ -17438,7 +17438,14 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) usize {
-            return self.sampleFrom(rng);
+            if (self.constant_index) |index| return index;
+            if (aliasTableCanSampleWithOneWord(self.prob.len)) {
+                const raw = Rng.nextFrom(rng);
+                const column = @as(usize, @intCast(raw & @as(u64, @intCast(self.prob.len - 1))));
+                return if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column];
+            }
+            const column = Rng.uintLessThanFrom(rng, usize, self.prob.len);
+            return if (Rng.floatFrom(rng, f64) < self.prob[column]) column else self.alias[column];
         }
 
         pub fn sampleIndex(self: Self, rng: Rng) usize {
@@ -17453,7 +17460,14 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sampleChecked(self: Self, rng: Rng) Error!usize {
-            return self.sampleCheckedFrom(rng);
+            if (self.constant_index) |index| return index;
+            if (aliasTableCanSampleWithOneWord(self.prob.len)) {
+                const raw = Rng.nextFrom(rng);
+                const column = @as(usize, @intCast(raw & @as(u64, @intCast(self.prob.len - 1))));
+                return if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column];
+            }
+            const column = Rng.uintLessThanFrom(rng, usize, self.prob.len);
+            return if (Rng.floatFrom(rng, f64) < self.prob[column]) column else self.alias[column];
         }
 
         pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {

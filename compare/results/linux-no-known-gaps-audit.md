@@ -4834,3 +4834,9 @@ directly (`compare/results/s4-m954-weighted-tree-sample-from-direct.md`):
 WeightedTree and WeightedIntTree `sampleFrom` / `sampleU32From` now execute direct
 total-aware sampling instead of routing through checked sample wrappers. This
 improves dynamic weighted-index sample ergonomics but does not resolve S4-M11.
+
+S4-M955 routes static AliasTable canonical facade samples directly
+(`compare/results/s4-m955-aliastable-sample-facade-direct.md`):
+AliasTable `sample` and `sampleChecked` now execute direct alias-table sampling
+branches instead of routing through direct-source sample wrappers. This improves
+weighted-index facade sample ergonomics but does not resolve S4-M11.
