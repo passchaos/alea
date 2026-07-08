@@ -8863,7 +8863,8 @@ pub fn fillGeometricCheckedFrom(source: anytype, dest: []u64, p: f64) Error!void
 }
 
 pub fn vectorGeometric(rng: Rng, comptime VectorType: type, p: f64) VectorType {
-    return vectorGeometricFrom(rng, VectorType, p);
+    const dist = VectorGeometric(VectorType).init(p) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn vectorGeometricFrom(source: anytype, comptime VectorType: type, p: f64) VectorType {
@@ -8872,7 +8873,8 @@ pub fn vectorGeometricFrom(source: anytype, comptime VectorType: type, p: f64) V
 }
 
 pub fn vectorGeometricChecked(rng: Rng, comptime VectorType: type, p: f64) Error!VectorType {
-    return vectorGeometricCheckedFrom(rng, VectorType, p);
+    const dist = try VectorGeometric(VectorType).init(p);
+    return dist.sample(rng);
 }
 
 pub fn vectorGeometricCheckedFrom(source: anytype, comptime VectorType: type, p: f64) Error!VectorType {
@@ -8881,7 +8883,8 @@ pub fn vectorGeometricCheckedFrom(source: anytype, comptime VectorType: type, p:
 }
 
 pub fn fillVectorGeometric(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) void {
-    fillVectorGeometricFrom(rng, VectorType, dest, p);
+    const dist = VectorGeometric(VectorType).init(p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorGeometricFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) void {
@@ -8890,7 +8893,9 @@ pub fn fillVectorGeometricFrom(source: anytype, comptime VectorType: type, dest:
 }
 
 pub fn fillVectorGeometricChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
-    return fillVectorGeometricCheckedFrom(rng, VectorType, dest, p);
+    if (dest.len == 0) return;
+    const dist = try VectorGeometric(VectorType).init(p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorGeometricCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
@@ -8999,7 +9004,13 @@ pub fn VectorGeometric(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.p == 1) return @splat(1);
+            const p = self.sampler.p;
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| {
+                out[lane] = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p)))) + 1;
+            }
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -9010,7 +9021,18 @@ pub fn VectorGeometric(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.p == 1) {
+                @memset(dest, @as(VectorType, @splat(1)));
+                return;
+            }
+            const p = self.sampler.p;
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| {
+                    out[lane] = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p)))) + 1;
+                }
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -9095,7 +9117,8 @@ pub const GeometricFailures = struct {
 };
 
 pub fn vectorGeometricFailures(rng: Rng, comptime VectorType: type, p: f64) VectorType {
-    return vectorGeometricFailuresFrom(rng, VectorType, p);
+    const dist = VectorGeometricFailures(VectorType).init(p) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn vectorGeometricFailuresFrom(source: anytype, comptime VectorType: type, p: f64) VectorType {
@@ -9104,7 +9127,8 @@ pub fn vectorGeometricFailuresFrom(source: anytype, comptime VectorType: type, p
 }
 
 pub fn vectorGeometricFailuresChecked(rng: Rng, comptime VectorType: type, p: f64) Error!VectorType {
-    return vectorGeometricFailuresCheckedFrom(rng, VectorType, p);
+    const dist = try VectorGeometricFailures(VectorType).init(p);
+    return dist.sample(rng);
 }
 
 pub fn vectorGeometricFailuresCheckedFrom(source: anytype, comptime VectorType: type, p: f64) Error!VectorType {
@@ -9113,7 +9137,8 @@ pub fn vectorGeometricFailuresCheckedFrom(source: anytype, comptime VectorType: 
 }
 
 pub fn fillVectorGeometricFailures(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) void {
-    fillVectorGeometricFailuresFrom(rng, VectorType, dest, p);
+    const dist = VectorGeometricFailures(VectorType).init(p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorGeometricFailuresFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) void {
@@ -9122,7 +9147,9 @@ pub fn fillVectorGeometricFailuresFrom(source: anytype, comptime VectorType: typ
 }
 
 pub fn fillVectorGeometricFailuresChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
-    return fillVectorGeometricFailuresCheckedFrom(rng, VectorType, dest, p);
+    if (dest.len == 0) return;
+    const dist = try VectorGeometricFailures(VectorType).init(p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorGeometricFailuresCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
@@ -9169,7 +9196,13 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.p == 1) return @splat(0);
+            const p = self.sampler.p;
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| {
+                out[lane] = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p))));
+            }
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -9180,7 +9213,18 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.p == 1) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            const p = self.sampler.p;
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| {
+                    out[lane] = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p))));
+                }
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {

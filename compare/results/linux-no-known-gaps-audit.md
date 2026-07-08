@@ -5038,3 +5038,13 @@ S4-M985 routes scalar Geometric facade helpers directly
 facade sample/fill methods now dispatch directly through facade `Rng` instead of
 routing through `From` wrappers. This improves Geometric facade ergonomics but
 does not resolve S4-M11.
+
+S4-M986 routes vector Geometric facade helpers directly
+(`compare/results/s4-m986-vector-geometric-facade-direct.md`): vector top-level
+`vectorGeometric`, `vectorGeometricChecked`, `fillVectorGeometric`,
+`fillVectorGeometricChecked`, `vectorGeometricFailures`,
+`vectorGeometricFailuresChecked`, `fillVectorGeometricFailures`,
+`fillVectorGeometricFailuresChecked`, and reusable `VectorGeometric` /
+`VectorGeometricFailures` facade sample/fill methods now dispatch directly
+through facade `Rng` instead of routing through `From` wrappers. This improves
+vector Geometric facade ergonomics but does not resolve S4-M11.
