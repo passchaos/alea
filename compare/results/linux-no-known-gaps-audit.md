@@ -4708,3 +4708,10 @@ Choice pointer/index/u32 checked direct-source fixed-array helpers now construct
 stack arrays and fill directly instead of routing through unchecked direct-source
 array wrappers. This improves reusable checked direct-source fixed-array
 ergonomics but does not resolve S4-M11.
+
+S4-M936 routes reusable WeightedChoice checked direct-source fixed-array helpers
+directly (`compare/results/s4-m936-weightedchoice-checked-array-from-direct.md`):
+WeightedChoice pointer/index/u32 checked direct-source fixed-array helpers now
+construct stack arrays and fill directly instead of routing through unchecked
+direct-source array wrappers. This improves reusable weighted checked
+direct-source fixed-array ergonomics but does not resolve S4-M11.

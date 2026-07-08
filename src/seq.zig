@@ -9481,7 +9481,9 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn ptrArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]*const T {
-            return self.ptrArrayFrom(source, N);
+            var out: [N]*const T = undefined;
+            try self.fillCheckedFrom(source, &out);
+            return out;
         }
 
         pub fn iter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
@@ -9662,7 +9664,9 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn indexArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]usize {
-            return self.indexArrayFrom(source, N);
+            var out: [N]usize = undefined;
+            try self.fillIndicesCheckedFrom(source, &out);
+            return out;
         }
 
         pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
@@ -9681,7 +9685,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
             var out: [N]u32 = undefined;
-            try self.fillIndicesU32From(source, &out);
+            try self.fillIndicesU32CheckedFrom(source, &out);
             return out;
         }
 
