@@ -545,7 +545,15 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn fillChecked(self: Self, rng: Rng, dest: []*const T) Error!void {
-            try self.fillCheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            const items = self.items;
+            std.debug.assert(items.len > 0);
+            if (items.len == 1) {
+                @memset(dest, &items[0]);
+                return;
+            }
+            const item_len = items.len;
+            for (dest) |*slot| slot.* = &items[Rng.uintLessThanFrom(rng, usize, item_len)];
         }
 
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []*const T) Error!void {
@@ -644,7 +652,14 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
-            try self.fillIndicesCheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            const item_len = self.items.len;
+            std.debug.assert(item_len > 0);
+            if (item_len == 1) {
+                @memset(dest, 0);
+                return;
+            }
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(rng, usize, item_len);
         }
 
         pub fn fillIndicesCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
@@ -854,7 +869,16 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn fillValuesChecked(self: Self, rng: Rng, dest: []T) Error!void {
-            try self.fillValuesCheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+            const items = self.items;
+            std.debug.assert(items.len > 0);
+            if (items.len == 1) {
+                @memset(dest, items[0]);
+                return;
+            }
+            const item_len = items.len;
+            for (dest) |*slot| slot.* = items[Rng.uintLessThanFrom(rng, usize, item_len)];
         }
 
         pub fn fillValuesCheckedFrom(self: Self, source: anytype, dest: []T) Error!void {
@@ -34787,6 +34811,14 @@ test "distribution Choose sampler mirrors slice choices" {
     try choice.fillIndicesCheckedFrom(&checked_fill_engine, &checked_fill);
     try std.testing.expectEqualSlices(usize, &unchecked_fill, &checked_fill);
     try std.testing.expectEqual(unchecked_fill_engine.next(), checked_fill_engine.next());
+    var facade_checked_index_fill_engine = root.DefaultPrng.init(0xc0_2aa);
+    var direct_checked_index_fill_engine = root.DefaultPrng.init(0xc0_2aa);
+    var facade_checked_index_fill: [6]usize = undefined;
+    var direct_checked_index_fill: [6]usize = undefined;
+    try choice.fillIndicesChecked(root.Rng.init(&facade_checked_index_fill_engine), &facade_checked_index_fill);
+    try choice.fillIndicesCheckedFrom(&direct_checked_index_fill_engine, &direct_checked_index_fill);
+    try std.testing.expectEqualSlices(usize, &direct_checked_index_fill, &facade_checked_index_fill);
+    try std.testing.expectEqual(direct_checked_index_fill_engine.next(), facade_checked_index_fill_engine.next());
     var checked_array_engine = root.DefaultPrng.init(0xc0_280);
     var unchecked_array_engine = root.DefaultPrng.init(0xc0_280);
     const unchecked_array = choice.indexArrayFrom(&unchecked_array_engine, 6);
@@ -34959,6 +34991,14 @@ test "distribution Choose sampler mirrors slice choices" {
     try choice.fillCheckedFrom(&checked_ptr_fill_engine, &checked_ptr_fill);
     try std.testing.expectEqualSlices(*const u8, &unchecked_ptr_fill, &checked_ptr_fill);
     try std.testing.expectEqual(unchecked_ptr_fill_engine.next(), checked_ptr_fill_engine.next());
+    var facade_checked_ptr_fill_engine = root.DefaultPrng.init(0xc0_2a8);
+    var direct_checked_ptr_fill_engine = root.DefaultPrng.init(0xc0_2a8);
+    var facade_checked_ptr_fill: [6]*const u8 = undefined;
+    var direct_checked_ptr_fill: [6]*const u8 = undefined;
+    try choice.fillChecked(root.Rng.init(&facade_checked_ptr_fill_engine), &facade_checked_ptr_fill);
+    try choice.fillCheckedFrom(&direct_checked_ptr_fill_engine, &direct_checked_ptr_fill);
+    try std.testing.expectEqualSlices(*const u8, &direct_checked_ptr_fill, &facade_checked_ptr_fill);
+    try std.testing.expectEqual(direct_checked_ptr_fill_engine.next(), facade_checked_ptr_fill_engine.next());
     var ptr_iter_engine = root.DefaultPrng.init(0xc0_287);
     var ptr_iter_control = root.DefaultPrng.init(0xc0_287);
     var ptr_iter = choice.ptrIterFrom(&ptr_iter_engine);
@@ -35013,6 +35053,14 @@ test "distribution Choose sampler mirrors slice choices" {
     try choice.fillValuesCheckedFrom(&checked_value_fill_engine, &checked_value_fill);
     try std.testing.expectEqualSlices(u8, &unchecked_value_fill, &checked_value_fill);
     try std.testing.expectEqual(unchecked_value_fill_engine.next(), checked_value_fill_engine.next());
+    var facade_checked_value_fill_engine = root.DefaultPrng.init(0xc0_2a9);
+    var direct_checked_value_fill_engine = root.DefaultPrng.init(0xc0_2a9);
+    var facade_checked_value_fill: [6]u8 = undefined;
+    var direct_checked_value_fill: [6]u8 = undefined;
+    try choice.fillValuesChecked(root.Rng.init(&facade_checked_value_fill_engine), &facade_checked_value_fill);
+    try choice.fillValuesCheckedFrom(&direct_checked_value_fill_engine, &direct_checked_value_fill);
+    try std.testing.expectEqualSlices(u8, &direct_checked_value_fill, &facade_checked_value_fill);
+    try std.testing.expectEqual(direct_checked_value_fill_engine.next(), facade_checked_value_fill_engine.next());
     var checked_values_engine = root.DefaultPrng.init(0xc0_290);
     var unchecked_values_engine = root.DefaultPrng.init(0xc0_290);
     const unchecked_values = try choice.valuesFrom(std.testing.allocator, &unchecked_values_engine, 6);

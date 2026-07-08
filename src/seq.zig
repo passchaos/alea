@@ -8518,7 +8518,14 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn fillChecked(self: Self, rng: Rng, dest: []*const T) Error!void {
-            try self.fillCheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            const items = self.items;
+            if (items.len == 1) {
+                @memset(dest, &items[0]);
+                return;
+            }
+            const item_len = items.len;
+            for (dest) |*slot| slot.* = &items[Rng.uintLessThanFrom(rng, usize, item_len)];
         }
 
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []*const T) Error!void {
@@ -8542,7 +8549,15 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn fillValuesChecked(self: Self, rng: Rng, dest: []T) Error!void {
-            try self.fillValuesCheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            const items = self.items;
+            if (items.len == 1) {
+                @memset(dest, items[0]);
+                return;
+            }
+            const item_len = items.len;
+            for (dest) |*slot| slot.* = items[Rng.uintLessThanFrom(rng, usize, item_len)];
         }
 
         pub fn fillValuesCheckedFrom(self: Self, source: anytype, dest: []T) Error!void {
@@ -8687,7 +8702,13 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
-            try self.fillIndicesCheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            const item_len = self.items.len;
+            if (item_len == 1) {
+                @memset(dest, 0);
+                return;
+            }
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(rng, usize, item_len);
         }
 
         pub fn fillIndicesCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
@@ -9200,7 +9221,13 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillChecked(self: Self, rng: Rng, dest: []*const T) Error!void {
-            try self.fillCheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            const items = self.items;
+            if (self.table.constantIndex()) |index| {
+                @memset(dest, &items[index]);
+                return;
+            }
+            for (dest) |*slot| slot.* = &items[self.table.sampleFrom(rng)];
         }
 
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []*const T) Error!void {
@@ -9223,7 +9250,14 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillValuesChecked(self: Self, rng: Rng, dest: []T) Error!void {
-            try self.fillValuesCheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            const items = self.items;
+            if (self.table.constantIndex()) |index| {
+                @memset(dest, items[index]);
+                return;
+            }
+            for (dest) |*slot| slot.* = items[self.table.sampleFrom(rng)];
         }
 
         pub fn fillValuesCheckedFrom(self: Self, source: anytype, dest: []T) Error!void {
@@ -9427,7 +9461,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
-            try self.fillIndicesCheckedFrom(rng, dest);
+            self.table.fillFrom(rng, dest);
         }
 
         pub fn fillIndicesCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
@@ -19856,6 +19890,14 @@ test "choice sampler repeatedly samples slice references" {
     try choice.fillCheckedFrom(&checked_ptr_fill_engine, &checked_ptr_fill);
     try std.testing.expectEqualSlices(*const u8, &unchecked_ptr_fill, &checked_ptr_fill);
     try std.testing.expectEqual(unchecked_ptr_fill_engine.next(), checked_ptr_fill_engine.next());
+    var facade_checked_ptr_fill_engine = alea.DefaultPrng.init(0xc0_ef4f);
+    var direct_checked_ptr_fill_engine = alea.DefaultPrng.init(0xc0_ef4f);
+    var facade_checked_ptr_fill: [8]*const u8 = undefined;
+    var direct_checked_ptr_fill: [8]*const u8 = undefined;
+    try choice.fillChecked(Rng.init(&facade_checked_ptr_fill_engine), &facade_checked_ptr_fill);
+    try choice.fillCheckedFrom(&direct_checked_ptr_fill_engine, &direct_checked_ptr_fill);
+    try std.testing.expectEqualSlices(*const u8, &direct_checked_ptr_fill, &facade_checked_ptr_fill);
+    try std.testing.expectEqual(direct_checked_ptr_fill_engine.next(), facade_checked_ptr_fill_engine.next());
     var checked_ptrs_engine = alea.DefaultPrng.init(0xc0_ef0c);
     var unchecked_ptrs_engine = alea.DefaultPrng.init(0xc0_ef0c);
     const unchecked_ptrs = try choice.ptrsFrom(std.testing.allocator, &unchecked_ptrs_engine, 8);
@@ -19895,6 +19937,14 @@ test "choice sampler repeatedly samples slice references" {
     try choice.fillValuesCheckedFrom(&checked_value_fill_engine, &checked_value_fill);
     try std.testing.expectEqualSlices(u8, &unchecked_value_fill, &checked_value_fill);
     try std.testing.expectEqual(unchecked_value_fill_engine.next(), checked_value_fill_engine.next());
+    var facade_checked_value_fill_engine = alea.DefaultPrng.init(0xc0_ef50);
+    var direct_checked_value_fill_engine = alea.DefaultPrng.init(0xc0_ef50);
+    var facade_checked_value_fill: [8]u8 = undefined;
+    var direct_checked_value_fill: [8]u8 = undefined;
+    try choice.fillValuesChecked(Rng.init(&facade_checked_value_fill_engine), &facade_checked_value_fill);
+    try choice.fillValuesCheckedFrom(&direct_checked_value_fill_engine, &direct_checked_value_fill);
+    try std.testing.expectEqualSlices(u8, &direct_checked_value_fill, &facade_checked_value_fill);
+    try std.testing.expectEqual(direct_checked_value_fill_engine.next(), facade_checked_value_fill_engine.next());
     var checked_values_engine = alea.DefaultPrng.init(0xc0_ef24);
     var unchecked_values_engine = alea.DefaultPrng.init(0xc0_ef24);
     const unchecked_values = try choice.valuesFrom(std.testing.allocator, &unchecked_values_engine, 8);
@@ -20023,6 +20073,14 @@ test "choice sampler repeatedly samples slice references" {
     try choice.fillIndicesCheckedFrom(&checked_index_fill_engine, &checked_index_fill);
     try std.testing.expectEqualSlices(usize, &unchecked_index_fill, &checked_index_fill);
     try std.testing.expectEqual(unchecked_index_fill_engine.next(), checked_index_fill_engine.next());
+    var facade_checked_index_fill_engine = alea.DefaultPrng.init(0xc0_ef51);
+    var direct_checked_index_fill_engine = alea.DefaultPrng.init(0xc0_ef51);
+    var facade_checked_index_fill: [8]usize = undefined;
+    var direct_checked_index_fill: [8]usize = undefined;
+    try choice.fillIndicesChecked(Rng.init(&facade_checked_index_fill_engine), &facade_checked_index_fill);
+    try choice.fillIndicesCheckedFrom(&direct_checked_index_fill_engine, &direct_checked_index_fill);
+    try std.testing.expectEqualSlices(usize, &direct_checked_index_fill, &facade_checked_index_fill);
+    try std.testing.expectEqual(direct_checked_index_fill_engine.next(), facade_checked_index_fill_engine.next());
     var direct_index_fill_engine = alea.DefaultPrng.init(0xc0_ef3c);
     var helper_index_fill_engine = alea.DefaultPrng.init(0xc0_ef3c);
     var direct_index_fill: [8]usize = undefined;
@@ -20831,6 +20889,14 @@ test "weighted choice sampler maps alias indexes to items" {
     try choice.fillIndicesCheckedFrom(&checked_index_fill_engine, &checked_index_fill);
     try std.testing.expectEqualSlices(usize, &unchecked_index_fill, &checked_index_fill);
     try std.testing.expectEqual(unchecked_index_fill_engine.next(), checked_index_fill_engine.next());
+    var facade_checked_index_fill_engine = alea.DefaultPrng.init(0xc0_ef51);
+    var direct_checked_index_fill_engine = alea.DefaultPrng.init(0xc0_ef51);
+    var facade_checked_index_fill: [8]usize = undefined;
+    var direct_checked_index_fill: [8]usize = undefined;
+    try choice.fillIndicesChecked(Rng.init(&facade_checked_index_fill_engine), &facade_checked_index_fill);
+    try choice.fillIndicesCheckedFrom(&direct_checked_index_fill_engine, &direct_checked_index_fill);
+    try std.testing.expectEqualSlices(usize, &direct_checked_index_fill, &facade_checked_index_fill);
+    try std.testing.expectEqual(direct_checked_index_fill_engine.next(), facade_checked_index_fill_engine.next());
     var table_fill_engine = alea.DefaultPrng.init(0xc0_ef3a);
     var choice_fill_engine = alea.DefaultPrng.init(0xc0_ef3a);
     var table_fill: [8]usize = undefined;
@@ -21031,6 +21097,14 @@ test "weighted choice sampler maps alias indexes to items" {
     try choice.fillCheckedFrom(&checked_ptr_fill_engine, &checked_ptr_fill);
     try std.testing.expectEqualSlices(*const []const u8, &unchecked_ptr_fill, &checked_ptr_fill);
     try std.testing.expectEqual(unchecked_ptr_fill_engine.next(), checked_ptr_fill_engine.next());
+    var facade_checked_ptr_fill_engine = alea.DefaultPrng.init(0xc0_ef4f);
+    var direct_checked_ptr_fill_engine = alea.DefaultPrng.init(0xc0_ef4f);
+    var facade_checked_ptr_fill: [8]*const []const u8 = undefined;
+    var direct_checked_ptr_fill: [8]*const []const u8 = undefined;
+    try choice.fillChecked(Rng.init(&facade_checked_ptr_fill_engine), &facade_checked_ptr_fill);
+    try choice.fillCheckedFrom(&direct_checked_ptr_fill_engine, &direct_checked_ptr_fill);
+    try std.testing.expectEqualSlices(*const []const u8, &direct_checked_ptr_fill, &facade_checked_ptr_fill);
+    try std.testing.expectEqual(direct_checked_ptr_fill_engine.next(), facade_checked_ptr_fill_engine.next());
     var checked_ptrs_engine = alea.DefaultPrng.init(0xc0_ef0f);
     var unchecked_ptrs_engine = alea.DefaultPrng.init(0xc0_ef0f);
     const unchecked_ptrs = try choice.ptrsFrom(std.testing.allocator, &unchecked_ptrs_engine, 8);
@@ -21068,6 +21142,14 @@ test "weighted choice sampler maps alias indexes to items" {
     try choice.fillValuesCheckedFrom(&checked_value_fill_engine, &checked_value_fill);
     try std.testing.expectEqualSlices([]const u8, &unchecked_value_fill, &checked_value_fill);
     try std.testing.expectEqual(unchecked_value_fill_engine.next(), checked_value_fill_engine.next());
+    var facade_checked_value_fill_engine = alea.DefaultPrng.init(0xc0_ef50);
+    var direct_checked_value_fill_engine = alea.DefaultPrng.init(0xc0_ef50);
+    var facade_checked_value_fill: [8][]const u8 = undefined;
+    var direct_checked_value_fill: [8][]const u8 = undefined;
+    try choice.fillValuesChecked(Rng.init(&facade_checked_value_fill_engine), &facade_checked_value_fill);
+    try choice.fillValuesCheckedFrom(&direct_checked_value_fill_engine, &direct_checked_value_fill);
+    try std.testing.expectEqualSlices([]const u8, &direct_checked_value_fill, &facade_checked_value_fill);
+    try std.testing.expectEqual(direct_checked_value_fill_engine.next(), facade_checked_value_fill_engine.next());
     var checked_values_engine = alea.DefaultPrng.init(0xc0_ef26);
     var unchecked_values_engine = alea.DefaultPrng.init(0xc0_ef26);
     const unchecked_values = try choice.valuesFrom(std.testing.allocator, &unchecked_values_engine, 8);
