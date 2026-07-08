@@ -3907,3 +3907,10 @@ distribution-layer Choose value iterator next calls now generate uniform indexes
 and map directly into item storage instead of routing through sampleValueFrom.
 This improves distribution choose value iterator ergonomics but does not resolve
 S4-M11.
+
+S4-M819 maps WeightedChoice value iterators directly from AliasTable indexes
+(`compare/results/s4-m819-weightedchoice-value-iterator-direct-table.md`):
+reusable WeightedChoice value iterator next calls now sample alias-table indexes
+and map directly into item storage instead of routing through sampleValueFrom.
+This improves reusable weighted-choice value iterator ergonomics but does not
+resolve S4-M11.

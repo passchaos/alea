@@ -9294,7 +9294,8 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
                 pub fn nextValue(self: *Iter) ?T {
                     if (comptime valueTypeHasEmptyEnum(T)) return null;
-                    return self.choice.sampleValueFrom(self.source);
+                    const items = self.choice.items;
+                    return items[self.choice.table.sampleFrom(self.source)];
                 }
 
                 pub fn fill(self: *Iter, dest: []T) void {
@@ -20932,6 +20933,11 @@ test "weighted choice sampler maps alias indexes to items" {
     var unchecked_value_iter = choice.valueIterFrom(&unchecked_value_iter_engine);
     try std.testing.expectEqualSlices(u8, unchecked_value_iter.next().?, checked_value_iter.next().?);
     try std.testing.expectEqual(unchecked_value_iter_engine.next(), checked_value_iter_engine.next());
+    var direct_value_iter_engine = alea.DefaultPrng.init(0xc0_ef43);
+    var helper_value_iter_engine = alea.DefaultPrng.init(0xc0_ef43);
+    var direct_value_iter = choice.valueIterFrom(&direct_value_iter_engine);
+    try std.testing.expectEqualSlices(u8, labels[choice.table.sampleFrom(&helper_value_iter_engine)], direct_value_iter.next().?);
+    try std.testing.expectEqual(helper_value_iter_engine.next(), direct_value_iter_engine.next());
     var checked_value_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef31);
     var checked_value_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef31);
     var checked_value_iter_facade = try choice.valueIterChecked(Rng.init(&checked_value_iter_facade_engine));
