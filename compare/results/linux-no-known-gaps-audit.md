@@ -4553,3 +4553,9 @@ Distribution Choose, reusable Choice, and reusable WeightedChoice
 fillIndicesU32Checked facade helpers now fill directly instead of routing through
 direct-source checked compact fill wrappers. This improves checked compact index
 fill ergonomics but does not resolve S4-M11.
+
+S4-M913 routes distribution Choose checked array facades through direct filling
+(`compare/results/s4-m913-distribution-choose-checked-array-facade-direct.md`):
+Choose ptr/value/index/u32 checked fixed-array facade helpers now fill directly
+instead of routing through direct-source checked array wrappers. This improves
+checked fixed-array ergonomics but does not resolve S4-M11.

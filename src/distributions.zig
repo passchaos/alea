@@ -590,7 +590,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn ptrArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]*const T {
-            return self.ptrArrayCheckedFrom(rng, N);
+            var out: [N]*const T = undefined;
+            try self.fillChecked(rng, &out);
+            return out;
         }
 
         pub fn ptrArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]*const T {
@@ -696,7 +698,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indexArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]usize {
-            return self.indexArrayCheckedFrom(rng, N);
+            var out: [N]usize = undefined;
+            try self.fillIndicesChecked(rng, &out);
+            return out;
         }
 
         pub fn indexArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]usize {
@@ -774,7 +778,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indexArrayU32Checked(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
-            return self.indexArrayU32CheckedFrom(rng, N);
+            var out: [N]u32 = undefined;
+            try self.fillIndicesU32Checked(rng, &out);
+            return out;
         }
 
         pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
@@ -906,7 +912,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn valueArrayChecked(self: Self, rng: Rng, comptime N: usize) Error![N]T {
-            return self.valueArrayCheckedFrom(rng, N);
+            var out: [N]T = undefined;
+            try self.fillValuesChecked(rng, &out);
+            return out;
         }
 
         pub fn valueArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]T {
@@ -34833,6 +34841,12 @@ test "distribution Choose sampler mirrors slice choices" {
     const checked_array = try choice.indexArrayCheckedFrom(&checked_array_engine, 6);
     try std.testing.expectEqualSlices(usize, &unchecked_array, &checked_array);
     try std.testing.expectEqual(unchecked_array_engine.next(), checked_array_engine.next());
+    var facade_checked_index_array_engine = root.DefaultPrng.init(0xc0_2ac);
+    var direct_checked_index_array_engine = root.DefaultPrng.init(0xc0_2ac);
+    const facade_checked_index_array = try choice.indexArrayChecked(root.Rng.init(&facade_checked_index_array_engine), 6);
+    const direct_checked_index_array = try choice.indexArrayCheckedFrom(&direct_checked_index_array_engine, 6);
+    try std.testing.expectEqualSlices(usize, &direct_checked_index_array, &facade_checked_index_array);
+    try std.testing.expectEqual(direct_checked_index_array_engine.next(), facade_checked_index_array_engine.next());
     var owned_index_engine = root.DefaultPrng.init(0xc0_278);
     var owned_index_control = root.DefaultPrng.init(0xc0_278);
     const owned_indices = try choice.indicesFrom(std.testing.allocator, &owned_index_engine, 6);
@@ -34894,6 +34908,12 @@ test "distribution Choose sampler mirrors slice choices" {
     const checked_u32_array = try choice.indexArrayU32CheckedFrom(&checked_u32_array_engine, 6);
     try std.testing.expectEqualSlices(u32, &unchecked_u32_array, &checked_u32_array);
     try std.testing.expectEqual(unchecked_u32_array_engine.next(), checked_u32_array_engine.next());
+    var facade_checked_u32_array_engine = root.DefaultPrng.init(0xc0_2ad);
+    var direct_checked_u32_array_engine = root.DefaultPrng.init(0xc0_2ad);
+    const facade_checked_u32_array = try choice.indexArrayU32Checked(root.Rng.init(&facade_checked_u32_array_engine), 6);
+    const direct_checked_u32_array = try choice.indexArrayU32CheckedFrom(&direct_checked_u32_array_engine, 6);
+    try std.testing.expectEqualSlices(u32, &direct_checked_u32_array, &facade_checked_u32_array);
+    try std.testing.expectEqual(direct_checked_u32_array_engine.next(), facade_checked_u32_array_engine.next());
     var owned_index_u32_engine = root.DefaultPrng.init(0xc0_27b);
     var owned_index_u32_control = root.DefaultPrng.init(0xc0_27b);
     const owned_indices_u32 = try choice.indicesU32From(std.testing.allocator, &owned_index_u32_engine, 6);
@@ -34999,6 +35019,12 @@ test "distribution Choose sampler mirrors slice choices" {
     const checked_ptr_array = try choice.ptrArrayCheckedFrom(&checked_ptr_array_engine, 6);
     try std.testing.expectEqualSlices(*const u8, &unchecked_ptr_array, &checked_ptr_array);
     try std.testing.expectEqual(unchecked_ptr_array_engine.next(), checked_ptr_array_engine.next());
+    var facade_checked_ptr_array_engine = root.DefaultPrng.init(0xc0_2ae);
+    var direct_checked_ptr_array_engine = root.DefaultPrng.init(0xc0_2ae);
+    const facade_checked_ptr_array = try choice.ptrArrayChecked(root.Rng.init(&facade_checked_ptr_array_engine), 6);
+    const direct_checked_ptr_array = try choice.ptrArrayCheckedFrom(&direct_checked_ptr_array_engine, 6);
+    try std.testing.expectEqualSlices(*const u8, &direct_checked_ptr_array, &facade_checked_ptr_array);
+    try std.testing.expectEqual(direct_checked_ptr_array_engine.next(), facade_checked_ptr_array_engine.next());
     var checked_ptr_fill_engine = root.DefaultPrng.init(0xc0_28a);
     var unchecked_ptr_fill_engine = root.DefaultPrng.init(0xc0_28a);
     var checked_ptr_fill: [6]*const u8 = undefined;
@@ -35118,6 +35144,12 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillValuesFrom(&value_array_control, &value_array_fill);
     try std.testing.expectEqualSlices(u8, &value_array_fill, &value_array);
     try std.testing.expectEqual(value_array_control.next(), value_array_engine.next());
+    var facade_value_array_engine = root.DefaultPrng.init(0xc0_2af);
+    var direct_value_array_engine = root.DefaultPrng.init(0xc0_2af);
+    const facade_value_array = try choice.valueArrayChecked(root.Rng.init(&facade_value_array_engine), 6);
+    const direct_value_array = try choice.valueArrayCheckedFrom(&direct_value_array_engine, 6);
+    try std.testing.expectEqualSlices(u8, &direct_value_array, &facade_value_array);
+    try std.testing.expectEqual(direct_value_array_engine.next(), facade_value_array_engine.next());
 
     var iter_engine = root.DefaultPrng.init(0xc0_269);
     var helper_iter_engine = root.DefaultPrng.init(0xc0_269);
