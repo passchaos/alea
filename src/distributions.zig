@@ -613,12 +613,14 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
-            std.debug.assert(self.items.len > 0);
-            if (self.items.len == 1) {
+            if (dest.len == 0) return;
+            const item_len = self.items.len;
+            std.debug.assert(item_len > 0);
+            if (item_len == 1) {
                 @memset(dest, 0);
                 return;
             }
-            for (dest) |*index| index.* = self.sampleIndexFrom(source);
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(source, usize, item_len);
         }
 
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
@@ -32951,6 +32953,14 @@ test "distribution Choose sampler mirrors slice choices" {
     const index_array = choice.indexArrayFrom(&index_array_engine, 6);
     try std.testing.expectEqualSlices(usize, &index_fill, &index_array);
     try std.testing.expectEqual(index_fill_engine.next(), index_array_engine.next());
+    var direct_index_fill_engine = root.DefaultPrng.init(0xc0_299);
+    var helper_index_fill_engine = root.DefaultPrng.init(0xc0_299);
+    var direct_index_fill: [6]usize = undefined;
+    var helper_index_fill: [6]usize = undefined;
+    choice.fillIndicesFrom(&direct_index_fill_engine, &direct_index_fill);
+    for (&helper_index_fill) |*slot| slot.* = Rng.chooseIndexFrom(&helper_index_fill_engine, items.len).?;
+    try std.testing.expectEqualSlices(usize, &helper_index_fill, &direct_index_fill);
+    try std.testing.expectEqual(helper_index_fill_engine.next(), direct_index_fill_engine.next());
     var checked_index_engine = root.DefaultPrng.init(0xc0_27e);
     var unchecked_index_engine = root.DefaultPrng.init(0xc0_27e);
     try std.testing.expectEqual(

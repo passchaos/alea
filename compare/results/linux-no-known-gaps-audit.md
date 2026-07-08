@@ -3835,3 +3835,9 @@ dynamic WeightedTree and WeightedIntTree usize/u32 index fills now run direct
 tree-walk sampling loops instead of routing each slot through scalar sample
 wrappers. This improves dynamic weighted-tree index fill ergonomics but does not
 resolve S4-M11.
+
+S4-M808 fills distribution Choose indexes with direct uniform loops
+(`compare/results/s4-m808-distribution-choose-index-fill-direct.md`):
+distribution-layer Choose usize index fills now cache length and generate uniform
+indexes directly instead of routing each slot through sample wrappers. This
+improves distribution choose index fill ergonomics but does not resolve S4-M11.
