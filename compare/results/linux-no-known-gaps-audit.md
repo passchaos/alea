@@ -4068,3 +4068,11 @@ Chi.fillFrom now delegates to the cached ChiSquared sampler's fill path and then
 applies square root in place, reusing ChiSquared/Gamma bulk handling instead of
 routing every output through Chi.sampleFrom. This improves Chi reusable fill
 ergonomics but does not resolve S4-M11.
+
+S4-M842 delegates reusable VectorChi fills to cached VectorChiSquared fills
+(`compare/results/s4-m842-vector-chi-fill-chi-squared-delegate.md`):
+VectorChi.fillFrom now delegates to VectorChiSquared over the cached ChiSquared
+sampler and then applies vector square root in place, reusing vector
+ChiSquared/Gamma bulk handling instead of routing every output through
+VectorChi.sampleFrom. This improves VectorChi reusable fill ergonomics but does
+not resolve S4-M11.

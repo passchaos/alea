@@ -880,7 +880,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M839 ChiSquared reusable fill delegates to Gamma fill | `src/distributions.zig`, `compare/results/s4-m839-chi-squared-fill-gamma-delegate.md` | Closed for the current bar: reusable ChiSquared fills now delegate to the cached Gamma sampler fill and reuse its shape-specific bulk paths. |
 | S4-M840 VectorChiSquared reusable fill delegates to VectorGamma fill | `src/distributions.zig`, `compare/results/s4-m840-vector-chi-squared-fill-gamma-delegate.md` | Closed for the current bar: reusable VectorChiSquared fills now delegate to the cached Gamma sampler via VectorGamma fill and reuse shape-specific vector bulk paths. |
 | S4-M841 Chi reusable fill delegates to ChiSquared fill | `src/distributions.zig`, `compare/results/s4-m841-chi-fill-chi-squared-delegate.md` | Closed for the current bar: reusable Chi fills now delegate to cached ChiSquared fills and apply square root in place. |
-| S4-M842 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M842 VectorChi reusable fill delegates to VectorChiSquared fill | `src/distributions.zig`, `compare/results/s4-m842-vector-chi-fill-chi-squared-delegate.md` | Closed for the current bar: reusable VectorChi fills now delegate to cached VectorChiSquared fills and apply vector square root in place. |
+| S4-M843 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2746,6 +2747,10 @@ S4-M841 additionally routes reusable Chi fills through cached ChiSquared fills
 and applies square root in place, reusing ChiSquared/Gamma bulk paths while
 preserving stream shape; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M842 additionally routes reusable VectorChi fills through cached
+VectorChiSquared fills and applies vector square root in place, reusing vector
+ChiSquared/Gamma bulk paths while preserving stream shape; it is reliability/
+ergonomics work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

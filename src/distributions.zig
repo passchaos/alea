@@ -9480,7 +9480,8 @@ pub fn VectorChi(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(0)));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            (VectorChiSquared(VectorType){ .sampler = self.sampler.chi_squared_sampler }).fillFrom(source, dest);
+            for (dest) |*item| item.* = @sqrt(item.*);
         }
     };
 }
@@ -26638,6 +26639,31 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &chi_buf_vec, &direct_chi_buf_vec);
     for (chi_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_chi_shape_one_fill_engine = alea.ScalarPrng.init(0xc842_0001);
+    var vector_chi_shape_one_chi_squared_engine = alea.ScalarPrng.init(0xc842_0001);
+    const vector_chi_shape_one = try VectorChi(@Vector(4, f64)).init(2);
+    var vector_chi_shape_one_fill: [3]@Vector(4, f64) = undefined;
+    var vector_chi_shape_one_chi_squared: [3]@Vector(4, f64) = undefined;
+    vector_chi_shape_one.fillFrom(&vector_chi_shape_one_fill_engine, &vector_chi_shape_one_fill);
+    (try VectorChiSquared(@Vector(4, f64)).init(2)).fillFrom(&vector_chi_shape_one_chi_squared_engine, &vector_chi_shape_one_chi_squared);
+    for (&vector_chi_shape_one_chi_squared) |*vec| vec.* = @sqrt(vec.*);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_chi_shape_one_chi_squared, &vector_chi_shape_one_fill);
+    try std.testing.expectEqual(vector_chi_shape_one_chi_squared_engine.next(), vector_chi_shape_one_fill_engine.next());
+    var vector_chi_f32_fill_engine = alea.ScalarPrng.init(0xc842_f32);
+    var vector_chi_f32_loop_engine = alea.ScalarPrng.init(0xc842_f32);
+    const vector_chi_f32 = try VectorChi(@Vector(8, f32)).init(3);
+    var vector_chi_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_chi_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_chi_f32.fillFrom(&vector_chi_f32_fill_engine, &vector_chi_f32_fill);
+    for (&vector_chi_f32_loop) |*slot| slot.* = vector_chi_f32.sampleFrom(&vector_chi_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_chi_f32_loop, &vector_chi_f32_fill);
+    try std.testing.expectEqual(vector_chi_f32_loop_engine.next(), vector_chi_f32_fill_engine.next());
+    var vector_chi_degenerate_engine = alea.ScalarPrng.init(0xc842_d00);
+    var vector_chi_degenerate_control = alea.ScalarPrng.init(0xc842_d00);
+    const vector_chi_degenerate = try VectorChi(@Vector(4, f64)).init(0);
+    vector_chi_degenerate.fillFrom(&vector_chi_degenerate_engine, &vector_chi_shape_one_fill);
+    for (vector_chi_shape_one_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vec);
+    try std.testing.expectEqual(vector_chi_degenerate_control.next(), vector_chi_degenerate_engine.next());
 
     const erlang_vec = try vectorErlangChecked(rng, @Vector(4, f64), 3, 2);
     const direct_erlang_vec = try vectorErlangCheckedFrom(&direct_engine, @Vector(4, f64), 3, 2);
