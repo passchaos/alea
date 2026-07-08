@@ -1766,7 +1766,15 @@ pub const Binomial = struct {
     }
 
     pub fn fill(self: Binomial, rng: Rng, dest: []u64) void {
-        self.fillFrom(rng, dest);
+        if (self.trials == 0 or self.p == 0) {
+            @memset(dest, 0);
+            return;
+        }
+        if (self.p == 1) {
+            @memset(dest, self.trials);
+            return;
+        }
+        for (dest) |*item| item.* = binomialFrom(rng, self.trials, self.p);
     }
 
     pub fn fillFrom(self: Binomial, source: anytype, dest: []u64) void {
@@ -1906,7 +1914,21 @@ pub fn VectorBinomial(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.trials == 0 or self.sampler.p == 0) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            if (self.sampler.p == 1) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.trials)));
+                return;
+            }
+            const trials = self.sampler.trials;
+            const p = self.sampler.p;
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = binomialFrom(rng, trials, p);
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {

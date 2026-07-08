@@ -4915,3 +4915,9 @@ S4-M967 routes scalar/vector Binomial facade samples directly
 Binomial and VectorBinomial `sample` helpers now execute direct binomial sampling
 and degenerate fast paths instead of routing through `sampleFrom`. This improves
 Binomial facade sample ergonomics but does not resolve S4-M11.
+
+S4-M968 routes scalar/vector Binomial facade fills directly
+(`compare/results/s4-m968-binomial-fill-facade-direct.md`):
+Binomial and VectorBinomial `fill` helpers now execute direct binomial sampling
+loops and degenerate fast paths instead of routing through `fillFrom`. This
+improves Binomial facade fill ergonomics but does not resolve S4-M11.
