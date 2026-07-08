@@ -864,7 +864,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M823 NegativeBinomial fill direct sampler loop | `src/distributions.zig`, `compare/results/s4-m823-negative-binomial-fill-direct-sampler.md` | Closed for the current bar: NegativeBinomial fills now call negativeBinomialFrom directly for non-degenerate outputs. |
 | S4-M824 Hypergeometric fill direct method dispatch | `src/distributions.zig`, `compare/results/s4-m824-hypergeometric-fill-direct-method.md` | Closed for the current bar: Hypergeometric fills now switch once and call selected method samplers directly. |
 | S4-M825 Geometric fill direct sampler loop | `src/distributions.zig`, `compare/results/s4-m825-geometric-fill-direct-sampler.md` | Closed for the current bar: Geometric fills now call geometricFrom directly for non-degenerate outputs. |
-| S4-M826 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M826 GeometricFailures fill direct sampler loop | `src/distributions.zig`, `compare/results/s4-m826-geometric-failures-fill-direct-sampler.md` | Closed for the current bar: GeometricFailures fills now call geometricFailuresFrom directly for non-degenerate outputs. |
+| S4-M827 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2659,6 +2660,10 @@ S4-M825 additionally fills Geometric outputs by calling the underlying
 geometricFrom sampler directly, reducing per-item sampler wrapper calls while
 preserving stream shape; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M826 additionally fills GeometricFailures outputs by calling the underlying
+geometricFailuresFrom sampler directly, reducing per-item sampler wrapper calls
+while preserving stream shape; it is reliability/ergonomics work and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

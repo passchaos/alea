@@ -3952,3 +3952,10 @@ S4-M825 fills Geometric outputs with direct geometricFrom calls
 Geometric non-degenerate fills now call the underlying geometricFrom sampler
 directly instead of routing each slot through Geometric.sampleFrom. This improves
 Geometric fill ergonomics but does not resolve S4-M11.
+
+S4-M826 fills GeometricFailures outputs with direct geometricFailuresFrom calls
+(`compare/results/s4-m826-geometric-failures-fill-direct-sampler.md`):
+GeometricFailures non-degenerate fills now call the underlying
+geometricFailuresFrom sampler directly instead of routing each slot through
+GeometricFailures.sampleFrom. This improves GeometricFailures fill ergonomics but
+does not resolve S4-M11.
