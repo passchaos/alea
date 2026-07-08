@@ -11445,7 +11445,10 @@ pub fn VectorLaplace(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.locationValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+                item.* = laplaceFromOpenUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+            }
         }
     };
 }
@@ -27084,6 +27087,29 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &laplace_buf_vec, &direct_laplace_buf_vec);
     for (laplace_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_laplace_fill_engine = alea.ScalarPrng.init(0x1a52_0001);
+    var vector_laplace_loop_engine = alea.ScalarPrng.init(0x1a52_0001);
+    var vector_laplace_fill: [3]@Vector(4, f64) = undefined;
+    var vector_laplace_loop: [3]@Vector(4, f64) = undefined;
+    vector_laplace_sampler.fillFrom(&vector_laplace_fill_engine, &vector_laplace_fill);
+    for (&vector_laplace_loop) |*slot| slot.* = vector_laplace_sampler.sampleFrom(&vector_laplace_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_laplace_loop, &vector_laplace_fill);
+    try std.testing.expectEqual(vector_laplace_loop_engine.next(), vector_laplace_fill_engine.next());
+    var vector_laplace_f32_fill_engine = alea.ScalarPrng.init(0x1a52_f32);
+    var vector_laplace_f32_loop_engine = alea.ScalarPrng.init(0x1a52_f32);
+    const vector_laplace_f32 = try VectorLaplace(@Vector(8, f32)).init(0, 1);
+    var vector_laplace_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_laplace_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_laplace_f32.fillFrom(&vector_laplace_f32_fill_engine, &vector_laplace_f32_fill);
+    for (&vector_laplace_f32_loop) |*slot| slot.* = vector_laplace_f32.sampleFrom(&vector_laplace_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_laplace_f32_loop, &vector_laplace_f32_fill);
+    try std.testing.expectEqual(vector_laplace_f32_loop_engine.next(), vector_laplace_f32_fill_engine.next());
+    var vector_laplace_degenerate_engine = alea.ScalarPrng.init(0x1a52_d00);
+    var vector_laplace_degenerate_control = alea.ScalarPrng.init(0x1a52_d00);
+    const vector_laplace_degenerate = try VectorLaplace(@Vector(4, f64)).init(1.5, 0);
+    vector_laplace_degenerate.fillFrom(&vector_laplace_degenerate_engine, &vector_laplace_fill);
+    for (vector_laplace_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
+    try std.testing.expectEqual(vector_laplace_degenerate_control.next(), vector_laplace_degenerate_engine.next());
 
     const logistic_vec = try vectorLogisticChecked(rng, @Vector(4, f64), 0, 1);
     const direct_logistic_vec = try vectorLogisticCheckedFrom(&direct_engine, @Vector(4, f64), 0, 1);

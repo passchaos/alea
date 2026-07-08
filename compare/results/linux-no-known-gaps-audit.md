@@ -4139,3 +4139,10 @@ VectorCauchy.fillFrom now draws vector open-uniform values and applies the
 Cauchy transform directly, instead of routing every output through
 VectorCauchy.sampleFrom. This improves VectorCauchy reusable fill ergonomics but
 does not resolve S4-M11.
+
+S4-M852 draws reusable VectorLaplace fills through direct vector open-uniform
+transforms (`compare/results/s4-m852-vector-laplace-fill-direct-transform.md`):
+VectorLaplace.fillFrom now draws vector open-uniform values and applies the
+Laplace transform directly, instead of routing every output through
+VectorLaplace.sampleFrom. This improves VectorLaplace reusable fill ergonomics
+but does not resolve S4-M11.
