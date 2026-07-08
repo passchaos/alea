@@ -847,7 +847,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M806 WeightedChoice index fills reuse AliasTable direct paths | `src/seq.zig`, `compare/results/s4-m806-weightedchoice-index-fill-table-direct.md` | Closed for the current bar: WeightedChoice usize/u32 index fills now reuse the optimized AliasTable direct fill loops. |
 | S4-M807 Weighted tree fill direct sampling paths | `src/distributions.zig`, `compare/results/s4-m807-weighted-tree-fill-direct-sampling.md` | Closed for the current bar: dynamic weighted tree usize/u32 index fills now use direct tree-walk loops. |
 | S4-M808 Distribution Choose index fill direct uniform loop | `src/distributions.zig`, `compare/results/s4-m808-distribution-choose-index-fill-direct.md` | Closed for the current bar: distribution-layer Choose usize index fills now generate uniform indexes directly. |
-| S4-M809 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M809 Choice index fill cached length direct loop | `src/seq.zig`, `compare/results/s4-m809-choice-index-fill-cached-length.md` | Closed for the current bar: reusable Choice usize index fills now cache item length and use a direct uniform loop. |
+| S4-M810 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2574,6 +2575,10 @@ S4-M808 additionally fills distribution-layer Choose usize index buffers with a
 direct uniform index loop, reducing per-slot sample wrapper calls while
 preserving stream shape; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M809 additionally fills reusable Choice usize index buffers with a cached
+length direct uniform loop, reducing per-slot metadata reloads while preserving
+stream shape; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

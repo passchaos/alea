@@ -8657,11 +8657,13 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
-            if (self.items.len == 1) {
+            if (dest.len == 0) return;
+            const item_len = self.items.len;
+            if (item_len == 1) {
                 @memset(dest, 0);
                 return;
             }
-            for (dest) |*index| index.* = Rng.uintLessThanFrom(source, usize, self.items.len);
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(source, usize, item_len);
         }
 
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
@@ -19937,6 +19939,14 @@ test "choice sampler repeatedly samples slice references" {
     try choice.fillIndicesCheckedFrom(&checked_index_fill_engine, &checked_index_fill);
     try std.testing.expectEqualSlices(usize, &unchecked_index_fill, &checked_index_fill);
     try std.testing.expectEqual(unchecked_index_fill_engine.next(), checked_index_fill_engine.next());
+    var direct_index_fill_engine = alea.DefaultPrng.init(0xc0_ef3c);
+    var helper_index_fill_engine = alea.DefaultPrng.init(0xc0_ef3c);
+    var direct_index_fill: [8]usize = undefined;
+    var helper_index_fill: [8]usize = undefined;
+    choice.fillIndicesFrom(&direct_index_fill_engine, &direct_index_fill);
+    for (&helper_index_fill) |*slot| slot.* = Rng.chooseIndexFrom(&helper_index_fill_engine, values.len).?;
+    try std.testing.expectEqualSlices(usize, &helper_index_fill, &direct_index_fill);
+    try std.testing.expectEqual(helper_index_fill_engine.next(), direct_index_fill_engine.next());
     var checked_indices_engine = alea.DefaultPrng.init(0xc0_ef13);
     var unchecked_indices_engine = alea.DefaultPrng.init(0xc0_ef13);
     const unchecked_indices = try choice.indicesFrom(std.testing.allocator, &unchecked_indices_engine, 8);

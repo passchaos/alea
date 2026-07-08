@@ -3841,3 +3841,9 @@ S4-M808 fills distribution Choose indexes with direct uniform loops
 distribution-layer Choose usize index fills now cache length and generate uniform
 indexes directly instead of routing each slot through sample wrappers. This
 improves distribution choose index fill ergonomics but does not resolve S4-M11.
+
+S4-M809 fills reusable Choice indexes with cached-length direct loops
+(`compare/results/s4-m809-choice-index-fill-cached-length.md`):
+reusable Choice usize index fills now return early for empty output, cache item
+length once, and generate uniform indexes directly. This improves reusable choice
+index fill ergonomics but does not resolve S4-M11.
