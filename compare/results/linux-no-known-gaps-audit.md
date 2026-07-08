@@ -4715,3 +4715,9 @@ WeightedChoice pointer/index/u32 checked direct-source fixed-array helpers now
 construct stack arrays and fill directly instead of routing through unchecked
 direct-source array wrappers. This improves reusable weighted checked
 direct-source fixed-array ergonomics but does not resolve S4-M11.
+
+S4-M937 routes reusable Choice pointer direct-source iterator alias directly
+(`compare/results/s4-m937-choice-pointer-iter-from-direct.md`):
+Choice `ptrIterFrom` now constructs its direct-source sample iterator directly
+instead of routing through `iterFrom`. This improves reusable pointer iterator
+ergonomics but does not resolve S4-M11.
