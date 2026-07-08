@@ -4754,3 +4754,10 @@ S4-M942 routes reusable Choice non-checked fixed-array facade helpers directly
 Choice pointer/value/index/u32 fixed-array facade helpers now construct stack
 arrays and fill directly instead of routing through direct-source array wrappers.
 This improves reusable fixed-array ergonomics but does not resolve S4-M11.
+
+S4-M943 routes reusable WeightedChoice non-checked fixed-array facade helpers
+directly (`compare/results/s4-m943-weightedchoice-array-facade-direct.md`):
+WeightedChoice pointer/value/index/u32 fixed-array facade helpers now construct
+stack arrays and fill directly instead of routing through direct-source array
+wrappers. This improves reusable weighted fixed-array ergonomics but does not
+resolve S4-M11.
