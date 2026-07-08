@@ -3884,7 +3884,19 @@ pub fn VectorUniform(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.inclusive) {
+                switch (@typeInfo(Child)) {
+                    .int => return rng.vectorRangeAtMost(VectorType, self.low, self.high),
+                    .float => {
+                        if (self.low == self.high) return @splat(self.low);
+                        return @as(VectorType, @splat(self.low)) +
+                            (@as(VectorType, @splat(self.high)) - @as(VectorType, @splat(self.low))) *
+                                vectorClosedUnitFrom(rng, VectorType);
+                    },
+                    else => unreachable,
+                }
+            }
+            return rng.vectorRange(VectorType, self.low, self.high);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -3895,7 +3907,29 @@ pub fn VectorUniform(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.inclusive) {
+                switch (@typeInfo(Child)) {
+                    .int => {
+                        if (self.low == self.high) {
+                            @memset(dest, @as(VectorType, @splat(self.low)));
+                            return;
+                        }
+                        for (dest) |*item| item.* = rng.vectorRangeAtMost(VectorType, self.low, self.high);
+                    },
+                    .float => {
+                        if (self.low == self.high) {
+                            @memset(dest, @as(VectorType, @splat(self.low)));
+                            return;
+                        }
+                        const low_vec: VectorType = @splat(self.low);
+                        const width_vec: VectorType = @splat(self.high - self.low);
+                        for (dest) |*item| item.* = low_vec + width_vec * vectorClosedUnitFrom(rng, VectorType);
+                    },
+                    else => unreachable,
+                }
+                return;
+            }
+            rng.fillVectorRange(VectorType, dest, self.low, self.high);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {

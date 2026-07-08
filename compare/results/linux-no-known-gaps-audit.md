@@ -5078,3 +5078,10 @@ S4-M990 routes scalar top-level Uniform facade helpers directly
 `fillUniformInclusiveChecked` now dispatch through facade `Rng` range logic
 directly instead of routing through `From` wrappers. This improves Uniform
 top-level facade ergonomics but does not resolve S4-M11.
+
+S4-M991 routes reusable VectorUniform facade helpers directly
+(`compare/results/s4-m991-vector-uniform-sampler-facade-direct.md`):
+`VectorUniform.sample` and `VectorUniform.fill` now dispatch through facade `Rng`
+vector range logic directly instead of routing through `sampleFrom` / `fillFrom`
+wrappers. This improves VectorUniform sampler facade ergonomics but does not
+resolve S4-M11.
