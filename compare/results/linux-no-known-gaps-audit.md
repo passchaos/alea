@@ -4391,3 +4391,9 @@ generation (`compare/results/s4-m888-choice-sample-direct-index.md`):
 Choice.sampleFrom now generates a uniform index and maps into item storage
 directly instead of routing through Choice.sampleIndexFrom. This improves Choice
 scalar pointer sampling ergonomics but does not resolve S4-M11.
+
+S4-M889 fills ASCII and Unicode charset probability iterators directly
+(`compare/results/s4-m889-charset-probability-fill-direct.md`):
+Charset and UnicodeCharset probability iterator fills now write the known uniform
+probability directly instead of routing every output through next(). This improves
+charset diagnostic fill ergonomics but does not resolve S4-M11.
