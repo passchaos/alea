@@ -3801,3 +3801,10 @@ S4-M802 uses direct backing reads for IndexVec iterator next calls
 seq IndexVec borrowed and consuming iterator `next()` calls now switch once and
 read directly from compact/native backing storage. This improves indexed-sample
 iterator ergonomics but does not resolve S4-M11.
+
+S4-M803 maps Choice fills directly from generated indexes
+(`compare/results/s4-m803-choice-fill-direct-index-mapping.md`):
+seq reusable `Choice` and distribution-layer `Choose` pointer/value fills now
+generate indexes and map directly into item storage instead of routing each slot
+through sample wrappers. This improves unweighted choice fill ergonomics but does
+not resolve S4-M11.

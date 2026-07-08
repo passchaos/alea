@@ -515,12 +515,15 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []*const T) void {
-            std.debug.assert(self.items.len > 0);
-            if (self.items.len == 1) {
-                @memset(dest, &self.items[0]);
+            if (dest.len == 0) return;
+            const items = self.items;
+            std.debug.assert(items.len > 0);
+            if (items.len == 1) {
+                @memset(dest, &items[0]);
                 return;
             }
-            for (dest) |*slot| slot.* = self.sampleFrom(source);
+            const item_len = items.len;
+            for (dest) |*slot| slot.* = &items[Rng.uintLessThanFrom(source, usize, item_len)];
         }
 
         pub fn fillChecked(self: Self, rng: Rng, dest: []*const T) Error!void {
@@ -802,14 +805,16 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
-            std.debug.assert(self.items.len > 0);
             if (dest.len == 0) return;
             if (comptime valueTypeHasEmptyEnum(T)) return;
-            if (self.items.len == 1) {
-                @memset(dest, self.items[0]);
+            const items = self.items;
+            std.debug.assert(items.len > 0);
+            if (items.len == 1) {
+                @memset(dest, items[0]);
                 return;
             }
-            for (dest) |*slot| slot.* = self.sampleValueFrom(source);
+            const item_len = items.len;
+            for (dest) |*slot| slot.* = items[Rng.uintLessThanFrom(source, usize, item_len)];
         }
 
         pub fn fillValuesChecked(self: Self, rng: Rng, dest: []T) Error!void {
@@ -32748,6 +32753,14 @@ test "distribution Choose sampler mirrors slice choices" {
     for (&helper_values) |*value| value.* = Rng.chooseFrom(&helper_engine, u8, &items).?;
     try std.testing.expectEqualSlices(u8, &helper_values, &values);
     try std.testing.expectEqual(helper_engine.next(), fill_engine.next());
+    var value_direct_engine = root.DefaultPrng.init(0xc0_297);
+    var value_index_engine = root.DefaultPrng.init(0xc0_297);
+    var value_direct: [6]u8 = undefined;
+    var value_indices: [6]usize = undefined;
+    choice.fillValuesFrom(&value_direct_engine, &value_direct);
+    choice.fillIndicesFrom(&value_index_engine, &value_indices);
+    for (value_direct, value_indices) |value, index| try std.testing.expectEqual(items[index], value);
+    try std.testing.expectEqual(value_index_engine.next(), value_direct_engine.next());
     var index_fill_engine = root.DefaultPrng.init(0xc0_277);
     var index_array_engine = root.DefaultPrng.init(0xc0_277);
     var index_fill: [6]usize = undefined;
@@ -32879,6 +32892,14 @@ test "distribution Choose sampler mirrors slice choices" {
     choice.fillFrom(&ptrs_control, &ptrs_fill);
     try std.testing.expectEqualSlices(*const u8, &ptrs_fill, owned_ptrs);
     try std.testing.expectEqual(ptrs_control.next(), ptrs_engine.next());
+    var pointer_direct_engine = root.DefaultPrng.init(0xc0_298);
+    var pointer_index_engine = root.DefaultPrng.init(0xc0_298);
+    var pointer_direct: [6]*const u8 = undefined;
+    var pointer_indices: [6]usize = undefined;
+    choice.fillFrom(&pointer_direct_engine, &pointer_direct);
+    choice.fillIndicesFrom(&pointer_index_engine, &pointer_indices);
+    for (pointer_direct, pointer_indices) |ptr, index| try std.testing.expectEqual(&items[index], ptr);
+    try std.testing.expectEqual(pointer_index_engine.next(), pointer_direct_engine.next());
     var checked_ptrs_engine = root.DefaultPrng.init(0xc0_288);
     var unchecked_ptrs_engine = root.DefaultPrng.init(0xc0_288);
     const unchecked_ptrs = try choice.ptrsFrom(std.testing.allocator, &unchecked_ptrs_engine, 6);
