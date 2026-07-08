@@ -4247,3 +4247,9 @@ VectorNormalInverseGaussian.fillFrom now draws the embedded inverse-Gaussian
 normal/uniform vector pair and final standard-normal vector directly instead of
 routing every output through VectorNormalInverseGaussian.sampleFrom. This improves
 VectorNormalInverseGaussian reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M867 draws reusable VectorZipf fills through direct cached scalar Zipf lane
+sampling (`compare/results/s4-m867-vector-zipf-fill-direct-lanes.md`):
+VectorZipf.fillFrom now samples each vector lane directly from the cached scalar
+Zipf sampler instead of routing every output through VectorZipf.sampleFrom. This
+improves VectorZipf reusable fill ergonomics but does not resolve S4-M11.

@@ -16337,7 +16337,11 @@ pub fn VectorZipf(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(1)));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+                item.* = out;
+            }
         }
     };
 }
@@ -28211,6 +28215,23 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &zipf_buf_vec, &direct_zipf_buf_vec);
     for (zipf_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 1 and vec[lane] <= 10);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_zipf_fill_engine = alea.ScalarPrng.init(0x5867_0001);
+    var vector_zipf_loop_engine = alea.ScalarPrng.init(0x5867_0001);
+    var vector_zipf_fill: [3]@Vector(4, f64) = undefined;
+    var vector_zipf_loop: [3]@Vector(4, f64) = undefined;
+    vector_zipf_sampler.fillFrom(&vector_zipf_fill_engine, &vector_zipf_fill);
+    for (&vector_zipf_loop) |*slot| slot.* = vector_zipf_sampler.sampleFrom(&vector_zipf_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_zipf_loop, &vector_zipf_fill);
+    try std.testing.expectEqual(vector_zipf_loop_engine.next(), vector_zipf_fill_engine.next());
+    var vector_zipf_f32_fill_engine = alea.ScalarPrng.init(0x5867_f32);
+    var vector_zipf_f32_loop_engine = alea.ScalarPrng.init(0x5867_f32);
+    const vector_zipf_f32 = try VectorZipf(@Vector(8, f32)).init(10, 1.5);
+    var vector_zipf_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_zipf_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_zipf_f32.fillFrom(&vector_zipf_f32_fill_engine, &vector_zipf_f32_fill);
+    for (&vector_zipf_f32_loop) |*slot| slot.* = vector_zipf_f32.sampleFrom(&vector_zipf_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_zipf_f32_loop, &vector_zipf_f32_fill);
+    try std.testing.expectEqual(vector_zipf_f32_loop_engine.next(), vector_zipf_f32_fill_engine.next());
 
     const vector_zipf_degenerate = try VectorZipf(@Vector(4, f64)).init(10, std.math.inf(f64));
     try std.testing.expect(vector_zipf_degenerate.nValue() == null);
@@ -28220,6 +28241,11 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(zipf_degenerate_vec, direct_zipf_degenerate_vec);
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), zipf_degenerate_vec);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_zipf_degenerate_engine = alea.ScalarPrng.init(0x5867_d00);
+    var vector_zipf_degenerate_control = alea.ScalarPrng.init(0x5867_d00);
+    vector_zipf_degenerate.fillFrom(&vector_zipf_degenerate_engine, &vector_zipf_fill);
+    for (vector_zipf_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), vec);
+    try std.testing.expectEqual(vector_zipf_degenerate_control.next(), vector_zipf_degenerate_engine.next());
 
     const zeta_vec = try vectorZetaChecked(rng, @Vector(4, f64), 3);
     const direct_zeta_vec = try vectorZetaCheckedFrom(&direct_engine, @Vector(4, f64), 3);
