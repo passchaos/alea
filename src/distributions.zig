@@ -8392,7 +8392,7 @@ pub const Geometric = struct {
             @memset(dest, 1);
             return;
         }
-        for (dest) |*item| item.* = self.sampleFrom(source);
+        for (dest) |*item| item.* = geometricFrom(source, self.p);
     }
 };
 
@@ -30382,6 +30382,14 @@ test "non-uniform samplers can be reused with sample iterators" {
     try fillGeometricCheckedFrom(&direct_engine, &direct_geometric_buf, 0.25);
     for (direct_geometric_buf) |value| try std.testing.expect(value >= 1);
     try std.testing.expectError(error.InvalidProbability, fillGeometricCheckedFrom(&direct_engine, &direct_geometric_buf, 0));
+    var geometric_direct_fill_engine = alea.ScalarPrng.init(0x9e0_0001);
+    var geometric_scalar_loop_engine = alea.ScalarPrng.init(0x9e0_0001);
+    var geometric_direct_fill: [8]u64 = undefined;
+    var geometric_scalar_fill: [8]u64 = undefined;
+    (try Geometric.init(0.25)).fillFrom(&geometric_direct_fill_engine, &geometric_direct_fill);
+    for (&geometric_scalar_fill) |*slot| slot.* = geometricFrom(&geometric_scalar_loop_engine, 0.25);
+    try std.testing.expectEqualSlices(u64, &geometric_scalar_fill, &geometric_direct_fill);
+    try std.testing.expectEqual(geometric_scalar_loop_engine.next(), geometric_direct_fill_engine.next());
     const geometric_sampler = try Geometric.init(0.25);
     try std.testing.expectApproxEqAbs(@as(f64, 0.25), geometric_sampler.probabilityValue(), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 4), geometric_sampler.expectedValue(), 1e-12);

@@ -3946,3 +3946,9 @@ Hypergeometric fills now switch once on the selected method and call draw-loop,
 inverse-transform, or rejection-acceptance samplers directly instead of routing
 each slot through Hypergeometric.sampleFrom. This improves Hypergeometric fill
 ergonomics but does not resolve S4-M11.
+
+S4-M825 fills Geometric outputs with direct geometricFrom calls
+(`compare/results/s4-m825-geometric-fill-direct-sampler.md`):
+Geometric non-degenerate fills now call the underlying geometricFrom sampler
+directly instead of routing each slot through Geometric.sampleFrom. This improves
+Geometric fill ergonomics but does not resolve S4-M11.
