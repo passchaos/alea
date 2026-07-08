@@ -5215,3 +5215,10 @@ S4-M1010 routes reusable scalar/vector StudentT facade helpers directly
 standard-normal and cached ChiSquared values directly through facade `Rng`
 instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
 StudentT sampler facade ergonomics but does not resolve S4-M11.
+
+S4-M1011 routes top-level scalar/vector StudentT facade helpers directly
+(`compare/results/s4-m1011-student-t-top-level-facade-direct.md`): scalar/vector
+StudentT checked/nonchecked sample/fill helpers now construct reusable StudentT
+samplers and call facade `sample` / `fill` directly instead of routing through
+`From` wrappers. This improves StudentT top-level facade ergonomics but does not
+resolve S4-M11.

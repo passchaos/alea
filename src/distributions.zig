@@ -11489,11 +11489,16 @@ pub fn FisherF(comptime T: type) type {
 }
 
 pub fn studentT(rng: Rng, comptime T: type, dof: T) T {
-    return studentTFrom(rng, T, dof);
+    comptime requireFloat(T);
+    std.debug.assert(studentTParametersValid(T, dof));
+    if (dof == std.math.inf(T)) return Rng.standardNormalFastFrom(rng, T);
+    const sampler = StudentT(T).init(dof) catch unreachable;
+    return sampler.sample(rng);
 }
 
 pub fn studentTChecked(rng: Rng, comptime T: type, dof: T) Error!T {
-    return studentTCheckedFrom(rng, T, dof);
+    const dist = try StudentT(T).init(dof);
+    return dist.sample(rng);
 }
 
 pub fn studentTCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T {
@@ -11513,7 +11518,14 @@ fn studentTParametersValid(comptime T: type, dof: T) bool {
 }
 
 pub fn fillStudentT(rng: Rng, comptime T: type, dest: []T, dof: T) void {
-    fillStudentTFrom(rng, T, dest, dof);
+    comptime requireFloat(T);
+    std.debug.assert(studentTParametersValid(T, dof));
+    if (dof == std.math.inf(T)) {
+        for (dest) |*item| item.* = Rng.standardNormalFastFrom(rng, T);
+        return;
+    }
+    const sampler = StudentT(T).init(dof) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillStudentTFrom(source: anytype, comptime T: type, dest: []T, dof: T) void {
@@ -11528,7 +11540,9 @@ pub fn fillStudentTFrom(source: anytype, comptime T: type, dest: []T, dof: T) vo
 }
 
 pub fn fillStudentTChecked(rng: Rng, comptime T: type, dest: []T, dof: T) Error!void {
-    return fillStudentTCheckedFrom(rng, T, dest, dof);
+    if (dest.len == 0) return;
+    const sampler = try StudentT(T).init(dof);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillStudentTCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T) Error!void {
@@ -11538,7 +11552,8 @@ pub fn fillStudentTCheckedFrom(source: anytype, comptime T: type, dest: []T, dof
 }
 
 pub fn vectorStudentT(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType)) VectorType {
-    return vectorStudentTFrom(rng, VectorType, dof);
+    const sampler = VectorStudentT(VectorType).init(dof) catch unreachable;
+    return sampler.sample(rng);
 }
 
 pub fn vectorStudentTFrom(source: anytype, comptime VectorType: type, dof: vectorChild(VectorType)) VectorType {
@@ -11547,7 +11562,8 @@ pub fn vectorStudentTFrom(source: anytype, comptime VectorType: type, dof: vecto
 }
 
 pub fn vectorStudentTChecked(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType)) Error!VectorType {
-    return vectorStudentTCheckedFrom(rng, VectorType, dof);
+    const sampler = try VectorStudentT(VectorType).init(dof);
+    return sampler.sample(rng);
 }
 
 pub fn vectorStudentTCheckedFrom(source: anytype, comptime VectorType: type, dof: vectorChild(VectorType)) Error!VectorType {
@@ -11556,7 +11572,8 @@ pub fn vectorStudentTCheckedFrom(source: anytype, comptime VectorType: type, dof
 }
 
 pub fn fillVectorStudentT(rng: Rng, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) void {
-    fillVectorStudentTFrom(rng, VectorType, dest, dof);
+    const sampler = VectorStudentT(VectorType).init(dof) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorStudentTFrom(source: anytype, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) void {
@@ -11565,7 +11582,9 @@ pub fn fillVectorStudentTFrom(source: anytype, comptime VectorType: type, dest: 
 }
 
 pub fn fillVectorStudentTChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) Error!void {
-    return fillVectorStudentTCheckedFrom(rng, VectorType, dest, dof);
+    if (dest.len == 0) return;
+    const sampler = try VectorStudentT(VectorType).init(dof);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorStudentTCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) Error!void {
