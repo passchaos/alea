@@ -9374,7 +9374,8 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
                 }
 
                 pub fn nextValue(self: *Iter) *const T {
-                    return self.choice.sampleFrom(self.source);
+                    const choice = self.choice;
+                    return &choice.items[choice.table.sampleFrom(self.source)];
                 }
 
                 pub fn fill(self: *Iter, dest: []*const T) void {
@@ -24305,6 +24306,13 @@ test "weighted choice iterator streams repeated const pointers" {
         }
         try std.testing.expectEqualSlices([]const u8, &direct_out, &facade_out);
         try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+
+        var table_pointer_engine = Engine.init(0x5150_1787);
+        var pointer_iter_engine = Engine.init(0x5150_1787);
+        var pointer_iter = direct_choice.iterFrom(&pointer_iter_engine);
+        const pointer_index = direct_choice.table.sampleFrom(&table_pointer_engine);
+        try std.testing.expectEqual(&direct_choice.items[pointer_index], pointer_iter.next().?);
+        try std.testing.expectEqual(table_pointer_engine.next(), pointer_iter_engine.next());
 
         var checked_facade_engine = Engine.init(0x5150_1782);
         var checked_direct_engine = Engine.init(0x5150_1782);

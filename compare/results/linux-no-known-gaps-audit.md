@@ -4353,3 +4353,10 @@ S4-M882 draws UnicodeCharset UTF-8 appends through direct uniform index sampling
 UnicodeCharset.appendStringFrom now draws uniform indexes and encodes selected
 scalars directly instead of routing every scalar through UnicodeCharset.sampleFrom.
 This improves UnicodeCharset string append ergonomics but does not resolve S4-M11.
+
+S4-M883 draws reusable WeightedChoice pointer iterator scalar outputs through
+direct alias-table sampling
+(`compare/results/s4-m883-weightedchoice-pointer-iterator-direct-table.md`):
+WeightedChoice.Iterator.nextValue now samples the underlying table and maps into
+item storage directly instead of routing through WeightedChoice.sampleFrom. This
+improves WeightedChoice iterator ergonomics but does not resolve S4-M11.
