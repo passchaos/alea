@@ -984,7 +984,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M943 WeightedChoice array facade direct paths | `src/seq.zig`, `compare/results/s4-m943-weightedchoice-array-facade-direct.md` | Closed for the current bar: reusable WeightedChoice non-checked fixed-array facade helpers now fill directly. |
 | S4-M944 AliasTable checked owned From direct paths | `src/distributions.zig`, `compare/results/s4-m944-aliastable-checked-owned-from-direct.md` | Closed for the current bar: static AliasTable checked direct-source allocation-returning helpers now allocate and fill directly. |
 | S4-M945 AliasTable owned facade direct paths | `src/distributions.zig`, `compare/results/s4-m945-aliastable-owned-facade-direct.md` | Closed for the current bar: static AliasTable allocation-returning facade helpers now allocate and fill directly. |
-| S4-M946 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M946 AliasTable array direct paths | `src/distributions.zig`, `compare/results/s4-m946-aliastable-array-direct-paths.md` | Closed for the current bar: static AliasTable fixed-array helpers now fill directly. |
+| S4-M947 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3318,6 +3319,10 @@ through direct allocation and facade filling after prevalidation, preserving
 stream shape while avoiding direct-source owned wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
+S4-M946 additionally routes static AliasTable fixed-array helpers through direct
+stack-array construction and facade/direct-source filling, preserving stream shape
+while avoiding array wrapper aliases; it is reliability/ergonomics work and does
+not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

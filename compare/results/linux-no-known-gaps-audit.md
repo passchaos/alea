@@ -4775,3 +4775,9 @@ AliasTable `indices`, `indicesChecked`, `indicesU32`, and `indicesU32Checked`
 now allocate and fill directly instead of routing through direct-source owned
 wrappers. This improves weighted-index owned-batch ergonomics but does not
 resolve S4-M11.
+
+S4-M946 routes static AliasTable fixed-array helpers directly
+(`compare/results/s4-m946-aliastable-array-direct-paths.md`):
+AliasTable checked and compact `u32` fixed-array helpers now construct stack
+arrays and fill directly instead of routing through other array wrappers. This
+improves weighted-index fixed-array ergonomics but does not resolve S4-M11.
