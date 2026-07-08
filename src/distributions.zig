@@ -9742,7 +9742,10 @@ pub fn VectorGamma(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(0);
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -9753,7 +9756,23 @@ pub fn VectorGamma(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            if (self.sampler.shape == 1 and (comptime Child == f32 or Child == f64)) {
+                rng.fillVectorStandardExponential(VectorType, dest);
+                if (self.sampler.scale != 1) {
+                    const scalars = std.mem.bytesAsSlice(Child, std.mem.sliceAsBytes(dest));
+                    scaleInPlace(Child, scalars, self.sampler.scale);
+                }
+                return;
+            }
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {

@@ -1035,7 +1035,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M994 UniformUnicodeScalar facade direct paths | `src/distributions.zig`, `compare/results/s4-m994-uniform-unicode-scalar-facade-direct.md` | Closed for the current bar: reusable UniformUnicodeScalar facade sample/fill helpers now avoid From wrappers. |
 | S4-M995 Open01/OpenClosed01 facade direct paths | `src/distributions.zig`, `compare/results/s4-m995-open01-facade-direct.md` | Closed for the current bar: scalar/vector strict-interval facade helpers now avoid direct-source wrappers. |
 | S4-M996 Gamma sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m996-gamma-sampler-facade-direct.md` | Closed for the current bar: reusable scalar Gamma facade sample/fill helpers now avoid From wrappers. |
-| S4-M997 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M997 VectorGamma sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m997-vector-gamma-sampler-facade-direct.md` | Closed for the current bar: reusable VectorGamma facade sample/fill helpers now avoid From wrappers. |
+| S4-M998 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3616,6 +3617,12 @@ long-term objective.
 S4-M996 additionally routes reusable scalar Gamma facade sample/fill helpers
 through direct degenerate, shape-one, boosted-small-shape, and regular Marsaglia
 paths, preserving stream shape, degenerate no-consume behavior, and zero-length
+checked fill semantics while avoiding `sampleFrom` / `fillFrom` wrapper aliases;
+it is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M997 additionally routes reusable VectorGamma facade sample/fill helpers
+through direct degenerate, shape-one, and general per-lane Gamma sampling,
+preserving vector stream shape, degenerate no-consume behavior, and zero-length
 checked fill semantics while avoiding `sampleFrom` / `fillFrom` wrapper aliases;
 it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
