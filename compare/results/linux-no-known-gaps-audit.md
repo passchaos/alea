@@ -4878,3 +4878,9 @@ S4-M961 refreshes current checked value facade aliases directly
 Choose, Choice, and WeightedChoice `valueChecked` facade helpers now sample values
 directly through facade RNGs instead of routing through `valueCheckedFrom`. This
 improves checked value-sample ergonomics but does not resolve S4-M11.
+
+S4-M962 refreshes current AliasTable direct-source index alias sampling directly
+(`compare/results/s4-m962-aliastable-index-from-direct-refresh.md`):
+AliasTable `sampleIndexFrom` now executes direct alias-table sampling branches
+instead of routing through `sampleCheckedFrom`. This improves weighted-index
+alias ergonomics but does not resolve S4-M11.
