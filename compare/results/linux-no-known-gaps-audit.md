@@ -4160,3 +4160,10 @@ VectorLogLogistic.fillFrom now draws vector open-uniform values and applies the
 LogLogistic transform directly, including the shape-one ratio path, instead of
 routing every output through VectorLogLogistic.sampleFrom. This improves
 VectorLogLogistic reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M855 draws reusable VectorKumaraswamy fills through direct vector open-uniform
+transforms (`compare/results/s4-m855-vector-kumaraswamy-fill-direct-transform.md`):
+VectorKumaraswamy.fillFrom now draws vector open-uniform values and applies the
+Kumaraswamy transform directly, including beta-one and alpha-one paths, instead
+of routing every output through VectorKumaraswamy.sampleFrom. This improves
+VectorKumaraswamy reusable fill ergonomics but does not resolve S4-M11.
