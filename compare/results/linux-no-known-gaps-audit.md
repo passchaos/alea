@@ -4607,3 +4607,10 @@ S4-M920 routes reusable Choice owned facades through direct allocation and filli
 Choice ptr/value/index/u32 allocation-returning facade helpers now allocate and
 fill directly instead of routing through direct-source owned wrappers. This
 improves reusable owned-batch ergonomics but does not resolve S4-M11.
+
+S4-M921 routes reusable WeightedChoice owned facades through direct alias-table
+allocation and filling
+(`compare/results/s4-m921-weightedchoice-owned-facade-direct.md`):
+WeightedChoice ptr/value/index/u32 allocation-returning facade helpers now allocate
+and fill directly instead of routing through direct-source owned wrappers. This
+improves reusable weighted owned-batch ergonomics but does not resolve S4-M11.
