@@ -3724,3 +3724,10 @@ seq hinted iterator choices now query inexact size-hint/remaining metadata once
 before falling back to reservoir choice, preserving fallback stream shape while
 avoiding duplicate metadata probes. This improves iterator choice reliability
 evidence but does not resolve S4-M11.
+
+S4-M791 reuses sampled iterator index-buffer fills
+(`compare/results/s4-m791-sampled-iterator-fill-index-buffer.md`):
+seq sampled value/const-pointer/mutable-pointer iterator fills now bulk-fill
+owned sampled indices before mapping them to outputs, reducing per-slot iterator
+overhead while preserving fill results and stream shape. This improves sampled
+iterator fill reliability/ergonomics evidence but does not resolve S4-M11.

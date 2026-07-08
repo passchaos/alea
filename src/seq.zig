@@ -497,9 +497,16 @@ pub fn SampledPtrIterator(comptime T: type) type {
         }
 
         pub fn fill(self: *Self, dest: []*const T) usize {
-            const count = @min(dest.len, self.remaining());
-            for (dest[0..count]) |*slot| slot.* = self.next().?;
-            return count;
+            var indices_buf: [64]usize = undefined;
+            var filled: usize = 0;
+            while (filled < dest.len) {
+                const chunk_len = @min(dest.len - filled, indices_buf.len);
+                const count = self.index_iter.fill(indices_buf[0..chunk_len]);
+                for (indices_buf[0..count], dest[filled..][0..count]) |index, *slot| slot.* = &self.items[index];
+                filled += count;
+                if (count < chunk_len) break;
+            }
+            return filled;
         }
 
         pub fn deinit(self: Self) void {
@@ -541,9 +548,16 @@ pub fn SampledMutPtrIterator(comptime T: type) type {
         }
 
         pub fn fill(self: *Self, dest: []*T) usize {
-            const count = @min(dest.len, self.remaining());
-            for (dest[0..count]) |*slot| slot.* = self.next().?;
-            return count;
+            var indices_buf: [64]usize = undefined;
+            var filled: usize = 0;
+            while (filled < dest.len) {
+                const chunk_len = @min(dest.len - filled, indices_buf.len);
+                const count = self.index_iter.fill(indices_buf[0..chunk_len]);
+                for (indices_buf[0..count], dest[filled..][0..count]) |index, *slot| slot.* = &self.items[index];
+                filled += count;
+                if (count < chunk_len) break;
+            }
+            return filled;
         }
 
         pub fn deinit(self: Self) void {
@@ -577,9 +591,16 @@ pub fn SampledValueIterator(comptime T: type) type {
         }
 
         pub fn fill(self: *Self, dest: []T) usize {
-            const count = @min(dest.len, self.remaining());
-            for (dest[0..count]) |*slot| slot.* = self.next().?;
-            return count;
+            var indices_buf: [64]usize = undefined;
+            var filled: usize = 0;
+            while (filled < dest.len) {
+                const chunk_len = @min(dest.len - filled, indices_buf.len);
+                const count = self.index_iter.fill(indices_buf[0..chunk_len]);
+                for (indices_buf[0..count], dest[filled..][0..count]) |index, *slot| slot.* = self.items[index];
+                filled += count;
+                if (count < chunk_len) break;
+            }
+            return filled;
         }
 
         pub fn deinit(self: Self) void {
@@ -15057,6 +15078,15 @@ test "sampleItemsIter owns sampled indices and streams values" {
     try std.testing.expectEqual(@as(usize, 0), fill_iter.remaining());
     try std.testing.expectEqual(@as(usize, 0), fill_iter.len());
     try expectExactSizeHint(fill_iter.sizeHint(), 0);
+
+    var large_items: [80]u8 = undefined;
+    for (&large_items, 0..) |*item, index| item.* = @intCast(index);
+    var large_fill_engine = alea.ScalarPrng.init(0x5150_c319);
+    var large_fill_iter = try sampleItemsIterCheckedFrom(std.testing.allocator, &large_fill_engine, u8, &large_items, large_items.len);
+    defer large_fill_iter.deinit();
+    var large_fill_out: [80]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, large_fill_out.len), large_fill_iter.fill(&large_fill_out));
+    try std.testing.expectEqual(@as(usize, 0), large_fill_iter.remaining());
 
     var checked_engine = alea.ScalarPrng.init(0x5150_c30d);
     var checked_iter = try sampleItemsIterCheckedFrom(std.testing.allocator, &checked_engine, u8, &items, 5);
