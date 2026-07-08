@@ -16674,7 +16674,23 @@ pub fn Zeta(comptime T: type) type {
                 @memset(dest, 1);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                while (true) {
+                    const u = Rng.floatOpenClosedFrom(source, T);
+                    const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
+                    if (std.math.isInf(x)) {
+                        item.* = x;
+                        break;
+                    }
+
+                    const t = std.math.pow(T, 1 + 1 / x, self.exponent_minus_one);
+                    const v = Rng.floatFrom(source, T);
+                    if (v * x * (t - 1) * self.b <= t * (self.b - 1)) {
+                        item.* = x;
+                        break;
+                    }
+                }
+            }
         }
 
         fn isDegenerate(self: Self) bool {
@@ -32629,6 +32645,23 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_zeta_buf: [8]f64 = undefined;
     zeta_sampler.fillFrom(&direct_engine, &direct_zeta_buf);
     for (direct_zeta_buf) |value| try std.testing.expect(value >= 1);
+    var zeta_fill_engine = alea.ScalarPrng.init(0x5878_0001);
+    var zeta_loop_engine = alea.ScalarPrng.init(0x5878_0001);
+    var zeta_fill: [10]f64 = undefined;
+    var zeta_loop: [10]f64 = undefined;
+    zeta_sampler.fillFrom(&zeta_fill_engine, &zeta_fill);
+    for (&zeta_loop) |*slot| slot.* = zeta_sampler.sampleFrom(&zeta_loop_engine);
+    try std.testing.expectEqualSlices(f64, &zeta_loop, &zeta_fill);
+    try std.testing.expectEqual(zeta_loop_engine.next(), zeta_fill_engine.next());
+    var zeta_f32_fill_engine = alea.ScalarPrng.init(0x5878_f32);
+    var zeta_f32_loop_engine = alea.ScalarPrng.init(0x5878_f32);
+    const zeta_f32_sampler = try Zeta(f32).init(3);
+    var zeta_f32_fill: [11]f32 = undefined;
+    var zeta_f32_loop: [11]f32 = undefined;
+    zeta_f32_sampler.fillFrom(&zeta_f32_fill_engine, &zeta_f32_fill);
+    for (&zeta_f32_loop) |*slot| slot.* = zeta_f32_sampler.sampleFrom(&zeta_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &zeta_f32_loop, &zeta_f32_fill);
+    try std.testing.expectEqual(zeta_f32_loop_engine.next(), zeta_f32_fill_engine.next());
     fillZeta(rng, f64, &zeta_buf, 3);
     for (zeta_buf) |value| try std.testing.expect(value >= 1);
     fillZetaFrom(&direct_engine, f64, &direct_zeta_buf, 3);

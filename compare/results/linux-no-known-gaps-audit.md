@@ -4322,3 +4322,9 @@ S4-M877 draws reusable Zipf fills through the direct cached rejection loop
 Zipf.fillFrom now runs the inverse-CDF proposal and uniform rejection check
 directly instead of routing every output through Zipf.sampleFrom. This improves
 Zipf reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M878 draws reusable Zeta fills through the direct cached rejection loop
+(`compare/results/s4-m878-zeta-fill-direct-rejection.md`):
+Zeta.fillFrom now runs the open-closed proposal and uniform rejection check
+directly instead of routing every output through Zeta.sampleFrom. This improves
+Zeta reusable fill ergonomics but does not resolve S4-M11.
