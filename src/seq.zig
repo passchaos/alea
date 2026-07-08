@@ -9507,7 +9507,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn ptrIterFrom(self: Self, source: anytype) Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
-            return self.iterFrom(source);
+            return Rng.sampleIterFrom(source, *const T, self);
         }
 
         pub fn ptrIterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, *const T) {

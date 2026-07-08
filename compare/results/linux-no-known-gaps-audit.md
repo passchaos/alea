@@ -4721,3 +4721,9 @@ S4-M937 routes reusable Choice pointer direct-source iterator alias directly
 Choice `ptrIterFrom` now constructs its direct-source sample iterator directly
 instead of routing through `iterFrom`. This improves reusable pointer iterator
 ergonomics but does not resolve S4-M11.
+
+S4-M938 routes reusable WeightedChoice pointer direct-source iterator alias
+directly (`compare/results/s4-m938-weightedchoice-pointer-iter-from-direct.md`):
+WeightedChoice `ptrIterFrom` now constructs its direct-source sample iterator
+directly instead of routing through `iterFrom`. This improves reusable weighted
+pointer iterator ergonomics but does not resolve S4-M11.
