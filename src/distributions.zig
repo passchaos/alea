@@ -1378,7 +1378,7 @@ fn vectorClosedUnitFrom(source: anytype, comptime VectorType: type) VectorType {
 
 pub fn bernoulli(rng: Rng, p: f64) bool {
     const dist = Bernoulli.init(p) catch unreachable;
-    return dist.sampleFrom(rng);
+    return dist.sample(rng);
 }
 
 pub fn bernoulliFrom(source: anytype, p: f64) bool {
@@ -1387,7 +1387,8 @@ pub fn bernoulliFrom(source: anytype, p: f64) bool {
 }
 
 pub fn bernoulliChecked(rng: Rng, p: f64) Error!bool {
-    return bernoulliCheckedFrom(rng, p);
+    const dist = try Bernoulli.init(p);
+    return dist.sample(rng);
 }
 
 pub fn bernoulliCheckedFrom(source: anytype, p: f64) Error!bool {
@@ -1396,7 +1397,8 @@ pub fn bernoulliCheckedFrom(source: anytype, p: f64) Error!bool {
 }
 
 pub fn fillBernoulli(rng: Rng, dest: []bool, p: f64) void {
-    fillBernoulliFrom(rng, dest, p);
+    const dist = Bernoulli.init(p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillBernoulliFrom(source: anytype, dest: []bool, p: f64) void {
@@ -1405,7 +1407,9 @@ pub fn fillBernoulliFrom(source: anytype, dest: []bool, p: f64) void {
 }
 
 pub fn fillBernoulliChecked(rng: Rng, dest: []bool, p: f64) Error!void {
-    return fillBernoulliCheckedFrom(rng, dest, p);
+    if (dest.len == 0) return;
+    const dist = try Bernoulli.init(p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillBernoulliCheckedFrom(source: anytype, dest: []bool, p: f64) Error!void {
@@ -1415,7 +1419,8 @@ pub fn fillBernoulliCheckedFrom(source: anytype, dest: []bool, p: f64) Error!voi
 }
 
 pub fn vectorBernoulli(rng: Rng, comptime VectorType: type, p: f64) VectorType {
-    return vectorBernoulliFrom(rng, VectorType, p);
+    const dist = VectorBernoulli(VectorType).init(p) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn vectorBernoulliFrom(source: anytype, comptime VectorType: type, p: f64) VectorType {
@@ -1424,7 +1429,8 @@ pub fn vectorBernoulliFrom(source: anytype, comptime VectorType: type, p: f64) V
 }
 
 pub fn vectorBernoulliChecked(rng: Rng, comptime VectorType: type, p: f64) Error!VectorType {
-    return vectorBernoulliCheckedFrom(rng, VectorType, p);
+    const dist = try VectorBernoulli(VectorType).init(p);
+    return dist.sample(rng);
 }
 
 pub fn vectorBernoulliCheckedFrom(source: anytype, comptime VectorType: type, p: f64) Error!VectorType {
@@ -1433,7 +1439,8 @@ pub fn vectorBernoulliCheckedFrom(source: anytype, comptime VectorType: type, p:
 }
 
 pub fn fillVectorBernoulli(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) void {
-    fillVectorBernoulliFrom(rng, VectorType, dest, p);
+    const dist = VectorBernoulli(VectorType).init(p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorBernoulliFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) void {
@@ -1442,7 +1449,9 @@ pub fn fillVectorBernoulliFrom(source: anytype, comptime VectorType: type, dest:
 }
 
 pub fn fillVectorBernoulliChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {
-    return fillVectorBernoulliCheckedFrom(rng, VectorType, dest, p);
+    if (dest.len == 0) return;
+    const dist = try VectorBernoulli(VectorType).init(p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorBernoulliCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, p: f64) Error!void {

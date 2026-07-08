@@ -5056,3 +5056,11 @@ S4-M987 routes scalar/vector StandardGeometric facade helpers directly
 `VectorStandardGeometric` facade sample/fill methods now execute leading-zero
 sampling directly through facade `Rng` instead of routing through `From` wrappers.
 This improves StandardGeometric facade ergonomics but does not resolve S4-M11.
+
+S4-M988 routes scalar/vector top-level Bernoulli facade helpers directly
+(`compare/results/s4-m988-bernoulli-top-level-facade-direct.md`): `bernoulli`,
+`bernoulliChecked`, `fillBernoulli`, `fillBernoulliChecked`, `vectorBernoulli`,
+`vectorBernoulliChecked`, `fillVectorBernoulli`, and
+`fillVectorBernoulliChecked` now construct reusable Bernoulli samplers and call
+facade `sample` / `fill` directly instead of routing through `From` wrappers.
+This improves Bernoulli top-level facade ergonomics but does not resolve S4-M11.
