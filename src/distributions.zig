@@ -16675,7 +16675,9 @@ pub fn AliasTable(comptime Weight: type) type {
 
             pub fn fill(self: *Iterator, dest: []f64) usize {
                 const count = @min(dest.len, self.remaining());
-                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                if (count == 0) return 0;
+                @memcpy(dest[0..count], self.table.weight_values[self.index..][0..count]);
+                self.index += count;
                 return count;
             }
         };
@@ -16707,7 +16709,11 @@ pub fn AliasTable(comptime Weight: type) type {
 
             pub fn fill(self: *Iterator, dest: []f64) usize {
                 const count = @min(dest.len, self.remaining());
-                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                if (count == 0) return 0;
+                for (self.table.weight_values[self.index..][0..count], dest[0..count]) |weight_value, *slot| {
+                    slot.* = weight_value / self.table.total;
+                }
+                self.index += count;
                 return count;
             }
         };

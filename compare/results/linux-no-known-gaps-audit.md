@@ -3758,3 +3758,9 @@ seq reusable `Choice` and distribution-layer `Choose` probability iterators now
 fill caller-owned buffers with the constant uniform probability directly instead
 of per-slot `next()`/`probability()` calls. This improves choice probability
 iterator ergonomics but does not resolve S4-M11.
+
+S4-M796 uses direct storage fills for AliasTable iterators
+(`compare/results/s4-m796-aliastable-iterator-fill-direct-storage.md`):
+static AliasTable weight/probability iterators now fill caller-owned buffers from
+stored weights directly instead of per-slot `next()`/lookup calls. This improves
+static weighted iterator ergonomics but does not resolve S4-M11.
