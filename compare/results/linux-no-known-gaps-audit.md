@@ -4422,3 +4422,9 @@ paths (`compare/results/s4-m893-weighted-tree-index-alias-direct.md`):
 WeightedTree and WeightedIntTree sampleIndexFrom/sampleIndexU32From now avoid
 extra unchecked alias wrappers. This improves dynamic weighted tree index alias
 ergonomics but does not resolve S4-M11.
+
+S4-M894 routes AliasTable checked sampling through direct alias-table branches
+(`compare/results/s4-m894-aliastable-checked-sample-direct.md`):
+AliasTable.sampleCheckedFrom now avoids the unchecked sampleFrom wrapper while
+preserving stream shape. This improves AliasTable checked sampling ergonomics but
+does not resolve S4-M11.
