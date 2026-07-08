@@ -884,7 +884,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M843 Erlang reusable fill delegates to Gamma fill | `src/distributions.zig`, `compare/results/s4-m843-erlang-fill-gamma-delegate.md` | Closed for the current bar: reusable Erlang fills now delegate to the cached Gamma sampler fill and reuse shape-specific Gamma bulk paths. |
 | S4-M844 VectorErlang reusable fill delegates to VectorGamma fill | `src/distributions.zig`, `compare/results/s4-m844-vector-erlang-fill-gamma-delegate.md` | Closed for the current bar: reusable VectorErlang fills now delegate to the cached Gamma sampler via VectorGamma fill and reuse shape-specific vector bulk paths. |
 | S4-M845 FisherF reusable fill direct cached Gamma ratio loop | `src/distributions.zig`, `compare/results/s4-m845-fisher-f-fill-direct-gamma-ratio.md` | Closed for the current bar: reusable FisherF fills now draw from cached numerator/denominator Gamma samplers directly and divide. |
-| S4-M846 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M846 VectorFisherF reusable fill direct cached Gamma ratio lanes | `src/distributions.zig`, `compare/results/s4-m846-vector-fisher-f-fill-direct-gamma-ratio.md` | Closed for the current bar: reusable VectorFisherF fills now draw cached numerator/denominator Gamma values directly per lane and divide. |
+| S4-M847 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2766,6 +2767,11 @@ S4-M845 additionally routes reusable FisherF fills through direct cached
 numerator/denominator Gamma draws and division, preserving stream shape while
 avoiding per-output FisherF.sampleFrom wrapper calls; it is reliability/
 ergonomics work and does not resolve S4-M11 or complete the long-term objective.
+S4-M846 additionally routes reusable VectorFisherF fills through direct cached
+numerator/denominator Gamma draws per lane and division, preserving stream shape
+while avoiding per-output VectorFisherF.sampleFrom wrapper calls; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

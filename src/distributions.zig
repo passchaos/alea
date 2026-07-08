@@ -10272,7 +10272,13 @@ pub fn VectorFisherF(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+                    out[lane] = self.sampler.numerator.sampleFrom(source) / self.sampler.denominator.sampleFrom(source);
+                }
+                item.* = out;
+            }
         }
     };
 }
@@ -26785,6 +26791,29 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &fisher_buf_vec, &direct_fisher_buf_vec);
     for (fisher_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_fisher_fill_engine = alea.ScalarPrng.init(0xf846_0001);
+    var vector_fisher_loop_engine = alea.ScalarPrng.init(0xf846_0001);
+    var vector_fisher_fill: [3]@Vector(4, f64) = undefined;
+    var vector_fisher_loop: [3]@Vector(4, f64) = undefined;
+    vector_fisher_sampler.fillFrom(&vector_fisher_fill_engine, &vector_fisher_fill);
+    for (&vector_fisher_loop) |*slot| slot.* = vector_fisher_sampler.sampleFrom(&vector_fisher_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_fisher_loop, &vector_fisher_fill);
+    try std.testing.expectEqual(vector_fisher_loop_engine.next(), vector_fisher_fill_engine.next());
+    var vector_fisher_f32_fill_engine = alea.ScalarPrng.init(0xf846_f32);
+    var vector_fisher_f32_loop_engine = alea.ScalarPrng.init(0xf846_f32);
+    const vector_fisher_f32 = try VectorFisherF(@Vector(8, f32)).init(5, 20);
+    var vector_fisher_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_fisher_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_fisher_f32.fillFrom(&vector_fisher_f32_fill_engine, &vector_fisher_f32_fill);
+    for (&vector_fisher_f32_loop) |*slot| slot.* = vector_fisher_f32.sampleFrom(&vector_fisher_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_fisher_f32_loop, &vector_fisher_f32_fill);
+    try std.testing.expectEqual(vector_fisher_f32_loop_engine.next(), vector_fisher_f32_fill_engine.next());
+    var vector_fisher_degenerate_engine = alea.ScalarPrng.init(0xf846_1af);
+    var vector_fisher_degenerate_control = alea.ScalarPrng.init(0xf846_1af);
+    const vector_fisher_degenerate = try VectorFisherF(@Vector(4, f64)).init(std.math.inf(f64), std.math.inf(f64));
+    vector_fisher_degenerate.fillFrom(&vector_fisher_degenerate_engine, &vector_fisher_fill);
+    for (vector_fisher_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), vec);
+    try std.testing.expectEqual(vector_fisher_degenerate_control.next(), vector_fisher_degenerate_engine.next());
 
     const student_vec = try vectorStudentTChecked(rng, @Vector(4, f64), 10);
     const direct_student_vec = try vectorStudentTCheckedFrom(&direct_engine, @Vector(4, f64), 10);

@@ -4097,3 +4097,10 @@ FisherF.fillFrom now draws numerator and denominator values from its cached Gamm
 samplers directly and divides them, instead of routing every output through
 FisherF.sampleFrom. This improves FisherF reusable fill ergonomics but does not
 resolve S4-M11.
+
+S4-M846 draws reusable VectorFisherF fills through cached Gamma ratio lanes
+(`compare/results/s4-m846-vector-fisher-f-fill-direct-gamma-ratio.md`):
+VectorFisherF.fillFrom now draws numerator and denominator values from its cached
+Gamma samplers directly for each lane and divides them, instead of routing every
+output through VectorFisherF.sampleFrom. This improves VectorFisherF reusable
+fill ergonomics but does not resolve S4-M11.
