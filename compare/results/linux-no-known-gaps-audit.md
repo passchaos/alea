@@ -3894,3 +3894,9 @@ S4-M816 samples weighted tree u32 iterators through checked tree sampling
 dynamic WeightedTree and WeightedIntTree compact u32 iterator next calls now call
 the checked tree sampler directly instead of routing through sampleU32From. This
 improves dynamic weighted-tree iterator ergonomics but does not resolve S4-M11.
+
+S4-M817 maps Choice value iterators directly from generated indexes
+(`compare/results/s4-m817-choice-value-iterator-direct-index.md`):
+reusable Choice value iterator next calls now generate uniform indexes and map
+directly into item storage instead of routing through sampleValueFrom. This
+improves reusable choice value iterator ergonomics but does not resolve S4-M11.

@@ -8625,7 +8625,9 @@ pub fn Choice(comptime T: type) type {
 
                 pub fn nextValue(self: *Iter) ?T {
                     if (comptime valueTypeHasEmptyEnum(T)) return null;
-                    return self.choice.sampleValueFrom(self.source);
+                    const items = self.choice.items;
+                    if (items.len == 1) return items[0];
+                    return items[Rng.uintLessThanFrom(self.source, usize, items.len)];
                 }
 
                 pub fn fill(self: *Iter, dest: []T) void {
@@ -19858,6 +19860,11 @@ test "choice sampler repeatedly samples slice references" {
     var unchecked_value_iter = choice.valueIterFrom(&unchecked_value_iter_engine);
     try std.testing.expectEqual(unchecked_value_iter.next().?, checked_value_iter.next().?);
     try std.testing.expectEqual(unchecked_value_iter_engine.next(), checked_value_iter_engine.next());
+    var direct_value_iter_engine = alea.DefaultPrng.init(0xc0_ef42);
+    var helper_value_iter_engine = alea.DefaultPrng.init(0xc0_ef42);
+    var direct_value_iter = choice.valueIterFrom(&direct_value_iter_engine);
+    try std.testing.expectEqual(values[Rng.chooseIndexFrom(&helper_value_iter_engine, values.len).?], direct_value_iter.next().?);
+    try std.testing.expectEqual(helper_value_iter_engine.next(), direct_value_iter_engine.next());
     var checked_value_iter_facade_engine = alea.DefaultPrng.init(0xc0_ef2e);
     var checked_value_iter_direct_engine = alea.DefaultPrng.init(0xc0_ef2e);
     var checked_value_iter_facade = try choice.valueIterChecked(Rng.init(&checked_value_iter_facade_engine));
