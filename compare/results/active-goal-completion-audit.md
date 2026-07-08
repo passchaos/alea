@@ -895,7 +895,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M854 VectorLogLogistic reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m854-vector-log-logistic-fill-direct-transform.md` | Closed for the current bar: reusable VectorLogLogistic fills now draw vector open-uniform values and apply the LogLogistic transform directly, including shape-one ratio handling. |
 | S4-M855 VectorKumaraswamy reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m855-vector-kumaraswamy-fill-direct-transform.md` | Closed for the current bar: reusable VectorKumaraswamy fills now draw vector open-uniform values and apply the Kumaraswamy transform directly, including beta-one/alpha-one paths. |
 | S4-M856 VectorPowerFunction reusable fill direct transform | `src/distributions.zig`, `compare/results/s4-m856-vector-power-function-fill-direct-transform.md` | Closed for the current bar: reusable VectorPowerFunction fills now dispatch directly to point-max, uniform, sqrt, or generic power-function transforms. |
-| S4-M857 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M857 VectorRayleigh reusable fill direct open-uniform transform | `src/distributions.zig`, `compare/results/s4-m857-vector-rayleigh-fill-direct-transform.md` | Closed for the current bar: reusable VectorRayleigh fills now draw vector open-uniform values and apply the Rayleigh transform directly. |
+| S4-M858 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2826,6 +2827,10 @@ point-max, uniform range, square-root, and generic power-function transform path
 preserving stream shape while avoiding per-output VectorPowerFunction.sampleFrom
 wrapper calls; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M857 additionally routes reusable VectorRayleigh fills through direct vector
+open-uniform draws and Rayleigh transforms, preserving stream shape while avoiding
+per-output VectorRayleigh.sampleFrom wrapper calls; it is reliability/ergonomics
+work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

@@ -4174,3 +4174,10 @@ VectorPowerFunction.fillFrom now dispatches directly to point-max, uniform range
 square-root, or generic power-function transform paths instead of routing every
 output through VectorPowerFunction.sampleFrom. This improves VectorPowerFunction
 reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M857 draws reusable VectorRayleigh fills through direct vector open-uniform
+transforms (`compare/results/s4-m857-vector-rayleigh-fill-direct-transform.md`):
+VectorRayleigh.fillFrom now draws vector open-uniform values and applies the
+Rayleigh transform directly, instead of routing every output through
+VectorRayleigh.sampleFrom. This improves VectorRayleigh reusable fill ergonomics
+but does not resolve S4-M11.
