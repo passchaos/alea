@@ -4601,3 +4601,9 @@ filling (`compare/results/s4-m919-distribution-choose-owned-facade-direct.md`):
 Choose ptr/value/index/u32 allocation-returning facade helpers now allocate and
 fill directly instead of routing through direct-source owned wrappers. This
 improves owned-batch ergonomics but does not resolve S4-M11.
+
+S4-M920 routes reusable Choice owned facades through direct allocation and filling
+(`compare/results/s4-m920-choice-owned-facade-direct.md`):
+Choice ptr/value/index/u32 allocation-returning facade helpers now allocate and
+fill directly instead of routing through direct-source owned wrappers. This
+improves reusable owned-batch ergonomics but does not resolve S4-M11.

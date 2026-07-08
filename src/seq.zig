@@ -8567,7 +8567,10 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn ptrs(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
-            return self.ptrsFrom(allocator, rng, amount);
+            const out = try allocator.alloc(*const T, amount);
+            errdefer allocator.free(out);
+            self.fill(rng, out);
+            return out;
         }
 
         pub fn ptrsFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]*const T {
@@ -8589,7 +8592,12 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn values(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]T {
-            return self.valuesFrom(allocator, rng, amount);
+            if (amount == 0) return allocator.alloc(T, 0);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            const out = try allocator.alloc(T, amount);
+            errdefer allocator.free(out);
+            self.fillValues(rng, out);
+            return out;
         }
 
         pub fn valuesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]T {
@@ -8768,7 +8776,10 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
-            return self.indicesFrom(allocator, rng, amount);
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            self.fillIndices(rng, out);
+            return out;
         }
 
         pub fn indicesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
@@ -8790,7 +8801,11 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
-            return self.indicesU32From(allocator, rng, amount);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillIndicesU32(rng, out);
+            return out;
         }
 
         pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
@@ -19937,6 +19952,14 @@ test "choice sampler repeatedly samples slice references" {
     defer std.testing.allocator.free(owned_ptrs);
     try std.testing.expectEqual(@as(usize, 8), owned_ptrs.len);
     for (owned_ptrs) |item| try std.testing.expect(item == &values[0] or item == &values[1] or item == &values[2] or item == &values[3]);
+    var facade_ptrs_engine = alea.DefaultPrng.init(0xc0_ef57);
+    var direct_ptrs_engine = alea.DefaultPrng.init(0xc0_ef57);
+    const facade_ptrs = try choice.ptrs(std.testing.allocator, Rng.init(&facade_ptrs_engine), 8);
+    defer std.testing.allocator.free(facade_ptrs);
+    const direct_ptrs = try choice.ptrsFrom(std.testing.allocator, &direct_ptrs_engine, 8);
+    defer std.testing.allocator.free(direct_ptrs);
+    try std.testing.expectEqualSlices(*const u8, direct_ptrs, facade_ptrs);
+    try std.testing.expectEqual(direct_ptrs_engine.next(), facade_ptrs_engine.next());
     var checked_ptr_fill_engine = alea.DefaultPrng.init(0xc0_ef0b);
     var unchecked_ptr_fill_engine = alea.DefaultPrng.init(0xc0_ef0b);
     var checked_ptr_fill: [8]*const u8 = undefined;
@@ -19992,6 +20015,14 @@ test "choice sampler repeatedly samples slice references" {
     defer std.testing.allocator.free(owned_values);
     try std.testing.expectEqual(@as(usize, 8), owned_values.len);
     for (owned_values) |value| try std.testing.expect(value == 2 or value == 4 or value == 6 or value == 8);
+    var facade_values_engine = alea.DefaultPrng.init(0xc0_ef58);
+    var direct_values_engine = alea.DefaultPrng.init(0xc0_ef58);
+    const facade_values = try choice.values(std.testing.allocator, Rng.init(&facade_values_engine), 8);
+    defer std.testing.allocator.free(facade_values);
+    const direct_values = try choice.valuesFrom(std.testing.allocator, &direct_values_engine, 8);
+    defer std.testing.allocator.free(direct_values);
+    try std.testing.expectEqualSlices(u8, direct_values, facade_values);
+    try std.testing.expectEqual(direct_values_engine.next(), facade_values_engine.next());
     var checked_value_fill_engine = alea.DefaultPrng.init(0xc0_ef23);
     var unchecked_value_fill_engine = alea.DefaultPrng.init(0xc0_ef23);
     var checked_value_fill: [8]u8 = undefined;
@@ -20176,6 +20207,14 @@ test "choice sampler repeatedly samples slice references" {
     defer std.testing.allocator.free(direct_checked_indices);
     try std.testing.expectEqualSlices(usize, direct_checked_indices, facade_checked_indices);
     try std.testing.expectEqual(direct_checked_indices_engine.next(), facade_checked_indices_engine.next());
+    var facade_indices_engine = alea.DefaultPrng.init(0xc0_ef59);
+    var direct_indices_engine = alea.DefaultPrng.init(0xc0_ef59);
+    const facade_indices = try choice.indices(std.testing.allocator, Rng.init(&facade_indices_engine), 8);
+    defer std.testing.allocator.free(facade_indices);
+    const direct_indices = try choice.indicesFrom(std.testing.allocator, &direct_indices_engine, 8);
+    defer std.testing.allocator.free(direct_indices);
+    try std.testing.expectEqualSlices(usize, direct_indices, facade_indices);
+    try std.testing.expectEqual(direct_indices_engine.next(), facade_indices_engine.next());
     var checked_index_array_engine = alea.DefaultPrng.init(0xc0_ef14);
     var unchecked_index_array_engine = alea.DefaultPrng.init(0xc0_ef14);
     const unchecked_index_array = choice.indexArrayFrom(&unchecked_index_array_engine, 8);
@@ -20268,6 +20307,14 @@ test "choice sampler repeatedly samples slice references" {
     defer std.testing.allocator.free(direct_checked_indices_u32);
     try std.testing.expectEqualSlices(u32, direct_checked_indices_u32, facade_checked_indices_u32);
     try std.testing.expectEqual(direct_checked_indices_u32_engine.next(), facade_checked_indices_u32_engine.next());
+    var facade_indices_u32_engine = alea.DefaultPrng.init(0xc0_ef5a);
+    var direct_indices_u32_engine = alea.DefaultPrng.init(0xc0_ef5a);
+    const facade_indices_u32 = try choice.indicesU32(std.testing.allocator, Rng.init(&facade_indices_u32_engine), 8);
+    defer std.testing.allocator.free(facade_indices_u32);
+    const direct_indices_u32 = try choice.indicesU32From(std.testing.allocator, &direct_indices_u32_engine, 8);
+    defer std.testing.allocator.free(direct_indices_u32);
+    try std.testing.expectEqualSlices(u32, direct_indices_u32, facade_indices_u32);
+    try std.testing.expectEqual(direct_indices_u32_engine.next(), facade_indices_u32_engine.next());
     var checked_index_u32_iter_engine = alea.DefaultPrng.init(0xc0_ef1e);
     var unchecked_index_u32_iter_engine = alea.DefaultPrng.init(0xc0_ef1e);
     var checked_index_u32_iter = try choice.indexIterU32CheckedFrom(&checked_index_u32_iter_engine);
