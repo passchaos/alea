@@ -4995,3 +4995,9 @@ S4-M979 routes reusable Multinomial facade helpers directly
 Multinomial allocation-returning and caller-buffer facade helpers now run direct
 multinomial sampling instead of routing through `From` wrappers. This improves
 multinomial facade ergonomics but does not resolve S4-M11.
+
+S4-M980 routes reusable Dirichlet facade helpers directly
+(`compare/results/s4-m980-dirichlet-facade-direct.md`):
+Dirichlet allocation-returning and caller-buffer facade helpers now run direct
+gamma-normalization sampling instead of routing through `From` wrappers. This
+improves Dirichlet facade ergonomics but does not resolve S4-M11.

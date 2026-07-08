@@ -1018,7 +1018,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M977 Vector Hypergeometric facade direct paths | `src/distributions.zig`, `compare/results/s4-m977-vector-hypergeometric-facade-direct.md` | Closed for the current bar: top-level/reusable VectorHypergeometric facade helpers now dispatch directly. |
 | S4-M978 Hypergeometric top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m978-hypergeometric-top-level-facade-direct.md` | Closed for the current bar: top-level scalar Hypergeometric facade helpers now avoid From wrappers. |
 | S4-M979 Multinomial facade direct paths | `src/distributions.zig`, `compare/results/s4-m979-multinomial-facade-direct.md` | Closed for the current bar: reusable Multinomial facade helpers now sample directly. |
-| S4-M980 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M980 Dirichlet facade direct paths | `src/distributions.zig`, `compare/results/s4-m980-dirichlet-facade-direct.md` | Closed for the current bar: reusable Dirichlet facade helpers now sample directly. |
+| S4-M981 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3506,6 +3507,11 @@ reliability/ergonomics work and does not resolve S4-M11 or complete the long-ter
 objective.
 S4-M979 additionally routes reusable Multinomial allocation-returning and
 caller-buffer facade helpers through direct multinomial sampling loops after
+allocation or validation, preserving stream shape while avoiding `From` wrapper
+aliases; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
+S4-M980 additionally routes reusable Dirichlet allocation-returning and
+caller-buffer facade helpers through direct gamma-normalization sampling after
 allocation or validation, preserving stream shape while avoiding `From` wrapper
 aliases; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.

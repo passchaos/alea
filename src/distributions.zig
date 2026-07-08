@@ -17227,7 +17227,10 @@ pub fn Dirichlet(comptime T: type) type {
         }
 
         pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
-            return self.sampleFrom(allocator, rng);
+            const out = try allocator.alloc(T, self.alpha.len);
+            errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
@@ -17238,11 +17241,29 @@ pub fn Dirichlet(comptime T: type) type {
         }
 
         pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
-            self.sampleIntoFrom(rng, out);
+            std.debug.assert(out.len == self.alpha.len);
+            if (self.alpha.len == 1) {
+                out[0] = 1;
+                return;
+            }
+            if (self.degenerateIndex()) |degenerate| {
+                @memset(out, 0);
+                out[degenerate] = 1;
+                return;
+            }
+            var total: T = 0;
+            for (self.alpha, out) |a, *slot| {
+                const value = gammaFrom(rng, T, a, 1);
+                slot.* = value;
+                total += value;
+            }
+
+            for (out) |*value| value.* /= total;
         }
 
         pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
-            try self.sampleIntoCheckedFrom(rng, out);
+            if (out.len != self.alpha.len) return error.InvalidLength;
+            self.sampleInto(rng, out);
         }
 
         pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
@@ -17251,11 +17272,26 @@ pub fn Dirichlet(comptime T: type) type {
         }
 
         pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
-            self.sampleManyIntoFrom(rng, out);
+            std.debug.assert(out.len % self.alpha.len == 0);
+            if (self.alpha.len == 1) {
+                @memset(out, 1);
+                return;
+            }
+            if (self.degenerateIndex()) |degenerate| {
+                @memset(out, 0);
+                var offset: usize = degenerate;
+                while (offset < out.len) : (offset += self.alpha.len) out[offset] = 1;
+                return;
+            }
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += self.alpha.len) {
+                self.sampleInto(rng, out[offset..][0..self.alpha.len]);
+            }
         }
 
         pub fn sampleManyIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
-            try self.sampleManyIntoCheckedFrom(rng, out);
+            if (out.len % self.alpha.len != 0) return error.InvalidLength;
+            self.sampleManyInto(rng, out);
         }
 
         pub fn sampleManyIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
