@@ -1521,7 +1521,9 @@ pub const Bernoulli = struct {
     }
 
     pub fn sample(self: Bernoulli, rng: Rng) bool {
-        return self.sampleFrom(rng);
+        if (self.p_int == 0) return false;
+        if (self.p_int == always_true) return true;
+        return Rng.nextFrom(rng) < self.p_int;
     }
 
     pub fn sampleFrom(self: Bernoulli, source: anytype) bool {
@@ -1630,7 +1632,14 @@ pub fn VectorBernoulli(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.p_int == 0) return @splat(false);
+            if (self.p_int == always_true) return @splat(true);
+            if (self.p_int == Rng.probabilityThreshold(0.5)) return Rng.vectorChanceFrom(rng, VectorType, 0.5);
+            if (self.p_int == Rng.probabilityThreshold(0.25)) return Rng.vectorChanceFrom(rng, VectorType, 0.25);
+
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = Rng.nextFrom(rng) < self.p_int;
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {

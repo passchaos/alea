@@ -4897,3 +4897,9 @@ WeightedTree and WeightedIntTree `sampleIndexFrom` / `sampleIndexU32From` now
 execute direct total-aware tree sampling instead of routing through checked sample
 wrappers. This improves dynamic weighted-index alias ergonomics but does not
 resolve S4-M11.
+
+S4-M965 routes scalar/vector Bernoulli facade samples directly
+(`compare/results/s4-m965-bernoulli-sample-facade-direct.md`):
+Bernoulli and VectorBernoulli `sample` helpers now execute direct threshold
+comparisons and degenerate fast paths instead of routing through `sampleFrom`.
+This improves Bernoulli facade sample ergonomics but does not resolve S4-M11.
