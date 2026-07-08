@@ -4852,3 +4852,9 @@ S4-M957 routes reusable WeightedChoice facade sampling directly
 WeightedChoice `sample` and `sampleValue` now map direct AliasTable facade samples
 instead of routing through `sampleFrom`. This improves reusable weighted-choice
 sample ergonomics but does not resolve S4-M11.
+
+S4-M958 routes reusable Choice value facade sampling directly
+(`compare/results/s4-m958-choice-value-sample-facade-direct.md`):
+Choice `sampleValue` now generates a facade RNG index and copies the item directly
+instead of routing through pointer `sample`. This improves reusable choice value
+sample ergonomics but does not resolve S4-M11.

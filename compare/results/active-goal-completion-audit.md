@@ -996,7 +996,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M955 AliasTable sample facade direct paths | `src/distributions.zig`, `compare/results/s4-m955-aliastable-sample-facade-direct.md` | Closed for the current bar: static AliasTable canonical facade samples now execute directly. |
 | S4-M956 Choice sample facade direct path | `src/seq.zig`, `compare/results/s4-m956-choice-sample-facade-direct.md` | Closed for the current bar: reusable Choice pointer facade sampling now maps a direct facade-generated index. |
 | S4-M957 WeightedChoice sample facade direct paths | `src/seq.zig`, `compare/results/s4-m957-weightedchoice-sample-facade-direct.md` | Closed for the current bar: reusable WeightedChoice facade pointer/value sampling now maps direct alias-table facade samples. |
-| S4-M958 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M958 Choice value sample facade direct path | `src/seq.zig`, `compare/results/s4-m958-choice-value-sample-facade-direct.md` | Closed for the current bar: reusable Choice value facade sampling now maps a direct facade-generated index. |
+| S4-M959 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3387,6 +3388,10 @@ through direct AliasTable facade sampling and item mapping, preserving stream
 shape while avoiding direct-source sample wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the long-term
 objective.
+S4-M958 additionally routes reusable Choice value facade sampling through direct
+facade-index generation and value copying, preserving stream shape while avoiding
+a pointer sample wrapper alias; it is reliability/ergonomics work and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
