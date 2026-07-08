@@ -942,7 +942,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M901 ValueChecked aliases direct sampling paths | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m901-valuechecked-direct.md` | Closed for the current bar: Choose/Choice/WeightedChoice valueChecked aliases now sample directly after prevalidation. |
 | S4-M902 AliasTable u32 checked index alias direct path | `src/distributions.zig`, `compare/results/s4-m902-aliastable-u32-index-checked-direct.md` | Closed for the current bar: AliasTable checked compact index aliases now execute u32 alias-table sampling branches directly. |
 | S4-M903 Weighted tree checked aliases direct sampler paths | `src/distributions.zig`, `compare/results/s4-m903-weighted-tree-checked-alias-direct.md` | Closed for the current bar: dynamic WeightedTree and WeightedIntTree checked scalar/index/u32 aliases now validate once and sample directly. |
-| S4-M904 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M904 SampleValueChecked facade aliases direct paths | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m904-samplevaluechecked-facade-direct.md` | Closed for the current bar: Choose/Choice/WeightedChoice facade sampleValueChecked helpers now sample directly after prevalidation. |
+| S4-M905 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3078,6 +3079,11 @@ scalar, index, and compact-index aliases through direct tree sampling after
 validation, preserving stream shape while avoiding checked wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M904 additionally routes Choose, Choice, and WeightedChoice facade
+sampleValueChecked helpers through direct value sampling after checked
+prevalidation, preserving stream shape while avoiding sampleValueCheckedFrom
+wrapper aliases; it is reliability/ergonomics work and does not resolve S4-M11
+or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

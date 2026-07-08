@@ -4490,3 +4490,10 @@ WeightedTree and WeightedIntTree checked scalar/index/u32 sample aliases now
 validate once and call the tree sampler directly instead of routing through
 checked wrapper aliases. This improves dynamic weighted tree checked alias
 ergonomics but does not resolve S4-M11.
+
+S4-M904 routes sampleValueChecked facade aliases through direct sampling
+(`compare/results/s4-m904-samplevaluechecked-facade-direct.md`):
+Distribution Choose, reusable Choice, and reusable WeightedChoice facade
+sampleValueChecked helpers now validate and then sample directly instead of
+routing through sampleValueCheckedFrom wrappers. This improves checked facade
+value ergonomics but does not resolve S4-M11.

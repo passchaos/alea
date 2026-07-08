@@ -460,7 +460,10 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn sampleValueChecked(self: Self, rng: Rng) Error!T {
-            return self.sampleValueCheckedFrom(rng);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return self.items[0];
+            return self.items[Rng.uintLessThanFrom(rng, usize, self.items.len)];
         }
 
         pub fn sampleValueCheckedFrom(self: Self, source: anytype) Error!T {
@@ -34500,6 +34503,11 @@ test "distribution Choose sampler mirrors slice choices" {
     const helper_checked_value_index = Rng.chooseIndexFrom(&helper_checked_value_engine, items.len).?;
     try std.testing.expectEqual(items[helper_checked_value_index], try choice.sampleValueCheckedFrom(&direct_checked_value_engine));
     try std.testing.expectEqual(helper_checked_value_engine.next(), direct_checked_value_engine.next());
+    var facade_checked_value_engine = root.DefaultPrng.init(0xc0_2a4);
+    var helper_facade_checked_value_engine = root.DefaultPrng.init(0xc0_2a4);
+    const helper_facade_checked_value_index = Rng.chooseIndexFrom(&helper_facade_checked_value_engine, items.len).?;
+    try std.testing.expectEqual(items[helper_facade_checked_value_index], try choice.sampleValueChecked(root.Rng.init(&facade_checked_value_engine)));
+    try std.testing.expectEqual(helper_facade_checked_value_engine.next(), facade_checked_value_engine.next());
     var direct_value_checked_engine = root.DefaultPrng.init(0xc0_2a3);
     var helper_value_checked_engine = root.DefaultPrng.init(0xc0_2a3);
     const helper_value_checked_index = Rng.chooseIndexFrom(&helper_value_checked_engine, items.len).?;
