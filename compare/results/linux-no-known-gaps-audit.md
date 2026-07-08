@@ -4673,3 +4673,10 @@ WeightedChoice pointer/value/index/u32 checked direct-source iterator helpers no
 construct iterators directly instead of routing through unchecked direct-source
 iterator wrappers. This improves reusable weighted checked direct-source iterator
 ergonomics but does not resolve S4-M11.
+
+S4-M931 routes distribution Choose checked direct-source owned helpers directly
+(`compare/results/s4-m931-distribution-choose-checked-owned-from-direct.md`):
+Choose pointer/value/index/u32 checked direct-source allocation-returning helpers
+now allocate and fill directly instead of routing through unchecked direct-source
+owned wrappers. This improves checked direct-source owned-batch ergonomics but
+does not resolve S4-M11.

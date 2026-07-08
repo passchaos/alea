@@ -582,7 +582,10 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn ptrsCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]*const T {
-            return self.ptrsFrom(allocator, source, amount);
+            const out = try allocator.alloc(*const T, amount);
+            errdefer allocator.free(out);
+            try self.fillCheckedFrom(source, out);
+            return out;
         }
 
         pub fn ptrArray(self: Self, rng: Rng, comptime N: usize) [N]*const T {
@@ -696,7 +699,10 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
-            return self.indicesFrom(allocator, source, amount);
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            try self.fillIndicesCheckedFrom(source, out);
+            return out;
         }
 
         pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
@@ -784,7 +790,11 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
-            return self.indicesU32From(allocator, source, amount);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillIndicesU32CheckedFrom(source, out);
+            return out;
         }
 
         pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
@@ -976,7 +986,12 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn valuesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]T {
-            return self.valuesFrom(allocator, source, amount);
+            if (amount == 0) return allocator.alloc(T, 0);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+            const out = try allocator.alloc(T, amount);
+            errdefer allocator.free(out);
+            try self.fillValuesCheckedFrom(source, out);
+            return out;
         }
 
         pub fn valueIter(self: Self, rng: Rng) ValueIterator(Rng) {
