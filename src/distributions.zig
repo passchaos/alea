@@ -9993,11 +9993,15 @@ pub fn Gamma(comptime T: type) type {
 }
 
 pub fn chiSquared(rng: Rng, comptime T: type, dof: T) T {
-    return chiSquaredFrom(rng, T, dof);
+    comptime requireFloat(T);
+    std.debug.assert(dof >= 0 and std.math.isFinite(dof));
+    if (dof == 0) return 0;
+    return gamma(rng, T, dof / 2, 2);
 }
 
 pub fn chiSquaredChecked(rng: Rng, comptime T: type, dof: T) Error!T {
-    return chiSquaredCheckedFrom(rng, T, dof);
+    const dist = try ChiSquared(T).init(dof);
+    return dist.sample(rng);
 }
 
 pub fn chiSquaredCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T {
@@ -10013,7 +10017,22 @@ pub fn chiSquaredFrom(source: anytype, comptime T: type, dof: T) T {
 }
 
 pub fn fillChiSquared(rng: Rng, comptime T: type, dest: []T, dof: T) void {
-    fillChiSquaredFrom(rng, T, dest, dof);
+    comptime requireFloat(T);
+    std.debug.assert(dof >= 0 and std.math.isFinite(dof));
+    if (dof == 0) {
+        @memset(dest, 0);
+        return;
+    }
+    if (dof == 1) {
+        for (dest) |*item| {
+            const z = Rng.standardNormalFastFrom(rng, T);
+            item.* = z * z;
+        }
+        return;
+    }
+
+    const sampler = ChiSquared(T).init(dof) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillChiSquaredFrom(source: anytype, comptime T: type, dest: []T, dof: T) void {
@@ -10036,7 +10055,9 @@ pub fn fillChiSquaredFrom(source: anytype, comptime T: type, dest: []T, dof: T) 
 }
 
 pub fn fillChiSquaredChecked(rng: Rng, comptime T: type, dest: []T, dof: T) Error!void {
-    return fillChiSquaredCheckedFrom(rng, T, dest, dof);
+    if (dest.len == 0) return;
+    const sampler = try ChiSquared(T).init(dof);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillChiSquaredCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T) Error!void {
@@ -10046,7 +10067,8 @@ pub fn fillChiSquaredCheckedFrom(source: anytype, comptime T: type, dest: []T, d
 }
 
 pub fn vectorChiSquared(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType)) VectorType {
-    return vectorChiSquaredFrom(rng, VectorType, dof);
+    const sampler = VectorChiSquared(VectorType).init(dof) catch unreachable;
+    return sampler.sample(rng);
 }
 
 pub fn vectorChiSquaredFrom(source: anytype, comptime VectorType: type, dof: vectorChild(VectorType)) VectorType {
@@ -10055,7 +10077,8 @@ pub fn vectorChiSquaredFrom(source: anytype, comptime VectorType: type, dof: vec
 }
 
 pub fn vectorChiSquaredChecked(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType)) Error!VectorType {
-    return vectorChiSquaredCheckedFrom(rng, VectorType, dof);
+    const sampler = try VectorChiSquared(VectorType).init(dof);
+    return sampler.sample(rng);
 }
 
 pub fn vectorChiSquaredCheckedFrom(source: anytype, comptime VectorType: type, dof: vectorChild(VectorType)) Error!VectorType {
@@ -10064,7 +10087,8 @@ pub fn vectorChiSquaredCheckedFrom(source: anytype, comptime VectorType: type, d
 }
 
 pub fn fillVectorChiSquared(rng: Rng, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) void {
-    fillVectorChiSquaredFrom(rng, VectorType, dest, dof);
+    const sampler = VectorChiSquared(VectorType).init(dof) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorChiSquaredFrom(source: anytype, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) void {
@@ -10073,7 +10097,9 @@ pub fn fillVectorChiSquaredFrom(source: anytype, comptime VectorType: type, dest
 }
 
 pub fn fillVectorChiSquaredChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) Error!void {
-    return fillVectorChiSquaredCheckedFrom(rng, VectorType, dest, dof);
+    if (dest.len == 0) return;
+    const sampler = try VectorChiSquared(VectorType).init(dof);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorChiSquaredCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType)) Error!void {

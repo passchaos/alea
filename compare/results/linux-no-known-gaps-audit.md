@@ -5141,3 +5141,10 @@ S4-M999 routes reusable scalar/vector ChiSquared facade helpers directly
 through cached Gamma facade samplers directly instead of routing through
 `sampleFrom` / `fillFrom` wrappers. This improves ChiSquared sampler facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1000 routes top-level scalar/vector ChiSquared facade helpers directly
+(`compare/results/s4-m1000-chi-squared-top-level-facade-direct.md`):
+scalar/vector ChiSquared checked/nonchecked sample/fill helpers now construct
+reusable ChiSquared samplers and call facade `sample` / `fill` directly instead
+of routing through `From` wrappers. This improves ChiSquared top-level facade
+ergonomics but does not resolve S4-M11.
