@@ -18349,7 +18349,11 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) usize {
-            return self.sampleCheckedFrom(source) catch unreachable;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) unreachable;
+            if (self.positive_count == 1) return self.positive_index.?;
+
+            return self.sampleWithTotalFrom(source, total);
         }
 
         pub fn sampleIndexFrom(self: Self, source: anytype) usize {
@@ -18357,7 +18361,12 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn sampleU32From(self: Self, source: anytype) u32 {
-            return self.sampleU32CheckedFrom(source) catch unreachable;
+            if (self.len() > std.math.maxInt(u32)) unreachable;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) unreachable;
+            if (self.positive_count == 1) return @intCast(self.positive_index.?);
+
+            return @intCast(self.sampleWithTotalFrom(source, total));
         }
 
         pub fn sampleIndexU32From(self: Self, source: anytype) u32 {
@@ -19299,7 +19308,11 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) usize {
-            return self.sampleCheckedFrom(source) catch unreachable;
+            const total = self.totalWeight();
+            if (total == 0) unreachable;
+            if (self.positive_count == 1) return self.positive_index.?;
+
+            return self.sampleWithTotalFrom(source, total);
         }
 
         pub fn sampleIndexFrom(self: Self, source: anytype) usize {
@@ -19307,7 +19320,12 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn sampleU32From(self: Self, source: anytype) u32 {
-            return self.sampleU32CheckedFrom(source) catch unreachable;
+            if (self.len() > std.math.maxInt(u32)) unreachable;
+            const total = self.totalWeight();
+            if (total == 0) unreachable;
+            if (self.positive_count == 1) return @intCast(self.positive_index.?);
+
+            return @intCast(self.sampleWithTotalFrom(source, total));
         }
 
         pub fn sampleIndexU32From(self: Self, source: anytype) u32 {

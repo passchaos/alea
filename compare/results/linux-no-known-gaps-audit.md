@@ -4828,3 +4828,9 @@ WeightedTree and WeightedIntTree facade fill helpers now execute direct
 total-aware fill loops instead of routing through checked/direct-source fill
 wrappers. This improves dynamic weighted-index fill ergonomics but does not
 resolve S4-M11.
+
+S4-M954 routes dynamic weighted-tree canonical direct-source sample helpers
+directly (`compare/results/s4-m954-weighted-tree-sample-from-direct.md`):
+WeightedTree and WeightedIntTree `sampleFrom` / `sampleU32From` now execute direct
+total-aware sampling instead of routing through checked sample wrappers. This
+improves dynamic weighted-index sample ergonomics but does not resolve S4-M11.
