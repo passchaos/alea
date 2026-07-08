@@ -4840,3 +4840,9 @@ S4-M955 routes static AliasTable canonical facade samples directly
 AliasTable `sample` and `sampleChecked` now execute direct alias-table sampling
 branches instead of routing through direct-source sample wrappers. This improves
 weighted-index facade sample ergonomics but does not resolve S4-M11.
+
+S4-M956 routes reusable Choice pointer facade sampling directly
+(`compare/results/s4-m956-choice-sample-facade-direct.md`):
+Choice `sample` now generates a facade RNG index and maps directly to item storage
+instead of routing through `sampleFrom`. This improves reusable choice sample
+ergonomics but does not resolve S4-M11.

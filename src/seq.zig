@@ -8417,7 +8417,9 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) *const T {
-            return self.sampleFrom(rng);
+            const items = self.items;
+            if (items.len == 1) return &items[0];
+            return &items[Rng.uintLessThanFrom(rng, usize, items.len)];
         }
 
         pub fn sampleFrom(self: Self, source: anytype) *const T {
