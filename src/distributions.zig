@@ -11204,7 +11204,10 @@ pub fn VectorCauchy(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.medianValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+                item.* = cauchyFromOpenUniformVector(VectorType, uniform_vec, self.medianValue(), self.scaleValue());
+            }
         }
     };
 }
@@ -27024,6 +27027,29 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &cauchy_buf_vec, &direct_cauchy_buf_vec);
     for (cauchy_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_cauchy_fill_engine = alea.ScalarPrng.init(0xc851_0001);
+    var vector_cauchy_loop_engine = alea.ScalarPrng.init(0xc851_0001);
+    var vector_cauchy_fill: [3]@Vector(4, f64) = undefined;
+    var vector_cauchy_loop: [3]@Vector(4, f64) = undefined;
+    vector_cauchy_sampler.fillFrom(&vector_cauchy_fill_engine, &vector_cauchy_fill);
+    for (&vector_cauchy_loop) |*slot| slot.* = vector_cauchy_sampler.sampleFrom(&vector_cauchy_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_cauchy_loop, &vector_cauchy_fill);
+    try std.testing.expectEqual(vector_cauchy_loop_engine.next(), vector_cauchy_fill_engine.next());
+    var vector_cauchy_f32_fill_engine = alea.ScalarPrng.init(0xc851_f32);
+    var vector_cauchy_f32_loop_engine = alea.ScalarPrng.init(0xc851_f32);
+    const vector_cauchy_f32 = try VectorCauchy(@Vector(8, f32)).init(0, 1);
+    var vector_cauchy_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_cauchy_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_cauchy_f32.fillFrom(&vector_cauchy_f32_fill_engine, &vector_cauchy_f32_fill);
+    for (&vector_cauchy_f32_loop) |*slot| slot.* = vector_cauchy_f32.sampleFrom(&vector_cauchy_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_cauchy_f32_loop, &vector_cauchy_f32_fill);
+    try std.testing.expectEqual(vector_cauchy_f32_loop_engine.next(), vector_cauchy_f32_fill_engine.next());
+    var vector_cauchy_degenerate_engine = alea.ScalarPrng.init(0xc851_d00);
+    var vector_cauchy_degenerate_control = alea.ScalarPrng.init(0xc851_d00);
+    const vector_cauchy_degenerate = try VectorCauchy(@Vector(4, f64)).init(1.5, 0);
+    vector_cauchy_degenerate.fillFrom(&vector_cauchy_degenerate_engine, &vector_cauchy_fill);
+    for (vector_cauchy_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
+    try std.testing.expectEqual(vector_cauchy_degenerate_control.next(), vector_cauchy_degenerate_engine.next());
 
     const laplace_vec = try vectorLaplaceChecked(rng, @Vector(4, f64), 0, 1);
     const direct_laplace_vec = try vectorLaplaceCheckedFrom(&direct_engine, @Vector(4, f64), 0, 1);

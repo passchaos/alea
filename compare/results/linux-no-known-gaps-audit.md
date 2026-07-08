@@ -4132,3 +4132,10 @@ VectorArcsine.fillFrom now draws vector open-uniform values and applies the
 arcsine transform directly, instead of routing every output through
 VectorArcsine.sampleFrom. This improves VectorArcsine reusable fill ergonomics
 but does not resolve S4-M11.
+
+S4-M851 draws reusable VectorCauchy fills through direct vector open-uniform
+transforms (`compare/results/s4-m851-vector-cauchy-fill-direct-transform.md`):
+VectorCauchy.fillFrom now draws vector open-uniform values and applies the
+Cauchy transform directly, instead of routing every output through
+VectorCauchy.sampleFrom. This improves VectorCauchy reusable fill ergonomics but
+does not resolve S4-M11.
