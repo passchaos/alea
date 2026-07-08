@@ -17369,7 +17369,14 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
-            return self.sampleCheckedFrom(source);
+            if (self.constant_index) |index| return index;
+            if (aliasTableCanSampleWithOneWord(self.prob.len)) {
+                const raw = Rng.nextFrom(source);
+                const column = @as(usize, @intCast(raw & @as(u64, @intCast(self.prob.len - 1))));
+                return if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column];
+            }
+            const column = Rng.uintLessThanFrom(source, usize, self.prob.len);
+            return if (Rng.floatFrom(source, f64) < self.prob[column]) column else self.alias[column];
         }
 
         pub fn sampleU32From(self: Self, source: anytype) u32 {
