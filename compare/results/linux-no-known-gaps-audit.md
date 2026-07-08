@@ -5398,3 +5398,9 @@ S4-M1036 routes reusable vector table Normal facade helpers directly
 now call table-normal facade helpers directly instead of routing through
 `sampleFrom` / `fillFrom` wrappers. This improves vector table Normal facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1037 routes reusable VectorNormal facade fills directly
+(`compare/results/s4-m1037-vector-normal-fill-facade-direct.md`):
+`VectorNormal.fill` now calls facade `fillVectorNormal` directly instead of
+routing through `fillFrom`. This improves VectorNormal fill facade ergonomics but
+does not resolve S4-M11.

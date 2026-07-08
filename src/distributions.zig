@@ -5825,7 +5825,7 @@ pub fn VectorNormal(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            fillVectorNormal(rng, VectorType, dest, self.mean, self.stddev);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
