@@ -4808,3 +4808,10 @@ WeightedTree and WeightedIntTree checked compact iterator constructors now build
 iterator payloads directly after width and validity checks instead of routing
 through iterator wrappers. This improves dynamic weighted-index compact iterator
 ergonomics but does not resolve S4-M11.
+
+S4-M951 routes dynamic weighted-tree owned facade helpers directly
+(`compare/results/s4-m951-weighted-tree-owned-facade-direct.md`):
+WeightedTree and WeightedIntTree allocation-returning facade helpers now allocate
+and fill directly instead of routing through direct-source owned wrappers. This
+improves dynamic weighted-index owned-batch ergonomics but does not resolve
+S4-M11.

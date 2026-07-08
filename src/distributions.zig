@@ -18413,7 +18413,10 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
-            return self.indicesFrom(allocator, rng, amount);
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            self.fill(rng, out);
+            return out;
         }
 
         pub fn indicesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
@@ -18424,7 +18427,11 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indicesChecked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
-            return self.indicesCheckedFrom(allocator, rng, amount);
+            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            try self.fillChecked(rng, out);
+            return out;
         }
 
         pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
@@ -18436,7 +18443,11 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
-            return self.indicesU32From(allocator, rng, amount);
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            self.fillU32(rng, out);
+            return out;
         }
 
         pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
@@ -18448,7 +18459,12 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indicesU32Checked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
-            return self.indicesU32CheckedFrom(allocator, rng, amount);
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillU32Checked(rng, out);
+            return out;
         }
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
@@ -19277,7 +19293,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indices(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
-            return self.indicesFrom(allocator, rng, amount);
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            self.fill(rng, out);
+            return out;
         }
 
         pub fn indicesFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
@@ -19288,7 +19307,11 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indicesChecked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
-            return self.indicesCheckedFrom(allocator, rng, amount);
+            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            const out = try allocator.alloc(usize, amount);
+            errdefer allocator.free(out);
+            try self.fillChecked(rng, out);
+            return out;
         }
 
         pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
@@ -19300,7 +19323,11 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indicesU32(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
-            return self.indicesU32From(allocator, rng, amount);
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            self.fillU32(rng, out);
+            return out;
         }
 
         pub fn indicesU32From(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
@@ -19312,7 +19339,12 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indicesU32Checked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
-            return self.indicesU32CheckedFrom(allocator, rng, amount);
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            const out = try allocator.alloc(u32, amount);
+            errdefer allocator.free(out);
+            try self.fillU32Checked(rng, out);
+            return out;
         }
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
