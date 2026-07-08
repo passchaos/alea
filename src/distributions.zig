@@ -1533,7 +1533,23 @@ pub const Bernoulli = struct {
     }
 
     pub fn fill(self: Bernoulli, rng: Rng, dest: []bool) void {
-        self.fillFrom(rng, dest);
+        if (self.p_int == 0) {
+            @memset(dest, false);
+            return;
+        }
+        if (self.p_int == always_true) {
+            @memset(dest, true);
+            return;
+        }
+        if (self.p_int == Rng.probabilityThreshold(0.5)) {
+            Rng.fillChanceFrom(rng, dest, 0.5);
+            return;
+        }
+        if (self.p_int == Rng.probabilityThreshold(0.25)) {
+            Rng.fillChanceFrom(rng, dest, 0.25);
+            return;
+        }
+        for (dest) |*item| item.* = Rng.nextFrom(rng) < self.p_int;
     }
 
     pub fn fillFrom(self: Bernoulli, source: anytype, dest: []bool) void {
@@ -1654,7 +1670,27 @@ pub fn VectorBernoulli(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.p_int == 0) {
+                @memset(dest, @as(VectorType, @splat(false)));
+                return;
+            }
+            if (self.p_int == always_true) {
+                @memset(dest, @as(VectorType, @splat(true)));
+                return;
+            }
+            if (self.p_int == Rng.probabilityThreshold(0.5)) {
+                Rng.fillVectorChanceFrom(rng, VectorType, dest, 0.5);
+                return;
+            }
+            if (self.p_int == Rng.probabilityThreshold(0.25)) {
+                Rng.fillVectorChanceFrom(rng, VectorType, dest, 0.25);
+                return;
+            }
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = Rng.nextFrom(rng) < self.p_int;
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {

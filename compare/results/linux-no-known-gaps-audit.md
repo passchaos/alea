@@ -4903,3 +4903,9 @@ S4-M965 routes scalar/vector Bernoulli facade samples directly
 Bernoulli and VectorBernoulli `sample` helpers now execute direct threshold
 comparisons and degenerate fast paths instead of routing through `sampleFrom`.
 This improves Bernoulli facade sample ergonomics but does not resolve S4-M11.
+
+S4-M966 routes scalar/vector Bernoulli facade fills directly
+(`compare/results/s4-m966-bernoulli-fill-facade-direct.md`):
+Bernoulli and VectorBernoulli `fill` helpers now execute direct threshold loops
+and degenerate fast paths instead of routing through `fillFrom`. This improves
+Bernoulli facade fill ergonomics but does not resolve S4-M11.
