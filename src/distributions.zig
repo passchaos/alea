@@ -2727,11 +2727,13 @@ pub const Hypergeometric = struct {
 };
 
 pub fn hypergeometric(rng: Rng, population: u64, successes: u64, draws: u64) u64 {
-    return hypergeometricFrom(rng, population, successes, draws);
+    const dist = Hypergeometric.init(population, successes, draws) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn hypergeometricChecked(rng: Rng, population: u64, successes: u64, draws: u64) Error!u64 {
-    return hypergeometricCheckedFrom(rng, population, successes, draws);
+    const dist = try Hypergeometric.init(population, successes, draws);
+    return dist.sample(rng);
 }
 
 pub fn hypergeometricCheckedFrom(source: anytype, population: u64, successes: u64, draws: u64) Error!u64 {
@@ -2740,7 +2742,8 @@ pub fn hypergeometricCheckedFrom(source: anytype, population: u64, successes: u6
 }
 
 pub fn fillHypergeometric(rng: Rng, dest: []u64, population: u64, successes: u64, draws: u64) void {
-    fillHypergeometricFrom(rng, dest, population, successes, draws);
+    const dist = Hypergeometric.init(population, successes, draws) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillHypergeometricFrom(source: anytype, dest: []u64, population: u64, successes: u64, draws: u64) void {
@@ -2749,7 +2752,9 @@ pub fn fillHypergeometricFrom(source: anytype, dest: []u64, population: u64, suc
 }
 
 pub fn fillHypergeometricChecked(rng: Rng, dest: []u64, population: u64, successes: u64, draws: u64) Error!void {
-    return fillHypergeometricCheckedFrom(rng, dest, population, successes, draws);
+    if (dest.len == 0) return;
+    const dist = try Hypergeometric.init(population, successes, draws);
+    dist.fill(rng, dest);
 }
 
 pub fn fillHypergeometricCheckedFrom(source: anytype, dest: []u64, population: u64, successes: u64, draws: u64) Error!void {

@@ -973,6 +973,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M975", .path = "compare/results/s4-m975-vector-negative-binomial-top-level-facade-direct.md" },
     .{ .milestone = "S4-M976", .path = "compare/results/s4-m976-hypergeometric-sampler-facade-direct.md" },
     .{ .milestone = "S4-M977", .path = "compare/results/s4-m977-vector-hypergeometric-facade-direct.md" },
+    .{ .milestone = "S4-M978", .path = "compare/results/s4-m978-hypergeometric-top-level-facade-direct.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -980,7 +981,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M978",
+    "S4-M979",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -1293,12 +1294,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M978 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M978 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M979 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M979 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M978 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M978 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M979 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M979 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {

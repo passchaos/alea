@@ -4982,3 +4982,10 @@ S4-M977 routes vector Hypergeometric facade helpers directly
 VectorHypergeometric top-level and reusable facade helpers now dispatch directly
 to the selected method instead of routing through `From` wrappers. This improves
 vector Hypergeometric facade ergonomics but does not resolve S4-M11.
+
+S4-M978 routes top-level scalar Hypergeometric facade helpers directly
+(`compare/results/s4-m978-hypergeometric-top-level-facade-direct.md`):
+`hypergeometric`, `hypergeometricChecked`, `fillHypergeometric`, and
+`fillHypergeometricChecked` now validate and sample/fill through reusable facade
+samplers instead of routing through `From` wrappers. This improves Hypergeometric
+top-level facade ergonomics but does not resolve S4-M11.
