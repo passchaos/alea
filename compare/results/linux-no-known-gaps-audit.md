@@ -3900,3 +3900,10 @@ S4-M817 maps Choice value iterators directly from generated indexes
 reusable Choice value iterator next calls now generate uniform indexes and map
 directly into item storage instead of routing through sampleValueFrom. This
 improves reusable choice value iterator ergonomics but does not resolve S4-M11.
+
+S4-M818 maps distribution Choose value iterators directly from generated indexes
+(`compare/results/s4-m818-distribution-choose-value-iterator-direct.md`):
+distribution-layer Choose value iterator next calls now generate uniform indexes
+and map directly into item storage instead of routing through sampleValueFrom.
+This improves distribution choose value iterator ergonomics but does not resolve
+S4-M11.
