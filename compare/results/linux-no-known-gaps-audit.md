@@ -4038,3 +4038,11 @@ shape-one non-degenerate fills and scales the output in place, matching local
 rand_distr's `GammaRepr::One(Exp)` decomposition while preserving stream shape.
 This improves Gamma shape-one reusable fill ergonomics but does not resolve
 S4-M11.
+
+S4-M838 stages shape-one reusable VectorGamma fills through the standard helper
+(`compare/results/s4-m838-vector-gamma-shape-one-fill-standard-stage.md`):
+VectorGamma.fillFrom now uses the shared standard vector exponential bulk helper
+for f32/f64 shape-one non-degenerate fills and scales the backing scalar lanes in
+place, matching the same local rand_distr Gamma decomposition for vector fills
+while preserving stream shape. This improves VectorGamma shape-one reusable fill
+ergonomics but does not resolve S4-M11.

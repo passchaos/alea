@@ -8967,6 +8967,14 @@ pub fn VectorGamma(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(0)));
                 return;
             }
+            if (self.sampler.shape == 1 and (comptime Child == f32 or Child == f64)) {
+                fillVectorStandardExponentialFrom(source, VectorType, dest);
+                if (self.sampler.scale != 1) {
+                    const scalars = std.mem.bytesAsSlice(Child, std.mem.sliceAsBytes(dest));
+                    scaleInPlace(Child, scalars, self.sampler.scale);
+                }
+                return;
+            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
@@ -26525,6 +26533,26 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &gamma_buf_vec, &direct_gamma_buf_vec);
     for (gamma_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_gamma_shape_one_fill_engine = alea.ScalarPrng.init(0x6838_0001);
+    var vector_gamma_shape_one_standard_engine = alea.ScalarPrng.init(0x6838_0001);
+    const vector_gamma_shape_one = try VectorGamma(@Vector(4, f64)).init(1, 3);
+    var vector_gamma_shape_one_fill: [3]@Vector(4, f64) = undefined;
+    var vector_gamma_shape_one_standard: [3]@Vector(4, f64) = undefined;
+    vector_gamma_shape_one.fillFrom(&vector_gamma_shape_one_fill_engine, &vector_gamma_shape_one_fill);
+    fillVectorStandardExponentialFrom(&vector_gamma_shape_one_standard_engine, @Vector(4, f64), &vector_gamma_shape_one_standard);
+    const vector_gamma_shape_one_scalars = std.mem.bytesAsSlice(f64, std.mem.sliceAsBytes(&vector_gamma_shape_one_standard));
+    scaleInPlace(f64, vector_gamma_shape_one_scalars, 3);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_gamma_shape_one_standard, &vector_gamma_shape_one_fill);
+    try std.testing.expectEqual(vector_gamma_shape_one_standard_engine.next(), vector_gamma_shape_one_fill_engine.next());
+    var vector_gamma_shape_one_f32_fill_engine = alea.ScalarPrng.init(0x6838_f32);
+    var vector_gamma_shape_one_f32_loop_engine = alea.ScalarPrng.init(0x6838_f32);
+    const vector_gamma_shape_one_f32 = try VectorGamma(@Vector(8, f32)).init(1, 2.75);
+    var vector_gamma_shape_one_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_gamma_shape_one_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_gamma_shape_one_f32.fillFrom(&vector_gamma_shape_one_f32_fill_engine, &vector_gamma_shape_one_f32_fill);
+    for (&vector_gamma_shape_one_f32_loop) |*slot| slot.* = vector_gamma_shape_one_f32.sampleFrom(&vector_gamma_shape_one_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_gamma_shape_one_f32_loop, &vector_gamma_shape_one_f32_fill);
+    try std.testing.expectEqual(vector_gamma_shape_one_f32_loop_engine.next(), vector_gamma_shape_one_f32_fill_engine.next());
 
     const chi_squared_vec = try vectorChiSquaredChecked(rng, @Vector(4, f64), 4);
     const direct_chi_squared_vec = try vectorChiSquaredCheckedFrom(&direct_engine, @Vector(4, f64), 4);
