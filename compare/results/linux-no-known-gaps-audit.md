@@ -5243,3 +5243,10 @@ S4-M1014 routes reusable scalar/vector Cauchy facade helpers directly
 the Cauchy transform directly through facade `Rng` instead of routing through
 `sampleFrom` / `fillFrom` wrappers. This improves Cauchy sampler facade ergonomics
 but does not resolve S4-M11.
+
+S4-M1015 routes reusable scalar/vector Laplace facade helpers directly
+(`compare/results/s4-m1015-laplace-sampler-facade-direct.md`): `Laplace.sample` /
+`fill` and `VectorLaplace.sample` / `fill` now draw strict-open uniform values and
+apply the Laplace transform directly through facade `Rng` instead of routing
+through `sampleFrom` / `fillFrom` wrappers. This improves Laplace sampler facade
+ergonomics but does not resolve S4-M11.
