@@ -1972,7 +1972,14 @@ pub fn binomialFrom(source: anytype, trials: u64, p: f64) u64 {
 }
 
 pub fn binomialPoissonApprox(rng: Rng, trials: u64, p: f64) u64 {
-    return binomialPoissonApproxFrom(rng, trials, p);
+    std.debug.assert(p >= 0 and p <= 1);
+    if (trials == 0 or p == 0) return 0;
+    if (p == 1) return trials;
+
+    const q = if (p <= 0.5) p else 1.0 - p;
+    const mean = @as(f64, @floatFromInt(trials)) * q;
+    const sampled = @min(poissonFrom(rng, mean), trials);
+    return if (p <= 0.5) sampled else trials - sampled;
 }
 
 pub fn binomialPoissonApproxFrom(source: anytype, trials: u64, p: f64) u64 {
@@ -1987,7 +1994,8 @@ pub fn binomialPoissonApproxFrom(source: anytype, trials: u64, p: f64) u64 {
 }
 
 pub fn binomialPoissonApproxChecked(rng: Rng, trials: u64, p: f64) Error!u64 {
-    return binomialPoissonApproxCheckedFrom(rng, trials, p);
+    if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+    return binomialPoissonApprox(rng, trials, p);
 }
 
 pub fn binomialPoissonApproxCheckedFrom(source: anytype, trials: u64, p: f64) Error!u64 {
