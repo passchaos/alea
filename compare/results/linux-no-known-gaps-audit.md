@@ -4846,3 +4846,9 @@ S4-M956 routes reusable Choice pointer facade sampling directly
 Choice `sample` now generates a facade RNG index and maps directly to item storage
 instead of routing through `sampleFrom`. This improves reusable choice sample
 ergonomics but does not resolve S4-M11.
+
+S4-M957 routes reusable WeightedChoice facade sampling directly
+(`compare/results/s4-m957-weightedchoice-sample-facade-direct.md`):
+WeightedChoice `sample` and `sampleValue` now map direct AliasTable facade samples
+instead of routing through `sampleFrom`. This improves reusable weighted-choice
+sample ergonomics but does not resolve S4-M11.

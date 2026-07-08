@@ -9218,7 +9218,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) *const T {
-            return self.sampleFrom(rng);
+            return &self.items[self.table.sample(rng)];
         }
 
         pub fn sampleFrom(self: Self, source: anytype) *const T {
@@ -9261,7 +9261,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn sampleValue(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng).*;
+            return self.items[self.table.sample(rng)];
         }
 
         pub fn sampleValueFrom(self: Self, source: anytype) T {
