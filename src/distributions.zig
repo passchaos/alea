@@ -3520,7 +3520,21 @@ pub fn Uniform(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.inclusive) {
+                switch (@typeInfo(T)) {
+                    .int => return rng.intRangeAtMost(T, self.low, self.high),
+                    .float => {
+                        if (self.low == self.high) return self.low;
+                        return self.low + (self.high - self.low) * uniformClosedUnitFrom(rng, T);
+                    },
+                    else => @compileError("Uniform supports integer and floating-point types"),
+                }
+            }
+            switch (@typeInfo(T)) {
+                .int => return rng.intRangeLessThan(T, self.low, self.high),
+                .float => return rng.floatRange(T, self.low, self.high),
+                else => @compileError("Uniform supports integer and floating-point types"),
+            }
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -3531,7 +3545,31 @@ pub fn Uniform(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.inclusive) {
+                switch (@typeInfo(T)) {
+                    .int => {
+                        if (self.low == self.high) {
+                            @memset(dest, self.low);
+                            return;
+                        }
+                        for (dest) |*item| item.* = rng.intRangeAtMost(T, self.low, self.high);
+                    },
+                    .float => {
+                        if (self.low == self.high) {
+                            @memset(dest, self.low);
+                            return;
+                        }
+                        const width = self.high - self.low;
+                        for (dest) |*item| item.* = self.low + width * uniformClosedUnitFrom(rng, T);
+                    },
+                    else => @compileError("Uniform supports integer and floating-point types"),
+                }
+                return;
+            }
+            switch (@typeInfo(T)) {
+                .int, .float => rng.fillRange(T, dest, self.low, self.high),
+                else => @compileError("Uniform supports integer and floating-point types"),
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {

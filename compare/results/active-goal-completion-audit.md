@@ -1027,7 +1027,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M986 Vector Geometric facade direct paths | `src/distributions.zig`, `compare/results/s4-m986-vector-geometric-facade-direct.md` | Closed for the current bar: vector Geometric and GeometricFailures facade helpers now avoid From wrappers. |
 | S4-M987 StandardGeometric facade direct paths | `src/distributions.zig`, `compare/results/s4-m987-standard-geometric-facade-direct.md` | Closed for the current bar: scalar/vector StandardGeometric facade helpers now avoid From wrappers. |
 | S4-M988 Bernoulli top-level facade direct paths | `src/distributions.zig`, `compare/results/s4-m988-bernoulli-top-level-facade-direct.md` | Closed for the current bar: scalar/vector top-level Bernoulli facade helpers now avoid From wrappers. |
-| S4-M989 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M989 Uniform sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m989-uniform-sampler-facade-direct.md` | Closed for the current bar: reusable scalar Uniform facade sample/fill helpers now avoid From wrappers. |
+| S4-M990 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3564,6 +3565,12 @@ S4-M988 additionally routes scalar/vector top-level Bernoulli facade helpers
 through reusable Bernoulli facade sample/fill methods, preserving stream shape,
 degenerate no-consume behavior, checked invalid-probability behavior, and
 zero-length checked fill semantics while avoiding `From` wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M989 additionally routes reusable scalar Uniform facade sample/fill helpers
+through direct facade range dispatch, preserving stream shape, inclusive endpoint
+behavior, degenerate inclusive no-consume behavior, and zero-length checked fill
+semantics while avoiding `sampleFrom` / `fillFrom` wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 

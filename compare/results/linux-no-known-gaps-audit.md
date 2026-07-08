@@ -5064,3 +5064,9 @@ S4-M988 routes scalar/vector top-level Bernoulli facade helpers directly
 `fillVectorBernoulliChecked` now construct reusable Bernoulli samplers and call
 facade `sample` / `fill` directly instead of routing through `From` wrappers.
 This improves Bernoulli top-level facade ergonomics but does not resolve S4-M11.
+
+S4-M989 routes reusable scalar Uniform facade helpers directly
+(`compare/results/s4-m989-uniform-sampler-facade-direct.md`): `Uniform(T).sample`
+and `Uniform(T).fill` now dispatch through facade `Rng` range logic directly
+instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
+Uniform sampler facade ergonomics but does not resolve S4-M11.
