@@ -4580,3 +4580,10 @@ and filling
 Choose ptr/value/index/u32 checked allocation-returning facade helpers now allocate
 and fill directly instead of routing through direct-source checked owned wrappers.
 This improves checked owned-batch ergonomics but does not resolve S4-M11.
+
+S4-M917 routes reusable Choice checked owned facades through direct allocation and
+filling (`compare/results/s4-m917-choice-checked-owned-facade-direct.md`):
+Choice ptr/value/index/u32 checked allocation-returning facade helpers now allocate
+and fill directly instead of routing through direct-source checked owned wrappers.
+This improves reusable checked owned-batch ergonomics but does not resolve
+S4-M11.
