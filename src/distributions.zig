@@ -1827,7 +1827,8 @@ pub fn fillBinomialCheckedFrom(source: anytype, dest: []u64, trials: u64, p: f64
 }
 
 pub fn vectorBinomial(rng: Rng, comptime VectorType: type, trials: u64, p: f64) VectorType {
-    return vectorBinomialFrom(rng, VectorType, trials, p);
+    const dist = VectorBinomial(VectorType).init(trials, p) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn vectorBinomialFrom(source: anytype, comptime VectorType: type, trials: u64, p: f64) VectorType {
@@ -1836,7 +1837,8 @@ pub fn vectorBinomialFrom(source: anytype, comptime VectorType: type, trials: u6
 }
 
 pub fn vectorBinomialChecked(rng: Rng, comptime VectorType: type, trials: u64, p: f64) Error!VectorType {
-    return vectorBinomialCheckedFrom(rng, VectorType, trials, p);
+    const dist = try VectorBinomial(VectorType).init(trials, p);
+    return dist.sample(rng);
 }
 
 pub fn vectorBinomialCheckedFrom(source: anytype, comptime VectorType: type, trials: u64, p: f64) Error!VectorType {
@@ -1845,7 +1847,8 @@ pub fn vectorBinomialCheckedFrom(source: anytype, comptime VectorType: type, tri
 }
 
 pub fn fillVectorBinomial(rng: Rng, comptime VectorType: type, dest: []VectorType, trials: u64, p: f64) void {
-    fillVectorBinomialFrom(rng, VectorType, dest, trials, p);
+    const dist = VectorBinomial(VectorType).init(trials, p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorBinomialFrom(source: anytype, comptime VectorType: type, dest: []VectorType, trials: u64, p: f64) void {
@@ -1854,7 +1857,9 @@ pub fn fillVectorBinomialFrom(source: anytype, comptime VectorType: type, dest: 
 }
 
 pub fn fillVectorBinomialChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, trials: u64, p: f64) Error!void {
-    return fillVectorBinomialCheckedFrom(rng, VectorType, dest, trials, p);
+    if (dest.len == 0) return;
+    const dist = try VectorBinomial(VectorType).init(trials, p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorBinomialCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, trials: u64, p: f64) Error!void {

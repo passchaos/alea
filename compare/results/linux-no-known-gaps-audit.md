@@ -4927,3 +4927,10 @@ S4-M969 routes top-level scalar Binomial checked/fill facade helpers directly
 `binomialChecked`, `fillBinomial`, and `fillBinomialChecked` now validate and
 sample/fill through facade samplers instead of routing through `From` wrappers.
 This improves Binomial top-level facade ergonomics but does not resolve S4-M11.
+
+S4-M970 routes top-level vector Binomial facade helpers directly
+(`compare/results/s4-m970-vector-binomial-top-level-facade-direct.md`):
+`vectorBinomial`, `vectorBinomialChecked`, `fillVectorBinomial`, and
+`fillVectorBinomialChecked` now validate and sample/fill through reusable vector
+facade samplers instead of routing through `From` wrappers. This improves vector
+Binomial top-level facade ergonomics but does not resolve S4-M11.
