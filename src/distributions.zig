@@ -9326,11 +9326,7 @@ pub fn ChiSquared(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, 0);
-                return;
-            }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            self.gamma_sampler.fillFrom(source, dest);
         }
 
         fn isDegenerate(self: Self) bool {
@@ -30763,6 +30759,30 @@ test "non-uniform samplers can be reused with sample iterators" {
     var chi_squared_one_buf: [8]f64 = undefined;
     fillChiSquaredFrom(&direct_engine, f64, &chi_squared_one_buf, 1);
     for (chi_squared_one_buf) |value| try std.testing.expect(value >= 0);
+    var chi_squared_shape_one_fill_engine = alea.ScalarPrng.init(0xc839_0001);
+    var chi_squared_shape_one_gamma_engine = alea.ScalarPrng.init(0xc839_0001);
+    const chi_squared_shape_one = try ChiSquared(f64).init(2);
+    var chi_squared_shape_one_fill: [10]f64 = undefined;
+    var chi_squared_shape_one_gamma: [10]f64 = undefined;
+    chi_squared_shape_one.fillFrom(&chi_squared_shape_one_fill_engine, &chi_squared_shape_one_fill);
+    (try Gamma(f64).init(1, 2)).fillFrom(&chi_squared_shape_one_gamma_engine, &chi_squared_shape_one_gamma);
+    try std.testing.expectEqualSlices(f64, &chi_squared_shape_one_gamma, &chi_squared_shape_one_fill);
+    try std.testing.expectEqual(chi_squared_shape_one_gamma_engine.next(), chi_squared_shape_one_fill_engine.next());
+    var chi_squared_f32_fill_engine = alea.ScalarPrng.init(0xc839_f32);
+    var chi_squared_f32_loop_engine = alea.ScalarPrng.init(0xc839_f32);
+    const chi_squared_f32 = try ChiSquared(f32).init(3);
+    var chi_squared_f32_fill: [11]f32 = undefined;
+    var chi_squared_f32_loop: [11]f32 = undefined;
+    chi_squared_f32.fillFrom(&chi_squared_f32_fill_engine, &chi_squared_f32_fill);
+    for (&chi_squared_f32_loop) |*slot| slot.* = chi_squared_f32.sampleFrom(&chi_squared_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &chi_squared_f32_loop, &chi_squared_f32_fill);
+    try std.testing.expectEqual(chi_squared_f32_loop_engine.next(), chi_squared_f32_fill_engine.next());
+    var chi_squared_degenerate_engine = alea.ScalarPrng.init(0xc839_d00);
+    var chi_squared_degenerate_control = alea.ScalarPrng.init(0xc839_d00);
+    const chi_squared_degenerate = try ChiSquared(f64).init(0);
+    chi_squared_degenerate.fillFrom(&chi_squared_degenerate_engine, &chi_squared_shape_one_fill);
+    for (chi_squared_shape_one_fill) |value| try std.testing.expectEqual(@as(f64, 0), value);
+    try std.testing.expectEqual(chi_squared_degenerate_control.next(), chi_squared_degenerate_engine.next());
 
     var chis = rng.sampleIter(f64, try Chi(f64).init(4));
     try std.testing.expect(chis.next().? > 0);

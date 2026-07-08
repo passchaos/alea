@@ -4046,3 +4046,10 @@ for f32/f64 shape-one non-degenerate fills and scales the backing scalar lanes i
 place, matching the same local rand_distr Gamma decomposition for vector fills
 while preserving stream shape. This improves VectorGamma shape-one reusable fill
 ergonomics but does not resolve S4-M11.
+
+S4-M839 delegates reusable ChiSquared fills to cached Gamma fills
+(`compare/results/s4-m839-chi-squared-fill-gamma-delegate.md`):
+ChiSquared.fillFrom now delegates to the cached Gamma sampler's fill path,
+reusing Gamma's shape-specific bulk handling (including shape-one standard
+exponential staging) instead of routing every output through ChiSquared.sampleFrom.
+This improves ChiSquared reusable fill ergonomics but does not resolve S4-M11.
