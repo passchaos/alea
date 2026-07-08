@@ -11928,7 +11928,14 @@ pub fn VectorLogLogistic(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+                if (self.shapeValue() == 1) {
+                    item.* = logLogisticShapeOneFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
+                } else {
+                    item.* = logLogisticFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
+                }
+            }
         }
     };
 }
@@ -27205,6 +27212,23 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &log_logistic_buf_vec, &direct_log_logistic_buf_vec);
     for (log_logistic_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_log_logistic_fill_engine = alea.ScalarPrng.init(0x1854_0001);
+    var vector_log_logistic_loop_engine = alea.ScalarPrng.init(0x1854_0001);
+    var vector_log_logistic_fill: [3]@Vector(4, f64) = undefined;
+    var vector_log_logistic_loop: [3]@Vector(4, f64) = undefined;
+    vector_log_logistic_sampler.fillFrom(&vector_log_logistic_fill_engine, &vector_log_logistic_fill);
+    for (&vector_log_logistic_loop) |*slot| slot.* = vector_log_logistic_sampler.sampleFrom(&vector_log_logistic_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_log_logistic_loop, &vector_log_logistic_fill);
+    try std.testing.expectEqual(vector_log_logistic_loop_engine.next(), vector_log_logistic_fill_engine.next());
+    var vector_log_logistic_f32_fill_engine = alea.ScalarPrng.init(0x1854_f32);
+    var vector_log_logistic_f32_loop_engine = alea.ScalarPrng.init(0x1854_f32);
+    const vector_log_logistic_f32 = try VectorLogLogistic(@Vector(8, f32)).init(2, 3);
+    var vector_log_logistic_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_log_logistic_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_log_logistic_f32.fillFrom(&vector_log_logistic_f32_fill_engine, &vector_log_logistic_f32_fill);
+    for (&vector_log_logistic_f32_loop) |*slot| slot.* = vector_log_logistic_f32.sampleFrom(&vector_log_logistic_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_log_logistic_f32_loop, &vector_log_logistic_f32_fill);
+    try std.testing.expectEqual(vector_log_logistic_f32_loop_engine.next(), vector_log_logistic_f32_fill_engine.next());
 
     const vector_log_logistic_shape_one = try VectorLogLogistic(@Vector(4, f64)).init(2, 1);
     try std.testing.expect(vector_log_logistic_shape_one.expectedValue() == null);
@@ -27214,6 +27238,20 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(log_logistic_shape_one_vec, direct_log_logistic_shape_one_vec);
     inline for (0..4) |lane| try std.testing.expect(log_logistic_shape_one_vec[lane] > 0 and std.math.isFinite(log_logistic_shape_one_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_log_logistic_shape_one_fill_engine = alea.ScalarPrng.init(0x1854_1001);
+    var vector_log_logistic_shape_one_loop_engine = alea.ScalarPrng.init(0x1854_1001);
+    var vector_log_logistic_shape_one_fill: [3]@Vector(4, f64) = undefined;
+    var vector_log_logistic_shape_one_loop: [3]@Vector(4, f64) = undefined;
+    vector_log_logistic_shape_one.fillFrom(&vector_log_logistic_shape_one_fill_engine, &vector_log_logistic_shape_one_fill);
+    for (&vector_log_logistic_shape_one_loop) |*slot| slot.* = vector_log_logistic_shape_one.sampleFrom(&vector_log_logistic_shape_one_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_log_logistic_shape_one_loop, &vector_log_logistic_shape_one_fill);
+    try std.testing.expectEqual(vector_log_logistic_shape_one_loop_engine.next(), vector_log_logistic_shape_one_fill_engine.next());
+    var vector_log_logistic_degenerate_engine = alea.ScalarPrng.init(0x1854_d00);
+    var vector_log_logistic_degenerate_control = alea.ScalarPrng.init(0x1854_d00);
+    const vector_log_logistic_degenerate = try VectorLogLogistic(@Vector(4, f64)).init(2, std.math.inf(f64));
+    vector_log_logistic_degenerate.fillFrom(&vector_log_logistic_degenerate_engine, &vector_log_logistic_fill);
+    for (vector_log_logistic_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(2)), vec);
+    try std.testing.expectEqual(vector_log_logistic_degenerate_control.next(), vector_log_logistic_degenerate_engine.next());
 
     const kumaraswamy_vec = try vectorKumaraswamyChecked(rng, @Vector(4, f64), 2, 5);
     const direct_kumaraswamy_vec = try vectorKumaraswamyCheckedFrom(&direct_engine, @Vector(4, f64), 2, 5);

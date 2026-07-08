@@ -4153,3 +4153,10 @@ VectorLogistic.fillFrom now draws vector open-uniform values and applies the
 Logistic transform directly, instead of routing every output through
 VectorLogistic.sampleFrom. This improves VectorLogistic reusable fill ergonomics
 but does not resolve S4-M11.
+
+S4-M854 draws reusable VectorLogLogistic fills through direct vector open-uniform
+transforms (`compare/results/s4-m854-vector-log-logistic-fill-direct-transform.md`):
+VectorLogLogistic.fillFrom now draws vector open-uniform values and applies the
+LogLogistic transform directly, including the shape-one ratio path, instead of
+routing every output through VectorLogLogistic.sampleFrom. This improves
+VectorLogLogistic reusable fill ergonomics but does not resolve S4-M11.
