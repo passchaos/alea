@@ -1317,7 +1317,7 @@ pub fn fillUniformInclusiveCheckedFrom(source: anytype, comptime T: type, dest: 
 }
 
 pub fn vectorUniform(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
-    return vectorUniformFrom(rng, VectorType, min, max);
+    return rng.vectorRange(VectorType, min, max);
 }
 
 pub fn vectorUniformFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
@@ -1325,7 +1325,7 @@ pub fn vectorUniformFrom(source: anytype, comptime VectorType: type, min: vector
 }
 
 pub fn vectorUniformChecked(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
-    return vectorUniformCheckedFrom(rng, VectorType, min, max);
+    return rng.vectorRangeChecked(VectorType, min, max);
 }
 
 pub fn vectorUniformCheckedFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
@@ -1333,7 +1333,7 @@ pub fn vectorUniformCheckedFrom(source: anytype, comptime VectorType: type, min:
 }
 
 pub fn fillVectorUniform(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
-    fillVectorUniformFrom(rng, VectorType, dest, min, max);
+    rng.fillVectorRange(VectorType, dest, min, max);
 }
 
 pub fn fillVectorUniformFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
@@ -1341,7 +1341,7 @@ pub fn fillVectorUniformFrom(source: anytype, comptime VectorType: type, dest: [
 }
 
 pub fn fillVectorUniformChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
-    return fillVectorUniformCheckedFrom(rng, VectorType, dest, min, max);
+    return rng.fillVectorRangeChecked(VectorType, dest, min, max);
 }
 
 pub fn fillVectorUniformCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
@@ -1349,7 +1349,22 @@ pub fn fillVectorUniformCheckedFrom(source: anytype, comptime VectorType: type, 
 }
 
 pub fn vectorUniformInclusive(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
-    return vectorUniformInclusiveFrom(rng, VectorType, min, max);
+    const info = vectorInfo(VectorType);
+    switch (@typeInfo(info.child)) {
+        .int => {
+            std.debug.assert(min <= max);
+            if (min == max) return @splat(min);
+            return rng.vectorRangeAtMost(VectorType, min, max);
+        },
+        .float => {
+            std.debug.assert(min <= max and std.math.isFinite(min) and std.math.isFinite(max));
+            if (min == max) return @splat(min);
+            return @as(VectorType, @splat(min)) +
+                (@as(VectorType, @splat(max)) - @as(VectorType, @splat(min))) *
+                    vectorClosedUnitFrom(rng, VectorType);
+        },
+        else => @compileError("vectorUniformInclusive supports integer and floating-point vectors"),
+    }
 }
 
 pub fn vectorUniformInclusiveFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
@@ -1374,7 +1389,8 @@ pub fn vectorUniformInclusiveFrom(source: anytype, comptime VectorType: type, mi
 }
 
 pub fn vectorUniformInclusiveChecked(rng: Rng, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
-    return vectorUniformInclusiveCheckedFrom(rng, VectorType, min, max);
+    try validateVectorInclusiveRange(VectorType, min, max);
+    return vectorUniformInclusive(rng, VectorType, min, max);
 }
 
 pub fn vectorUniformInclusiveCheckedFrom(source: anytype, comptime VectorType: type, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!VectorType {
@@ -1383,7 +1399,27 @@ pub fn vectorUniformInclusiveCheckedFrom(source: anytype, comptime VectorType: t
 }
 
 pub fn fillVectorUniformInclusive(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
-    fillVectorUniformInclusiveFrom(rng, VectorType, dest, min, max);
+    const info = vectorInfo(VectorType);
+    switch (@typeInfo(info.child)) {
+        .int => {
+            if (min == max) {
+                @memset(dest, @as(VectorType, @splat(min)));
+                return;
+            }
+            for (dest) |*item| item.* = rng.vectorRangeAtMost(VectorType, min, max);
+        },
+        .float => {
+            std.debug.assert(min <= max and std.math.isFinite(min) and std.math.isFinite(max));
+            if (min == max) {
+                @memset(dest, @as(VectorType, @splat(min)));
+                return;
+            }
+            const min_vec: VectorType = @splat(min);
+            const width_vec: VectorType = @splat(max - min);
+            for (dest) |*item| item.* = min_vec + width_vec * vectorClosedUnitFrom(rng, VectorType);
+        },
+        else => @compileError("fillVectorUniformInclusive supports integer and floating-point vectors"),
+    }
 }
 
 pub fn fillVectorUniformInclusiveFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) void {
@@ -1396,7 +1432,9 @@ pub fn fillVectorUniformInclusiveFrom(source: anytype, comptime VectorType: type
 }
 
 pub fn fillVectorUniformInclusiveChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
-    return fillVectorUniformInclusiveCheckedFrom(rng, VectorType, dest, min, max);
+    if (dest.len == 0) return;
+    try validateVectorInclusiveRange(VectorType, min, max);
+    fillVectorUniformInclusive(rng, VectorType, dest, min, max);
 }
 
 pub fn fillVectorUniformInclusiveCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, min: vectorChild(VectorType), max: vectorChild(VectorType)) Error!void {
