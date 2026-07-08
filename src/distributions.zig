@@ -10742,11 +10742,22 @@ pub fn Erlang(comptime T: type) type {
 }
 
 pub fn beta(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
-    return betaFrom(rng, T, alpha, beta_param);
+    comptime requireFloat(T);
+    std.debug.assert(betaParametersValid(T, alpha, beta_param));
+    if (alpha == std.math.inf(T)) return 1;
+    if (beta_param == std.math.inf(T)) return 0;
+    if (alpha == 1 and beta_param == 1) return rng.float(T);
+    if (alpha == 2 and beta_param == 1) return @sqrt(rng.floatOpen(T));
+    if (alpha == 1 and beta_param == 2) return 1 - @sqrt(rng.floatOpen(T));
+    if (beta_param == 1) return std.math.pow(T, rng.floatOpen(T), 1 / alpha);
+    const x = gamma(rng, T, alpha, 1);
+    const y = gamma(rng, T, beta_param, 1);
+    return x / (x + y);
 }
 
 pub fn betaChecked(rng: Rng, comptime T: type, alpha: T, beta_param: T) Error!T {
-    return betaCheckedFrom(rng, T, alpha, beta_param);
+    const dist = try Beta(T).init(alpha, beta_param);
+    return dist.sample(rng);
 }
 
 pub fn betaCheckedFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) Error!T {
@@ -10771,7 +10782,38 @@ pub fn betaFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
 }
 
 pub fn fillBeta(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
-    fillBetaFrom(rng, T, dest, alpha, beta_param);
+    comptime requireFloat(T);
+    std.debug.assert(betaParametersValid(T, alpha, beta_param));
+    if (alpha == std.math.inf(T)) {
+        @memset(dest, 1);
+        return;
+    }
+    if (beta_param == std.math.inf(T)) {
+        @memset(dest, 0);
+        return;
+    }
+    if (alpha == 1 and beta_param == 1) {
+        rng.fill(T, dest);
+        return;
+    }
+    if (alpha == 2 and beta_param == 1) {
+        rng.fillOpen(T, dest);
+        for (dest) |*item| item.* = @sqrt(item.*);
+        return;
+    }
+    if (alpha == 1 and beta_param == 2) {
+        rng.fillOpen(T, dest);
+        for (dest) |*item| item.* = 1 - @sqrt(item.*);
+        return;
+    }
+    if (beta_param == 1) {
+        rng.fillOpen(T, dest);
+        const inverse_alpha = 1 / alpha;
+        for (dest) |*item| item.* = std.math.pow(T, item.*, inverse_alpha);
+        return;
+    }
+    const sampler = Beta(T).init(alpha, beta_param) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillBetaFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
@@ -10819,7 +10861,9 @@ fn betaParametersValid(comptime T: type, alpha: T, beta_param: T) bool {
 }
 
 pub fn fillBetaChecked(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
-    return fillBetaCheckedFrom(rng, T, dest, alpha, beta_param);
+    if (dest.len == 0) return;
+    const sampler = try Beta(T).init(alpha, beta_param);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillBetaCheckedFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) Error!void {
@@ -10829,7 +10873,8 @@ pub fn fillBetaCheckedFrom(source: anytype, comptime T: type, dest: []T, alpha: 
 }
 
 pub fn vectorBeta(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
-    return vectorBetaFrom(rng, VectorType, alpha, beta_param);
+    const sampler = VectorBeta(VectorType).init(alpha, beta_param) catch unreachable;
+    return sampler.sample(rng);
 }
 
 pub fn vectorBetaFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
@@ -10838,7 +10883,8 @@ pub fn vectorBetaFrom(source: anytype, comptime VectorType: type, alpha: vectorC
 }
 
 pub fn vectorBetaChecked(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!VectorType {
-    return vectorBetaCheckedFrom(rng, VectorType, alpha, beta_param);
+    const sampler = try VectorBeta(VectorType).init(alpha, beta_param);
+    return sampler.sample(rng);
 }
 
 pub fn vectorBetaCheckedFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!VectorType {
@@ -10847,7 +10893,8 @@ pub fn vectorBetaCheckedFrom(source: anytype, comptime VectorType: type, alpha: 
 }
 
 pub fn fillVectorBeta(rng: Rng, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) void {
-    fillVectorBetaFrom(rng, VectorType, dest, alpha, beta_param);
+    const sampler = VectorBeta(VectorType).init(alpha, beta_param) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorBetaFrom(source: anytype, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) void {
@@ -10856,7 +10903,9 @@ pub fn fillVectorBetaFrom(source: anytype, comptime VectorType: type, dest: []Ve
 }
 
 pub fn fillVectorBetaChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!void {
-    return fillVectorBetaCheckedFrom(rng, VectorType, dest, alpha, beta_param);
+    if (dest.len == 0) return;
+    const sampler = try VectorBeta(VectorType).init(alpha, beta_param);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorBetaCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!void {

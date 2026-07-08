@@ -5188,3 +5188,9 @@ S4-M1006 routes reusable VectorBeta facade helpers directly
 facade lane sampling directly instead of routing through `sampleFrom` /
 `fillFrom` wrappers. This improves VectorBeta sampler facade ergonomics but does
 not resolve S4-M11.
+
+S4-M1007 routes top-level scalar/vector Beta facade helpers directly
+(`compare/results/s4-m1007-beta-top-level-facade-direct.md`): scalar/vector Beta
+checked/nonchecked sample/fill helpers now construct reusable Beta samplers and
+call facade `sample` / `fill` directly instead of routing through `From` wrappers.
+This improves Beta top-level facade ergonomics but does not resolve S4-M11.
