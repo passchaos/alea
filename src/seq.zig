@@ -8740,7 +8740,15 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
-            try self.fillIndicesU32CheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            const item_len = self.items.len;
+            if (item_len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (item_len == 1) {
+                @memset(dest, 0);
+                return;
+            }
+            const item_len_u32: u32 = @intCast(item_len);
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(rng, u32, item_len_u32);
         }
 
         pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
@@ -9479,7 +9487,8 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
-            try self.fillIndicesU32CheckedFrom(rng, dest);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            self.table.fillU32CheckedFrom(rng, dest) catch unreachable;
         }
 
         pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
@@ -20149,6 +20158,14 @@ test "choice sampler repeatedly samples slice references" {
     try choice.fillIndicesU32CheckedFrom(&checked_index_u32_fill_engine, &checked_index_u32_fill);
     try std.testing.expectEqualSlices(u32, &unchecked_index_u32_fill, &checked_index_u32_fill);
     try std.testing.expectEqual(unchecked_index_u32_fill_engine.next(), checked_index_u32_fill_engine.next());
+    var facade_checked_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef52);
+    var direct_checked_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef52);
+    var facade_checked_u32_fill: [8]u32 = undefined;
+    var direct_checked_u32_fill: [8]u32 = undefined;
+    try choice.fillIndicesU32Checked(Rng.init(&facade_checked_u32_fill_engine), &facade_checked_u32_fill);
+    try choice.fillIndicesU32CheckedFrom(&direct_checked_u32_fill_engine, &direct_checked_u32_fill);
+    try std.testing.expectEqualSlices(u32, &direct_checked_u32_fill, &facade_checked_u32_fill);
+    try std.testing.expectEqual(direct_checked_u32_fill_engine.next(), facade_checked_u32_fill_engine.next());
     var direct_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef3d);
     var helper_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef3d);
     var direct_u32_fill: [8]u32 = undefined;
@@ -20965,6 +20982,14 @@ test "weighted choice sampler maps alias indexes to items" {
     try choice.fillIndicesU32CheckedFrom(&checked_index_u32_fill_engine, &checked_index_u32_fill);
     try std.testing.expectEqualSlices(u32, &unchecked_index_u32_fill, &checked_index_u32_fill);
     try std.testing.expectEqual(unchecked_index_u32_fill_engine.next(), checked_index_u32_fill_engine.next());
+    var facade_checked_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef52);
+    var direct_checked_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef52);
+    var facade_checked_u32_fill: [8]u32 = undefined;
+    var direct_checked_u32_fill: [8]u32 = undefined;
+    try choice.fillIndicesU32Checked(Rng.init(&facade_checked_u32_fill_engine), &facade_checked_u32_fill);
+    try choice.fillIndicesU32CheckedFrom(&direct_checked_u32_fill_engine, &direct_checked_u32_fill);
+    try std.testing.expectEqualSlices(u32, &direct_checked_u32_fill, &facade_checked_u32_fill);
+    try std.testing.expectEqual(direct_checked_u32_fill_engine.next(), facade_checked_u32_fill_engine.next());
     var table_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef3b);
     var choice_u32_fill_engine = alea.DefaultPrng.init(0xc0_ef3b);
     var table_u32_fill: [8]u32 = undefined;

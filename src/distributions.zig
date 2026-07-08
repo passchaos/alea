@@ -728,7 +728,15 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
-            try self.fillIndicesU32CheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            const item_len = self.items.len;
+            if (item_len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (item_len == 1) {
+                @memset(dest, 0);
+                return;
+            }
+            const item_len_u32: u32 = @intCast(item_len);
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(rng, u32, item_len_u32);
         }
 
         pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
@@ -34856,6 +34864,14 @@ test "distribution Choose sampler mirrors slice choices" {
     try choice.fillIndicesU32CheckedFrom(&checked_u32_fill_engine, &checked_u32_fill);
     try std.testing.expectEqualSlices(u32, &unchecked_u32_fill, &checked_u32_fill);
     try std.testing.expectEqual(unchecked_u32_fill_engine.next(), checked_u32_fill_engine.next());
+    var facade_checked_u32_fill_engine = root.DefaultPrng.init(0xc0_2ab);
+    var direct_checked_u32_fill_engine = root.DefaultPrng.init(0xc0_2ab);
+    var facade_checked_u32_fill: [6]u32 = undefined;
+    var direct_checked_u32_fill: [6]u32 = undefined;
+    try choice.fillIndicesU32Checked(root.Rng.init(&facade_checked_u32_fill_engine), &facade_checked_u32_fill);
+    try choice.fillIndicesU32CheckedFrom(&direct_checked_u32_fill_engine, &direct_checked_u32_fill);
+    try std.testing.expectEqualSlices(u32, &direct_checked_u32_fill, &facade_checked_u32_fill);
+    try std.testing.expectEqual(direct_checked_u32_fill_engine.next(), facade_checked_u32_fill_engine.next());
     var direct_u32_fill_engine = root.DefaultPrng.init(0xc0_29a);
     var helper_u32_fill_engine = root.DefaultPrng.init(0xc0_29a);
     var direct_u32_fill: [6]u32 = undefined;

@@ -950,7 +950,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M909 Weighted tree facade sample aliases direct paths | `src/distributions.zig`, `compare/results/s4-m909-weighted-tree-facade-direct.md` | Closed for the current bar: dynamic WeightedTree and WeightedIntTree facade sample/index/u32 aliases now validate once and sample directly. |
 | S4-M910 U32 index facade fills direct paths | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m910-u32-index-facade-fill-direct.md` | Closed for the current bar: Choose/Choice/WeightedChoice facade compact index fills now write directly. |
 | S4-M911 Checked facade fills direct paths | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m911-checked-facade-fill-direct.md` | Closed for the current bar: Choose/Choice/WeightedChoice checked facade pointer/value/index fills now write directly. |
-| S4-M912 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M912 Checked u32 index facade fills direct paths | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m912-checked-u32-index-facade-fill-direct.md` | Closed for the current bar: Choose/Choice/WeightedChoice checked facade compact index fills now write directly. |
+| S4-M913 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3121,6 +3122,11 @@ S4-M911 additionally routes Choose, Choice, and WeightedChoice checked facade
 pointer/value/index fills through direct filling after prevalidation, preserving
 stream shape while avoiding direct-source checked fill wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M912 additionally routes Choose, Choice, and WeightedChoice checked compact
+index facade fills through direct u32 filling after prevalidation, preserving
+stream shape while avoiding direct-source checked compact fill wrapper aliases;
+it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

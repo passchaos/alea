@@ -4546,3 +4546,10 @@ Distribution Choose, reusable Choice, and reusable WeightedChoice checked facade
 pointer/value/index fill helpers now fill directly instead of routing through
 direct-source checked fill wrappers. This improves checked fill ergonomics but
 does not resolve S4-M11.
+
+S4-M912 routes checked compact index facade fills through direct filling
+(`compare/results/s4-m912-checked-u32-index-facade-fill-direct.md`):
+Distribution Choose, reusable Choice, and reusable WeightedChoice
+fillIndicesU32Checked facade helpers now fill directly instead of routing through
+direct-source checked compact fill wrappers. This improves checked compact index
+fill ergonomics but does not resolve S4-M11.
