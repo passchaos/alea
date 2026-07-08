@@ -1874,7 +1874,13 @@ pub fn VectorBinomialPoissonApprox(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.trials)));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            const trials = self.trials;
+            const p = self.p;
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = binomialPoissonApproxFrom(source, trials, p);
+                item.* = out;
+            }
         }
     };
 }
@@ -25803,6 +25809,18 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, u64), &binomial_buf, &direct_binomial_buf);
     for (binomial_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] <= 10_000);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var direct_vector_binomial_approx_engine = alea.ScalarPrng.init(0xb1_a001);
+    var scalar_vector_binomial_approx_engine = alea.ScalarPrng.init(0xb1_a001);
+    var direct_vector_binomial_approx: [3]@Vector(4, u64) = undefined;
+    var scalar_vector_binomial_approx: [3]@Vector(4, u64) = undefined;
+    vector_binomial_approx_sampler.fillFrom(&direct_vector_binomial_approx_engine, &direct_vector_binomial_approx);
+    for (&scalar_vector_binomial_approx) |*vec| {
+        var out: @Vector(4, u64) = undefined;
+        inline for (0..4) |lane| out[lane] = binomialPoissonApproxFrom(&scalar_vector_binomial_approx_engine, 10_000, 0.01);
+        vec.* = out;
+    }
+    try std.testing.expectEqualSlices(@Vector(4, u64), &scalar_vector_binomial_approx, &direct_vector_binomial_approx);
+    try std.testing.expectEqual(scalar_vector_binomial_approx_engine.next(), direct_vector_binomial_approx_engine.next());
 
     const negative_binomial_vec = vectorNegativeBinomial(rng, @Vector(4, u64), 5, 0.25);
     const direct_negative_binomial_vec = vectorNegativeBinomialFrom(&direct_engine, @Vector(4, u64), 5, 0.25);

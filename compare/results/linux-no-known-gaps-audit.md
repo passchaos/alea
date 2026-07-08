@@ -3987,3 +3987,10 @@ VectorBinomial non-degenerate fills now draw lanes with the underlying
 binomialFrom sampler directly instead of routing each vector through
 VectorBinomial.sampleFrom. This improves VectorBinomial fill ergonomics but does
 not resolve S4-M11.
+
+S4-M831 fills VectorBinomialPoissonApprox outputs with direct approximation lane draws
+(`compare/results/s4-m831-vector-binomial-poisson-approx-fill-direct.md`):
+VectorBinomialPoissonApprox non-degenerate fills now draw lanes with the
+underlying binomialPoissonApproxFrom sampler directly instead of routing each
+vector through VectorBinomialPoissonApprox.sampleFrom. This improves vector
+binomial approximation fill ergonomics but does not resolve S4-M11.
