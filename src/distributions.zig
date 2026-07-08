@@ -8131,7 +8131,8 @@ pub fn VectorHalfNormal(comptime VectorType: type) type {
 }
 
 pub fn poisson(rng: Rng, lambda: f64) u64 {
-    return poissonFrom(rng, lambda);
+    const dist = Poisson.init(lambda) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn poissonFrom(source: anytype, lambda: f64) u64 {
@@ -8146,7 +8147,8 @@ pub fn poissonFrom(source: anytype, lambda: f64) u64 {
 }
 
 pub fn poissonChecked(rng: Rng, lambda: f64) Error!u64 {
-    return poissonCheckedFrom(rng, lambda);
+    const dist = try Poisson.init(lambda);
+    return dist.sample(rng);
 }
 
 pub fn poissonCheckedFrom(source: anytype, lambda: f64) Error!u64 {
@@ -8155,7 +8157,8 @@ pub fn poissonCheckedFrom(source: anytype, lambda: f64) Error!u64 {
 }
 
 pub fn fillPoisson(rng: Rng, dest: []u64, lambda: f64) void {
-    fillPoissonFrom(rng, dest, lambda);
+    const dist = Poisson.init(lambda) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillPoissonFrom(source: anytype, dest: []u64, lambda: f64) void {
@@ -8164,7 +8167,9 @@ pub fn fillPoissonFrom(source: anytype, dest: []u64, lambda: f64) void {
 }
 
 pub fn fillPoissonChecked(rng: Rng, dest: []u64, lambda: f64) Error!void {
-    return fillPoissonCheckedFrom(rng, dest, lambda);
+    if (dest.len == 0) return;
+    const dist = try Poisson.init(lambda);
+    dist.fill(rng, dest);
 }
 
 pub fn fillPoissonCheckedFrom(source: anytype, dest: []u64, lambda: f64) Error!void {
@@ -8174,7 +8179,8 @@ pub fn fillPoissonCheckedFrom(source: anytype, dest: []u64, lambda: f64) Error!v
 }
 
 pub fn vectorPoisson(rng: Rng, comptime VectorType: type, lambda: f64) VectorType {
-    return vectorPoissonFrom(rng, VectorType, lambda);
+    const dist = VectorPoisson(VectorType).init(lambda) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn vectorPoissonFrom(source: anytype, comptime VectorType: type, lambda: f64) VectorType {
@@ -8183,7 +8189,8 @@ pub fn vectorPoissonFrom(source: anytype, comptime VectorType: type, lambda: f64
 }
 
 pub fn vectorPoissonChecked(rng: Rng, comptime VectorType: type, lambda: f64) Error!VectorType {
-    return vectorPoissonCheckedFrom(rng, VectorType, lambda);
+    const dist = try VectorPoisson(VectorType).init(lambda);
+    return dist.sample(rng);
 }
 
 pub fn vectorPoissonCheckedFrom(source: anytype, comptime VectorType: type, lambda: f64) Error!VectorType {
@@ -8192,7 +8199,8 @@ pub fn vectorPoissonCheckedFrom(source: anytype, comptime VectorType: type, lamb
 }
 
 pub fn fillVectorPoisson(rng: Rng, comptime VectorType: type, dest: []VectorType, lambda: f64) void {
-    fillVectorPoissonFrom(rng, VectorType, dest, lambda);
+    const dist = VectorPoisson(VectorType).init(lambda) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorPoissonFrom(source: anytype, comptime VectorType: type, dest: []VectorType, lambda: f64) void {
@@ -8201,7 +8209,9 @@ pub fn fillVectorPoissonFrom(source: anytype, comptime VectorType: type, dest: [
 }
 
 pub fn fillVectorPoissonChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, lambda: f64) Error!void {
-    return fillVectorPoissonCheckedFrom(rng, VectorType, dest, lambda);
+    if (dest.len == 0) return;
+    const dist = try VectorPoisson(VectorType).init(lambda);
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorPoissonCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, lambda: f64) Error!void {
@@ -8250,7 +8260,11 @@ pub const Poisson = struct {
     }
 
     pub fn sample(self: Poisson, rng: Rng) u64 {
-        return self.sampleFrom(rng);
+        return switch (self.method) {
+            .zero => 0,
+            .product => |threshold| poissonProduct(rng, threshold),
+            .ahrens_dieter => |method| method.sample(rng),
+        };
     }
 
     pub inline fn sampleFrom(self: Poisson, source: anytype) u64 {
@@ -8262,7 +8276,15 @@ pub const Poisson = struct {
     }
 
     pub fn fill(self: Poisson, rng: Rng, dest: []u64) void {
-        self.fillFrom(rng, dest);
+        switch (self.method) {
+            .zero => @memset(dest, 0),
+            .product => |threshold| {
+                for (dest) |*item| item.* = poissonProduct(rng, threshold);
+            },
+            .ahrens_dieter => |method| {
+                for (dest) |*item| item.* = method.sample(rng);
+            },
+        }
     }
 
     pub inline fn fillFrom(self: Poisson, source: anytype, dest: []u64) void {
@@ -8313,7 +8335,19 @@ pub fn VectorPoisson(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            switch (self.sampler.method) {
+                .zero => return @splat(0),
+                .product => |threshold| {
+                    var out: VectorType = undefined;
+                    inline for (0..info.len) |lane| out[lane] = poissonProduct(rng, threshold);
+                    return out;
+                },
+                .ahrens_dieter => |method| {
+                    var out: VectorType = undefined;
+                    inline for (0..info.len) |lane| out[lane] = method.sample(rng);
+                    return out;
+                },
+            }
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -8324,7 +8358,23 @@ pub fn VectorPoisson(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            switch (self.sampler.method) {
+                .zero => @memset(dest, @as(VectorType, @splat(0))),
+                .product => |threshold| {
+                    for (dest) |*item| {
+                        var out: VectorType = undefined;
+                        inline for (0..info.len) |lane| out[lane] = poissonProduct(rng, threshold);
+                        item.* = out;
+                    }
+                },
+                .ahrens_dieter => |method| {
+                    for (dest) |*item| {
+                        var out: VectorType = undefined;
+                        inline for (0..info.len) |lane| out[lane] = method.sample(rng);
+                        item.* = out;
+                    }
+                },
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -8390,7 +8440,34 @@ const PoissonAhrensDieter = struct {
     }
 
     fn sample(self: PoissonAhrensDieter, rng: Rng) u64 {
-        return self.sampleFrom(rng);
+        while (true) {
+            const g = Rng.normalFastFrom(rng, f64, self.lambda, self.s);
+            if (g >= 0) {
+                const k1 = @floor(g);
+                if (k1 >= self.l) return @intFromFloat(k1);
+
+                const u = Rng.floatFrom(rng, f64);
+                const diff = self.lambda - k1;
+                if (self.d * u >= diff * diff * diff) return @intFromFloat(k1);
+
+                const parts = poissonAdParts(self, k1);
+                if (parts.fy * (1.0 - u) <= parts.py * @exp(parts.px - parts.fx)) return @intFromFloat(k1);
+            }
+
+            while (true) {
+                const e = Rng.exponentialFastFrom(rng, f64, 1);
+                const u = 2.0 * Rng.floatFrom(rng, f64) - 1.0;
+                const sign: f64 = if (u < 0) -1 else 1;
+                const t = 1.8 + e * sign;
+                if (t <= -0.6744) continue;
+
+                const k2 = @floor(self.lambda + self.s * t);
+                const parts = poissonAdParts(self, k2);
+                if (self.c * @abs(u) <= parts.py * @exp(parts.px + e) - parts.fy * @exp(parts.fx + e)) {
+                    return @intFromFloat(k2);
+                }
+            }
+        }
     }
 
     inline fn sampleFrom(self: PoissonAhrensDieter, source: anytype) u64 {
@@ -8552,7 +8629,13 @@ pub fn VectorPoissonAhrensDieter(comptime VectorType: type) type {
 }
 
 fn poissonProduct(rng: Rng, threshold: f64) u64 {
-    return poissonProductFrom(rng, threshold);
+    var k: u64 = 0;
+    var p: f64 = 1;
+    while (p > threshold) {
+        k += 1;
+        p *= Rng.floatFrom(rng, f64);
+    }
+    return k - 1;
 }
 
 fn poissonProductFrom(source: anytype, threshold: f64) u64 {

@@ -5015,3 +5015,11 @@ S4-M982 routes top-level vector Poisson Ahrens-Dieter facade helpers directly
 construct the reusable vector sampler and call facade `sample` / `fill` directly
 instead of routing through `From` wrappers. This improves vector Poisson top-level
 facade ergonomics but does not resolve S4-M11.
+
+S4-M983 routes scalar/vector Poisson facade helpers directly
+(`compare/results/s4-m983-poisson-facade-direct.md`): `poisson`,
+`poissonChecked`, `fillPoisson`, `fillPoissonChecked`, `vectorPoisson`,
+`vectorPoissonChecked`, `fillVectorPoisson`, `fillVectorPoissonChecked`, and the
+reusable `Poisson` / `VectorPoisson` facade sample/fill methods now dispatch
+directly through facade `Rng` instead of routing through `From` wrappers. This
+improves Poisson facade ergonomics but does not resolve S4-M11.
