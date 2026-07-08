@@ -2555,13 +2555,30 @@ pub fn VectorHypergeometric(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: *const Self, source: anytype, dest: []VectorType) void {
-            const min = self.sampler.minValue();
-            const max = self.sampler.maxValue();
-            if (min == max) {
-                @memset(dest, @as(VectorType, @splat(min)));
-                return;
+            switch (self.sampler.method) {
+                .constant => @memset(dest, @as(VectorType, @splat(self.sampler.constant))),
+                .draw_loop => {
+                    for (dest) |*item| {
+                        var out: VectorType = undefined;
+                        inline for (0..info.len) |lane| out[lane] = hypergeometricDrawLoopFrom(source, self.sampler.population, self.sampler.successes, self.sampler.draws);
+                        item.* = out;
+                    }
+                },
+                .inverse_transform => {
+                    for (dest) |*item| {
+                        var out: VectorType = undefined;
+                        inline for (0..info.len) |lane| out[lane] = self.sampler.inverse_transform.sampleFrom(source);
+                        item.* = out;
+                    }
+                },
+                .rejection_acceptance => {
+                    for (dest) |*item| {
+                        var out: VectorType = undefined;
+                        inline for (0..info.len) |lane| out[lane] = self.sampler.rejection_acceptance.sampleFrom(source);
+                        item.* = out;
+                    }
+                },
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -25914,6 +25931,18 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, u64), &hypergeometric_buf, &direct_hypergeometric_buf);
     for (hypergeometric_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] <= 10);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var direct_vector_hyper_engine = alea.ScalarPrng.init(0x0bad_3001);
+    var scalar_vector_hyper_engine = alea.ScalarPrng.init(0x0bad_3001);
+    var direct_vector_hyper: [3]@Vector(4, u64) = undefined;
+    var scalar_vector_hyper: [3]@Vector(4, u64) = undefined;
+    vector_hypergeometric_sampler.fillFrom(&direct_vector_hyper_engine, &direct_vector_hyper);
+    for (&scalar_vector_hyper) |*vec| {
+        var out: @Vector(4, u64) = undefined;
+        inline for (0..4) |lane| out[lane] = vector_hypergeometric_sampler.sampler.sampleFrom(&scalar_vector_hyper_engine);
+        vec.* = out;
+    }
+    try std.testing.expectEqualSlices(@Vector(4, u64), &scalar_vector_hyper, &direct_vector_hyper);
+    try std.testing.expectEqual(scalar_vector_hyper_engine.next(), direct_vector_hyper_engine.next());
 
     const deterministic_hypergeometric = try VectorHypergeometric(@Vector(4, u64)).init(10, 10, 4);
     const deterministic_vec = deterministic_hypergeometric.sample(rng);

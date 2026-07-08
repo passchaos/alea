@@ -827,6 +827,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M829", .path = "compare/results/s4-m829-vector-negative-binomial-fill-direct-sampler.md" },
     .{ .milestone = "S4-M830", .path = "compare/results/s4-m830-vector-binomial-fill-direct-sampler.md" },
     .{ .milestone = "S4-M831", .path = "compare/results/s4-m831-vector-binomial-poisson-approx-fill-direct.md" },
+    .{ .milestone = "S4-M832", .path = "compare/results/s4-m832-vector-hypergeometric-fill-direct-method.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -834,7 +835,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M832",
+    "S4-M833",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -1146,12 +1147,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M832 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M832 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M833 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M833 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M832 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M832 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M833 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M833 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {

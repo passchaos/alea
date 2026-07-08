@@ -870,7 +870,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M829 VectorNegativeBinomial fill direct sampler loop | `src/distributions.zig`, `compare/results/s4-m829-vector-negative-binomial-fill-direct-sampler.md` | Closed for the current bar: VectorNegativeBinomial fills now draw lanes with negativeBinomialFrom directly for non-degenerate outputs. |
 | S4-M830 VectorBinomial fill direct sampler loop | `src/distributions.zig`, `compare/results/s4-m830-vector-binomial-fill-direct-sampler.md` | Closed for the current bar: VectorBinomial fills now draw lanes with binomialFrom directly for non-degenerate outputs. |
 | S4-M831 VectorBinomialPoissonApprox fill direct sampler loop | `src/distributions.zig`, `compare/results/s4-m831-vector-binomial-poisson-approx-fill-direct.md` | Closed for the current bar: VectorBinomialPoissonApprox fills now draw lanes with binomialPoissonApproxFrom directly for non-degenerate outputs. |
-| S4-M832 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M832 VectorHypergeometric fill direct method dispatch | `src/distributions.zig`, `compare/results/s4-m832-vector-hypergeometric-fill-direct-method.md` | Closed for the current bar: VectorHypergeometric fills now switch once and call selected method samplers directly. |
+| S4-M833 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2687,6 +2688,11 @@ calls while preserving stream shape; it is reliability/ergonomics work and does
 not resolve S4-M11 or complete the long-term objective.
 S4-M831 additionally fills VectorBinomialPoissonApprox outputs by drawing lanes
 with the underlying binomialPoissonApproxFrom sampler directly, reducing
+per-vector sampler wrapper calls while preserving stream shape; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M832 additionally fills VectorHypergeometric outputs by switching once on the
+selected method and drawing lanes with method samplers directly, reducing
 per-vector sampler wrapper calls while preserving stream shape; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.

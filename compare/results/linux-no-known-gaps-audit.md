@@ -3994,3 +3994,10 @@ VectorBinomialPoissonApprox non-degenerate fills now draw lanes with the
 underlying binomialPoissonApproxFrom sampler directly instead of routing each
 vector through VectorBinomialPoissonApprox.sampleFrom. This improves vector
 binomial approximation fill ergonomics but does not resolve S4-M11.
+
+S4-M832 fills VectorHypergeometric outputs with direct method dispatch
+(`compare/results/s4-m832-vector-hypergeometric-fill-direct-method.md`):
+VectorHypergeometric fills now switch once on the selected method and call
+draw-loop, inverse-transform, or rejection-acceptance samplers directly for each
+lane instead of routing each vector through VectorHypergeometric.sampleFrom. This
+improves vector hypergeometric fill ergonomics but does not resolve S4-M11.
