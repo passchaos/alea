@@ -2004,7 +2004,8 @@ pub fn binomialPoissonApproxCheckedFrom(source: anytype, trials: u64, p: f64) Er
 }
 
 pub fn vectorBinomialPoissonApprox(rng: Rng, comptime VectorType: type, trials: u64, p: f64) VectorType {
-    return vectorBinomialPoissonApproxFrom(rng, VectorType, trials, p);
+    const dist = VectorBinomialPoissonApprox(VectorType).init(trials, p) catch unreachable;
+    return dist.sample(rng);
 }
 
 pub fn vectorBinomialPoissonApproxFrom(source: anytype, comptime VectorType: type, trials: u64, p: f64) VectorType {
@@ -2013,7 +2014,8 @@ pub fn vectorBinomialPoissonApproxFrom(source: anytype, comptime VectorType: typ
 }
 
 pub fn vectorBinomialPoissonApproxChecked(rng: Rng, comptime VectorType: type, trials: u64, p: f64) Error!VectorType {
-    return vectorBinomialPoissonApproxCheckedFrom(rng, VectorType, trials, p);
+    const dist = try VectorBinomialPoissonApprox(VectorType).init(trials, p);
+    return dist.sample(rng);
 }
 
 pub fn vectorBinomialPoissonApproxCheckedFrom(source: anytype, comptime VectorType: type, trials: u64, p: f64) Error!VectorType {
@@ -2022,7 +2024,8 @@ pub fn vectorBinomialPoissonApproxCheckedFrom(source: anytype, comptime VectorTy
 }
 
 pub fn fillVectorBinomialPoissonApprox(rng: Rng, comptime VectorType: type, dest: []VectorType, trials: u64, p: f64) void {
-    fillVectorBinomialPoissonApproxFrom(rng, VectorType, dest, trials, p);
+    const dist = VectorBinomialPoissonApprox(VectorType).init(trials, p) catch unreachable;
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorBinomialPoissonApproxFrom(source: anytype, comptime VectorType: type, dest: []VectorType, trials: u64, p: f64) void {
@@ -2031,7 +2034,9 @@ pub fn fillVectorBinomialPoissonApproxFrom(source: anytype, comptime VectorType:
 }
 
 pub fn fillVectorBinomialPoissonApproxChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, trials: u64, p: f64) Error!void {
-    return fillVectorBinomialPoissonApproxCheckedFrom(rng, VectorType, dest, trials, p);
+    if (dest.len == 0) return;
+    const dist = try VectorBinomialPoissonApprox(VectorType).init(trials, p);
+    dist.fill(rng, dest);
 }
 
 pub fn fillVectorBinomialPoissonApproxCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, trials: u64, p: f64) Error!void {
@@ -2082,7 +2087,11 @@ pub fn VectorBinomialPoissonApprox(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.trials == 0 or self.p == 0) return @splat(0);
+            if (self.p == 1) return @splat(self.trials);
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = binomialPoissonApprox(rng, self.trials, self.p);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -2094,7 +2103,21 @@ pub fn VectorBinomialPoissonApprox(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.trials == 0 or self.p == 0) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            if (self.p == 1) {
+                @memset(dest, @as(VectorType, @splat(self.trials)));
+                return;
+            }
+            const trials = self.trials;
+            const p = self.p;
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = binomialPoissonApprox(rng, trials, p);
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {

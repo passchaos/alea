@@ -4941,3 +4941,10 @@ S4-M971 routes scalar binomial Poisson-approx facade helpers directly
 Poisson-approximation sampling path directly instead of routing through `From`
 wrappers. This improves binomial approximation facade ergonomics but does not
 resolve S4-M11.
+
+S4-M972 routes vector binomial Poisson-approx facade helpers directly
+(`compare/results/s4-m972-vector-binomial-poisson-approx-facade-direct.md`):
+VectorBinomialPoissonApprox top-level and reusable facade helpers now execute the
+Poisson-approximation sampling/fill paths directly instead of routing through
+`From` wrappers. This improves vector binomial approximation facade ergonomics
+but does not resolve S4-M11.
