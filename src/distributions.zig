@@ -15610,7 +15610,10 @@ pub fn VectorFrechet(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
+            const uniform_vec = rng.vectorOpenClosed(VectorType);
+            if (self.shapeValue() == 1) return frechetShapeOneFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+            return frechetFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue(), -1 / self.shapeValue());
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -15621,7 +15624,18 @@ pub fn VectorFrechet(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
+                return;
+            }
+            for (dest) |*item| {
+                const uniform_vec = rng.vectorOpenClosed(VectorType);
+                if (self.shapeValue() == 1) {
+                    item.* = frechetShapeOneFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+                } else {
+                    item.* = frechetFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue(), -1 / self.shapeValue());
+                }
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -15705,7 +15719,10 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return self.degenerateValue();
+            const u = rng.floatOpenClosed(T);
+            if (self.shape == 1) return self.location - self.scale / @log(u);
+            return self.location + self.scale * std.math.pow(T, -@log(u), -1 / self.shape);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -15714,7 +15731,17 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, self.degenerateValue());
+                return;
+            }
+            rng.fillOpenClosed(T, dest);
+            if (self.shape == 1) {
+                frechetShapeOneFromOpenClosedUniforms(T, dest, self.location, self.scale);
+                return;
+            }
+
+            frechetFromOpenClosedUniforms(T, dest, self.location, self.scale, -1 / self.shape);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {

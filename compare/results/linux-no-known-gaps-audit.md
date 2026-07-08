@@ -5315,3 +5315,10 @@ S4-M1024 routes reusable scalar/vector Gumbel facade helpers directly
 apply the Gumbel transform directly through facade `Rng` instead of routing
 through `sampleFrom` / `fillFrom` wrappers. This improves Gumbel sampler facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1025 routes reusable scalar/vector Frechet facade helpers directly
+(`compare/results/s4-m1025-frechet-sampler-facade-direct.md`): `Frechet.sample` /
+`fill` and `VectorFrechet.sample` / `fill` now draw open-closed uniform values
+and apply the Frechet transform directly through facade `Rng` instead of routing
+through `sampleFrom` / `fillFrom` wrappers. This improves Frechet sampler facade
+ergonomics but does not resolve S4-M11.
