@@ -7658,11 +7658,7 @@ pub fn HalfNormal(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, 0);
-                return;
-            }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillHalfNormalFrom(source, T, dest, self.scale);
         }
 
         fn isDegenerate(self: Self) bool {
@@ -30471,6 +30467,14 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expect(half_normal_sampler.maxValue() == null);
     half_normal_sampler.fillFrom(&direct_engine, &direct_half_normal_buf);
     for (direct_half_normal_buf) |value| try std.testing.expect(value >= 0);
+    var half_sampler_fill_engine = alea.ScalarPrng.init(0x4a1f_0001);
+    var half_top_fill_engine = alea.ScalarPrng.init(0x4a1f_0001);
+    var half_sampler_fill: [8]f64 = undefined;
+    var half_top_fill: [8]f64 = undefined;
+    half_normal_sampler.fillFrom(&half_sampler_fill_engine, &half_sampler_fill);
+    fillHalfNormalFrom(&half_top_fill_engine, f64, &half_top_fill, 2);
+    try std.testing.expectEqualSlices(f64, &half_top_fill, &half_sampler_fill);
+    try std.testing.expectEqual(half_top_fill_engine.next(), half_sampler_fill_engine.next());
     try std.testing.expect(try halfNormalCheckedFrom(&direct_engine, f64, 2) >= 0);
     try std.testing.expectError(error.InvalidParameter, halfNormalCheckedFrom(&direct_engine, f64, -1));
 

@@ -4008,3 +4008,10 @@ VectorPoisson fills now switch once on zero/product/Ahrens-Dieter methods and
 call selected method samplers directly for each lane instead of routing each
 vector through VectorPoisson.sampleFrom. This improves VectorPoisson fill
 ergonomics but does not resolve S4-M11.
+
+S4-M834 delegates reusable HalfNormal fills to the optimized helper
+(`compare/results/s4-m834-halfnormal-fill-helper-delegate.md`):
+HalfNormal.fillFrom now delegates to fillHalfNormalFrom, reusing its degenerate
+and optimized bulk implementation instead of routing each slot through
+HalfNormal.sampleFrom. This improves HalfNormal reusable fill ergonomics but does
+not resolve S4-M11.

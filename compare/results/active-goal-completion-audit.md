@@ -872,7 +872,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M831 VectorBinomialPoissonApprox fill direct sampler loop | `src/distributions.zig`, `compare/results/s4-m831-vector-binomial-poisson-approx-fill-direct.md` | Closed for the current bar: VectorBinomialPoissonApprox fills now draw lanes with binomialPoissonApproxFrom directly for non-degenerate outputs. |
 | S4-M832 VectorHypergeometric fill direct method dispatch | `src/distributions.zig`, `compare/results/s4-m832-vector-hypergeometric-fill-direct-method.md` | Closed for the current bar: VectorHypergeometric fills now switch once and call selected method samplers directly. |
 | S4-M833 VectorPoisson fill direct method dispatch | `src/distributions.zig`, `compare/results/s4-m833-vector-poisson-fill-direct-method.md` | Closed for the current bar: VectorPoisson fills now switch once and call selected method samplers directly. |
-| S4-M834 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M834 HalfNormal reusable fill delegates to optimized helper | `src/distributions.zig`, `compare/results/s4-m834-halfnormal-fill-helper-delegate.md` | Closed for the current bar: reusable HalfNormal fills now delegate to the optimized top-level fill helper. |
+| S4-M835 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2702,6 +2703,10 @@ selected method and drawing lanes with method samplers directly, reducing
 per-vector sampler wrapper calls while preserving stream shape; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M834 additionally routes reusable HalfNormal fills through the optimized
+fillHalfNormalFrom helper, reducing per-item sample wrapper calls and preserving
+stream shape; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
