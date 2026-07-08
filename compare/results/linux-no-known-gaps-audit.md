@@ -5410,3 +5410,10 @@ S4-M1038 routes reusable scalar Exponential facade helpers directly
 `Exponential.sample` / `fill` now draw through facade exponential helpers directly
 instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
 Exponential sampler facade ergonomics but does not resolve S4-M11.
+
+S4-M1039 routes reusable scalar/vector native-f32 Exponential facade helpers
+directly (`compare/results/s4-m1039-native-f32-exponential-facade-direct.md`):
+`ExponentialNativeF32.sample` / `fill` and `VectorExponentialNativeF32.sample` /
+`fill` now call native-f32 standard-exponential facade helpers directly instead of
+routing through `sampleFrom` / `fillFrom` wrappers. This improves native-f32
+Exponential facade ergonomics but does not resolve S4-M11.

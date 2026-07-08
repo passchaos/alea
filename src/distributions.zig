@@ -6346,7 +6346,8 @@ pub const ExponentialNativeF32 = struct {
     }
 
     pub fn sample(self: Self, rng: Rng) f32 {
-        return self.sampleFrom(rng);
+        if (self.inverse_rate == 0) return 0;
+        return standardExponentialNativeF32(rng) * self.inverse_rate;
     }
 
     pub fn sampleFrom(self: Self, source: anytype) f32 {
@@ -6355,7 +6356,12 @@ pub const ExponentialNativeF32 = struct {
     }
 
     pub fn fill(self: Self, rng: Rng, dest: []f32) void {
-        self.fillFrom(rng, dest);
+        if (self.inverse_rate == 0) {
+            @memset(dest, 0);
+            return;
+        }
+        fillStandardExponentialNativeF32(rng, dest);
+        for (dest) |*item| item.* *= self.inverse_rate;
     }
 
     pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {
@@ -6415,7 +6421,8 @@ pub fn VectorExponentialNativeF32(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.inverse_rate == 0) return @splat(0);
+            return vectorStandardExponentialNativeF32(rng, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -6424,7 +6431,13 @@ pub fn VectorExponentialNativeF32(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.inverse_rate == 0) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            fillVectorStandardExponentialNativeF32(rng, VectorType, dest);
+            const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+            for (scalars) |*item| item.* *= self.inverse_rate;
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
