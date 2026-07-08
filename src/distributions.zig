@@ -1589,7 +1589,7 @@ pub const Binomial = struct {
             @memset(dest, self.trials);
             return;
         }
-        for (dest) |*item| item.* = self.sampleFrom(source);
+        for (dest) |*item| item.* = binomialFrom(source, self.trials, self.p);
     }
 };
 
@@ -31419,6 +31419,14 @@ test "binomial sampler has plausible moments" {
     for (binomial_buf) |value| try std.testing.expect(value <= 8);
     fillBinomialFrom(&direct_engine, &binomial_buf, 8, 0.5);
     for (binomial_buf) |value| try std.testing.expect(value <= 8);
+    var direct_fill_engine = alea.ScalarPrng.init(0xb1_0001);
+    var scalar_loop_engine = alea.ScalarPrng.init(0xb1_0001);
+    var direct_fill: [8]u64 = undefined;
+    var scalar_fill: [8]u64 = undefined;
+    (try Binomial.init(8, 0.5)).fillFrom(&direct_fill_engine, &direct_fill);
+    for (&scalar_fill) |*slot| slot.* = binomialFrom(&scalar_loop_engine, 8, 0.5);
+    try std.testing.expectEqualSlices(u64, &scalar_fill, &direct_fill);
+    try std.testing.expectEqual(scalar_loop_engine.next(), direct_fill_engine.next());
     try std.testing.expect(binomialPoissonApprox(rng, 10_000, 0.01) < 200);
     try std.testing.expect(binomialPoissonApproxFrom(&direct_engine, 10_000, 0.01) < 200);
     try std.testing.expect(try binomialPoissonApproxChecked(rng, 10_000, 0.01) < 200);

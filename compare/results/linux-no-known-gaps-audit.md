@@ -3927,3 +3927,9 @@ S4-M821 fills mapped samplers with direct mapper application
 distribution MappedSampler fills now apply the mapper directly to base sampler
 outputs instead of routing each slot through MappedSampler.sampleFrom. This
 improves mapped sampler fill ergonomics but does not resolve S4-M11.
+
+S4-M822 fills Binomial outputs with direct binomialFrom calls
+(`compare/results/s4-m822-binomial-fill-direct-sampler.md`):
+Binomial non-degenerate fills now call the underlying binomialFrom sampler
+directly instead of routing each slot through Binomial.sampleFrom. This improves
+Binomial fill ergonomics but does not resolve S4-M11.
