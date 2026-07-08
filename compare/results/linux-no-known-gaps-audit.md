@@ -3868,3 +3868,10 @@ reusable Choice usize/u32 index iterator next calls now generate uniform indexes
 directly from cached choice length instead of routing through sample wrappers.
 This improves reusable choice index iterator ergonomics but does not resolve
 S4-M11.
+
+S4-M813 samples distribution Choose index iterators directly
+(`compare/results/s4-m813-distribution-choose-index-iterator-direct.md`):
+distribution-layer Choose usize/u32 index iterator next calls now generate uniform
+indexes directly from cached choice length instead of routing through sample
+wrappers. This improves distribution choose index iterator ergonomics but does
+not resolve S4-M11.

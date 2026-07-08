@@ -775,7 +775,8 @@ pub fn Choose(comptime T: type) type {
                 }
 
                 pub fn nextValue(self: *SelfIter) usize {
-                    return self.choice.sampleIndexFrom(self.source);
+                    const item_len = self.choice.items.len;
+                    return if (item_len == 1) 0 else Rng.uintLessThanFrom(self.source, usize, item_len);
                 }
 
                 pub fn fill(self: *SelfIter, dest: []usize) void {
@@ -796,7 +797,9 @@ pub fn Choose(comptime T: type) type {
                 }
 
                 pub fn nextValue(self: *SelfIter) u32 {
-                    return self.choice.sampleIndexU32From(self.source) catch unreachable;
+                    const item_len = self.choice.items.len;
+                    if (item_len == 1) return 0;
+                    return Rng.uintLessThanFrom(self.source, u32, @intCast(item_len));
                 }
 
                 pub fn fill(self: *SelfIter, dest: []u32) void {
@@ -33061,6 +33064,11 @@ test "distribution Choose sampler mirrors slice choices" {
     var unchecked_index_iter = choice.indexIterFrom(&unchecked_index_iter_engine);
     try std.testing.expectEqual(unchecked_index_iter.next().?, checked_index_iter.next().?);
     try std.testing.expectEqual(unchecked_index_iter_engine.next(), checked_index_iter_engine.next());
+    var direct_index_iter_engine = root.DefaultPrng.init(0xc0_29b);
+    var helper_index_iter_engine = root.DefaultPrng.init(0xc0_29b);
+    var direct_index_iter = choice.indexIterFrom(&direct_index_iter_engine);
+    try std.testing.expectEqual(Rng.chooseIndexFrom(&helper_index_iter_engine, items.len).?, direct_index_iter.next().?);
+    try std.testing.expectEqual(helper_index_iter_engine.next(), direct_index_iter_engine.next());
     var checked_index_iter_facade_engine = root.DefaultPrng.init(0xc0_294);
     var checked_index_iter_direct_engine = root.DefaultPrng.init(0xc0_294);
     var checked_index_iter_facade = try choice.indexIterChecked(root.Rng.init(&checked_index_iter_facade_engine));
@@ -33082,6 +33090,11 @@ test "distribution Choose sampler mirrors slice choices" {
     var unchecked_index_iter_u32 = try choice.indexIterU32From(&unchecked_index_iter_u32_engine);
     try std.testing.expectEqual(unchecked_index_iter_u32.next().?, checked_index_iter_u32.next().?);
     try std.testing.expectEqual(unchecked_index_iter_u32_engine.next(), checked_index_iter_u32_engine.next());
+    var direct_u32_index_iter_engine = root.DefaultPrng.init(0xc0_29c);
+    var helper_u32_index_iter_engine = root.DefaultPrng.init(0xc0_29c);
+    var direct_u32_index_iter = try choice.indexIterU32From(&direct_u32_index_iter_engine);
+    try std.testing.expectEqual(Rng.chooseIndexU32From(&helper_u32_index_iter_engine, @intCast(items.len)).?, direct_u32_index_iter.next().?);
+    try std.testing.expectEqual(helper_u32_index_iter_engine.next(), direct_u32_index_iter_engine.next());
     var checked_index_iter_u32_facade_engine = root.DefaultPrng.init(0xc0_295);
     var checked_index_iter_u32_direct_engine = root.DefaultPrng.init(0xc0_295);
     var checked_index_iter_u32_facade = try choice.indexIterU32Checked(root.Rng.init(&checked_index_iter_u32_facade_engine));
