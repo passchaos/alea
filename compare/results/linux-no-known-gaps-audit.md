@@ -3847,3 +3847,10 @@ S4-M809 fills reusable Choice indexes with cached-length direct loops
 reusable Choice usize index fills now return early for empty output, cache item
 length once, and generate uniform indexes directly. This improves reusable choice
 index fill ergonomics but does not resolve S4-M11.
+
+S4-M810 fills distribution Choose u32 indexes with cached-length direct loops
+(`compare/results/s4-m810-distribution-choose-u32-index-fill-cached-length.md`):
+distribution-layer Choose compact u32 index fills now return early for empty
+output, cache item length once, validate compact width, and generate uniform u32
+indexes directly. This improves distribution choose compact index fill ergonomics
+but does not resolve S4-M11.

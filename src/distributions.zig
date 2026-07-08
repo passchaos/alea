@@ -673,12 +673,15 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn fillIndicesU32From(self: Self, source: anytype, dest: []u32) Error!void {
-            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
-            if (self.items.len == 1) {
+            if (dest.len == 0) return;
+            const item_len = self.items.len;
+            if (item_len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (item_len == 1) {
                 @memset(dest, 0);
                 return;
             }
-            for (dest) |*index| index.* = Rng.uintLessThanFrom(source, u32, @intCast(self.items.len));
+            const item_len_u32: u32 = @intCast(item_len);
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(source, u32, item_len_u32);
         }
 
         pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
@@ -33013,6 +33016,14 @@ test "distribution Choose sampler mirrors slice choices" {
     try choice.fillIndicesU32CheckedFrom(&checked_u32_fill_engine, &checked_u32_fill);
     try std.testing.expectEqualSlices(u32, &unchecked_u32_fill, &checked_u32_fill);
     try std.testing.expectEqual(unchecked_u32_fill_engine.next(), checked_u32_fill_engine.next());
+    var direct_u32_fill_engine = root.DefaultPrng.init(0xc0_29a);
+    var helper_u32_fill_engine = root.DefaultPrng.init(0xc0_29a);
+    var direct_u32_fill: [6]u32 = undefined;
+    var helper_u32_fill: [6]u32 = undefined;
+    try choice.fillIndicesU32From(&direct_u32_fill_engine, &direct_u32_fill);
+    for (&helper_u32_fill) |*slot| slot.* = Rng.chooseIndexU32From(&helper_u32_fill_engine, @intCast(items.len)).?;
+    try std.testing.expectEqualSlices(u32, &helper_u32_fill, &direct_u32_fill);
+    try std.testing.expectEqual(helper_u32_fill_engine.next(), direct_u32_fill_engine.next());
     var checked_u32_array_engine = root.DefaultPrng.init(0xc0_284);
     var unchecked_u32_array_engine = root.DefaultPrng.init(0xc0_284);
     const unchecked_u32_array = try choice.indexArrayU32From(&unchecked_u32_array_engine, 6);
