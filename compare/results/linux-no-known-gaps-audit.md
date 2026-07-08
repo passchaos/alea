@@ -4872,3 +4872,9 @@ Choose `sample` and `sampleValue` now generate facade RNG indexes and map direct
 to item storage instead of routing through direct-source or pointer sample
 wrappers. This improves distribution-layer choice sample ergonomics but does not
 resolve S4-M11.
+
+S4-M961 refreshes current checked value facade aliases directly
+(`compare/results/s4-m961-valuechecked-facade-direct-refresh.md`):
+Choose, Choice, and WeightedChoice `valueChecked` facade helpers now sample values
+directly through facade RNGs instead of routing through `valueCheckedFrom`. This
+improves checked value-sample ergonomics but does not resolve S4-M11.

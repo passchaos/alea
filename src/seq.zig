@@ -8499,7 +8499,9 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn valueChecked(self: Self, rng: Rng) Error!T {
-            return self.valueCheckedFrom(rng);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            if (self.items.len == 1) return self.items[0];
+            return self.items[Rng.uintLessThanFrom(rng, usize, self.items.len)];
         }
 
         pub fn valueCheckedFrom(self: Self, source: anytype) Error!T {
@@ -9285,7 +9287,8 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn valueChecked(self: Self, rng: Rng) Error!T {
-            return self.valueCheckedFrom(rng);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+            return self.items[self.table.sampleChecked(rng) catch unreachable];
         }
 
         pub fn valueCheckedFrom(self: Self, source: anytype) Error!T {

@@ -478,7 +478,10 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn valueChecked(self: Self, rng: Rng) Error!T {
-            return self.valueCheckedFrom(rng);
+            if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyRange;
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return self.items[0];
+            return self.items[Rng.uintLessThanFrom(rng, usize, self.items.len)];
         }
 
         pub fn valueCheckedFrom(self: Self, source: anytype) Error!T {
