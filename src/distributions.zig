@@ -9833,7 +9833,15 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return 0;
+            if (self.shape == 1) return self.scale * Rng.standardExponentialFastFrom(rng, T);
+
+            if (self.is_boosted) {
+                return self.scale * self.sampleMarsaglia(rng, self.boosted_d, self.boosted_c) *
+                    std.math.pow(T, Rng.floatFrom(rng, T), self.boost_inverse_shape);
+            }
+
+            return self.scale * self.sampleMarsaglia(rng, self.d, self.c);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -9849,7 +9857,23 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
+            if (self.shape == 1) {
+                Rng.fillStandardExponentialFrom(rng, T, dest);
+                if (self.scale != 1) scaleInPlace(T, dest, self.scale);
+                return;
+            }
+            if (self.is_boosted) {
+                for (dest) |*item| {
+                    item.* = self.scale * self.sampleMarsaglia(rng, self.boosted_d, self.boosted_c) *
+                        std.math.pow(T, Rng.floatFrom(rng, T), self.boost_inverse_shape);
+                }
+                return;
+            }
+            for (dest) |*item| item.* = self.scale * self.sampleMarsaglia(rng, self.d, self.c);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {

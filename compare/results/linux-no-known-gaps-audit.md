@@ -5115,3 +5115,9 @@ S4-M995 routes reusable Open01/OpenClosed01 facade helpers directly
 facade `Rng` strict-interval helpers directly instead of routing through
 direct-source wrappers. This improves strict-interval sampler facade ergonomics
 but does not resolve S4-M11.
+
+S4-M996 routes reusable scalar Gamma facade helpers directly
+(`compare/results/s4-m996-gamma-sampler-facade-direct.md`): `Gamma(T).sample` and
+`Gamma(T).fill` now dispatch through facade `Rng` Gamma method bodies directly
+instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
+Gamma sampler facade ergonomics but does not resolve S4-M11.
