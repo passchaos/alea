@@ -5257,3 +5257,11 @@ S4-M1016 routes reusable scalar/vector Logistic facade helpers directly
 and apply the Logistic transform directly through facade `Rng` instead of routing
 through `sampleFrom` / `fillFrom` wrappers. This improves Logistic sampler facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1017 routes reusable scalar/vector LogLogistic facade helpers directly
+(`compare/results/s4-m1017-log-logistic-sampler-facade-direct.md`):
+`LogLogistic.sample` / `fill` and `VectorLogLogistic.sample` / `fill` now draw
+strict-open uniform values and apply the ratio/generic LogLogistic transform
+directly through facade `Rng` instead of routing through `sampleFrom` /
+`fillFrom` wrappers. This improves LogLogistic sampler facade ergonomics but does
+not resolve S4-M11.

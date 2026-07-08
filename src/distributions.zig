@@ -13149,7 +13149,10 @@ pub fn VectorLogLogistic(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
+            const uniform_vec = rng.vectorOpen(VectorType);
+            if (self.shapeValue() == 1) return logLogisticShapeOneFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
+            return logLogisticFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -13160,7 +13163,18 @@ pub fn VectorLogLogistic(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
+                return;
+            }
+            for (dest) |*item| {
+                const uniform_vec = rng.vectorOpen(VectorType);
+                if (self.shapeValue() == 1) {
+                    item.* = logLogisticShapeOneFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
+                } else {
+                    item.* = logLogisticFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
+                }
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -13246,7 +13260,10 @@ pub fn LogLogistic(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return self.degenerateValue();
+            const u = rng.floatOpen(T);
+            if (self.method == .ratio) return self.scale * u / (1 - u);
+            return self.scale * std.math.pow(T, u / (1 - u), self.inverse_shape);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -13257,7 +13274,17 @@ pub fn LogLogistic(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, self.degenerateValue());
+                return;
+            }
+            rng.fillOpen(T, dest);
+            if (self.method == .ratio) {
+                logLogisticShapeOneFromOpenUniforms(T, dest, self.scale);
+                return;
+            }
+
+            logLogisticFromOpenUniforms(T, dest, self.scale, self.inverse_shape);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
