@@ -8879,7 +8879,9 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn indexArrayU32From(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
-            return self.indexArrayU32CheckedFrom(source, N);
+            var out: [N]u32 = undefined;
+            try self.fillIndicesU32From(source, &out);
+            return out;
         }
 
         pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {

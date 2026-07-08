@@ -4727,3 +4727,10 @@ directly (`compare/results/s4-m938-weightedchoice-pointer-iter-from-direct.md`):
 WeightedChoice `ptrIterFrom` now constructs its direct-source sample iterator
 directly instead of routing through `iterFrom`. This improves reusable weighted
 pointer iterator ergonomics but does not resolve S4-M11.
+
+S4-M939 routes reusable Choice compact direct-source fixed-array helper directly
+(`compare/results/s4-m939-choice-u32-array-from-direct.md`):
+Choice `indexArrayU32From` now constructs its stack array and fills compact
+indexes directly instead of routing through `indexArrayU32CheckedFrom`. This
+improves reusable compact-index fixed-array ergonomics but does not resolve
+S4-M11.
