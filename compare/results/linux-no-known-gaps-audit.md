@@ -4015,3 +4015,10 @@ HalfNormal.fillFrom now delegates to fillHalfNormalFrom, reusing its degenerate
 and optimized bulk implementation instead of routing each slot through
 HalfNormal.sampleFrom. This improves HalfNormal reusable fill ergonomics but does
 not resolve S4-M11.
+
+S4-M835 stages reusable Exponential fills through the standard helper
+(`compare/results/s4-m835-exponential-fill-standard-stage.md`):
+Exponential.fillFrom now fills standard exponential samples through the shared
+bulk helper and scales them in place, while preserving infinite-rate no-consume
+behavior and scalar-loop stream shape. This improves Exponential reusable fill
+ergonomics but does not resolve S4-M11.

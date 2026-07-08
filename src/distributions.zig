@@ -5660,7 +5660,8 @@ pub fn Exponential(comptime T: type) type {
                 @memset(dest, 0);
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            fillStandardExponentialFrom(source, T, dest);
+            if (self.inverse_rate != 1) scaleInPlace(T, dest, self.inverse_rate);
         }
 
         fn isDegenerate(self: Self) bool {
@@ -30327,6 +30328,30 @@ test "non-uniform samplers can be reused with sample iterators" {
     var direct_exponential_buf: [8]f64 = undefined;
     exponential_sampler.fillFrom(&direct_engine, &direct_exponential_buf);
     for (direct_exponential_buf) |value| try std.testing.expect(value >= 0);
+    var exponential_fill_engine = alea.ScalarPrng.init(0xe835_0001);
+    var exponential_loop_engine = alea.ScalarPrng.init(0xe835_0001);
+    var exponential_fill: [10]f64 = undefined;
+    var exponential_loop: [10]f64 = undefined;
+    exponential_sampler.fillFrom(&exponential_fill_engine, &exponential_fill);
+    for (&exponential_loop) |*slot| slot.* = exponential_sampler.sampleFrom(&exponential_loop_engine);
+    try std.testing.expectEqualSlices(f64, &exponential_loop, &exponential_fill);
+    try std.testing.expectEqual(exponential_loop_engine.next(), exponential_fill_engine.next());
+    var exponential_f32_fill_engine = alea.ScalarPrng.init(0xe835_f32);
+    var exponential_f32_loop_engine = alea.ScalarPrng.init(0xe835_f32);
+    const exponential_f32_sampler = try Exponential(f32).init(2.75);
+    var exponential_f32_fill: [11]f32 = undefined;
+    var exponential_f32_loop: [11]f32 = undefined;
+    exponential_f32_sampler.fillFrom(&exponential_f32_fill_engine, &exponential_f32_fill);
+    for (&exponential_f32_loop) |*slot| slot.* = exponential_f32_sampler.sampleFrom(&exponential_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &exponential_f32_loop, &exponential_f32_fill);
+    try std.testing.expectEqual(exponential_f32_loop_engine.next(), exponential_f32_fill_engine.next());
+    var exponential_degenerate_engine = alea.ScalarPrng.init(0xe835_1af);
+    var exponential_degenerate_control = alea.ScalarPrng.init(0xe835_1af);
+    const degenerate_exponential_sampler = try Exponential(f64).init(std.math.inf(f64));
+    var exponential_degenerate_fill: [4]f64 = undefined;
+    degenerate_exponential_sampler.fillFrom(&exponential_degenerate_engine, &exponential_degenerate_fill);
+    for (exponential_degenerate_fill) |value| try std.testing.expectEqual(@as(f64, 0), value);
+    try std.testing.expectEqual(exponential_degenerate_control.next(), exponential_degenerate_engine.next());
 
     var standard_normals = rng.sampleIter(f64, StandardNormal(f64){});
     try std.testing.expect(std.math.isFinite(standard_normals.next().?));
