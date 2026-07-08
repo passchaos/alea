@@ -907,7 +907,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M866 VectorNormalInverseGaussian reusable fill direct composition | `src/distributions.zig`, `compare/results/s4-m866-vector-nig-fill-direct-composition.md` | Closed for the current bar: reusable VectorNormalInverseGaussian fills now draw embedded inverse-Gaussian and final standard-normal vectors directly. |
 | S4-M867 VectorZipf reusable fill direct lane sampling | `src/distributions.zig`, `compare/results/s4-m867-vector-zipf-fill-direct-lanes.md` | Closed for the current bar: reusable VectorZipf fills now sample lanes directly from the cached scalar Zipf sampler. |
 | S4-M868 VectorZeta reusable fill direct lane sampling | `src/distributions.zig`, `compare/results/s4-m868-vector-zeta-fill-direct-lanes.md` | Closed for the current bar: reusable VectorZeta fills now sample lanes directly from the cached scalar Zeta sampler. |
-| S4-M869 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M869 VectorBeta reusable fill direct lane sampling | `src/distributions.zig`, `compare/results/s4-m869-vector-beta-fill-direct-lanes.md` | Closed for the current bar: reusable VectorBeta fills now sample lanes directly from the cached scalar Beta sampler. |
+| S4-M870 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2891,6 +2892,10 @@ not resolve S4-M11 or complete the long-term objective.
 S4-M868 additionally routes reusable VectorZeta fills through direct cached scalar
 Zeta lane sampling, preserving stream shape while avoiding per-output
 VectorZeta.sampleFrom wrapper calls; it is reliability/ergonomics work and does
+not resolve S4-M11 or complete the long-term objective.
+S4-M869 additionally routes reusable VectorBeta fills through direct cached scalar
+Beta lane sampling, preserving stream shape while avoiding per-output
+VectorBeta.sampleFrom wrapper calls; it is reliability/ergonomics work and does
 not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by

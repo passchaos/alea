@@ -4259,3 +4259,9 @@ sampling (`compare/results/s4-m868-vector-zeta-fill-direct-lanes.md`):
 VectorZeta.fillFrom now samples each vector lane directly from the cached scalar
 Zeta sampler instead of routing every output through VectorZeta.sampleFrom. This
 improves VectorZeta reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M869 draws reusable VectorBeta fills through direct cached scalar Beta lane
+sampling (`compare/results/s4-m869-vector-beta-fill-direct-lanes.md`):
+VectorBeta.fillFrom now samples each vector lane directly from the cached scalar
+Beta sampler instead of routing every output through VectorBeta.sampleFrom. This
+improves VectorBeta reusable fill ergonomics but does not resolve S4-M11.
