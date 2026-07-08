@@ -4225,3 +4225,10 @@ VectorSkewNormal.fillFrom now draws standard-normal vectors and applies the
 skew-normal composition directly, including symmetric and +/-1 shape paths,
 instead of routing every output through VectorSkewNormal.sampleFrom. This improves
 VectorSkewNormal reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M864 draws reusable VectorPert fills through a cached vector Beta delegate
+(`compare/results/s4-m864-vector-pert-fill-beta-delegate.md`):
+VectorPert.fillFrom now constructs a VectorBeta sampler from the cached PERT
+alpha/beta values, fills beta vectors, and affine-maps them into [min,max]
+instead of routing every output through VectorPert.sampleFrom. This improves
+VectorPert reusable fill ergonomics but does not resolve S4-M11.

@@ -14726,7 +14726,11 @@ pub fn VectorPert(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.minValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            const beta_sampler = VectorBeta(VectorType).init(self.alphaValue(), self.betaValue()) catch unreachable;
+            beta_sampler.fillFrom(source, dest);
+            const min_vec: VectorType = @splat(self.minValue());
+            const range_vec: VectorType = @splat(self.maxValue() - self.minValue());
+            for (dest) |*item| item.* = min_vec + range_vec * item.*;
         }
     };
 }
@@ -28000,6 +28004,35 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &pert_buf_vec, &direct_pert_buf_vec);
     for (pert_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0 and vec[lane] <= 10);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_pert_fill_engine = alea.ScalarPrng.init(0x5864_0001);
+    var vector_pert_loop_engine = alea.ScalarPrng.init(0x5864_0001);
+    var vector_pert_fill: [3]@Vector(4, f64) = undefined;
+    var vector_pert_loop: [3]@Vector(4, f64) = undefined;
+    vector_pert_sampler.fillFrom(&vector_pert_fill_engine, &vector_pert_fill);
+    for (&vector_pert_loop) |*slot| slot.* = vector_pert_sampler.sampleFrom(&vector_pert_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_pert_loop, &vector_pert_fill);
+    try std.testing.expectEqual(vector_pert_loop_engine.next(), vector_pert_fill_engine.next());
+    var vector_pert_f32_fill_engine = alea.ScalarPrng.init(0x5864_f32);
+    var vector_pert_f32_loop_engine = alea.ScalarPrng.init(0x5864_f32);
+    const vector_pert_f32 = try VectorPert(@Vector(8, f32)).init(0, 4, 10, 4);
+    var vector_pert_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_pert_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_pert_f32.fillFrom(&vector_pert_f32_fill_engine, &vector_pert_f32_fill);
+    for (&vector_pert_f32_loop) |*slot| slot.* = vector_pert_f32.sampleFrom(&vector_pert_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_pert_f32_loop, &vector_pert_f32_fill);
+    try std.testing.expectEqual(vector_pert_f32_loop_engine.next(), vector_pert_f32_fill_engine.next());
+    var vector_pert_degenerate_engine = alea.ScalarPrng.init(0x5864_d00);
+    var vector_pert_degenerate_control = alea.ScalarPrng.init(0x5864_d00);
+    const vector_pert_degenerate = try VectorPert(@Vector(4, f64)).init(1.5, 1.5, 1.5, 4);
+    vector_pert_degenerate.fillFrom(&vector_pert_degenerate_engine, &vector_pert_fill);
+    for (vector_pert_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
+    try std.testing.expectEqual(vector_pert_degenerate_control.next(), vector_pert_degenerate_engine.next());
+    var vector_pert_infinite_shape_engine = alea.ScalarPrng.init(0x5864_1af);
+    var vector_pert_infinite_shape_control = alea.ScalarPrng.init(0x5864_1af);
+    const vector_pert_infinite_shape = try VectorPert(@Vector(4, f64)).init(0, 4, 10, std.math.inf(f64));
+    vector_pert_infinite_shape.fillFrom(&vector_pert_infinite_shape_engine, &vector_pert_fill);
+    for (vector_pert_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(4)), vec);
+    try std.testing.expectEqual(vector_pert_infinite_shape_control.next(), vector_pert_infinite_shape_engine.next());
 
     const vector_pert_uniform = try VectorPert(@Vector(4, f64)).init(0, 4, 10, 0);
     try std.testing.expect(vector_pert_uniform.modeValue() == null);
@@ -28008,6 +28041,12 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(pert_uniform_vec, direct_pert_uniform_vec);
     inline for (0..4) |lane| try std.testing.expect(pert_uniform_vec[lane] >= 0 and pert_uniform_vec[lane] <= 10);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_pert_uniform_fill_engine = alea.ScalarPrng.init(0x5864_0000);
+    var vector_pert_uniform_loop_engine = alea.ScalarPrng.init(0x5864_0000);
+    vector_pert_uniform.fillFrom(&vector_pert_uniform_fill_engine, &vector_pert_fill);
+    for (&vector_pert_loop) |*slot| slot.* = vector_pert_uniform.sampleFrom(&vector_pert_uniform_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_pert_loop, &vector_pert_fill);
+    try std.testing.expectEqual(vector_pert_uniform_loop_engine.next(), vector_pert_uniform_fill_engine.next());
 
     const vector_pert_mean = try VectorPert(@Vector(4, f64)).initMean(0, 5, 10, 4);
     try std.testing.expectApproxEqAbs(@as(f64, 5), vector_pert_mean.modeValue().?, 1e-12);
