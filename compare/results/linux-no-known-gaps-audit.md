@@ -4118,3 +4118,10 @@ VectorStudentT.fillFrom now draws standard normal and cached ChiSquared samples
 directly for each finite-degree vector lane and combines them, instead of routing
 every output through VectorStudentT.sampleFrom. This improves VectorStudentT
 reusable fill ergonomics but does not resolve S4-M11.
+
+S4-M849 draws reusable VectorTriangular fills through direct vector uniform
+transforms (`compare/results/s4-m849-vector-triangular-fill-direct-transform.md`):
+VectorTriangular.fillFrom now draws vector uniform values and applies the
+triangular transform directly, instead of routing every output through
+VectorTriangular.sampleFrom. This improves VectorTriangular reusable fill
+ergonomics but does not resolve S4-M11.

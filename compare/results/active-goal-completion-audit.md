@@ -887,7 +887,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M846 VectorFisherF reusable fill direct cached Gamma ratio lanes | `src/distributions.zig`, `compare/results/s4-m846-vector-fisher-f-fill-direct-gamma-ratio.md` | Closed for the current bar: reusable VectorFisherF fills now draw cached numerator/denominator Gamma values directly per lane and divide. |
 | S4-M847 StudentT reusable fill direct composition | `src/distributions.zig`, `compare/results/s4-m847-student-t-fill-direct-composition.md` | Closed for the current bar: reusable StudentT fills now draw standard normal and cached chi-squared samples directly and combine them for finite degrees of freedom. |
 | S4-M848 VectorStudentT reusable fill direct composition | `src/distributions.zig`, `compare/results/s4-m848-vector-student-t-fill-direct-composition.md` | Closed for the current bar: reusable VectorStudentT fills now draw standard normal and cached chi-squared samples directly per lane and combine them for finite degrees of freedom. |
-| S4-M849 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M849 VectorTriangular reusable fill direct uniform transform | `src/distributions.zig`, `compare/results/s4-m849-vector-triangular-fill-direct-transform.md` | Closed for the current bar: reusable VectorTriangular fills now draw vector uniform values and apply the triangular transform directly. |
+| S4-M850 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2783,6 +2784,10 @@ direct standard-normal and cached ChiSquared composition per lane, preserving
 stream shape while avoiding per-output VectorStudentT.sampleFrom wrapper calls;
 it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M849 additionally routes reusable VectorTriangular fills through direct vector
+uniform draws and triangular transforms, preserving stream shape while avoiding
+per-output VectorTriangular.sampleFrom wrapper calls; it is reliability/
+ergonomics work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

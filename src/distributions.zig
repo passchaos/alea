@@ -10762,7 +10762,10 @@ pub fn VectorTriangular(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.minValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const uniform_vec = Rng.vectorFrom(source, VectorType);
+                item.* = triangularFromUniformVector(VectorType, uniform_vec, self.minValue(), self.modeValue(), self.maxValue());
+            }
         }
     };
 }
@@ -26908,6 +26911,29 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &triangular_buf_vec, &direct_triangular_buf_vec);
     for (triangular_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 2);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_triangular_fill_engine = alea.ScalarPrng.init(0x7849_0001);
+    var vector_triangular_loop_engine = alea.ScalarPrng.init(0x7849_0001);
+    var vector_triangular_fill: [3]@Vector(4, f64) = undefined;
+    var vector_triangular_loop: [3]@Vector(4, f64) = undefined;
+    vector_triangular_sampler.fillFrom(&vector_triangular_fill_engine, &vector_triangular_fill);
+    for (&vector_triangular_loop) |*slot| slot.* = vector_triangular_sampler.sampleFrom(&vector_triangular_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_triangular_loop, &vector_triangular_fill);
+    try std.testing.expectEqual(vector_triangular_loop_engine.next(), vector_triangular_fill_engine.next());
+    var vector_triangular_f32_fill_engine = alea.ScalarPrng.init(0x7849_f32);
+    var vector_triangular_f32_loop_engine = alea.ScalarPrng.init(0x7849_f32);
+    const vector_triangular_f32 = try VectorTriangular(@Vector(8, f32)).init(-1, 0, 2);
+    var vector_triangular_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_triangular_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_triangular_f32.fillFrom(&vector_triangular_f32_fill_engine, &vector_triangular_f32_fill);
+    for (&vector_triangular_f32_loop) |*slot| slot.* = vector_triangular_f32.sampleFrom(&vector_triangular_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_triangular_f32_loop, &vector_triangular_f32_fill);
+    try std.testing.expectEqual(vector_triangular_f32_loop_engine.next(), vector_triangular_f32_fill_engine.next());
+    var vector_triangular_degenerate_engine = alea.ScalarPrng.init(0x7849_d00);
+    var vector_triangular_degenerate_control = alea.ScalarPrng.init(0x7849_d00);
+    const vector_triangular_degenerate = try VectorTriangular(@Vector(4, f64)).init(1.5, 1.5, 1.5);
+    vector_triangular_degenerate.fillFrom(&vector_triangular_degenerate_engine, &vector_triangular_fill);
+    for (vector_triangular_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
+    try std.testing.expectEqual(vector_triangular_degenerate_control.next(), vector_triangular_degenerate_engine.next());
 
     const arcsine_vec = try vectorArcsineChecked(rng, @Vector(4, f64), -1, 3);
     const direct_arcsine_vec = try vectorArcsineCheckedFrom(&direct_engine, @Vector(4, f64), -1, 3);
