@@ -5434,7 +5434,7 @@ pub fn Normal(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            rng.fillNormal(T, dest, self.mean, self.stddev);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {

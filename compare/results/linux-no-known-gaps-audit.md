@@ -5379,3 +5379,8 @@ S4-M1033 routes distribution-layer reusable Choose pointer fills directly
 now maps direct facade-generated indexes into item storage instead of routing
 through `fillFrom`. This improves Choice pointer-fill facade ergonomics but does
 not resolve S4-M11.
+
+S4-M1034 routes reusable scalar Normal facade fills directly
+(`compare/results/s4-m1034-normal-fill-facade-direct.md`): `Normal(T).fill` now
+calls facade `Rng.fillNormal` directly instead of routing through `fillFrom`. This
+improves Normal fill facade ergonomics but does not resolve S4-M11.
