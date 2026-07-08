@@ -10120,7 +10120,7 @@ pub fn VectorChiSquared(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            return (VectorGamma(VectorType){ .sampler = self.sampler.gamma_sampler }).sample(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -10131,7 +10131,7 @@ pub fn VectorChiSquared(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            (VectorGamma(VectorType){ .sampler = self.sampler.gamma_sampler }).fill(rng, dest);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -10194,7 +10194,7 @@ pub fn ChiSquared(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            return self.gamma_sampler.sample(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -10202,7 +10202,7 @@ pub fn ChiSquared(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            self.gamma_sampler.fill(rng, dest);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
