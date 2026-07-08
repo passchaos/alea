@@ -1758,7 +1758,7 @@ pub const Binomial = struct {
     }
 
     pub fn sample(self: Binomial, rng: Rng) u64 {
-        return self.sampleFrom(rng);
+        return binomialFrom(rng, self.trials, self.p);
     }
 
     pub fn sampleFrom(self: Binomial, source: anytype) u64 {
@@ -1890,7 +1890,11 @@ pub fn VectorBinomial(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.trials == 0 or self.sampler.p == 0) return @splat(0);
+            if (self.sampler.p == 1) return @splat(self.sampler.trials);
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = binomialFrom(rng, self.sampler.trials, self.sampler.p);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {

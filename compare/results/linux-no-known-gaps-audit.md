@@ -4909,3 +4909,9 @@ S4-M966 routes scalar/vector Bernoulli facade fills directly
 Bernoulli and VectorBernoulli `fill` helpers now execute direct threshold loops
 and degenerate fast paths instead of routing through `fillFrom`. This improves
 Bernoulli facade fill ergonomics but does not resolve S4-M11.
+
+S4-M967 routes scalar/vector Binomial facade samples directly
+(`compare/results/s4-m967-binomial-sample-facade-direct.md`):
+Binomial and VectorBinomial `sample` helpers now execute direct binomial sampling
+and degenerate fast paths instead of routing through `sampleFrom`. This improves
+Binomial facade sample ergonomics but does not resolve S4-M11.
