@@ -9135,7 +9135,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn sampleValueFrom(self: Self, source: anytype) T {
-            return self.sampleFrom(source).*;
+            return self.items[self.table.sampleFrom(source)];
         }
 
         pub fn sampleValueChecked(self: Self, rng: Rng) Error!T {
@@ -20814,6 +20814,11 @@ test "weighted choice sampler maps alias indexes to items" {
     try std.testing.expectEqual(checked_index_u32_iter_direct_engine.next(), checked_index_u32_iter_facade_engine.next());
     const direct_value = choice.sampleValueFrom(&engine);
     try std.testing.expect(!std.mem.eql(u8, direct_value, "never"));
+    var table_value_engine = alea.DefaultPrng.init(0xc0_ef44);
+    var weighted_value_engine = alea.DefaultPrng.init(0xc0_ef44);
+    const table_value_index = choice.table.sampleFrom(&table_value_engine);
+    try std.testing.expectEqualSlices(u8, labels[table_value_index], choice.sampleValueFrom(&weighted_value_engine));
+    try std.testing.expectEqual(table_value_engine.next(), weighted_value_engine.next());
     var checked_value_engine = alea.DefaultPrng.init(0xc0_ef02);
     var unchecked_value_engine = alea.DefaultPrng.init(0xc0_ef02);
     const unchecked_value = choice.sampleValueFrom(&unchecked_value_engine);

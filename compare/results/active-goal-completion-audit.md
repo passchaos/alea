@@ -923,7 +923,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M882 UnicodeCharset append UTF-8 direct index sampling | `src/ascii.zig`, `compare/results/s4-m882-unicode-charset-append-direct-index.md` | Closed for the current bar: UnicodeCharset UTF-8 append now draws uniform indexes and encodes selected scalars directly. |
 | S4-M883 WeightedChoice pointer iterator direct table mapping | `src/seq.zig`, `compare/results/s4-m883-weightedchoice-pointer-iterator-direct-table.md` | Closed for the current bar: reusable WeightedChoice pointer iterator scalar outputs now sample the alias table directly and map into item storage. |
 | S4-M884 WeightedChoice sample direct table mapping | `src/seq.zig`, `compare/results/s4-m884-weightedchoice-sample-direct-table.md` | Closed for the current bar: reusable WeightedChoice scalar pointer samples now sample the alias table directly and map into item storage. |
-| S4-M885 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M885 WeightedChoice value sample direct table mapping | `src/seq.zig`, `compare/results/s4-m885-weightedchoice-value-sample-direct-table.md` | Closed for the current bar: reusable WeightedChoice scalar value samples now sample the alias table directly and copy item storage. |
+| S4-M886 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2978,6 +2979,10 @@ S4-M884 additionally routes reusable WeightedChoice scalar pointer sampling thro
 direct alias-table sampling and item mapping, preserving stream shape while
 avoiding the sampleIndexFrom wrapper call; it is reliability/ergonomics work and
 does not resolve S4-M11 or complete the long-term objective.
+S4-M885 additionally routes reusable WeightedChoice scalar value sampling through
+direct alias-table sampling and item copying, preserving stream shape while
+avoiding the sampleFrom wrapper call; it is reliability/ergonomics work and does
+not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
