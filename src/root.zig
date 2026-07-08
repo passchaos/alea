@@ -5289,7 +5289,11 @@ fn rootSampleIteratorWeightedCandidateArray(comptime T: type, io: std.Io, compti
     var count: usize = 0;
     var engine: ?SecurePrng = null;
 
-    while (iterator.next()) |entry| {
+    const scan_limit = exact_remaining;
+    var scanned: usize = 0;
+    while (scan_limit == null or scanned < scan_limit.?) {
+        const entry = iterator.next() orelse break;
+        scanned += 1;
         const weight = rootWeightAsF64(@TypeOf(entry.weight), entry.weight);
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         if (weight == 0) continue;
@@ -10821,6 +10825,29 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeightedArray(u8, failing, 1, &weighted_array_entropy));
     var weighted_array_entropy_checked = WeightedIter{ .items = &weighted_entropy_entries };
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeightedArrayChecked(u8, failing, 1, &weighted_array_entropy_checked));
+    const ExactLongWeightedArrayIter = struct {
+        entries: []const WeightedIter.Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?WeightedIter.Entry {
+            self.calls += 1;
+            if (self.index >= self.entries.len) return null;
+            const entry = self.entries[self.index];
+            self.index += 1;
+            return entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.entries.len - self.index;
+        }
+    };
+    var weighted_array_exact_long = ExactLongWeightedArrayIter{ .entries = &weighted_entropy_entries };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeightedArray(u8, failing, 1, &weighted_array_exact_long));
+    try std.testing.expectEqual(@as(usize, 2), weighted_array_exact_long.calls);
+    var weighted_array_exact_long_checked = ExactLongWeightedArrayIter{ .entries = &weighted_entropy_entries };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeightedArrayChecked(u8, failing, 1, &weighted_array_exact_long_checked));
+    try std.testing.expectEqual(@as(usize, 2), weighted_array_exact_long_checked.calls);
     try std.testing.expectError(error.EntropyUnavailable, weightedIndex(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexChecked(failing, &.{ 1, 2 }));
     try std.testing.expectError(error.EntropyUnavailable, weightedIndexByIndex(f64, failing, 2, RootByIndexWeights.weight));

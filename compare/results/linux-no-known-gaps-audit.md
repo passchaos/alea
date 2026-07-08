@@ -3696,3 +3696,10 @@ root unweighted iterator choice helpers now reuse exact remaining metadata acros
 empty, hinted, and stable reservoir branches, so exact-size choices query
 size-hint/remaining once instead of multiple times. This improves iterator choice
 reliability evidence but does not resolve S4-M11.
+
+S4-M787 avoids weighted iterator array exact-long end probes
+(`compare/results/s4-m787-weighted-iterator-array-exact-long-end-probe.md`):
+seq/root fixed-size weighted iterator arrays now bound exact-long candidate
+scanning by the known remaining count, avoiding an extra trailing null probe
+while preserving weighted-key stream shape. This improves weighted iterator array
+reliability evidence but does not resolve S4-M11.
