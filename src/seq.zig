@@ -248,11 +248,22 @@ pub const IndexVec = union(enum) {
     }
 
     pub fn indexOf(self: IndexVec, value: usize) ?usize {
-        var position: usize = 0;
-        while (position < self.len()) : (position += 1) {
-            if (self.at(position) == value) return position;
-        }
-        return null;
+        return switch (self) {
+            .u32 => |items| {
+                if (value > std.math.maxInt(u32)) return null;
+                const needle: u32 = @intCast(value);
+                for (items, 0..) |item, position| {
+                    if (item == needle) return position;
+                }
+                return null;
+            },
+            .usize => |items| {
+                for (items, 0..) |item, position| {
+                    if (item == value) return position;
+                }
+                return null;
+            },
+        };
     }
 
     pub fn contains(self: IndexVec, value: usize) bool {
@@ -284,20 +295,45 @@ pub const IndexVec = union(enum) {
     }
 
     pub fn validateItems(self: IndexVec, item_len: usize) Error!void {
-        var position: usize = 0;
-        while (position < self.len()) : (position += 1) {
-            if (self.at(position) >= item_len) return error.InvalidParameter;
+        switch (self) {
+            .u32 => |items| {
+                if (item_len > std.math.maxInt(u32)) return;
+                const upper: u32 = @intCast(item_len);
+                for (items) |item| {
+                    if (item >= upper) return error.InvalidParameter;
+                }
+            },
+            .usize => |items| {
+                for (items) |item| {
+                    if (item >= item_len) return error.InvalidParameter;
+                }
+            },
         }
     }
 
     pub fn validateDistinctItems(self: IndexVec, item_len: usize) Error!void {
-        try self.validateItems(item_len);
-        var position: usize = 0;
-        while (position < self.len()) : (position += 1) {
-            var other = position + 1;
-            while (other < self.len()) : (other += 1) {
-                if (self.at(position) == self.at(other)) return error.InvalidParameter;
-            }
+        switch (self) {
+            .u32 => |items| {
+                if (item_len <= std.math.maxInt(u32)) {
+                    const upper: u32 = @intCast(item_len);
+                    for (items) |item| {
+                        if (item >= upper) return error.InvalidParameter;
+                    }
+                }
+                for (items, 0..) |item, position| {
+                    for (items[position + 1 ..]) |other| {
+                        if (item == other) return error.InvalidParameter;
+                    }
+                }
+            },
+            .usize => |items| {
+                for (items, 0..) |item, position| {
+                    if (item >= item_len) return error.InvalidParameter;
+                    for (items[position + 1 ..]) |other| {
+                        if (item == other) return error.InvalidParameter;
+                    }
+                }
+            },
         }
     }
 
@@ -10862,6 +10898,17 @@ test "index vec maps sampled indexes to slice items" {
     try std.testing.expectEqualStrings("ant", compact_values.next().?);
     try std.testing.expectEqualStrings("cat", compact_values.next().?);
     try std.testing.expectEqualStrings("dog", compact_values.next().?);
+    if (comptime @bitSizeOf(usize) > 32) {
+        const oversized_item_len = @as(usize, std.math.maxInt(u32)) + 1;
+        try std.testing.expectEqual(@as(?usize, null), compact.indexOf(oversized_item_len));
+        try std.testing.expect(!compact.contains(oversized_item_len));
+        try compact.validateItems(oversized_item_len);
+        try compact.validateDistinctItems(oversized_item_len);
+        var compact_max_backing = [_]u32{std.math.maxInt(u32)};
+        const compact_max = IndexVec{ .u32 = &compact_max_backing };
+        try compact_max.validateItems(oversized_item_len);
+        try std.testing.expectError(error.InvalidParameter, compact_max.validateItems(@as(usize, std.math.maxInt(u32))));
+    }
     var compact_mapped_values: [3][]const u8 = undefined;
     try compact.valuesIntoChecked([]const u8, &labels, &compact_mapped_values);
     try std.testing.expectEqualStrings("ant", compact_mapped_values[0]);
@@ -10958,6 +11005,9 @@ test "index vec maps sampled indexes to slice items" {
     var duplicate_backing = [_]usize{ 1, 1 };
     const duplicate = IndexVec{ .usize = &duplicate_backing };
     try std.testing.expectError(error.InvalidParameter, duplicate.validateDistinctItems(numbers.len));
+    var duplicate_compact_backing = [_]u32{ 2, 2 };
+    const duplicate_compact = IndexVec{ .u32 = &duplicate_compact_backing };
+    try std.testing.expectError(error.InvalidParameter, duplicate_compact.validateDistinctItems(numbers.len));
     try std.testing.expectError(error.InvalidParameter, duplicate.mutPtrsChecked(u8, &numbers));
     try std.testing.expectError(error.InvalidParameter, duplicate.mutPtrsIntoChecked(u8, &numbers, short_mut_ptrs[0..2]));
     try std.testing.expectError(error.InvalidParameter, duplicate.mutPtrsOwnedChecked(std.testing.allocator, u8, &numbers));

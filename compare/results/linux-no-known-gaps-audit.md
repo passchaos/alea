@@ -3783,3 +3783,9 @@ S4-M799 uses direct backing fills for IndexVec iterators
 seq IndexVec borrowed and consuming iterator fills now switch once per fill and
 copy/map directly from active backing storage. This improves indexed-sample fill
 ergonomics but does not resolve S4-M11.
+
+S4-M800 uses direct backing scans for IndexVec search and validation
+(`compare/results/s4-m800-indexvec-search-validation-direct-scans.md`):
+seq IndexVec search and validation helpers now switch once per call and scan the
+active compact/native backing storage directly. This improves indexed-sample
+diagnostic ergonomics but does not resolve S4-M11.
