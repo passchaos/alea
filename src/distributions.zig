@@ -10132,7 +10132,11 @@ pub fn Beta(comptime T: type) type {
                 .generic => {},
             }
 
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const x = self.gamma_a.sampleFrom(source);
+                const y = self.gamma_b.sampleFrom(source);
+                item.* = x / (x + y);
+            }
         }
 
         fn isDegenerate(self: Self) bool {
@@ -31869,6 +31873,23 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), beta_sampler.maxValue(), 0);
     beta_sampler.fillFrom(&direct_engine, &direct_beta_buf);
     for (direct_beta_buf) |value| try std.testing.expect(value >= 0 and value <= 1);
+    var beta_fill_engine = alea.ScalarPrng.init(0x5874_0001);
+    var beta_loop_engine = alea.ScalarPrng.init(0x5874_0001);
+    var beta_fill: [10]f64 = undefined;
+    var beta_loop: [10]f64 = undefined;
+    beta_sampler.fillFrom(&beta_fill_engine, &beta_fill);
+    for (&beta_loop) |*slot| slot.* = beta_sampler.sampleFrom(&beta_loop_engine);
+    try std.testing.expectEqualSlices(f64, &beta_loop, &beta_fill);
+    try std.testing.expectEqual(beta_loop_engine.next(), beta_fill_engine.next());
+    var beta_f32_fill_engine = alea.ScalarPrng.init(0x5874_f32);
+    var beta_f32_loop_engine = alea.ScalarPrng.init(0x5874_f32);
+    const beta_f32_sampler = try Beta(f32).init(2, 5);
+    var beta_f32_fill: [11]f32 = undefined;
+    var beta_f32_loop: [11]f32 = undefined;
+    beta_f32_sampler.fillFrom(&beta_f32_fill_engine, &beta_f32_fill);
+    for (&beta_f32_loop) |*slot| slot.* = beta_f32_sampler.sampleFrom(&beta_f32_loop_engine);
+    try std.testing.expectEqualSlices(f32, &beta_f32_loop, &beta_f32_fill);
+    try std.testing.expectEqual(beta_f32_loop_engine.next(), beta_f32_fill_engine.next());
     var beta_unit_buf: [8]f64 = undefined;
     fillBetaFrom(&direct_engine, f64, &beta_unit_buf, 1, 1);
     for (beta_unit_buf) |value| try std.testing.expect(value >= 0 and value < 1);

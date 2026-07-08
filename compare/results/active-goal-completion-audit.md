@@ -912,7 +912,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M871 VectorBernoulli reusable fill direct lane sampling | `src/distributions.zig`, `compare/results/s4-m871-vector-bernoulli-fill-direct-lanes.md` | Closed for the current bar: reusable VectorBernoulli generic-probability fills now draw lane raw words and compare directly against the cached threshold. |
 | S4-M872 VectorGamma reusable fill direct lane sampling | `src/distributions.zig`, `compare/results/s4-m872-vector-gamma-fill-direct-lanes.md` | Closed for the current bar: reusable VectorGamma generic-shape fills now sample lanes directly from the cached scalar Gamma sampler. |
 | S4-M873 Gamma reusable fill direct method dispatch | `src/distributions.zig`, `compare/results/s4-m873-gamma-fill-direct-method.md` | Closed for the current bar: reusable Gamma generic-shape fills now dispatch once to boosted-small-shape or regular Marsaglia sampling. |
-| S4-M874 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M874 Beta reusable fill direct gamma ratio | `src/distributions.zig`, `compare/results/s4-m874-beta-fill-direct-gamma-ratio.md` | Closed for the current bar: reusable Beta generic fills now draw cached Gamma samplers and normalize directly. |
+| S4-M875 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2919,6 +2920,11 @@ boosted-small-shape or regular Marsaglia method dispatch, preserving stream shap
 while avoiding per-output Gamma.sampleFrom wrapper calls and retaining the
 shape-one fast path; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M874 additionally routes reusable Beta generic fills through direct cached
+Gamma draws and ratio normalization, preserving stream shape while avoiding
+per-output Beta.sampleFrom wrapper calls and retaining edge fast paths; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the long-term
+objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

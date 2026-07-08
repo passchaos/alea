@@ -4296,3 +4296,10 @@ Gamma.fillFrom now dispatches once to the boosted-small-shape or regular Marsagl
 path instead of routing every output through Gamma.sampleFrom, while retaining the
 degenerate and shape-one fast paths. This improves Gamma reusable fill ergonomics
 but does not resolve S4-M11.
+
+S4-M874 draws reusable Beta generic fills through direct cached Gamma-ratio
+composition (`compare/results/s4-m874-beta-fill-direct-gamma-ratio.md`):
+Beta.fillFrom now draws gamma_a and gamma_b directly and writes x/(x+y) instead
+of routing every output through Beta.sampleFrom, while retaining point-mass,
+uniform, and square-root edge paths. This improves Beta reusable fill ergonomics
+but does not resolve S4-M11.
