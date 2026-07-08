@@ -3821,3 +3821,10 @@ S4-M805 fills AliasTable indexes with direct alias sampling loops
 static AliasTable usize/u32 index fills now inline both power-of-two one-word and
 general alias sampling loops instead of routing each slot through sample wrappers.
 This improves static weighted-index fill ergonomics but does not resolve S4-M11.
+
+S4-M806 routes WeightedChoice index fills through AliasTable direct loops
+(`compare/results/s4-m806-weightedchoice-index-fill-table-direct.md`):
+reusable WeightedChoice usize/u32 index fills now reuse the optimized AliasTable
+direct fill loops instead of duplicating per-slot table sampling wrappers. This
+improves reusable weighted-choice index fill ergonomics but does not resolve
+S4-M11.
