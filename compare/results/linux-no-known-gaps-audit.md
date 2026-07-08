@@ -5352,3 +5352,10 @@ directly
 facade `Rng` instead of routing through `sampleFrom` / `fillFrom` wrappers. This
 improves NormalInverseGaussian sampler facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1030 routes reusable scalar/vector Zipf facade helpers directly
+(`compare/results/s4-m1030-zipf-sampler-facade-direct.md`): `Zipf.sample` /
+`fill` and `VectorZipf.sample` / `fill` now run cached rejection sampling directly
+through facade `Rng` instead of routing through `sampleFrom` / `fillFrom`
+wrappers. This improves Zipf sampler facade ergonomics but does not resolve
+S4-M11.

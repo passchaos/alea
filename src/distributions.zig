@@ -17989,7 +17989,10 @@ pub fn VectorZipf(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(1);
+            var out: VectorType = undefined;
+            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(rng);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -18000,7 +18003,15 @@ pub fn VectorZipf(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(1)));
+                return;
+            }
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(rng);
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -18067,7 +18078,16 @@ pub fn Zipf(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return 1;
+
+            while (true) {
+                const inv_b = self.invCdf(Rng.floatFrom(rng, T));
+                const x = @floor(inv_b + 1);
+                var ratio = std.math.pow(T, x, -self.exponent);
+                if (x > 1) ratio *= std.math.pow(T, inv_b, self.exponent);
+
+                if (Rng.floatFrom(rng, T) < ratio) return x;
+            }
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -18084,7 +18104,23 @@ pub fn Zipf(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, 1);
+                return;
+            }
+            for (dest) |*item| {
+                while (true) {
+                    const inv_b = self.invCdf(Rng.floatFrom(rng, T));
+                    const x = @floor(inv_b + 1);
+                    var ratio = std.math.pow(T, x, -self.exponent);
+                    if (x > 1) ratio *= std.math.pow(T, inv_b, self.exponent);
+
+                    if (Rng.floatFrom(rng, T) < ratio) {
+                        item.* = x;
+                        break;
+                    }
+                }
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
