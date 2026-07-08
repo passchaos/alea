@@ -4666,3 +4666,10 @@ Choice pointer/value/index/u32 checked direct-source iterator helpers now
 construct iterators directly instead of routing through unchecked direct-source
 iterator wrappers. This improves reusable checked direct-source iterator
 ergonomics but does not resolve S4-M11.
+
+S4-M930 routes reusable WeightedChoice checked direct-source iterator constructors
+directly (`compare/results/s4-m930-weightedchoice-checked-iterator-from-direct.md`):
+WeightedChoice pointer/value/index/u32 checked direct-source iterator helpers now
+construct iterators directly instead of routing through unchecked direct-source
+iterator wrappers. This improves reusable weighted checked direct-source iterator
+ergonomics but does not resolve S4-M11.

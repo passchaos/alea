@@ -9411,7 +9411,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn valueIterCheckedFrom(self: Self, source: anytype) Error!ValueIterator(@TypeOf(source)) {
             if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-            return self.valueIterFrom(source);
+            return .{ .source = source, .choice = self };
         }
 
         pub fn ValueIterator(comptime Source: type) type {
@@ -9470,7 +9470,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
-            return self.iterFrom(source);
+            return Rng.sampleIterFrom(source, *const T, self);
         }
 
         pub fn ptrIter(self: Self, rng: Rng) Rng.SampleIterator(Self, *const T) {
@@ -9486,7 +9486,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn ptrIterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, *const T) {
-            return self.ptrIterFrom(source);
+            return Rng.sampleIterFrom(source, *const T, self);
         }
 
         pub fn ownedIter(self: Self, rng: Rng) Iterator(Rng) {
@@ -9664,7 +9664,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn indexIterCheckedFrom(self: Self, source: anytype) Error!IndexIterator(@TypeOf(source)) {
-            return self.indexIterFrom(source);
+            return .{ .source = source, .choice = self };
         }
 
         pub fn indexIterU32(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
@@ -9683,7 +9683,8 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn indexIterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
-            return self.indexIterU32From(source);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            return .{ .source = source, .choice = self };
         }
 
         pub fn IndexIterator(comptime Source: type) type {
