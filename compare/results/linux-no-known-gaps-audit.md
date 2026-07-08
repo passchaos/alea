@@ -4440,3 +4440,9 @@ S4-M896 routes AliasTable checked index aliases through direct alias-table branc
 AliasTable.sampleIndexCheckedFrom now avoids the sampleCheckedFrom wrapper while
 preserving stream shape. This improves AliasTable checked index alias ergonomics
 but does not resolve S4-M11.
+
+S4-M897 routes ASCII and Unicode charset checked samples through direct index
+mapping (`compare/results/s4-m897-charset-checked-sample-direct.md`):
+Charset.sampleCheckedFrom and UnicodeCharset.sampleCheckedFrom now validate and
+then sample indexes directly instead of routing through unchecked sampleFrom. This
+improves charset checked sampling ergonomics but does not resolve S4-M11.

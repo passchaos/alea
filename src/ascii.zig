@@ -132,7 +132,13 @@ pub const Charset = struct {
 
     pub fn sampleCheckedFrom(self: Charset, source: anytype) error{EmptyCharset}!u8 {
         if (self.bytes.len == 0) return error.EmptyCharset;
-        return self.sampleFrom(source);
+        if (self.bytes.len == 1) return self.bytes[0];
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const byte_count: u64 = @intCast(self.bytes.len);
+            const index = Rng.uintLessThanFrom(source, u64, byte_count);
+            return self.bytes[@intCast(index)];
+        }
+        return self.bytes[Rng.uintLessThanFrom(source, usize, self.bytes.len)];
     }
 
     pub fn sampleFrom(self: Charset, source: anytype) u8 {
@@ -375,7 +381,13 @@ pub const UnicodeCharset = struct {
 
     pub fn sampleCheckedFrom(self: UnicodeCharset, source: anytype) error{ EmptyCharset, InvalidParameter }!u21 {
         try self.validateNonEmpty();
-        return self.sampleFrom(source);
+        if (self.scalars.len == 1) return self.scalars[0];
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const scalar_count: u64 = @intCast(self.scalars.len);
+            const index = Rng.uintLessThanFrom(source, u64, scalar_count);
+            return self.scalars[@intCast(index)];
+        }
+        return self.scalars[Rng.uintLessThanFrom(source, usize, self.scalars.len)];
     }
 
     pub fn sampleFrom(self: UnicodeCharset, source: anytype) u21 {

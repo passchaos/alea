@@ -935,7 +935,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M894 AliasTable checked sample direct path | `src/distributions.zig`, `compare/results/s4-m894-aliastable-checked-sample-direct.md` | Closed for the current bar: AliasTable checked sampling now executes alias-table sampling paths directly. |
 | S4-M895 AliasTable u32 checked sample direct path | `src/distributions.zig`, `compare/results/s4-m895-aliastable-u32-checked-direct.md` | Closed for the current bar: AliasTable compact checked sampling now executes u32 alias-table branches directly. |
 | S4-M896 AliasTable checked index alias direct path | `src/distributions.zig`, `compare/results/s4-m896-aliastable-index-checked-direct.md` | Closed for the current bar: AliasTable checked index alias now executes alias-table sampling paths directly. |
-| S4-M897 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M897 Charset checked sample direct index paths | `src/ascii.zig`, `compare/results/s4-m897-charset-checked-sample-direct.md` | Closed for the current bar: ASCII and Unicode charset checked samples now draw uniform indexes and map into storage directly after prevalidation. |
+| S4-M898 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3038,6 +3039,10 @@ S4-M896 additionally routes AliasTable checked index aliases through direct
 alias-table sampling branches, preserving stream shape while avoiding the
 sampleCheckedFrom wrapper; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M897 additionally routes ASCII and Unicode charset checked samples through
+direct uniform index mapping after prevalidation, preserving stream shape while
+avoiding unchecked sampleFrom wrappers; it is reliability/ergonomics work and
+does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
