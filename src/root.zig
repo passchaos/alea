@@ -5194,7 +5194,11 @@ fn rootSampleIteratorWeightedAlloc(comptime T: type, io: std.Io, allocator: std.
     var pending_count: usize = 0;
     var engine: ?SecurePrng = null;
 
-    while (iterator.next()) |entry| {
+    const scan_limit = exact_remaining;
+    var scanned: usize = 0;
+    while (scan_limit == null or scanned < scan_limit.?) {
+        const entry = iterator.next() orelse break;
+        scanned += 1;
         const weight = rootWeightAsF64(@TypeOf(entry.weight), entry.weight);
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         if (weight == 0) continue;
@@ -10617,6 +10621,29 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_entropy, 1));
     var weighted_sample_entropy_checked = WeightedIter{ .items = &weighted_entropy_entries };
     try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_entropy_checked, 1));
+    const ExactLongWeightedSampleIter = struct {
+        entries: []const WeightedIter.Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?WeightedIter.Entry {
+            self.calls += 1;
+            if (self.index >= self.entries.len) return null;
+            const entry = self.entries[self.index];
+            self.index += 1;
+            return entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.entries.len - self.index;
+        }
+    };
+    var weighted_sample_exact_long = ExactLongWeightedSampleIter{ .entries = &weighted_entropy_entries };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeighted(u8, failing, std.testing.allocator, &weighted_sample_exact_long, 1));
+    try std.testing.expectEqual(@as(usize, 2), weighted_sample_exact_long.calls);
+    var weighted_sample_exact_long_checked = ExactLongWeightedSampleIter{ .entries = &weighted_entropy_entries };
+    try std.testing.expectError(error.EntropyUnavailable, sampleIteratorWeightedChecked(u8, failing, std.testing.allocator, &weighted_sample_exact_long_checked, 1));
+    try std.testing.expectEqual(@as(usize, 2), weighted_sample_exact_long_checked.calls);
     var weighted_into_empty = WeightedIter{ .items = &weighted_entropy_entries };
     var weighted_into_empty_out: [0]u8 = .{};
     var weighted_into_empty_keys: [0]f64 = .{};

@@ -5236,7 +5236,11 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
     try heap.ensureTotalCapacityPrecise(allocator, queue_capacity);
     var pending: ?Pending = null;
 
-    while (iterator.next()) |entry| {
+    const scan_limit = exact_remaining;
+    var scanned: usize = 0;
+    while (scan_limit == null or scanned < scan_limit.?) {
+        const entry = iterator.next() orelse break;
+        scanned += 1;
         const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         if (weight == 0) continue;
@@ -5286,7 +5290,8 @@ pub fn sampleIteratorWeightedCheckedFrom(allocator: std.mem.Allocator, source: a
 pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, iterator: anytype, amount: usize) ![]T {
     if (amount == 0) return allocator.alloc(T, 0);
     if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-    const queue_capacity = if (iteratorExactRemaining(iterator)) |remaining| blk: {
+    const exact_remaining = iteratorExactRemaining(iterator);
+    const queue_capacity = if (exact_remaining) |remaining| blk: {
         if (remaining == 0) return allocator.alloc(T, 0);
         if (remaining <= amount) return sampleIteratorWeightedExactCoverFrom(allocator, T, iterator, remaining, false);
         break :blk @min(amount, remaining);
@@ -5301,7 +5306,11 @@ pub fn sampleIteratorWeightedFrom(allocator: std.mem.Allocator, source: anytype,
     try heap.ensureTotalCapacityPrecise(allocator, queue_capacity);
     var pending: ?Pending = null;
 
-    while (iterator.next()) |entry| {
+    const scan_limit = exact_remaining;
+    var scanned: usize = 0;
+    while (scan_limit == null or scanned < scan_limit.?) {
+        const entry = iterator.next() orelse break;
+        scanned += 1;
         const weight = weightAsF64(@TypeOf(entry.weight), entry.weight);
         if (!(weight >= 0) or !std.math.isFinite(weight)) return error.InvalidWeight;
         if (weight == 0) continue;
@@ -13272,6 +13281,74 @@ test "exact-cover weighted iterator samples avoid heap setup" {
     try std.testing.expectEqual(@as(usize, 2), sparse_checked_iter.calls);
     try std.testing.expectEqual(@as(usize, 1), sparse_checked_iter.remaining_calls);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "exact-long weighted iterator samples avoid trailing probe" {
+    const alea = @import("root.zig");
+
+    const Entry = struct { item: u8, weight: f64 };
+    const ExactIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const entry = self.items[self.index];
+            self.index += 1;
+            return entry;
+        }
+
+        fn remaining(self: @This()) usize {
+            return self.items.len - self.index;
+        }
+    };
+    const PlainIter = struct {
+        items: []const Entry,
+        index: usize = 0,
+        calls: usize = 0,
+
+        fn next(self: *@This()) ?Entry {
+            self.calls += 1;
+            if (self.index >= self.items.len) return null;
+            const entry = self.items[self.index];
+            self.index += 1;
+            return entry;
+        }
+    };
+
+    const entries = [_]Entry{
+        .{ .item = 10, .weight = 1 },
+        .{ .item = 20, .weight = 2 },
+        .{ .item = 30, .weight = 3 },
+        .{ .item = 40, .weight = 4 },
+    };
+    var engine = alea.ScalarPrng.init(0x5150_7848);
+    var reference = alea.ScalarPrng.init(0x5150_7848);
+    var iter = ExactIter{ .items = &entries };
+    var reference_iter = PlainIter{ .items = &entries };
+    const sample = try sampleIteratorWeightedFrom(std.testing.allocator, &engine, u8, &iter, 2);
+    defer std.testing.allocator.free(sample);
+    const reference_sample = try sampleIteratorWeightedFrom(std.testing.allocator, &reference, u8, &reference_iter, 2);
+    defer std.testing.allocator.free(reference_sample);
+    try std.testing.expectEqualSlices(u8, reference_sample, sample);
+    try std.testing.expectEqual(@as(usize, 4), iter.calls);
+    try std.testing.expectEqual(@as(usize, 5), reference_iter.calls);
+    try std.testing.expectEqual(reference.next(), engine.next());
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_7849);
+    var checked_ref_engine = alea.ScalarPrng.init(0x5150_7849);
+    var checked_iter = ExactIter{ .items = &entries };
+    var checked_reference_iter = PlainIter{ .items = &entries };
+    const checked = try sampleIteratorWeightedCheckedFrom(std.testing.allocator, &checked_engine, u8, &checked_iter, 2);
+    defer std.testing.allocator.free(checked);
+    const checked_reference = try sampleIteratorWeightedCheckedFrom(std.testing.allocator, &checked_ref_engine, u8, &checked_reference_iter, 2);
+    defer std.testing.allocator.free(checked_reference);
+    try std.testing.expectEqualSlices(u8, checked_reference, checked);
+    try std.testing.expectEqual(@as(usize, 4), checked_iter.calls);
+    try std.testing.expectEqual(@as(usize, 5), checked_reference_iter.calls);
+    try std.testing.expectEqual(checked_ref_engine.next(), checked_engine.next());
 }
 
 test "exact-short weighted iterator samples cap heap allocation" {
