@@ -5301,3 +5301,10 @@ S4-M1022 routes reusable scalar/vector Pareto facade helpers directly
 apply the Pareto inverse-power transform directly through facade `Rng` instead of
 routing through `sampleFrom` / `fillFrom` wrappers. This improves Pareto sampler
 facade ergonomics but does not resolve S4-M11.
+
+S4-M1023 routes reusable scalar/vector Weibull facade helpers directly
+(`compare/results/s4-m1023-weibull-sampler-facade-direct.md`): `Weibull.sample` /
+`fill` and `VectorWeibull.sample` / `fill` now draw standard exponentials or
+strict-open uniform values directly through facade `Rng` instead of routing
+through `sampleFrom` / `fillFrom` wrappers. This improves Weibull sampler facade
+ergonomics but does not resolve S4-M11.

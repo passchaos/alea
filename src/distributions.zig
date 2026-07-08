@@ -15042,7 +15042,11 @@ pub fn VectorWeibull(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
+            const scale_vec: VectorType = @splat(self.scaleValue());
+            if (self.shapeValue() == 1) return scale_vec * vectorStandardExponential(rng, VectorType);
+            const uniform_vec = rng.vectorOpen(VectorType);
+            return weibullFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -15054,7 +15058,20 @@ pub fn VectorWeibull(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
+                return;
+            }
+            const scale_vec: VectorType = @splat(self.scaleValue());
+            if (self.shapeValue() == 1) {
+                for (dest) |*item| item.* = scale_vec * vectorStandardExponential(rng, VectorType);
+                return;
+            }
+            const inverse_shape = 1 / self.shapeValue();
+            for (dest) |*item| {
+                const uniform_vec = rng.vectorOpen(VectorType);
+                item.* = weibullFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), inverse_shape);
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -15134,7 +15151,9 @@ pub fn Weibull(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return self.degenerateValue();
+            if (self.shape == 1) return self.scale * rng.standardExponential(T);
+            return self.scale * std.math.pow(T, -@log(rng.floatOpen(T)), 1 / self.shape);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -15143,7 +15162,17 @@ pub fn Weibull(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, self.degenerateValue());
+                return;
+            }
+            if (self.shape == 1) {
+                for (dest) |*item| item.* = self.scale * rng.standardExponential(T);
+                return;
+            }
+
+            rng.fillOpen(T, dest);
+            weibullFromOpenUniforms(T, dest, self.scale, 1 / self.shape);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
