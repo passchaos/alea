@@ -4483,3 +4483,10 @@ AliasTable.sampleIndexU32CheckedFrom now validates compact output size and then
 executes the u32 alias-table sampling branches directly instead of routing
 through sampleU32CheckedFrom. This improves AliasTable checked compact index alias
 ergonomics but does not resolve S4-M11.
+
+S4-M903 routes dynamic weighted-tree checked aliases through direct sampling
+(`compare/results/s4-m903-weighted-tree-checked-alias-direct.md`):
+WeightedTree and WeightedIntTree checked scalar/index/u32 sample aliases now
+validate once and call the tree sampler directly instead of routing through
+checked wrapper aliases. This improves dynamic weighted tree checked alias
+ergonomics but does not resolve S4-M11.

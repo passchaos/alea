@@ -18361,16 +18361,29 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
-            return self.sampleCheckedFrom(source);
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            if (self.positive_count == 1) return self.positive_index.?;
+
+            return self.sampleWithTotalFrom(source, total);
         }
 
         pub fn sampleU32CheckedFrom(self: Self, source: anytype) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            return @intCast(try self.sampleCheckedFrom(source));
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            if (self.positive_count == 1) return @intCast(self.positive_index.?);
+
+            return @intCast(self.sampleWithTotalFrom(source, total));
         }
 
         pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
-            return self.sampleU32CheckedFrom(source);
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            const total = self.totalWeight();
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            if (self.positive_count == 1) return @intCast(self.positive_index.?);
+
+            return @intCast(self.sampleWithTotalFrom(source, total));
         }
 
         fn sampleWithTotalFrom(self: Self, source: anytype, total: f64) usize {
@@ -19174,16 +19187,29 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
-            return self.sampleCheckedFrom(source);
+            const total = self.totalWeight();
+            if (total == 0) return error.InvalidWeight;
+            if (self.positive_count == 1) return self.positive_index.?;
+
+            return self.sampleWithTotalFrom(source, total);
         }
 
         pub fn sampleU32CheckedFrom(self: Self, source: anytype) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            return @intCast(try self.sampleCheckedFrom(source));
+            const total = self.totalWeight();
+            if (total == 0) return error.InvalidWeight;
+            if (self.positive_count == 1) return @intCast(self.positive_index.?);
+
+            return @intCast(self.sampleWithTotalFrom(source, total));
         }
 
         pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
-            return self.sampleU32CheckedFrom(source);
+            if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
+            const total = self.totalWeight();
+            if (total == 0) return error.InvalidWeight;
+            if (self.positive_count == 1) return @intCast(self.positive_index.?);
+
+            return @intCast(self.sampleWithTotalFrom(source, total));
         }
 
         fn sampleWithTotalFrom(self: Self, source: anytype, total: u64) usize {
@@ -22108,6 +22134,11 @@ test "weighted tree index aliases mirror sample helpers" {
     try std.testing.expectEqual(try tree.sampleCheckedFrom(&sample_engine), try tree.sampleIndexCheckedFrom(&alias_engine));
     try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
 
+    sample_engine = alea.ScalarPrng.init(0x5150_d519);
+    alias_engine = alea.ScalarPrng.init(0x5150_d519);
+    try std.testing.expectEqual(try tree.sampleU32CheckedFrom(&sample_engine), try tree.sampleIndexU32CheckedFrom(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
     sample_engine = alea.ScalarPrng.init(0x5150_d511);
     alias_engine = alea.ScalarPrng.init(0x5150_d511);
     try std.testing.expectEqual(tree.sampleU32From(&sample_engine), tree.sampleIndexU32From(&alias_engine));
@@ -22150,6 +22181,16 @@ test "weighted tree index aliases mirror sample helpers" {
     sample_engine = alea.ScalarPrng.init(0x5150_d515);
     alias_engine = alea.ScalarPrng.init(0x5150_d515);
     try std.testing.expectEqual(int_tree.sampleFrom(&sample_engine), int_tree.sampleIndexFrom(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_d516);
+    alias_engine = alea.ScalarPrng.init(0x5150_d516);
+    try std.testing.expectEqual(try int_tree.sampleCheckedFrom(&sample_engine), try int_tree.sampleIndexCheckedFrom(&alias_engine));
+    try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
+
+    sample_engine = alea.ScalarPrng.init(0x5150_d51a);
+    alias_engine = alea.ScalarPrng.init(0x5150_d51a);
+    try std.testing.expectEqual(try int_tree.sampleU32CheckedFrom(&sample_engine), try int_tree.sampleIndexU32CheckedFrom(&alias_engine));
     try std.testing.expectEqual(sample_engine.next(), alias_engine.next());
 
     sample_engine = alea.ScalarPrng.init(0x5150_d516);
