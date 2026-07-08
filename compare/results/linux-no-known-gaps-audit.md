@@ -5048,3 +5048,11 @@ S4-M986 routes vector Geometric facade helpers directly
 `VectorGeometricFailures` facade sample/fill methods now dispatch directly
 through facade `Rng` instead of routing through `From` wrappers. This improves
 vector Geometric facade ergonomics but does not resolve S4-M11.
+
+S4-M987 routes scalar/vector StandardGeometric facade helpers directly
+(`compare/results/s4-m987-standard-geometric-facade-direct.md`):
+`standardGeometric`, `fillStandardGeometric`, `vectorStandardGeometric`,
+`fillVectorStandardGeometric`, and reusable `StandardGeometric` /
+`VectorStandardGeometric` facade sample/fill methods now execute leading-zero
+sampling directly through facade `Rng` instead of routing through `From` wrappers.
+This improves StandardGeometric facade ergonomics but does not resolve S4-M11.

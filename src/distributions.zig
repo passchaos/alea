@@ -8804,7 +8804,12 @@ pub fn fillGeometricFailuresCheckedFrom(source: anytype, dest: []u64, p: f64) Er
 }
 
 pub fn standardGeometric(rng: Rng) u64 {
-    return standardGeometricFrom(rng);
+    var failures: u64 = 0;
+    while (true) {
+        const zeros = @clz(Rng.nextFrom(rng));
+        failures += zeros;
+        if (zeros < 64) return failures;
+    }
 }
 
 pub fn standardGeometricFrom(source: anytype) u64 {
@@ -8817,7 +8822,7 @@ pub fn standardGeometricFrom(source: anytype) u64 {
 }
 
 pub fn fillStandardGeometric(rng: Rng, dest: []u64) void {
-    fillStandardGeometricFrom(rng, dest);
+    for (dest) |*item| item.* = standardGeometric(rng);
 }
 
 pub fn fillStandardGeometricFrom(source: anytype, dest: []u64) void {
@@ -8825,7 +8830,7 @@ pub fn fillStandardGeometricFrom(source: anytype, dest: []u64) void {
 }
 
 pub fn vectorStandardGeometric(rng: Rng, comptime VectorType: type) VectorType {
-    return vectorStandardGeometricFrom(rng, VectorType);
+    return (VectorStandardGeometric(VectorType){}).sample(rng);
 }
 
 pub fn vectorStandardGeometricFrom(source: anytype, comptime VectorType: type) VectorType {
@@ -8833,7 +8838,7 @@ pub fn vectorStandardGeometricFrom(source: anytype, comptime VectorType: type) V
 }
 
 pub fn fillVectorStandardGeometric(rng: Rng, comptime VectorType: type, dest: []VectorType) void {
-    fillVectorStandardGeometricFrom(rng, VectorType, dest);
+    (VectorStandardGeometric(VectorType){}).fill(rng, dest);
 }
 
 pub fn fillVectorStandardGeometricFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
@@ -9281,7 +9286,9 @@ pub fn VectorStandardGeometric(comptime VectorType: type) type {
 
         pub fn sample(self: Self, rng: Rng) VectorType {
             _ = self;
-            return vectorStandardGeometricFrom(rng, VectorType);
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = standardGeometric(rng);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -9292,7 +9299,12 @@ pub fn VectorStandardGeometric(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            _ = self;
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = standardGeometric(rng);
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -9335,7 +9347,7 @@ pub const StandardGeometric = struct {
 
     pub fn sample(self: StandardGeometric, rng: Rng) u64 {
         _ = self;
-        return standardGeometricFrom(rng);
+        return standardGeometric(rng);
     }
 
     pub fn sampleFrom(self: StandardGeometric, source: anytype) u64 {
@@ -9344,7 +9356,8 @@ pub const StandardGeometric = struct {
     }
 
     pub fn fill(self: StandardGeometric, rng: Rng, dest: []u64) void {
-        self.fillFrom(rng, dest);
+        _ = self;
+        for (dest) |*item| item.* = standardGeometric(rng);
     }
 
     pub fn fillFrom(self: StandardGeometric, source: anytype, dest: []u64) void {
