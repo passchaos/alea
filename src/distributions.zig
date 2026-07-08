@@ -589,7 +589,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn ptrArray(self: Self, rng: Rng, comptime N: usize) [N]*const T {
-            return self.ptrArrayFrom(rng, N);
+            var out: [N]*const T = undefined;
+            self.fill(rng, &out);
+            return out;
         }
 
         pub fn ptrArrayFrom(self: Self, source: anytype, comptime N: usize) [N]*const T {
@@ -708,7 +710,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indexArray(self: Self, rng: Rng, comptime N: usize) [N]usize {
-            return self.indexArrayFrom(rng, N);
+            var out: [N]usize = undefined;
+            self.fillIndices(rng, &out);
+            return out;
         }
 
         pub fn indexArrayFrom(self: Self, source: anytype, comptime N: usize) [N]usize {
@@ -802,7 +806,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indexArrayU32(self: Self, rng: Rng, comptime N: usize) Error![N]u32 {
-            return self.indexArrayU32From(rng, N);
+            var out: [N]u32 = undefined;
+            try self.fillIndicesU32(rng, &out);
+            return out;
         }
 
         pub fn indexArrayU32From(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
@@ -941,7 +947,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn valueArray(self: Self, rng: Rng, comptime N: usize) [N]T {
-            return self.valueArrayFrom(rng, N);
+            var out: [N]T = undefined;
+            self.fillValues(rng, &out);
+            return out;
         }
 
         pub fn valueArrayFrom(self: Self, source: anytype, comptime N: usize) [N]T {
