@@ -12142,7 +12142,9 @@ pub fn VectorArcsine(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.isDegenerate()) return @splat(self.minValue());
+            const uniform_vec = rng.vectorOpen(VectorType);
+            return arcsineFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), self.maxValue());
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -12152,7 +12154,14 @@ pub fn VectorArcsine(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.minValue())));
+                return;
+            }
+            for (dest) |*item| {
+                const uniform_vec = rng.vectorOpen(VectorType);
+                item.* = arcsineFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), self.maxValue());
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -12203,7 +12212,10 @@ pub fn Arcsine(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return self.min;
+            const u = rng.floatOpen(T);
+            const s = @sin(@as(T, @floatCast(std.math.pi)) * u / 2);
+            return self.min + (self.max - self.min) * s * s;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -12211,7 +12223,12 @@ pub fn Arcsine(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, self.min);
+                return;
+            }
+            rng.fillOpen(T, dest);
+            arcsineFromOpenUniforms(T, dest, self.min, self.max - self.min);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {

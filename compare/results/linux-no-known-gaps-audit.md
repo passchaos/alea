@@ -5229,3 +5229,10 @@ S4-M1012 routes reusable scalar/vector Triangular facade helpers directly
 uniform values and apply the triangular transform directly through facade `Rng`
 instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
 Triangular sampler facade ergonomics but does not resolve S4-M11.
+
+S4-M1013 routes reusable scalar/vector Arcsine facade helpers directly
+(`compare/results/s4-m1013-arcsine-sampler-facade-direct.md`): `Arcsine.sample`
+/ `fill` and `VectorArcsine.sample` / `fill` now draw open-uniform values and
+apply the arcsine transform directly through facade `Rng` instead of routing
+through `sampleFrom` / `fillFrom` wrappers. This improves Arcsine sampler facade
+ergonomics but does not resolve S4-M11.
