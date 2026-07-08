@@ -605,7 +605,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn ptrArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]*const T {
-            return self.ptrArrayFrom(source, N);
+            var out: [N]*const T = undefined;
+            try self.fillCheckedFrom(source, &out);
+            return out;
         }
 
         pub fn ptrIter(self: Self, rng: Rng) PtrIterator(Rng) {
@@ -722,7 +724,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indexArrayCheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]usize {
-            return self.indexArrayFrom(source, N);
+            var out: [N]usize = undefined;
+            try self.fillIndicesCheckedFrom(source, &out);
+            return out;
         }
 
         pub fn fillIndicesU32(self: Self, rng: Rng, dest: []u32) Error!void {
@@ -814,7 +818,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn indexArrayU32CheckedFrom(self: Self, source: anytype, comptime N: usize) Error![N]u32 {
-            return try self.indexArrayU32From(source, N);
+            var out: [N]u32 = undefined;
+            try self.fillIndicesU32CheckedFrom(source, &out);
+            return out;
         }
 
         pub fn indexIter(self: Self, rng: Rng) IndexIterator(Rng) {

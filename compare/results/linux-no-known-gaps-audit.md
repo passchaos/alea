@@ -4694,3 +4694,10 @@ WeightedChoice pointer/value/index/u32 checked direct-source allocation-returnin
 helpers now allocate and fill directly instead of routing through unchecked
 direct-source owned wrappers. This improves reusable weighted checked
 direct-source owned-batch ergonomics but does not resolve S4-M11.
+
+S4-M934 routes distribution Choose checked direct-source fixed-array helpers
+directly (`compare/results/s4-m934-distribution-choose-checked-array-from-direct.md`):
+Choose pointer/index/u32 checked direct-source fixed-array helpers now construct
+stack arrays and fill directly instead of routing through unchecked direct-source
+array wrappers. This improves checked direct-source fixed-array ergonomics but
+does not resolve S4-M11.
