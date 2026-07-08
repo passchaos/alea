@@ -1725,7 +1725,13 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.trials)));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            const trials = self.sampler.trials;
+            const p = self.sampler.p;
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = binomialFrom(source, trials, p);
+                item.* = out;
+            }
         }
     };
 }
@@ -25769,6 +25775,18 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, u64), &binomial_buf, &direct_binomial_buf);
     for (binomial_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] <= 10);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var direct_vector_binomial_engine = alea.ScalarPrng.init(0xb1_1001);
+    var scalar_vector_binomial_engine = alea.ScalarPrng.init(0xb1_1001);
+    var direct_vector_binomial: [3]@Vector(4, u64) = undefined;
+    var scalar_vector_binomial: [3]@Vector(4, u64) = undefined;
+    vector_binomial_sampler.fillFrom(&direct_vector_binomial_engine, &direct_vector_binomial);
+    for (&scalar_vector_binomial) |*vec| {
+        var out: @Vector(4, u64) = undefined;
+        inline for (0..4) |lane| out[lane] = binomialFrom(&scalar_vector_binomial_engine, 10, 0.5);
+        vec.* = out;
+    }
+    try std.testing.expectEqualSlices(@Vector(4, u64), &scalar_vector_binomial, &direct_vector_binomial);
+    try std.testing.expectEqual(scalar_vector_binomial_engine.next(), direct_vector_binomial_engine.next());
 
     always_success_binomial.fill(rng, &binomial_buf);
     for (binomial_buf) |vec| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(10)), vec);

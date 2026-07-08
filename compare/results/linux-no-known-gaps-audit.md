@@ -3980,3 +3980,10 @@ VectorNegativeBinomial non-degenerate fills now draw lanes with the underlying
 negativeBinomialFrom sampler directly instead of routing each vector through
 VectorNegativeBinomial.sampleFrom. This improves VectorNegativeBinomial fill
 ergonomics but does not resolve S4-M11.
+
+S4-M830 fills VectorBinomial outputs with direct binomialFrom lane draws
+(`compare/results/s4-m830-vector-binomial-fill-direct-sampler.md`):
+VectorBinomial non-degenerate fills now draw lanes with the underlying
+binomialFrom sampler directly instead of routing each vector through
+VectorBinomial.sampleFrom. This improves VectorBinomial fill ergonomics but does
+not resolve S4-M11.
