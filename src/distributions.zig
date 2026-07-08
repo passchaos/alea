@@ -9585,11 +9585,20 @@ pub const StandardGeometric = struct {
 };
 
 pub fn gamma(rng: Rng, comptime T: type, shape: T, scale: T) T {
-    return gammaFrom(rng, T, shape, scale);
+    comptime requireFloat(T);
+    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(shape) and std.math.isFinite(scale));
+    if (scale == 0) return 0;
+    if (shape == 0.5) {
+        const z = Rng.standardNormalFastFrom(rng, T);
+        return (scale * 0.5) * z * z;
+    }
+    const sampler = Gamma(T).init(shape, scale) catch unreachable;
+    return sampler.sample(rng);
 }
 
 pub fn gammaChecked(rng: Rng, comptime T: type, shape: T, scale: T) Error!T {
-    return gammaCheckedFrom(rng, T, shape, scale);
+    const dist = try Gamma(T).init(shape, scale);
+    return dist.sample(rng);
 }
 
 pub fn gammaCheckedFrom(source: anytype, comptime T: type, shape: T, scale: T) Error!T {
@@ -9630,7 +9639,23 @@ pub fn gammaFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
 }
 
 pub fn fillGamma(rng: Rng, comptime T: type, dest: []T, shape: T, scale: T) void {
-    fillGammaFrom(rng, T, dest, shape, scale);
+    comptime requireFloat(T);
+    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(shape) and std.math.isFinite(scale));
+    if (scale == 0) {
+        @memset(dest, 0);
+        return;
+    }
+    if (shape == 0.5) {
+        const half_scale = scale * 0.5;
+        for (dest) |*item| {
+            const z = Rng.standardNormalFastFrom(rng, T);
+            item.* = half_scale * z * z;
+        }
+        return;
+    }
+
+    const sampler = Gamma(T).init(shape, scale) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillGammaFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) void {
@@ -9654,7 +9679,9 @@ pub fn fillGammaFrom(source: anytype, comptime T: type, dest: []T, shape: T, sca
 }
 
 pub fn fillGammaChecked(rng: Rng, comptime T: type, dest: []T, shape: T, scale: T) Error!void {
-    return fillGammaCheckedFrom(rng, T, dest, shape, scale);
+    if (dest.len == 0) return;
+    const sampler = try Gamma(T).init(shape, scale);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillGammaCheckedFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) Error!void {
@@ -9664,7 +9691,8 @@ pub fn fillGammaCheckedFrom(source: anytype, comptime T: type, dest: []T, shape:
 }
 
 pub fn vectorGamma(rng: Rng, comptime VectorType: type, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
-    return vectorGammaFrom(rng, VectorType, shape, scale);
+    const sampler = VectorGamma(VectorType).init(shape, scale) catch unreachable;
+    return sampler.sample(rng);
 }
 
 pub fn vectorGammaFrom(source: anytype, comptime VectorType: type, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
@@ -9673,7 +9701,8 @@ pub fn vectorGammaFrom(source: anytype, comptime VectorType: type, shape: vector
 }
 
 pub fn vectorGammaChecked(rng: Rng, comptime VectorType: type, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!VectorType {
-    return vectorGammaCheckedFrom(rng, VectorType, shape, scale);
+    const sampler = try VectorGamma(VectorType).init(shape, scale);
+    return sampler.sample(rng);
 }
 
 pub fn vectorGammaCheckedFrom(source: anytype, comptime VectorType: type, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!VectorType {
@@ -9682,7 +9711,8 @@ pub fn vectorGammaCheckedFrom(source: anytype, comptime VectorType: type, shape:
 }
 
 pub fn fillVectorGamma(rng: Rng, comptime VectorType: type, dest: []VectorType, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
-    fillVectorGammaFrom(rng, VectorType, dest, shape, scale);
+    const sampler = VectorGamma(VectorType).init(shape, scale) catch unreachable;
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorGammaFrom(source: anytype, comptime VectorType: type, dest: []VectorType, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
@@ -9691,7 +9721,9 @@ pub fn fillVectorGammaFrom(source: anytype, comptime VectorType: type, dest: []V
 }
 
 pub fn fillVectorGammaChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!void {
-    return fillVectorGammaCheckedFrom(rng, VectorType, dest, shape, scale);
+    if (dest.len == 0) return;
+    const sampler = try VectorGamma(VectorType).init(shape, scale);
+    sampler.fill(rng, dest);
 }
 
 pub fn fillVectorGammaCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) Error!void {

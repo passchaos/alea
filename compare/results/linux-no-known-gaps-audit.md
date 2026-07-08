@@ -5128,3 +5128,9 @@ S4-M997 routes reusable VectorGamma facade helpers directly
 Gamma lane sampling directly instead of routing through `sampleFrom` /
 `fillFrom` wrappers. This improves VectorGamma sampler facade ergonomics but does
 not resolve S4-M11.
+
+S4-M998 routes top-level scalar/vector Gamma facade helpers directly
+(`compare/results/s4-m998-gamma-top-level-facade-direct.md`): scalar/vector Gamma
+checked/nonchecked sample/fill helpers now construct reusable Gamma samplers and
+call facade `sample` / `fill` directly instead of routing through `From` wrappers.
+This improves Gamma top-level facade ergonomics but does not resolve S4-M11.
