@@ -3751,3 +3751,10 @@ S4-M794 prevalidates IndexVec owned u32 narrowing
 seq IndexVec native `usize` backing is now checked for oversized values before
 allocating a compact `u32` output slice. This improves indexed-sample conversion
 failure determinism but does not resolve S4-M11.
+
+S4-M795 uses constant fills for uniform choice probability iterators
+(`compare/results/s4-m795-choice-probability-fill-constant.md`):
+seq reusable `Choice` and distribution-layer `Choose` probability iterators now
+fill caller-owned buffers with the constant uniform probability directly instead
+of per-slot `next()`/`probability()` calls. This improves choice probability
+iterator ergonomics but does not resolve S4-M11.

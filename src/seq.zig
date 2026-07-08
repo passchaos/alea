@@ -8258,7 +8258,9 @@ pub fn Choice(comptime T: type) type {
 
             pub fn fill(self: *Iterator, dest: []f64) usize {
                 const count = @min(dest.len, self.remaining());
-                for (dest[0..count]) |*slot| slot.* = self.next().?;
+                if (count == 0) return 0;
+                @memset(dest[0..count], 1.0 / @as(f64, @floatFromInt(self.choice.len())));
+                self.index += count;
                 return count;
             }
         };

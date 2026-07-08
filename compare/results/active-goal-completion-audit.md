@@ -833,7 +833,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M792 IndexVec mapped iterator fill index-buffer reuse | `src/seq.zig`, `compare/results/s4-m792-indexvec-mapped-iterator-fill-index-buffer.md` | Closed for the current bar: non-owned IndexVec value/pointer iterator fills now reuse index-buffer fills instead of per-slot next calls. |
 | S4-M793 IndexVec mapped into switch-once loops | `src/seq.zig`, `compare/results/s4-m793-indexvec-mapped-into-switch-once.md` | Closed for the current bar: IndexVec caller-owned value/pointer mappings now switch once on backing representation instead of calling `at()` per output slot. |
 | S4-M794 IndexVec owned u32 narrowing prevalidation | `src/seq.zig`, `compare/results/s4-m794-indexvec-owned-u32-prevalidation.md` | Closed for the current bar: IndexVec native-to-u32 owned narrowing now rejects oversized indexes before allocating output. |
-| S4-M795 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M795 uniform choice probability fill constant path | `src/seq.zig`, `src/distributions.zig`, `compare/results/s4-m795-choice-probability-fill-constant.md` | Closed for the current bar: uniform choice probability iterators now fill constant probabilities directly instead of per-slot `next()` calls. |
+| S4-M796 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -2503,6 +2504,10 @@ reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 S4-M794 additionally prevalidates native IndexVec to u32 owned-slice narrowing,
 avoiding allocation before oversized-index failures; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M795 additionally fills uniform choice probability iterators with a direct
+constant-probability path, reducing per-slot iterator overhead; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
