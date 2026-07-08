@@ -2406,7 +2406,7 @@ pub const NegativeBinomial = struct {
     }
 
     pub fn sample(self: NegativeBinomial, rng: Rng) u64 {
-        return self.sampleFrom(rng);
+        return negativeBinomialFrom(rng, self.successes, self.p);
     }
 
     pub fn sampleFrom(self: NegativeBinomial, source: anytype) u64 {
@@ -2414,7 +2414,11 @@ pub const NegativeBinomial = struct {
     }
 
     pub fn fill(self: NegativeBinomial, rng: Rng, dest: []u64) void {
-        self.fillFrom(rng, dest);
+        if (self.p == 1) {
+            @memset(dest, 0);
+            return;
+        }
+        for (dest) |*item| item.* = negativeBinomialFrom(rng, self.successes, self.p);
     }
 
     pub fn fillFrom(self: NegativeBinomial, source: anytype, dest: []u64) void {
@@ -2533,7 +2537,10 @@ pub fn VectorNegativeBinomial(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.sampler.p == 1) return @splat(0);
+            var out: VectorType = undefined;
+            inline for (0..info.len) |lane| out[lane] = negativeBinomialFrom(rng, self.sampler.successes, self.sampler.p);
+            return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -2544,7 +2551,17 @@ pub fn VectorNegativeBinomial(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.sampler.p == 1) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            const successes = self.sampler.successes;
+            const p = self.sampler.p;
+            for (dest) |*item| {
+                var out: VectorType = undefined;
+                inline for (0..info.len) |lane| out[lane] = negativeBinomialFrom(rng, successes, p);
+                item.* = out;
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {

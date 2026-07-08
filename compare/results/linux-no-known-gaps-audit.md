@@ -4948,3 +4948,10 @@ VectorBinomialPoissonApprox top-level and reusable facade helpers now execute th
 Poisson-approximation sampling/fill paths directly instead of routing through
 `From` wrappers. This improves vector binomial approximation facade ergonomics
 but does not resolve S4-M11.
+
+S4-M973 routes scalar/vector NegativeBinomial reusable facade helpers directly
+(`compare/results/s4-m973-negative-binomial-sampler-facade-direct.md`):
+NegativeBinomial and VectorNegativeBinomial sample/fill helpers now execute direct
+negative-binomial sampling loops and degenerate fast paths instead of routing
+through direct-source wrappers. This improves negative-binomial sampler ergonomics
+but does not resolve S4-M11.
