@@ -1115,7 +1115,14 @@ const ProfileDynLib = if (can_try_dynamic_lib) std.DynLib else struct {
 };
 
 pub fn uniform(rng: Rng, comptime T: type, min: T, max: T) T {
-    return uniformFrom(rng, T, min, max);
+    switch (@typeInfo(T)) {
+        .int => return rng.intRangeLessThan(T, min, max),
+        .float => {
+            std.debug.assert(min <= max);
+            return rng.floatRange(T, min, max);
+        },
+        else => @compileError("uniform supports integer and floating-point types"),
+    }
 }
 
 pub fn uniformFrom(source: anytype, comptime T: type, min: T, max: T) T {
@@ -1130,7 +1137,11 @@ pub fn uniformFrom(source: anytype, comptime T: type, min: T, max: T) T {
 }
 
 pub fn uniformChecked(rng: Rng, comptime T: type, min: T, max: T) Error!T {
-    return uniformCheckedFrom(rng, T, min, max);
+    switch (@typeInfo(T)) {
+        .int => return rng.intRangeLessThanChecked(T, min, max),
+        .float => return rng.floatRangeChecked(T, min, max),
+        else => @compileError("uniformChecked supports integer and floating-point types"),
+    }
 }
 
 pub fn uniformCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
@@ -1150,7 +1161,10 @@ pub fn sampleSingleFrom(source: anytype, comptime T: type, min: T, max: T) Error
 }
 
 pub fn fillUniform(rng: Rng, comptime T: type, dest: []T, min: T, max: T) void {
-    fillUniformFrom(rng, T, dest, min, max);
+    switch (@typeInfo(T)) {
+        .int, .float => rng.fillRange(T, dest, min, max),
+        else => @compileError("fillUniform supports integer and floating-point slices"),
+    }
 }
 
 pub fn fillUniformFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
@@ -1161,7 +1175,10 @@ pub fn fillUniformFrom(source: anytype, comptime T: type, dest: []T, min: T, max
 }
 
 pub fn fillUniformChecked(rng: Rng, comptime T: type, dest: []T, min: T, max: T) Error!void {
-    return fillUniformCheckedFrom(rng, T, dest, min, max);
+    switch (@typeInfo(T)) {
+        .int, .float => try rng.fillRangeChecked(T, dest, min, max),
+        else => @compileError("fillUniformChecked supports integer and floating-point slices"),
+    }
 }
 
 pub fn fillUniformCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {
@@ -1172,7 +1189,15 @@ pub fn fillUniformCheckedFrom(source: anytype, comptime T: type, dest: []T, min:
 }
 
 pub fn uniformInclusive(rng: Rng, comptime T: type, min: T, max: T) T {
-    return uniformInclusiveFrom(rng, T, min, max);
+    switch (@typeInfo(T)) {
+        .int => return rng.intRangeAtMost(T, min, max),
+        .float => {
+            std.debug.assert(min <= max);
+            if (min == max) return min;
+            return min + (max - min) * uniformClosedUnitFrom(rng, T);
+        },
+        else => @compileError("uniformInclusive supports integer and floating-point types"),
+    }
 }
 
 pub fn uniformInclusiveFrom(source: anytype, comptime T: type, min: T, max: T) T {
@@ -1188,7 +1213,14 @@ pub fn uniformInclusiveFrom(source: anytype, comptime T: type, min: T, max: T) T
 }
 
 pub fn uniformInclusiveChecked(rng: Rng, comptime T: type, min: T, max: T) Error!T {
-    return uniformInclusiveCheckedFrom(rng, T, min, max);
+    switch (@typeInfo(T)) {
+        .int => return rng.intRangeAtMostChecked(T, min, max),
+        .float => {
+            try validateFiniteFloatRange(T, min, max, true);
+            return uniformInclusive(rng, T, min, max);
+        },
+        else => @compileError("uniformInclusiveChecked supports integer and floating-point types"),
+    }
 }
 
 pub fn uniformInclusiveCheckedFrom(source: anytype, comptime T: type, min: T, max: T) Error!T {
@@ -1211,7 +1243,25 @@ pub fn sampleSingleInclusiveFrom(source: anytype, comptime T: type, min: T, max:
 }
 
 pub fn fillUniformInclusive(rng: Rng, comptime T: type, dest: []T, min: T, max: T) void {
-    fillUniformInclusiveFrom(rng, T, dest, min, max);
+    switch (@typeInfo(T)) {
+        .int => {
+            if (min == max) {
+                @memset(dest, min);
+                return;
+            }
+            for (dest) |*item| item.* = rng.intRangeAtMost(T, min, max);
+        },
+        .float => {
+            std.debug.assert(min <= max and std.math.isFinite(min) and std.math.isFinite(max));
+            if (min == max) {
+                @memset(dest, min);
+                return;
+            }
+            const width = max - min;
+            for (dest) |*item| item.* = min + width * uniformClosedUnitFrom(rng, T);
+        },
+        else => @compileError("fillUniformInclusive supports integer and floating-point slices"),
+    }
 }
 
 pub fn fillUniformInclusiveFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
@@ -1237,7 +1287,18 @@ pub fn fillUniformInclusiveFrom(source: anytype, comptime T: type, dest: []T, mi
 }
 
 pub fn fillUniformInclusiveChecked(rng: Rng, comptime T: type, dest: []T, min: T, max: T) Error!void {
-    return fillUniformInclusiveCheckedFrom(rng, T, dest, min, max);
+    if (dest.len == 0) return;
+    switch (@typeInfo(T)) {
+        .int => {
+            if (min > max) return error.EmptyRange;
+            fillUniformInclusive(rng, T, dest, min, max);
+        },
+        .float => {
+            try validateFiniteFloatRange(T, min, max, true);
+            fillUniformInclusive(rng, T, dest, min, max);
+        },
+        else => @compileError("fillUniformInclusiveChecked supports integer and floating-point slices"),
+    }
 }
 
 pub fn fillUniformInclusiveCheckedFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) Error!void {

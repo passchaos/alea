@@ -5070,3 +5070,11 @@ S4-M989 routes reusable scalar Uniform facade helpers directly
 and `Uniform(T).fill` now dispatch through facade `Rng` range logic directly
 instead of routing through `sampleFrom` / `fillFrom` wrappers. This improves
 Uniform sampler facade ergonomics but does not resolve S4-M11.
+
+S4-M990 routes scalar top-level Uniform facade helpers directly
+(`compare/results/s4-m990-uniform-top-level-facade-direct.md`): `uniform`,
+`uniformChecked`, `fillUniform`, `fillUniformChecked`, `uniformInclusive`,
+`uniformInclusiveChecked`, `fillUniformInclusive`, and
+`fillUniformInclusiveChecked` now dispatch through facade `Rng` range logic
+directly instead of routing through `From` wrappers. This improves Uniform
+top-level facade ergonomics but does not resolve S4-M11.
