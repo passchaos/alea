@@ -495,7 +495,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
-            return self.sampleIndexCheckedFrom(rng);
+            std.debug.assert(self.items.len > 0);
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(rng, usize, self.items.len);
         }
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
@@ -515,7 +517,9 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn sampleIndexU32Checked(self: Self, rng: Rng) Error!u32 {
-            return self.sampleIndexU32CheckedFrom(rng);
+            if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.items.len == 1) return 0;
+            return Rng.uintLessThanFrom(rng, u32, @intCast(self.items.len));
         }
 
         pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
@@ -34541,6 +34545,20 @@ test "distribution Choose sampler mirrors slice choices" {
         try choice.sampleIndexU32CheckedFrom(&direct_checked_index_u32_engine),
     );
     try std.testing.expectEqual(helper_checked_index_u32_engine.next(), direct_checked_index_u32_engine.next());
+    var facade_checked_index_engine = root.DefaultPrng.init(0xc0_2a5);
+    var helper_facade_checked_index_engine = root.DefaultPrng.init(0xc0_2a5);
+    try std.testing.expectEqual(
+        Rng.chooseIndexFrom(&helper_facade_checked_index_engine, items.len).?,
+        try choice.sampleIndexChecked(root.Rng.init(&facade_checked_index_engine)),
+    );
+    try std.testing.expectEqual(helper_facade_checked_index_engine.next(), facade_checked_index_engine.next());
+    var facade_checked_index_u32_engine = root.DefaultPrng.init(0xc0_2a6);
+    var helper_facade_checked_index_u32_engine = root.DefaultPrng.init(0xc0_2a6);
+    try std.testing.expectEqual(
+        Rng.chooseIndexU32From(&helper_facade_checked_index_u32_engine, @intCast(items.len)).?,
+        try choice.sampleIndexU32Checked(root.Rng.init(&facade_checked_index_u32_engine)),
+    );
+    try std.testing.expectEqual(helper_facade_checked_index_u32_engine.next(), facade_checked_index_u32_engine.next());
 
     var fill_engine = root.DefaultPrng.init(0xc0_268);
     var helper_engine = root.DefaultPrng.init(0xc0_268);

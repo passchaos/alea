@@ -4497,3 +4497,10 @@ Distribution Choose, reusable Choice, and reusable WeightedChoice facade
 sampleValueChecked helpers now validate and then sample directly instead of
 routing through sampleValueCheckedFrom wrappers. This improves checked facade
 value ergonomics but does not resolve S4-M11.
+
+S4-M905 routes checked index facade aliases through direct sampling
+(`compare/results/s4-m905-checked-index-facade-direct.md`):
+Distribution Choose, reusable Choice, and reusable WeightedChoice facade
+sampleIndexChecked/sampleIndexU32Checked helpers now validate and sample directly
+instead of routing through direct-source checked wrapper aliases. This improves
+checked facade index ergonomics but does not resolve S4-M11.
