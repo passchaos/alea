@@ -948,7 +948,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M907 AliasTable index facade aliases direct paths | `src/distributions.zig`, `compare/results/s4-m907-aliastable-index-facade-direct.md` | Closed for the current bar: AliasTable facade index aliases now execute alias-table sampling branches directly. |
 | S4-M908 AliasTable u32 facade sample direct paths | `src/distributions.zig`, `compare/results/s4-m908-aliastable-u32-facade-direct.md` | Closed for the current bar: AliasTable compact facade sample helpers now execute u32 alias-table sampling branches directly. |
 | S4-M909 Weighted tree facade sample aliases direct paths | `src/distributions.zig`, `compare/results/s4-m909-weighted-tree-facade-direct.md` | Closed for the current bar: dynamic WeightedTree and WeightedIntTree facade sample/index/u32 aliases now validate once and sample directly. |
-| S4-M910 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M910 U32 index facade fills direct paths | `src/distributions.zig`, `src/seq.zig`, `compare/results/s4-m910-u32-index-facade-fill-direct.md` | Closed for the current bar: Choose/Choice/WeightedChoice facade compact index fills now write directly. |
+| S4-M911 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3111,6 +3112,10 @@ sample/index/u32 aliases through direct tree sampling after validation,
 preserving stream shape while avoiding checked facade wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M910 additionally routes Choose, Choice, and WeightedChoice compact index
+facade fills through direct u32 filling, preserving stream shape while avoiding
+direct-source fill wrapper aliases; it is reliability/ergonomics work and does
+not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

@@ -4532,3 +4532,10 @@ WeightedTree and WeightedIntTree facade sample/index/u32 aliases now validate on
 and call the tree sampler directly instead of routing through checked facade
 wrappers. This improves dynamic weighted tree facade ergonomics but does not
 resolve S4-M11.
+
+S4-M910 routes compact index facade fills through direct filling
+(`compare/results/s4-m910-u32-index-facade-fill-direct.md`):
+Distribution Choose, reusable Choice, and reusable WeightedChoice fillIndicesU32
+facade helpers now fill directly instead of routing through direct-source fill
+wrappers. This improves compact index fill ergonomics but does not resolve
+S4-M11.
