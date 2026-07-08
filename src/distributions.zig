@@ -13335,7 +13335,14 @@ pub fn VectorPareto(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
                 return;
             }
-            for (dest) |*item| item.* = self.sampleFrom(source);
+            for (dest) |*item| {
+                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
+                if (self.shapeValue() == 1) {
+                    item.* = @as(VectorType, @splat(self.scaleValue())) / uniform_vec;
+                } else {
+                    item.* = paretoFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
+                }
+            }
         }
     };
 }
@@ -27603,6 +27610,23 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, f64), &pareto_buf_vec, &direct_pareto_buf_vec);
     for (pareto_buf_vec) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 2 and std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_pareto_fill_engine = alea.ScalarPrng.init(0x6859_0001);
+    var vector_pareto_loop_engine = alea.ScalarPrng.init(0x6859_0001);
+    var vector_pareto_fill: [3]@Vector(4, f64) = undefined;
+    var vector_pareto_loop: [3]@Vector(4, f64) = undefined;
+    vector_pareto_sampler.fillFrom(&vector_pareto_fill_engine, &vector_pareto_fill);
+    for (&vector_pareto_loop) |*slot| slot.* = vector_pareto_sampler.sampleFrom(&vector_pareto_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_pareto_loop, &vector_pareto_fill);
+    try std.testing.expectEqual(vector_pareto_loop_engine.next(), vector_pareto_fill_engine.next());
+    var vector_pareto_f32_fill_engine = alea.ScalarPrng.init(0x6859_f32);
+    var vector_pareto_f32_loop_engine = alea.ScalarPrng.init(0x6859_f32);
+    const vector_pareto_f32 = try VectorPareto(@Vector(8, f32)).init(2, 3);
+    var vector_pareto_f32_fill: [2]@Vector(8, f32) = undefined;
+    var vector_pareto_f32_loop: [2]@Vector(8, f32) = undefined;
+    vector_pareto_f32.fillFrom(&vector_pareto_f32_fill_engine, &vector_pareto_f32_fill);
+    for (&vector_pareto_f32_loop) |*slot| slot.* = vector_pareto_f32.sampleFrom(&vector_pareto_f32_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_pareto_f32_loop, &vector_pareto_f32_fill);
+    try std.testing.expectEqual(vector_pareto_f32_loop_engine.next(), vector_pareto_f32_fill_engine.next());
 
     const vector_pareto_shape_one = try VectorPareto(@Vector(4, f64)).init(2, 1);
     try std.testing.expect(vector_pareto_shape_one.expectedValue() == null);
@@ -27612,6 +27636,18 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqual(pareto_shape_one_vec, direct_pareto_shape_one_vec);
     inline for (0..4) |lane| try std.testing.expect(pareto_shape_one_vec[lane] >= 2 and std.math.isFinite(pareto_shape_one_vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    var vector_pareto_shape_one_fill_engine = alea.ScalarPrng.init(0x6859_1001);
+    var vector_pareto_shape_one_loop_engine = alea.ScalarPrng.init(0x6859_1001);
+    vector_pareto_shape_one.fillFrom(&vector_pareto_shape_one_fill_engine, &vector_pareto_fill);
+    for (&vector_pareto_loop) |*slot| slot.* = vector_pareto_shape_one.sampleFrom(&vector_pareto_shape_one_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_pareto_loop, &vector_pareto_fill);
+    try std.testing.expectEqual(vector_pareto_shape_one_loop_engine.next(), vector_pareto_shape_one_fill_engine.next());
+    var vector_pareto_degenerate_engine = alea.ScalarPrng.init(0x6859_d00);
+    var vector_pareto_degenerate_control = alea.ScalarPrng.init(0x6859_d00);
+    const vector_pareto_degenerate = try VectorPareto(@Vector(4, f64)).init(2, std.math.inf(f64));
+    vector_pareto_degenerate.fillFrom(&vector_pareto_degenerate_engine, &vector_pareto_fill);
+    for (vector_pareto_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(2)), vec);
+    try std.testing.expectEqual(vector_pareto_degenerate_control.next(), vector_pareto_degenerate_engine.next());
 
     const weibull_vec = try vectorWeibullChecked(rng, @Vector(4, f64), 2, 1.5);
     const direct_weibull_vec = try vectorWeibullCheckedFrom(&direct_engine, @Vector(4, f64), 2, 1.5);

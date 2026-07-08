@@ -4188,3 +4188,10 @@ VectorMaxwell.fillFrom now draws three vector normal values and applies the
 Maxwell norm transform directly, instead of routing every output through
 VectorMaxwell.sampleFrom. This improves VectorMaxwell reusable fill ergonomics
 but does not resolve S4-M11.
+
+S4-M859 draws reusable VectorPareto fills through direct vector open-uniform
+transforms (`compare/results/s4-m859-vector-pareto-fill-direct-transform.md`):
+VectorPareto.fillFrom now draws vector open-uniform values and applies the Pareto
+transform directly, including the shape-one reciprocal path, instead of routing
+every output through VectorPareto.sampleFrom. This improves VectorPareto reusable
+fill ergonomics but does not resolve S4-M11.
