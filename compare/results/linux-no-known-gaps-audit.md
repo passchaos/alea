@@ -5780,3 +5780,9 @@ S4-M1094 routes reusable ASCII Charset byte fills directly
 `ascii.Charset.fill` now samples charset indexes through facade `Rng` directly
 instead of routing through `fillFrom`. This improves ASCII Charset fill facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1095 routes reusable UnicodeCharset scalar fills directly
+(`compare/results/s4-m1095-unicode-charset-fill-facade-direct.md`):
+`ascii.UnicodeCharset.fill` now samples scalar indexes through facade `Rng`
+directly instead of routing through `fillFrom`. This improves UnicodeCharset
+scalar-fill facade ergonomics but does not resolve S4-M11.

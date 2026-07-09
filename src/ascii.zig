@@ -414,7 +414,20 @@ pub const UnicodeCharset = struct {
     }
 
     pub fn fill(self: UnicodeCharset, rng: Rng, out: []u21) void {
-        self.fillFrom(rng, out);
+        std.debug.assert(self.scalars.len > 0 or out.len == 0);
+        if (self.scalars.len == 1) {
+            @memset(out, self.scalars[0]);
+            return;
+        }
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const scalar_count: u64 = @intCast(self.scalars.len);
+            for (out) |*scalar| {
+                const index = Rng.uintLessThanFrom(rng, u64, scalar_count);
+                scalar.* = self.scalars[@intCast(index)];
+            }
+            return;
+        }
+        for (out) |*scalar| scalar.* = self.scalars[Rng.uintLessThanFrom(rng, usize, self.scalars.len)];
     }
 
     pub fn fillChecked(self: UnicodeCharset, rng: Rng, out: []u21) error{ EmptyCharset, InvalidParameter }!void {
