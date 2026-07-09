@@ -1082,7 +1082,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1041 Vector table Exponential facade direct paths | `src/distributions.zig`, `compare/results/s4-m1041-vector-table-exponential-facade-direct.md` | Closed for the current bar: reusable vector table Exponential facade helpers now avoid From wrappers. |
 | S4-M1042 VectorExponential facade direct paths | `src/distributions.zig`, `compare/results/s4-m1042-vector-exponential-facade-direct.md` | Closed for the current bar: reusable generic VectorExponential facade helpers now avoid From wrappers. |
 | S4-M1043 LogNormal sampler facade direct paths | `src/distributions.zig`, `compare/results/s4-m1043-log-normal-sampler-facade-direct.md` | Closed for the current bar: reusable scalar LogNormal facade sample/fill helpers now avoid From wrappers. |
-| S4-M1044 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1044 BufferedLogNormal facade direct paths | `src/distributions.zig`, `compare/results/s4-m1044-buffered-log-normal-facade-direct.md` | Closed for the current bar: reusable BufferedLogNormal facade sample/fill helpers now avoid From wrappers. |
+| S4-M1045 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3924,6 +3925,11 @@ through direct log-normal facade helpers, preserving stream shape and degenerate
 no-consume behavior while avoiding `sampleFrom` / `fillFrom` wrapper aliases; it
 is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M1044 additionally routes reusable BufferedLogNormal facade sample/fill helpers
+through direct log-normal facade refills, preserving the explicit refill stream
+contract and degenerate no-consume behavior while avoiding `sampleFrom` /
+`fillFrom` wrapper aliases; it is reliability/ergonomics work and does not resolve
+S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

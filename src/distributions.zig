@@ -7503,7 +7503,14 @@ pub fn BufferedLogNormal(comptime T: type, comptime buffer_len: usize) type {
         }
 
         pub fn sample(self: *Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.log_stddev == 0) return @exp(self.log_mean);
+            if (self.index == buffer_len) {
+                fillLogNormal(rng, T, self.buffer[0..], self.log_mean, self.log_stddev);
+                self.index = 0;
+            }
+            const value = self.buffer[self.index];
+            self.index += 1;
+            return value;
         }
 
         pub fn sampleFrom(self: *Self, source: anytype) T {
@@ -7518,7 +7525,28 @@ pub fn BufferedLogNormal(comptime T: type, comptime buffer_len: usize) type {
         }
 
         pub fn fill(self: *Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.log_stddev == 0) {
+                @memset(dest, @exp(self.log_mean));
+                return;
+            }
+            var written: usize = 0;
+            if (self.index < buffer_len) {
+                const buffered_count = buffer_len - self.index;
+                const n = @min(dest.len, buffered_count);
+                @memcpy(dest[0..n], self.buffer[self.index..][0..n]);
+                self.index += n;
+                written += n;
+            }
+            while (written + buffer_len <= dest.len) : (written += buffer_len) {
+                fillLogNormal(rng, T, dest[written..][0..buffer_len], self.log_mean, self.log_stddev);
+            }
+            if (written < dest.len) {
+                fillLogNormal(rng, T, self.buffer[0..], self.log_mean, self.log_stddev);
+                self.index = 0;
+                const n = dest.len - written;
+                @memcpy(dest[written..], self.buffer[0..n]);
+                self.index = n;
+            }
         }
 
         pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
