@@ -9625,7 +9625,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
             if (self.items.len > std.math.maxInt(u32)) return error.InvalidParameter;
-            self.table.fillU32CheckedFrom(rng, dest) catch unreachable;
+            self.table.fillU32Checked(rng, dest) catch unreachable;
         }
 
         pub fn fillIndicesU32CheckedFrom(self: Self, source: anytype, dest: []u32) Error!void {
