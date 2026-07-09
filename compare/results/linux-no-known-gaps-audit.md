@@ -5608,3 +5608,9 @@ S4-M1068 routes reusable AliasTable checked fills directly
 `AliasTable(Weight).fillChecked` now calls the AliasTable fill facade directly
 instead of routing through `fillCheckedFrom`. This improves AliasTable checked
 fill facade ergonomics but does not resolve S4-M11.
+
+S4-M1069 routes sequence-layer reusable WeightedChoice u32 index fills directly
+(`compare/results/s4-m1069-seq-weightedchoice-u32-index-fill-facade-direct.md`):
+`seq.WeightedChoice(T).fillIndicesU32` now calls the AliasTable checked u32 fill
+facade directly instead of routing through `fillU32CheckedFrom`. This improves
+seq WeightedChoice u32 index-fill facade ergonomics but does not resolve S4-M11.
