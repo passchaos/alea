@@ -1,6 +1,6 @@
 # S4-M11 Resolution Audit
 
-Date: 2026-07-09
+Date: 2026-07-10
 
 S4-M11 asked for one of three ways to keep raising the accepted vector profile
 bar:
@@ -34,9 +34,9 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
-compare/results/s4-m1144-negative-normal-stddev.md
+compare/results/s4-m1145-nonfinite-normal-mean.md
 `1`
-Alea local rand/rand_distr status (2026-07-09)
+Alea local rand/rand_distr status (2026-07-10)
 "schema_version"
 "baseline"
 "validate_local_passes"
@@ -47,7 +47,7 @@ Alea local rand/rand_distr status (2026-07-09)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1144-negative-normal-stddev.md"
+"compare/results/s4-m1145-nonfinite-normal-mean.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -97,3 +97,4 @@ S4-M1143 remains active after S4-M1142 specializes parameterized f64x4 vector fi
 S4-M1144 remains active after S4-M1143 aligns zero-rate exponential semantics in `compare/results/s4-m1143-zero-rate-exponential.md`.
 
 S4-M1145 remains active after S4-M1144 aligns negative normal stddev semantics in `compare/results/s4-m1144-negative-normal-stddev.md`.
+S4-M1146 remains active after S4-M1145 aligns unrestricted normal/log-normal log-space mean semantics in `compare/results/s4-m1145-nonfinite-normal-mean.md`.

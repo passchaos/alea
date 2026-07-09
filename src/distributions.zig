@@ -4319,7 +4319,7 @@ pub fn normalNativeF32(rng: Rng, mean: f32, stddev: f32) f32 {
 }
 
 pub fn normalNativeF32From(source: anytype, mean: f32, stddev: f32) f32 {
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) return mean;
     return mean + stddev * standardNormalNativeF32From(source);
 }
@@ -4329,7 +4329,7 @@ pub fn normalNativeF32Checked(rng: Rng, mean: f32, stddev: f32) Error!f32 {
 }
 
 pub fn normalNativeF32CheckedFrom(source: anytype, mean: f32, stddev: f32) Error!f32 {
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     return normalNativeF32From(source, mean, stddev);
 }
 
@@ -4354,7 +4354,7 @@ pub fn fillNormalNativeF32(rng: Rng, dest: []f32, mean: f32, stddev: f32) void {
 }
 
 pub fn fillNormalNativeF32From(source: anytype, dest: []f32, mean: f32, stddev: f32) void {
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) {
         @memset(dest, mean);
         return;
@@ -4373,7 +4373,7 @@ pub fn fillNormalNativeF32Checked(rng: Rng, dest: []f32, mean: f32, stddev: f32)
 
 pub fn fillNormalNativeF32CheckedFrom(source: anytype, dest: []f32, mean: f32, stddev: f32) Error!void {
     if (dest.len == 0) return;
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     fillNormalNativeF32From(source, dest, mean, stddev);
 }
 
@@ -4424,7 +4424,7 @@ pub fn vectorNormalNativeF32(rng: Rng, comptime VectorType: type, mean: f32, std
 pub fn vectorNormalNativeF32From(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorNormalNativeF32 expects an f32 vector");
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) return @splat(mean);
     var out: VectorType = undefined;
     inline for (0..info.len) |lane| out[lane] = normalNativeF32From(source, mean, stddev);
@@ -4438,7 +4438,7 @@ pub fn vectorNormalNativeF32Checked(rng: Rng, comptime VectorType: type, mean: f
 pub fn vectorNormalNativeF32CheckedFrom(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorNormalNativeF32Checked expects an f32 vector");
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     return vectorNormalNativeF32From(source, VectorType, mean, stddev);
 }
 
@@ -4449,7 +4449,7 @@ pub fn fillVectorNormalNativeF32(rng: Rng, comptime VectorType: type, dest: []Ve
 pub fn fillVectorNormalNativeF32From(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorNormalNativeF32 expects an f32 vector");
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) {
         @memset(dest, @as(VectorType, @splat(mean)));
         return;
@@ -4466,7 +4466,7 @@ pub fn fillVectorNormalNativeF32CheckedFrom(source: anytype, comptime VectorType
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorNormalNativeF32Checked expects an f32 vector");
     if (dest.len == 0) return;
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     fillVectorNormalNativeF32From(source, VectorType, dest, mean, stddev);
 }
 
@@ -4477,7 +4477,7 @@ pub fn vectorNormalTableF32(rng: Rng, comptime VectorType: type, mean: f32, stdd
 pub fn vectorNormalTableF32From(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorNormalTableF32 expects an f32 vector");
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) return @splat(mean);
     return @as(VectorType, @splat(mean)) + @as(VectorType, @splat(stddev)) * vectorStandardNormalTableF32From(source, VectorType);
 }
@@ -4489,7 +4489,7 @@ pub fn vectorNormalTableF32Checked(rng: Rng, comptime VectorType: type, mean: f3
 pub fn vectorNormalTableF32CheckedFrom(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorNormalTableF32Checked expects an f32 vector");
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     return vectorNormalTableF32From(source, VectorType, mean, stddev);
 }
 
@@ -4500,7 +4500,7 @@ pub fn fillVectorNormalTableF32(rng: Rng, comptime VectorType: type, dest: []Vec
 pub fn fillVectorNormalTableF32From(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorNormalTableF32 expects an f32 vector");
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) {
         @memset(dest, @as(VectorType, @splat(mean)));
         return;
@@ -4518,7 +4518,7 @@ pub fn fillVectorNormalTableF32CheckedFrom(source: anytype, comptime VectorType:
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorNormalTableF32Checked expects an f32 vector");
     if (dest.len == 0) return;
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     fillVectorNormalTableF32From(source, VectorType, dest, mean, stddev);
 }
 
@@ -4529,7 +4529,7 @@ pub fn vectorNormalTableF64(rng: Rng, comptime VectorType: type, mean: f64, stdd
 pub fn vectorNormalTableF64From(source: anytype, comptime VectorType: type, mean: f64, stddev: f64) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f64) @compileError("vectorNormalTableF64 expects an f64 vector");
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) return @splat(mean);
     return @as(VectorType, @splat(mean)) + @as(VectorType, @splat(stddev)) * vectorStandardNormalTableF64From(source, VectorType);
 }
@@ -4541,7 +4541,7 @@ pub fn vectorNormalTableF64Checked(rng: Rng, comptime VectorType: type, mean: f6
 pub fn vectorNormalTableF64CheckedFrom(source: anytype, comptime VectorType: type, mean: f64, stddev: f64) Error!VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f64) @compileError("vectorNormalTableF64Checked expects an f64 vector");
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     return vectorNormalTableF64From(source, VectorType, mean, stddev);
 }
 
@@ -4552,7 +4552,7 @@ pub fn fillVectorNormalTableF64(rng: Rng, comptime VectorType: type, dest: []Vec
 pub fn fillVectorNormalTableF64From(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f64, stddev: f64) void {
     const info = vectorInfo(VectorType);
     if (info.child != f64) @compileError("fillVectorNormalTableF64 expects an f64 vector");
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) {
         @memset(dest, @as(VectorType, @splat(mean)));
         return;
@@ -4570,7 +4570,7 @@ pub fn fillVectorNormalTableF64CheckedFrom(source: anytype, comptime VectorType:
     const info = vectorInfo(VectorType);
     if (info.child != f64) @compileError("fillVectorNormalTableF64Checked expects an f64 vector");
     if (dest.len == 0) return;
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     fillVectorNormalTableF64From(source, VectorType, dest, mean, stddev);
 }
 
@@ -5400,7 +5400,6 @@ pub fn Normal(comptime T: type) type {
         pub fn init(mean: T, stddev: T) Error!Self {
             comptime requireFloat(T);
             if (!std.math.isFinite(stddev)) return error.InvalidParameter;
-            if (!std.math.isFinite(mean)) return error.InvalidParameter;
             return .{ .mean = mean, .stddev = stddev };
         }
 
@@ -5496,7 +5495,7 @@ pub const NormalNativeF32 = struct {
     stddev: f32,
 
     pub fn init(mean: f32, stddev: f32) Error!Self {
-        if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+        if (!std.math.isFinite(stddev)) return error.InvalidParameter;
         return .{ .mean = mean, .stddev = stddev };
     }
 
@@ -5574,7 +5573,7 @@ pub fn VectorNormalNativeF32(comptime VectorType: type) type {
         stddev: f32,
 
         pub fn init(mean: f32, stddev: f32) Error!Self {
-            if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+            if (!std.math.isFinite(stddev)) return error.InvalidParameter;
             return .{ .mean = mean, .stddev = stddev };
         }
 
@@ -5653,7 +5652,7 @@ pub fn VectorNormalTableF32(comptime VectorType: type) type {
         stddev: f32,
 
         pub fn init(mean: f32, stddev: f32) Error!Self {
-            if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+            if (!std.math.isFinite(stddev)) return error.InvalidParameter;
             return .{ .mean = mean, .stddev = stddev };
         }
 
@@ -5736,7 +5735,7 @@ pub fn VectorNormalTableF64(comptime VectorType: type) type {
         stddev: f64,
 
         pub fn init(mean: f64, stddev: f64) Error!Self {
-            if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+            if (!std.math.isFinite(stddev)) return error.InvalidParameter;
             return .{ .mean = mean, .stddev = stddev };
         }
 
@@ -5820,7 +5819,6 @@ pub fn VectorNormal(comptime VectorType: type) type {
 
         pub fn init(mean: Child, stddev: Child) Error!Self {
             if (!std.math.isFinite(stddev)) return error.InvalidParameter;
-            if (!std.math.isFinite(mean)) return error.InvalidParameter;
             return .{ .mean = mean, .stddev = stddev };
         }
 
@@ -6898,7 +6896,7 @@ pub fn logNormalNativeF32(rng: Rng, mean: f32, stddev: f32) f32 {
 }
 
 pub fn logNormalNativeF32From(source: anytype, mean: f32, stddev: f32) f32 {
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) return @exp(mean);
     const z = standardNormalNativeF32From(source);
     const log_space = if (mean == 0) stddev * z else mean + stddev * z;
@@ -6910,7 +6908,7 @@ pub fn logNormalNativeF32Checked(rng: Rng, mean: f32, stddev: f32) Error!f32 {
 }
 
 pub fn logNormalNativeF32CheckedFrom(source: anytype, mean: f32, stddev: f32) Error!f32 {
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     return logNormalNativeF32From(source, mean, stddev);
 }
 
@@ -6919,7 +6917,7 @@ pub fn fillLogNormalNativeF32(rng: Rng, dest: []f32, mean: f32, stddev: f32) voi
 }
 
 pub fn fillLogNormalNativeF32From(source: anytype, dest: []f32, mean: f32, stddev: f32) void {
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) {
         @memset(dest, @exp(mean));
         return;
@@ -6939,7 +6937,7 @@ pub fn fillLogNormalNativeF32Checked(rng: Rng, dest: []f32, mean: f32, stddev: f
 
 pub fn fillLogNormalNativeF32CheckedFrom(source: anytype, dest: []f32, mean: f32, stddev: f32) Error!void {
     if (dest.len == 0) return;
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     fillLogNormalNativeF32From(source, dest, mean, stddev);
 }
 
@@ -6950,7 +6948,7 @@ pub fn vectorLogNormalNativeF32(rng: Rng, comptime VectorType: type, mean: f32, 
 pub fn vectorLogNormalNativeF32From(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorLogNormalNativeF32 expects an f32 vector");
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) return @splat(@exp(mean));
     var out: VectorType = undefined;
     inline for (0..info.len) |lane| out[lane] = logNormalNativeF32From(source, mean, stddev);
@@ -6964,7 +6962,7 @@ pub fn vectorLogNormalNativeF32Checked(rng: Rng, comptime VectorType: type, mean
 pub fn vectorLogNormalNativeF32CheckedFrom(source: anytype, comptime VectorType: type, mean: f32, stddev: f32) Error!VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorLogNormalNativeF32Checked expects an f32 vector");
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     return vectorLogNormalNativeF32From(source, VectorType, mean, stddev);
 }
 
@@ -6975,7 +6973,7 @@ pub fn fillVectorLogNormalNativeF32(rng: Rng, comptime VectorType: type, dest: [
 pub fn fillVectorLogNormalNativeF32From(source: anytype, comptime VectorType: type, dest: []VectorType, mean: f32, stddev: f32) void {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorLogNormalNativeF32 expects an f32 vector");
-    std.debug.assert(std.math.isFinite(mean) and std.math.isFinite(stddev));
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) {
         @memset(dest, @as(VectorType, @splat(@exp(mean))));
         return;
@@ -6992,7 +6990,7 @@ pub fn fillVectorLogNormalNativeF32CheckedFrom(source: anytype, comptime VectorT
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorLogNormalNativeF32Checked expects an f32 vector");
     if (dest.len == 0) return;
-    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(stddev)) return error.InvalidParameter;
     fillVectorLogNormalNativeF32From(source, VectorType, dest, mean, stddev);
 }
 
@@ -7936,7 +7934,7 @@ pub const LogNormalNativeF32 = struct {
     stddev: f32,
 
     pub fn init(mean: f32, stddev: f32) Error!Self {
-        if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+        if (!std.math.isFinite(stddev)) return error.InvalidParameter;
         return .{ .mean = mean, .stddev = stddev };
     }
 
@@ -8023,7 +8021,7 @@ pub fn VectorLogNormalNativeF32(comptime VectorType: type) type {
         stddev: f32,
 
         pub fn init(mean: f32, stddev: f32) Error!Self {
-            if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+            if (!std.math.isFinite(stddev)) return error.InvalidParameter;
             return .{ .mean = mean, .stddev = stddev };
         }
 
@@ -32626,7 +32624,7 @@ test "zero-length base distribution fills do not validate or consume random stre
     try std.testing.expectEqual(control.next(), engine.next());
     try fillUniformInclusiveCheckedFrom(&engine, f64, &floats, std.math.inf(f64), 1);
     try std.testing.expectEqual(control.next(), engine.next());
-    try fillNormalCheckedFrom(&engine, f64, &floats, std.math.inf(f64), 1);
+    try fillNormalCheckedFrom(&engine, f64, &floats, 0, std.math.inf(f64));
     try std.testing.expectEqual(control.next(), engine.next());
     try fillExponentialCheckedFrom(&engine, f64, &floats, 0);
     try std.testing.expectEqual(control.next(), engine.next());
@@ -33951,6 +33949,64 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (&negative_log_loop) |*slot| slot.* = negative_log_sampler.sampleFrom(&negative_log_loop_engine);
     try std.testing.expectEqualSlices(f64, &negative_log_loop, &negative_log_fill);
     try std.testing.expectEqual(negative_log_loop_engine.next(), negative_log_fill_engine.next());
+
+    var nonfinite_mean_engine = alea.ScalarPrng.init(0x5d_1ff);
+    var nonfinite_mean_manual_engine = alea.ScalarPrng.init(0x5d_1ff);
+    const nonfinite_mean_normal = try Normal(f64).init(std.math.inf(f64), -2);
+    try std.testing.expectEqual(std.math.inf(f64), nonfinite_mean_normal.meanValue());
+    try std.testing.expectEqual(@as(f64, -2), nonfinite_mean_normal.stddevValue());
+    try std.testing.expectEqual(std.math.inf(f64), nonfinite_mean_normal.sampleFrom(&nonfinite_mean_engine));
+    _ = Rng.standardNormalFastFrom(&nonfinite_mean_manual_engine, f64);
+    try std.testing.expectEqual(nonfinite_mean_manual_engine.next(), nonfinite_mean_engine.next());
+
+    var nan_mean_engine = alea.ScalarPrng.init(0x5d_1aa);
+    var nan_mean_manual_engine = alea.ScalarPrng.init(0x5d_1aa);
+    const nan_mean_normal = try Normal(f32).init(std.math.nan(f32), -0.25);
+    try std.testing.expect(std.math.isNan(nan_mean_normal.meanValue()));
+    try std.testing.expect(std.math.isNan(nan_mean_normal.sampleFrom(&nan_mean_engine)));
+    _ = Rng.standardNormalFastFrom(&nan_mean_manual_engine, f32);
+    try std.testing.expectEqual(nan_mean_manual_engine.next(), nan_mean_engine.next());
+
+    var native_mean_engine = alea.ScalarPrng.init(0x5d_1ac);
+    var native_mean_manual_engine = alea.ScalarPrng.init(0x5d_1ac);
+    const native_mean_normal = try NormalNativeF32.init(std.math.inf(f32), -0.5);
+    try std.testing.expectEqual(std.math.inf(f32), native_mean_normal.sampleFrom(&native_mean_engine));
+    _ = standardNormalNativeF32From(&native_mean_manual_engine);
+    try std.testing.expectEqual(native_mean_manual_engine.next(), native_mean_engine.next());
+
+    var table_mean_engine = alea.ScalarPrng.init(0x5d_1ad);
+    var table_mean_manual_engine = alea.ScalarPrng.init(0x5d_1ad);
+    const table_mean_normal = try VectorNormalTableF64(@Vector(4, f64)).init(std.math.inf(f64), -0.5);
+    try std.testing.expectEqual(
+        @as(@Vector(4, f64), @splat(std.math.inf(f64))),
+        table_mean_normal.sampleFrom(&table_mean_engine),
+    );
+    _ = vectorStandardNormalTableF64From(&table_mean_manual_engine, @Vector(4, f64));
+    try std.testing.expectEqual(table_mean_manual_engine.next(), table_mean_engine.next());
+
+    var nonfinite_log_engine = alea.ScalarPrng.init(0x5d_10f);
+    var nonfinite_log_manual_engine = alea.ScalarPrng.init(0x5d_10f);
+    var nonfinite_log_sampler = try LogNormal(f64).init(std.math.inf(f64), -0.5);
+    try std.testing.expectEqual(std.math.inf(f64), nonfinite_log_sampler.logMeanValue());
+    try std.testing.expectEqual(@as(f64, -0.5), nonfinite_log_sampler.logStddevValue());
+    try std.testing.expectEqual(std.math.inf(f64), nonfinite_log_sampler.sampleFrom(&nonfinite_log_engine));
+    _ = Rng.standardNormalFastFrom(&nonfinite_log_manual_engine, f64);
+    try std.testing.expectEqual(nonfinite_log_manual_engine.next(), nonfinite_log_engine.next());
+
+    var nan_log_engine = alea.ScalarPrng.init(0x5d_1ab);
+    var nan_log_manual_engine = alea.ScalarPrng.init(0x5d_1ab);
+    var nan_log_sampler = try LogNormal(f64).init(std.math.nan(f64), 0.75);
+    try std.testing.expect(std.math.isNan(nan_log_sampler.logMeanValue()));
+    try std.testing.expect(std.math.isNan(nan_log_sampler.sampleFrom(&nan_log_engine)));
+    _ = Rng.standardNormalFastFrom(&nan_log_manual_engine, f64);
+    try std.testing.expectEqual(nan_log_manual_engine.next(), nan_log_engine.next());
+
+    var native_log_engine = alea.ScalarPrng.init(0x5d_1ae);
+    var native_log_manual_engine = alea.ScalarPrng.init(0x5d_1ae);
+    const native_log_sampler = try LogNormalNativeF32.init(std.math.inf(f32), -0.5);
+    try std.testing.expectEqual(std.math.inf(f32), native_log_sampler.sampleFrom(&native_log_engine));
+    _ = standardNormalNativeF32From(&native_log_manual_engine);
+    try std.testing.expectEqual(native_log_manual_engine.next(), native_log_engine.next());
 
     const normal_cv_sampler = try Normal(f64).initMeanCv(-10, 0.2);
     try std.testing.expectApproxEqAbs(@as(f64, -10), normal_cv_sampler.mean, 0);
