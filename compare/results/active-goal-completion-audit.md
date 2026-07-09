@@ -1137,7 +1137,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1096 ASCII Charset sample facade direct path | `src/ascii.zig`, `compare/results/s4-m1096-ascii-charset-sample-facade-direct.md` | Closed for the current bar: reusable ASCII Charset sample now avoids From wrappers. |
 | S4-M1097 ASCII Charset checked sample facade direct path | `src/ascii.zig`, `compare/results/s4-m1097-ascii-charset-checked-sample-facade-direct.md` | Closed for the current bar: reusable ASCII Charset checked sample now avoids From wrappers. |
 | S4-M1098 UnicodeCharset sample facade direct path | `src/ascii.zig`, `compare/results/s4-m1098-unicode-charset-sample-facade-direct.md` | Closed for the current bar: reusable UnicodeCharset sample now avoids From wrappers. |
-| S4-M1099 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1099 UnicodeCharset checked sample facade direct path | `src/ascii.zig`, `compare/results/s4-m1099-unicode-charset-checked-sample-facade-direct.md` | Closed for the current bar: reusable UnicodeCharset checked sample now avoids From wrappers. |
+| S4-M1100 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4262,6 +4263,12 @@ direct facade scalar-index sampling, preserving stream shape, scalar output
 behavior, validation assumptions, and singleton no-consume behavior while avoiding
 `sampleFrom` wrapper aliases; it is reliability/ergonomics work and does not
 resolve S4-M11 or complete the long-term objective.
+S4-M1099 additionally routes reusable UnicodeCharset checked scalar sampling
+through validation plus the direct sample facade path, preserving stream shape,
+empty/invalid validation, scalar output behavior, and singleton no-consume
+behavior while avoiding `sampleCheckedFrom` wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

@@ -5804,3 +5804,10 @@ S4-M1098 routes reusable UnicodeCharset scalar sampling directly
 `ascii.UnicodeCharset.sample` now samples scalar indexes through facade `Rng`
 directly instead of routing through `sampleFrom`. This improves UnicodeCharset
 scalar sample facade ergonomics but does not resolve S4-M11.
+
+S4-M1099 routes reusable UnicodeCharset checked scalar sampling directly
+(`compare/results/s4-m1099-unicode-charset-checked-sample-facade-direct.md`):
+`ascii.UnicodeCharset.sampleChecked` now validates and calls facade `sample`
+directly instead of routing through `sampleCheckedFrom`. This improves
+UnicodeCharset checked scalar sample facade ergonomics but does not resolve
+S4-M11.

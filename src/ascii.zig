@@ -402,7 +402,8 @@ pub const UnicodeCharset = struct {
     }
 
     pub fn sampleChecked(self: UnicodeCharset, rng: Rng) error{ EmptyCharset, InvalidParameter }!u21 {
-        return self.sampleCheckedFrom(rng);
+        try self.validateNonEmpty();
+        return self.sample(rng);
     }
 
     pub fn sampleCheckedFrom(self: UnicodeCharset, source: anytype) error{ EmptyCharset, InvalidParameter }!u21 {
