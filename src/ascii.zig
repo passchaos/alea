@@ -448,7 +448,9 @@ pub const UnicodeCharset = struct {
     }
 
     pub fn fillChecked(self: UnicodeCharset, rng: Rng, out: []u21) error{ EmptyCharset, InvalidParameter }!void {
-        try self.fillCheckedFrom(rng, out);
+        if (out.len == 0) return;
+        try self.validateNonEmpty();
+        self.fill(rng, out);
     }
 
     pub fn fillCheckedFrom(self: UnicodeCharset, source: anytype, out: []u21) error{ EmptyCharset, InvalidParameter }!void {
