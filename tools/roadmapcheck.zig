@@ -1066,6 +1066,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1068", .path = "compare/results/s4-m1068-alias-table-checked-fill-facade-direct.md" },
     .{ .milestone = "S4-M1069", .path = "compare/results/s4-m1069-seq-weightedchoice-u32-index-fill-facade-direct.md" },
     .{ .milestone = "S4-M1070", .path = "compare/results/s4-m1070-seq-weightedchoice-checked-u32-index-fill-facade-direct.md" },
+    .{ .milestone = "S4-M1071", .path = "compare/results/s4-m1071-seq-weightedchoice-owned-iter-facade-direct.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1073,7 +1074,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M1071",
+    "S4-M1072",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -1386,12 +1387,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M1071 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1071 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1072 | Next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1072 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M1071 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M1071 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M1072 next unblocked product gap") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1072 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {

@@ -9564,7 +9564,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn ownedIter(self: Self, rng: Rng) Iterator(Rng) {
-            return self.ownedIterFrom(rng);
+            return .{ .source = rng, .choice = self };
         }
 
         pub fn ownedIterFrom(self: Self, source: anytype) Iterator(@TypeOf(source)) {

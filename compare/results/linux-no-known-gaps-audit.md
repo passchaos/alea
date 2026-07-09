@@ -5621,3 +5621,9 @@ directly (`compare/results/s4-m1070-seq-weightedchoice-checked-u32-index-fill-fa
 u32 fill facade directly instead of routing through `fillU32CheckedFrom`. This
 improves seq WeightedChoice checked u32 index-fill facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1071 routes sequence-layer reusable WeightedChoice owned iterator facade
+construction directly (`compare/results/s4-m1071-seq-weightedchoice-owned-iter-facade-direct.md`):
+`seq.WeightedChoice(T).ownedIter` now constructs the iterator directly with the
+facade `Rng` instead of routing through `ownedIterFrom`. This improves seq
+WeightedChoice owned iterator facade ergonomics but does not resolve S4-M11.
