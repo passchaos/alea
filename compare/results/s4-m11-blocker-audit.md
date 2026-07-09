@@ -34,7 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
-compare/results/s4-m469-latest-validate-local-evidence-pointer.md
+compare/results/s4-m1125-post-s4-m1124-rand-status-refresh.md
 `1`
 Alea local rand/rand_distr status (2026-07-09)
 "schema_version"
@@ -47,7 +47,7 @@ Alea local rand/rand_distr status (2026-07-09)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m469-latest-validate-local-evidence-pointer.md"
+"compare/results/s4-m1125-post-s4-m1124-rand-status-refresh.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -75,3 +75,4 @@ Do not call `update_goal(status=complete)` from this audit: S4-M11 is resolved
 for the current milestone only, while the product goal deliberately keeps
 raising the bar.
 S4-M1125 post-S4-M11 next product bar remains active after S4-M1124 restores validate-all.
+S4-M1126 post-S4-M1125 next product bar remains active after S4-M1125 refreshes rand-status.

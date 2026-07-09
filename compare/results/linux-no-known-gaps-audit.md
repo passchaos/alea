@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M11 bar is S4-M1124: exact/default dense SIMD research,
+The active post-S4-M1125 bar is S4-M1126: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -5981,3 +5981,11 @@ targets while still running the 64-bit checks on native Linux. `zig build
 crosscheck` and `zig build validate-all` pass again. This closes the current
 post-S4-M11 validation bar and raises the next product bar to S4-M1125; it is not
 whole-goal completion.
+
+S4-M1125 refreshes the current local `rand` / `rand_distr` status snapshots after
+S4-M1124 restored `validate-all`
+(`compare/results/s4-m1125-post-s4-m1124-rand-status-refresh.md`):
+`rand-status` now reports both the S4-M11 Wasmtime runtime branch and S4-M1124
+validate-all restoration as closed for the current bar, command-matrix evidence
+is refreshed, and the next product bar is S4-M1126. This is status/tooling
+synchronization, not whole-goal completion.
