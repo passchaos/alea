@@ -9926,7 +9926,8 @@ pub fn partialShuffleTail(rng: Rng, comptime T: type, items: []T, amount: usize)
 }
 
 pub fn partialShuffleTailChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error![]T {
-    return partialShuffleTailCheckedFrom(rng, T, items, amount);
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffleTail(rng, T, items, amount);
 }
 
 pub fn partialShuffleTailCheckedFrom(source: anytype, comptime T: type, items: []T, amount: usize) Error![]T {
