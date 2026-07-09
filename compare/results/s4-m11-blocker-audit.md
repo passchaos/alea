@@ -34,7 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
-compare/results/s4-m1152-beta-infinity.md
+compare/results/s4-m1153-triangular-nonfinite.md
 `1`
 Alea local rand/rand_distr status (2026-07-10)
 "schema_version"
@@ -47,7 +47,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1152-beta-infinity.md"
+"compare/results/s4-m1153-triangular-nonfinite.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -112,3 +112,5 @@ S4-M1151 remains active after S4-M1150 aligns Cauchy non-finite parameter semant
 S4-M1152 remains active after S4-M1151 aligns Pareto/Weibull infinite-scale semantics in `compare/results/s4-m1151-pareto-weibull-infinite-scale.md`.
 
 S4-M1153 remains active after S4-M1152 aligns Beta infinity semantics in `compare/results/s4-m1152-beta-infinity.md`.
+
+S4-M1154 remains active after S4-M1153 aligns Triangular non-finite bound semantics in `compare/results/s4-m1153-triangular-nonfinite.md`.

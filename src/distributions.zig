@@ -7859,7 +7859,7 @@ pub fn LogNormalDlsymExp(comptime T: type, comptime buffer_len: usize) type {
             self.index = buffer_len;
         }
 
-        pub fn sample(self: *Self, rng: Rng) T {
+       pub fn sample(self: *Self, rng: Rng) T {
             if (self.log_stddev == 0) return dlsymExpValue(T, self.exp_fn, self.log_mean);
             if (self.index == buffer_len) {
                 self.refill(rng, self.buffer[0..]);
@@ -7868,7 +7868,7 @@ pub fn LogNormalDlsymExp(comptime T: type, comptime buffer_len: usize) type {
             const value = self.buffer[self.index];
             self.index += 1;
             return value;
-        }
+       }
 
         pub fn sampleFrom(self: *Self, source: anytype) T {
             if (self.log_stddev == 0) return dlsymExpValue(T, self.exp_fn, self.log_mean);
@@ -7881,7 +7881,7 @@ pub fn LogNormalDlsymExp(comptime T: type, comptime buffer_len: usize) type {
             return value;
         }
 
-        pub fn fill(self: *Self, rng: Rng, dest: []T) void {
+       pub fn fill(self: *Self, rng: Rng, dest: []T) void {
             if (self.log_stddev == 0) {
                 @memset(dest, dlsymExpValue(T, self.exp_fn, self.log_mean));
                 return;
@@ -7904,7 +7904,7 @@ pub fn LogNormalDlsymExp(comptime T: type, comptime buffer_len: usize) type {
                 @memcpy(dest[written..], self.buffer[0..n]);
                 self.index = n;
             }
-        }
+       }
 
         pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
             if (self.log_stddev == 0) {
@@ -12080,10 +12080,13 @@ pub fn triangularCheckedFrom(source: anytype, comptime T: type, min: T, mode: T,
 
 pub fn triangularFrom(source: anytype, comptime T: type, min: T, mode: T, max: T) T {
     comptime requireFloat(T);
-    std.debug.assert(min <= mode and mode <= max and min <= max);
+    std.debug.assert(triangularParametersValid(T, min, mode, max));
     if (min == max) return min;
 
     const u = Rng.floatFrom(source, T);
+    if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) {
+        return triangularRustShapeFromUniform(T, u, min, mode, max);
+    }
     const c = (mode - min) / (max - min);
     if (u < c) {
         return min + @sqrt(u * (max - min) * (mode - min));
@@ -12097,13 +12100,17 @@ pub fn fillTriangular(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, ma
 
 pub fn fillTriangularFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: T, max: T) void {
     comptime requireFloat(T);
-    std.debug.assert(min <= mode and mode <= max and min <= max);
+    std.debug.assert(triangularParametersValid(T, min, mode, max));
     if (min == max) {
         @memset(dest, min);
         return;
     }
     Rng.fillFrom(source, T, dest);
     triangularFromUniforms(T, dest, min, mode, max);
+}
+
+fn triangularParametersValid(comptime T: type, min: T, mode: T, max: T) bool {
+    return min <= mode and mode <= max and min <= max;
 }
 
 pub fn fillTriangularChecked(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, max: T) Error!void {
@@ -12153,9 +12160,24 @@ pub fn fillVectorTriangularCheckedFrom(source: anytype, comptime VectorType: typ
     sampler.fillFrom(source, dest);
 }
 
+fn triangularRustShapeFromUniform(comptime T: type, uniform_value: T, min: T, mode: T, max: T) T {
+    const diff_mode_min = mode - min;
+    const range = max - min;
+    const f_range = uniform_value * range;
+    if (f_range < diff_mode_min) return min + @sqrt(f_range * diff_mode_min);
+    return max - @sqrt((range - f_range) * (max - mode));
+}
+
 fn triangularFromUniformVector(comptime VectorType: type, uniform_vec: VectorType, min: vectorChild(VectorType), mode: vectorChild(VectorType), max: vectorChild(VectorType)) VectorType {
     const Child = vectorChild(VectorType);
     if (min == max) return @splat(min);
+    if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) {
+        var out: VectorType = undefined;
+        inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+            out[lane] = triangularRustShapeFromUniform(Child, uniform_vec[lane], min, mode, max);
+        }
+        return out;
+    }
     const width = max - min;
     const left_width = mode - min;
     const right_width = max - mode;
@@ -12253,8 +12275,7 @@ pub fn Triangular(comptime T: type) type {
 
         pub fn init(min: T, mode: T, max: T) Error!Self {
             comptime requireFloat(T);
-            if (!(min <= mode and mode <= max and min <= max)) return error.InvalidParameter;
-            if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) return error.InvalidParameter;
+            if (!triangularParametersValid(T, min, mode, max)) return error.InvalidParameter;
             return .{ .min = min, .mode = mode, .max = max };
         }
 
@@ -12294,6 +12315,9 @@ pub fn Triangular(comptime T: type) type {
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return self.min;
             const u = rng.float(T);
+            if (!std.math.isFinite(self.min) or !std.math.isFinite(self.mode) or !std.math.isFinite(self.max)) {
+                return triangularRustShapeFromUniform(T, u, self.min, self.mode, self.max);
+            }
             const c = (self.mode - self.min) / (self.max - self.min);
             if (u < c) {
                 return self.min + @sqrt(u * (self.max - self.min) * (self.mode - self.min));
@@ -22321,6 +22345,10 @@ fn triangularFromUniforms(comptime T: type, dest: []T, min: T, mode: T, max: T) 
 
 fn triangularFromUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, min: T, mode: T, max: T) void {
     const len = @typeInfo(VectorType).vector.len;
+    if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) {
+        for (dest) |*item| item.* = triangularRustShapeFromUniform(T, item.*, min, mode, max);
+        return;
+    }
     const width = max - min;
     const left_width = mode - min;
     const right_width = max - mode;
@@ -28572,6 +28600,177 @@ test "infinite-dof student-t preserves rand_distr-compatible stream shape" {
     try std.testing.expectEqual(control.next(), engine.next());
     try std.testing.expectError(error.InvalidParameter, StudentT(f64).init(std.math.nan(f64)));
     try std.testing.expectError(error.InvalidParameter, VectorStudentT(@Vector(4, f64)).init(-1));
+}
+
+test "nonfinite triangular bounds preserve rand_distr-compatible stream shape" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x751a_1153);
+    var control = alea.ScalarPrng.init(0x751a_1153);
+    const rng = Rng.init(&engine);
+    const control_rng = Rng.init(&control);
+
+    const Scenario = struct { min: f64, mode: f64, max: f64 };
+    const scenarios = [_]Scenario{
+        .{ .min = 0, .mode = 1, .max = std.math.inf(f64) },
+        .{ .min = 0, .mode = std.math.inf(f64), .max = std.math.inf(f64) },
+        .{ .min = -std.math.inf(f64), .mode = -1, .max = 0 },
+        .{ .min = -std.math.inf(f64), .mode = -std.math.inf(f64), .max = 0 },
+        .{ .min = -std.math.inf(f64), .mode = 0, .max = std.math.inf(f64) },
+        .{ .min = -std.math.inf(f64), .mode = std.math.inf(f64), .max = std.math.inf(f64) },
+        .{ .min = -std.math.inf(f64), .mode = -std.math.inf(f64), .max = std.math.inf(f64) },
+    };
+
+    const Reference = struct {
+        fn expectNan(value: f64) !void {
+            try std.testing.expect(std.math.isNan(value));
+        }
+
+        fn expectVectorNan(value: @Vector(4, f64)) !void {
+            inline for (0..4) |lane| try expectNan(value[lane]);
+        }
+
+        fn consumeScalar(source: anytype, comptime T: type) void {
+            _ = Rng.floatFrom(source, T);
+        }
+
+        fn consumeFill(source: anytype, comptime T: type, dest: []T) void {
+            Rng.fillFrom(source, T, dest);
+        }
+
+        fn consumeVector(source: anytype, comptime VectorType: type) void {
+            _ = Rng.vectorFrom(source, VectorType);
+        }
+
+        fn consumeVectorFill(source: anytype, comptime VectorType: type, count: usize) void {
+            for (0..count) |_| consumeVector(source, VectorType);
+        }
+    };
+
+    var scalar_buf: [5]f64 = undefined;
+    var control_buf: [5]f64 = undefined;
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+
+    for (scenarios) |scenario| {
+        try Reference.expectNan(triangular(rng, f64, scenario.min, scenario.mode, scenario.max));
+        Reference.consumeScalar(control_rng, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Reference.expectNan(triangularFrom(&engine, f64, scenario.min, scenario.mode, scenario.max));
+        Reference.consumeScalar(&control, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Reference.expectNan(try triangularChecked(rng, f64, scenario.min, scenario.mode, scenario.max));
+        Reference.consumeScalar(control_rng, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Reference.expectNan(try triangularCheckedFrom(&engine, f64, scenario.min, scenario.mode, scenario.max));
+        Reference.consumeScalar(&control, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        fillTriangular(rng, f64, &scalar_buf, scenario.min, scenario.mode, scenario.max);
+        for (scalar_buf) |sample| try Reference.expectNan(sample);
+        Reference.consumeFill(control_rng, f64, &control_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        fillTriangularFrom(&engine, f64, &scalar_buf, scenario.min, scenario.mode, scenario.max);
+        for (scalar_buf) |sample| try Reference.expectNan(sample);
+        Reference.consumeFill(&control, f64, &control_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillTriangularChecked(rng, f64, &scalar_buf, scenario.min, scenario.mode, scenario.max);
+        for (scalar_buf) |sample| try Reference.expectNan(sample);
+        Reference.consumeFill(control_rng, f64, &control_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillTriangularCheckedFrom(&engine, f64, &scalar_buf, scenario.min, scenario.mode, scenario.max);
+        for (scalar_buf) |sample| try Reference.expectNan(sample);
+        Reference.consumeFill(&control, f64, &control_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        const sampler = try Triangular(f64).init(scenario.min, scenario.mode, scenario.max);
+        try std.testing.expectEqual(scenario.min, sampler.minValue());
+        try std.testing.expectEqual(scenario.mode, sampler.modeValue());
+        try std.testing.expectEqual(scenario.max, sampler.maxValue());
+        try Reference.expectNan(sampler.sample(rng));
+        Reference.consumeScalar(control_rng, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Reference.expectNan(sampler.sampleFrom(&engine));
+        Reference.consumeScalar(&control, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        sampler.fill(rng, &scalar_buf);
+        for (scalar_buf) |sample| try Reference.expectNan(sample);
+        Reference.consumeFill(control_rng, f64, &control_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        sampler.fillFrom(&engine, &scalar_buf);
+        for (scalar_buf) |sample| try Reference.expectNan(sample);
+        Reference.consumeFill(&control, f64, &control_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Reference.expectVectorNan(vectorTriangular(rng, @Vector(4, f64), scenario.min, scenario.mode, scenario.max));
+        Reference.consumeVector(control_rng, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Reference.expectVectorNan(vectorTriangularFrom(&engine, @Vector(4, f64), scenario.min, scenario.mode, scenario.max));
+        Reference.consumeVector(&control, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Reference.expectVectorNan(try vectorTriangularChecked(rng, @Vector(4, f64), scenario.min, scenario.mode, scenario.max));
+        Reference.consumeVector(control_rng, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Reference.expectVectorNan(try vectorTriangularCheckedFrom(&engine, @Vector(4, f64), scenario.min, scenario.mode, scenario.max));
+        Reference.consumeVector(&control, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        fillVectorTriangular(rng, @Vector(4, f64), &vector_buf, scenario.min, scenario.mode, scenario.max);
+        for (vector_buf) |sample| try Reference.expectVectorNan(sample);
+        Reference.consumeVectorFill(control_rng, @Vector(4, f64), vector_buf.len);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        fillVectorTriangularFrom(&engine, @Vector(4, f64), &vector_buf, scenario.min, scenario.mode, scenario.max);
+        for (vector_buf) |sample| try Reference.expectVectorNan(sample);
+        Reference.consumeVectorFill(&control, @Vector(4, f64), vector_buf.len);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillVectorTriangularChecked(rng, @Vector(4, f64), &vector_buf, scenario.min, scenario.mode, scenario.max);
+        for (vector_buf) |sample| try Reference.expectVectorNan(sample);
+        Reference.consumeVectorFill(control_rng, @Vector(4, f64), vector_buf.len);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillVectorTriangularCheckedFrom(&engine, @Vector(4, f64), &vector_buf, scenario.min, scenario.mode, scenario.max);
+        for (vector_buf) |sample| try Reference.expectVectorNan(sample);
+        Reference.consumeVectorFill(&control, @Vector(4, f64), vector_buf.len);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        const vector_sampler = try VectorTriangular(@Vector(4, f64)).init(scenario.min, scenario.mode, scenario.max);
+        try Reference.expectVectorNan(vector_sampler.sample(rng));
+        Reference.consumeVector(control_rng, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Reference.expectVectorNan(vector_sampler.sampleFrom(&engine));
+        Reference.consumeVector(&control, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        vector_sampler.fill(rng, &vector_buf);
+        for (vector_buf) |sample| try Reference.expectVectorNan(sample);
+        Reference.consumeVectorFill(control_rng, @Vector(4, f64), vector_buf.len);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        vector_sampler.fillFrom(&engine, &vector_buf);
+        for (vector_buf) |sample| try Reference.expectVectorNan(sample);
+        Reference.consumeVectorFill(&control, @Vector(4, f64), vector_buf.len);
+        try std.testing.expectEqual(control.next(), engine.next());
+    }
+
+    try std.testing.expectError(error.InvalidParameter, triangularCheckedFrom(&engine, f64, std.math.nan(f64), 0, 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, vectorTriangularCheckedFrom(&engine, @Vector(4, f64), 0, std.math.nan(f64), 1));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, Triangular(f64).init(0, 0, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidParameter, VectorTriangular(@Vector(4, f64)).init(1, 0, 0));
 }
 
 test "degenerate triangular helpers do not consume random stream" {

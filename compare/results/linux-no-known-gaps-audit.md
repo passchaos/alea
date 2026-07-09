@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1152 bar is S4-M1153: exact/default dense SIMD research,
+The active post-S4-M1153 bar is S4-M1154: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6063,3 +6063,5 @@ S4-M1150 aligns Cauchy non-finite parameter semantics with local `rand_distr::Ca
 S4-M1151 aligns Pareto/Weibull infinite-scale semantics with local `rand_distr::Pareto::new` and `Weibull::new` (`compare/results/s4-m1151-pareto-weibull-infinite-scale.md`): infinite positive scale is accepted, finite-shape paths preserve transform draw shape before producing infinity, and existing Alea zero-scale/infinite-shape point-mass extensions remain documented. This is a local `rand_distr` compatibility closure, not whole-goal completion.
 
 S4-M1152 aligns Beta infinite-shape semantics with local `rand_distr::Beta::new` (`compare/results/s4-m1152-beta-infinity.md`): one-sided and both-sided infinite shapes are accepted, endpoint/NaN outputs follow the local Cheng branch, and the corresponding Open01 draw shape is preserved. This is a local `rand_distr` compatibility closure, not whole-goal completion.
+
+S4-M1153 aligns Triangular non-finite bound semantics with local `rand_distr::Triangular::new` (`compare/results/s4-m1153-triangular-nonfinite.md`): ordered `-inf`/`+inf` bounds and modes are accepted, NaN/unordered parameters remain invalid, and accepted non-finite paths preserve uniform draw shape before producing NaN. This is a local `rand_distr` compatibility closure, not whole-goal completion.
