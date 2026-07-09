@@ -8119,7 +8119,7 @@ pub const LogNormalApproxF32 = struct {
     }
 
     pub fn sample(self: Self, rng: Rng) f32 {
-        return self.sampleFrom(rng);
+        return logNormalApproxF32(rng, self.mean, self.stddev);
     }
 
     pub fn sampleFrom(self: Self, source: anytype) f32 {
@@ -8127,7 +8127,7 @@ pub const LogNormalApproxF32 = struct {
     }
 
     pub fn fill(self: Self, rng: Rng, dest: []f32) void {
-        self.fillFrom(rng, dest);
+        fillLogNormalApproxF32(rng, dest, self.mean, self.stddev);
     }
 
     pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {

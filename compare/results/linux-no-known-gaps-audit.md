@@ -5483,3 +5483,10 @@ S4-M1049 routes reusable generic VectorLogNormal facade helpers directly
 `VectorLogNormal.sample` / `fill` now call vector log-normal facade helpers
 directly instead of routing through `sampleFrom` / `fillFrom` wrappers. This
 improves generic VectorLogNormal facade ergonomics but does not resolve S4-M11.
+
+S4-M1050 routes reusable scalar approximate-f32 LogNormal facade helpers directly
+(`compare/results/s4-m1050-approx-f32-log-normal-facade-direct.md`):
+`LogNormalApproxF32.sample` / `fill` now call approximate-f32 log-normal facade
+helpers directly instead of routing through `sampleFrom` / `fillFrom` wrappers.
+This improves approximate-f32 LogNormal facade ergonomics but does not resolve
+S4-M11.
