@@ -5548,3 +5548,10 @@ directly (`compare/results/s4-m1059-seq-weightedchoice-checked-pointer-fill-faca
 indexes into item storage instead of using the direct-source sample wrapper. This
 improves seq WeightedChoice checked pointer-fill facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1060 routes sequence-layer reusable WeightedChoice value fills directly
+(`compare/results/s4-m1060-seq-weightedchoice-value-fill-facade-direct.md`):
+`seq.WeightedChoice(T).fillValues` now maps direct facade-sampled alias-table
+indexes into value output instead of routing through `fillValuesFrom`. This
+improves seq WeightedChoice value-fill facade ergonomics but does not resolve
+S4-M11.

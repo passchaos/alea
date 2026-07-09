@@ -9338,7 +9338,14 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillValues(self: Self, rng: Rng, dest: []T) void {
-            self.fillValuesFrom(rng, dest);
+            if (dest.len == 0) return;
+            if (comptime valueTypeHasEmptyEnum(T)) return;
+            const items = self.items;
+            if (self.table.constantIndex()) |index| {
+                @memset(dest, items[index]);
+                return;
+            }
+            for (dest) |*slot| slot.* = items[self.table.sample(rng)];
         }
 
         pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
