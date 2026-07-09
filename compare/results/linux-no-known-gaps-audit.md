@@ -5860,3 +5860,9 @@ strings directly (`compare/results/s4-m1107-unicode-charset-checked-sample-strin
 `sampleString` directly instead of routing through `sampleStringCheckedFrom`.
 This improves UnicodeCharset checked sampleString facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1108 routes reusable UnicodeCharset caller-owned UTF-8 append generation
+directly (`compare/results/s4-m1108-unicode-charset-append-string-facade-direct.md`):
+`ascii.UnicodeCharset.appendString` now reserves and encodes through facade
+`Rng` directly instead of routing through `appendStringFrom`. This improves
+UnicodeCharset appendString facade ergonomics but does not resolve S4-M11.

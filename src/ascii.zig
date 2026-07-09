@@ -543,7 +543,37 @@ pub const UnicodeCharset = struct {
     }
 
     pub fn appendString(self: UnicodeCharset, allocator: std.mem.Allocator, rng: Rng, string_buffer: *std.ArrayList(u8), length: usize) !void {
-        try self.appendStringFrom(allocator, rng, string_buffer, length);
+        if (length == 0) return;
+        try self.validateNonEmpty();
+        try string_buffer.ensureUnusedCapacity(allocator, try self.utf8Capacity(length));
+
+        if (self.scalars.len == 1) {
+            var buf: [4]u8 = undefined;
+            const written = std.unicode.utf8Encode(self.scalars[0], &buf) catch unreachable;
+            var i: usize = 0;
+            while (i < length) : (i += 1) string_buffer.appendSliceAssumeCapacity(buf[0..written]);
+            return;
+        }
+
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const scalar_count: u64 = @intCast(self.scalars.len);
+            var i: usize = 0;
+            while (i < length) : (i += 1) {
+                const index = Rng.uintLessThanFrom(rng, u64, scalar_count);
+                var buf: [4]u8 = undefined;
+                const written = std.unicode.utf8Encode(self.scalars[@intCast(index)], &buf) catch unreachable;
+                string_buffer.appendSliceAssumeCapacity(buf[0..written]);
+            }
+            return;
+        }
+
+        var i: usize = 0;
+        while (i < length) : (i += 1) {
+            const index = Rng.uintLessThanFrom(rng, usize, self.scalars.len);
+            var buf: [4]u8 = undefined;
+            const written = std.unicode.utf8Encode(self.scalars[index], &buf) catch unreachable;
+            string_buffer.appendSliceAssumeCapacity(buf[0..written]);
+        }
     }
 
     pub fn appendStringFrom(self: UnicodeCharset, allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), length: usize) !void {
@@ -1283,6 +1313,18 @@ test "unicode charset unchecked strings validate before allocation" {
     try std.testing.expectEqualStrings("u:", list.items);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    var empty_facade_append_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyCharset, empty.appendString(empty_facade_append_alloc.allocator(), rng, &list, 3));
+    try std.testing.expect(!empty_facade_append_alloc.has_induced_failure);
+    try std.testing.expectEqualStrings("u:", list.items);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_facade_append_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, invalid.appendString(invalid_facade_append_alloc.allocator(), rng, &list, 3));
+    try std.testing.expect(!invalid_facade_append_alloc.has_induced_failure);
+    try std.testing.expectEqualStrings("u:", list.items);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const zero_empty = try empty.sampleStringFrom(std.testing.allocator, &engine, 0);
     defer std.testing.allocator.free(zero_empty);
     try std.testing.expectEqual(@as(usize, 0), zero_empty.len);
@@ -1370,6 +1412,18 @@ test "initial unicode charset allocation failures do not consume random stream" 
     try std.testing.expect(append_alloc.has_induced_failure);
     try std.testing.expectEqualStrings("p:", list.items);
     try std.testing.expectEqual(append_control.next(), append_engine.next());
+
+    var facade_append_engine = alea.ScalarPrng.init(0x5150_b00a);
+    var facade_append_control = alea.ScalarPrng.init(0x5150_b00a);
+    const facade_append_rng = alea.Rng.init(&facade_append_engine);
+    var facade_append_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var facade_list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+    defer facade_list.deinit(std.testing.allocator);
+    try facade_list.appendSlice(std.testing.allocator, "f:");
+    try std.testing.expectError(error.OutOfMemory, symbols.appendString(facade_append_alloc.allocator(), facade_append_rng, &facade_list, 8));
+    try std.testing.expect(facade_append_alloc.has_induced_failure);
+    try std.testing.expectEqualStrings("f:", facade_list.items);
+    try std.testing.expectEqual(facade_append_control.next(), facade_append_engine.next());
 }
 
 test "invalid charset facade helpers do not consume random stream" {

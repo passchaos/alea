@@ -1146,7 +1146,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1105 ASCII Charset checked sampleString facade direct path | `src/ascii.zig`, `compare/results/s4-m1105-ascii-charset-checked-sample-string-facade-direct.md` | Closed for the current bar: reusable ASCII Charset checked sampleString now avoids From wrappers. |
 | S4-M1106 UnicodeCharset sampleString facade direct path | `src/ascii.zig`, `compare/results/s4-m1106-unicode-charset-sample-string-facade-direct.md` | Closed for the current bar: reusable UnicodeCharset sampleString now avoids From wrappers. |
 | S4-M1107 UnicodeCharset checked sampleString facade direct path | `src/ascii.zig`, `compare/results/s4-m1107-unicode-charset-checked-sample-string-facade-direct.md` | Closed for the current bar: reusable UnicodeCharset checked sampleString now avoids From wrappers. |
-| S4-M1108 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1108 UnicodeCharset appendString facade direct path | `src/ascii.zig`, `compare/results/s4-m1108-unicode-charset-append-string-facade-direct.md` | Closed for the current bar: reusable UnicodeCharset appendString now avoids From wrappers. |
+| S4-M1109 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4324,6 +4325,12 @@ validation, zero-length behavior, UTF-8 encoding, and singleton no-consume
 behavior while avoiding `sampleStringCheckedFrom` wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M1108 additionally routes reusable UnicodeCharset caller-owned UTF-8 append
+generation through a direct facade reserve/encoding path, preserving stream
+shape, caller-owned output behavior, empty/invalid validation, zero-length
+behavior, UTF-8 encoding, and singleton no-consume behavior while avoiding
+`appendStringFrom` wrapper aliases; it is reliability/ergonomics work and does
+not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
