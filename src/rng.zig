@@ -1185,7 +1185,7 @@ pub fn vectorStandardNormalBatchFrom(source: anytype, comptime VectorType: type,
 pub fn fillVectorStandardNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    if (info.child == f64 and info.len == 4 and comptime @TypeOf(source) != Rng) {
+    if (info.child == f64 and info.len == 4) {
         fillVectorStandardNormalF64x4From(source, dest);
         return;
     }
@@ -1221,11 +1221,9 @@ pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []
         return;
     }
     if (info.child == f32 or info.child == f64) {
-        if (comptime @TypeOf(source) != Rng) {
-            if (mean == 0 and stddev == 1) {
-                fillVectorStandardNormalFrom(source, VectorType, dest);
-                return;
-            }
+        if (mean == 0 and stddev == 1) {
+            fillVectorStandardNormalFrom(source, VectorType, dest);
+            return;
         }
         fillVectorNormalScalarFrom(source, VectorType, dest, mean, stddev);
         return;
@@ -1358,7 +1356,7 @@ pub fn vectorStandardExponentialBatchFrom(source: anytype, comptime VectorType: 
 pub fn fillVectorStandardExponentialFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    if (info.child == f64 and info.len == 4 and comptime @TypeOf(source) != Rng) {
+    if (info.child == f64 and info.len == 4) {
         fillVectorStandardExponentialF64x4From(source, dest);
         return;
     }
@@ -2473,9 +2471,7 @@ pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vector
     std.debug.assert(stddev >= 0);
     if (stddev == 0) return @splat(mean);
     if (info.child == f32 or info.child == f64) {
-        if (comptime @TypeOf(source) != Rng) {
-            if (mean == 0 and stddev == 1) return vectorStandardNormalFrom(source, VectorType);
-        }
+        if (mean == 0 and stddev == 1) return vectorStandardNormalFrom(source, VectorType);
         return vectorNormalScalarFrom(source, VectorType, mean, stddev);
     }
     var out: VectorType = undefined;
@@ -7408,6 +7404,59 @@ test "rate-one scalar exponential matches standard stream shape" {
         exponentialFastFrom(&exponential_engine, f32, 1),
     );
     try std.testing.expectEqual(standard_engine.next(), exponential_engine.next());
+}
+
+test "facade f64x4 standard vector fills match direct stream shape" {
+    const alea = @import("root.zig");
+    const VectorType = @Vector(4, f64);
+
+    var facade_normal_engine = alea.ScalarPrng.init(0x5150_4f64);
+    var direct_normal_engine = alea.ScalarPrng.init(0x5150_4f64);
+    const normal_rng = Rng.init(&facade_normal_engine);
+    var facade_standard_normal: [5]VectorType = undefined;
+    var direct_standard_normal: [5]VectorType = undefined;
+    normal_rng.fillVectorStandardNormal(VectorType, &facade_standard_normal);
+    fillVectorStandardNormalFrom(&direct_normal_engine, VectorType, &direct_standard_normal);
+    try std.testing.expectEqualSlices(VectorType, &direct_standard_normal, &facade_standard_normal);
+    try std.testing.expectEqual(direct_normal_engine.next(), facade_normal_engine.next());
+
+    var facade_param_normal_engine = alea.ScalarPrng.init(0x5150_4f65);
+    var direct_param_normal_engine = alea.ScalarPrng.init(0x5150_4f65);
+    const param_normal_rng = Rng.init(&facade_param_normal_engine);
+    var facade_param_normal: [5]VectorType = undefined;
+    var direct_param_normal: [5]VectorType = undefined;
+    param_normal_rng.fillVectorNormal(VectorType, &facade_param_normal, 0, 1);
+    fillVectorStandardNormalFrom(&direct_param_normal_engine, VectorType, &direct_param_normal);
+    try std.testing.expectEqualSlices(VectorType, &direct_param_normal, &facade_param_normal);
+    try std.testing.expectEqual(direct_param_normal_engine.next(), facade_param_normal_engine.next());
+
+    var facade_single_normal_engine = alea.ScalarPrng.init(0x5150_4f66);
+    var direct_single_normal_engine = alea.ScalarPrng.init(0x5150_4f66);
+    const single_normal_rng = Rng.init(&facade_single_normal_engine);
+    const facade_single_normal = single_normal_rng.vectorNormal(VectorType, 0, 1);
+    const direct_single_normal = vectorStandardNormalFrom(&direct_single_normal_engine, VectorType);
+    try std.testing.expectEqual(direct_single_normal, facade_single_normal);
+    try std.testing.expectEqual(direct_single_normal_engine.next(), facade_single_normal_engine.next());
+
+    var facade_exp_engine = alea.ScalarPrng.init(0x5150_4f67);
+    var direct_exp_engine = alea.ScalarPrng.init(0x5150_4f67);
+    const exp_rng = Rng.init(&facade_exp_engine);
+    var facade_standard_exp: [5]VectorType = undefined;
+    var direct_standard_exp: [5]VectorType = undefined;
+    exp_rng.fillVectorStandardExponential(VectorType, &facade_standard_exp);
+    fillVectorStandardExponentialFrom(&direct_exp_engine, VectorType, &direct_standard_exp);
+    try std.testing.expectEqualSlices(VectorType, &direct_standard_exp, &facade_standard_exp);
+    try std.testing.expectEqual(direct_exp_engine.next(), facade_exp_engine.next());
+
+    var facade_rate_one_engine = alea.ScalarPrng.init(0x5150_4f68);
+    var direct_rate_one_engine = alea.ScalarPrng.init(0x5150_4f68);
+    const rate_one_rng = Rng.init(&facade_rate_one_engine);
+    var facade_rate_one: [5]VectorType = undefined;
+    var direct_rate_one: [5]VectorType = undefined;
+    rate_one_rng.fillVectorExponential(VectorType, &facade_rate_one, 1);
+    fillVectorStandardExponentialFrom(&direct_rate_one_engine, VectorType, &direct_rate_one);
+    try std.testing.expectEqualSlices(VectorType, &direct_rate_one, &facade_rate_one);
+    try std.testing.expectEqual(direct_rate_one_engine.next(), facade_rate_one_engine.next());
 }
 
 test "degenerate exponential helpers do not consume random stream" {

@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1140 bar is S4-M1141: exact/default dense SIMD research,
+The active post-S4-M1141 bar is S4-M1142: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6039,3 +6039,5 @@ S4-M1138 refreshes current status after S4-M1133-S4-M1137 delegation fixes (`com
 S4-M1139 fixes roadmapcheck evidence-path drift (`compare/results/s4-m1139-roadmapcheck-evidence-map-fix.md`): S4-M1131 and S4-M1138 now map to their own status-refresh evidence files. This is evidence hygiene, not whole-goal completion; S4-M1140 remains active.
 
 S4-M1140 refreshes current status after the S4-M1139 evidence-map fix (`compare/results/s4-m1140-post-s4-m1139-rand-status-refresh.md`): `rand-status` now includes S4-M1139 as closed for the current bar and points to S4-M1141. This is status synchronization, not whole-goal completion.
+
+S4-M1141 extends f64x4 standard vector fill specializations to facade standard-parameter workflows (`compare/results/s4-m1141-f64x4-facade-standard-vector-fill.md`): facade standard-normal, standard-exponential, standard-parameter normal, and rate-one exponential f64x4 fills now reuse specialized standard fill paths while preserving stream shape. This is a narrow exact/default call-shape closure, not whole-goal completion.
