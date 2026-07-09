@@ -2615,7 +2615,7 @@ pub fn unicodeScalarRangeAtMostChecked(self: Rng, min: u21, at_most: u21) Error!
 }
 
 pub fn fillUnicodeScalar(self: Rng, dest: []u21) void {
-    fillUnicodeScalarFrom(self, dest);
+    for (dest) |*item| item.* = self.unicodeScalar();
 }
 
 pub fn fillUnicodeScalarRangeLessThan(self: Rng, dest: []u21, min: u21, less_than: u21) void {
@@ -5705,6 +5705,8 @@ test "unicode scalar fills and batches preserve scalar stream shape" {
 
         var manual = Engine.init(0x5150_97a0);
         var filled = Engine.init(0x5150_97a0);
+        var facade_filled = Engine.init(0x5150_97a0);
+        const fill_rng = Rng.init(&facade_filled);
 
         var manual_buf: [8]u21 = undefined;
         for (&manual_buf) |*item| item.* = unicodeScalarFrom(&manual);
@@ -5712,8 +5714,14 @@ test "unicode scalar fills and batches preserve scalar stream shape" {
         var filled_buf: [8]u21 = undefined;
         fillUnicodeScalarFrom(&filled, &filled_buf);
 
+        var facade_filled_buf: [8]u21 = undefined;
+        fill_rng.fillUnicodeScalar(&facade_filled_buf);
+
         try std.testing.expectEqualSlices(u21, &manual_buf, &filled_buf);
-        try std.testing.expectEqual(manual.next(), filled.next());
+        try std.testing.expectEqualSlices(u21, &manual_buf, &facade_filled_buf);
+        const expected_next = manual.next();
+        try std.testing.expectEqual(expected_next, filled.next());
+        try std.testing.expectEqual(expected_next, facade_filled.next());
 
         var owned_manual = Engine.init(0x5150_97a1);
         var owned = Engine.init(0x5150_97a1);

@@ -5933,3 +5933,9 @@ S4-M1118 routes checked bounded `Rng` Unicode scalar range helpers directly
 `Rng.unicodeScalarRangeAtMostChecked` now validate and call direct facade range
 helpers instead of routing through checked `From` wrappers. This improves
 checked Unicode scalar range facade ergonomics but does not resolve S4-M11.
+
+S4-M1119 routes `Rng.fillUnicodeScalar` directly
+(`compare/results/s4-m1119-rng-fill-unicode-scalar-facade-direct.md`):
+`Rng.fillUnicodeScalar` now fills caller-owned output through facade
+`unicodeScalar` directly instead of routing through `fillUnicodeScalarFrom`.
+This improves Unicode scalar fill facade ergonomics but does not resolve S4-M11.
