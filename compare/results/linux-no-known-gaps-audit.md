@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1139 bar is S4-M1140: exact/default dense SIMD research,
+The active post-S4-M1140 bar is S4-M1141: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6037,3 +6037,5 @@ S4-M1137 routes standard-parameter scalar normal single samples through standard
 S4-M1138 refreshes current status after S4-M1133-S4-M1137 delegation fixes (`compare/results/s4-m1138-post-s4-m1137-rand-status-refresh.md`): `rand-status` now includes those closures and points to S4-M1139. This is status synchronization, not whole-goal completion.
 
 S4-M1139 fixes roadmapcheck evidence-path drift (`compare/results/s4-m1139-roadmapcheck-evidence-map-fix.md`): S4-M1131 and S4-M1138 now map to their own status-refresh evidence files. This is evidence hygiene, not whole-goal completion; S4-M1140 remains active.
+
+S4-M1140 refreshes current status after the S4-M1139 evidence-map fix (`compare/results/s4-m1140-post-s4-m1139-rand-status-refresh.md`): `rand-status` now includes S4-M1139 as closed for the current bar and points to S4-M1141. This is status synchronization, not whole-goal completion.

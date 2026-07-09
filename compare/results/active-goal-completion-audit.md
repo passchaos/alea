@@ -27,9 +27,9 @@ local `rand` / `rand_distr` status snapshot, S4-M450/S4-M455 record the
 `zig build validate-local` passes, S4-M438/S4-M449 keep the S4-M11 evidence chain
 visible, S4-M1123 records direct Wasmtime 31.0.0 execution of the accepted
 profile long sweep, S4-M1124 restores the post-S4-M11 `validate-all` aggregate,
-and S4-M1125 refreshes the status snapshots after that restoration. S4-M1126 adds fresh f32x8 dense SIMD probe evidence, and S4-M1127 closes a checksum-preserving f64x4 standard-normal direct-source fill optimization, and S4-M1128 closes the matching narrow standard-exponential direct-source fill call-shape improvement, and S4-M1129 refreshes current status after those closures, and S4-M1130 refreshes full `validate-all` evidence, and S4-M1131 refreshes current status after that validation, and S4-M1132 records refreshed f32x8 direct-source negative evidence, and S4-M1133 routes rate-one vector exponential fills through standard-exponential fills, and S4-M1134 applies the same delegation to single-vector helpers, and S4-M1135 routes scalar rate-one exponential fills through standard-exponential fills, and S4-M1136 routes scalar rate-one exponential single samples through standard-exponential samples, and S4-M1137 routes standard-parameter scalar normal single samples through standard-normal samples, and S4-M1138 refreshes current status after those delegation fixes, and S4-M1139 repairs roadmapcheck evidence-path drift. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
+and S4-M1125 refreshes the status snapshots after that restoration. S4-M1126 adds fresh f32x8 dense SIMD probe evidence, and S4-M1127 closes a checksum-preserving f64x4 standard-normal direct-source fill optimization, and S4-M1128 closes the matching narrow standard-exponential direct-source fill call-shape improvement, and S4-M1129 refreshes current status after those closures, and S4-M1130 refreshes full `validate-all` evidence, and S4-M1131 refreshes current status after that validation, and S4-M1132 records refreshed f32x8 direct-source negative evidence, and S4-M1133 routes rate-one vector exponential fills through standard-exponential fills, and S4-M1134 applies the same delegation to single-vector helpers, and S4-M1135 routes scalar rate-one exponential fills through standard-exponential fills, and S4-M1136 routes scalar rate-one exponential single samples through standard-exponential samples, and S4-M1137 routes standard-parameter scalar normal single samples through standard-normal samples, and S4-M1138 refreshes current status after those delegation fixes, and S4-M1139 repairs roadmapcheck evidence-path drift, and S4-M1140 refreshes status after that fix. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
 kernels are still not known to beat scalar lane-fill, and the roadmap has raised
-the next product bar to S4-M1140. Therefore do not call
+the next product bar to S4-M1141. Therefore do not call
 `update_goal(status=complete)`.
 
 ## Prompt-to-Artifact Checklist
@@ -1179,7 +1179,8 @@ the next product bar to S4-M1140. Therefore do not call
 | S4-M1137 scalar normal standard-parameter sample delegate | `src/rng.zig`, `compare/results/s4-m1137-scalar-normal-standard-sample.md` | Closed for the current bar: standard-parameter scalar normal single samples now reuse standard-normal sample paths. |
 | S4-M1138 post-S4-M1137 rand-status refresh | `tools/rand_status.zig`, `compare/results/s4-m1138-post-s4-m1137-rand-status-refresh.md` | Closed for the current bar: status tooling now reports S4-M1137 closure and points at S4-M1139. |
 | S4-M1139 roadmapcheck evidence map fix | `tools/roadmapcheck.zig`, `compare/results/s4-m1139-roadmapcheck-evidence-map-fix.md` | Closed for the current bar: S4-M1131 and S4-M1138 roadmapcheck evidence mappings now point to their own evidence files. |
-| S4-M1140 next post-S4-M1139 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M1139 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
+| S4-M1140 post-S4-M1139 rand-status refresh | `tools/rand_status.zig`, `compare/results/s4-m1140-post-s4-m1139-rand-status-refresh.md` | Closed for the current bar: status tooling now reports S4-M1139 closure and points at S4-M1141. |
+| S4-M1141 next post-S4-M1140 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M1140 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1209,9 +1210,10 @@ S4-M1134 applies the same delegation to single-vector helpers, and S4-M1135
 routes scalar rate-one exponential fills through standard-exponential fills, and
 S4-M1136 routes scalar rate-one exponential single samples through
 standard-exponential samples, and S4-M1137 routes standard-parameter scalar
-normal single samples through standard-normal samples, and S4-M1138 refreshes
-status after those delegation fixes, and S4-M1139 repairs roadmapcheck evidence
-path drift, so the next active product bar is S4-M1140.
+normal single samples through standard-normal samples, S4-M1138 refreshes
+status after those delegation fixes, S4-M1139 repairs roadmapcheck evidence
+path drift, and S4-M1140 refreshes status after that fix, so the next active
+product bar is S4-M1141.
 
 S4-M12 through S4-M14 are closed as unblocked adoption/documentation
 improvements, S4-M15 adds an examples validation gate, S4-M16 adds weighted
@@ -4494,11 +4496,13 @@ same delegation to single-vector helpers, and S4-M1135 routes scalar rate-one
 exponential fills through standard-exponential fills, and S4-M1136 routes scalar
 rate-one exponential single samples through standard-exponential samples, and
 S4-M1137 routes standard-parameter scalar normal single samples through
-standard-normal samples, so the next active product bar is S4-M1138.
+standard-normal samples, S4-M1138 refreshes status, S4-M1139 repairs evidence
+map drift, and S4-M1140 refreshes status again, so the next active product bar
+is S4-M1141.
 
 ## Required Next Work Before Completion
 
-The goal remains active under the new S4-M1140 bar until at least one of these
+The goal remains active under the new S4-M1141 bar until at least one of these
 happens:
 
 - a default/exact-compatible dense SIMD normal/exponential candidate beats

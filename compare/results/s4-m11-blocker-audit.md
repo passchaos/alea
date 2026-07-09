@@ -34,7 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
-compare/results/s4-m1125-post-s4-m1124-rand-status-refresh.md
+compare/results/s4-m1140-post-s4-m1139-rand-status-refresh.md
 `1`
 Alea local rand/rand_distr status (2026-07-09)
 "schema_version"
@@ -47,7 +47,7 @@ Alea local rand/rand_distr status (2026-07-09)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1138-post-s4-m1137-rand-status-refresh.md"
+"compare/results/s4-m1140-post-s4-m1139-rand-status-refresh.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -90,3 +90,4 @@ S4-M1137 remains active after S4-M1136 closes scalar rate-one exponential sample
 S4-M1138 remains active after S4-M1137 closes scalar standard-normal sample delegation in `compare/results/s4-m1137-scalar-normal-standard-sample.md`.
 S4-M1139 remains active after S4-M1138 refreshes rand-status in `compare/results/s4-m1138-post-s4-m1137-rand-status-refresh.md`.
 S4-M1140 remains active after S4-M1139 fixes roadmapcheck evidence mapping in `compare/results/s4-m1139-roadmapcheck-evidence-map-fix.md`.
+S4-M1141 remains active after S4-M1140 refreshes rand-status in `compare/results/s4-m1140-post-s4-m1139-rand-status-refresh.md`.
