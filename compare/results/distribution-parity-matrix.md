@@ -80,7 +80,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Beta | Covered: `beta`, `Beta(T)`, including alpha/beta/moment/mode/support accessors and infinite-shape boundary point masses |
 | Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max/moment/median accessors and collapsed `min == mode == max` point masses |
 | Arcsine | Covered: `arcsine`, `Arcsine(T)`, including min/max/moment/median accessors and collapsed `min == max` point masses |
-| Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/mode/scale, undefined-moment, support accessors, and collapsed `scale == 0` point masses |
+| Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/mode/scale, undefined-moment, support accessors, collapsed `scale == 0` point masses, and local `rand_distr` non-finite median / infinite-scale acceptance |
 | Laplace | Covered: `laplace`, `Laplace(T)`, including location/scale/median/mode/moment/support accessors and collapsed `scale == 0` point masses |
 | Logistic | Covered: `logistic`, `Logistic(T)`, including location/scale/median/mode/moment/support accessors and collapsed `scale == 0` point masses |
 | Rayleigh | Covered: `rayleigh`, `Rayleigh(T)`, including scale/moment/median/mode/support accessors and collapsed `scale == 0` point masses |

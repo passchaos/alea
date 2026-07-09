@@ -12528,7 +12528,7 @@ pub fn cauchyCheckedFrom(source: anytype, comptime T: type, median: T, scale: T)
 
 pub fn cauchyFrom(source: anytype, comptime T: type, median: T, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(median) and scale >= 0 and std.math.isFinite(scale));
+    std.debug.assert(cauchyParametersValid(T, median, scale));
     if (scale == 0) return median;
     const angle = @as(T, @floatCast(std.math.pi)) * Rng.floatOpenFrom(source, T);
     return median - scale * @cos(angle) / @sin(angle);
@@ -12540,13 +12540,18 @@ pub fn fillCauchy(rng: Rng, comptime T: type, dest: []T, median: T, scale: T) vo
 
 pub fn fillCauchyFrom(source: anytype, comptime T: type, dest: []T, median: T, scale: T) void {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(median) and scale >= 0 and std.math.isFinite(scale));
+    std.debug.assert(cauchyParametersValid(T, median, scale));
     if (scale == 0) {
         @memset(dest, median);
         return;
     }
     Rng.fillOpenFrom(source, T, dest);
     cauchyFromOpenUniforms(T, dest, median, scale);
+}
+
+fn cauchyParametersValid(comptime T: type, median: T, scale: T) bool {
+    _ = median;
+    return scale >= 0 and (std.math.isFinite(scale) or scale == std.math.inf(T));
 }
 
 pub fn fillCauchyChecked(rng: Rng, comptime T: type, dest: []T, median: T, scale: T) Error!void {
@@ -12692,8 +12697,7 @@ pub fn Cauchy(comptime T: type) type {
 
         pub fn init(median: T, scale: T) Error!Self {
             comptime requireFloat(T);
-            if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
-            if (!std.math.isFinite(median)) return error.InvalidParameter;
+            if (!cauchyParametersValid(T, median, scale)) return error.InvalidParameter;
             return .{ .median = median, .scale = scale };
         }
 
@@ -27912,6 +27916,201 @@ test "degenerate cauchy and gumbel helpers do not consume random stream" {
     vector_gumbel_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(gumbel_point)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "nonfinite cauchy parameters follow local rand_distr acceptance" {
+    const alea = @import("root.zig");
+
+    const Scenario = struct { median: f64, scale: f64 };
+    const scenarios = [_]Scenario{
+        .{ .median = std.math.inf(f64), .scale = 1 },
+        .{ .median = -std.math.inf(f64), .scale = 1 },
+        .{ .median = std.math.nan(f64), .scale = 1 },
+        .{ .median = 0, .scale = std.math.inf(f64) },
+        .{ .median = std.math.inf(f64), .scale = std.math.inf(f64) },
+    };
+
+    const Check = struct {
+        fn expectSameFloat(expected: f64, actual: f64) !void {
+            if (std.math.isNan(expected)) {
+                try std.testing.expect(std.math.isNan(actual));
+            } else {
+                try std.testing.expectEqual(expected, actual);
+            }
+        }
+
+        fn expectEdge(value: f64, median: f64, scale: f64) !void {
+            if (std.math.isNan(median)) {
+                try std.testing.expect(std.math.isNan(value));
+                return;
+            }
+            if (scale == std.math.inf(f64)) {
+                try std.testing.expect(!std.math.isFinite(value));
+                return;
+            }
+            if (median == std.math.inf(f64)) {
+                try std.testing.expect(value == std.math.inf(f64));
+                return;
+            }
+            if (median == -std.math.inf(f64)) {
+                try std.testing.expect(value == -std.math.inf(f64));
+                return;
+            }
+            try std.testing.expect(std.math.isFinite(value));
+        }
+
+        fn expectVectorEdge(value: @Vector(4, f64), median: f64, scale: f64) !void {
+            inline for (0..4) |lane| try expectEdge(value[lane], median, scale);
+        }
+
+        fn expectVectorBufEdge(values: []const @Vector(4, f64), median: f64, scale: f64) !void {
+            for (values) |value| try expectVectorEdge(value, median, scale);
+        }
+    };
+
+    var scalar_buf: [5]f64 = undefined;
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+
+    for (scenarios, 0..) |scenario, i| {
+        var engine = alea.ScalarPrng.init(0xca00_0000 + @as(u64, @intCast(i)));
+        var control = alea.ScalarPrng.init(0xca00_0000 + @as(u64, @intCast(i)));
+        const rng = Rng.init(&engine);
+        const control_rng = Rng.init(&control);
+
+        try Check.expectEdge(cauchy(rng, f64, scenario.median, scenario.scale), scenario.median, scenario.scale);
+        _ = Rng.floatOpenFrom(control_rng, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Check.expectEdge(cauchyFrom(&engine, f64, scenario.median, scenario.scale), scenario.median, scenario.scale);
+        _ = Rng.floatOpenFrom(&control, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Check.expectEdge(try cauchyChecked(rng, f64, scenario.median, scenario.scale), scenario.median, scenario.scale);
+        _ = Rng.floatOpenFrom(control_rng, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Check.expectEdge(try cauchyCheckedFrom(&engine, f64, scenario.median, scenario.scale), scenario.median, scenario.scale);
+        _ = Rng.floatOpenFrom(&control, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        fillCauchy(rng, f64, &scalar_buf, scenario.median, scenario.scale);
+        for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
+        Rng.fillOpenFrom(control_rng, f64, &scalar_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        fillCauchyFrom(&engine, f64, &scalar_buf, scenario.median, scenario.scale);
+        for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
+        Rng.fillOpenFrom(&control, f64, &scalar_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillCauchyChecked(rng, f64, &scalar_buf, scenario.median, scenario.scale);
+        for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
+        Rng.fillOpenFrom(control_rng, f64, &scalar_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillCauchyCheckedFrom(&engine, f64, &scalar_buf, scenario.median, scenario.scale);
+        for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
+        Rng.fillOpenFrom(&control, f64, &scalar_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        const sampler = try Cauchy(f64).init(scenario.median, scenario.scale);
+        try Check.expectSameFloat(scenario.median, sampler.medianValue());
+        try Check.expectSameFloat(scenario.median, sampler.modeValue());
+        try std.testing.expectEqual(scenario.scale, sampler.scaleValue());
+        if (scenario.scale == 0) {
+            try std.testing.expect(sampler.minValue() != null);
+        } else {
+            try std.testing.expect(sampler.expectedValue() == null);
+            try std.testing.expect(sampler.varianceValue() == null);
+            try std.testing.expect(sampler.minValue() == null);
+            try std.testing.expect(sampler.maxValue() == null);
+        }
+        try Check.expectEdge(sampler.sample(rng), scenario.median, scenario.scale);
+        _ = Rng.floatOpenFrom(control_rng, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Check.expectEdge(sampler.sampleFrom(&engine), scenario.median, scenario.scale);
+        _ = Rng.floatOpenFrom(&control, f64);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        sampler.fill(rng, &scalar_buf);
+        for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
+        Rng.fillOpenFrom(control_rng, f64, &scalar_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        sampler.fillFrom(&engine, &scalar_buf);
+        for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
+        Rng.fillOpenFrom(&control, f64, &scalar_buf);
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Check.expectVectorEdge(vectorCauchy(rng, @Vector(4, f64), scenario.median, scenario.scale), scenario.median, scenario.scale);
+        _ = Rng.vectorOpenFrom(control_rng, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Check.expectVectorEdge(vectorCauchyFrom(&engine, @Vector(4, f64), scenario.median, scenario.scale), scenario.median, scenario.scale);
+        _ = Rng.vectorOpenFrom(&control, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Check.expectVectorEdge(try vectorCauchyChecked(rng, @Vector(4, f64), scenario.median, scenario.scale), scenario.median, scenario.scale);
+        _ = Rng.vectorOpenFrom(control_rng, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Check.expectVectorEdge(try vectorCauchyCheckedFrom(&engine, @Vector(4, f64), scenario.median, scenario.scale), scenario.median, scenario.scale);
+        _ = Rng.vectorOpenFrom(&control, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        fillVectorCauchy(rng, @Vector(4, f64), &vector_buf, scenario.median, scenario.scale);
+        try Check.expectVectorBufEdge(&vector_buf, scenario.median, scenario.scale);
+        for (0..vector_buf.len) |_| _ = Rng.vectorOpenFrom(control_rng, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        fillVectorCauchyFrom(&engine, @Vector(4, f64), &vector_buf, scenario.median, scenario.scale);
+        try Check.expectVectorBufEdge(&vector_buf, scenario.median, scenario.scale);
+        for (0..vector_buf.len) |_| _ = Rng.vectorOpenFrom(&control, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillVectorCauchyChecked(rng, @Vector(4, f64), &vector_buf, scenario.median, scenario.scale);
+        try Check.expectVectorBufEdge(&vector_buf, scenario.median, scenario.scale);
+        for (0..vector_buf.len) |_| _ = Rng.vectorOpenFrom(control_rng, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try fillVectorCauchyCheckedFrom(&engine, @Vector(4, f64), &vector_buf, scenario.median, scenario.scale);
+        try Check.expectVectorBufEdge(&vector_buf, scenario.median, scenario.scale);
+        for (0..vector_buf.len) |_| _ = Rng.vectorOpenFrom(&control, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        const vector_sampler = try VectorCauchy(@Vector(4, f64)).init(scenario.median, scenario.scale);
+        try Check.expectSameFloat(scenario.median, vector_sampler.medianValue());
+        try std.testing.expectEqual(scenario.scale, vector_sampler.scaleValue());
+        try Check.expectVectorEdge(vector_sampler.sample(rng), scenario.median, scenario.scale);
+        _ = Rng.vectorOpenFrom(control_rng, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        try Check.expectVectorEdge(vector_sampler.sampleFrom(&engine), scenario.median, scenario.scale);
+        _ = Rng.vectorOpenFrom(&control, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        vector_sampler.fill(rng, &vector_buf);
+        try Check.expectVectorBufEdge(&vector_buf, scenario.median, scenario.scale);
+        for (0..vector_buf.len) |_| _ = Rng.vectorOpenFrom(control_rng, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+
+        vector_sampler.fillFrom(&engine, &vector_buf);
+        try Check.expectVectorBufEdge(&vector_buf, scenario.median, scenario.scale);
+        for (0..vector_buf.len) |_| _ = Rng.vectorOpenFrom(&control, @Vector(4, f64));
+        try std.testing.expectEqual(control.next(), engine.next());
+    }
+
+    var invalid_engine = alea.ScalarPrng.init(0xca00_bad);
+    var invalid_control = alea.ScalarPrng.init(0xca00_bad);
+    try std.testing.expectError(error.InvalidParameter, cauchyCheckedFrom(&invalid_engine, f64, 0, -1));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, cauchyCheckedFrom(&invalid_engine, f64, 0, std.math.nan(f64)));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, vectorCauchyCheckedFrom(&invalid_engine, @Vector(4, f64), 0, -1));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    try std.testing.expectError(error.InvalidParameter, Cauchy(f64).init(0, -1));
+    try std.testing.expectError(error.InvalidParameter, VectorCauchy(@Vector(4, f64)).init(0, std.math.nan(f64)));
 }
 
 test "infinite-dof student-t preserves rand_distr-compatible stream shape" {
